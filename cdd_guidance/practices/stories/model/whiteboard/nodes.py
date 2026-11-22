@@ -23,6 +23,10 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStoryModel,
     LaidOutEpic,
     LaidOutStory,
+    ThinSliceColumn,
+    ThinSliceLane,
+    ThinSliceLayout,
+    ThinSliceSurface,
 )
 from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel
 from harness.guidance.practice_formats import Written
@@ -161,8 +165,8 @@ class WhiteboardStoryModel(DiagramStoryModel):
         return self
 
 
-class _ThinSliceBoard:
-    """A story map's thin slice drawn as board elements, in the layout the diagram model gives every format."""
+class _ThinSliceBoard(ThinSliceSurface):
+    """The board a story map's thin slice is drawn on, in the layout every drawn format draws (``ThinSliceLayout``)."""
 
     LANE_INSET = 24
     LANE_GAP = 24
@@ -173,40 +177,35 @@ class _ThinSliceBoard:
         self.story_map = story_map
         self.drawing = drawing
         self.left = WhiteboardEpic.first_x + self.LABEL_WIDTH + self.LANE_GAP
-        self.columns = story_map.thin_slice_columns()
-        self.lanes = story_map.thin_slice_lanes(self.columns)
-        self.widths = story_map.thin_slice_widths(self.lanes, WhiteboardStory.pitch, WhiteboardStory.column_pad)
+        self.layout = ThinSliceLayout(story_map, WhiteboardStory.pitch, WhiteboardStory.column_pad, self.left)
+        self._top = DiagramEpic.nested_row_y + DiagramEpic.bar_height + self.LANE_GAP
 
     def board(self) -> Whiteboard:
-        board = self.drawing
-        left = self.left
-        for index, (epic, sub) in enumerate(self.columns):
-            if index == 0 or self.columns[index - 1][0] is not epic:
-                span = sum(width for (top, _), width in zip(self.columns, self.widths) if top is epic)
-                board.add(Shape(epic.element_id("epic"), box=Box(left, DiagramEpic.row_y, span - WhiteboardEpic.bar_gap, DiagramEpic.bar_height),
-                                kind="rounded", color="purple", size="body", text=epic.name))
-            if sub is not epic:
-                board.add(Shape(sub.element_id("subepic", str(sub.depth)), box=Box(left, DiagramEpic.nested_row_y, self.widths[index] - WhiteboardEpic.bar_gap, DiagramEpic.bar_height),
-                                kind="rounded", color="green", size="body", text=sub.name))
-            left += self.widths[index]
-        top = DiagramEpic.nested_row_y + DiagramEpic.bar_height + self.LANE_GAP
-        for increment, held in self.lanes:
-            top = self._draw_lane(increment, held, top)
-        return board
+        self.layout.draw_on(self)
+        return self.drawing
 
-    def _draw_lane(self, increment: "Increment", held: Dict[int, List[Story]], top: float) -> float:
-        board = self.drawing
-        lane = ElementId.of("lane", f"lane:{increment.name}", length=WhiteboardNode.KEY_LENGTH)
+    def epic_header(self, epic: Epic, x: float, width: float) -> None:
+        self.drawing.add(Shape(epic.element_id("epic"), box=Box(x, DiagramEpic.row_y, width - WhiteboardEpic.bar_gap, DiagramEpic.bar_height),
+                               kind="rounded", color="purple", size="body", text=epic.name))
+
+    def sub_epic_header(self, column: ThinSliceColumn) -> None:
+        sub = column.sub
+        self.drawing.add(Shape(sub.element_id("subepic", str(sub.depth)), box=Box(column.x, DiagramEpic.nested_row_y, column.width - WhiteboardEpic.bar_gap, DiagramEpic.bar_height),
+                               kind="rounded", color="green", size="body", text=sub.name))
+
+    def lane(self, lane: ThinSliceLane, layout: ThinSliceLayout) -> None:
+        board, increment, top = self.drawing, lane.increment, self._top
+        lane_id = ElementId.of("lane", f"lane:{increment.name}", length=WhiteboardNode.KEY_LENGTH)
         height = WhiteboardStory.size + 2 * self.LANE_INSET
-        board.add(Section(lane, box=Box(WhiteboardEpic.first_x, top, self.left - WhiteboardEpic.first_x + sum(self.widths), height), color="white"))
-        board.add(Shape(ElementId("increment", lane.key), box=Box(WhiteboardEpic.first_x + self.LANE_INSET, top + self.LANE_INSET, self.LABEL_WIDTH - self.LANE_INSET, WhiteboardStory.size),
+        board.add(Section(lane_id, box=Box(WhiteboardEpic.first_x, top, self.left - WhiteboardEpic.first_x + layout.width, height), color="white"))
+        board.add(Shape(ElementId("increment", lane_id.key), box=Box(WhiteboardEpic.first_x + self.LANE_INSET, top + self.LANE_INSET, self.LABEL_WIDTH - self.LANE_INSET, WhiteboardStory.size),
                         kind="rounded", color="white", size="body", text=increment.name))
-        for column, stories in held.items():
-            column_left = self.left + sum(self.widths[:column]) + WhiteboardStory.column_pad
+        for column, stories in lane.stories.items():
+            column_left = layout.columns[column].x + WhiteboardStory.column_pad
             for place, story in enumerate(self._map_story(story) for story in stories):
                 if isinstance(story, WhiteboardStory):
-                    board.add(story.lane_card(lane, column_left + place * WhiteboardStory.pitch, top + self.LANE_INSET))
-        return top + height + self.LANE_GAP
+                    board.add(story.lane_card(lane_id, column_left + place * WhiteboardStory.pitch, top + self.LANE_INSET))
+        self._top = top + height + self.LANE_GAP
 
     def _map_story(self, story: Story) -> Story:
         """The map's own whiteboard story of this name, which carries the card's actor and size."""

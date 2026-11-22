@@ -211,8 +211,32 @@ A structural peer of the screens on the map: a transition, a content type, or a 
 + to_name: str
 	// the names of the screens it joins; blank for a screen it lacks
 + trigger: str
-+ nav_type: str
-	// "tab" draws dashed on the site map
++ nav_type: NavType
+	// an action, a tab (drawn dashed on the site map), or a kind a sketch names; saved as the string it is written as
+
+## NavType : str
+
++ NavType.ACTION, NavType.TAB
++ NavType.from_drawn(kept: str, dashed: bool): NavType
+	// the kind a drawn transition keeps by name, else a tab for a dashed line, else an action
+------
++ is_tab: bool
++ is_named_on_label: bool
+	// every kind but an action and a tab, which a drawing writes before the trigger: `[top nav] Check out`
+
+## Served
+
+What a screen or a control serves (`ServesStories.served`), in the one notation every text format lists it in: a line
+for each kind it serves any of, `Stories: Browse Books · Check Out`, the things joined by ` · `.
+
++ Served(node: ServesStories)
++ Served.kind_headed(heading: str): str
+------
++ stories, scenarios, steps: list[StoryLink]
+----
++ serve(kind: str, shown: str): None
++ as_lines(link_text: Callable[[StoryLink], str]): list[str]
++ read_lines(lines: list[str]): None
 
 ## ContentType : UxComponent
 

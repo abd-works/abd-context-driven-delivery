@@ -15,6 +15,7 @@ from harness.graph.graph import Graph, Node
 
 from cdd_guidance.practices.stories.model.story_tree import StoryTree
 
+from .served import NavType, Served
 from .story_link import StoryLink
 from .ux_node import UxNode
 
@@ -82,18 +83,20 @@ class ServesStories(UxNode):
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
         self._story_links: List[StoryLink] = []
+        # What it serves, in the notation every text format lists it in.
+        self.served = Served(self)
 
     def show_story(self, story: Node | str) -> None:
         """A story this node serves: the Story, or its name."""
-        self._show("Story", story)
+        self.show("Story", story)
 
     def show_scenario(self, scenario: Node | str) -> None:
         """A scenario this node serves: the Scenario, or its key ``Story › Scenario``."""
-        self._show("Scenario", scenario)
+        self.show("Scenario", scenario)
 
     def show_step(self, step: Node | str) -> None:
         """A step this node serves: the Step, or its key ``Story › Scenario › Step``."""
-        self._show("Step", step)
+        self.show("Step", step)
 
     @property
     def shows(self) -> List[Node]:
@@ -131,9 +134,9 @@ class ServesStories(UxNode):
         the key and the link target other holds for it."""
         for link in other._story_links:
             resolved = link.resolved_in(StoryTree.of_graph(other.graph)) if other.practice is not None else None
-            self._show(link.kind, resolved or link.written)
+            self.show(link.kind, resolved or link.written)
 
-    def _show(self, kind: str, shown: Node | str) -> None:
+    def show(self, kind: str, shown: Node | str) -> None:
         link = StoryLink.from_shown(kind, shown)
         if not link.key or any(held.key == link.key and held.target == link.target for held in self.links_of(kind)):
             return
@@ -316,7 +319,7 @@ class Transition(UxComponent):
         self.from_screen: Optional[Screen] = None
         self.to_screen: Optional[Screen] = None
         self._trigger = ""
-        self.nav_type = "action"
+        self._nav_type = NavType.ACTION
 
     def joining(self, from_screen: Optional[Screen], to_screen: Optional[Screen]) -> "Transition":
         """This transition going from from_screen to to_screen; answers itself."""
@@ -333,6 +336,15 @@ class Transition(UxComponent):
     def to_name(self) -> str:
         """The name of the screen it goes to; blank while it goes to none."""
         return self.to_screen.name if self.to_screen is not None else ""
+
+    @property
+    def nav_type(self) -> NavType:
+        """The kind of navigation it is, saved as the string it is written as."""
+        return self._nav_type
+
+    @nav_type.setter
+    def nav_type(self, nav_type: str) -> None:
+        self._nav_type = NavType(nav_type)
 
     @property
     def trigger(self) -> str:

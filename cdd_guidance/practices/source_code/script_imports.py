@@ -53,17 +53,18 @@ class ClassReference(NamedTuple):
     def files(self) -> List[str]:
         """The files the module it names it from may be, from the source root; for a language adapter, the Python
         module the adapter is generated from."""
-        if self._through_adapter():
+        if self.through_adapter():
             return imported_files(self.source.removeprefix(LANGUAGE_ADAPTER_ALIAS).replace("-", "_"))
         return imported_files(self.source)
 
     def names(self) -> List[str]:
         """The class names it may name: its own, and for a language adapter's `{Class}Data`, the class it sends."""
-        if self._through_adapter() and self.name.endswith(_ADAPTER_DATA_SUFFIX) and self.name != _ADAPTER_DATA_SUFFIX:
+        if self.through_adapter() and self.name.endswith(_ADAPTER_DATA_SUFFIX) and self.name != _ADAPTER_DATA_SUFFIX:
             return [self.name, self.name.removesuffix(_ADAPTER_DATA_SUFFIX)]
         return [self.name]
 
-    def _through_adapter(self) -> bool:
+    def through_adapter(self) -> bool:
+        """Whether it names a generated language adapter (`@cdd/...`), which a script imports a Python class through."""
         return self.source.startswith(LANGUAGE_ADAPTER_ALIAS)
 
 

@@ -22,15 +22,12 @@ from typing import List, Optional
 
 from harness.whiteboard import Arrow, BoardElement, Box, ElementId, Section, Shape, Whiteboard, WhiteboardNode
 
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, ServesStories, StoryDemoControl, Transition
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, Transition
+from cdd_guidance.practices.ux.model.served import NavType, Served
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_node import UxNode
 from harness.guidance.practice_formats import Written
 
-# What joins the things one line lists: the stories a card shows, the domain terms of a screen.
-_BESIDE = " · "
-# The heading each kind of thing served is listed under, in the order a card lists them.
-_SERVED_HEADINGS = (("Stories", "Story"), ("Scenarios", "Scenario"), ("Steps", "Step"))
 _TERMS_HEADING = "Domain terms"
 _SERVES_TITLE = "**Serves**"
 # A card's name line, `**Quantity**`, and its type line, `*number*`.
@@ -43,7 +40,6 @@ _AREA_IN_ID = re.compile(r"^[A-Za-z0-9_-]{1,16}$")
 _NO_AREA = "-"
 # A transition's label that names its kind of navigation before its trigger: `[top nav] Check out`.
 _NAV_LABEL = re.compile(r"^\[(?P<nav>[^\]]+)\]\s*(?P<trigger>.*)$")
-_ACTION, _TAB = "action", "tab"
 
 SCREEN_WIDTH = 480
 SCREEN_GAP = 96
@@ -77,28 +73,13 @@ class DrawnNode(UxNode, WhiteboardNode):
         return self.box
 
 
-class ServedOnCard(ServesStories):
-    """What a screen or a control serves as a card lists it: one line for each kind, `Stories: ...`, each thing a
-    markdown link when it has a target."""
-
-    def served_lines(self) -> List[str]:
-        listed = ((heading, self._keys(kind)) for heading, kind in _SERVED_HEADINGS)
-        return [f"{heading}: {_BESIDE.join(keys)}" for heading, keys in listed if keys]
-
-    def read_served_lines(self, lines: List[str]) -> None:
-        """Serve each story, scenario, and step lines list under its heading."""
-        for heading, kind in _SERVED_HEADINGS:
-            for item in _listed(lines, heading):
-                self._show(kind, item)
-
-
-class WhiteboardControl(Control, ServedOnCard, DrawnNode):
+class WhiteboardControl(Control, DrawnNode):
     """A control's card: its name, its type, and what it serves."""
 
     @property
     def card_text(self) -> str:
         kind = [f"*{self.control_type}*"] if self.control_type else []
-        return "\n".join([f"**{self.name}**", *kind, *self.served_lines()])
+        return "\n".join([f"**{self.name}**", *kind, *self.served.as_lines(lambda link: link.written)])
 
     @property
     def height(self) -> float:
@@ -116,7 +97,7 @@ class WhiteboardControl(Control, ServedOnCard, DrawnNode):
         control = cls(name.group("words") if name else (lines[0] if lines else f"Control {order}"), order)
         kind = next((found for found in (_ITALIC.match(line) for line in lines[1:]) if found), None)
         control.control_type = kind.group("words").strip() if kind else ""
-        control.read_served_lines(lines[1:])
+        control.served.read_lines(lines[1:])
         return control
 
 
@@ -155,7 +136,7 @@ class WhiteboardRegion(Region, DrawnNode):
         return region
 
 
-class WhiteboardScreen(Screen, ServedOnCard, DrawnNode):
+class WhiteboardScreen(Screen, DrawnNode):
     """A screen's section: the card of what the screen serves, then its regions one under another."""
 
     _serves_box = Box(0, 0, 0, 0)
@@ -166,7 +147,7 @@ class WhiteboardScreen(Screen, ServedOnCard, DrawnNode):
         """The words of the card of what this screen serves and names; none for a screen that serves and names
         nothing."""
         terms = list(self.domain_terms or self.domain_concepts)
-        lines = [*self.served_lines(), *([f"{_TERMS_HEADING}: {_BESIDE.join(terms)}"] if terms else [])]
+        lines = [*self.served.as_lines(lambda link: link.written), *([f"{_TERMS_HEADING}: {Served.BESIDE.join(terms)}"] if terms else [])]
         return "\n".join([_SERVES_TITLE, *lines]) if lines else ""
 
     @property
@@ -194,7 +175,7 @@ class WhiteboardScreen(Screen, ServedOnCard, DrawnNode):
     def read_serves_card(self, card: BoardElement) -> None:
         """Serve what the card lists, and attach each domain term it lists."""
         lines = _lines_of(card.text)
-        self.read_served_lines(lines)
+        self.served.read_lines(lines)
         for term in _listed(lines, _TERMS_HEADING):
             self.attach_domain_term(term)
 
@@ -206,18 +187,18 @@ class WhiteboardTransition(Transition, DrawnNode):
     def board_elements(self) -> List[BoardElement]:
         if not isinstance(self.from_screen, WhiteboardScreen) or not isinstance(self.to_screen, WhiteboardScreen):
             return []
-        label = self.trigger if self.nav_type in (_ACTION, _TAB, "") else f"[{self.nav_type}] {self.trigger}"
+        label = f"[{self.nav_type}] {self.trigger}" if self.nav_type.is_named_on_label else self.trigger
         return [Arrow(
             ElementId.of("transition", self.from_screen.name, self.to_screen.name, self.trigger, length=self.KEY_LENGTH),
             from_id=self.from_screen.element_id("screen"), to_id=self.to_screen.element_id("screen"),
-            label=label, dash=self.nav_type == _TAB, head="arrow",
+            label=label, dash=self.nav_type.is_tab, head="arrow",
         )]
 
     def read_arrow(self, arrow: BoardElement) -> None:
         """Take the arrow's trigger and kind of navigation: the kind its label names, else a tab for a dashed arrow."""
         named = _NAV_LABEL.match(arrow.label.strip())
         self.trigger = named.group("trigger").strip() if named else arrow.label.strip()
-        self.nav_type = named.group("nav").strip() if named else (_TAB if arrow.dash else _ACTION)
+        self.nav_type = NavType.from_drawn(named.group("nav").strip() if named else "", arrow.dash)
 
 
 class WhiteboardUxMap(UxMap):
@@ -331,7 +312,7 @@ def _listed(lines: List[str], heading: str) -> List[str]:
     """What the line that starts with heading lists after it; nothing when no line does."""
     start = f"{heading.lower()}:"
     line = next((line for line in lines if line.lower().startswith(start)), "")
-    return [item.strip() for item in line[len(start):].split(_BESIDE) if item.strip()]
+    return [item.strip() for item in line[len(start):].split(Served.BESIDE) if item.strip()]
 
 
 def _card_height(text: str) -> float:

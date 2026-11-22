@@ -2,7 +2,7 @@
 
 The overlay sets these on the ClientRoot, View, BffRoot, BffRoute, ServiceRoot, ServiceRoute, Proxy, Migration, and
 Aggregate nodes; the OSS rules read them with ``get_fact`` and never open a file. Story files are read with the LERN
-pattern's *TierFile*, because the OSS pattern keeps LERN's shared-story layout.
+pattern's *StoryTestFile* and *BehaviorFile*, because the OSS pattern keeps LERN's shared-story layout.
 """
 
 from __future__ import annotations

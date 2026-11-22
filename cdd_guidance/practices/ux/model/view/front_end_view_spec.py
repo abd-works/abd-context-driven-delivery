@@ -92,7 +92,7 @@ _ARROW_VIEW = '''export const CartView = (props: CartProps) => {
 
 
 def outline(view) -> tuple:
-    return (view.components, view.props, view.handlers)
+    return ([component.name for component in view.components], view.props, view.handlers)
 
 
 with description("a front-end view written in TypeScript"):
@@ -100,7 +100,7 @@ with description("a front-end view written in TypeScript"):
         self.view = TypeScriptView().parse(_TYPED)
 
     with it("should name its components"):
-        expect(self.view.components).to(equal(["CheckoutView"]))
+        expect([component.name for component in self.view.components]).to(equal(["CheckoutView"]))
 
     with it("should name the props each component takes"):
         expect(self.view.props).to(equal({"CheckoutView": ["cart", "onPaid", "note"]}))

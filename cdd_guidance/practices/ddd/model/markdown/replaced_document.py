@@ -10,12 +10,7 @@ does hold is the drawing's: a context, a class, a member or an arrow removed fro
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap, Integration
-
-if TYPE_CHECKING:
-    from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownAggregate, MarkdownBoundedContext
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap, Integration
 
 
 class ReplacedDocument:
@@ -38,7 +33,7 @@ class ReplacedDocument:
             if context.name in was_named:
                 self._give_context(was_named[context.name], context)
 
-    def _give_context(self, was: MarkdownBoundedContext, context: MarkdownBoundedContext) -> None:
+    def _give_context(self, was: BoundedContext, context: BoundedContext) -> None:
         """The context's sentence, notes, module, and group notes, then each of its aggregates' words."""
         context.take_words_from(was)
         was_named = {aggregate.name: aggregate for aggregate in was.aggregates}
@@ -63,13 +58,13 @@ class ReplacedDocument:
 class _ReplacedAggregate:
     """One aggregate of the replaced file and the aggregate of the same name read from the drawing."""
 
-    def __init__(self, document: ReplacedDocument, was: MarkdownAggregate, aggregate: MarkdownAggregate) -> None:
+    def __init__(self, document: ReplacedDocument, was: Aggregate, aggregate: Aggregate) -> None:
         self._document = document
         self._was = was
         self._aggregate = aggregate
 
     def give_its_words(self) -> None:
-        """The aggregate's own words, its root's and its cards' (``MarkdownAggregate.take_words_from``), then the
+        """The aggregate's own words, its root's and its cards' (``Aggregate.take_words_from``), then the
         integrations the replaced file writes to the targets its arrows still reach."""
         self._aggregate.take_words_from(self._was)
         self._aggregate.integrations = self._integrations()

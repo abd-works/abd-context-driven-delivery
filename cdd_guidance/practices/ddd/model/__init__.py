@@ -1,19 +1,16 @@
 """DDD practice model — building blocks on the clean engineering model."""
 
-from .nodes import (
-    Aggregate,
-    BoundedContext,
-    BoundedContextMap,
+from .building_blocks import (
     DomainEvent,
     DomainService,
     Entity,
     Factory,
-    Integration,
     InvariantObject,
     Repository,
     Specification,
     ValueObject,
 )
+from .nodes import Aggregate, BoundedContext, BoundedContextMap, Integration
 from .stereotypes import TacticalClass, plain_class_name
 
 

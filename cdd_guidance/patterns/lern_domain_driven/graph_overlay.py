@@ -14,7 +14,8 @@ from harness.graph.graph import Graph, Node, PracticeNodes
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
-from cdd_guidance.patterns.lern_domain_driven.tier_facts import AggregateFolder, TierFile
+from cdd_guidance.patterns.lern_domain_driven import fact_names
+from cdd_guidance.patterns.lern_domain_driven.fact_files import AggregateFolder, BehaviorFile, LernFile, NodeRootFile, RouteFile, StoryTestFile
 from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.source_code import CODE_LANGUAGES, TYPESCRIPT
 from cdd_guidance.practices.ddd.ddd import Ddd
@@ -112,8 +113,8 @@ class _LernReading:
         for file in self._files:
             semantic = _BEHAVIOR_TIERS.get(".".join(file.name.split(".")[1:]))
             if semantic is not None:
-                behavior = TierFile.at(self.root, file)
-                self.graph.practices.part_of(bdd).add_file(semantic, behavior.relative, file.name).set_facts(behavior.behavior_facts())
+                behavior = BehaviorFile.at(self.root, file, semantic)
+                self.graph.practices.part_of(bdd).add_file(behavior.node_type, behavior.relative, file.name).set_facts(behavior.facts)
 
     def _tier_folders(self) -> None:
         """A folder holding its slug's routes or node is an aggregate, even with no domain class: a CDD-backed one has none."""
@@ -131,12 +132,12 @@ class _LernReading:
             semantic = self._story_semantic(file)
             if semantic is None:
                 continue
-            story = TierFile.at(self.root, file)
-            node = self.story_nodes.add_file(semantic, story.relative, file.name)
+            story = StoryTestFile.at(self.root, file, semantic)
+            node = self.story_nodes.add_file(story.node_type, story.relative, file.name)
             parent = self._parent_story_scope(story.relative)
             if parent is not None:
                 self.link("owns", parent, node)
-            node.set_facts(story.story_facts())
+            node.set_facts(story.facts)
 
     def _parent_story_scope(self, relative: str) -> Node | None:
         """The innermost epic of the stories whose folder holds the file; else the epic named for the file's folder."""
@@ -170,9 +171,9 @@ class _LernReading:
         """Whether a Playwright file's describe names each story (``has_screen_story``), which the screen-story rule
         reads: the screen story that drives the page the domain and server specs cannot see."""
         specs = self.story_nodes.nodes("PlaywrightSpec")
-        driven = {self._story_key(name) for spec in specs for name in spec.get_fact("screen_stories", [])}
+        driven = {self._story_key(name) for spec in specs for name in spec.get_fact(fact_names.SCREEN_STORIES, [])}
         for story in self.story_nodes.nodes("Story"):
-            story.set_fact("has_screen_story", self._story_key(story.name) in driven)
+            story.set_fact(fact_names.HAS_SCREEN_STORY, self._story_key(story.name) in driven)
 
     def _story_key(self, name: str) -> str:
         """A story's name as a describe may write it: lower case, with its words one space apart."""
@@ -232,16 +233,16 @@ class _AggregateTiers:
         """Read each LERN tier file once and record what its rules need on the node it became."""
         root, setup_text = self.reading.root, self.reading.setup_text
         aggregate_folder = AggregateFolder(root, self.folder)
-        self.aggregate.set_fact("web_path_literals", aggregate_folder.web_path_literals())
-        self.aggregate.set_fact("core_request_reads", aggregate_folder.core_request_reads())
-        readers = (("NodeRoot", lambda file: file.node_root_facts(setup_text)), ("Route", TierFile.route_facts))
-        for semantic, facts_of in readers:
-            tier = self.tiers.get(semantic)
-            if tier is not None:
-                tier.set_facts(facts_of(TierFile.at(root, root / tier.source.file)))
+        self.aggregate.set_fact(fact_names.WEB_PATH_LITERALS, aggregate_folder.web_path_literals())
+        self.aggregate.set_fact(fact_names.CORE_REQUEST_READS, aggregate_folder.core_request_reads())
+        node_root, route = self.tiers.get(NodeRootFile.node_type), self.tiers.get(RouteFile.node_type)
+        if node_root is not None:
+            node_root.set_facts(NodeRootFile.at(root, root / node_root.source.file, setup_text).facts)
+        if route is not None:
+            route.set_facts(RouteFile.at(root, root / route.source.file).facts)
         for repository in self.repositories:
-            file = TierFile.at(root, root / repository.source.file)
-            repository.set_fact("unreset_instances", file.unreset_instances([repository.name], setup_text))
+            file = LernFile.at(root, root / repository.source.file)
+            repository.set_fact(fact_names.UNRESET_INSTANCES, file.unreset_instances([repository.name], setup_text))
 
     def _other_node_files(self) -> None:
         """Every other ``*-node.ts`` in the aggregate folder is node-tier code too (e.g. ``iccid-inventory-node.ts``)."""

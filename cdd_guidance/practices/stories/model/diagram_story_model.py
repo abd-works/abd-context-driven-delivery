@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import List, Optional
+from typing import Dict, List, NamedTuple, Optional
 
 from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel, StoryType
 
@@ -279,29 +279,6 @@ class DiagramStoryModel(StoryModel):
         delivers under their sub-epics' columns. Each diagram format draws its own."""
         raise NotImplementedError(f"{type(self).__name__} must draw its thin slice")
 
-    def thin_slice_columns(self) -> List[tuple]:
-        """The thin slice's columns: one per sub-epic, or per epic with none, with its top epic, in map order."""
-        return [(epic, sub) for epic in self.epics for sub in (epic.epics or [epic])]
-
-    def thin_slice_lanes(self, columns: List[tuple]) -> List[tuple]:
-        """Each increment with its stories under the column of the sub-epic that holds each, in the increment's order;
-        a story the map lacks goes under the last column."""
-        lanes = []
-        for increment in self.increments:
-            by_column: dict = {}
-            for story in increment.stories:
-                column = next((index for index, (_, sub) in enumerate(columns)
-                               if any(held.name == story.name for held in sub.descendants.stories())), len(columns) - 1)
-                by_column.setdefault(column, []).append(story)
-            lanes.append((increment, by_column))
-        return lanes
-
-    def thin_slice_widths(self, lanes: List[tuple], pitch: int, gap: int) -> List[int]:
-        """Each column widened to hold, side by side on one row, the most stories any one increment of lanes puts in it,
-        so a lane is a single row of cards and a sub-epic is as wide as its fullest lane."""
-        columns = range(len(self.thin_slice_columns()))
-        return [max([1] + [len(held.get(index, [])) for _, held in lanes]) * pitch + gap for index in columns]
-
     @property
     def max_sub_epic_depth(self) -> int:
         deepest = 0
@@ -385,3 +362,84 @@ class EpicColumns:
         if not self._epic.epics:
             return self._epic.depth
         return max(child.columns.tree_depth() for child in self._epic.epics)
+
+
+class ThinSliceColumn(NamedTuple):
+    """One column of a thin slice: the sub-epic it is, or the epic with none, under its top epic, where it starts, and
+    how wide it is."""
+
+    epic: Epic
+    sub: Epic
+    x: float
+    width: float
+
+
+class ThinSliceLane(NamedTuple):
+    """One increment's lane of a thin slice: its stories, by the index of the column of the sub-epic that holds each."""
+
+    increment: Increment
+    stories: Dict[int, List[Story]]
+
+
+class ThinSliceLayout:
+    """A story map's increments laid out as a thin slice, the one layout every drawn format draws: a column for each
+    sub-epic, or epic with none, in map order, each wide enough for the most stories any one increment puts in it side
+    by side, and a lane for each increment holding its stories under their sub-epics' columns. A format draws it on a
+    surface of its own (``draw_on``), at its own pitch and from its own left edge."""
+
+    def __init__(self, story_map: "DiagramStoryModel", pitch: float, gap: float, left: float) -> None:
+        pairs = [(epic, sub) for epic in story_map.epics for sub in (epic.epics or [epic])]
+        self.lanes = [ThinSliceLane(increment, self._by_column(increment, pairs)) for increment in story_map.increments]
+        widths = [max([1] + [len(lane.stories.get(index, [])) for lane in self.lanes]) * pitch + gap for index in range(len(pairs))]
+        starts = [left + sum(widths[:index]) for index in range(len(pairs))]
+        self.columns = [ThinSliceColumn(epic, sub, x, width) for (epic, sub), x, width in zip(pairs, starts, widths)]
+
+    def _by_column(self, increment: Increment, pairs: List[tuple]) -> Dict[int, List[Story]]:
+        """The increment's stories by the column of the sub-epic that holds each, in the increment's order; a story the
+        map lacks goes under the last column."""
+        by_column: Dict[int, List[Story]] = {}
+        for story in increment.stories:
+            column = next((index for index, (_, sub) in enumerate(pairs)
+                           if any(held.name == story.name for held in sub.descendants.stories())), len(pairs) - 1)
+            by_column.setdefault(column, []).append(story)
+        return by_column
+
+    @property
+    def width(self) -> float:
+        return sum(column.width for column in self.columns)
+
+    def epic_headers(self) -> List[tuple]:
+        """Each top epic with where its header starts and how wide it is: over every column it holds."""
+        return [(column.epic, column.x, sum(held.width for held in self.columns if held.epic is column.epic))
+                for index, column in enumerate(self.columns) if index == 0 or self.columns[index - 1].epic is not column.epic]
+
+    def sub_epic_headers(self) -> List[ThinSliceColumn]:
+        """Each column that is a sub-epic, which draws a header of its own under its epic's."""
+        return [column for column in self.columns if column.sub is not column.epic]
+
+    def draw_on(self, surface: "ThinSliceSurface") -> None:
+        """Draw the layout on surface: each epic's header, then each of its sub-epics' headers, column by column, then
+        each lane in the increments' order."""
+        headers = iter(self.epic_headers())
+        previous = None
+        for column in self.columns:
+            if column.epic is not previous:
+                surface.epic_header(*next(headers))
+                previous = column.epic
+            if column.sub is not column.epic:
+                surface.sub_epic_header(column)
+        for lane in self.lanes:
+            surface.lane(lane, self)
+
+
+class ThinSliceSurface:
+    """Where a format draws a thin slice: a header for each epic and sub-epic, and each lane."""
+
+    def epic_header(self, epic: Epic, x: float, width: float) -> None:
+        raise NotImplementedError(f"{type(self).__name__} must draw an epic's header")
+
+    def sub_epic_header(self, column: ThinSliceColumn) -> None:
+        raise NotImplementedError(f"{type(self).__name__} must draw a sub-epic's header")
+
+    def lane(self, lane: ThinSliceLane, layout: ThinSliceLayout) -> None:
+        raise NotImplementedError(f"{type(self).__name__} must draw a lane")

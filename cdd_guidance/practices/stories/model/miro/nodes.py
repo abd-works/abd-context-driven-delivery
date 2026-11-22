@@ -17,6 +17,7 @@ from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
+    DiagramStoryCell,
     DiagramStoryModel,
     LaidOutEpic,
     LaidOutStory,
@@ -176,45 +177,25 @@ class MiroParseError(Exception):
     """Raised when the payload is not a valid Miro story map SVG."""
 
 
-class _MiroReading:
-    """One read of a canvas-composer SVG's cards into a new story map: the epic being read and the sub-epics open under
-    it, so each card lands under the one above it."""
+class _MiroCell(DiagramStoryCell):
+    """A rect of a canvas-composer SVG as a story-map cell: its role, bar depth and story kind from its data-role, its
+    words and actor, its id, and its box. A rect no story map draws has no role."""
 
-    def __init__(self, story_map: "MiroStoryModel") -> None:
-        self.story_map = story_map
-        self.epic: Optional[MiroEpic] = None
-        self.sub_epics: List[MiroEpic] = []
+    ROLES = ("epic", "subepic", "story", "actor")
 
-    def read(self, element: ET.Element) -> None:
-        role = element.get("data-role", "")
-        label = element.get("data-content", "")
-        if role == "epic":
-            self.epic = MiroEpic(label, len(self.story_map.epics) + 1)
-            self.story_map.epics.append(self.epic)
-            self.sub_epics = []
+    def __init__(self, element: ET.Element) -> None:
+        super().__init__()
+        role, _, detail = element.get("data-role", "").partition(":")
+        if role not in self.ROLES:
             return
-        if self.epic is None:
-            return
-        if role.startswith("subepic:"):
-            self._sub_epic(label, int(role.split(":", 1)[1]))
-            return
-        if role.startswith("story:"):
-            self._story(label, role, element.get("data-actor", "").strip())
-
-    def _sub_epic(self, label: str, depth: int) -> None:
-        while len(self.sub_epics) > depth:
-            self.sub_epics.pop()
-        owner = self.sub_epics[-1] if self.sub_epics else self.epic
-        sub_epic = MiroEpic(label, len(owner.epics) + 1)
-        owner.epics.append(sub_epic)
-        self.sub_epics.append(sub_epic)
-
-    def _story(self, label: str, role: str, actor: str) -> None:
-        parent = self.sub_epics[-1] if self.sub_epics else self.epic
-        story = MiroStory(label, len(parent.stories) + 1, StoryType.from_mark(role.split(":", 1)[1]))
-        if actor:
-            story.actors = [actor]
-        parent.stories.append(story)
+        self.role = role
+        self.depth = int(detail) if role == "subepic" and detail.isdigit() else -1
+        self.kind = detail if role == "story" else ""
+        self.text = element.get("data-content", "").strip()
+        self.actor = element.get("data-actor", "").strip()
+        self.cell_id = element.get("id", "")
+        self.x, self.y = float(element.get("x", 0)), float(element.get("y", 0))
+        self.width, self.height = float(element.get("width", 0)), float(element.get("height", 0))
 
 
 class MiroStoryModel(DiagramStoryModel):
@@ -298,14 +279,14 @@ class MiroStoryModel(DiagramStoryModel):
         return [shape.svg_line() for epic in self.epics for shape in epic.shapes()]
 
     def parse(self, text: str, file: str = "") -> "MiroStoryModel":
-        """Read a canvas-composer SVG into a Miro story map; the format-adapter entry point Stories renders through."""
-        tagged = list(self._cards_in_order(self._svg_root(text)))
-        if not tagged:
+        """Read a canvas-composer SVG into a Miro story map, by where its cards sit, as every drawn format reads its
+        map; the format-adapter entry point Stories renders through."""
+        cells = [cell for cell in (_MiroCell(element) for element in self._cards_in_order(self._svg_root(text))) if cell.role]
+        if not cells:
             raise MiroParseError("No story-map nodes found in SVG (missing data-role attributes)")
-        reading = _MiroReading(MiroStoryModel())
-        for element in tagged:
-            reading.read(element)
-        return reading.story_map
+        story_map = MiroStoryModel()
+        story_map.place_cells(cells)
+        return story_map
 
     def _svg_root(self, text: str) -> ET.Element:
         try:

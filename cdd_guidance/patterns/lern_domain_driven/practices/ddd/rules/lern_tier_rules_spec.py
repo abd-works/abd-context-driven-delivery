@@ -22,9 +22,11 @@ from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_sto
 )
 from cdd_guidance.patterns.lern_domain_driven.graph_overlay import _LernReading
 from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
-from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
+from cdd_guidance.patterns.lern_domain_driven.fact_files import (
     AggregateFolder,
-    TierFile,
+    NodeRootFile,
+    RouteFile,
+    StoryTestFile,
 )
 from cdd_guidance.practices.source_code import SourceText
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
@@ -54,15 +56,15 @@ def tier_node(name, node_type, facts, file="src/a/a-node.ts"):
 
 
 def node_root(text, setup_text=""):
-    return tier_node("x-node", "NodeRoot", TierFile(text).node_root_facts(setup_text))
+    return tier_node("x-node", "NodeRoot", NodeRootFile("x-node.ts", text, setup_text).facts)
 
 
 def route(text):
-    return tier_node("x-routes", "Route", TierFile(text).route_facts())
+    return tier_node("x-routes", "Route", RouteFile("x-routes.ts", text).facts)
 
 
 def story_file(text, node_type="StoryShared"):
-    return tier_node("x.story.shared.ts", node_type, TierFile(text).story_facts(), file="tests/x/x.story.shared.ts")
+    return tier_node("x.story.shared.ts", node_type, StoryTestFile("tests/x/x.story.shared.ts", text, node_type).facts, file="tests/x/x.story.shared.ts")
 
 
 with description("the lern_domain_driven pattern rules"):

@@ -8,21 +8,17 @@ from __future__ import annotations
 from functools import cached_property
 
 from harness.agent_tools.agent_tools import agent_toolset
-from harness.guidance.guidance import PracticeGuidance
+
+from cdd_guidance.patterns.pattern import Pattern
 
 from cdd_guidance.patterns.cdd_web_domain_access.graph_overlay import WebDomainAccessOverlay
 
 
 @agent_toolset
-class CddWebDomainAccess(PracticeGuidance):
+class CddWebDomainAccess(Pattern):
     """How code outside Python reaches the CDD domain: through MCP tools, by a language adapter the installer deploys."""
 
-    pattern = "cdd_web_domain_access"
-
     default_workspace_folder = "harness"
-
-    def __init__(self) -> None:
-        super().__init__(format="typescript")
 
     @cached_property
     def graph_overlay(self) -> WebDomainAccessOverlay:

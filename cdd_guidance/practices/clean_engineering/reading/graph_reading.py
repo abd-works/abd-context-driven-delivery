@@ -22,12 +22,14 @@ from harness.graph.skipped_folders import skips_folder
 from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER, CleanEngineeringModel, OoadClass
-from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassesInReach, ClassLinks
+from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassLinks
+from cdd_guidance.practices.clean_engineering.reading.code_file import CodeFile
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
 from cdd_guidance.practices.clean_engineering.reading.compared_facts import ComparedFacts
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.reading.node_evidence import CodeNodeTypes
-from cdd_guidance.practices.source_code import is_test_code
+from cdd_guidance.practices.source_code import ClassReference, is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
@@ -67,12 +69,11 @@ class GraphReading(PracticeReading):
         model, adding the folders, classes, properties, operations, and parameters it parsed as nodes, and each class a
         document describes."""
         self.code_index.forget()
-        reach = ClassesInReach(self)
         with schema_sync_paused():
             self.model_documents.read()
-            CodeRead(self, reach).read()
-        ClassLinks(self, reach).link()
-        CallLinks(self, reach).link()
+            CodeRead(self).read()
+        ClassLinks(self).link()
+        CallLinks(self).link()
         ComparedFacts(self).record()
         self._exempt_test_code()
 
@@ -89,19 +90,43 @@ class GraphReading(PracticeReading):
 
 
 class CodeIndex:
-    """The code read into the practice's graph, by name: its classes, and its operations and properties. Made once after
-    each read, the first time a reader asks, so the type linking, every rule, and every practice that links to the code
-    ask one index, and a graph read back from its saved file answers from the nodes it restored."""
+    """The code read into the practice's graph, by name: its classes, and its operations and properties, and each file as
+    its code names things (*CodeFile*). Made once after each read, the first time a reader asks, so the type linking,
+    every rule, and every practice that links to the code ask one index, and a graph read back from its saved file
+    answers from the nodes it restored."""
 
     def __init__(self, reading: GraphReading) -> None:
         self._reading = reading
         self._classes: dict[str, list[Node]] | None = None
         self._members: dict[str, list[Node]] | None = None
+        # The classes each production file imports, by its path, as its folder kept them.
+        self._imports: dict[str, list[ClassReference]] | None = None
+        self._files: dict[str, CodeFile] = {}
 
     def forget(self) -> None:
         """Drop the index, so the next question after a read indexes what the read added."""
         self._classes = None
         self._members = None
+        self._imports = None
+        self._files = {}
+
+    def file(self, relative: str, imports: list[ClassReference] | None = None) -> CodeFile:
+        """The file at relative, from the source root, as its code names things. A production file's imports are those
+        its folder kept; a file the read keeps no imports for, such as a spec, is given the imports its text names."""
+        if imports is not None:
+            return CodeFile(self, relative, imports, self._reading.graph.scope.over_whole)
+        if relative not in self._files:
+            self._files[relative] = CodeFile(self, relative, self._imports_of(relative), self._reading.graph.scope.over_whole)
+        return self._files[relative]
+
+    def _imports_of(self, relative: str) -> list[ClassReference]:
+        if self._imports is None:
+            self._imports = {}
+            for folder in folders_of(self._reading.in_graph):
+                kept = folder.get_fact("imported_classes_by_file") if folder.has_fact("imported_classes_by_file") else {}
+                for file, references in kept.items():
+                    self._imports[file] = [ClassReference(*reference) for reference in references]
+        return self._imports.get(relative, [])
 
     def classes_named(self, name: str) -> list[Node]:
         """The classes the graph holds called name, in the order of their node ids."""
