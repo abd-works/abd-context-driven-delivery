@@ -17,7 +17,8 @@ from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.mcp.mcp_server import ProjectToolsets
 from space.session.session import Session
 from harness.process.capped_log_file import LOG_SIZE_LIMIT_BYTES
-from space.session.session_log import LogTimestamp
+from harness.agent_tools.chat_pointer import ChatPointer
+from space.session.session_log import LogLine, LogTimestamp
 from space.session.sessions import Sessions
 from space.session.throwaway_project import ExampleHome
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
@@ -48,9 +49,9 @@ with description("a session loop"):
             )
             Sessions(repo).switch("alpha", work)
             session = Sessions(repo).current()
-            session.log.record("--- 1")
+            session.log.record(LogLine("---", subject="1"))
             chat_id = "b4c2a422-7199-47ce-9656-c0429af8adb8"
-            session.log.record(f"2026-10-20T12:00:00Z sketch {work / 'a.py'} {chat_id} {transcript} 1")
+            session.log.record(LogLine("sketch", paths=[work / "a.py"], chat=ChatPointer(chat_id, transcript, "1")))
             expanded = session.log.loop_at(1).expanded_text()
             expect("question" in expanded and "sketch" in expanded).to(equal(True))
 
@@ -63,7 +64,7 @@ with description("a session loop"):
             self.session = Sessions(repo).current()
             self.worktree = Path(tempfile.mkdtemp()) / "cdd-alpha"
             self.session.work_folder = self.worktree / ".sessions" / "alpha"
-            self.session.log.record("move alpha Discovery")
+            self.session.log.record(LogLine("move", subject="alpha Discovery"))
 
         with it("should write nothing, leaving no folder where the worktree was"):
             expect(self.worktree.exists()).to(equal(False))
@@ -149,9 +150,9 @@ with description("a session loop"):
             repo = Path(tempfile.mkdtemp())
             Sessions(repo).switch("alpha", repo)
             self.session = Sessions(repo).current()
-            self.session.log.record("--- 3 chat-a")
-            self.session.log.record("x" * LOG_SIZE_LIMIT_BYTES)
-            self.session.log.record("tool board.show")
+            self.session.log.record(LogLine("---", subject="3", chat=ChatPointer("chat-a")))
+            self.session.log.record(LogLine("x" * LOG_SIZE_LIMIT_BYTES))
+            self.session.log.record(LogLine("tool", subject="board.show"))
             self.folder = repo / ".sessions" / "alpha"
 
         with it("should keep the earlier lines in session.log.1"):
@@ -291,3 +292,21 @@ with description("a session a chat switches to"):
         with it("should not ask about roots"):
             answer = Sessions(self.repo).switch("main")
             expect("Output roots" in answer).to(equal(False))
+
+
+with description("a log line"):
+    with it("should write its verb, subject, paths, practices, fidelities, formats, detail and chat in that order"):
+        line = LogLine("generate", paths=["src/a.py", "src/b.py"], practices=["stories"], fidelities=["scenarios"], formats=["markdown"], chat=ChatPointer("chat-a"))
+        expect(line.written).to(equal("generate src/a.py, src/b.py stories scenarios markdown chat-a"))
+
+    with it("should read its time, verb and words back from the line the log holds"):
+        read = LogLine.read("2026-10-31T01:00:01Z validate stories scenarios graph-rule map.md:12 no-chat")
+        expect([read.time, read.verb, read.words[:2]]).to(equal(["2026-10-31T01:00:01Z", "validate", ["stories", "scenarios"]]))
+
+    # Older logs named a validated practice by its class, which a ticket still reads its progress from.
+    with it("should name a fidelity an older validate line names by its practice's class"):
+        class Stories:
+            key = "stories"
+
+        fidelity = type("Fidelity", (), {"name": "story_map", "practice_guidance": Stories()})()
+        expect(LogLine.read("2026-10-31T01:00:01Z validate Stories story_map no-chat").names(fidelity)).to(equal(True))

@@ -3665,7 +3665,7 @@ Git refused to merge one branch into the branch a checkout has checked out, such
 A *Session* is one named piece of work in `.sessions/{name}/`; *Sessions* are all of a checkout's sessions; its *SessionLog* records each action, a *PracticeSessionOutput* is what one practice has in it, and its *FileManager* lists and reads the files under its roots.
 
 - **Purpose:** Keep the state of one piece of work — where it works, which practices it uses and where they write, the files it works with, the log of what was done, the handoff the next agent resumes from, and the reasons behind hard-to-reverse choices — so any chat or tool can pick the work up from its folder.
-- **Seam (terms):** Sessions, Session, BoardPractices, CallSessions, SessionLog, ChatLog, LogEntry, LogTimestamp, HookLog, PracticeSessionOutput, FidelitySessionOutput, FileManager, FileEntry, FileText, PathOutsideRootsError, ThrowawayProject, SessionDiagnostics, SessionsRead, OutputRootRefused, FileTooLongToShowError, SessionFolderHeldError
+- **Seam (terms):** Sessions, Session, BoardPractices, CallSessions, SessionLog, ChatLog, LogLine, LogTimestamp, HookLog, PracticeSessionOutput, FidelitySessionOutput, FileManager, FileEntry, FileText, PathOutsideRootsError, ThrowawayProject, SessionDiagnostics, SessionsRead, OutputRootRefused, FileTooLongToShowError, SessionFolderHeldError
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/graph, harness/diagnostics, harness/catalog_generator, harness/git, space/work_state, space/repo, cdd_guidance/actions (the session diagnostics probe runs Generate and Validate)
 
 ## Sessions
@@ -3981,12 +3981,12 @@ The log of one session: `session.log`, one timestamped line per action, tool cal
 + session: Session
 + path: Path | None
 + error_path: Path | None
-+ << composition >> entries: list[LogEntry]
++ << composition >> entries: list[LogLine]
 + << composition >> injected_rules: InjectedRules
 + last_loop_number: int
 + latest_loop_with_entries: int
 ----
-+ latest(*verbs: str, stage: str = ''): LogEntry | None
++ latest(*verbs: str, stage: str = ''): LogLine | None
 + record(line: str): None
 	// a session without a folder has a log that writes nothing
 + by(chat: ChatPointer | None): ChatLog
@@ -3996,7 +3996,7 @@ The log of one session: `session.log`, one timestamped line per action, tool cal
 + read_loop(number: int | None = None): str
 + loop_to_note(loop: int | None): int
 + instructions(): str
----<<creates>>--> LogEntry
+---<<creates>>--> LogLine
 ---<<creates>>--> ChatLog
 ---<<stamps lines with>>--> LogTimestamp
 ---<<raises>>--> LoopNotFoundError
@@ -4024,20 +4024,35 @@ The lines one chat writes in a session's log, each pointing at that chat; `no-ch
 ---<<records lines in>>--> SessionLog
 ---<<names practice and fidelity of>>--> FidelitySessionOutput
 
-## LogEntry
+## LogLine
 
-One line of a session log: `<time> <verb> <words...>`, the words being the subject the verb acted on.
+One line of a session log, which writes and reads itself: `<time> <verb> <words...>`. A chat's log (*ChatLog*) makes one for each of its operations.
 
-+ LogEntry(line: str)
++ LogLine(verb: str, subject: str = '', paths: Iterable[str | Path] = (), practices: Iterable[str] = (), fidelities: Iterable[str] = (), formats: Iterable[str] = (), detail: str = '', rules: str = '', chat: ChatPointer | None = None, time: str = '')
 ------
-+ text: str
-+ time: str
 + verb: str
++ time: str
++ subject: str
+	// what the verb acted on: a tool's name, a note, a loop's number, a stage
++ detail: str
+	// written after the names, such as a validate's findings
++ paths: list[str]
++ practices: list[str]
++ fidelities: list[str]
++ formats: list[str]
++ rules: str
++ chat: ChatPointer | None
++ written: str
+	// verb, subject, paths, practices, fidelities, formats, detail, rules, chat, each left out when empty; the log stamps the time
++ text: str
 + words: list[str]
 + stage: str
 + loop_number: int | None
 ----
++ read(text: str): LogLine
+	// a line as the log holds it: its time, its verb, and the rest of its words as its subject
 + names(fidelity: FidelityGuidance): bool
+	// by the practice's key, or, in an older validate line, its class
 ---<<reads practice guidance of>>--> FidelityGuidance
 ---<<reads name of>>--> FidelityGuidance
 
@@ -4733,7 +4748,7 @@ Hold an idea not yet started. Starting it opens a ticket for it.
 + latest_report: ReportFile | None
 + violation_count: int
 ----
-+ from_log(fidelity: FidelityGuidance, stage: Stage, entries: list[LogEntry], ticket: Ticket): FidelityProgress
++ from_log(fidelity: FidelityGuidance, stage: Stage, entries: list[LogLine], ticket: Ticket): FidelityProgress
 + load(ticket: str, fidelity: str, project: Path | str): FidelityProgress
 	-> Ticket.load
 	-> TicketWork.progress_of
@@ -4748,7 +4763,7 @@ Hold an idea not yet started. Starting it opens a ticket for it.
 + files(): dict[str, list[FileEntry]]
 	-> FidelityGuidance.files
 + with_violations(): FidelityProgress
----<<reads lines from>>--> LogEntry
+---<<reads lines from>>--> LogLine
 ---<<finds its latest report through>>--> ReportFile
 ---<<creates>>--> ActionStates
 ---<<creates>>--> Help

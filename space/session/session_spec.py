@@ -34,7 +34,7 @@ from space.repo.repo import Repo
 from space.session import Session, Sessions
 from space.session.guidance_selection import UnknownSelectionPart
 from harness.agent_tools.chat_pointer import ChatPointer
-from space.session.session_log import LoopNotFoundError
+from space.session.session_log import LogLine, LoopNotFoundError
 from space.session.open_sessions import SessionNameRequiredError
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
@@ -488,7 +488,7 @@ with description("a session"):
             self.work = self.repo / "work"
             self.work.mkdir()
             Sessions(self.repo).switch("alpha", self.work)
-            Sessions(self.called).current().log.record("--- 2")
+            Sessions(self.called).current().log.record(LogLine("---", subject="2"))
 
         with it("should append the next loop after switch without in-memory loops"):
             Sessions(self.repo).switch("alpha", self.work)
@@ -500,8 +500,8 @@ with description("a session"):
             self.repo = Path(tempfile.mkdtemp())
             Sessions(self.repo).switch("alpha", self.repo)
             self.log = Sessions(self.repo).current().log
-            for line in ("move Discovery", "done Discovery", "move Specification", "in-progress Specification"):
-                self.log.record(line)
+            for verb, stage in (("move", "Discovery"), ("done", "Discovery"), ("move", "Specification"), ("in-progress", "Specification")):
+                self.log.record(LogLine(verb, subject=stage))
 
         with it("should answer the latest line of a verb"):
             expect(self.log.latest("move").stage).to(equal("Specification"))
@@ -837,7 +837,7 @@ with description("an action"):
             with it("should log that practice and that fidelity"):
                 self.chat_log.validation(self.practice, [])
                 log = (self.session.work_folder / "session.log").read_text(encoding="utf-8")
-                expect("Bdd" in log and "behavior" in log).to(equal(True))
+                expect(" validate Bdd behavior " in log).to(equal(True))
 
         with context("with a violation"):
             with it("should log the rule, the synopsis, and the correction"):
@@ -886,8 +886,7 @@ with description("an action"):
                 expect(
                     "generate" in log
                     and "bdd" in log
-                    and "validate" in log
-                    and "Bdd" in log
+                    and " validate Bdd " in log
                 ).to(equal(True))
 
         with context("after inject_rules records rules on the session"):

@@ -40,7 +40,7 @@ from space.repo.repo import Branch
 from space.session import Session
 from space.session.session import MAIN_SESSION_NAME
 from space.session.progress_cache import ACCEPTED_COUNT, HAS_OUTPUT, VIOLATION_COUNT
-from space.session.session_log import LogEntry
+from space.session.session_log import LogLine
 from space.session.guidance_selection import GuidanceSelection
 from space.session.session_record import OwnedFields
 from space.session.file_manager import FileEntry
@@ -824,10 +824,10 @@ class TicketWork:
         # The enabled part of that reading, with the reading it was picked from.
         self._enabled: tuple[list[FidelityProgress], list[FidelityProgress]] | None = None
         # Its session's log entries as last read; none until asked for, and none again once a line is written.
-        self._entries: list[LogEntry] | None = None
+        self._entries: list[LogLine] | None = None
 
     @property
-    def entries(self) -> list[LogEntry]:
+    def entries(self) -> list[LogLine]:
         """Its session's log entries, read once with its progress, so its stage and its progress read the same lines."""
         if self._entries is None:
             self._entries = self._ticket.session.log.entries
@@ -890,7 +890,7 @@ class TicketWork:
         """Its work in stage: the progress of every fidelity stage requires whose practice its session works on."""
         return StageWork(self._ticket, stage, [progress for progress in self.enabled if progress.stage is stage])
 
-    def record(self, line: str) -> None:
+    def record(self, line: LogLine) -> None:
         """Write line to the ticket's session log; its progress is read from the log again next time it is asked for."""
         self._ticket.session.log.record(line)
         self._read = None
@@ -956,7 +956,7 @@ class StageMarks:
     def _write(self, mark: StageMark | None, stage: Stage) -> None:
         """Keep the ticket in stage with mark, none when it was only moved there, and log the move or the mark."""
         self._fields.save(**{_STAGE_FIELD: stage.name, _STAGE_MARK_FIELD: mark.value if mark is not None else ""})
-        self._ticket.work.record(f"{mark.value if mark is not None else MOVED_INTO} {stage.name}")
+        self._ticket.work.record(LogLine(mark.value if mark is not None else MOVED_INTO, subject=stage.name))
 
 
 class NoReportToAcceptInError(LookupError):

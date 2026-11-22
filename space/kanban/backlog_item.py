@@ -20,7 +20,7 @@ from space.kanban.card_name import BacklogItemTakenError, CardName
 # ticket the call names.
 from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
-from space.session.session_log import LogTimestamp
+from space.session.session_log import LogLine, LogTimestamp
 from space.session.session_record import SESSION_FILE
 from harness.mcp.mcp_annotations import mcp
 
@@ -314,5 +314,5 @@ class BacklogItem(BacklogOrderTools, Card):
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
         ticket = self._board.placement.open_ticket(self.title, scope, path)
-        ticket.work.record(f"backlog {self._path}")
+        ticket.work.record(LogLine("backlog", paths=[self._path]))
         return ticket

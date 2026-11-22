@@ -683,7 +683,7 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + from_log(required: RequiredFidelity, ticket: Ticket): FidelityProgress
 	// reads its ticket's session log entries and finds the fidelity by name, never by position
 	-> TicketWork.entries
-	-> LogEntry.names
+	-> LogLine.names
 	-> Stage.steps
 + load(ticket: str, fidelity: str, project: Path): FidelityProgress
 	// the `@tool_subject` of the `fidelity-progress.*` tools
@@ -1065,7 +1065,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Session
 
-`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `parent`, `is_pulled_out`, `tags`, `text`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `remove()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, `keep_text(text)`, `add_tag(word)`, `set_parent(parent)`, `mark_pulled_out()`, `open_child(name, title, scope)`, and `from_project(path)`. A backlog item reads and writes its file through an `IdeaFile` (`space/session/idea_file.py`), the same as a session's idea file. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogEntry`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a move or a mark; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
+`space/session/session.py`, sent whole as a ticket's `session` data field. The board reads `name`, `title`, `parent`, `is_pulled_out`, `tags`, `text`, `is_closed`, `workpath`, `practices`, `reports_folder`, and `log`, and calls `close()`, `remove()`, `reopen()`, `move_to_closed()`, `move_to_archive()`, `move_to_backlog()`, `keep_file(file)`, `keep_text(text)`, `add_tag(word)`, `set_parent(parent)`, `mark_pulled_out()`, `open_child(name, title, scope)`, and `from_project(path)`. A backlog item reads and writes its file through an `IdeaFile` (`space/session/idea_file.py`), the same as a session's idea file. Its `log` is a `SessionLog` (`space/session/session_log.py`), whose `entries` are `LogLine`s with `time`, `verb`, `stage`, `words`, and `names(fidelity)`, and whose `record(line)` writes a `LogLine` the board makes for a move or a mark; `latest(*verbs, stage)` answers a ticket's latest move and its latest mark in a stage.
 
 ## IdeaFile
 
