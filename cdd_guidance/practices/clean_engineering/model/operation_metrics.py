@@ -299,16 +299,14 @@ class FunctionCollaborators:
                 return True
         return False
 
-# The failures that say by their name that something read could not be parsed or decoded.
-_UNREADABLE_FAILURES = frozenset({"JSONDecodeError", "UnicodeDecodeError", "UnicodeError", "YAMLError", "TOMLDecodeError", "ParseError", "ExpatError", "SyntaxError", "ParserError", "ScannerError"})
+# The failures that say by their name that stored data could not be read: JSON that does not parse, and text that
+# does not decode. Source code that does not parse (SyntaxError) is not stored data: a code reader skips it, and
+# source-parses reports the file.
+_UNREADABLE_FAILURES = frozenset({"JSONDecodeError", "UnicodeDecodeError", "UnicodeError"})
 # The failures that catch a parse failure among much else.
 _WIDE_FAILURES = frozenset({"ValueError", "Exception", "BaseException"})
-# The calls that parse stored text, each as the module and the function it is called by.
-_PARSERS = frozenset({
-    ("json", "load"), ("json", "loads"), ("yaml", "load"), ("yaml", "safe_load"), ("tomllib", "load"), ("tomllib", "loads"),
-    ("toml", "load"), ("toml", "loads"), ("ast", "parse"), ("ast", "literal_eval"), ("ET", "parse"), ("ET", "fromstring"),
-    ("ElementTree", "parse"), ("ElementTree", "fromstring"), ("pickle", "load"), ("pickle", "loads"),
-})
+# The calls that parse stored JSON, each as the module and the function it is called by.
+_PARSERS = frozenset({("json", "load"), ("json", "loads")})
 # The calls that build an empty value.
 _EMPTY_BUILDERS = frozenset({"dict", "list", "tuple", "set", "frozenset", "str"})
 

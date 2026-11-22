@@ -11,7 +11,6 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     CODE_LINES,
     IMPORT_LOOPS,
     CLASSES_DEPENDED_ON,
-    MEASURE_NAMED,
     MODULES_IMPORTED,
     NOT_MEASURED,
     SHIPPED_TOOLS,
@@ -165,9 +164,6 @@ with description("the tools a project chooses for its code measures") as self:
 
         with it("should offer lizard and the practice's own reader, and no other tool"):
             expect(sorted(TOOLS)).to(equal(["lizard", "reader"]))
-
-        with it("should hold no measure of a module's maintainability, which only radon took"):
-            expect("maintainability_score" in MEASURE_NAMED).to(be_false)
 
         with it("should ask no tool for a measure a fact on the node already gives"):
             asked = [self.chosen.supplied_by_a_tool(measure) for measure in (CODE_LINES, PARAMETERS_TAKEN, IMPORT_LOOPS, MODULES_IMPORTED)]

@@ -64,3 +64,29 @@ Validate at Clean Engineering's modules, model and code fidelities checks what o
 - Validate judges one folder at a time today; this pass judges the whole codebase, as AI-judge rules where the graph cannot answer.
 - What it looks for: second object models (a dict, `*_name` copy or helper class that copies an owner's data), the same behaviour written in several files, second registries of practices, actions or stages, global or ambient state, state passed as parameters the object already holds, legacy names and dead code, and swallowed failures.
 - Examples of each: `.sessions/ensure-domain-orientation-refactor/validation-reports/cross-file-round3.md` and `cross-file-round4.md`; the first full run of the relationship checks: `.context/repo-runtime.md` and `.context/repo-model-disconnected.md`.
+
+## Implementation plan (2026-11-22)
+
+### What it has to catch: what the judges found by hand
+
+The seven design judgments of release 1.2 (`.sessions/release-1-2-fixes/validation-reports/judgment-*.md`) read every production file against the Clean Engineering rules, under four themes: module boundaries, the same work in different shapes, resource orientation, and domain orientation. Their most frequent findings, and how this item takes each over so the next validate finds it without a judge reading every file:
+
+| What the judges found | How often | Checked by the graph | Judged on the graph's candidates |
+|---|---|---|---|
+| The same behaviour written in several files (`eliminate-duplication`) | 31 | Operations whose bodies match once names are set aside, in different files | Whether the copies are one behaviour that needs one home |
+| State handed down as parameters the object already holds (`hold-state-on-the-object-not-in-parameters`) | 19 | A parameter passed on unchanged through two or more calls, or a session, ticket or name passed to every operation of an object made for it | Which object should hold it |
+| A module that is not one boundary (`single-boundary`, `high-cohesion`, `low-coupling`, `one-way-deps`, `deep-module`) | about 30 | Module measures: import loops, modules imported and importing, seam share | Where the boundary should move |
+| Logic that belongs on its owner, classes not shaped around resources (`put-logic-on-the-owning-resource`, `shape-classes-around-resources`, `use-explicit-dependencies`) | about 17 | Dependencies reached per call from strings or by name (story 2); disconnected classes (story 3) | The owner, and the relationship it should be |
+| A second object model (`do-not-invent-parallel-object-models`) | 4 | A field or dict copying a property its owner already has; a second registry | Whether it is a copy |
+| Names that disagree or do not reveal intent (`use-consistent-naming`, `use-intention-revealing-names`) | 16 | Two verbs used for one operation across classes (`get_` / `fetch_` / `read_` with the same target) | The one name to use |
+| Simplifications: dead code, nested operations, static operations, internal operations left public | many, in every report | Unused class and unused operation; operations public but used only inside their module; static operations not on the allowed factory list | — |
+
+The checked rules raise violations. The judged rules raise candidates, which the report, the board and the graph tree show apart from violations, and the validation report's Fix button hands each candidate to the agent with the rule's text.
+
+### Steps
+
+0. **A graph that can be counted on.** Every class-to-class edge from code (inheritance, composition, aggregation, association, dependency), with how a dependency is reached: created per call, created in the constructor, looked up by name, held, or handed in. Calls joined to the operation they really reach, not to every operation of that name (defect e1e1c23c67a2). Until one thing is one node, these rules run on the code fidelity only, so each class is counted once.
+1. **One shared list of the ways a project reaches code**, moved out of TDD's `called_by_name.py` so the coverage rule and the unused rules read the same list, and named for each project in `.context/config.json`.
+2. **The rules**, each as scenario, then a failing and a repaired example, then the rule: unused class and operation, dependency that should be owned, disconnected class, one-class package, duplicated behaviour, state passed down, second object model, two names for one concept, and the judged pass over what the graph cannot find.
+3. **Calibration on this repository:** run every rule and compare with the seven judgment reports and `.context/model/repo-model-disconnected.md`. Each finding the judges made by hand that no rule lists means the graph is still blind there, and becomes a defect.
+4. **Where it runs:** validate given the whole graph, at the modules, model and code fidelities. The checked rules run every time; the judged pass runs on the candidates only.

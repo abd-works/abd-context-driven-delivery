@@ -38,6 +38,15 @@ _UNDECODABLE_TEXT = (
     "from pathlib import Path\n\n\nclass Note:\n    def text(self, path: Path) -> str:\n        try:\n            return path.read_text(encoding='utf-8')\n"
     "        except UnicodeDecodeError:\n            return ''\n"
 )
+# A code reader: source that does not parse is skipped, and source-parses reports the file.
+_SKIPS_UNPARSABLE_SOURCE = (
+    "import ast\n\n\nclass Classes:\n    def named_in(self, source: str) -> list:\n        try:\n            tree = ast.parse(source)\n"
+    "        except SyntaxError:\n            return []\n        return [node.name for node in tree.body]\n"
+)
+_PARSES_SOURCE_IN_A_WIDE_CATCH = (
+    "import ast\n\n\nclass Classes:\n    def named_in(self, source: str) -> list:\n        try:\n            tree = ast.parse(source)\n"
+    "        except ValueError:\n            return []\n        return [node.name for node in tree.body]\n"
+)
 _TYPESCRIPT_READ_AS_EMPTY = (
     "export class Settings {\n  read(text: string): Record<string, string> {\n    try {\n      return JSON.parse(text);\n"
     "    } catch (unreadable) {\n      return {};\n    }\n  }\n}\n"
@@ -88,6 +97,14 @@ with description("a read of something that is not there") as self:
     with context("that answers an empty value for a missing file"):
         with it("should pass, since nothing there is an empty result"):
             expect(_hits(_MISSING_FILE_IS_EMPTY)).to(equal([]))
+
+    with context("that reads source code and skips a file it cannot parse"):
+        with it("should pass, since source that does not parse is reported by source-parses, not saved over"):
+            expect(_hits(_SKIPS_UNPARSABLE_SOURCE)).to(equal([]))
+
+    with context("that reads source code with ast.parse inside a wide catch"):
+        with it("should pass, since only a JSON read or a decode is a read of stored data"):
+            expect(_hits(_PARSES_SOURCE_IN_A_WIDE_CATCH)).to(equal([]))
 
     with context("that answers a default for a number that does not parse, with no file or record read"):
         with it("should pass, since no stored thing is read as empty"):

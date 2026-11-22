@@ -76,7 +76,8 @@ def main(checkout: Path, out: Path) -> None:
         measured = measures_read(session.graph.practices.opened[PRACTICE].reading.in_graph.nodes())
     finally:
         throwaway.close()
-    slugs = [rule.slug for rule in MEASURE_LIMIT_RULES]
+    # The measured limits, and the one parameter limit, which limit-operation-parameters holds with its exemptions.
+    slugs = [rule.slug for rule in MEASURE_LIMIT_RULES] + ["limit-operation-parameters"]
     findings, not_taken = dict.fromkeys(slugs, 0), dict.fromkeys(slugs, 0)
     for violation in saved.violations([PRACTICE]):
         if violation.rule in findings and is_production(violation.location):
