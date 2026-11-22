@@ -159,7 +159,7 @@ class CheckedGraph:
         """The practices whose violations the call reports: those of the fidelities it checks, else every practice of
         the session, as a call that names only graph files reports every practice's violations."""
         checked = list({id(practice): practice for practice in (each.fidelity.practice_guidance for each in self._checked_fidelities)}.values())
-        return checked or [output.guidance for output in self._session.practice_outputs.every.values()]
+        return checked or [output.guidance for output in self._session.session_practices.every.values()]
 
     @property
     def unread(self) -> list[str]:

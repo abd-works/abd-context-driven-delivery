@@ -307,7 +307,7 @@ class SessionFile:
     def _fold_kinds(self) -> dict[str, FoldKind]:
         """The node types a file folds on, as the graph's source view does: each practice's classes fold whole, its
         operations and properties as a block (harness/graph/app/source/call-expansion.ts)."""
-        readings = [output.guidance.reading for output in self._session.practice_outputs.every.values()]
+        readings = [output.guidance.reading for output in self._session.session_practices.every.values()]
         members: dict[str, FoldKind] = {kind: "block" for reading in readings for kind in reading.member_types}
         return {**members, **{kind: "class" for reading in readings for kind in reading.class_types}}
 
