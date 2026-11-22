@@ -9,7 +9,6 @@ from mamba import after, before, context, description, it
 from harness.installation.json_file import JsonFileUnreadable
 from space.session import Sessions
 from space.session.session_record import SessionFieldOwnedError
-from space.session.session_saves import SessionSaves
 from space.session.spec_support.throwaway_project import ThrowawayProject
 
 # Seed: a session.json as a server before the typed record wrote it: a practice's on-switch and formats under
@@ -147,6 +146,3 @@ with description("a session's record") as self:
             saved = json.loads(self.file.read_text(encoding="utf-8"))
             expect((saved["title"], saved["tags"])).to(equal(("Refund an order", ["urgent"])))
 
-    with context("with the lock file a change leaves beside it"):
-        with it("should have the saves leave the lock file and a staged text out of every commit"):
-            expect(SessionSaves._left_out).to(contain("**/session.json.lock", "**/session.json.*.tmp"))

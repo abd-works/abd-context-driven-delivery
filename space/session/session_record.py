@@ -8,9 +8,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Generic, Iterator, TypeVar
 
-from harness.installation.json_file import HeldJsonFile, JsonFile
+from harness.installation.json_file import LEFT_BESIDE, HeldJsonFile, JsonFile
 from harness.process.answer_reads import ANSWER_READS, HeldForAnswer
-from space.session.session_saves import SessionSaves
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -28,11 +27,9 @@ _TEST_TIERS = "test_tiers"
 # web for one that shows a page.
 TEST_TIERS = ("unit", "server", "web")
 
-# What a change to session.json leaves beside it, which no save commits: the lock file a change holds it by, and the
-# text a writer staged and was killed before it swapped it in.
-_LEFT_BESIDE = (f"{SESSION_FILE}.lock", f"{SESSION_FILE}.*.tmp")
-for _pattern in _LEFT_BESIDE:
-    SessionSaves.leave_out(f"**/{_pattern}")
+# What a change to session.json leaves beside it, as every JSON file's writes do (``LEFT_BESIDE``), which no save
+# commits: the lock file a change holds it by, and the text a writer staged and was killed before it swapped it in.
+_LEFT_BESIDE = tuple(f"{SESSION_FILE}{pattern}" for pattern in LEFT_BESIDE)
 
 Value = TypeVar("Value")
 

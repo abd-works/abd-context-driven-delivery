@@ -103,3 +103,16 @@ with description("the saves of a repository's session folders on main"):
             self.saves.now("sessions: open checkout-flow")
             expect(self.held.branches.logs["main"][-1]).to(equal("sessions: open checkout-flow"))
 
+    # A JSON file is written by staging its text beside it and renaming that over it, and a change holds a lock file
+    # beside it; git must never add either, since the staged text is renamed away while git may be reading it.
+    with context("that a JSON file in a session folder is being written as the save runs"):
+        with before.each:
+            ticket = self.folder / "checkout-flow"
+            (ticket / "progress-cache.json.4242.17.tmp").write_text("{}\n", encoding="utf-8")
+            (ticket / "notes.json.lock").write_text("", encoding="utf-8")
+            self.saves.now("sessions: open checkout-flow")
+
+        with it("should commit neither the staged text nor the lock file"):
+            committed = [path for path in self.held.branches.trees["main"] if path.startswith(".sessions/checkout-flow/")]
+            expect(committed).to(equal([".sessions/checkout-flow/session.json"]))
+

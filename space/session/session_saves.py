@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from harness.installation.data_class import data_field
+from harness.installation.json_file import LEFT_BESIDE
 from harness.git.git import RepoConnectError
 from space.repo.repo import Repo
 
@@ -48,10 +49,11 @@ class SessionSaves:
     succeeds clears it. Work that needs main committed before it goes on, such as opening a ticket's worktree, saves
     ``now``, which waits for the queued saves and makes its own in the caller's thread."""
 
-    # The files in the session folders that no save commits, each a .gitignore pattern a module that writes such a file
-    # registers when it is imported (``leave_out``), such as the board's progress caches, which are worked out again
-    # wherever they are missing. The saves name none of them themselves.
-    _left_out: ClassVar[list[str]] = []
+    # The files in the session folders that no save commits, each a .gitignore pattern: what every JSON file's writes
+    # leave beside it for a moment (``LEFT_BESIDE``), since git would add staged text that is renamed away as it reads
+    # it; and each pattern a module that writes such a file registers when it is imported (``leave_out``), such as the
+    # board's progress caches, which are worked out again wherever they are missing.
+    _left_out: ClassVar[list[str]] = [f"**/{pattern}" for pattern in LEFT_BESIDE]
 
     @classmethod
     def leave_out(cls, pattern: str) -> None:

@@ -18,6 +18,11 @@ _SWAP_RETRY_SECONDS = 0.05
 _HOLD_SECONDS = 30.0
 # What follows the file's name in the name of the lock file beside it.
 _LOCK_SUFFIX = ".lock"
+# What ends the name of the text a write stages beside the file before renaming it over the file.
+_STAGED_SUFFIX = ".tmp"
+# The files a write or a change leaves beside any JSON file, as .gitignore patterns: the staged text and the lock file.
+# A folder that is committed leaves both out, since git would add staged text that is renamed away as it reads it.
+LEFT_BESIDE = (f"*{_STAGED_SUFFIX}", f"*{_LOCK_SUFFIX}")
 
 
 class JsonFileUnreadable(ValueError):
@@ -91,7 +96,7 @@ class JsonFile:
         if self._holds(text):
             return self.path
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        staged = self.path.with_name(f"{self.path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+        staged = self.path.with_name(f"{self.path.name}.{os.getpid()}.{threading.get_ident()}{_STAGED_SUFFIX}")
         staged.write_text(text, encoding="utf-8")
         try:
             self._swap_in(staged)

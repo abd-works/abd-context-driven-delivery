@@ -342,20 +342,32 @@ class MockWorkingTree(WorkingTree):
 
     def _files(self, under: Path) -> dict[str, str]:
         """Every file under the folder under in this checkout, by its path from the checkout's top, with the hash of its
-        content; what the checkout's .gitignore names, and the .git marker, are left out, as git leaves them out."""
-        ignored = self._ignore_patterns()
+        content; what a .gitignore in the checkout names, read from its own folder, and the .git marker, are left out,
+        as git leaves them out."""
+        ignored: dict[Path, list[re.Pattern[str]]] = {}
         found = {}
         for path in self._files_at(under.resolve()):
             if not path.is_relative_to(self._repo.root):
                 continue
             relative = path.relative_to(self._repo.root).as_posix()
-            if relative.split("/", 1)[0] in _IGNORED_ALWAYS or any(pattern.search(relative) for pattern in ignored):
+            if relative.split("/", 1)[0] in _IGNORED_ALWAYS or self._is_ignored(path, ignored):
                 continue
             found[relative] = hashlib.sha1(path.read_bytes()).hexdigest()
         return found
 
-    def _ignore_patterns(self) -> list[re.Pattern[str]]:
-        gitignore = self._repo.root / ".gitignore"
+    def _is_ignored(self, path: Path, ignored: dict[Path, list[re.Pattern[str]]]) -> bool:
+        """Whether the .gitignore of a folder holding path, from the checkout's top down, names it, as a path from that
+        folder."""
+        for folder in [parent for parent in path.parents if parent.is_relative_to(self._repo.root)]:
+            if folder not in ignored:
+                ignored[folder] = self._ignore_patterns(folder)
+            relative = path.relative_to(folder).as_posix()
+            if any(pattern.search(relative) for pattern in ignored[folder]):
+                return True
+        return False
+
+    def _ignore_patterns(self, folder: Path) -> list[re.Pattern[str]]:
+        gitignore = folder / ".gitignore"
         if not gitignore.is_file():
             return []
         patterns = []
