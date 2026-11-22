@@ -7,7 +7,7 @@ Computer control is a tool only an agent in a chat has, so no spec can run a wal
 
 - **Purpose:** Test the chat bar and the prompt queue end to end, in the app a person uses them in, as story tests on the story map.
 - **Seam (terms):** DesktopWalk, DesktopScenario, DesktopStep, TestChat, NoDesktopStoryTest; the MCP operations `desktop-walk.scenarios`, `desktop-walk.open_test_chat` and `desktop-walk.desktop_walk`; the skill `/desktop-walk`.
-- **Dependencies (one-way):** Stories (`Stories.desktop_story_tests`, each story of a desktop story test with its scenarios and each step's lines below it), harness/agent_tools, harness/installation (`@skill`, `@data_field`), harness/mcp (`@mcp`), harness/chat (`ChatLinks`, which opens the test chat), space/repo (`NewRepository`, which makes the throwaway repository). It calls the end-to-end review only through the instructions it gives an agent.
+- **Dependencies (one-way):** Stories (`Stories.desktop_story_tests`, each story of a desktop story test with its scenarios and each step's lines below it), harness/agent_tools, harness/installation (`@skill`, `@data_field`), harness/mcp (`@mcp`), harness/chat (`Chats`, through which the test chat opens), space/repo (`NewRepository`, which makes the throwaway repository). It calls the end-to-end review only through the instructions it gives an agent.
 
 ## Constraint
 

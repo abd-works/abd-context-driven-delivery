@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.agent_tools.tool_call import ToolCall
 from harness.catalog_generator.catalog_examples import CatalogFidelity
 from harness.chat.chat import Chat, Chats
 from harness.apps.app import App
@@ -113,9 +114,12 @@ class Board:
     # Every ticket is in exactly one column; the board stores no ticket state.
 
 
-    def __init__(self, sessions: Sessions, practices: BoardPractices | None = None) -> None:
+    def __init__(self, sessions: Sessions, practices: BoardPractices | None = None, call: ToolCall | None = None) -> None:
         # The sessions of the board's repository, as this process holds them: each one a ticket, and which is open.
         self._sessions = sessions
+        # The call the board is read for, whose chat it shows the open session of and opens new chats beside; none for
+        # a board read outside a call, which shows the checkout folder's own open session.
+        self.call = call
         self._repo = sessions.repo
         # The catalog's view of each practice the board works through, which names its pages and its fidelities' skills,
         # held for the checkout by its sessions, since a board is made for every call. Its stages and tickets ask it.
@@ -128,10 +132,16 @@ class Board:
 
     @classmethod
     @tool_subject
-    def load(cls, project: Path | str) -> Board:
-        """The board of project, with every practice chosen; a tool call is handed the project the call names, the folder
-        the calling chat works in. Every checkout's board lists the repository's own ``.sessions``."""
-        return cls(Sessions.of_project(project))
+    def load(cls, project: Path | str, call: ToolCall | None = None) -> Board:
+        """The board of project, with every practice chosen, read for call; a tool call is handed the project the call
+        names, the folder the calling chat works in, and the call itself. Every checkout's board lists the repository's
+        own ``.sessions``."""
+        return cls(Sessions.of_project(project), call=call)
+
+    @property
+    def chat(self) -> str:
+        """The id of the chat the board is read for; empty for a call that names none, or a read outside a call."""
+        return self.call.chat_id if self.call is not None else ""
 
     @property
     def repo(self) -> Repo:
@@ -250,9 +260,9 @@ class Board:
     @property
     @data_field
     def active(self) -> Ticket | None:
-        """The ticket of the session saved as open, main's own ticket while main is. Sent whole, so
+        """The ticket of the session the board's chat has open, main's own ticket while main is. Sent whole, so
         a reader such as the chat bar draws the active session from it without finding the ticket again by its name."""
-        return self.placement.ticket(self.sessions.opened.name_for())
+        return self.placement.ticket(self.sessions.opened.name_for(self.chat))
 
     def column(self, name: str) -> Column:
         found = next((column for column in self._columns if column.name == name), None)
@@ -618,9 +628,9 @@ class Stage(Column):
 
     @classmethod
     @tool_subject
-    def load(cls, stage: str, *, project: Path | str) -> Stage:
-        """The stage named stage, such as Discovery, on the board of project."""
-        return Board.load(project).stage(stage)
+    def load(cls, stage: str, *, project: Path | str, call: ToolCall | None = None) -> Stage:
+        """The stage named stage, such as Discovery, on the board of project, read for call."""
+        return Board.load(project, call).stage(stage)
 
     @property
     def steps(self) -> list[str]:

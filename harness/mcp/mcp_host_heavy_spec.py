@@ -521,7 +521,7 @@ with description("an MCP host that has been restarted, on a project with a sessi
         self.project = Path(tempfile.mkdtemp(prefix="mcp-host-restarted-"))
         (self.project / ".git").mkdir()
         sessions = Sessions(self.project)
-        sessions.opened.open(sessions.create("alpha", self.project))
+        sessions.opened.open(sessions.create("alpha", self.project), "")
         self.host = McpHost.from_refs(("cdd_guidance.actions.generate.generate:Generate",), repo=str(_REPO_ROOT), project=str(self.project))
         self.host.dispatch("cdd.restart", {})
 

@@ -67,7 +67,7 @@ def _open_project() -> ThrowawayProject:
     throwaway = ThrowawayProject()
     (throwaway.root / "docs").mkdir()
     sessions = Sessions(throwaway.root)
-    sessions.opened.open(sessions.create("alpha", throwaway.root))
+    sessions.opened.open(sessions.create("alpha", throwaway.root), "")
     return throwaway
 
 

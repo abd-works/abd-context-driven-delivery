@@ -64,12 +64,12 @@ QUEUE_TEST = """\
 
 
 class OpenedChats:
-    """The chats' opener as the walk sees it: each folder and prompt a new chat was opened with."""
+    """The chats as the walk sees them: each folder and prompt a new chat was opened with."""
 
     def __init__(self) -> None:
         self.opened: list[tuple[str, str]] = []
 
-    def open_new(self, folder: str, prompt: str) -> str:
+    def open(self, folder: str, prompt: str) -> str:
         self.opened.append((folder, prompt))
         return f"claude://code/new?folder={folder}"
 
@@ -83,7 +83,7 @@ with description("a desktop walk of a project") as self:
         self.test_chats = Path(tempfile.mkdtemp(prefix="desktop-walk-chats-"))
         self.chats = OpenedChats()
         self.made: list[Path] = []
-        self.walk = DesktopWalk(self.project, opener=self.chats, test_chats_folder=self.test_chats, make_repository=self.made.append)
+        self.walk = DesktopWalk(self.project, chats=self.chats, test_chats_folder=self.test_chats, make_repository=self.made.append)
 
     with after.each:
         shutil.rmtree(self.project, ignore_errors=True)

@@ -9,7 +9,7 @@ from expects import contain, expect, equal, raise_error
 
 from harness.chat.chat import CHATS_FOLDER
 from harness.installation.json_file import JsonFile, JsonFileBusy
-from tools.prompt_queue.prompt_queue import ChatIdNotAnId, PromptNotQueued, PromptQueue, QueueFileUnreadable, StepStateUnknown
+from tools.prompt_queue.prompt_queue import ChatIdNotAnId, PromptNotQueued, PromptQueue, QueueFileUnreadable, StepNotPlanned, StepStateUnknown
 
 
 
@@ -23,46 +23,46 @@ with describe(PromptQueue):
         self.queue.add_all(["Write the scenarios", "  ", "Run the unit tier"])
 
     with it("queues each text in order, leaving out texts that are only spaces"):
-        expect([prompt["text"] for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
+        expect([prompt.text for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
 
     with it("keeps a prompt the agent marks done in its place, marked done, so the person sees it finish"):
         first = self.queue.prompts[0]
-        self.queue.done(first["id"])
-        expect([(prompt["text"], prompt.get("is_done", False)) for prompt in self.queue.prompts]).to(equal([("Write the scenarios", True), ("Run the unit tier", False)]))
+        self.queue.done(first.id)
+        expect([(prompt.text, prompt.is_done) for prompt in self.queue.prompts]).to(equal([("Write the scenarios", True), ("Run the unit tier", False)]))
 
     with it("clears the finished prompts first, leaving the work still to do"):
-        self.queue.done(self.queue.prompts[0]["id"])
-        expect([prompt["text"] for prompt in self.queue.clear().prompts]).to(equal(["Run the unit tier"]))
+        self.queue.done(self.queue.prompts[0].id)
+        expect([prompt.text for prompt in self.queue.clear().prompts]).to(equal(["Run the unit tier"]))
 
     with it("clears every prompt when none is finished"):
         expect(self.queue.clear().prompts).to(equal([]))
 
     with it("keeps the robot a prompt is assigned to on the queue, so its robot's queue comes back after a reload"):
-        self.queue.assign(self.queue.prompts[0]["id"], "Bolt")
-        expect([prompt.get("robot", "") for prompt in self.queue.prompts]).to(equal(["Bolt", ""]))
+        self.queue.assign(self.queue.prompts[0].id, "Bolt")
+        expect([prompt.robot for prompt in self.queue.prompts]).to(equal(["Bolt", ""]))
 
     with it("takes a prompt off its robot when it is assigned to no robot"):
-        first = self.queue.prompts[0]["id"]
+        first = self.queue.prompts[0].id
         self.queue.assign(first, "Bolt")
         self.queue.assign(first, "")
-        expect("robot" in self.queue.prompts[0]).to(equal(False))
+        expect("robot" in self.queue.prompts[0].record).to(equal(False))
 
     with it("reopens a done prompt so it runs again, its steps not started"):
-        first = self.queue.prompts[0]["id"]
+        first = self.queue.prompts[0].id
         self.queue.set_steps(first, [{"text": "Write them", "state": "done"}])
         self.queue.done(first)
         self.queue.reopen(first)
-        expect((self.queue.prompts[0].get("is_done", False), self.queue.prompts[0]["steps"])).to(equal((False, [{"text": "Write them", "state": "pending"}])))
+        expect((self.queue.prompts[0].is_done, self.queue.prompts[0].listed_steps)).to(equal((False, [{"text": "Write them", "state": "pending"}])))
 
     with it("refuses to mark done a prompt the queue does not hold"):
         expect(lambda: self.queue.done("gone")).to(raise_error(PromptNotQueued))
 
     with it("names the chat whose queue it read and the prompts that queue holds, when it refuses one it does not hold"):
-        held = ", ".join(prompt["id"] for prompt in self.queue.prompts)
+        held = ", ".join(prompt.id for prompt in self.queue.prompts)
         expect(lambda: self.queue.done("gone")).to(raise_error(PromptNotQueued, f"no prompt 'gone' is on the queue of chat chat-1, which holds {held}"))
 
     with it("says when a prompt was taken off the queue, when it refuses one the archive holds"):
-        removed = self.queue.prompts[0]["id"]
+        removed = self.queue.prompts[0].id
         self.queue.remove(removed)
         expect(lambda: self.queue.done(removed)).to(raise_error(PromptNotQueued, contain(f"{removed} was taken off the queue at ")))
 
@@ -72,7 +72,7 @@ with describe(PromptQueue):
         expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Write the scenarios", "Run the unit tier"]]))
 
     with it("keeps a copy of a prompt remove takes off, as JSON in the chat's queue archive"):
-        self.queue.remove(self.queue.prompts[1]["id"])
+        self.queue.remove(self.queue.prompts[1].id)
         archived = [json.loads(saved.read_text(encoding="utf-8")) for saved in (self.folder / "queue-archive").glob("*.json")]
         expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Run the unit tier"]]))
 
@@ -92,15 +92,15 @@ with describe(PromptQueue):
         expect(len(list((worktree / ".sessions" / "simple-queue" / "queue-archive").glob("*.json")))).to(equal(1))
 
     with it("files a message under a goal as a step not started, marked as the person's interruption"):
-        goal = self.queue.prompts[0]["id"]
+        goal = self.queue.prompts[0].id
         self.queue.add_interruption(goal, "cut the text with an ellipsis")
-        expect(self.queue.prompts[0]["steps"]).to(equal([{"text": "[interruption] cut the text with an ellipsis", "state": "pending"}]))
+        expect(self.queue.prompts[0].listed_steps).to(equal([{"text": "[interruption] cut the text with an ellipsis", "state": "pending"}]))
 
     with it("reopens a done goal a message is filed under, since it has work again"):
-        goal = self.queue.prompts[0]["id"]
+        goal = self.queue.prompts[0].id
         self.queue.done(goal)
         self.queue.add_interruption(goal, "cut the text with an ellipsis")
-        expect(self.queue.prompts[0].get("is_done", False)).to(equal(False))
+        expect(self.queue.prompts[0].is_done).to(equal(False))
 
     with it("refuses to file a message under a goal the queue does not hold"):
         expect(lambda: self.queue.add_interruption("gone", "cut the text")).to(raise_error(PromptNotQueued))
@@ -110,36 +110,89 @@ with describe(PromptQueue):
         expect([self.queue.queue_once("handoff-1.md", steps), self.queue.queue_once("handoff-1.md", steps)]).to(equal([3, 0]))
 
     with it("keeps a card's text when it is edited to only spaces"):
-        self.queue.edit(self.queue.prompts[1]["id"], "   ")
-        expect([prompt["text"] for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
+        self.queue.edit(self.queue.prompts[1].id, "   ")
+        expect([prompt.text for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
 
     with it("files nothing under a goal for a message of only spaces"):
-        self.queue.add_interruption(self.queue.prompts[0]["id"], "   ")
-        expect("steps" in self.queue.prompts[0]).to(equal(False))
+        self.queue.add_interruption(self.queue.prompts[0].id, "   ")
+        expect("steps" in self.queue.prompts[0].record).to(equal(False))
 
     with it("leaves a done goal done for a message of only spaces"):
-        goal = self.queue.prompts[0]["id"]
+        goal = self.queue.prompts[0].id
         self.queue.done(goal)
         self.queue.add_interruption(goal, "   ")
-        expect(self.queue.prompts[0].get("is_done", False)).to(equal(True))
+        expect(self.queue.prompts[0].is_done).to(equal(True))
 
     with it("leaves out a step whose text is only spaces"):
-        goal = self.queue.prompts[0]["id"]
+        goal = self.queue.prompts[0].id
         self.queue.set_steps(goal, [{"text": "Read the epic", "state": "done"}, {"text": "  ", "state": "pending"}])
-        expect(self.queue.prompts[0]["steps"]).to(equal([{"text": "Read the epic", "state": "done"}]))
+        expect(self.queue.prompts[0].listed_steps).to(equal([{"text": "Read the epic", "state": "done"}]))
 
     with it("refuses a step whose state is not pending, in_progress or done, naming the state and the three it takes"):
-        goal = self.queue.prompts[0]["id"]
+        goal = self.queue.prompts[0].id
         expect(lambda: self.queue.set_steps(goal, [{"text": "Read the epic", "state": "completed"}])).to(raise_error(StepStateUnknown, contain("'completed'", "pending, in_progress, done")))
 
     with it("keeps the steps a prompt had when it refuses a step state"):
-        goal = self.queue.prompts[0]["id"]
+        goal = self.queue.prompts[0].id
         self.queue.set_steps(goal, [{"text": "Read the epic", "state": "done"}])
         try:
             self.queue.set_steps(goal, [{"text": "Read the epic", "state": "completed"}])
         except StepStateUnknown:
             pass
-        expect(self.queue.prompts[0]["steps"]).to(equal([{"text": "Read the epic", "state": "done"}]))
+        expect(self.queue.prompts[0].listed_steps).to(equal([{"text": "Read the epic", "state": "done"}]))
+
+    with context("whose first prompt has three steps planned, the first done"):
+        with before.each:
+            self.goal = self.queue.prompts[0].id
+            self.queue.set_steps(self.goal, [{"text": "Read the epic", "state": "done"}, {"text": "Write them", "state": "in_progress"}, {"text": "Check them", "state": "pending"}])
+
+        def steps(self) -> list[tuple[str, str]]:
+            return [(step["text"], step["state"]) for step in self.queue.prompt(self.goal).listed_steps]
+
+        with it("points its steps at the first step not done"):
+            expect(self.queue.prompt(self.goal).step_pointer).to(equal(1))
+
+        with it("moves a step to another place, counted from 1"):
+            self.queue.move_step(self.goal, 3, 1)
+            expect([text for text, _ in self.steps()]).to(equal(["Check them", "Read the epic", "Write them"]))
+
+        with it("moves nothing for a place past the last step"):
+            self.queue.move_step(self.goal, 1, 4)
+            expect([text for text, _ in self.steps()]).to(equal(["Read the epic", "Write them", "Check them"]))
+
+        with it("takes a step off"):
+            self.queue.remove_step(self.goal, 2)
+            expect([text for text, _ in self.steps()]).to(equal(["Read the epic", "Check them"]))
+
+        with it("refuses a step the prompt does not have"):
+            expect(lambda: self.queue.remove_step(self.goal, 4)).to(raise_error(StepNotPlanned))
+
+        with it("moves the pointer on: its step done, the next worked"):
+            self.queue.step_on(self.goal)
+            expect([state for _, state in self.steps()]).to(equal(["done", "done", "in_progress"]))
+
+        with it("moves the pointer back: the done step above worked again, every later step not started"):
+            self.queue.step_back(self.goal)
+            expect([state for _, state in self.steps()]).to(equal(["in_progress", "pending", "pending"]))
+
+    with context("whose first prompt is done and second asks a decision"):
+        with before.each:
+            self.queue.done(self.queue.prompts[0].id)
+            self.queue.edit(self.queue.prompts[1].id, "[decision required] Keep the old name?")
+            self.queue.add("Run the heavy tier")
+
+        with it("has the first prompt that waits next, passing over the one asking a decision"):
+            expect(self.queue.next.text).to(equal("Run the heavy tier"))
+
+        with it("has none next once no prompt waits"):
+            self.queue.done(self.queue.next.id)
+            expect(self.queue.next).to(equal(None))
+
+    # The stable and dev lanes' servers read one queue file, so a prompt is written in the keys both read.
+    with it("writes a prompt in the keys the queue's file has always held, an optional one only when it has it"):
+        self.queue.assign(self.queue.prompts[0].id, "Bolt")
+        held = json.loads((self.folder / "prompt-queue.json").read_text(encoding="utf-8"))["prompts"]
+        expect([sorted(card) for card in held]).to(equal([["id", "robot", "text"], ["id", "text"]]))
 
     with context("whose file another caller holds for a change"):
         with it("refuses a change it waited for in vain, saying the file is held"):
@@ -154,10 +207,10 @@ with describe(PromptQueue):
             file.write_text(file.read_text(encoding="utf-8"), encoding="utf-8-sig")
 
         with it("holds the prompts the file holds"):
-            expect([prompt["text"] for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
+            expect([prompt.text for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
 
         with it("queues a new prompt after the prompts the file holds"):
-            expect([prompt["text"] for prompt in self.queue.add("Run the heavy tier").prompts]).to(equal(["Write the scenarios", "Run the unit tier", "Run the heavy tier"]))
+            expect([prompt.text for prompt in self.queue.add("Run the heavy tier").prompts]).to(equal(["Write the scenarios", "Run the unit tier", "Run the heavy tier"]))
 
     with context("whose file is cut off half way"):
         with before.each:

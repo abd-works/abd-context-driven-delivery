@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import mimetypes
 import uuid
 from pathlib import Path
-from typing import Literal, NotRequired, TypedDict, get_args
+from typing import Callable, Literal, TypedDict, get_args
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
@@ -33,6 +33,10 @@ ATTACHMENTS_FOLDER = "attachments"
 ARCHIVE_FOLDER = "queue-archive"
 # What marks a step that came from a message the person sent: a correction or comment filed under the goal it belongs to.
 INTERRUPTION_MARK = "[interruption]"
+# What marks a prompt that waits for the person's answer to a decision: the queue's pointer passes over it.
+DECISION_MARK = "[decision required]"
+# The key under which the queue's file lists each source, such as a handoff, whose prompts were queued once.
+_QUEUED_SOURCES = "handoffs"
 # What a chat that opened a session is told once its latest handoff's next steps are on its queue.
 _HANDOFF_QUEUED_NOTE = (
     "**Handoff queued.** The {count} steps of {handoff}'s Approach for Next Agent are on this chat's prompt queue, in "
@@ -50,23 +54,11 @@ _PATH_MARKS = ("/", "\\", ":", "..")
 
 
 class PromptStep(TypedDict):
-    """One thing the agent plans to do for a queued prompt: its text and where it stands."""
+    """One thing the agent plans to do for a queued prompt, as the queue's file and set_steps hold it: its text and
+    where it stands. A step has no behaviour of its own: its prompt's *PromptSteps* change it."""
 
     text: str
     state: StepState
-
-
-class QueuedPrompt(TypedDict):
-    """One prompt on the queue: its own id, which stays when the prompt moves or is edited, its text, the steps the
-    agent planned for it, none until it plans them, and whether its work is done; a finished prompt stays on the queue,
-    drawn dim, until the queue is cleared."""
-
-    id: str
-    text: str
-    steps: NotRequired[list[PromptStep]]
-    attachments: NotRequired[list[str]]
-    is_done: NotRequired[bool]
-    robot: NotRequired[str]
 
 
 class StepNotPlanned(LookupError):
@@ -85,6 +77,204 @@ class StepStateUnknown(ValueError):
     def __init__(self, state: str) -> None:
         super().__init__(f"{state!r} is not a step's state, which is one of {', '.join(STEP_STATES)}")
         self.state = state
+
+
+class PromptSteps:
+    """*PromptSteps* are the steps the agent planned for one queued prompt, in order, and their pointer: the first step
+    not done, which the agent works next. Each change moves a step or its state; steps are numbered from 1, as a person
+    counts them."""
+
+    def __init__(self, prompt: str, steps: list[PromptStep]) -> None:
+        self._prompt = prompt
+        self._steps = [dict(step) for step in steps]
+
+    @property
+    def listed(self) -> list[PromptStep]:
+        """The steps, in order, each its text and its state."""
+        return [{"text": step["text"], "state": step["state"]} for step in self._steps]
+
+    @property
+    def pointer(self) -> int:
+        """The place, from 0, of the first step not done; past the last step when every step is done."""
+        return next((place for place, step in enumerate(self._steps) if step["state"] != "done"), len(self._steps))
+
+    def done(self, number: int) -> None:
+        """Mark step number done."""
+        self._step(number)["state"] = "done"
+
+    def move(self, step: int, place: int) -> None:
+        """Move step number step to place place among the steps, both counted from 1; a place past either end moves
+        nothing."""
+        moving = self._step(step)
+        if not 1 <= place <= len(self._steps):
+            return
+        self._steps.remove(moving)
+        self._steps.insert(place - 1, moving)
+
+    def remove(self, step: int) -> None:
+        """Take step number step off."""
+        self._steps.remove(self._step(step))
+
+    def back(self) -> None:
+        """The pointer moves up: the done step above it is worked again, and every step after that is not started.
+        With no step done, nothing changes."""
+        above = self.pointer - 1
+        if above < 0:
+            return
+        for place, step in enumerate(self._steps):
+            if place >= above:
+                step["state"] = "in_progress" if place == above else "pending"
+
+    def on(self) -> None:
+        """The pointer moves down: its step is done, and the step after it is the one worked. With every step done,
+        nothing changes."""
+        pointed = self.pointer
+        if pointed >= len(self._steps):
+            return
+        self._steps[pointed]["state"] = "done"
+        if pointed + 1 < len(self._steps):
+            self._steps[pointed + 1]["state"] = "in_progress"
+
+    def restarted(self) -> None:
+        """Every step not started, as when its prompt opens again."""
+        for step in self._steps:
+            step["state"] = "pending"
+
+    def plan(self, steps: list[PromptStep]) -> None:
+        """Replace the steps with steps, in order: a step whose text is only spaces is left out, and a state that is
+        none of a step's states is refused."""
+        unknown = next((step["state"] for step in steps if step["state"] not in STEP_STATES), None)
+        if unknown is not None:
+            raise StepStateUnknown(unknown)
+        self._steps = [{"text": step["text"].strip(), "state": step["state"]} for step in steps if step["text"].strip()]
+
+    def add(self, text: str) -> None:
+        """Add text as the last step, not started."""
+        self._steps.append({"text": text, "state": "pending"})
+
+    def _step(self, number: int) -> dict:
+        if not 1 <= number <= len(self._steps):
+            raise StepNotPlanned(self._prompt, number, len(self._steps))
+        return self._steps[number - 1]
+
+
+@identity("id")
+class QueuedPrompt:
+    """*QueuedPrompt* is one prompt on a chat's queue: its own id, which stays when the prompt moves or is edited, its
+    text, the steps the agent planned for it, the files queued with it, the robot it is given to in sub-agent mode, and
+    whether its work is done; a finished prompt stays on the queue, drawn dim, until the queue is cleared. It changes
+    itself, and ``record`` is what the queue's file keeps of it, in the keys every lane's server reads."""
+
+    def __init__(self, record: dict) -> None:
+        self._id: str = record["id"]
+        self._text: str = record["text"]
+        # Whether the file named each optional field, so record writes back exactly the keys it read.
+        self._has_steps = "steps" in record
+        self.steps = PromptSteps(self._id, list(record.get("steps", [])))
+        self._attachments: list[str] | None = list(record["attachments"]) if "attachments" in record else None
+        self._is_done: bool | None = record.get("is_done") if "is_done" in record else None
+        self._robot: str = record.get("robot", "")
+
+    @classmethod
+    def new(cls, text: str) -> QueuedPrompt:
+        """A new prompt of text, with an id of its own."""
+        return cls({"id": uuid.uuid4().hex[:_PROMPT_ID_LENGTH], "text": text.strip()})
+
+    @property
+    @data_field
+    def id(self) -> str:
+        return self._id
+
+    @property
+    @data_field
+    def text(self) -> str:
+        return self._text
+
+    @property
+    @data_field(key="steps")
+    def listed_steps(self) -> list[PromptStep]:
+        """The steps planned for it, in order; none until the agent plans them."""
+        return self.steps.listed
+
+    @property
+    @data_field
+    def step_pointer(self) -> int:
+        """The place, from 0, of its first step not done, where its steps' pointer stands."""
+        return self.steps.pointer
+
+    @property
+    @data_field
+    def attachments(self) -> list[str]:
+        """The files queued with it, each a path in the chat's folder."""
+        return list(self._attachments or [])
+
+    @property
+    @data_field
+    def is_done(self) -> bool:
+        return bool(self._is_done)
+
+    @property
+    @data_field
+    def robot(self) -> str:
+        """The robot it is given to in sub-agent mode; empty for none."""
+        return self._robot
+
+    @property
+    @data_field
+    def is_waiting(self) -> bool:
+        """Whether it waits to be done: not done, and asking no decision of the person, which a prompt whose text
+        starts with [decision required] does. The queue's pointer stands on the first prompt that waits."""
+        return not self.is_done and not self._text.startswith(DECISION_MARK)
+
+    def edit(self, text: str) -> None:
+        """Change its text to text; text that is only spaces changes nothing."""
+        if text.strip():
+            self._text = text.strip()
+
+    def mark_done(self) -> None:
+        self._is_done = True
+
+    def reopen(self) -> None:
+        """Not done, and each of its steps not started, so it runs again."""
+        self._is_done = False
+        self.steps.restarted()
+
+    def assign(self, robot: str) -> None:
+        """Give it to robot; an empty robot takes it off its robot."""
+        self._robot = robot.strip()
+
+    def plan(self, steps: list[PromptStep]) -> None:
+        """Give it steps, in place of any it had."""
+        self.steps.plan(steps)
+        self._has_steps = True
+
+    def interrupt(self, text: str) -> None:
+        """File a message the person sent under it: its last step, not started, marked as an interruption; a done
+        prompt opens again, since it has work again. A message that is only spaces files nothing."""
+        if not text.strip():
+            return
+        self.steps.add(f"{INTERRUPTION_MARK} {text.strip()}")
+        self._has_steps = True
+        self._is_done = False
+
+    def attach(self, file: Path) -> None:
+        """List file among the files queued with it."""
+        self._attachments = [*(self._attachments or []), str(file)]
+
+    @property
+    def record(self) -> dict:
+        """What the queue's file keeps of it: id and text, and steps, attachments, is_done and robot only when it has
+        them, the keys the stable and dev lanes' servers both read."""
+        kept: dict = {"id": self._id, "text": self._text}
+        if self._has_steps:
+            kept["steps"] = self.steps.listed
+        if self._attachments is not None:
+            kept["attachments"] = list(self._attachments)
+        if self._is_done is not None:
+            kept["is_done"] = self._is_done
+        if self._robot:
+            kept["robot"] = self._robot
+        return kept
 
 
 class ChatIdNotAnId(ValueError):
@@ -174,12 +364,23 @@ class PromptQueue:
             if card["id"] in places:
                 raise self._misshapen(f"cards {places[card['id']]} and {place} share the id {card['id']!r}")
             places[card["id"]] = place
-        return list(cards)
+        return [QueuedPrompt(card) for card in cards]
+
+    @property
+    @data_field(reference=True)
+    def next(self) -> QueuedPrompt | None:
+        """The prompt to do next, where the queue's pointer stands: the first that waits, neither done nor asking a
+        decision of the person; none when no prompt waits."""
+        return next((prompt for prompt in self.prompts if prompt.is_waiting), None)
+
+    def prompt(self, prompt: str) -> QueuedPrompt:
+        """The queued prompt whose id is prompt, refused with PromptNotQueued when the queue holds none."""
+        return self._found(self.prompts, prompt)
 
     @mcp
     @agent_tool
     def show(self) -> PromptQueue:
-        """Answer this chat's prompt queue: the prompts queued, first to be sent first."""
+        """Answer this chat's prompt queue: the prompts queued, first to be sent first, and the one to do next."""
         return self
 
     @mcp
@@ -199,20 +400,16 @@ class PromptQueue:
     @agent_tool
     def edit(self, prompt: str, text: str) -> PromptQueue:
         """Change the text of the queued prompt whose id is prompt, keeping its place. Text that is only spaces changes nothing."""
-        with self._file.held():
-            held = self._holding(prompt)
-            if not text.strip():
-                return self
-            return self._keep([{**item, "text": text.strip()} if item["id"] == prompt else item for item in held])
+        return self._changing(prompt, lambda found: found.edit(text))
 
     @mcp
     @agent_tool
     def move(self, prompt: str, to: int) -> PromptQueue:
         """Move the queued prompt whose id is prompt to place to, counted from 0 at the front of the queue."""
         with self._file.held():
-            held = self._holding(prompt)
-            moving = next(item for item in held if item["id"] == prompt)
-            rest = [item for item in held if item["id"] != prompt]
+            held = self.prompts
+            moving = self._found(held, prompt)
+            rest = [item for item in held if item is not moving]
             rest.insert(max(0, min(to, len(rest))), moving)
             return self._keep(rest)
 
@@ -221,9 +418,10 @@ class PromptQueue:
     def remove(self, prompt: str) -> PromptQueue:
         """Take the queued prompt whose id is prompt off the queue, keeping a copy of it in the chat's queue archive."""
         with self._file.held():
-            held = self._holding(prompt)
-            self._archive([item for item in held if item["id"] == prompt])
-            return self._keep([item for item in held if item["id"] != prompt])
+            held = self.prompts
+            removed = self._found(held, prompt)
+            self._archive([removed])
+            return self._keep([item for item in held if item is not removed])
 
     @mcp
     @agent_tool
@@ -231,7 +429,7 @@ class PromptQueue:
         """Take the finished prompts off the queue, leaving the work still to do; with none finished, take every prompt off."""
         with self._file.held():
             held = self.prompts
-            unfinished = [item for item in held if not item.get("is_done", False)]
+            unfinished = [item for item in held if not item.is_done]
             kept = [] if len(unfinished) == len(held) else unfinished
             self._archive([item for item in held if item not in kept])
             return self._keep(kept)
@@ -240,22 +438,19 @@ class PromptQueue:
     @agent_tool
     def done(self, prompt: str) -> PromptQueue:
         """Mark the prompt whose id is prompt done once its work is done: it stays in its place, drawn dim, so the person sees it finish, and the next prompt not done is the next to do. An agent working through the queue does each prompt in order, first to last, and calls this as it finishes each one."""
-        with self._file.held():
-            return self._keep([{**held, "is_done": True} if held["id"] == prompt else held for held in self._holding(prompt)])
+        return self._changing(prompt, QueuedPrompt.mark_done)
 
     @mcp
     @agent_tool
     def reopen(self, prompt: str) -> PromptQueue:
         """Open the done prompt whose id is prompt again so it runs again: it is no longer done, and its steps are not started. The person moves the queue's pointer back onto it to rerun its work."""
-        with self._file.held():
-            return self._keep([self._reopened(held) if held["id"] == prompt else held for held in self._holding(prompt)])
+        return self._changing(prompt, QueuedPrompt.reopen)
 
     @mcp
     @agent_tool
     def assign(self, prompt: str, robot: str) -> PromptQueue:
         """Give the queued prompt whose id is prompt to the robot named robot, the sub-agent that works it in sub-agent mode: the queue keeps it, so each robot's queue comes back after a reload. An empty robot takes the prompt off its robot."""
-        with self._file.held():
-            return self._keep([self._assigned(held, robot.strip()) if held["id"] == prompt else held for held in self._holding(prompt)])
+        return self._changing(prompt, lambda found: found.assign(robot))
 
     @mcp
     @agent_tool
@@ -264,58 +459,72 @@ class PromptQueue:
         unknown = next((step["state"] for step in steps if step["state"] not in STEP_STATES), None)
         if unknown is not None:
             raise StepStateUnknown(unknown)
-        planned = [{"text": step["text"].strip(), "state": step["state"]} for step in steps if step["text"].strip()]
-        with self._file.held():
-            return self._keep([{**held, "steps": planned} if held["id"] == prompt else held for held in self._holding(prompt)])
+        return self._changing(prompt, lambda found: found.plan(steps))
 
     @mcp
     @agent_tool
     def add_interruption(self, prompt: str, text: str) -> PromptQueue:
         """File a message the person sent under the goal whose id is prompt: it becomes that goal's last step, not started, its text starting [interruption], and a done goal opens again, since it has work again. The agent moves it to a card of its own with add when it is separate work. A message that is only spaces files nothing and opens nothing."""
-        with self._file.held():
-            held = self._holding(prompt)
-            if not text.strip():
-                return self
-            goal = next(item for item in held if item["id"] == prompt)
-            filed = [*goal.get("steps", []), {"text": f"{INTERRUPTION_MARK} {text.strip()}", "state": "pending"}]
-            return self._keep([{**item, "steps": filed, "is_done": False} if item["id"] == prompt else item for item in held])
+        return self._changing(prompt, lambda found: found.interrupt(text))
 
     @mcp
     @agent_tool
     def step_done(self, prompt: str, step: int) -> PromptQueue:
         """Mark step number step, counted from 1, of the queued prompt whose id is prompt done. The prompt stays on the queue until it is marked done with done, even once every step is done."""
-        with self._file.held():
-            held = self._holding(prompt)
-            planned = next(item for item in held if item["id"] == prompt).get("steps", [])
-            if not 1 <= step <= len(planned):
-                raise StepNotPlanned(prompt, step, len(planned))
-            ticked = [{**planned_step, "state": "done"} if number == step else planned_step for number, planned_step in enumerate(planned, start=1)]
-            return self._keep([{**item, "steps": ticked} if item["id"] == prompt else item for item in held])
+        return self._changing(prompt, lambda found: found.steps.done(step))
+
+    @mcp
+    @agent_tool
+    def move_step(self, prompt: str, step: int, place: int) -> PromptQueue:
+        """Move step number step of the queued prompt whose id is prompt to place place among its steps, both counted from 1, as the step's up and down buttons do; a place past either end moves nothing."""
+        return self._changing(prompt, lambda found: found.steps.move(step, place))
+
+    @mcp
+    @agent_tool
+    def remove_step(self, prompt: str, step: int) -> PromptQueue:
+        """Take step number step, counted from 1, off the queued prompt whose id is prompt."""
+        return self._changing(prompt, lambda found: found.steps.remove(step))
+
+    @mcp
+    @agent_tool
+    def step_back(self, prompt: str) -> PromptQueue:
+        """Move the step pointer of the queued prompt whose id is prompt up, as its ▲ does: the done step above the pointer is worked again, and every step after it is not started."""
+        return self._changing(prompt, lambda found: found.steps.back())
+
+    @mcp
+    @agent_tool
+    def step_on(self, prompt: str) -> PromptQueue:
+        """Move the step pointer of the queued prompt whose id is prompt down, as its ▼ does: the step it points at is done, and the step after it is the one worked."""
+        return self._changing(prompt, lambda found: found.steps.on())
 
     @mcp
     @agent_tool
     def attach(self, prompt: str, filename: str, media_type: str, data: str) -> PromptQueue:
         """Keep an image or document pasted in a queued draft beside the queued prompt whose id is prompt: data is its bytes in base64, saved as a file in this chat's folder whose path the prompt lists under attachments, for the agent to open when it takes the prompt."""
-        with self._file.held():
-            held = self._holding(prompt)
-            listed = next(item for item in held if item["id"] == prompt).get("attachments", [])
-            saved = self._saved_attachment(prompt, len(listed) + 1, filename, media_type, data)
-            return self._keep([{**item, "attachments": [*listed, str(saved)]} if item["id"] == prompt else item for item in held])
+        return self._changing(prompt, lambda found: found.attach(self._saved_attachment(prompt, len(found.attachments) + 1, filename, media_type, data)))
 
     def queue_once(self, source: str, texts: list[str]) -> int:
         """Queue texts, in order, one prompt each, once for source, such as the steps of a handoff called source: a
         source already queued on this chat queues nothing again. Answers how many it queued."""
         with self._file.held():
             held = self._file.read()
-            if source in held.get("handoffs", []):
+            if source in held.get(_QUEUED_SOURCES, []):
                 return 0
             queued = [*self.prompts, *self._new_prompts(texts)]
-            self._file.write({**held, "prompts": queued, "handoffs": [*held.get("handoffs", []), source]})
+            self._file.write({**held, "prompts": [prompt.record for prompt in queued], _QUEUED_SOURCES: [*held.get(_QUEUED_SOURCES, []), source]})
             return len([text for text in texts if text.strip()])
+
+    def _changing(self, prompt: str, change: Callable[[QueuedPrompt], None]) -> PromptQueue:
+        """Make change to the queued prompt whose id is prompt and keep the queue, holding the queue's file from its
+        read to its write; a prompt the queue does not hold is refused, and nothing changes."""
+        with self._file.held():
+            held = self.prompts
+            change(self._found(held, prompt))
+            return self._keep(held)
 
     def _new_prompts(self, texts: list[str]) -> list[QueuedPrompt]:
         """One prompt, with an id of its own, for each of texts that is more than spaces."""
-        return [{"id": uuid.uuid4().hex[:_PROMPT_ID_LENGTH], "text": text.strip()} for text in texts if text.strip()]
+        return [QueuedPrompt.new(text) for text in texts if text.strip()]
 
     def _misshapen(self, fault: str) -> QueueFileUnreadable:
         """The refusal of the queue's file for fault, what in it is not a prompt queue."""
@@ -338,14 +547,15 @@ class PromptQueue:
         taken_off = datetime.now(timezone.utc)
         self._archive_folder.mkdir(parents=True, exist_ok=True)
         saved = self._archive_folder / f"{taken_off.strftime('%Y%m%dT%H%M%S%fZ')}.json"
-        saved.write_text(json.dumps({"chat": self._chat, "taken_off": taken_off.isoformat(), "prompts": prompts}, indent=2), encoding="utf-8")
+        kept = {"chat": self._chat, "taken_off": taken_off.isoformat(), "prompts": [prompt.record for prompt in prompts]}
+        saved.write_text(json.dumps(kept, indent=2), encoding="utf-8")
 
-    def _holding(self, prompt: str) -> list[QueuedPrompt]:
-        """The prompts queued, refusing a prompt id the queue does not hold."""
-        held = self.prompts
-        if not any(item["id"] == prompt for item in held):
-            raise PromptNotQueued(prompt, self._chat, [item["id"] for item in held], self._taken_off(prompt))
-        return held
+    def _found(self, held: list[QueuedPrompt], prompt: str) -> QueuedPrompt:
+        """The prompt of held whose id is prompt, refusing an id the queue does not hold."""
+        found = next((item for item in held if item.id == prompt), None)
+        if found is None:
+            raise PromptNotQueued(prompt, self._chat, [item.id for item in held], self._taken_off(prompt))
+        return found
 
     def _taken_off(self, prompt: str) -> str:
         """When the chat's queue archive says prompt was taken off the queue, the latest time; empty when it holds none."""
@@ -357,18 +567,8 @@ class PromptQueue:
     def _keep(self, prompts: list[QueuedPrompt]) -> PromptQueue:
         """Write prompts as the queue, beside whatever else the queue's file holds. Its caller holds the file from the
         read prompts were made from, so no other caller's change comes between that read and this write."""
-        self._file.write({**self._file.read(), "prompts": prompts})
+        self._file.write({**self._file.read(), "prompts": [prompt.record for prompt in prompts]})
         return self
-
-    def _reopened(self, prompt: QueuedPrompt) -> QueuedPrompt:
-        """The prompt not done, each of its steps not started."""
-        steps = {"steps": [{**step, "state": "pending"} for step in prompt["steps"]]} if "steps" in prompt else {}
-        return {**prompt, "is_done": False, **steps}
-
-    def _assigned(self, prompt: QueuedPrompt, robot: str) -> QueuedPrompt:
-        """The prompt given to robot, or to no robot when robot is empty."""
-        unassigned = {key: value for key, value in prompt.items() if key != "robot"}
-        return {**unassigned, "robot": robot} if robot else unassigned
 
 
 def _queue_latest_handoff(session: Session, chat: str) -> str:

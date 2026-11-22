@@ -108,7 +108,7 @@ with description("a session"):
 
             with context("that has closed"):
                 with it("should be the main session again"):
-                    Sessions(self.root).current().close()
+                    Sessions(self.root).current().close(ToolCall())
                     expect(self.event().session.name).to(equal("main"))
 
     # (S) Session --> Read Call Session
@@ -154,7 +154,7 @@ with description("a session"):
             self.instructions = Sessions(self.repo).switch("alpha", call=self.call)
 
         with it("should queue the handoff's steps on the chat's prompt queue, in order"):
-            expect([prompt["text"] for prompt in PromptQueue.of_chat(self.chat).prompts]).to(equal(["Read the handoff", "Run the unit tier"]))
+            expect([prompt.text for prompt in PromptQueue.of_chat(self.chat).prompts]).to(equal(["Read the handoff", "Run the unit tier"]))
 
         with it("should tell the agent to work through them, marking each one done"):
             expect(self.instructions).to(contain("prompt-queue.done"))
@@ -218,7 +218,7 @@ with description("a session"):
             self.work = self.repo / "work"
             self.work.mkdir()
             Sessions(self.repo).switch("alpha", self.work)
-            Sessions(self.called).current().close()
+            Sessions(self.called).current().close(ToolCall())
 
         with it("should clear the open session kept under the cdd home"):
             expect(WorkState(self.repo).session).to(equal(""))
@@ -353,7 +353,7 @@ with description("a session"):
             # The board and the chat bar name the active ticket by the open session's name, so it follows the worktree
             # as current does: the ticket's own chat shows the ticket, not main.
             with it("should name that ticket as the session open"):
-                expect(Sessions(self.called).opened.name_for()).to(equal("alpha"))
+                expect(Sessions(self.called).opened.name_for("")).to(equal("alpha"))
 
             with context("that a chat in the repository's own folder switches to"):
                 with before.each:
@@ -1667,7 +1667,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
             expect("--- " in log).to(equal(True))
 
         with it("should close the project's session and leave the CDD checkout's current"):
-            Sessions(self.project).current().close()
+            Sessions(self.project).current().close(ToolCall())
             expect(WorkState(self.project).session).to(equal(""))
             expect(WorkState(self.cdd).session).to(equal("overlay"))
 
@@ -1755,7 +1755,7 @@ with description("a session read for a board") as self:
 
     with context("that is not the current session and has closed"):
         with before.each:
-            self.beta.close()
+            self.beta.close(ToolCall())
 
         with it("should leave the current session as it was"):
             expect(Sessions(self.repo).current().name).to(equal("alpha"))

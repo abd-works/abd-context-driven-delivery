@@ -53,7 +53,7 @@ with description("a cdd server answering every chat"):
             with before.each:
                 for project, name in ((self.orders, "orders"), (self.billing, "billing")):
                     sessions = Sessions(project)
-                    sessions.opened.open(sessions.create(name, project))
+                    sessions.opened.open(sessions.create(name, project), "")
 
             with it("should log each call in the session of the project it names"):
                 self.host.dispatch("generate.generate", {"guidance": "stories-story-map"}, self.orders)

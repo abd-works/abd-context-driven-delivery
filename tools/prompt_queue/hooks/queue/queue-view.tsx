@@ -22,7 +22,6 @@ import {
   editStep,
   movePointerUp,
   movePointerDown,
-  stepPointerOf,
   moveStepPointerUp,
   moveStepPointerDown,
   type QueueState,
@@ -341,7 +340,8 @@ function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt
   const elements = $.ui.resolve(e)
   const { Box, Button } = elements
   const steps = prompt.steps ?? []
-  const pointer = stepPointerOf(steps)
+  // Where the cdd server says the card's step pointer stands: its first step not done.
+  const pointer = prompt.step_pointer ?? steps.length
   const up = () => moveStepPointerUp($, prompt)
   const down = () => moveStepPointerDown($, prompt)
 

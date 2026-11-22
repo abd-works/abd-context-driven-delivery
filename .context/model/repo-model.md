@@ -520,7 +520,7 @@ The settings at the top of a file: a YAML block between `---` lines, or, in a co
 An *AgentToolSet* is an ordinary class an agent can list and run: each `@agent_tool` member is an *AgentOperation* and each `@agent_instructions` member is *AgentInstructions*. A *ToolCall* is one call as a chat made it, with its project and chat. The whole model of this module, internals included, is `harness/agent_tools/.context/agent-tools-model.md`; that document is canonical, and this section shows only the classes other modules use.
 
 - **Purpose:** Let an author publish an ordinary class as operations and instructions an agent can list and use, and let every publisher read those members from one place.
-- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, CallsBeingAnswered (`CALLS_BEING_ANSWERED`), `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, SessionOpening (`SESSION_OPENING`), ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
+- **Seam (terms):** AgentToolSet, ToolSetCollection, ToolsetMembers, ToolsetReference, AgentTool, InvokeLine, ToolRequest, `names_alike`, `is_built_in`, AgentOperation, AgentInstructions, AgentToolAnnotation, AgentInstructionsAnnotation, AgentToolSetAnnotation, ToolSetCollectionAnnotation, Collect, ToolSubject, OnSubject, TakesFromCall, NoSessionLog, PublishedWhereHeld, SubAgentAnnotation, ToolSubjectLoader, RecipePlaceholders, ToolCall, SessionOpening (`SESSION_OPENING`), ChatPointer; `tools(...)`, `instructions(...)`, `report_progress`, `reporting_to`, `NO_CHAT`, `SUB_AGENT_CALLER_PREAMBLE`
 - **Dependencies (one-way):** harness/annotations, harness/markdown
 
 ## AgentToolSet : AgentToolSetOrigin
@@ -841,16 +841,6 @@ The request a call answers: the chat that sent it and, for a call the cdd server
 + answers_a_chat: bool
 ----
 + sent_by(chat: ChatPointer | None): ToolRequest
-
-## CallsBeingAnswered
-
-The call a tool is answering on each thread; the process keeps one, `CALLS_BEING_ANSWERED`.
-
-+ CallsBeingAnswered()
-------
-+ current: ToolCall | None
-----
-+ answering(call: ToolCall): Iterator[ToolCall]
 
 ## ChatPointer
 
@@ -3226,11 +3216,11 @@ A probe of the guidance one install deployed, made for its Installer and the gui
 
 The Claude Code chats on this machine: the ones connected now, and a new one opened in the Claude app through the opener the chats hold.
 
-+ Chats(folder: Path, opener: ChatLinks)
++ Chats(folder: Path, opener: ChatOpener, asking: str = "")
 ------
-+ << association >> opener: ChatLinks
 ----
-+ load(): Chats
++ load(call: ToolCall | None = None): Chats
++ new_chat(folder: str, prompt: str): NewChat
 + list(): list[Chat]
 + open(folder: str, prompt: str): str
 ---<<lists>>--> Chat
@@ -4954,8 +4944,12 @@ The prompts one chat has queued, in the order they will be done, kept in a file 
 ------
 + chat: str
 + prompts: list[QueuedPrompt]
++ next: QueuedPrompt | None
+	// the first prompt that waits (QueuedPrompt.is_waiting), where the queue's pointer stands; sent by its id
 ----
 + load(chat: str, call: ToolCall): PromptQueue
++ prompt(prompt: str): QueuedPrompt
+	// raises PromptNotQueued for an id the queue does not hold
 + of_chat(chat: str, archive: Path | None = None): PromptQueue
 	// a chat id is never a path: an empty one, or one holding a folder separator, a drive or two dots, raises ChatIdNotAnId
 + show(): PromptQueue
@@ -4972,6 +4966,10 @@ The prompts one chat has queued, in the order they will be done, kept in a file 
 	// a step's state is one of STEP_STATES; any other raises StepStateUnknown
 + add_interruption(prompt: str, text: str): PromptQueue
 + step_done(prompt: str, step: int): PromptQueue
++ move_step(prompt: str, step: int, place: int): PromptQueue
++ remove_step(prompt: str, step: int): PromptQueue
++ step_back(prompt: str): PromptQueue
++ step_on(prompt: str): PromptQueue
 + attach(prompt: str, filename: str, media_type: str, data: str): PromptQueue
 + queue_once(source: str, texts: list[str]): int
 ---<<reads and writes through, holding it for each change>>--> JsonFile
@@ -4981,6 +4979,53 @@ The prompts one chat has queued, in the order they will be done, kept in a file 
 ---<<annotated with>>--> Identity
 ---<<annotated with>>--> LanguageAdapter
 ---<<annotated with>>--> NoCatalog
+---<<holds>>--> QueuedPrompt
+
+## QueuedPrompt
+
+One prompt on a chat's queue. It changes itself; `record` is what the queue's file keeps of it, in exactly the keys the stable and dev lanes' servers read (id and text, and steps, attachments, is_done and robot only when it has them).
+
++ QueuedPrompt(record: dict)
+------
++ id: str
++ text: str
++ << composition >> steps: PromptSteps
++ step_pointer: int
++ attachments: list[str]
++ is_done: bool
++ robot: str
++ is_waiting: bool
+	// neither done nor asking a decision ([decision required])
++ record: dict
+----
++ new(text: str): QueuedPrompt
++ edit(text: str)
++ mark_done()
++ reopen()
++ assign(robot: str)
++ plan(steps: list[PromptStep])
++ interrupt(text: str)
++ attach(file: Path)
+
+## PromptSteps
+
+The steps planned for one queued prompt, numbered from 1, and their pointer, the first step not done.
+
++ PromptSteps(prompt: str, steps: list[PromptStep])
+------
++ listed: list[PromptStep]
++ pointer: int
+----
++ done(number: int)
++ move(step: int, place: int)
++ remove(step: int)
++ back()
++ on()
++ restarted()
++ plan(steps: list[PromptStep])
++ add(text: str)
+---<<raises>>--> StepNotPlanned
+---<<raises>>--> StepStateUnknown
 
 ## ChatIdNotAnId : ValueError
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, ClassVar
 
-from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
+from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.name import Name
 from space.session.session import MAIN_SESSION_NAME, Session
 from space.session.session_checkout import names_ticket
@@ -15,30 +15,15 @@ from space.work_state import WorkState
 if TYPE_CHECKING:
     from space.session.sessions import Sessions
 
-# Said first when a chat switches to a session whose own worktree is not where the chat works: work done here would
-# land in the wrong folder.
-_OUTSIDE_WORKTREE_NOTE = (
-    "This chat works in {chat}, but {session}'s worktree is {worktree}. Do this session's work in a chat started there "
-    "(start_session with cwd {worktree}), not in this chat.\n\n"
-)
-_DEFAULT_ROOTS_NOTE = (
-    "**Output roots.** These practices write under their default folders, which nobody has checked: {roots}. Before "
-    "generating anything, set up the session's roots with session.set_up_roots, so they cover exactly the pieces the "
-    "ticket works on in every practice. A practice's documents and its code or tests can sit in different areas, each "
-    "where the practice's declared outputs place them, and the pieces of one ticket are spread across them: a domain "
-    "folder, the package that implements it, the story tests that cover it. Propose the roots from what the ticket "
-    "names and what its branch changed (fidelity-session-output.propose_roots answers the folders each fidelity "
-    "proposes), dig down to the most local folder that holds each piece rather than a parent that also holds its "
-    "siblings, and confirm them with the person before setting any. Then set them: "
-    "practice-session-output.choose_root for the practice's own root, fidelity-session-output.choose_root for a "
-    "fidelity kept apart, and fidelity-session-output.add_root for each further folder beside it, so the Files app, the "
-    "board and validate show this ticket's files and new work lands beside them. Leave a default that already holds "
-    "them, or where none exist yet.\n\n"
-)
-_WORKTREE_TICKET_NOTE = (
-    "This chat works in {ticket}'s own worktree, so its session is {ticket}, not {asked}. To work on {asked}, open it "
-    "from the main chat.\n\n"
-)
+# The notes a switch may open its answer with, one section each, filled in with the names of the switch.
+_SWITCH_NOTES_FILE = Path(__file__).parent / "SESSION-SWITCH.md"
+
+
+def _switch_note(heading: str) -> str:
+    """The note under heading in SESSION-SWITCH.md, the one text it holds, unfilled."""
+    text = _SWITCH_NOTES_FILE.read_text(encoding="utf-8")
+    section = text.split(f"\n## {heading}\n", 1)[1]
+    return section.split("\n## ", 1)[0].strip()
 
 
 class SessionNameRequiredError(ValueError):
@@ -78,15 +63,12 @@ class OpenSessions:
     def _told_on_opening(self, session: Session, chat: str) -> str:
         return "".join(listener(session, chat) for listener in self._opened_listeners)
 
-    def state(self, chat: str = "") -> WorkState:
-        """What chat keeps open, under ``~/.cdd``: the chat named, else the chat of the call being answered, else this
-        checkout folder's own entry, for a call that names no chat."""
-        if not chat:
-            call = CALLS_BEING_ANSWERED.current
-            chat = call.chat_id if call is not None else ""
+    def state(self, chat: str) -> WorkState:
+        """What chat keeps open, under ``~/.cdd``: an empty chat is a call that names none, which keeps this checkout
+        folder's own entry."""
         return WorkState(self._sessions.root, chat)
 
-    def name_for(self, chat: str = "") -> str:
+    def name_for(self, chat: str) -> str:
         """The name of the session chat works on: the ticket of the worktree these sessions serve, whatever any chat
         chose to open; else the session chat has open; main when none is."""
         ticket = self._ticket_of_worktree()
@@ -104,19 +86,19 @@ class OpenSessions:
         open_folder = sessions.folder_of(name)
         return (not open_folder.is_dir() or sessions.listing.is_left_behind(open_folder)) and (sessions.closed_folder / name).is_dir()
 
-    def open(self, session: Session, chat: str = "") -> Session:
+    def open(self, session: Session, chat: str) -> Session:
         """Make session the one chat has open. Nothing is written in the checkout: the choice is kept under ``~/.cdd``."""
         self.state(chat).session = "" if session.name == MAIN_SESSION_NAME else session.name
         return session
 
-    def current(self, chat: str = "") -> Session:
+    def current(self, chat: str) -> Session:
         """The session chat has open; main when none is."""
         sessions = self._sessions
         return sessions.held.load(sessions.folder_of(self.name_for(chat)))
 
-    def close(self, session: Session) -> None:
-        """Close session: when it is the one the call's chat has open, main becomes its open session."""
-        state = self.state()
+    def close(self, session: Session, chat: str) -> None:
+        """Close session for chat: when it is the one chat has open, main becomes its open session."""
+        state = self.state(chat)
         if session.name != (state.session or MAIN_SESSION_NAME):
             return
         state.session = ""
@@ -137,55 +119,84 @@ class OpenSessions:
         holding = [name for name in tickets if names_ticket(branch, name)]
         return sessions.named(holding[0]) if len(holding) == 1 else None
 
-    def switch(self, name: str, workpath: Path | None, call: ToolCall | None) -> str:
-        """Open the session called name for the call's chat, creating its folder when missing, and say how to keep its
-        log; a chat in a ticket's own worktree always opens that ticket's session."""
+    def switch(self, name: str, workpath: Path | None, call: ToolCall | None) -> SwitchedSession:
+        """Open the session called name for the call's chat, creating its folder when missing; a chat in a ticket's own
+        worktree always opens that ticket's session. Answers the switch, which says what the chat is told."""
         sessions = self._sessions
         chat = call.chat_id if call is not None else ""
         ticket = self._ticket_of_worktree()
         if ticket is not None:
             opened = self.open(ticket, chat)
-            return self._worktree_ticket_note(ticket, name) + self._told_on_opening(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
+            return SwitchedSession(opened, self._told_on_opening(opened, chat), asked_in_ticket_worktree=name)
         wanted = self._name_to_switch_to(name, chat)
         folder = sessions.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
         session = sessions.held.load(folder) if is_kept else sessions.create(wanted, workpath)
         opened = self.open(session, chat)
-        return self._outside_worktree_note(session, call) + self._told_on_opening(opened, chat) + self._default_roots_note(opened) + opened.log.instructions()
+        return SwitchedSession(opened, self._told_on_opening(opened, chat), chat_works_in=call.project if call is not None else None)
 
-    def _default_roots_note(self, session: Session) -> str:
-        """What a chat opening session is told about the practices it works on whose roots nobody set, so it points each
-        at the folder that already holds its artifacts; nothing for main, or when every root was set."""
-        if session.name == MAIN_SESSION_NAME:
-            return ""
-        defaults = [
-            f"{key} → {practice.root}"
-            for key, practice in session.own_practices.items()
-            if practice.enabled and practice.is_root_default
-        ]
-        return _DEFAULT_ROOTS_NOTE.format(roots=", ".join(defaults)) if defaults else ""
-
-    def _worktree_ticket_note(self, ticket: Session, asked: str) -> str:
-        """What a chat in ticket's worktree that asked for another session is told; nothing when it asked for none or
-        for ticket."""
-        cleaned = Name(asked).title_slug if asked else ""
-        if not cleaned or cleaned == ticket.name:
-            return ""
-        return _WORKTREE_TICKET_NOTE.format(ticket=ticket.name, asked=cleaned)
-
-    def _outside_worktree_note(self, session: Session, call: ToolCall | None) -> str:
-        """What a chat working outside session's own worktree must do instead; nothing when it works there, or the
-        session has none."""
-        if call is None or call.project is None or session.name == MAIN_SESSION_NAME:
-            return ""
-        own = session.checkout.own_worktree
-        worktree = own.root if own is not None else None
-        if worktree is None or worktree == call.project or worktree in call.project.parents:
-            return ""
-        return _OUTSIDE_WORKTREE_NOTE.format(chat=call.project, session=session.name, worktree=worktree)
-
-    def _name_to_switch_to(self, name: str, chat: str = "") -> str:
+    def _name_to_switch_to(self, name: str, chat: str) -> str:
         cleaned = Name(name or self.state(chat).session).title_slug
         if not cleaned:
             raise SessionNameRequiredError()
         return cleaned
+
+
+class SwitchedSession:
+    """*SwitchedSession* is one switch of a chat to a session: the session opened, what the modules listening for an
+    opening told the chat (``OpenSessions.on_session_opened``), and what the chat must know before it works there: the
+    ticket whose own worktree it works in when it asked for another, the session's own worktree when the chat works
+    elsewhere, and the practices whose roots nobody set. ``instructions`` says it in SESSION-SWITCH.md's words, before
+    how to keep the session's log."""
+
+    def __init__(self, session: Session, told_on_opening: str, *, asked_in_ticket_worktree: str | None = None,
+                 chat_works_in: Path | None = None) -> None:
+        self.session = session
+        self.told_on_opening = told_on_opening
+        # The name the chat asked for, when it works in the opened ticket's own worktree; None for any other switch.
+        self._asked_in_ticket_worktree = asked_in_ticket_worktree
+        # The folder the chat works in, when the call named one.
+        self._chat_works_in = chat_works_in
+
+    @property
+    def opened_in_worktree_of(self) -> str:
+        """The ticket the chat opened in place of the session it asked for, since it works in that ticket's own
+        worktree; empty when it asked for none, for that ticket, or switched anywhere else."""
+        asked = self._asked_in_ticket_worktree
+        cleaned = Name(asked).title_slug if asked else ""
+        return self.session.name if cleaned and cleaned != self.session.name else ""
+
+    @property
+    def outside_worktree(self) -> Path | None:
+        """The session's own worktree, when the chat works in another folder, where work done would land in the wrong
+        place; None when the chat works there, the session has none, or it is main."""
+        works_in = self._chat_works_in
+        if works_in is None or self.session.name == MAIN_SESSION_NAME:
+            return None
+        own = self.session.checkout.own_worktree
+        worktree = own.root if own is not None else None
+        if worktree is None or worktree == works_in or worktree in works_in.parents:
+            return None
+        return worktree
+
+    @property
+    def default_roots(self) -> list[str]:
+        """Each practice the session works on whose root nobody set, with the default folder it writes under; none for
+        main."""
+        if self.session.name == MAIN_SESSION_NAME:
+            return []
+        return [f"{key} → {practice.root}" for key, practice in self.session.own_practices.items() if practice.enabled and practice.is_root_default]
+
+    @property
+    def instructions(self) -> str:
+        """What the chat is told: the notes that apply, in SESSION-SWITCH.md's order, then how to keep the session's log."""
+        said = []
+        if self.opened_in_worktree_of:
+            asked = Name(self._asked_in_ticket_worktree or "").title_slug
+            said.append(_switch_note("Worktree ticket").format(ticket=self.session.name, asked=asked) + "\n\n")
+        if self.outside_worktree is not None:
+            said.append(_switch_note("Outside worktree").format(chat=self._chat_works_in, session=self.session.name, worktree=self.outside_worktree) + "\n\n")
+        said.append(self.told_on_opening)
+        if self.default_roots:
+            said.append(_switch_note("Default roots").format(roots=", ".join(self.default_roots)) + "\n\n")
+        return "".join(said) + self.session.log.instructions()

@@ -1093,7 +1093,7 @@ Built (2026-11-17), not seen (commit 3d19477a7, the person: a step has all of a 
 
 ### (S) Person --> [Move Step Pointer](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-move-step-pointer)
 
-Built (2026-11-17, commit c2cff7454): a card's open steps have a pointer of their own at the left of the first step not done (`stepPointerOf`). ▲ works the done step above it again and puts every step after it back to not started (`moveStepPointerUp`); ▼ marks its step done and starts the next (`moveStepPointerDown`). Each change gives the prompt its whole list through `prompt-queue.set_steps`.
+Built (2026-11-17, commit c2cff7454): a card's open steps have a pointer of their own at the left of the first step not done (`QueuedPrompt.step_pointer`, which the server answers). ▲ works the done step above it again and puts every step after it back to not started (`prompt-queue.step_back`); ▼ marks its step done and starts the next (`prompt-queue.step_on`). A step's ↑, ↓ and ✕ each call one tool too (`prompt-queue.move_step`, `prompt-queue.remove_step`), so the mod and the agent follow the server's one rule.
 
 ## (E) [Share Queue Among Robots](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md)
 

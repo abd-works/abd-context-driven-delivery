@@ -42,12 +42,12 @@ def seed_queue(*texts: str) -> PromptQueue:
 
 def id_of(queue: PromptQueue, text: str) -> str:
     """The id of the queued prompt whose text is text."""
-    return next(prompt["id"] for prompt in queue.prompts if prompt["text"] == text)
+    return next(prompt.id for prompt in queue.prompts if prompt.text == text)
 
 
 def steps_of(queue: PromptQueue, text: str) -> list[PromptStep]:
     """The steps the queue answers for the prompt whose text is text; none when it has none."""
-    return next(prompt for prompt in queue.prompts if prompt["text"] == text).get("steps", [])
+    return next(prompt for prompt in queue.prompts if prompt.text == text).listed_steps
 
 # Interaction: an image pasted in a queued draft, as its file is named, and its bytes: a one-pixel PNG.
 SCREENSHOT_NAME = "screenshot.png"

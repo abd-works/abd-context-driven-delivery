@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import json
-from contextlib import contextmanager
 from dataclasses import dataclass, replace
-from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Iterator, Protocol
+from typing import Any, Protocol
 
 from harness.agent_tools.chat_pointer import ChatPointer
 
@@ -86,33 +84,6 @@ class ToolRequest:
     def sent_by(self, chat: ChatPointer | None) -> ToolRequest:
         """This request as chat sent it; the chat it names already when chat is none."""
         return self if chat is None else replace(self, chat=chat)
-
-
-class CallsBeingAnswered:
-    """The call a tool is answering on each thread, so code deep under it, such as a board switching its session, keeps
-    the open session of the call's own chat without each layer passing the chat on. The process keeps one
-    (``CALLS_BEING_ANSWERED``): the MCP host and an in-process answer mark the call they run, and code under them asks
-    for it."""
-
-    def __init__(self) -> None:
-        self._answering: ContextVar[ToolCall | None] = ContextVar("answering_call", default=None)
-
-    @property
-    def current(self) -> ToolCall | None:
-        """The call a tool is answering now on this thread; none outside a call."""
-        return self._answering.get()
-
-    @contextmanager
-    def answering(self, call: ToolCall) -> Iterator[ToolCall]:
-        """Mark call as the one being answered on this thread while its tool runs."""
-        token = self._answering.set(call)
-        try:
-            yield call
-        finally:
-            self._answering.reset(token)
-
-
-CALLS_BEING_ANSWERED = CallsBeingAnswered()
 
 
 class SessionOpening:

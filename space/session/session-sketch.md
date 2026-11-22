@@ -447,7 +447,7 @@ it should keep the name, the workpath, and the repo path
 it should write --- 1 as the first line of a new session.log
   -> expect(session.log.path).to start with "--- 1"
 it should record the name in repo sessions session.json
-  -> expect(Sessions(project).opened.name_for()).to equal name
+  -> expect(Sessions(project).opened.name_for("")).to equal name
 ```
 
 #### that is closed
@@ -455,7 +455,7 @@ it should record the name in repo sessions session.json
 ```
 -> session.close()
 it should go back to the main session
-  -> expect(Sessions(project).opened.name_for()).to equal "main"
+  -> expect(Sessions(project).opened.name_for("")).to equal "main"
 ```
 
 #### that is selected

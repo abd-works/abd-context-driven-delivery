@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Callable, TypeVar
 from harness.agent_tools import agent_toolset
 from harness.annotations.annotation import hosted_only
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.chat.chat import Chat, links_of_run
+from harness.agent_tools.tool_call import ToolCall
+from harness.chat.chat import Chat, Chats
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.installation.data_class import data_field, identity, language_adapter
@@ -269,6 +270,10 @@ class TicketEnding:
         if self.is_main:
             raise MainStaysOpenError(action)
 
+    def _end_session(self) -> None:
+        """End the ticket's session for the chat the board is read for: when that chat has it open, main becomes open."""
+        self.board.sessions.opened.close(self.session, self.board.chat)
+
     @long_call
     @mcp
     @agent_tool
@@ -286,7 +291,7 @@ class TicketEnding:
         checkout.save_work(leaving)
         checkout.keep_landing_release(leaving)
         checkout.leave_branch(leaving)
-        self.session.close()
+        self._end_session()
         closed = self.board.placement.ticket_of(self.session.folder.move_to_closed())
         checkout.return_to_default_branch()
         self.board.sessions.saves.now(f"sessions: close {self.name}")
@@ -299,7 +304,7 @@ class TicketEnding:
         """Archive ticket: its own worktree is removed, its work committed and pushed on its branch first, which stays; then its session ends, its folder moves to _archive/, that move is committed on main and pushed, and it leaves the board. Main never archives."""
         self._refuse_main("archive")
         self.checkout.free_worktree()
-        self.session.close()
+        self._end_session()
         archived = self.board.placement.ticket_of(self.session.folder.move_to_archive())
         self.board.sessions.saves.now(f"sessions: archive {self.name}")
         return archived
@@ -312,14 +317,14 @@ class TicketEnding:
         self._refuse_main("be deleted")
         self.checkout.free_worktree()
         self.session.folder.remove()
-        self.session.close()
+        self._end_session()
         self.board.placement.reread()
 
     def to_backlog(self) -> BacklogItem:
         """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
         the item brings the ticket back with its work."""
         self._refuse_main("go to the Backlog")
-        self.session.close()
+        self._end_session()
         kept_in_backlog = self.board.placement.ticket_of(self.session.folder.move_to_backlog())
         return self.board.placement.backlog_item_of(kept_in_backlog)
 
@@ -395,17 +400,17 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
 
     @classmethod
     @tool_subject
-    def load(cls, ticket: str, *, project: Path | str) -> Ticket:
-        """The ticket named ticket on the board of project, read from its own session alone."""
-        return Board.load(project).placement.ticket_called(ticket)
+    def load(cls, ticket: str, *, project: Path | str, call: ToolCall | None = None) -> Ticket:
+        """The ticket named ticket on the board of project, read for call from its own session alone."""
+        return Board.load(project, call).placement.ticket_called(ticket)
 
     @classmethod
     @mcp
     @agent_tool
     @noSessionLog
-    def create(cls, title: str, scope: str = "feature", parent: str = "", path: str = "", *, project: Path | str) -> Ticket:
+    def create(cls, title: str, scope: str = "feature", parent: str = "", path: str = "", *, project: Path | str, call: ToolCall | None = None) -> Ticket:
         """Open a new ticket titled title in Discovery, its record committed on main and pushed. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on. Then run ticket.activate to open the ticket's own worktree, and do its work in a chat started there (start_session with cwd set to the ticket's worktree), not in this chat."""
-        board = Board.load(project)
+        board = Board.load(project, call)
         opened = board.placement.open_ticket(title, scope, path)
         if parent:
             opened.session.hierarchy.set_parent(board.sessions.named(parent))
@@ -516,8 +521,8 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
     @property
     @data_field
     def is_active(self) -> bool:
-        """Whether its session is the one saved as open, which the agent works in."""
-        return self._remember("is_active", lambda: self._board.sessions.opened.name_for() == self.name)
+        """Whether its session is the one the board's chat has open, which the agent works in."""
+        return self._remember("is_active", lambda: self._board.sessions.opened.name_for(self._board.chat) == self.name)
 
     @property
     @data_field
@@ -614,7 +619,7 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
             "session's latest handoff. When the switch says the session's roots are unchecked, set them up with "
             "session.set_up_roots before generating anything, so they cover exactly the pieces the ticket works on."
         )
-        return links_of_run().link_to_new(self.worktree, prompt)
+        return Chats.load(self._board.call).new_chat(self.worktree, prompt).link
 
     @property
     @data_field

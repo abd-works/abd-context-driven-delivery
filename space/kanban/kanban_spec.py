@@ -9,6 +9,8 @@ from urllib.parse import parse_qs, urlsplit
 from expects import be, be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
+from harness.agent_tools.chat_pointer import ChatPointer
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
@@ -78,6 +80,15 @@ with description("a board") as self:
         with it("should work on the one repository its sessions hold"):
             board = Board.load(SessionsFolder().project)
             expect(board.repo).to(be(board.sessions.repo))
+
+        # The open session is each chat's own, so a board read for one chat names that chat's ticket active, not the
+        # one another chat or the checkout folder has open.
+        with it("should name active the ticket the call's chat has open"):
+            folder = SessionsFolder()
+            folder.session("pet-visits")
+            WorkState(folder.project, "board-chat").session = "pet-visits"
+            call = ToolCall(request=ToolRequest(ChatPointer("board-chat", Path(folder.project) / "t.jsonl", "1")))
+            expect([Board.load(folder.project, call).active.name, Board.load(folder.project).active.name]).to(equal(["pet-visits", "main"]))
 
     # (S) Board App --> Display Board
     with context("with Stories, DDD, and UX chosen"):

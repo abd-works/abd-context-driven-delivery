@@ -11,6 +11,7 @@ from pathlib import Path
 from harness.agent_tools import agent_toolset
 from harness.annotations.annotation import hosted_only
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
@@ -79,9 +80,9 @@ class BacklogItem(BacklogOrderTools, Card):
 
     @classmethod
     @tool_subject
-    def load(cls, backlog_item: str, *, project: Path | str) -> BacklogItem:
-        """The backlog item titled backlog_item on the board of project."""
-        return Board.load(project).reads.backlog_item_called(backlog_item)
+    def load(cls, backlog_item: str, *, project: Path | str, call: ToolCall | None = None) -> BacklogItem:
+        """The backlog item titled backlog_item on the board of project, read for call."""
+        return Board.load(project, call).reads.backlog_item_called(backlog_item)
 
     @classmethod
     @mcp

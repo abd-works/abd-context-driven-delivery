@@ -680,11 +680,11 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     @mcp
     @command(name="close-session")
     @agent_tool
-    def close(self) -> None:
-        """Close this work session: when it is the open session of its project, main becomes the open one.
+    def close(self, call: ToolCall) -> None:
+        """Close this work session: when it is the open session of the calling chat, main becomes the open one.
 
         ``session`` is the session's session.json; ask ``sessions.current`` for it when the user names no session."""
-        self.sessions.opened.close(self)
+        self.sessions.opened.close(self, call.chat_id)
 
     @mcp
     @agent_tool

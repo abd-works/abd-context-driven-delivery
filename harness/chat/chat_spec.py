@@ -1,6 +1,5 @@
 """The chats the cdd-board mod connects, and the commands a person sends them, kept as a folder per chat."""
 import json
-from contextlib import ExitStack
 import os
 import sys
 import tempfile
@@ -16,8 +15,8 @@ from expects import be_empty, contain, equal, expect, have_keys, raise_error, st
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.chat_pointer import ChatPointer
-from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall, ToolRequest
-from harness.chat.chat import KEPT_MESSAGES, Chat, ChatNotConnectedError, Chats, RecordedChatLinks
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
+from harness.chat.chat import KEPT_MESSAGES, Chat, ChatNotConnectedError, Chats, RecordedChatOpener
 from harness.installation.data_class import data_of
 
 CHAT = "ad6c04ab-chat"
@@ -38,15 +37,9 @@ def _titled(title: str) -> str:
     return json.dumps({"type": "custom-title", "customTitle": title, "sessionId": CHAT})
 
 
-def _prompt_opened_by(chat: str, chats: Chats) -> str:
-    """The prompt of a new chat that chat asked chats.open for."""
-    # Mamba reads every with statement in a spec file as a context, so the call is answered through an ExitStack.
-    answering = ExitStack()
-    answering.enter_context(CALLS_BEING_ANSWERED.answering(ToolCall(request=ToolRequest(ChatPointer(chat), "chats.open"))))
-    try:
-        return parse_qs(urlsplit(chats.open(WORKTREE, NEW_CHAT_PROMPT)).query)["q"][0]
-    finally:
-        answering.close()
+def _prompt_of(link: str) -> str:
+    """The prompt a new chat's link fills in."""
+    return parse_qs(urlsplit(link).query)["q"][0]
 
 
 with description("a chat") as self:
@@ -75,7 +68,7 @@ with description("a chat") as self:
     # The board opens a ticket's new chat in the Claude app; the spec's chats keep each link instead of opening the app.
     with context("that a new chat is opened on a folder"):
         with before.each:
-            self.opened = RecordedChatLinks(self.chats / "opened-chats.txt")
+            self.opened = RecordedChatOpener(self.chats / "opened-chats.txt")
             self.link = Chats(self.chats, self.opened).open(WORKTREE, NEW_CHAT_PROMPT)
 
         with it("should hand the Claude app one new-chat link"):
@@ -95,10 +88,13 @@ with description("a chat") as self:
             (folder / f"{CHAT}.jsonl").write_text(_titled("main") + "\n", encoding="utf-8")
             CLOCK[0] += 31
             Chat.load(CHAT).check_in(is_busy=False, name="repo · first words", folder="C:\\dev\\repo")
-            self.prompt = _prompt_opened_by(CHAT, Chats(self.chats, RecordedChatLinks(self.chats / "opened-chats.txt")))
+            self.prompt = _prompt_of(Chats(self.chats, RecordedChatOpener(self.chats / "opened-chats.txt"), CHAT).open(WORKTREE, NEW_CHAT_PROMPT))
 
         with it("should keep its prompt first"):
             expect(self.prompt).to(start_with(NEW_CHAT_PROMPT))
+
+        with it("should be opened from the chat a call to the chats came from"):
+            expect(Chats.load(ToolCall(request=ToolRequest(ChatPointer(CHAT)))).new_chat(WORKTREE, NEW_CHAT_PROMPT).opened_from.id).to(equal(CHAT))
 
         with it("should have the new chat join the section of the chat that opened it"):
             expect(self.prompt).to(contain('opened from the chat titled "main" in C:\\dev\\repo', "move_sessions"))
@@ -312,7 +308,7 @@ with description("a chat") as self:
 
 with description("a new chat's link") as self:
     with before.each:
-        self.link = RecordedChatLinks(Path(tempfile.mkdtemp()) / "opened.txt").link_to_new(WORKTREE, NEW_CHAT_PROMPT)
+        self.link = Chats(Path(tempfile.mkdtemp()), RecordedChatOpener(Path(tempfile.mkdtemp()) / "opened.txt")).new_chat(WORKTREE, NEW_CHAT_PROMPT).link
         self.prompt = parse_qs(urlsplit(self.link).query)["q"][0]
 
     with it("should keep the prompt it was given first"):

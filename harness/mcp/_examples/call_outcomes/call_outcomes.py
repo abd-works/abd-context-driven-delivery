@@ -4,7 +4,7 @@ from __future__ import annotations
 import time
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
-from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED
+from harness.agent_tools.tool_call import ToolCall
 from harness.mcp.mcp_annotations import long_call, mcp
 
 
@@ -27,15 +27,15 @@ class CallOutcomes:
 
     @mcp
     @agent_tool
-    def ledger_folder(self) -> str:
+    def ledger_folder(self, call: ToolCall) -> str:
         """Answer the folder of the project the call works on, where the ledger is kept."""
-        return str(CALLS_BEING_ANSWERED.current.project)
+        return str(call.project)
 
     @mcp
     @agent_tool
-    def clerk(self) -> str:
+    def clerk(self, call: ToolCall) -> str:
         """Answer the id of the chat the call came from, the clerk posting to the ledger."""
-        return CALLS_BEING_ANSWERED.current.chat_id
+        return call.chat_id
 
     @mcp
     @agent_tool

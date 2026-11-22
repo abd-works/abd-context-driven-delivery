@@ -57,7 +57,7 @@ def _open_session(project: Path, name: str) -> None:
     from space.session import Sessions
 
     sessions = Sessions(project)
-    sessions.opened.open(sessions.create(name, project))
+    sessions.opened.open(sessions.create(name, project), "")
 
 
 def _call(guidance, project: Path | None = None):

@@ -77,9 +77,11 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 
 ## Board
 
-+ Board(sessions: Sessions, practices: BoardPractices)
-	// practices is left out by `Board.load`, so the board works through its sessions' `board_practices`; a board that works through fewer practices is handed its own
++ Board(sessions: Sessions, practices: BoardPractices, call: ToolCall | None)
+	// practices is left out by `Board.load(project, call)`, so the board works through its sessions' `board_practices`; a board that works through fewer practices is handed its own. call is the call the board is read for, handed to `Board.load` and to the loaders of `Ticket`, `Stage`, and `BacklogItem` from the call they serve
 ------
++ call: ToolCall | None
+	// the call the board is read for; `chat` is its chat's id, empty for a call that names none: `active` and a ticket's `is_active` name the session that chat has open, a ticket's `close`, `archive`, `delete`, and move to the Backlog close its session for that chat, and `new_chat_link` opens the new chat beside it
 + << association >> repo: Repo
 	// the repository the sessions folder sits in: its sessions' repository
 + sessions: Sessions
@@ -1045,7 +1047,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## Sessions
 
-`space/session/sessions.py`. The board calls `all()`, `named(name)`, `load(folder)`, `opened.name_for()` (*OpenSessions*), `create(name, workpath, title, scope, parent)`, `switch(name)`, `folder`, and `backlog_folder`; the board's own `_board.json` sits in its `folder`.
+`space/session/sessions.py`. The board calls `all()`, `named(name)`, `load(folder)`, `opened.name_for(chat)` (*OpenSessions*, for the chat the board is read for, `board.chat`), `create(name, workpath, title, scope, parent)`, `switch(name)`, `folder`, and `backlog_folder`; the board's own `_board.json` sits in its `folder`.
 
 ## Session
 

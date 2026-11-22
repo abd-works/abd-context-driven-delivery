@@ -841,11 +841,10 @@ class McpHost:
         (``call.request.answers_a_chat``), so work it starts that would hold the interpreter runs in a worker process."""
         # Read them from their modules as they are now: a restart imports them again, and tools read the new ones.
         from harness.agent_tools.progress import reporting_to
-        from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED
 
-        # The answer is read into JSON while the call is still the one being answered: properties such as a board's
-        # active ticket depend on the chat that asked, and read after the call they would answer for no chat.
-        with reporting_to(reporter), CALLS_BEING_ANSWERED.answering(call):
+        # The answer is read into JSON on the call's worker thread, so a property that reports progress reports it to
+        # the chat that asked.
+        with reporting_to(reporter):
             value = self.answer(call)
             return value if isinstance(value, str) else data_of(value)
 

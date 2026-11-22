@@ -395,7 +395,7 @@ export async function sendNextPrompt($: EngineInterface): Promise<void> {
  * its place. */
 async function promptsToDo($: EngineInterface): Promise<QueuedPrompt[]> {
   const edited = await read($, editingId)
-  return (await read($, queue)).prompts.filter(prompt => prompt.id !== edited && !prompt.is_done && !prompt.text.startsWith(DECISION_FLAG))
+  return (await read($, queue)).prompts.filter(prompt => prompt.id !== edited && prompt.is_waiting)
 }
 
 async function nextToDo($: EngineInterface): Promise<QueuedPrompt | undefined> {
@@ -636,18 +636,24 @@ export async function addStep($: EngineInterface, prompt: QueuedPrompt): Promise
 
 /** ✕ on a step: it comes off its prompt. */
 export async function removeStep($: EngineInterface, prompt: QueuedPrompt, index: number): Promise<void> {
-  await changeSteps($, prompt, (prompt.steps ?? []).filter((_, place) => place !== index))
+  await changeStepsBy($, prompt, 'remove_step', { step: index + 1 })
 }
 
 /** ↑ or ↓ on a step: it moves one place among its prompt's steps. */
 export async function moveStep($: EngineInterface, prompt: QueuedPrompt, from: number, to: number): Promise<void> {
-  const steps = [...(prompt.steps ?? [])]
-  if (to < 0 || to >= steps.length) {
+  await changeStepsBy($, prompt, 'move_step', { step: from + 1, place: to + 1 })
+}
+
+/** Runs one prompt-queue operation on a prompt's steps; for the prompt being worked the task list's next changes start
+ * from the steps the server answered. */
+async function changeStepsBy($: EngineInterface, prompt: QueuedPrompt, operation: string, args: Record<string, unknown> = {}): Promise<void> {
+  if (!(await changeQueue($, operation, { prompt: prompt.id, ...args }))) {
     return
   }
-  const [moving] = steps.splice(from, 1)
-  steps.splice(to, 0, moving!)
-  await changeSteps($, prompt, steps)
+  if (prompt.id === (await read($, askedAbout))) {
+    const changed = (await read($, queue)).prompts.find(held => held.id === prompt.id)
+    await update($, plan, () => changed?.steps ?? [])
+  }
 }
 
 /** Gives a prompt its changed steps; for the prompt being worked the task list's next changes start from them. */
@@ -847,10 +853,10 @@ function reasonOf(thrown: unknown): string {
   return thrown instanceof Error ? thrown.message : String(thrown)
 }
 
-/** The queue's pointer in a stack of cards: the place of the next card to do, past the last card when every card is
- * done. Play takes the card it points at. */
+/** The queue's pointer in a stack of cards: the place of the first card that waits, as the cdd server says each card
+ * does (neither done nor asking a decision), past the last card when none waits. Play takes the card it points at. */
 export function pointerOf(prompts: QueuedPrompt[]): number {
-  const next = prompts.findIndex(prompt => !prompt.is_done && !prompt.text.startsWith(DECISION_FLAG))
+  const next = prompts.findIndex(prompt => prompt.is_waiting)
   return next === -1 ? prompts.length : next
 }
 
@@ -872,30 +878,14 @@ export async function movePointerDown($: EngineInterface, prompts: QueuedPrompt[
   }
 }
 
-/** A card's step pointer: the place of its first step not done, past the last step when every step is done. */
-export function stepPointerOf(steps: PromptStep[]): number {
-  const next = steps.findIndex(step => step.state !== 'done')
-  return next === -1 ? steps.length : next
-}
-
 /** ▲ on a card's step pointer: the done step above it is worked again, and every step after it is not started. */
 export async function moveStepPointerUp($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
-  const steps = prompt.steps ?? []
-  const above = stepPointerOf(steps) - 1
-  if (above < 0) {
-    return
-  }
-  await changeSteps($, prompt, steps.map((step, place) => (place < above ? step : { ...step, state: place === above ? 'in_progress' : 'pending' })))
+  await changeStepsBy($, prompt, 'step_back')
 }
 
 /** ▼ on a card's step pointer: its step is done and the next step is the one worked. */
 export async function moveStepPointerDown($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
-  const steps = prompt.steps ?? []
-  const pointed = stepPointerOf(steps)
-  if (pointed >= steps.length) {
-    return
-  }
-  await changeSteps($, prompt, steps.map((step, place) => (place === pointed ? { ...step, state: 'done' } : place === pointed + 1 ? { ...step, state: 'in_progress' } : step)))
+  await changeStepsBy($, prompt, 'step_on')
 }
 
 /** The answer of a prompt-queue call the agent or a sub-agent made: the queue as the server now holds it, drawn at once,

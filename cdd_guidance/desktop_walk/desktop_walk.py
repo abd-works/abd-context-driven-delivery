@@ -18,7 +18,7 @@ from cdd_guidance.practices.stories.stories import STORY_TESTS_FOLDER, Stories
 from harness.agent_tools import agent_instructions, agent_toolset, tools
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
 from harness.annotations.name import Name
-from harness.chat.chat import ChatLinks, links_of_run
+from harness.chat.chat import Chats
 from harness.installation.data_class import data_field
 from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
@@ -168,10 +168,11 @@ class DesktopWalk:
     """Walk a project's desktop story tests in the real Claude desktop app by computer control, recording each step's
     screenshot and verdict through the end-to-end review's walk. Run only when a person asks."""
 
-    def __init__(self, project: Path | str, opener: ChatLinks | None = None, test_chats_folder: Path | None = None,
+    def __init__(self, project: Path | str, chats: Chats | None = None, test_chats_folder: Path | None = None,
                  make_repository: Callable[[Path], object] | None = None) -> None:
         self.project = Path(project).resolve()
-        self._opener = opener
+        # The chats the test chat opens among; the run's own when none are given.
+        self._chats = chats
         # The boundary to git: makes a folder a repository on main with a first commit.
         self._make_repository = make_repository or (lambda folder: NewRepository(SERVED_CHECKOUTS.at(folder.resolve())).create())
         self._test_chats_folder = test_chats_folder or Path(tempfile.gettempdir()) / TEST_CHATS_FOLDER
@@ -205,7 +206,7 @@ class DesktopWalk:
         self._make_repository(folder)
         mark = f"{TEST_CHAT_MARK} {stamp}"
         prompt = f"{mark}: this chat is driven by a desktop walk of the CDD chat bar. Reply with the one word ready and do nothing else."
-        return TestChat(folder, mark, (self._opener or links_of_run()).open_new(str(folder), prompt))
+        return TestChat(folder, mark, (self._chats or Chats.load()).open(str(folder), prompt))
 
     @mcp
     @skill
