@@ -21,6 +21,7 @@ from space.repo.built_once import BuiltOnce
 from space.session import Session, Sessions
 from space.session.session import SessionNotFoundError
 from space.session.spec_support.throwaway_project import ExampleHome
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 # Seed: the report the debug skill writes in a session's folder, named as it names it.
 DEBUG_REPORT = "debug/debug-20261116T225500.md"

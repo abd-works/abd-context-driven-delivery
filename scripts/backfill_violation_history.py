@@ -17,6 +17,7 @@ _REPO = Path(__file__).resolve().parents[1]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
+import cdd_guidance.practices  # noqa: E402,F401 - registers the practices with the practice catalogue
 from space.repo.repo import Repo  # noqa: E402
 from space.session.sessions import Sessions  # noqa: E402
 from space.session.validation.validation_report import ValidationReport  # noqa: E402

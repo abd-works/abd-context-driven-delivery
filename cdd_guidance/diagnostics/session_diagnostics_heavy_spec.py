@@ -34,7 +34,7 @@ with description("session diagnostics"):
         tree = Path(tempfile.mkdtemp())
         try:
             mcp = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).install([SessionDiagnostics()]).of(McpInstallation)
-            command_path = tree / "commands" / "space" / "session" / "session-diagnostics.md"
+            command_path = tree / "commands" / "diagnostics" / "session-diagnostics.md"
             expect(command_path.is_file()).to(equal(True))
             text = command_path.read_text(encoding="utf-8")
             expect(text).to(contain("session-diagnostics.session_diagnostics"))

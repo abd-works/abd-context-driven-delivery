@@ -23,7 +23,7 @@ from space.session import Sessions
 from cdd_guidance.align.format_alignment import SessionAlignment
 from space.session.spec_support.throwaway_project import ExampleHome
 
-TOOLSETS = ("space.session.session:Session", "space.session.practices.practice_session_output:FidelitySessionOutput", "space.session.sessions:Sessions", "cdd_guidance.actions.render.render:Render")
+TOOLSETS = ("space.session.session:Session", "space.session.practices.practice_session_output:FidelitySessionOutput", "space.session.sessions:Sessions", "cdd_guidance.actions.render.render:Render", "cdd_guidance.align.format_alignment:FormatAlignment")
 STORY_MAP = ".context/story-map.md"
 DRAWING = ".context/story-map.drawio"
 BOARD = ".context/story-map.whiteboard"
