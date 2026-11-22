@@ -67,7 +67,7 @@ export function useCallouts(editor: CalloutEditor | null, callouts: SourceCallou
     const zones: string[] = [];
     editor.changeViewZones((accessor) => {
       for (const line of lines.filter((each) => open.includes(lineKey(each)))) {
-        const shown = calloutsBlock(callouts.filter((each) => each.line === line), lineKey(line), { open, toggle, within, goTo }, []);
+        const shown = new OpenCallouts(open, toggle, within, goTo).block(callouts.filter((each) => each.line === line), lineKey(line), []);
         const afterLineNumber = editorLineOf(line);
         zones.push(accessor.addZone({ afterLineNumber, afterColumn: lastCharacterOf(editor, afterLineNumber), heightInPx: shown.rows * LINE_HEIGHT, domNode: shown.node }));
       }
@@ -137,40 +137,71 @@ function markOf(callouts: SourceCallout[], line: number, isOpen: boolean): monac
 // Opens what a callout shows in its own file, as Go to file on it asks.
 export type GoToFile = (callout: SourceCallout) => void;
 
-type Opening = { open: string[]; toggle: (key: string) => void; within: CalloutsWithin; goTo?: GoToFile };
+// The callouts a person opened in a source view, by their keys, and how to open more: what opening one toggles, the
+// callouts inside an open one, and Go to file. It draws the open callouts of one line as a block, each callout a
+// section, and each line of a section a row.
+class OpenCallouts {
+  constructor(
+    private readonly open: string[],
+    private readonly toggle: (key: string) => void,
+    private readonly within: CalloutsWithin,
+    readonly goTo?: GoToFile,
+  ) {}
 
-// The open callouts of one line, one after another, each shaded once; a line inside one whose code holds callouts of its
-// own carries a mark, and those callouts open below that line, inside it. Answers the block and how many rows it takes.
-function calloutsBlock(callouts: SourceCallout[], key: string, opening: Opening, stack: string[]): { node: HTMLElement; rows: number } {
-  const block = document.createElement('div');
-  block.className = 'callout-block';
-  let rows = 0;
-  callouts.forEach((callout, index) => {
-    const shown = calloutSection(callout, `${key}>${index}`, opening, [...stack, callout.id]);
-    block.append(shown.node);
-    rows += shown.rows;
-  });
-  return { node: block, rows };
-}
+  // The open callouts of one line, one after another, each shaded once; a line inside one whose code holds callouts of
+  // its own carries a mark, and those callouts open below that line, inside it. Answers the block and how many rows it
+  // takes.
+  block(callouts: SourceCallout[], key: string, stack: string[]): { node: HTMLElement; rows: number } {
+    const block = document.createElement('div');
+    block.className = 'callout-block';
+    let rows = 0;
+    callouts.forEach((callout, index) => {
+      const shown = this.section(callout, `${key}>${index}`, [...stack, callout.id]);
+      block.append(shown.node);
+      rows += shown.rows;
+    });
+    return { node: block, rows };
+  }
 
-function calloutSection(callout: SourceCallout, key: string, opening: Opening, stack: string[]): { node: HTMLElement; rows: number } {
-  const section = document.createElement('div');
-  section.className = `callout-section callout-${callout.kind}`;
-  section.title = calloutPlace(callout);
-  calloutOfSection.set(section, callout);
-  const inner = opening.within(callout, stack);
-  let rows = 0;
-  callout.text.split('\n').forEach((text, index) => {
-    const fileLine = callout.startLine + index;
-    const here = inner.filter((each) => each.line === fileLine);
-    section.append(calloutRow(text, here.length ? `${key}:${fileLine}` : '', here, opening));
-    rows += 1;
-    if (!here.length || !opening.open.includes(`${key}:${fileLine}`)) return;
-    const nested = calloutsBlock(here, `${key}:${fileLine}`, opening, stack);
-    section.append(nested.node);
-    rows += nested.rows;
-  });
-  return { node: section, rows };
+  private section(callout: SourceCallout, key: string, stack: string[]): { node: HTMLElement; rows: number } {
+    const section = document.createElement('div');
+    section.className = `callout-section callout-${callout.kind}`;
+    section.title = calloutPlace(callout);
+    calloutOfSection.set(section, callout);
+    const inner = this.within(callout, stack);
+    let rows = 0;
+    callout.text.split('\n').forEach((text, index) => {
+      const fileLine = callout.startLine + index;
+      const here = inner.filter((each) => each.line === fileLine);
+      section.append(this.row(text, here.length ? `${key}:${fileLine}` : '', here));
+      rows += 1;
+      if (!here.length || !this.open.includes(`${key}:${fileLine}`)) return;
+      const nested = this.block(here, `${key}:${fileLine}`, stack);
+      section.append(nested.node);
+      rows += nested.rows;
+    });
+    return { node: section, rows };
+  }
+
+  // One line of an open callout: its words, after a mark that opens the callouts inside it when its code holds any.
+  private row(text: string, key: string, inner: SourceCallout[]): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'callout-text';
+    if (key) {
+      const mark = document.createElement('button');
+      mark.type = 'button';
+      mark.className = `${CALLOUT_INNER_MARK}${this.open.includes(key) ? ' callout-mark-open' : ''}`;
+      mark.title = inner.map((callout) => callout.title).join(', ');
+      mark.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.toggle(key);
+      });
+      row.append(mark);
+    }
+    row.append(text);
+    return row;
+  }
 }
 
 const CALLOUT_MENU = 'callout-menu';
@@ -229,23 +260,4 @@ function showGoToMenu(x: number, y: number, goTo: () => void): void {
   document.addEventListener('keydown', onKey);
   menu.append(item);
   document.body.append(backdrop, menu);
-}
-
-function calloutRow(text: string, key: string, inner: SourceCallout[], opening: Opening): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'callout-text';
-  if (key) {
-    const mark = document.createElement('button');
-    mark.type = 'button';
-    mark.className = `${CALLOUT_INNER_MARK}${opening.open.includes(key) ? ' callout-mark-open' : ''}`;
-    mark.title = inner.map((callout) => callout.title).join(', ');
-    mark.addEventListener('mousedown', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      opening.toggle(key);
-    });
-    row.append(mark);
-  }
-  row.append(text);
-  return row;
 }

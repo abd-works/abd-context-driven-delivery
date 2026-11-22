@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { CddApi } from '@cdd/cdd-shared';
 
-import { GraphFailures } from '../graph/graph-failures';
-import { correctInChat } from './violation-chat';
+import { GraphFailures } from './graph-failures';
 
 // The Graph app's server as the page reaches it: each post is kept in order; a chat send can be made to fail.
 class FakeGraphServer implements CddApi {
@@ -34,7 +33,7 @@ describe('Correct Broken Rule In Graph App', () => {
   describe('with a page the chat bar opened', () => {
     it("should fill the chat's prompt with the correction", async () => {
       const server = new FakeGraphServer();
-      await correctInChat(new GraphFailures(server, 'chat-1'))(CORRECTION);
+      await new GraphFailures(server, 'chat-1').correct(CORRECTION);
       const filled = server.posts.filter((post) => post.path === '/chat/chat-1/send' && post.body.kind === 'fill').map((post) => String(post.body.text));
       expect(filled).toHaveLength(1);
       expect(filled[0]).toContain('Rule: limit-operation-parameters');
@@ -43,7 +42,7 @@ describe('Correct Broken Rule In Graph App', () => {
     });
 
     it('should answer that it was sent to the chat', async () => {
-      expect(await correctInChat(new GraphFailures(new FakeGraphServer(), 'chat-1'))(CORRECTION)).toEqual({ isSent: true, words: 'Sent to chat' });
+      expect(await new GraphFailures(new FakeGraphServer(), 'chat-1').correct(CORRECTION)).toEqual({ isSent: true, words: 'Sent to chat' });
     });
 
     describe('that is not connected', () => {
@@ -51,7 +50,7 @@ describe('Correct Broken Rule In Graph App', () => {
         const server = new FakeGraphServer();
         server.isChatDown = true;
         const failures = new GraphFailures(server, 'chat-1');
-        expect(await correctInChat(failures)(CORRECTION)).toEqual({ isSent: false, words: 'Not sent' });
+        expect(await failures.correct(CORRECTION)).toEqual({ isSent: false, words: 'Not sent' });
         expect(failures.shown).toContain("The correction for limit-operation-parameters was not sent: chat 'chat-1' is not connected");
       });
     });
@@ -61,7 +60,7 @@ describe('Correct Broken Rule In Graph App', () => {
     it('should answer that it was not sent, and say to open the page from the chat bar', async () => {
       const server = new FakeGraphServer();
       const failures = new GraphFailures(server, '');
-      expect(await correctInChat(failures)(CORRECTION)).toEqual({ isSent: false, words: 'Not sent' });
+      expect(await failures.correct(CORRECTION)).toEqual({ isSent: false, words: 'Not sent' });
       expect(server.posts).toEqual([]);
       expect(failures.shown).toContain('No chat opened this page, so the correction was not sent: open the Graph app from the chat bar.');
     });

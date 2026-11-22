@@ -1,3 +1,5 @@
+import type { NodeSourceData } from "@cdd/harness/graph/graph";
+
 import type { SourceCallout } from "./source-callouts";
 
 const SKIP_TYPES = new Set([
@@ -57,23 +59,15 @@ const BARE_CALL = /(?<![\w.$])([A-Za-z_][A-Za-z0-9_]*)\s*\(/g;
 const OWN_OBJECT = new Set(["self", "this"]);
 const QUOTED = /'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`/g;
 
-// A class, operation or property the session's graph holds, with its text, from which a callout opens it in place.
-export type FoldMember = {
-  node_id: string;
-  name: string;
-  type: string;
-  owner: string;
-  text: string;
-  file: string;
-  start_line: number;
-  end_line: number;
-};
+// A stretch of a file a source view shows: the file, the line of the file its text starts on, the text, and its language.
+export type SourceSpan = { file: string; startLine: number; text: string; language: string };
 
 type Body = { id: string; name: string; label: string; text: string; file: string; start: number; end: number; owner: string };
 
-// The members of a graph a source view opens calls and classes from: each class by its name, each operation and property
-// by its class and name. calloutsIn finds, line by line, the calls and classes the code of a text reaches; a name in a
-// comment, a docstring or a string is prose, which opens nothing.
+// The members of a graph a source view opens calls and classes from, each a class, operation or property the graph
+// holds with its text (NodeSourceData): each class by its name, each operation and property by its class and name.
+// calloutsIn finds, line by line, the calls and classes the code of a span reaches; a name in a comment, a docstring or
+// a string is prose, which opens nothing.
 export class CallCatalog {
   private readonly classes = new Map<string, Body>();
   private readonly bodies = new Map<string, Body>();
@@ -84,29 +78,19 @@ export class CallCatalog {
   private readonly everyClass: Body[] = [];
   private readonly everyMember: Body[] = [];
 
-  constructor(members: FoldMember[], owner = "") {
+  constructor(members: NodeSourceData[], owner = "") {
     for (const member of members) this.hold(member, owner);
   }
 
-  // The callouts of each line of text, which starts at file line origin of file: each call, then each class the line
-  // names in code, a class once per text. stack holds the members already open around it, which never open again
-  // inside, and no line opens a class or member whose own lines of file hold it: a definition never opens itself.
-  calloutsIn(text: string, origin: number, language: string, stack: string[] = [], file = ""): SourceCallout[] {
-    const code = codeOf(text, language).split("\n");
-    const bindings = variableTypes(code.join("\n"));
-    const seen = new Set<string>(stack);
-    return code.flatMap((line, index) => this.calloutsOn(line, { file, line: origin + index }, bindings, stack, seen));
+  // The callouts of each line of span: each call, then each class the line names in code, a class once per span. stack
+  // holds the members already open around it, which never open again inside, and no line opens a class or member whose
+  // own lines of the file hold it: a definition never opens itself.
+  calloutsIn(span: SourceSpan, stack: string[] = []): SourceCallout[] {
+    return new CalloutScan(this, span, stack).callouts();
   }
 
-  private calloutsOn(line: string, at: FileLine, bindings: Map<string, string>, stack: string[], seen: Set<string>): SourceCallout[] {
-    const outside = (body: Body) => !holds(body, at);
-    const calls = this.callsOn(line, bindings, at).filter((call) => !stack.includes(call.id) && outside(call));
-    const types = [...this.classes.values()].map((type) => this.classNamed(type.name, at)).filter((type) => !seen.has(type.id) && outside(type) && (namesType(line, type.name) || boundOn(line, bindings, type.name)));
-    types.forEach((type) => seen.add(type.id));
-    return [...calls.map((call) => calloutOf(call, at.line, "call")), ...types.map((type) => calloutOf(type, at.line, "class"))];
-  }
-
-  private callsOn(line: string, bindings: Map<string, string>, at: FileLine): Body[] {
+  // The calls line makes to members the catalog holds, the variables of its code bound as bindings says.
+  callsOn(line: string, bindings: Map<string, string>, at: FileLine): Body[] {
     const found: Body[] = [];
     const add = (body: Body | undefined) => {
       if (body && !found.includes(body)) found.push(body);
@@ -127,6 +111,11 @@ export class CallCatalog {
     return named.find((member) => sameFile(member.file, around.file)) ?? named[0];
   }
 
+  // Each class the catalog holds, as the line at means it: the open file's own when it defines one of that name.
+  classesAt(at: FileLine): Body[] {
+    return [...this.classes.values()].map((type) => this.classNamed(type.name, at));
+  }
+
   // The class called name that a line of the open file means: the open file's own when it defines one, else the
   // first the graph holds.
   private classNamed(name: string, at: FileLine): Body {
@@ -143,7 +132,7 @@ export class CallCatalog {
     return byReceiver?.[1] ?? this.bodies.get(method);
   }
 
-  private hold(member: FoldMember, owner: string): void {
+  private hold(member: NodeSourceData, owner: string): void {
     if (!member.text) return;
     const body = bodyOf(member);
     if (CLASS_KINDS.has(member.type)) {
@@ -161,12 +150,44 @@ export class CallCatalog {
   }
 }
 
+// One reading of a span's code for its callouts: its lines with the prose blanked out, the class each of its variables is
+// bound to, and the classes already called out, each class once per span.
+class CalloutScan {
+  private readonly code: string[];
+  private readonly bindings: Map<string, string>;
+  private readonly seen: Set<string>;
+
+  constructor(
+    private readonly catalog: CallCatalog,
+    private readonly span: SourceSpan,
+    private readonly stack: string[],
+  ) {
+    this.code = codeOf(span.text, span.language).split("\n");
+    this.bindings = variableTypes(this.code.join("\n"));
+    this.seen = new Set<string>(stack);
+  }
+
+  callouts(): SourceCallout[] {
+    return this.code.flatMap((line, index) => this.calloutsOn(line, this.span.startLine + index));
+  }
+
+  // The callouts of line, the file's line number: each call it makes, then each class it names.
+  calloutsOn(line: string, number: number): SourceCallout[] {
+    const at = { file: this.span.file, line: number };
+    const outside = (body: Body) => !holds(body, at);
+    const calls = this.catalog.callsOn(line, this.bindings, at).filter((call) => !this.stack.includes(call.id) && outside(call));
+    const types = this.catalog.classesAt(at).filter((type) => !this.seen.has(type.id) && outside(type) && (namesType(line, type.name) || boundOn(line, this.bindings, type.name)));
+    types.forEach((type) => this.seen.add(type.id));
+    return [...calls.map((call) => calloutOf(call, at.line, "call")), ...types.map((type) => calloutOf(type, at.line, "class"))];
+  }
+}
+
 // The text without the marker the graph puts after a line for each call on it, which is no code.
 export function withoutCallMarkers(text: string): string {
   return text.replace(CALL_MARKER, "");
 }
 
-function bodyOf(member: FoldMember): Body {
+function bodyOf(member: NodeSourceData): Body {
   const text = withoutCallMarkers(member.text);
   const start = member.start_line || 1;
   const label = member.owner && !isModuleFunction(member) ? `${member.owner}.${member.name}` : member.name;
@@ -177,7 +198,7 @@ function bodyOf(member: FoldMember): Body {
 export const MODULE_OWNER = "_module";
 
 // Whether member is a function of its module, not of a class: owned by the module, or by nothing.
-function isModuleFunction(member: FoldMember): boolean {
+function isModuleFunction(member: NodeSourceData): boolean {
   return member.type === "Operation" && (!member.owner || member.owner === MODULE_OWNER);
 }
 

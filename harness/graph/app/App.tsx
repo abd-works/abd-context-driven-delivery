@@ -10,11 +10,7 @@ import { FolderBar } from './graph/FolderBar';
 import { GraphView } from './graph/GraphView';
 import { SiteNav } from './SiteNav';
 import { SourceView } from './source/SourceView';
-import { correctInChat } from './source/violation-chat';
 import { failures } from './graph/graph-page';
-
-// Correct on a broken rule's banner sends the correction to the chat that opened the page.
-const correct = correctInChat(failures);
 
 // The Graph app's page: the folder its graph is read from, the filter, the tree, and the chosen node's source. Every
 // failure goes through failures.fail: shown on the page and sent once to the chat that opened it (?chat=).
@@ -75,7 +71,7 @@ export function App() {
             rules={pane.rulesIn(filter.trees)}
             activeRule={pane.activeRule}
             onSelectRule={(name) => pane.chooseRule(filter.trees, name)}
-            onCorrect={correct}
+            onCorrect={failures.correct}
           />
         </div>
       </div>

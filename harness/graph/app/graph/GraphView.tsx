@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { KindMark } from '../labels/kind-mark';
-import type { ExplorerEntryData } from '@cdd/harness/graph/graph';
-import { childrenLeftOut, childrenOf, isRule, ruleHits, selectionForRule, type GraphSelection, type TreeItem } from './graph-selection';
+import { ExplorerTrees, type TreeItem } from './explorer-trees';
+import { ruleHits, selectionForRule, type GraphSelection } from './graph-selection';
 import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures } from './graph-page';
 import { LoadProgressView } from './LoadProgressView';
 
 type GraphViewProps = {
-  trees: ExplorerEntryData[];
+  trees: ExplorerTrees;
   loading: boolean;
   loadingLabel?: string;
   loadingLog?: string[];
@@ -32,8 +32,8 @@ export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error
         </div>
       ) : null}
       <ul className="tree">
-        {trees.map((node) => (
-          <TreeNode key={node.node_id || node.name} node={node} selectedId={selectedId} activeRule={activeRule} onSelect={onSelect} onOpenBranch={onOpenBranch} />
+        {trees.entries.map((node) => (
+          <TreeNode key={node.node_id || node.name} node={node} trees={trees} selectedId={selectedId} activeRule={activeRule} onSelect={onSelect} onOpenBranch={onOpenBranch} />
         ))}
       </ul>
     </div>
@@ -42,6 +42,7 @@ export function GraphView({ trees, loading, loadingLabel, loadingLog = [], error
 
 function TreeNode({
   node,
+  trees,
   selectedId,
   activeRule,
   onSelect,
@@ -49,6 +50,7 @@ function TreeNode({
   ownerId,
 }: {
   node: TreeItem;
+  trees: ExplorerTrees;
   selectedId: string;
   activeRule: string;
   onSelect: (selection: GraphSelection) => void;
@@ -56,8 +58,8 @@ function TreeNode({
   ownerId?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const children = childrenOf(node);
-  const leftOut = childrenLeftOut(node);
+  const children: TreeItem[] = node.children;
+  const leftOut = ExplorerTrees.leftOutOf(node);
   // An open entry whose answer left its children out reads them: when a person opens it, and when new trees, after a
   // change of filter, arrive under an entry already open.
   useEffect(() => {
@@ -67,11 +69,9 @@ function TreeNode({
   const rule = node.type === 'Rule';
   const rulesHolder = node.type === 'rules';
   const selected = rule ? ownerId === selectedId && node.name === activeRule : node.node_id === selectedId;
-  const violating = children.some(
-    (child) => child.name === 'rules' && childrenOf(child).some((hit) => isRule(hit) && hit.status === 'violating'),
-  );
-  const hits = isRule(node) ? ruleHits(node) : [];
-  const violationHint = isRule(node) && node.status === 'violating' && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
+  const violating = trees.isViolating(node);
+  const hits = ExplorerTrees.isRule(node) ? ruleHits(node) : [];
+  const violationHint = ExplorerTrees.isRule(node) && node.status === 'violating' && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
   return (
     <li
       data-node-id={node.node_id}
@@ -96,12 +96,12 @@ function TreeNode({
         )}
         <button
           type="button"
-          className={[selected ? 'selected' : '', isRule(node) ? `rule-status ${node.status}` : '', violating ? 'tree-violating' : '']
+          className={[selected ? 'selected' : '', ExplorerTrees.isRule(node) ? `rule-status ${node.status}` : '', violating ? 'tree-violating' : '']
             .filter(Boolean)
             .join(' ')}
           title={violationHint}
           data-testid={rule ? (violationHint ? 'tree-violation-rule' : 'tree-rule') : undefined}
-          onClick={() => onSelect(rule && isRule(node) ? selectionForRule(ownerId || node.node_id, node) : { nodeId: node.node_id })}
+          onClick={() => onSelect(rule && ExplorerTrees.isRule(node) ? selectionForRule(ownerId || node.node_id, node) : { nodeId: node.node_id })}
         >
           <KindMark kind={rule ? 'Rule' : rulesHolder ? 'Rules' : node.type} isFile={false} />
           <span className="node-name">{node.name}</span>
@@ -113,6 +113,7 @@ function TreeNode({
             <TreeNode
               key={child.node_id || child.name}
               node={child}
+              trees={trees}
               selectedId={selectedId}
               activeRule={activeRule}
               onSelect={onSelect}

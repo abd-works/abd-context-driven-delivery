@@ -1,17 +1,17 @@
 import { useRef, useState, type MutableRefObject } from 'react';
 import type { Held } from './held';
-import type { ExplorerEntryData, FilterChoicesData } from '@cdd/harness/graph/graph';
+import type { FilterChoicesData } from '@cdd/harness/graph/graph';
 import { NO_CHOICES, NO_FILTER, chosen, nodeFilter, type FilterSelection } from '../filter/filter-selection';
 import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures, graphs } from '../graph/graph-page';
-import { withBranch } from '../graph/graph-selection';
+import { ExplorerTrees } from '../graph/explorer-trees';
 import type { LoadStatus } from './load-status';
 import type { PageFolder } from './page-folder';
 
 
 interface ExplorerFilterState {
   selection: Held<FilterSelection>;
-  trees: Held<ExplorerEntryData[]>;
+  trees: Held<ExplorerTrees>;
   choices: Held<FilterChoicesData>;
   // The filter the trees on the page were read with, which a branch opened later is read with too.
   shown: MutableRefObject<FilterSelection>;
@@ -33,7 +33,7 @@ export class ExplorerFilter {
     return this.state.folder;
   }
 
-  get trees(): ExplorerEntryData[] {
+  get trees(): ExplorerTrees {
     return this.state.trees[0];
   }
 
@@ -58,14 +58,14 @@ export class ExplorerFilter {
   async show(resolved: FilterSelection): Promise<void> {
     this.state.selection[1](resolved);
     this.state.shown.current = resolved;
-    this.state.trees[1]((await graphs.explorerTrees(nodeFilter(resolved))) ?? []);
+    this.state.trees[1](new ExplorerTrees((await graphs.explorerTrees(nodeFilter(resolved))) ?? []));
   }
 
   // The entries a closed entry left out, read with the filter the trees were read with, put in its place.
   async openBranch(nodeId: string): Promise<void> {
     try {
       const branch = await graphs.explorerBranch(nodeId, nodeFilter(this.state.shown.current));
-      if (branch) this.state.trees[1]((current) => withBranch(current, branch));
+      if (branch) this.state.trees[1]((current) => current.withBranch(branch));
     } catch (cause) {
       failures.fail(reasonOf(cause), `Opening ${nodeId} in the Graph app's tree`);
     }
@@ -96,7 +96,7 @@ export class ExplorerFilter {
 export function useExplorerFilter(folder: PageFolder, status: LoadStatus): ExplorerFilter {
   return new ExplorerFilter({
     selection: useState<FilterSelection>(NO_FILTER),
-    trees: useState<ExplorerEntryData[]>([]),
+    trees: useState<ExplorerTrees>(ExplorerTrees.NONE),
     choices: useState<FilterChoicesData>(NO_CHOICES),
     shown: useRef<FilterSelection>(NO_FILTER),
     folder,
