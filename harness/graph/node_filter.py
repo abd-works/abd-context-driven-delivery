@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Iterable, TypedDict
 
 from harness.graph.explorer import FilteredNode
+from harness.graph.node_metric import METRIC_TYPE, METRICS_GROUP
 from harness.installation.data_class import data_field
 
 if TYPE_CHECKING:
@@ -73,7 +74,8 @@ class FilterChoices:
     @property
     @data_field
     def relationships(self) -> list[str]:
-        """The edge kinds the chosen node types sit on, of every offered node type when none is chosen."""
+        """The edge kinds the chosen node types sit on, of every offered node type when none is chosen, and last the
+        metrics group when a node of those types holds a metric."""
         types = set(self._node_types or self.offered_node_types)
         found: list[str] = []
         for part in self._parts():
@@ -82,7 +84,20 @@ class FilterChoices:
                     continue
                 if any(edge.parent.type in types or edge.child.type in types for edge in part.edge_index.of(edge_type.kind)):
                     found.append(edge_type.kind)
-        return found
+        return [*found, METRICS_GROUP] if self._holds_a_metric(types) else found
+
+    def _holds_a_metric(self, types: set[str]) -> bool:
+        """Whether a node of types, in a chosen practice, holds a metric: only the node types a practice says can hold
+        one are looked at, so a practice with no limit rule costs nothing."""
+        opened = self._graph.practices.opened
+        readings = [opened[key].reading for key in self._scope() if key in opened]
+        return any(
+            reading.metrics_of(node)
+            for reading in readings
+            for node_type in reading.metric_node_types
+            if node_type in types
+            for node in reading.in_graph.nodes(node_type)
+        )
 
     @property
     @data_field
@@ -130,6 +145,9 @@ class Filter:
         violations are wanted, sits on a chosen relationship, and lies under a chosen path."""
         if node.type == "Practice" or node.type == node.name:
             return False
+        if node.type == METRIC_TYPE:
+            # A metric is shown wherever the node it measures is: it sits under that node's metrics group.
+            return self.matches(node.parent.parent)
         if self.name and node.name != self.name:
             return False
         if self.node_types and node.type not in self.node_types:
@@ -205,6 +223,8 @@ class Filter:
         return node.practice.key == practice
 
     def _on_relationship(self, node: Node) -> bool:
+        if METRICS_GROUP in self.relationships and node.practice.reading.metrics_of(node):
+            return True
         for kind in self.relationships:
             for edge in node.practice.reading.in_graph.edge_index.of(kind):
                 if edge.parent is node or edge.child is node:

@@ -32,6 +32,12 @@
 # First outcome: `then(...)`. Every later outcome on the same interaction: `.and_(...)`.
 # Do not repeat `then()` for the same When. Markdown *And* stays *And*.
 #
+# ## Edge conditions (`edge-conditions-walked`)
+#
+# Every story answers the nine edge conditions of the scenarios Guidance: a scenario such as the validation
+# branches below, one line "does not apply, because ...", or a question for the person. The lines live under
+# `### Edge conditions` in the story's markdown scenarios file, or in a comment above the story when it has none.
+#
 # ## Lifecycle hooks (`infrastructure-in-lifecycle-hooks`)
 #
 # Browser boot, app wiring, and `initialize` live in `before.all` / `after.all` — not in `given()`.

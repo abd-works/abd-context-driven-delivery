@@ -130,6 +130,10 @@ outputs:
   python: "**/*_spec.py"
   typescript: "**/*.spec.ts"
   javascript: "**/*.spec.js"
+example: "_examples/examples.py"
+leaves_out:
+  typescript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
+  javascript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
 ```
 
 #### Overview
@@ -187,6 +191,11 @@ outputs:
   typescript: "**/*.spec.ts"
   javascript: "**/*.spec.js"
   markdown: ".context/{scope}-bdd-realization.md"
+example: "_examples/examples.py"
+leaves_out:
+  typescript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
+  javascript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
+  markdown: "everything but the describe tree. Imports, helpers and test bodies stay in the spec file"
 ```
 
 #### Overview
@@ -256,6 +265,10 @@ outputs:
   python: "**/*_spec.py"
   typescript: "**/*.spec.ts"
   javascript: "**/*.spec.js"
+example: "_examples/examples.py"
+leaves_out:
+  typescript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
+  javascript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
 ```
 
 #### Overview

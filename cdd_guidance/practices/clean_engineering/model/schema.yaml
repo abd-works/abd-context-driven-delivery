@@ -96,6 +96,9 @@ class:
     - layer-separation
     - extensions-live-with-the-domain
     - write-interactions
+    - limit-class-complexity
+    - limit-class-methods
+    - keep-class-methods-sharing-data
 
 relationship:
   fidelity: model
@@ -149,6 +152,10 @@ operation:
     - put-logic-on-the-owning-resource
     - use-property-not-accessor
     - eliminate-duplication
+    - limit-paths-through-a-function
+    - keep-functions-readable
+    - limit-function-lines
+    - limit-function-parameters
 
 property:
   fidelity: model
@@ -173,6 +180,10 @@ property:
     - never-swallow-exceptions
     - limit-operation-parameters
     - write-interactions
+    - limit-paths-through-a-function
+    - keep-functions-readable
+    - limit-function-lines
+    - limit-function-parameters
 
 parameter:
   fidelity: model

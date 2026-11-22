@@ -321,8 +321,11 @@ class GuidanceSelection:
 
     def changed(self) -> None:
         """Raise the version, so every page waiting on it hears the change."""
-        version = self._on_disk() + 1
-        self._session.record.update(lambda fields: setattr(fields.guidance, "version", version), f"guidance version {version}")
+        def raised(fields) -> None:
+            # Raised from the version the file holds inside the change, so two changes at once raise it twice.
+            fields.guidance.version = fields.guidance.version + 1
+
+        self._session.record.update(raised, "guidance version raised")
         with _GUIDANCE_CHANGED:
             _GUIDANCE_CHANGED.notify_all()
 

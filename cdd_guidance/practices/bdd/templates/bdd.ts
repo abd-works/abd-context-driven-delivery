@@ -6,7 +6,7 @@
  * REALIZATION — `# ->` / `# <-` call-graph comments per `it` (see bdd.md `#realization`).
  * DEVELOPMENT — replace markers with Arrange / Act / Assert.
  *
- * describe('{DomainEntity}', () => {
+ * describe('{a domain subject}', () => {
  *   describe('that has been created', () => {
  *     it('should have {initial property} assigned', () => {
  *       // BDD: SIGNATURE
@@ -16,7 +16,7 @@
  */
 import { describe, it } from "vitest";
 
-describe("{DomainEntity}", () => {
+describe("{a domain subject}", () => {
   describe("that has been created", () => {
     it("should have {initial property} assigned", () => {
       // BDD: SIGNATURE

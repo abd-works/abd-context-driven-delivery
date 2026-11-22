@@ -74,6 +74,11 @@ outputs:
   whiteboard: "{epic}/.context/information-architecture.whiteboard"
   markdown: "{epic}/.context/ux-context.md"
   json: ["{epic}/ux-map.json", "ux/ux.json"]
+example: "model/_examples/trip/ordering-ux-map.json"
+leaves_out:
+  drawio: "the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in ux-map.json"
+  whiteboard: "a screen's layout, and the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in ux-map.json"
+  markdown: "everything but the map's scope, notes and invariants. ux-context.md is the map's context, and the screens stay in ux-map.json and the drawing"
 ```
 
 #### Overview
@@ -136,6 +141,11 @@ outputs:
   drawio: "{epic}/.context/{user_goal}.drawio"
   whiteboard: "{epic}/.context/{user_goal}.whiteboard"
   claude_design: "design-canvas/{version}/project/canvas.json"
+example: "model/_examples/trip/ordering-ux-map.json"
+leaves_out:
+  drawio: "the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in the mockup's HTML"
+  whiteboard: "a screen's layout, and the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in the mockup's HTML"
+  claude_design: "everything on the way back. The canvas is placed from the UX map and is never read back, so the map stays in the mockup's HTML"
 ```
 
 #### Overview
@@ -213,6 +223,9 @@ outputs:
   typescript: "**/*View.tsx"
   javascript: "**/*View.jsx"
 reviews_files_of: [ia, mockup]
+example: "model/_examples/trip/CheckoutView.tsx"
+leaves_out:
+  javascript: "type annotations, interfaces and type imports. They stay in the .tsx view"
 ```
 
 #### Overview

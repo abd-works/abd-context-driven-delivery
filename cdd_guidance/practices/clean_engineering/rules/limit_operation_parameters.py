@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
+from cdd_guidance.practices.clean_engineering.reading.production_classes import counted_parameters, parameters_of
 from cdd_guidance.practices.clean_engineering.rules.operation_checks import (
     OperationMeasureRule,
     operation_label,
@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from harness.graph.graph import Node
 
 MAX_DOMAIN_PARAMETERS = 3
-_PARAMETER_NAMES_EXCLUDED_FROM_COUNT = frozenset({"self", "cls"})
 # Creation / mapping factories may take a record or full field set (align with prefer-instance-operations).
 _PARAMETER_COUNT_EXEMPT_OPERATION_NAMES = frozenset({"create", "fromFields", "instance", "fromRequest"})
 _CAMEL_FROM_FACTORY = re.compile(r"^from[A-Z]")
@@ -23,14 +22,6 @@ _LOAD_FACTORY = re.compile(r"^load(?:[A-Z].*)?$")
 # The types an Express error handler takes after the failure. Express knows an error handler only by its four
 # parameters, so the count is the framework's contract, not setup the handler could be spared.
 _EXPRESS_ERROR_HANDLER_TYPES = ["Request", "Response", "NextFunction"]
-
-
-def counted_parameters(names: list[str], packed: dict[str, int] | None = None) -> int:
-    """Each named parameter counts once, except a packed tuple or ``*args``, which counts each value it carries."""
-    packed = packed or {}
-    named = [name for name in names if name not in _PARAMETER_NAMES_EXCLUDED_FROM_COUNT]
-    unnamed = [values for name, values in packed.items() if name not in named]
-    return sum(packed.get(name, 1) for name in named) + sum(unnamed)
 
 
 class LimitOperationParameters(OperationMeasureRule):

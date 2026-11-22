@@ -16,6 +16,10 @@ section: body
      Outcome chaining: first *Then* on a step; further outcomes on the same *When* use *And*
      (not a second *Then*). New *When* when actor or trigger changes. -->
 
+<!-- Head the file with the name the story has on the story map (`scenarios-name-a-story-on-the-map`). -->
+
+## Story: `<Story Verb–Noun>`
+
 ### Domain terms
 
 - ++[`<ConceptA>`](<path>/domain-model.md#<concepta-heading-anchor>)++ — `<plain-language gloss>`
@@ -29,6 +33,24 @@ section: body
 | Source | Note |
 |--------|------|
 | `<pointer>` | `<why it matters>` |
+
+### Edge conditions
+
+<!-- `edge-conditions-walked`: every condition gets one line. Name the Scenario that covers it, or write
+     "does not apply, because ...", or write the question for the person where the source and the running
+     product are silent. A condition with no line is the failure. -->
+
+| Edge condition | Scenario, "does not apply, because ...", or question for the person |
+|----------------|-------------------------------------------------------------------|
+| Missing or empty input | `<answer>` |
+| Malformed input, or input at or past a limit | `<answer>` |
+| Duplicate | `<answer>` |
+| Repeated action | `<answer>` |
+| Two actors at once | `<answer>` |
+| Interrupted action | `<answer>` |
+| Dependency absent, unavailable, slow, or wrong | `<answer>` |
+| Changed or gone since last seen | `<answer>` |
+| Actor not allowed | `<answer>` |
 
 ### Background
 
@@ -62,14 +84,22 @@ section: body
 |------------|-------------|-------------|-------------|
 | ++Scenario 1++ | `<value>`   | [`<ConceptB value>`](<path>/domain-model.md#<conceptb-heading-anchor>)   | `<value>`   |
 | ++Scenario 2++ | `<value>`   | `<value>`   | `<value>`   |
+| ++Scenario 3++ | `<value>`   | `<value>`   | `<value>`   |
 
 > Markdown keeps examples tables for documentation. Code wires values via `{Type}ExampleFactory` (AI fills helper/story method bodies). Do not copy inventable `examples: [{ … }]` literals into code story files.
 
 #### Scenario: `<variation — delta from the outline>`
 
-*Given* … (only the delta from the outline)  
-*When* …  
-*Then* …
+*Given* `<only the state that differs from the outline>`  
+*When* the **`<Actor>`** `<action>`  
+*Then* the ++`<result concept>`++ `<outcome that differs>`
+
+#### Scenario: `<refusal — the action is refused at an edge condition>`
+
+*Given* a ++`<ConceptA>`++ `<in the state the edge condition names — a blank value, a duplicate, a second actor, a missing dependency>`  
+*When* the **`<Actor>`** `<action>`  
+*Then* the ++`<result concept>`++ is `<refused, with the reason the actor is shown>`  
+  *But* no ++`<concept>`++ is `<what the refused action must leave unchanged>`
 
 ---
 

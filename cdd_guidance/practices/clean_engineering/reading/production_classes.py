@@ -235,6 +235,18 @@ def parameters_of(operation: "Node") -> list["Node"]:
     return [edge.child for edge in operation.graph.edges.from_parent("hasParameter", operation)]
 
 
+# The parameter a method takes for its own object, which is no parameter a caller supplies.
+_PARAMETER_NAMES_EXCLUDED_FROM_COUNT = frozenset({"self", "cls"})
+
+
+def counted_parameters(names: list[str], packed: dict[str, int] | None = None) -> int:
+    """Each named parameter counts once, except a packed tuple or ``*args``, which counts each value it carries."""
+    packed = packed or {}
+    named = [name for name in names if name not in _PARAMETER_NAMES_EXCLUDED_FROM_COUNT]
+    unnamed = [values for name, values in packed.items() if name not in named]
+    return sum(packed.get(name, 1) for name in named) + sum(unnamed)
+
+
 def names_in(type_hint: str) -> set[str]:
     """The identifiers a type hint mentions: ``dict[str, Practice]`` mentions ``dict``, ``str``, and ``Practice``."""
     return set(_IDENTIFIER.findall(type_hint or ""))

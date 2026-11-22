@@ -446,8 +446,9 @@ section: body
 
 **Stories in this increment:**
 
-- *Record Code Metrics As Node Facts*
-- *Check Code Metrics Against Clean Engineering Limits*
+- *Record Code Metrics As Node Facts* (built 2026-11-22)
+- *Record Module Measures As Node Facts* (built 2026-11-22)
+- *Check Code Metrics Against Clean Engineering Limits* (built 2026-11-22)
 - *Report Unused Class For Deletion*
 - *Report Runtime Dependency That Should Be Owned*
 - *Report Disconnected Class*

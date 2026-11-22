@@ -5,7 +5,7 @@
 # BEHAVIOR (SIGNATURE) — `signature-markers`
 # Every `it` body is exactly `pass  # BDD: SIGNATURE` — nothing else. A bare comment is not a Python body.
 #
-# with description('{DomainEntity}'):
+# with description('{a domain subject}'):
 #     with context('that has been created'):
 #         with it('should have {initial property} assigned'):
 #             pass  # BDD: SIGNATURE
@@ -22,7 +22,8 @@
 # DEVELOPMENT — `no-remaining-signatures`
 # Replace each `# BDD: SIGNATURE` with Arrange / Act / Assert. Zero markers when done.
 # Instructions:
-#   1. Replace {DomainEntity} with the class or module under test.
+#   1. Name the subject in plain English ({a domain subject}: a cart, an order), never a class's name;
+#      replace {DomainEntity} in the code with the class or module under test.
 #   2. Use Arrange / Act / Assert comments in test bodies.
 #   3. One assertion per behavior.
 # =============================================================================
@@ -31,7 +32,7 @@ from mamba import description, context, it, before
 from expects import equal, expect
 from {domain_module} import {DomainEntity}
 
-with description('{DomainEntity}'):
+with description('{a domain subject}'):
     with context('that has been created'):
         with it('should have {initial property} assigned'):
             # Arrange / Act

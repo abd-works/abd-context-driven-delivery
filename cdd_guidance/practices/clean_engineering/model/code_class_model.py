@@ -52,6 +52,11 @@ class CodeOperation(Operation):
     it measures them itself once its class holds it, so it reads its own class, body, and parameters."""
 
     language: CodeLanguage
+    # The measures a tool supplies of a file a read names, each kept only once the tool has supplied it: the paths
+    # through it and its readability score. Its lines and its parameters are facts every read already keeps.
+    paths_through: int
+    readability_score: int
+    graph_facts = (*Operation.graph_facts, "paths_through", "readability_score")
 
     def __init__(self, name: str, sequential_order: int = 0, return_type: str = "") -> None:
         super().__init__(name, sequential_order, return_type)
@@ -124,6 +129,11 @@ class CodeClass(OoadClass):
     language: CodeLanguage
     property_type: type = CodeProperty
     operation_type: type = CodeOperation
+    # The measures the reader keeps of a file a read names, each kept only once a tool has supplied it: its total complexity, the
+    # classes it depends on, and the groups of its methods that share no data with one another.
+    total_complexity: int
+    classes_depended_on: int
+    unshared_method_groups: int
     graph_facts = (
         *OoadClass.graph_facts,
         "method_count",
@@ -132,6 +142,9 @@ class CodeClass(OoadClass):
         "constructs",
         "prose_comment",
         "prototype_swap",
+        "total_complexity",
+        "classes_depended_on",
+        "unshared_method_groups",
     )
 
     def __init__(self, name: str, sequential_order: int, intent: str = "") -> None:

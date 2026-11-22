@@ -170,6 +170,12 @@ class DeclaredOutputs:
         """The files the fidelity declares in format; a declared folder names no file."""
         return self._files.get(format, [])
 
+    def formats_written_in(self, output: str) -> list[Format]:
+        """The format each file of output is written in, by its extension, once each: what an output named for what
+        it holds, such as the story map's ``thin_slice``, is written as (markdown, a drawing, a whiteboard)."""
+        extensions = (PurePosixPath(path).suffix for path in self.paths_in(output) if path and not path.endswith("/"))
+        return list(dict.fromkeys(Format.from_extension(extension) for extension in extensions if extension))
+
     @functools.cached_property
     def _files(self) -> dict[str, list[DeclaredFile]]:
         """The files each format of its outputs declares, by format."""

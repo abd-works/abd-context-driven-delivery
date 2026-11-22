@@ -44,6 +44,8 @@ class Generate(GuidanceAction):
         self.run(self._generate_item, action="generate")
         places = self._where_outputs_go()
         instructions(places)
+        test_tiers = self._supplement_records()
+        instructions(test_tiers)
         if self._writes_whiteboard():
             tools(self._render().publish_board)
             tools(self._render().record_board)
@@ -124,6 +126,15 @@ class Generate(GuidanceAction):
             return ""
         return f"Save each format you write at its path, filling any {{name}} from the work: {'; '.join(places)}"
 
+    def _supplement_records(self) -> str:
+        """What the supplements of each listed fidelity keep in the session as its files are written, such as TDD's
+        record of the test tiers a module uses, with what each leaves the agent to decide and record; nothing outside a
+        session, which has no record to keep it in."""
+        if self._session is None:
+            return ""
+        records = (fidelity.supplement_records() for fidelity in self._listed_fidelities)
+        return "\n\n".join(record for record in records if record)
+
     def _output_folders(self) -> list[Path]:
         """The folder of each file a listed fidelity writes, once each; the pattern overlays record their patterns at
         the root of each. A templated path's folder, or one a wildcard names, such as harness/**/.context, is no one
@@ -139,4 +150,5 @@ class Generate(GuidanceAction):
     def generate_fixes_from_validate(self) -> str:
         """The fixes step that follows a validate, which an action such as Satisfy names after asking for validate."""
         "Apply the fixes the latest validate report names before considering generate done, in every format of the fidelity: its documents, its diagrams, and its code, so they still mirror each other."
+        "A fix keeps the behaviour: before changing code to clear a finding, name the scenarios and tests that state what that code does today; where none covers the behaviour about to be reshaped, write that test first and see it pass on the code as it is; after the change run them again. A finding cleared by changing what the code does is not fixed."
         return ""

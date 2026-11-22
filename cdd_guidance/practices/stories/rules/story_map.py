@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cdd_guidance.practices.stories.model import story_map
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
 
@@ -14,7 +15,6 @@ if TYPE_CHECKING:
 _VERB_OPENINGS = {"verb", "unlisted"}
 # A generic verb is listed for the judgment to decide from its context, not failed on its own (stories.md).
 _GENERIC_VERB = "generic-verb"
-_MOST_SCENARIOS = 7
 
 
 class VerbNounFormat(PracticeGraphRule):
@@ -33,8 +33,9 @@ class VerbNounFormat(PracticeGraphRule):
 
 
 class ChildCountFitsLayer(PracticeGraphRule):
-    """An epic or sub-epic holds the number of children its layer reads well: 3-9 under a node that holds sub-epics,
-    2-9 stories under a sub-epic, 4-9 stories under a top epic. The node's map facts carry its count and band."""
+    """An epic or sub-epic holds the number of children its layer reads well: the band the story map model holds for
+    a node that holds sub-epics, for a sub-epic, and for a top epic of stories (``LAYER_BANDS``). The node's map facts
+    carry its count, its band's target, and whether the count is outside it."""
 
     slug = "child-count-fits-layer"
     node_types = ("Epic", "SubEpic")
@@ -45,13 +46,13 @@ class ChildCountFitsLayer(PracticeGraphRule):
             return []
         count = node.get_fact("child_count", 0)
         label = node.get_fact("child_label") or "children"
-        target = node.get_fact("child_target") or "4-9"
+        target = node.get_fact("child_target")
         kind = node.type.lower().replace("subepic", "sub-epic")
         return [Finding(node, f"{kind} {node.name!r}: {count} {label} (target {target})")]
 
 
 class StoryScenariosAtMostSeven(PracticeGraphRule):
-    """Code scenarios on a story: at most 7. More than seven and the story is huge. A story with none
+    """Code scenarios on a story: at most the number the story map model holds (``MOST_SCENARIOS``). More and the story is huge. A story with none
     has not had its scenarios written yet, which is ordinary while the map is ahead of the scenarios."""
 
     slug = "story-scenarios-at-most-seven"
@@ -64,9 +65,9 @@ class StoryScenariosAtMostSeven(PracticeGraphRule):
         if count is None:
             return []
         count = int(count)
-        if count <= _MOST_SCENARIOS:
+        if count <= story_map.MOST_SCENARIOS:
             return []
-        return [Finding(node, f"story {node.name!r}: {count} scenarios — story is huge (target 1-{_MOST_SCENARIOS})")]
+        return [Finding(node, f"story {node.name!r}: {count} scenarios — story is huge (target 1-{story_map.MOST_SCENARIOS})")]
 
 
 class KebabCasePaths(PracticeGraphRule):

@@ -64,6 +64,20 @@ class _SessionRecord(Protocol):
         """The record's fields."""
 
 
+class _TestTiers(Protocol):
+    """The test tiers a session records for each module, each tier with its test tool."""
+
+    @property
+    def recorded(self) -> Mapping[str, Mapping[str, str]]:
+        """Each module's tiers, by the module's path from the project."""
+
+    def of(self, module: str) -> Mapping[str, str]:
+        """The tiers module uses, each with its test tool."""
+
+    def record(self, module: str, tiers: dict[str, str]) -> Mapping[str, str]:
+        """Keep tiers beside the tiers module already holds, and answer the module's tiers."""
+
+
 class _SessionCheckout(Protocol):
     """The one checkout a session works in."""
 
@@ -104,6 +118,10 @@ class WorkedSession(CallSession, Protocol):
     @property
     def record(self) -> _SessionRecord:
         """Its session.json."""
+
+    @property
+    def test_tiers(self) -> _TestTiers:
+        """The test tiers it records for each module."""
 
     @property
     def practices(self) -> Mapping[str, PracticeOutput]:

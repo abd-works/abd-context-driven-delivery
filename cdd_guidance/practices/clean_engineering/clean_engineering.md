@@ -344,6 +344,17 @@ If this change will not stay here, follow `practices/clean-engineering/clean-eng
 - `limit-comments` — write comment in operations and properties only when the signature cannot say a constraint or explain why the code behaves the way it does. Do not narrate a line that already names what it does.
 - `source-parses` — Keep every source file valid in its language. A file that does not parse is read into no classes, so every other rule passes it without looking, and its problems stay hidden until it runs.
 
+**Measured limits**
+
+Each of these is a graph rule like the others, checked at the model and code fidelities. It reads one fact on the function or class. A function's lines and parameters and a class's methods are facts every read of the code keeps. The paths through a function, its readability score and a class's total complexity are supplied by the tool the project's `.context/config.json` chooses for that measure in the file's language (`code_measures`), for the code files a validate is given. The limits below are the shipped ones; a project sets its own there, beside the tools. A measure no tool could take, because none is chosen for the language or the chosen tool is not installed, is reported by its rule with what to do about it. A project with no `code_measures` section holds its code to none of these limits. The explorer tree shows each of these facts under a node's `metrics`, with its limit.
+- `limit-paths-through-a-function` — Keep a function to 10 paths through it or fewer (cyclomatic complexity: one path, plus one for each branch, loop, and condition). Every path is a case someone has to test, and past ten some case always goes untested.
+- `keep-functions-readable` — Keep a function's readability score at 15 or lower (cognitive complexity, which counts each branch and adds more for each level it is nested inside). A deeply nested function is the one a reader misjudges, even when it has few paths.
+- `limit-function-lines` — Keep a function to 50 lines or fewer. A function longer than a screen does several things, and a change to one of them is made without seeing the others.
+- `limit-function-parameters` — Have a function take 5 parameters or fewer, not counting its own object. A longer list is state the object should hold or values that travel together and need a name, and callers pass them in the wrong order.
+- `limit-class-complexity` — Keep a class's total complexity at 100 or lower (the paths through all its methods, added up). A class past that is doing a second job, and every change to one job risks the other.
+- `limit-class-methods` — Keep a class to 30 methods or fewer. A longer list hides which methods belong together, so the class grows by whatever is added next.
+- `keep-class-methods-sharing-data` — Keep the methods of a class in one group, where each method shares a field with another or calls it (lack of cohesion: more than one group). A group that uses none of the fields the rest use is a second class kept inside the first, and it changes for different reasons.
+
 ---
 
 ## Common mistakes still being made

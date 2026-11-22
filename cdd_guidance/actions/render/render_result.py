@@ -188,3 +188,22 @@ class SavedCode(RenderResult):
     @property
     def saved(self) -> list[Path]:
         return list(self._paths)
+
+    def with_test_tiers(self, test_tiers: str) -> SavedTests:
+        """This render as one that saved tests, naming what the session records of their module's test tiers."""
+        return SavedTests(self.rendered, self._paths, self._migrate, test_tiers)
+
+
+class SavedTests(SavedCode):
+    """A render to code that saved tests at a fidelity whose supplement keeps the test tiers of the module each test is
+    for: beside the files, it answers what the session's record of those tiers holds now and what the render could not
+    tell, which the agent decides and records."""
+
+    def __init__(self, rendered: Rendered, paths: list[Path], migrate: list[Migration], test_tiers: str) -> None:
+        super().__init__(rendered, paths, migrate)
+        self._test_tiers = test_tiers
+
+    @property
+    @data_field
+    def test_tiers(self) -> str:
+        return self._test_tiers

@@ -14,6 +14,7 @@ from cdd_guidance.practices.stories.model.graph_reading import StoriesReading
 from cdd_guidance.practices.stories.model.project_story_files import OnFile, ProjectStoryFiles
 from cdd_guidance.practices.stories.model.sketch.sketch_story_map import SketchStoryMap
 from cdd_guidance.practices.stories.model.story_map_files import STORY_TESTS_FOLDER
+from cdd_guidance.practices.stories.model import story_map
 from cdd_guidance.practices.stories.model.story_map import StoryNode
 from cdd_guidance.practices.stories.stories_formats import StoriesFormats
 
@@ -92,6 +93,18 @@ class Stories(PracticeGuidance):
 
     default_workspace_folder = "tests"
     format_adapters = _FORMAT_ADAPTERS
+
+    @property
+    def markdown_values(self) -> dict[str, str]:
+        """The numbers its rules hold, read from the story map model, for the markers its document and templates carry
+        in their place: the band of children each layer holds, and the most scenarios a story holds."""
+        bands = story_map.LAYER_BANDS
+        return {
+            "child_band.holding_sub_epics": bands.holding_sub_epics.written,
+            "child_band.sub_epic": bands.sub_epic.written,
+            "child_band.flat_epic": bands.flat_epic.written,
+            "story.most_scenarios": str(story_map.MOST_SCENARIOS),
+        }
 
     def reads_file_at(self, fidelity: str | None) -> StoryExampleFiles:
         """The files of its folders it reads at fidelity (``StoryExampleFiles``)."""

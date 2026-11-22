@@ -391,3 +391,66 @@ pet-visits.tag("urgent")
 ```
 
 *Then* pet-visits' card shows the tags billing and urgent
+
+## Story: Keep Every Change To Session Record
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| The person, 2026-11-22 | "one lock for every session.json update, so two chats or processes changing one session's record at once each keep their change" |
+| `space/session/session_record.py` `SessionRecord.update`, before the fix | it read the record, changed it and wrote it with nothing held, so the later of two writes dropped the earlier: four processes each recording twelve modules' test tiers left 12 of the 48 (`space/session/session_record_processes_heavy_spec.py`, run before the fix) |
+| `harness/installation/json_file.py` `JsonFile.held` | "a killed holder blocks nobody, and the lock file it leaves holds nothing" |
+
+#### Scenario: Keep the changes two chats make to one ticket at the same moment
+
+Observed (`space/session/session_record_processes_heavy_spec.py`, four real processes; `space/session/session_record_spec.py`, four callers in one process).
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is tagged billing
+*When* one chat tags pet-visits' [session](../../../space/kanban/.context/kanban-model.md#session) with urgent and another tags it with legal at the same moment
+*Then* pet-visits' `session.json` holds the tags billing, urgent and legal
+  *And* neither chat's change is refused
+
+#### Scenario: Make a change wait for the change that holds the record
+
+Observed (`session_record_spec.py`).
+
+*Given* a change to pet-visits' title holds its `session.json`
+*When* another chat tags pet-visits with urgent before the first change is written
+*Then* the tag waits for the first change
+  *And* `session.json` holds the new title and the tag urgent
+
+### Edge conditions
+
+Walked for `edge-conditions-walked`.
+
+#### Scenario: Take the next change at once after the holder is killed
+
+An action interrupted partway. Observed (`session_record_processes_heavy_spec.py`).
+
+*Given* a process holding pet-visits' `session.json` for a change is killed before it writes
+*When* another chat tags pet-visits with urgent
+*Then* `session.json` held what it held before the killed change
+  *And* the tag is kept at once, not after the wait a held record allows
+
+#### Scenario: Refuse to change a session.json left half written
+
+Malformed input, and the thing acted on changed since it was last seen. Observed (`session_record_processes_heavy_spec.py`, `session_record_spec.py`).
+
+*Given* pet-visits' `session.json` ends partway through its title
+*When* a chat tags pet-visits with urgent
+*Then* the change is refused, naming `session.json` as not a readable JSON object
+  *And* the file is left as it is for a person to repair, never read as empty and written over
+
+#### Scenario: Change the record itself when a killed writer left its staged text beside it
+
+An action interrupted partway. Observed (`session_record_spec.py`).
+
+*Given* a killed writer left `session.json.4242.1.tmp`, half written, beside pet-visits' `session.json`
+*When* a chat tags pet-visits with urgent
+*Then* `session.json` holds its title and the tag urgent
+
+- **A holder that never lets go:** a change that waits 30 seconds for a live holder is refused, naming the file as held by another caller (`JsonFile.held`, *JsonFileBusy*, covered for the mechanism in `harness/installation/json_file_spec.py`); the record is not changed.
+- **Missing input, a duplicate, the same action repeated, an actor not allowed:** do not apply to the hold itself, because each is the changed field's own behaviour, such as a tag added twice being kept once (Tag Ticket Session).
+- **A dependency absent:** a session with no folder yet has its folder made by the first change, which holds the lock file made beside the new `session.json`.
+- **A list a caller replaces whole:** question for the person: `GuidanceSelection.select` replaces the selected stages and each fidelity's formats with lists it worked out before the hold, so of two selections made at once the later one stands. That is what "select exactly these" asks for; should the formats it turns on and off be merged with a format another chat chose at the same moment?

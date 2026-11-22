@@ -10,6 +10,7 @@ there and its example fails.
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 
 from harness.graph.rule_fixture import RuleFixture, SchemaRuleRun
@@ -75,3 +76,12 @@ class DddExamplePair:
 def assert_ddd_example_pair(slug: str, fault_class: str | None = None, *, clean_class: str | None = None) -> None:
     """The rule flags the example's faulty asset and passes its repaired one: on the classes named, else anywhere."""
     DddExamplePair(slug, fault_class, clean_class=clean_class).check()
+
+
+def _has_both_sides(slug: str) -> bool:
+    return (_EXAMPLES / slug / "faulty" / "faultyAsset.py").is_file() and (_EXAMPLES / slug / "repaired" / "repairedAsset.py").is_file()
+
+
+# What proves each rule flags its failing asset and passes its repaired one, for the spec every practice shares: a
+# rule has a pair once its example folder holds a faulty and a repaired asset.
+EXAMPLE_PAIRS = {slug: partial(assert_ddd_example_pair, slug) for slug in BY_SLUG if _has_both_sides(slug)}

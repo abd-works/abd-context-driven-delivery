@@ -7,6 +7,7 @@ from cdd_guidance.practices.clean_engineering.rules.coupling_rules import (
     LayerSeparation,
     ShapeClassesAroundResources,
 )
+from cdd_guidance.practices.clean_engineering.rules.code_measure_limits import MEASURE_LIMIT_RULES
 from cdd_guidance.practices.clean_engineering.rules.operation_checks import CODE_RULES
 from cdd_guidance.practices.clean_engineering.rules.prefer_class_operations import PreferClassOperations
 from cdd_guidance.practices.clean_engineering.rules.typed_and_comments import LimitComments, UseTypedSignatures
@@ -53,7 +54,7 @@ RULES: tuple = (
     NoModulePerClass(),
     WriteInteractions(),
     NoPrototypeSwapping(),
-) + CODE_RULES
+) + CODE_RULES + MEASURE_LIMIT_RULES
 
 BY_SLUG = {rule.slug: rule for rule in RULES}
 

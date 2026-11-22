@@ -1,0 +1,160 @@
+{
+  "name": "ordering",
+  "scope": "Place New Order",
+  "story_references": [
+    "stories/place_order.js"
+  ],
+  "object_references": [
+    "domain/order.js"
+  ],
+  "notes": [
+    "Keep chrome shared across tabs --> always"
+  ],
+  "invariants": [
+    "Tab states are separate screens"
+  ],
+  "screens": [
+    {
+      "name": "Catalog",
+      "slug": "catalog",
+      "layout": "stack",
+      "description": "Browse products",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Browse Product Catalog"
+      ],
+      "scenario_names": [
+        "Browse Product Catalog \u203a Products are listed"
+      ],
+      "step_names": [
+        "Browse Product Catalog \u203a Products are listed \u203a the Customer opens the catalog"
+      ],
+      "domain_terms": [
+        "Product"
+      ],
+      "domain_concepts": [
+        "Catalog"
+      ],
+      "image": "screens/catalog.png",
+      "prototype": "screens/catalog.dc.html",
+      "regions": [
+        {
+          "name": "product list",
+          "area": "body",
+          "controls": [
+            {
+              "name": "Browse",
+              "control_type": "button",
+              "label": "Browse <all>",
+              "bound_field": "",
+              "states": [
+                "primary"
+              ],
+              "story_names": [],
+              "scenario_names": [],
+              "step_names": [],
+              "interactions": [
+                {
+                  "name": "open cart",
+                  "trigger": "click",
+                  "effect": "shows the cart",
+                  "destination": "Cart"
+                }
+              ]
+            },
+            {
+              "name": "Products",
+              "control_type": "bound-list",
+              "label": "Products",
+              "bound_field": "catalog.products",
+              "states": [],
+              "story_names": [],
+              "scenario_names": [],
+              "step_names": [],
+              "interactions": [],
+              "kind": "StoryDemoControl",
+              "story_steps": [
+                {
+                  "kind": "given",
+                  "label": "the catalog lists Products"
+                }
+              ],
+              "set_input": "product",
+              "item_story_steps": [
+                {
+                  "kind": "when",
+                  "label": "the Customer selects a Product"
+                }
+              ],
+              "item_value": "name",
+              "item_label": "{name}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "slug": "cart",
+      "layout": "sidebar",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [],
+      "domain_concepts": [],
+      "image": "",
+      "prototype": "",
+      "regions": []
+    },
+    {
+      "name": "Cart - Saved",
+      "slug": "cart-saved",
+      "layout": "",
+      "description": "",
+      "chrome_of": "Cart",
+      "inactive_tabs": [
+        "Current"
+      ],
+      "story_names": [],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [],
+      "domain_concepts": [],
+      "image": "",
+      "prototype": "",
+      "regions": []
+    }
+  ],
+  "transitions": [
+    {
+      "name": "opens cart",
+      "from_screen": "Catalog",
+      "to_screen": "Cart",
+      "trigger": "opens cart",
+      "nav_type": "action"
+    }
+  ],
+  "content_types": [
+    {
+      "name": "Product",
+      "hierarchy": "Catalog > Product",
+      "key_actions": [
+        "add to cart"
+      ]
+    }
+  ],
+  "nav_components": [
+    {
+      "name": "Top nav",
+      "ux_type": "top nav",
+      "destinations": [
+        "Catalog",
+        "Cart"
+      ]
+    }
+  ]
+}

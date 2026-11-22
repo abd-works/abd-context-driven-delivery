@@ -29,6 +29,8 @@ from cdd_guidance.practices.stories.model.story_map import Background, Scenario,
 
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
 SCENARIO_HEADING = re.compile(r"^#+\s+Scenario(?:\s+Outline)?(?:\s+\d+)?\s*[:\-]?\s*(.+?)\s*$", re.IGNORECASE)
+# A scenario heading that says the scenario is an outline: the words Scenario Outline open it, whatever its name holds.
+_OUTLINE_HEADING = re.compile(r"^#+\s+Scenario\s+Outline\b", re.IGNORECASE)
 _STORY_HEADING = re.compile(r"^#+\s+Story(?!\s+Background\b)\s*[:\-]?\s*(.+?)\s*$", re.IGNORECASE)
 _ITALIC_STEP = re.compile(r"^\s*\*(Given|When|Then|And|But)\*\s+(.+?)\s*$", re.IGNORECASE)
 _BULLET_STEP = re.compile(r"^\s*[-*]\s+(Given|When|Then|And|But)\b\s*(.+?)\s*$", re.IGNORECASE)
@@ -168,7 +170,7 @@ class ScenarioFileReading:
     def _scenario_heading(self, match: re.Match) -> None:
         self._close_scenario()
         scenario = self.scenario_class(strip_markup(match.group(1)))
-        scenario.is_outline = "outline" in self.raw.lower()
+        scenario.is_outline = _OUTLINE_HEADING.match(self.raw) is not None
         scenario.source = source_at(self.rel, self.number)
         scenario.read_lines = [HeadingLine(scenario, (scenario.name, scenario.is_outline), self.kept)]
         self.scenario = scenario

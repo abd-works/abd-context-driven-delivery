@@ -1,12 +1,15 @@
 """A session's record: its session.json read into typed fields, an older file upgraded as it is read, and the fields an
 owner outside the session keeps there changed by that owner alone."""
 import json
+import threading
 
-from expects import equal, expect, raise_error
+from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
+from harness.installation.json_file import JsonFileUnreadable
 from space.session import Sessions
 from space.session.session_record import SessionFieldOwnedError
+from space.session.session_saves import SessionSaves
 from space.session.spec_support.throwaway_project import ThrowawayProject
 
 # Seed: a session.json as a server before the typed record wrote it: a practice's on-switch and formats under
@@ -93,3 +96,57 @@ with description("a session's record") as self:
 
         with it("should keep it in session.json as chat"):
             expect(json.loads(self.file.read_text(encoding="utf-8"))["chat"]).to(equal("picked"))
+
+    # Two chats changing one session's record at once each read it, changed it and wrote it with nothing held, so the
+    # later write dropped the earlier change. The real processes are in session_record_processes_heavy_spec.py.
+    with context("changed by two callers at the same moment, each through its own sessions"):
+        with before.each:
+            def tag(word):
+                Sessions(self.project.root).named("refund-order").add_tag(word)
+
+            callers = [threading.Thread(target=tag, args=(word,)) for word in ("urgent", "billing", "refund", "legal")]
+            for caller in callers:
+                caller.start()
+            for caller in callers:
+                caller.join()
+
+        with it("should keep every caller's change"):
+            expect(sorted(json.loads(self.file.read_text(encoding="utf-8"))["tags"])).to(equal(["billing", "legal", "refund", "urgent"]))
+
+    with context("changed while another change holds it"):
+        with it("should wait for that change, and keep both"):
+            def held_change(fields):
+                waiting.start()
+                fields.title = "Refund in full"
+
+            waiting = threading.Thread(target=lambda: Sessions(self.project.root).named("refund-order").add_tag("urgent"))
+            self.session.record.update(held_change, "title")
+            waiting.join()
+            saved = json.loads(self.file.read_text(encoding="utf-8"))
+            expect((saved["title"], saved["tags"])).to(equal(("Refund in full", ["urgent"])))
+
+    with context("whose file a writer killed partway left half written"):
+        with before.each:
+            self.half = '{"name": "refund-order", "title": "Refund an or'
+            self.file.write_text(self.half, encoding="utf-8")
+
+        with it("should refuse a change, naming the file"):
+            expect(lambda: self.session.add_tag("urgent")).to(raise_error(JsonFileUnreadable, contain("session.json")))
+
+        with it("should leave the file as it is, never written over as if it were empty"):
+            try:
+                self.session.add_tag("urgent")
+            except JsonFileUnreadable:
+                pass
+            expect(self.file.read_text(encoding="utf-8")).to(equal(self.half))
+
+    with context("with the text a killed writer staged still beside its file"):
+        with it("should change the file itself and keep what it held"):
+            self.file.with_name("session.json.4242.1.tmp").write_text('{"name": "refund-or', encoding="utf-8")
+            self.session.add_tag("urgent")
+            saved = json.loads(self.file.read_text(encoding="utf-8"))
+            expect((saved["title"], saved["tags"])).to(equal(("Refund an order", ["urgent"])))
+
+    with context("with the lock file a change leaves beside it"):
+        with it("should have the saves leave the lock file and a staged text out of every commit"):
+            expect(SessionSaves._left_out).to(contain("**/session.json.lock", "**/session.json.*.tmp"))

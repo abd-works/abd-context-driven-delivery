@@ -966,6 +966,10 @@ A class as one language writes it. Only a class read from code is one, so only i
 + prose_comment: bool
 + prototype_swap: dict[str, str | int]
 	// the code that swaps an object's class and its line; empty when it swaps none
++ total_complexity: int
++ classes_depended_on: int
++ unshared_method_groups: int
+	// the three measures the reader keeps of a file a read names, each kept only once a tool has supplied it
 + << composition >> source_facts: CodeClassSourceFacts
 + property_type: type[CodeProperty]
 + operation_type: type[CodeOperation]
@@ -991,6 +995,11 @@ A class as one language writes it. Only a class read from code is one, so only i
 
 ## CodeOperation : Operation
 
+------
++ paths_through: int
++ readability_score: int
+	// the two measures a tool supplies of a file a read names, each kept only once the tool has supplied it; its lines and parameters are facts every read keeps
+----
 + take_brace_body(text: str, callees: list[str]): None
 	// a brace-language parser gives it the statements inside its braces, which it keeps as its body
 + load_brace_body_facts(): None
@@ -1214,3 +1223,86 @@ Routes every arrow between the placed cards.
 	// lays each inheritance trunk first, breaking it into separate arrows when its lines would cross a card or run along another arrow
 	// then routes the other arrows shortest first, and lifts each that crosses another and searches again with the rest in place
 	-> DiagramArrow.corners
+
+## CodeMeasure
+
+<<Value Object>> One measure of code (`measures/code_measures.py`): the name its fact is kept under and a project's config chooses a tool for, what a table calls it in plain English with the tool's own name for it in brackets, how a sentence says a value of it, and whether it is a measure of a function, a class or a module.
+
+------
++ name: str
++ label: str
++ phrase: str
++ of: str
++ existing: str
+	// the fact the reader already keeps that gives the measure, such as `line_count`; empty for a measure kept under its own name
++ counted: bool
++ not_taken_fact: str
+	// the fact a node keeps in place of the measure when no tool could take it, holding why
+----
++ value_on(node: Node): float | int | None
+	// the measure as node holds it; none when no fact on node gives it
++ said_of(value: float | int): str
+	// `14 paths through it (cyclomatic complexity)`
+
+## ChosenTools
+
+The tool a project chose for each measure in each language, and the limit of each measure (`measures/code_measures.py`): the shipped table, which fills in Python and TypeScript, with the project's own `code_measures` laid over it.
+
++ ChosenTools(chosen: Mapping | None, config: Path | None)
+	Invariant: a project whose config has no `code_measures` section chose no tools, and none of its code is measured
+------
++ measures_code: bool
++ config: Path
+----
++ of_project(folder: Path): ChosenTools
+	// the choices of the `.context/config.json` of folder, a project's top folder
+	-> ContextConfig.load
++ tool_name(measure: CodeMeasure, language: str): str | None
+	// none for a measure the project wrote `not measured` for; raises NoToolChosen when nobody chose
++ limit(measure: CodeMeasure): float | None
+	// none for a measure kept for information only, and for every measure of a project with no `code_measures` section
+
+## MeasuringTool
+
+One tool behind one question (`measures/measuring_tools.py`): this measure, of this node. *LizardTool* takes a function's paths and readability score, and a class's total complexity; *RadonTool* takes a Python file's maintainability score; *ReaderTool* counts from the graph's nodes and edges what no fact keeps yet, and the groups of a Python class's methods that share no data (*MethodGroups*). No tool repeats a fact the reader already keeps.
+
+------
++ name: str
+----
++ value(measure: CodeMeasure, measured: MeasuredNode): float | int | None
+	// raises ToolDoesNotTakeMeasure for a measure it was wrongly chosen for, and MeasuringToolNotInstalled when the outside tool is missing
+
+## MeasuredNode
+
+<<Value Object>> One node a measure is taken of (`measures/measuring_tools.py`): the node, the reading that holds it, and the checked files it was read from.
+
+------
++ node: Node
++ reading: GraphReading
++ files: tuple[Path, ...]
++ file: Path
++ lines: tuple[int, int]
+
+## CheckedCodeMeasures
+
+The code measures the reader keeps of the files a read names, such as the files a validate checks (`measures/checked_measures.py`).
+
++ CheckedCodeMeasures(reading: GraphReading, files: list[Path], chosen: ChosenTools, tools: dict[str, type[MeasuringTool]])
+	Invariant: test code is not measured
+----
++ take(): None
+	// keeps each measure of each function, class and module read from the named files on its node; a measure no tool could take is kept as the reason, on the first node of the file it was asked of
+	-> ChosenTools.tool_name
+	-> MeasuringTool.value
+
+## CodeMeasureLimit : ProductionCodeRule
+
+One measure held to its limit on the nodes that carry it (`rules/code_measure_limits.py`): `limit-paths-through-a-function`, `keep-functions-readable`, `limit-function-lines`, `limit-function-parameters`, `limit-class-complexity`, `limit-class-methods`, `keep-class-methods-sharing-data`.
+
+------
++ measure: CodeMeasure
++ advice: str
+----
++ check_production(node: Node, context: RuleCheckContext): list[Finding]
+	// nothing for a node no read measured; the reason, for a node that keeps why its measure could not be taken; else the node when its measure is over the project's limit
+	-> ChosenTools.limit

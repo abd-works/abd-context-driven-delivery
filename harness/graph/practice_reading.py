@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from harness.graph.graph import Graph, Node, PracticeNodes
+    from harness.graph.node_metric import NodeMetric
     from harness.graph.practice_rule import PracticeGraphRule
 
 
@@ -83,6 +84,15 @@ class PracticeReading:
         """The other files a refresh of files reads again with them, because this practice reads them as one: a story
         map and the story tests that give its stories their scenarios, say. A refresh drops their nodes too and reads
         them all, so the graph holds what a load of them holds. A practice that reads each file by itself names none."""
+        return []
+
+    metric_node_types: tuple[str, ...] = ()
+    """Node types whose nodes can hold a metric, a fact one of the practice's limit rules reads; none for a practice
+    with no such rule."""
+
+    def metrics_of(self, node: Node) -> list[NodeMetric]:
+        """The metrics node holds: each fact a limit rule of this practice reads on it, with its value and its limit,
+        which the explorer tree shows under one child of the node. A practice with no limit rule names none."""
         return []
 
     def steps(self) -> list[Node]:

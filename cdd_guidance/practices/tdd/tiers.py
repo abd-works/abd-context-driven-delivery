@@ -14,7 +14,13 @@ TIER_SUFFIXES: tuple[tuple[str, str], ...] = (
 )
 # A story test's tier file, named `.story.<tier>.`: the server tier starts a real server and the Playwright tier drives
 # a browser; the shared and domain tiers run in memory.
-_STORY_TIERS = {"shared": "unit", "domain": "unit", "server": "heavy", "heavy": "heavy", "playwright": "e2e", "e2e": "e2e"}
+_STORY_TIERS = {"shared": "unit", "domain": "unit", "server": "heavy", "heavy": "heavy", "ui": "e2e", "playwright": "e2e", "e2e": "e2e"}
+# The tier of a module's record a story test's tier file is at: a module that publishes operations through a server has
+# server story tests, and one that shows a page has browser story tests.
+_RECORDED_STORY_TIERS = {"server": "server", "ui": "web", "playwright": "web"}
+# The test tool each tier's tests are written with, where the file's language or tier says it.
+_WEB_TOOL = "playwright"
+_TOOL_OF_LANGUAGE = {".py": "mamba"}
 # Code files a test lives in; a markdown or YAML file is no test file.
 TEST_CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx")
 # Imports that reach a real resource: a process, the network, a browser. Python's import lines, then TypeScript's
@@ -33,6 +39,24 @@ def tier_of(file: str) -> str | None:
     if story_tier:
         return _STORY_TIERS.get(story_tier.group(1), "unit")
     return next((tier for tier, suffix in TIER_SUFFIXES if name.endswith(suffix)), None)
+
+
+def recorded_tier_of(file: str) -> str | None:
+    """The tier of a module's record (unit, server or web) a test file is at: a story test's server tier file is server,
+    its browser tier file is web, and every other unit test is unit. None for a file that is no test, and for a heavy
+    or end-to-end spec that is no story test, which the record does not keep."""
+    name = PurePosixPath(file.replace("\\", "/")).name
+    story_tier = re.search(r"\.story\.(\w+)\.", name)
+    if story_tier and story_tier.group(1) in _RECORDED_STORY_TIERS:
+        return _RECORDED_STORY_TIERS[story_tier.group(1)]
+    return "unit" if is_code_file(file) and tier_of(file) == "unit" else None
+
+
+def test_tool_of(tier: str, language_suffix: str) -> str | None:
+    """The test tool tests at tier are written with in the language a file suffix names, such as ``.py``: Playwright
+    for the web tier, Mamba for Python. None where the suffix does not say, as a TypeScript unit test can run under
+    several tools."""
+    return _WEB_TOOL if tier == "web" else _TOOL_OF_LANGUAGE.get(language_suffix)
 
 
 def is_code_file(file: str) -> bool:

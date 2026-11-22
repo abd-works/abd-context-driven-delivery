@@ -34,6 +34,19 @@ Every scaffold pass ends with **validate** on the new or patched practice folder
 
 - **`outputs-relative-to-the-session`** — Declare each fidelity's `outputs` as paths relative to the session's folder, with no `root`. Put `markdown` and `drawio` under `.context/` and code straight in the folder, because the session decides where work lives and a declared root would send every session's artifacts to one place in the repository.
 
+## A practice owns its formats
+
+These four rules hold for every practice, so they are written once here and checked by two specs that run over every practice, not copied into each practice's document.
+
+- **`every-declared-format-has-an-adapter`** — Every format a fidelity declares in its `outputs` has an adapter that reads it and writes it (`parse` and `render`), named in the practice's `format_adapters`, or in the Clean Engineering companion's when the practice has none of its own. `harness/guidance/format_adapter_spec.py` asks this of every fidelity and fails naming the format, because a declared format with no adapter offers a person a choice that answers nothing.
+- **`format-returns-what-went-in`** — Name one worked example for each fidelity, as `example:` in the fidelity's YAML block: a file of the practice's folder, or a folder of code files. `cdd_guidance/practices/format_trip_spec.py` renders that example to each format the fidelity declares and back, and compares what came back with what went in (`harness/guidance/format_trip.py`); add the new fidelity's context to that spec. A format nobody has taken there and back is found broken by the first person who picks it.
+- **`format-says-what-it-leaves-out`** — When a format holds less than the example, such as a drawing that holds no descriptions, say what it cannot hold and where that content is kept, as `leaves_out:` under the fidelity's YAML block, one sentence for each such format. The same spec fails a format that returns less and says nothing, because a person who picks a smaller format and renders it back loses content nobody told them about.
+- **`render-keeps-every-line`** — A render written onto a file already there keeps every line the file holds. An adapter's `reshape` places what it can; the Render action keeps the rest in the file, set apart, and names it in its result as `migrate`; a render that would lose a line fails by name and leaves the file as it was. Never save a format by replacing the file, because the file may hold work the model never knew.
+
+## A practice's graph reading
+
+- **`join-nodes-by-identity`** — When the practice's graph reading (its *PracticeReading*) links two nodes, join them by what the node is: its file, its class, its language. Use the name only inside that, such as the `add` of `Cart` in `cart.py`, and never a shared name alone. A name alone linked a Python step to a TypeScript operation and `super().__init__` to every `__init__` in the project, so rules judged links that were never in the code.
+
 ## Practice folder layout
 
 - **`domain-folder-layout`** — One folder per practice. The `.py` module lives **inside** that folder (e.g. `practices/agent_bdd/agent_bdd.py`, `builders/create_practice_guidance/_examples/car_chronicle/car_chronicle.py`). Same folder holds `{domain-slug}.md`, `_examples/examples.md`, optional `templates/` (artifact templates), optional `model/{format}/`, optional `scanners/`. Repair fixtures: `_examples/<descriptive-folder>/faultyAsset` and `repairedAsset`.

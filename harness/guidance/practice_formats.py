@@ -15,6 +15,7 @@ from harness.installation.data_class import data_field
 from harness.markdown.format import Format
 
 if TYPE_CHECKING:
+    from harness.guidance.declared_outputs import DeclaredOutputs
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 
 # Text or data a format's adapter parses: a document's text, a code format's tree of files by path, or nothing.
@@ -332,6 +333,30 @@ class PracticeFormats:
     def supported(self) -> frozenset[Format]:
         """The formats its adapters read and write; none for a practice that has no adapters of its own."""
         return frozenset(self._named)
+
+    def lacking(self, declared: DeclaredOutputs) -> list[str]:
+        """What these formats lack of the outputs a fidelity declares, each named, such as ``drawio: no adapter``: a
+        declared format with no adapter, or with an adapter that reads no text or writes none. An output named for
+        what it holds, such as the story map's ``thin_slice``, is asked for the format of each of its files
+        (``thin_slice (whiteboard): no adapter``). A fidelity that declares a format nothing reads and writes offers a
+        person a choice that answers nothing, so the gap is named before anyone picks it."""
+        found: list[str] = []
+        for output in declared.outputs:
+            if output in self or Format(output).is_offered:
+                found += [f"{output}: {gap}" for gap in self._gaps_of(Format(output))]
+            else:
+                found += [f"{output} ({format}): {gap}" for format in declared.formats_written_in(output) for gap in self._gaps_of(format)]
+        return found
+
+    def _gaps_of(self, format: Format) -> list[str]:
+        """What the adapter of format cannot do: nothing is there, it reads no text, or it writes none."""
+        if format not in self:
+            return ["no adapter"]
+        adapter = self.adapter_class(format)
+        made_as = adapter if inspect.isclass(adapter) else type(adapter)
+        reads = getattr(made_as, "parse", FormatAdapter.parse) is not FormatAdapter.parse
+        writes = getattr(made_as, "render", FormatAdapter.render) is not FormatAdapter.render
+        return [gap for gap, held in (("its adapter reads no text", reads), ("its adapter writes no text", writes)) if not held]
 
     def adapter_class(self, format: str) -> type[FormatAdapter] | FormatAdapter:
         """The adapter of format as the practice names it, imported once; raises ValueError for a format it has none

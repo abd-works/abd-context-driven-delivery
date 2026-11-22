@@ -451,8 +451,12 @@ with description("a fidelity read from its practice's document"):
         with it("should give the file its template is read from"):
             expect(self.story_map.template_file.as_posix()).to(contain("stories/templates/md/story-map.md"))
 
-        with it("should read its template from that file"):
-            expect(self.story_map.templates).to(equal(self.story_map.template_file.read_text(encoding="utf-8").strip()))
+        with it("should read its template from that file, each marker for a value its practice holds written as that value"):
+            written = self.story_map.template_file.read_text(encoding="utf-8").strip()
+            expect(self.story_map.templates).to(equal(self.story_map.markdown_scope.filled(written)))
+
+        with it("should hand an author no marker for a value its practice holds"):
+            expect("{{child_band" in self.story_map.templates).to(equal(False))
 
     with context("with a path its outputs name"):
         with it("should declare a file at the end of that path"):

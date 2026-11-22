@@ -75,6 +75,10 @@ outputs:
   markdown: [".context/bounded-context-map.md", "{bounded_context}/.context/bounded-context.md"]
   drawio: ".context/bounded-context-map.drawio"
   whiteboard: ".context/bounded-context-map.whiteboard"
+example: "model/_examples/trip/bounded-context-map.md"
+leaves_out:
+  drawio: "each context's and aggregate's description, and an integration's direction, what crosses it and how it is integrated. They stay in bounded-context-map.md"
+  whiteboard: "each context's and aggregate's description, and an integration's direction, what crosses it and how it is integrated. They stay in bounded-context-map.md"
 ```
 
 #### Overview
@@ -176,6 +180,13 @@ outputs:
   markdown: ".context/domain-model.md"
   drawio: ".context/domain-model.drawio"
   whiteboard: ".context/domain-model.whiteboard"
+example: "model/_examples/trip/domain-model.md"
+leaves_out:
+  python: "the document's front matter, title and Sources line, each class's description and invariants, and the model's spelling of a type Python spells its own way. They stay in domain-model.md"
+  typescript: "the document's front matter, title and Sources line, and each class's description and invariants. They stay in domain-model.md"
+  javascript: "the document's front matter, title and Sources line, each class's description and invariants, and the type of every property, parameter and return. They stay in domain-model.md"
+  drawio: "the document's front matter and Sources line, each class's description and invariants, and the notes and calls written under a member. They stay in domain-model.md"
+  whiteboard: "the document's front matter and Sources line, each class's description and invariants, and the notes and calls written under a member. They stay in domain-model.md"
 ```
 
 #### Overview
@@ -266,6 +277,9 @@ outputs:
   python: ["{bounded_context}/{aggregate}/", "{bounded_context}/{aggregate}/{aggregate}.py"]
   typescript: ["{bounded_context}/{aggregate}/", "{bounded_context}/{aggregate}/{aggregate}.ts"]
   javascript: ["{bounded_context}/{aggregate}/", "{bounded_context}/{aggregate}/{aggregate}.js"]
+example: "model/_examples/trip/bookshop.py"
+leaves_out:
+  javascript: "the type of every property, parameter and return, and the notes written above a property. They stay in the Python or TypeScript file"
 ```
 
 #### Overview

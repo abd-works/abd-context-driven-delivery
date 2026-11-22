@@ -54,6 +54,8 @@ class ExtractedMarkdown(str):
         return self
 
 
+# A marker in an owner's markdown for a value its code holds: ``{{child_band.sub_epic}}``.
+_MARKER = re.compile(r"\{\{([\w.]+)\}\}")
 # A markdown bullet: a dash or star after any indent.
 _BULLET = re.compile(r"^\s*[-*]\s+")
 
@@ -480,7 +482,8 @@ class MarkdownScope:
     its ``{slug}.md`` is named by, the format whose templates it reads, the name its own template is looked for by
     before the slug's (``template_name``), the headings its own sections are read under (``within``, such as
     ``("Fidelities", "story_map")`` for a section of one block of a longer document), and the owner's own filter of the
-    files of a folder it reads (``reads_file``). An owner that knows these hands them over as its ``markdown_scope``
+    files of a folder it reads (``reads_file``), and the values its code holds that its markdown names by a marker
+    (``values``). An owner that knows these hands them over as its ``markdown_scope``
     property, so nothing here asks the owner for its attributes; any other class reads the markdown beside its own
     file, under the ``domain_slug`` its class declares."""
 
@@ -490,6 +493,15 @@ class MarkdownScope:
     template_name: str | None = None
     within: tuple[str, ...] = ()
     reads_file: FileFilter | None = None
+    # The values the owner's code holds and its markdown names by a marker, such as ``{{child_band.sub_epic}}``: each
+    # name with what is written in its place, so a number a check holds is typed in the code alone.
+    values: tuple[tuple[str, str], ...] = ()
+
+    def filled(self, text: str) -> str:
+        """text with each marker ``{{name}}`` the owner holds a value for written as that value. Any other marker stays
+        as it is: an instruction's own ``{{argument}}`` is filled later, from the call."""
+        held = dict(self.values)
+        return _MARKER.sub(lambda marker: held.get(marker.group(1), marker.group(0)), text) if held else text
 
     @classmethod
     def _beside(cls, owner_class: type) -> MarkdownScope:
@@ -822,7 +834,7 @@ class Markdown(Generic[Owner]):
     @functools.cached_property
     def document(self) -> MarkdownText:
         """The section, read once from its location."""
-        return MarkdownText(self.location.extract())
+        return MarkdownText(self._scope.filled(self.location.extract()))
 
     def extract(self) -> str:
         """The section's prose, without its ```yaml settings, which belong to the owner that reads them."""

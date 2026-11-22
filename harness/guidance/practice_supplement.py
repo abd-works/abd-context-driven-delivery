@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import yaml
@@ -107,6 +108,12 @@ class PracticeSupplement(PracticeGuidance):
             return ""
         parts = (f"## Supplement: {self.key} for {fidelity.slug}", *self._sections_of(fidelity))
         return "\n\n".join(part for part in parts if part)
+
+    def records_for(self, fidelity: FidelityGuidance, files: list[Path] | None = None) -> str:
+        """What it keeps in the session about the files a generate or a render at fidelity writes, and what it leaves
+        the agent to decide and record, as text for that action's reply. files are the files just saved; with none it
+        reads the files fidelity has in the session. A supplement keeps nothing unless it says so here."""
+        return ""
 
     def rules_for(self, fidelity: FidelityGuidance) -> list[RulesCollection]:
         """The rules of each of its sections that names fidelity; none for a fidelity it does not supplement."""

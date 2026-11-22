@@ -35,7 +35,8 @@ from space.session.session_graph import SessionGraph
 from space.session.session_hierarchy import SessionHierarchy
 from space.session.session_log import SessionLog
 from space.session.session_paths import SessionPaths
-from space.session.session_record import SESSION_FILE, SessionRecord
+from space.session.session_record import SESSION_FILE, SessionFields, SessionRecord
+from space.session.test_tiers import TestTiers
 from space.session.validation.accepted_violations import ACCEPTED_VIOLATIONS_FILE, AcceptedViolations
 from space.work_state import SESSIONS_FOLDER
 
@@ -176,6 +177,19 @@ class SessionGuidanceTools:
 
 
 @hosted_only
+class SessionTestTierTools:
+    """The tool that records a test tier a module uses, which the session holds (*TestTiers*)."""
+
+    test_tiers: TestTiers
+
+    @mcp
+    @agent_tool
+    def record_test_tier(self, module: str, tier: str, tool: str) -> dict[str, dict[str, str]]:
+        """Record in session.json that the tests of module use tier, written with the test tool named, beside the tiers the module already holds, and return the module's tiers. module: the module's folder, named from the project's root, such as space/kanban. tier: unit, which every module uses; server, for a module that publishes operations through the cdd server or another server; or web, for a module that shows a page. tool: the test tool of that tier, such as mamba, vitest, or playwright. A generate or a render that writes tests records the tiers it can tell; call this for a tier it asks you to decide. A story of a module whose record names the server or web tier needs a test at that tier. Another tier, or an empty tool, is refused and nothing is recorded."""
+        tiers = self.test_tiers.record(module, {tier: tool})
+        return {self.test_tiers.path_of(module): tiers}
+
+
 class SessionLogTools:
     """The tools that mark and read a session's log loops, add notes to it, and hand its work on: each asks the
     session's *SessionLog* or its *Handoffs*."""
@@ -334,7 +348,7 @@ class SessionDecisionTools:
 @identity("session_file")
 @language_adapter(language="typescript")
 @agent_toolset
-class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLogTools, SessionDecisionTools):
+class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionTestTierTools, SessionLogTools, SessionDecisionTools):
     """One named piece of work in a project. Its record, the session.json the board reads, is kept on main in
     ``.sessions/{name}/`` (``record_folder``); everything else it writes goes to its work folder, the same folder in its
     ticket's worktree when it has one (``work_folder``). It holds where it works, the practices it
@@ -370,6 +384,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLo
         self.folder = SessionFolder(self)
         self.hierarchy = SessionHierarchy(self)
         self.guidance = GuidanceSelection(self)
+        self.test_tiers = TestTiers(self)
         self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
         self.handoffs: Handoffs | None = None
         self.log = SessionLog(self)
@@ -561,9 +576,15 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLo
 
     def add_tag(self, word: str) -> None:
         """Tag this session with word, once however often it is added."""
-        tags = self.tags
-        if word not in tags:
-            self.record.update(lambda fields: setattr(fields, "tags", [*tags, word]), f"tags {word}")
+        if word in self.tags:
+            return
+
+        def tagged(fields: SessionFields) -> None:
+            # Added to the tags the file holds inside the change, so a tag another chat adds at the same moment stays.
+            if word not in fields.tags:
+                fields.tags = [*fields.tags, word]
+
+        self.record.update(tagged, f"tags {word}")
 
     @property
     def idea_file(self) -> IdeaFile:

@@ -9,7 +9,7 @@ supplements:
 
 ## Overview
 
-Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for. The graph checks `unit-tier-fakes-every-boundary` on BDD specs and on Stories acceptance tests (its overlay records each test file's tier and the real resources a unit test imports); validate judges the rest.
+Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for. The graph checks `unit-tier-fakes-every-boundary` on BDD specs and on Stories acceptance tests (its overlay records each test file's tier and the real resources a unit test imports); validate judges the rest. The tiers each module uses are recorded in the session's `session.json` as generate and render write its tests (Set up the tiers of a module, below).
 
 ## Guidance
 
@@ -23,6 +23,8 @@ The order of work depends on whether the story crosses an architectural boundary
 2. **Iterate until it works for real.** Judge each step's screenshot against its step text, as Stories acceptance tests says: the Given's state is visible, the When took effect, the Then shows the right values, labels and messages. Fix and walk again until every step meets it, then write the walk report (`harness/e2e_review/report/report.ts`). A person verifies the result by reviewing that report; accepting it makes the walk the reference. A human seeing the real thing work is the only way to rule out hallucination.
 3. **Capture it in an e2e or heavy test.** Write the test that runs the same path end to end, and see it pass against the real stack, so the success cannot be hallucinated later. An e2e test records the same step screenshots; compare each with the accepted walk. Where they differ, fix the test or the code; when it is unclear which is right, walk that step again. When they all match, this run is the first baseline.
 4. **Then write the stubbed and mocked unit tests,** only where a stub or mock was actually used, each checked against the real seam you just ran. An AI tends to stub critical functionality, or to put the stub at the wrong seam and fake what should be real.
+
+The real run includes the error conditions, not only the main path. Walk the edge conditions of `edge-conditions-walked` (Stories scenarios) against the new boundary and run each one that applies for real: input that is missing, malformed or past a limit; the same action twice; a second actor at the same moment; the action stopped partway; a dependency absent, slow or wrong; the thing changed or gone since it was last seen; an actor not allowed. The heavy or e2e test that captures the run holds those cases, because a stubbed test written afterwards can only fake the failures somebody has seen happen.
 
 **Flow B — another story or feature on a known area.** The seams are proven, so the order reverses:
 
@@ -56,6 +58,24 @@ A spec file's suffix names its tier, and the tier is about speed:
 | unit | `*_spec`, story tiers | Examples that run in microseconds to milliseconds, with a fake at every architecture boundary |
 | heavy | `*_heavy_spec` | Examples that need a real resource: git, a server, a daemon, an installer, a worker process, a big load |
 | e2e | `*_e2e_spec`, `*_agent_spec`, `*.story.ui.spec.ts` and the other Playwright specs | Examples that drive a real browser or a real agent |
+
+### Set up the tiers of a module
+
+A module's tests use the unit tier, and a module that is an app uses more: the **server** tier when it publishes operations through the cdd server or another server, and the **web** tier when it shows a page. Which tiers a module uses, and the test tool of each, is recorded in the session's `session.json`, so the next story of that module is tested at every tier the module needs and not only at the one its author thought of:
+
+```json
+"test_tiers": {"space/kanban": {"unit": "mamba", "server": "mamba", "web": "playwright"}}
+```
+
+Nobody fills the record by hand when a session is set up. A generate or a render at Stories acceptance tests or BDD development fills it as it writes tests: the unit tier for each module the fidelity writes under, and the server or web tier of a module once a test file of that tier is there (`*.story.server.spec.*` is server, `*.story.ui.spec.*` is web). Where it cannot tell, such as a story test that sits under `story_tests/` and names no module, or a module with no server or web test yet, its reply asks you to decide and to record the answer with `session.record_test_tier` (the session, the module's folder, the tier, the test tool). Decide from the module's code, never from the story's wording: a class the module publishes as a tool of a server means the server tier, and a page the module serves or draws means the web tier.
+
+Set up each tier a module uses before its first test at that tier:
+
+1. **Unit:** the test tool of the module's language (Mamba for Python), with a fake at every architecture boundary. A story test's shared and domain tier files run here.
+2. **Server:** a story test's server tier file (`{sub_epic_slug}.story.server.spec.*`) starts the real server, sends each operation the arguments its published schema names, and reads the answer the server sends back, because a test that calls the Python operation directly never meets the arguments a caller really sends.
+3. **Web:** a browser story test (`{sub_epic_slug}.story.ui.spec.ts`, Playwright) opens the page against the real server and records a screenshot for each step, because a page can be wrong where no assertion looks.
+
+The server tier runs with the heavy specs and the web tier with the e2e specs, on their cadence.
 
 ### Make slow tests fast first
 
@@ -107,7 +127,7 @@ alwaysApply: true
 
 Whenever you are about to write production code or a test for it. Follow these rules.
 
-- **`flow-chosen-before-code`** — Before writing production code or a test, say which flow each boundary the change touches is in, and work in that flow's order. **Flow A** is a boundary crossed for the first time, such as a new module seam, a new external system, a new process, or a new tier; a feature built for the first time; or a change the person has already corrected and you are making again: run it for real end to end, have the person verify it, capture it in a heavy or e2e test, and only then write the stubbed unit tests. On a screen, the person verifies it by the walk report's screen for each step, and the e2e test is compared with that walk. **Flow B** is a known area, where a heavy or e2e test already runs every boundary the change touches: write the unit test, see it fail for the right reason, then write the code. Tests written after the code, which pass on their first run, prove nothing they were not shaped to pass, and stubs written before a real run fake the very boundary nobody has seen work.
+- **`flow-chosen-before-code`** — Before writing production code or a test, say which flow each boundary the change touches is in, and work in that flow's order. **Flow A** is a boundary crossed for the first time, such as a new module seam, a new external system, a new process, or a new tier; a feature built for the first time; or a change the person has already corrected and you are making again: run it for real end to end, the error conditions of `edge-conditions-walked` that apply as well as the main path, have the person verify it, capture it in a heavy or e2e test that holds those cases, and only then write the stubbed unit tests. On a screen, the person verifies it by the walk report's screen for each step, and the e2e test is compared with that walk. **Flow B** is a known area, where a heavy or e2e test already runs every boundary the change touches: write the unit test, see it fail for the right reason, then write the code. Tests written after the code, which pass on their first run, prove nothing they were not shaped to pass, and stubs written before a real run fake the very boundary nobody has seen work.
 
 ## stories-acceptance-tests, bdd-development
 
@@ -129,6 +149,8 @@ Whenever you create, alter, or delete acceptance tests or BDD specs. Follow thes
 - **`e2e-tier-drives-browser-or-agent`** — An e2e spec drives a real browser or a real agent, and no other tier does.
 - **`slow-example-moves-not-the-file`** — An example over budget moves out alone, never the whole file: its stub stays in the unit spec and its real run goes to the heavy spec beside it, under the same described subject.
 - **`no-skipped-or-empty-test`** — No test is skipped, commented out, or left without an assertion.
+- **`module-tiers-recorded`** — Before a test is written for a module, the session's `session.json` names the tiers the module uses and the test tool of each (`test_tiers`): unit for every module, server for one that publishes operations through a server, web for one that shows a page. Generate and render record what the test files show; record the rest with `session.record_test_tier`. A module with no record is tested at whichever tier its author thinks of first.
+- **`story-tested-at-each-recorded-tier`** — A story of a module whose record names the server tier has a server tier test, and one whose record names the web tier has a browser test, each running that story's scenarios. Judged by validate: read the session's `test_tiers`, then the story's test files on the graph and the tier of each, because a story proven only at the unit tier has never met the arguments a server sends or the page a person sees.
 
 **Speed**
 - **`unit-example-within-100-ms`** — Every unit example runs within 100 ms, its before-each and after-each included.

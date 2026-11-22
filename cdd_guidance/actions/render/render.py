@@ -5,7 +5,7 @@ from __future__ import annotations
 from cdd_guidance.actions.render.rendered_code import RenderedCode, RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS, WHITEBOARD, RenderedFile
 from cdd_guidance.actions.render.render_order import WorkerRender
-from cdd_guidance.actions.render.render_result import AnsweredContent, RenderResult, SavedFile
+from cdd_guidance.actions.render.render_result import AnsweredContent, RenderResult, SavedCode, SavedFile
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.guidance.declared_outputs import DeclaredOutputs, RenderPlacement
 from harness.guidance.guidance import FidelityGuidance
@@ -57,7 +57,9 @@ class Render(GuidanceAction):
         def on(worked: WorkedGuidance) -> RenderResult | str:
             if isinstance(worked, str):
                 return worked
-            return self._render_files(worked, format, paths, source) if paths else AnsweredContent(worked.render(format, content, source))
+            if not paths:
+                return AnsweredContent(worked.render(format, content, source))
+            return self._with_supplement_records(worked, self._render_files(worked, format, paths, source))
 
         converted = self.work.each(on)
         self.files.wrote([str(path) for result in converted if isinstance(result, RenderResult) for path in result.saved])
@@ -86,6 +88,15 @@ class Render(GuidanceAction):
         if not isinstance(worked, FidelityGuidance):
             return saved.save(worked.render_files(format, paths, source, saved.previous))
         return saved.save(self._drawn(RenderRequest.from_files(worked, format, paths, source, saved.previous)))
+
+    def _with_supplement_records(self, worked: WorkedGuidance, result: RenderResult) -> RenderResult:
+        """result, a render of files at worked, naming what the supplements of the fidelity keep in the session about
+        the code it saved, such as TDD's record of the test tiers the module of a saved test uses, with what each
+        leaves the agent to decide (a *SavedTests*). Only saved code is asked about: a document or a drawing is no test."""
+        if not isinstance(result, SavedCode) or not isinstance(worked, FidelityGuidance) or self._session is None:
+            return result
+        kept = worked.supplement_records(result.saved)
+        return result.with_test_tiers(kept) if kept else result
 
     def _saved_by_declared_paths(self, worked: WorkedGuidance, format: Format, sources: list[Path], paths: list[str] | str, source: str | None) -> RenderResult:
         """A render no source's declared name places, saved all the same. Code goes to the paths the fidelity declares

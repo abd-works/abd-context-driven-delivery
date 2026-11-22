@@ -85,7 +85,14 @@ class Guidance:
         """Where this guidance's markdown lives, handed to each Markdown it reads: the folder beside its class, its
         ``{slug}.md``, and the format it works in."""
         folder = self.module_dir
-        return MarkdownScope(folder, self.domain_slug or folder.name, format=self.format or None)
+        return MarkdownScope(folder, self.domain_slug or folder.name, format=self.format or None, values=tuple(sorted(self.markdown_values.items())))
+
+    @property
+    def markdown_values(self) -> dict[str, str]:
+        """The values this guidance's code holds that its markdown names by a marker, such as a band a check reads
+        (``{{child_band.sub_epic}}``), each by the marker's name: its document, rules and templates are filled from
+        them as they are read, so the number is typed in the code alone. None unless a guidance says otherwise."""
+        return {}
 
     def section_text(self, label: str) -> str:
         """The prose of one of its own labelled sections, such as its Overview, from the Markdown it keeps for that
@@ -429,7 +436,7 @@ class PracticeGuidance(Guidance):
         """The practice's own document, ``{key}.md`` beside its class, read once: its sections and each fidelity's
         block are read from this text."""
         path = self.domain_markdown_path
-        return MarkdownText(path.read_text(encoding="utf-8") if path.is_file() else "")
+        return MarkdownText(self.markdown_scope.filled(path.read_text(encoding="utf-8")) if path.is_file() else "")
 
     @cached_property
     def schema(self) -> Schema:
@@ -602,6 +609,14 @@ class FidelityGuidance(Guidance):
     """What a validate judges this fidelity's rules against, as its practice document's ``judged_on`` says: the
     ``artifacts`` it writes, read as text, or the ``graph`` validate builds from the code, where rules about the object
     model the code holds (one model, classes with one job, one-way dependencies) can be checked."""
+    example: str = ""
+    """The worked example of what it writes, as its practice document's ``example`` names it: a file of its practice's
+    folder, or a folder of code files. Its format trip (``FormatTrip``) takes this example to each format the fidelity
+    declares and back; a fidelity that names none has no format proven to hold what it writes."""
+    leaves_out: dict[str, str] = {}
+    """What each format it declares cannot hold and where that content is kept, as its practice document's
+    ``leaves_out`` says for the format: a drawing holds no description, which stays in the markdown file. Whoever picks
+    a format that holds less is told here what the file will not carry."""
     reviews_files_of: tuple[str, ...] = ()
     """The fidelities of its own practice whose files a person reviews for this one, as its practice document's
     ``reviews_files_of`` names them: UX's front-end code is reviewed against its information architecture and mockup,
@@ -625,7 +640,8 @@ class FidelityGuidance(Guidance):
 
     def _apply_settings(self, block_fields: dict[str, Any]) -> None:
         """Take the settings its block's ```yaml gives it: the stage it is in, its default format, the files it writes
-        in each format, its Clean Engineering companion, and what a validate judges it on. A setting it does not know
+        in each format, its worked example and what each format leaves out of it, its Clean Engineering companion, and
+        what a validate judges it on. A setting it does not know
         is the reader's, such as a rules block's ``globs``, and stays unread here."""
         if "stage" in block_fields:
             self.stage = str(block_fields["stage"] or "")
@@ -637,6 +653,11 @@ class FidelityGuidance(Guidance):
             self.clean_engineering = str(block_fields[COMPANION_PRACTICE] or "")
         if "judged_on" in block_fields:
             self.judged_on = str(block_fields["judged_on"] or "artifacts")
+        if "example" in block_fields:
+            self.example = str(block_fields["example"] or "")
+        if "leaves_out" in block_fields:
+            said = block_fields["leaves_out"] if isinstance(block_fields["leaves_out"], dict) else {}
+            self.leaves_out = {str(Format(str(format))): str(words) for format, words in said.items()}
         if "reviews_files_of" in block_fields:
             self.reviews_files_of = tuple(str(name) for name in block_fields["reviews_files_of"] or ())
 
@@ -768,6 +789,17 @@ class FidelityGuidance(Guidance):
         """The first word of a setting as a practice document writes it, such as ``code`` of ``code (Clean
         Engineering)``."""
         return written.split()[0].strip("()`") if written.strip() else ""
+
+    @property
+    def formats_without_an_adapter(self) -> list[str]:
+        """Each format it declares in its outputs that nothing reads and writes, named (``PracticeFormats.lacking``):
+        asked of its practice's formats, or, for a practice with no adapters of its own, of the formats of its Clean
+        Engineering companion, which renders for it. None for a fidelity whose practice has neither."""
+        practice = self.practice_guidance
+        formats = practice.formats if practice is not None else None
+        if formats is not None and not len(formats) and self.clean_engineering is not None:
+            formats = self.clean_engineering.practice_guidance.formats
+        return formats.lacking(self.declared) if formats is not None else []
 
     @property
     def clean_engineering(self) -> FidelityGuidance | None:
@@ -956,6 +988,14 @@ class FidelityGuidance(Guidance):
     def process(self) -> str:
         """The order of work its supplements give, such as TDD's flows: what to do first, ahead of any rule."""
         return "\n\n".join(supplement.process for supplement in self.supplements)
+
+    def supplement_records(self, files: list[Path] | None = None) -> str:
+        """What its supplements keep in the session about the files a generate or a render at this fidelity writes,
+        such as TDD's test tiers of the module a test is for, with what each leaves the agent to decide. files are the
+        files just saved; with none, each supplement reads the files the fidelity has in the session. Empty when no
+        supplement keeps anything."""
+        records = (supplement.records_for(self, files) for supplement in self.supplements)
+        return "\n\n".join(record for record in records if record)
 
     @property
     def own_instructions(self) -> str:

@@ -35,6 +35,14 @@ dependencies = [
   "playwright>=1.50",
 ]
 
+[project.optional-dependencies]
+# The outside tools Clean Engineering's code measures name in a project's .context/config.json (code_measures.tools).
+# A validate of code fails by name while a chosen tool is missing: pip install -e ".[measures]"
+measures = [
+  "lizard>=1.26",
+  "radon>=6.0",
+]
+
 [tool.setuptools.packages.find]
 # Mirror import_path_entries() in the installer:
 #   root → cdd_guidance, tools, harness

@@ -16,12 +16,16 @@ from pathlib import Path
 from harness.agent_tools.progress import report_progress
 from harness.graph.graph import Node
 from harness.guidance.guidance import PracticeGuidance
+from harness.graph.node_metric import NodeMetric
 from harness.graph.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER, CleanEngineeringModel, OoadClass
+from cdd_guidance.practices.clean_engineering.measures.checked_measures import CheckedCodeMeasures
+from cdd_guidance.practices.clean_engineering.measures.code_measures import MEASURES, NODE_TYPES, ChosenTools
+from cdd_guidance.practices.clean_engineering.measures.measuring_tools import TOOLS, MeasuringTool
 from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassLinks
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.reading.code_file import CodeFile, CodeSpan, MemberAnswers
@@ -64,18 +68,60 @@ class GraphReading(PracticeReading):
         super().__init__(practice)
         self.code_index = CodeIndex(self)
         self.model_documents = ModelDocuments(self)
+        # The tools a project's choices name, by that name; a spec stands its own in for an outside tool here.
+        self.measuring_tools: dict[str, type[MeasuringTool]] = dict(TOOLS)
+        self._chosen_tools: tuple[str, ChosenTools] | None = None
+
+    @property
+    def chosen_tools(self) -> ChosenTools:
+        """The tool and the limit the project it reads chose for each code measure, read once for each project: the
+        project of the session the practice works in, else the folder the graph reads the practice from. No folder
+        above that one is looked in, so a sample or a fixture kept inside a project that measures its code is not
+        measured by that project's choices."""
+        session = self.practice.session
+        folder = session.checkout.root if session is not None else self.in_graph.source_root_path if self.in_graph is not None else None
+        root = str(folder) if folder is not None else ""
+        if self._chosen_tools is None or self._chosen_tools[0] != root:
+            self._chosen_tools = (root, ChosenTools.of_project(Path(root).resolve()) if root else ChosenTools(None))
+        return self._chosen_tools[1]
+
+    metric_node_types = tuple(node_type for node_types in NODE_TYPES.values() for node_type in node_types)
+
+    def metrics_of(self, node: Node) -> list[NodeMetric]:
+        """The measures of production code a limit rule reads on node, each with its value and the project's limit:
+        the one list the limit rules and the explorer tree's metrics group both read. A project that holds its code to
+        no limit has none, and neither does test code, which no production rule judges."""
+        chosen = self.chosen_tools
+        if node.type not in self.metric_node_types or not chosen.measures_code or is_test_code(node.source.file):
+            return []
+        limited = [(measure, chosen.limit(measure)) for measure in MEASURES if node.type in NODE_TYPES[measure.of]]
+        held = [(measure, limit, measure.value_on(node)) for measure, limit in limited if limit is not None]
+        return [NodeMetric(measure.name, measure.label, value, limit) for measure, limit, value in held if value is not None]
+
+    def keep_code_measures(self, files: list[Path]) -> None:
+        """Keep the code measures of files as facts on the functions, classes and modules read from them, each supplied
+        by the tool the project chose for the measure in the file's language, so the limit rules read them as they read
+        any fact. A project whose config chooses no tools keeps none."""
+        if files and self.chosen_tools.measures_code:
+            report_progress("clean_engineering · code measures")
+            CheckedCodeMeasures(self, files, self.chosen_tools, self.measuring_tools).take()
 
     def read_working_copy(self) -> None:
         """Keep the class model each model document describes, then read each source file with its language's class
         model, adding the folders, classes, properties, operations, and parameters it parsed as nodes, and each class a
-        document describes."""
+        document describes. A read that names its files, as the refresh a validate asks for does, keeps the code
+        measures of those files as facts too; a read of the whole working copy keeps none, because a measuring tool run
+        over every file would slow every load of the graph."""
         self.code_index.forget()
+        # The project's choices are read again with each read, so a limit changed in its config holds from the next one.
+        self._chosen_tools = None
         with schema_sync_paused():
             self.model_documents.read()
             CodeRead(self).read()
         ClassLinks(self).link()
         CallLinks(self).link()
         ComparedFacts(self).record()
+        self.keep_code_measures(list(self.graph.scope.edited_files or []))
         self._exempt_test_code()
 
     def _exempt_test_code(self) -> None:

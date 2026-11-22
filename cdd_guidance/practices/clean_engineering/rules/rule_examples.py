@@ -96,3 +96,30 @@ def module_example_pair(slug: str) -> RulePair:
     """The rule's faulty and repaired example folders, each with its ``.context`` files."""
     root_path = _PRACTICE / "model" / "python" / "_examples" / slug
     return files_rule_pair(slug, _example_files(root_path / "faulty"), _example_files(root_path / "repaired"))
+
+
+# The config a fixture's project keeps when it measures its code with the shipped tools and limits.
+MEASURES_CHOSEN = {".context/config.json": '{"code_measures": {}}'}
+
+
+def measured(fixture: RuleFixture, tools: dict | None = None) -> RuleFixture:
+    """fixture with the code measures of its code files kept, as the reader keeps them of the files a validate names. tools
+    names the tool types that stand in for the outside tools, by the name the config chooses each under; with none,
+    the real tools measure, so only a heavy spec leaves it out."""
+    reading = fixture.practice.reading
+    reading.measuring_tools.update(tools or {})
+    suffixes = {suffix for language in CODE_LANGUAGES for suffix in language.suffixes}
+    reading.keep_code_measures([path for path in sorted(fixture.root.rglob("*")) if path.is_file() and path.suffix in suffixes])
+    return fixture
+
+
+def measured_example_pair(slug: str, tools: dict | None = None) -> RulePair:
+    """The faulty and repaired python assets of a rule that reads a code measure, each measured in a project that
+    chose the shipped tools."""
+    faulty_path, repaired_path = example_asset_paths(slug)
+    fixtures = (
+        practice_from_files({**MEASURES_CHOSEN, f"{FIXTURE_FOLDER}/example.py": path.read_text(encoding="utf-8")})
+        for path in (faulty_path, repaired_path)
+    )
+    faulty, repaired = (measured(fixture, tools) for fixture in fixtures)
+    return RulePair(BY_SLUG[slug], faulty, repaired)

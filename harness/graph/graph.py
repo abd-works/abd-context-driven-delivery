@@ -23,6 +23,7 @@ import harness.graph.graph_app  # noqa: F401 - registers the Graph app with App,
 from harness.graph.graph_practices import GraphPractices
 from harness.graph.graph_reads import GraphReads
 from harness.graph.node_filter import Filter, FilterChoices, FilterRequest
+from harness.graph.node_metric import METRIC_TYPE, METRICS_GROUP
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.load_scope import LoadScope
 from harness.graph.location import Location
@@ -518,6 +519,22 @@ class NodeTree:
                 for part in written:
                     yield part.child, self._node
                 written = []
+        self._place_metrics()
+
+    def _place_metrics(self) -> None:
+        """Put the node's metrics, the facts a limit rule of its practice reads on it, under one child of the node
+        named for them, each as an entry that says its plain name, its value and its limit. They come after the
+        node's relationship kinds; a node with no metric gets no such child."""
+        node = self._node
+        metrics = node.practice.reading.metrics_of(node)
+        if not metrics:
+            return
+        holder = self._holder_for(METRICS_GROUP)
+        for metric in metrics:
+            shown = Node(node.practice, NodeIdentity(type=METRIC_TYPE, node_id=f"{holder.node_id}:{metric.name}", name=metric.said), node.source)
+            shown.parent = holder
+            holder.children.append(shown)
+            node.practice.reading.in_graph.hold_group(shown)
 
     def _parts_in_source_order(self, kinds: list[str]) -> list[Edge]:
         """The direct edges of kinds to the node's parts its practice lists in source order, in the order their file
@@ -579,7 +596,7 @@ class NodeTree:
     def _rule_category(self) -> GraphRulesCollection | None:
         """The rules that apply to the node, as one child of it in the explorer tree; none when the filter shows none."""
         node = self._node
-        if node.type == node.name or node.type == "Practice":
+        if node.type == node.name or node.type in ("Practice", METRIC_TYPE):
             return None
         return node.rules if node.rules.shown else None
 

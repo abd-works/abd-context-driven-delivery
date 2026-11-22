@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import zlib
+from dataclasses import dataclass
 from pathlib import Path
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -73,6 +74,43 @@ def _as_part_class(part: "StoryNode", part_class: type) -> "StoryNode":
 def _as_own_class(part: "StoryNode", part_class: type) -> "StoryNode":
     """part cloned as the class it has: a clone keeps each part's own class."""
     return part.clone()
+
+
+@dataclass(frozen=True)
+class ChildBand:
+    """How many children a node of one layer of a story map holds: what its children are counted as, and the fewest
+    and the most that read well."""
+
+    label: str
+    fewest: int
+    most: int
+
+    @property
+    def written(self) -> str:
+        """The band as a rule's text and a finding write it: ``3-9``."""
+        return f"{self.fewest}-{self.most}"
+
+    def holds(self, count: int) -> bool:
+        """Whether count fits the band; a node with no children yet fits, since they are simply not written."""
+        return count == 0 or self.fewest <= count <= self.most
+
+
+@dataclass(frozen=True)
+class LayerBands:
+    """The band of each layer of a story map (`child-count-fits-layer`): a node holding sub-epics groups outcomes; a
+    sub-epic holding only stories may hold few, since its sibling sub-epics carry the breadth; a top epic holding only
+    stories needs more, since an epic of two or three stories is usually a sub-epic of a neighbouring epic."""
+
+    holding_sub_epics: ChildBand
+    sub_epic: ChildBand
+    flat_epic: ChildBand
+
+
+# The one place the numbers of the story map's rules are written. The checks read them here, and the practice's
+# document and templates carry a marker for each (``{{child_band.sub_epic}}``), filled when the guidance is read.
+LAYER_BANDS = LayerBands(ChildBand("children", 3, 9), ChildBand("stories", 2, 9), ChildBand("stories", 4, 9))
+# The most code scenarios a story holds before it is too big to be one interaction (`story-scenarios-at-most-seven`).
+MOST_SCENARIOS = 7
 
 
 class StoryNodeNotFound(LookupError):
@@ -151,7 +189,7 @@ class StoryNode(ModelNode, ABC):
         self.generic_handler = name_facts.names_generic_handler(self.name)
         self.near_duplicate = False
         self.shared_verb = ""
-        self._load_child_band(0, "children")
+        self._load_child_band(0, None)
 
     def _load_opening(self) -> None:
         self.opening_token, self.opening_class = name_facts.opening_of(self.name)
@@ -159,13 +197,13 @@ class StoryNode(ModelNode, ABC):
     def _load_path_case(self) -> None:
         self.artifact_name, self.camel_case_path = name_facts.file_name_facts(getattr(self, "source", None))
 
-    def _load_child_band(self, count: int, label: str, fewest: int = 4, most: int = 9) -> None:
-        """Record how many children the node holds and whether that count is outside fewest..most; a node with no
-        children yet passes, since its children are simply not written."""
+    def _load_child_band(self, count: int, band: ChildBand | None) -> None:
+        """Record how many children the node holds and whether that count is outside the band of its layer; a node of
+        no layer that is sized, such as a story, holds no band and passes."""
         self.child_count = count
-        self.child_label = label
-        self.child_target = f"{fewest}-{most}"
-        self.child_band = "" if count == 0 or fewest <= count <= most else "error"
+        self.child_label = band.label if band is not None else "children"
+        self.child_target = band.written if band is not None else ""
+        self.child_band = "" if band is None or band.holds(count) else "error"
 
     @property
     def recorded_name(self) -> str:
@@ -1193,19 +1231,14 @@ class Epic(CodeHeld):
         self._load_path_case()
         self.generic_handler = False
         self.near_duplicate = False
-        self._load_child_band(len(self.epics) + len(self.stories), *self._child_band_for_layer())
+        self._load_child_band(len(self.epics) + len(self.stories), self._child_band_for_layer())
         self.shared_verb = self._shared_opening()
 
-    def _child_band_for_layer(self) -> tuple[str, int, int]:
-        """The children this node is counted by and the band they fit (`child-count-fits-layer`). A node holding
-        sub-epics groups 3-9 outcomes; a sub-epic holding only stories holds 2-9, since its sibling sub-epics carry the
-        breadth; a top epic holding only stories holds 4-9, since an epic of two or three stories is usually a sub-epic
-        of a neighbouring epic."""
+    def _child_band_for_layer(self) -> ChildBand:
+        """The band this node's children fit, by the layer it is (`child-count-fits-layer`, ``LAYER_BANDS``)."""
         if self.epics:
-            return "children", 3, 9
-        if self.is_sub_epic:
-            return "stories", 2, 9
-        return "stories", 4, 9
+            return LAYER_BANDS.holding_sub_epics
+        return LAYER_BANDS.sub_epic if self.is_sub_epic else LAYER_BANDS.flat_epic
 
     def _shared_opening(self) -> str:
         names = [story.name.strip().casefold() for story in self.stories if story.name.strip()]

@@ -8,7 +8,7 @@ Map stakeholder and system interactions as behaviours that deliver a solution. E
 
 **Think hierarchically.** Use **Epics** for business capabilities or end-to-end outcomes, **Sub-Epics** for outcomes within an Epic, and **Stories** for discrete user or system interactions with observable results. Decompose Stories into **Scenarios**, then express each Scenario as **Given**, **When**, and **Then** steps. The hierarchy lets a reader move from the business outcome to the behaviour that implements it without losing traceability.
 
-**Write action-oriented interactions.** At every level, name the actor, action, and subject when the format includes actor metadata; name nodes with a base-form verb and a noun. `Manage Customer Orders` says what the Epic achieves, while `Orders` does not. Size each node by its layer: an epic or sub-epic that holds sub-epics groups 3-9 of them, a sub-epic holds 2-9 stories, and an epic that holds only stories holds 4-9, because shallow chains and crowded nodes both hide the shape of the work. A story holds at most 7 code scenarios; more than 7 and the story is huge. A story with none is waiting for its scenarios, which is fine.
+**Write action-oriented interactions.** At every level, name the actor, action, and subject when the format includes actor metadata; name nodes with a base-form verb and a noun. `Manage Customer Orders` says what the Epic achieves, while `Orders` does not. Size each node by its layer: an epic or sub-epic that holds sub-epics groups {{child_band.holding_sub_epics}} of them, a sub-epic holds {{child_band.sub_epic}} stories, and an epic that holds only stories holds {{child_band.flat_epic}}, because shallow chains and crowded nodes both hide the shape of the work. A story holds at most {{story.most_scenarios}} code scenarios; more than {{story.most_scenarios}} and the story is huge. A story with none is waiting for its scenarios, which is fine.
 
 ---
 
@@ -23,7 +23,7 @@ Whenever you define or change user interactions and resulting system behavior, a
 
 - **`vocabulary-traces-to-domain-source`** - Use terms from the domain language and model when they exist, because one shared definition keeps Stories, examples, and code consistent.
 - **`read-all-source-context-in-full`** - Before fixing the hierarchy or asking a question about an interaction between systems, read every referenced source that informs the decision, including the owning segment, module context, session records, related Story context, build order, code, recorded observations, and relevant run logs. Name the source and location that supports each important interaction, because titles and search results do not explain behaviour.
-- **`do-not-invent-requirements`** - Write only behaviour described by a source or explicitly requested by the user. Add a system-to-system interaction only when a named caller invokes it or a source requires it, because an assumed interaction becomes unrequested architecture, Scenarios, and tests.
+- **`do-not-invent-requirements`** - Write only features and behaviour described by a source or explicitly requested by the user. Add a system-to-system interaction only when a named caller invokes it or a source requires it, because an assumed interaction becomes unrequested architecture, Scenarios, and tests. Asking how a described behaviour acts at its edges is required, and is not invention: ask each edge question of the behaviour and take the answer from the source, the running product, or the person, because a behaviour whose edges nobody asked about is specified only for the case its author had in mind.
 
 ---
 
@@ -39,6 +39,10 @@ outputs:
   drawio: ".context/story-map.drawio"
   whiteboard: ".context/story-map.whiteboard"
   thin_slice: [".context/thin-slice.md", ".context/thin-slice.drawio", ".context/thin-slice.whiteboard"]
+example: "_examples/manage-customer-orders/md/story-map.md"
+leaves_out:
+  drawio: "the document's front matter, its title, and prose that is not an epic, a sub-epic, a story or an actor. They stay in story-map.md"
+  whiteboard: "the document's front matter, its title, and prose that is not an epic, a sub-epic, a story or an actor. They stay in story-map.md"
 ```
 
 #### Overview
@@ -81,8 +85,8 @@ If this change will not stay here, follow `practices/stories.mdc`.
 
 - **`verb-noun-format`** - Name every Epic, Sub-Epic, and Story with a base-form verb and noun. Epics and Sub-Epics name goals rather than an actor's activity or a supporting system call, because grammar alone does not preserve the right level of abstraction. A generic verb (handle, process, manage, perform, do, execute, run) is not wrong in itself: the graph lists each one, and the judgment decides it from its context. It passes when its noun and its place on the map make the action plain, such as an Epic *Manage Tickets* gathering the ticket stories below it; it fails when it hides which mechanic the node performs, such as a Story *Handle Ticket* standing for deleting one.
 - **`story-name-captures-system-mechanic`** - At Story level, use a verb that names the operation and a noun that names the record or concept it acts on. Replace vague names such as `Handle Request`, `Process Data`, or `Manage Record`, because they hide what the system does.
-- **`child-count-fits-layer`** - Size an epic or sub-epic by the layer it is: one that holds sub-epics groups 3-9 children, a sub-epic that holds only stories holds 2-9, and a top epic that holds only stories holds 4-9. Restructure outside the band: split a crowded node, and move an epic of two or three stories under the neighbouring epic whose outcome it serves rather than padding it, because readers cannot reason easily about shallow chains or crowded nodes, and a band that only counts stories pushes every map toward flat epics. Do not apply this band to the scenarios under a story.
-- **`story-scenarios-at-most-seven`** - A story holds at most 7 code scenarios. More than 7 and the story is huge — split it, because one story should be one interaction a reader can test in a few examples. A story with no scenarios passes: its scenarios are simply not written yet.
+- **`child-count-fits-layer`** - Size an epic or sub-epic by the layer it is: one that holds sub-epics groups {{child_band.holding_sub_epics}} children, a sub-epic that holds only stories holds {{child_band.sub_epic}}, and a top epic that holds only stories holds {{child_band.flat_epic}}. Restructure outside the band: split a crowded node, and move an epic of two or three stories under the neighbouring epic whose outcome it serves rather than padding it, because readers cannot reason easily about shallow chains or crowded nodes, and a band that only counts stories pushes every map toward flat epics. Do not apply this band to the scenarios under a story.
+- **`story-scenarios-at-most-seven`** - A story holds at most {{story.most_scenarios}} code scenarios. More than {{story.most_scenarios}} and the story is huge — split it, because one story should be one interaction a reader can test in a few examples. A story with no scenarios passes: its scenarios are simply not written yet.
 - **`branch-on-mechanical-uniqueness`** - Create separate Stories for distinct mechanics and use Scenarios or examples when several source entries share one mechanic, because one Story per source entry duplicates behaviour while one Story for different mechanics hides work.
 - **`right-size-story-nodes`** - Put one observable interaction at one system boundary in each Story. Keep the caller's request, response, and translation together; give the callee its own boundary Story; keep display-only and forwarding-only work as outcomes, because splitting every internal call or interface step obscures the interaction being tested.
 - **`behaviours-not-build-tasks`** - Write each Story as a behaviour of the product: what an actor does with it and what it does in return. Keep the work of getting that behaviour to exist, such as building, defining, designing, setting up, migrating or validating it, in plans and tasks, because a story about making the thing has no Given, When and Then of its own and tells nobody what the product does. How often the behaviour happens does not matter: one that happens once is as much a behaviour as one that happens every day. A judge reads the story's name and description for this; no name pattern decides it.
@@ -112,6 +116,7 @@ outputs:
     - "story_tests/{epic}/{sub-epic}/{story_snake}_story.test.md"
     - "story_tests/{epic}/{epic_snake}_story.test.md"
   realization: ".context/{scope}-scenario-realization.md"
+example: "_examples/telco-website/onboard-a-customer"
 ```
 
 #### Overview
@@ -128,6 +133,20 @@ Ask what is already true, what the person or system does, what someone else can 
 **Create testable specifications.** Use **Given** for state the system already has, **When** for the operation under test, and **Then** for results a person or another system can observe. Use **And** to continue the current kind of step. Use **But** for a missing record or an action not taken. Start a new **When** only when a new interaction begins, because each outcome must trace to the operation that produced it.
 
 **Start with the main flow, then inspect every variation.** Cover the successful path first, then validation, field-level errors, cross-field rules, operation gating, service failures, reversals, and recovery that the sources or running product contain. Use separate Scenarios when the flow changes and a Scenario Outline when the same flow applies to many data combinations.
+
+**Walk the edge conditions of every story.** A source describes the case its author had in mind and is usually silent about the edges, so ask each of the nine questions below of every story. Each condition ends as one of three things, written in the story's scenarios file under `### Edge conditions`: a Scenario that says what the system does, one line saying "does not apply, because ..." with the reason, or a question for the person where neither the source nor the running product answers. An answer comes from the source, the running product, or the person, never from a guess, and a condition left out with no line is the failure. A code story test with no markdown scenarios file carries the same lines as a comment above its story. The conditions fit any product; the examples show two domains each.
+
+| Edge condition | The question to ask of the story | Examples |
+|---|---|---|
+| **Missing or empty input** | What happens when a value the action needs is not given, or is given blank? | A bank transfer sent with no amount; a booking made with no date. |
+| **Malformed input, or input at or past a limit** | What happens when a value has the wrong form, or sits exactly at, or beyond, the smallest or largest the action accepts? | A shop order for zero items, or for more than the stock holds; a thermostat set above its highest temperature. |
+| **Duplicate** | What happens when the thing being created or added already exists? | Opening a bank account with an email address another account holds; adding a discount code the basket already carries. |
+| **Repeated action** | What happens when the same actor does the same action a second time? | Pressing Pay twice in a shop; cancelling a booking that is already cancelled. |
+| **Two actors at once** | What happens when two people or systems act on the same thing at the same moment? | Two guests booking the last room; two withdrawals drawn on one bank balance. |
+| **Interrupted action** | What happens when the action stops partway, and what does the next attempt find? | Power lost while a device installs an update; a shop's connection dropping between payment and confirmation. |
+| **Dependency absent, unavailable, slow, or wrong** | What happens when something the action relies on is not there, does not answer, answers late, or answers with something unusable? | A bank's fraud check timing out; a device's sensor returning no reading. |
+| **Changed or gone since last seen** | What happens when the thing acted on was changed or removed after the actor last saw it? | A price changing while the item sits in the basket; a flight cancelled while the traveller chooses a seat. |
+| **Actor not allowed** | What happens when the actor has no right to do this, or to do it to this thing? | A bank teller approving a loan above their limit; a guest user changing a device's owner settings. |
 
 **Use concrete examples.** Provide an example for every domain concept the scenario mentions. Put real domain values in Examples so domain experts and developers can agree on the expected result. Relate examples through domain keys when the model relates them. Every example field must change an input, rule, or expected result, because unused data makes the behaviour harder to see.
 
@@ -153,6 +172,7 @@ If this change will not stay here, follow `practices/stories/stories-story-map.m
 - **`gwt-steps-trace-to-domain-operations`** - Map every Given, When, and Then to a named domain operation or property. Express continuation as an operation on the aggregate that receives control, because routes, waits, and framework calls do not describe domain behaviour.
 - **`behavioral-and-system-observable-outcomes`** - Write each Then as a result a person or another system can observe, such as changed information, a returned response, or a changed interface state. Keep internal flags and function-local state out of Then, because they do not prove delivered behaviour.
 - **`explore-full-interaction-surface`** - Before finalizing Scenarios and again before generating acceptance tests, inspect every distinct visible behaviour required by the source or running product. Add Scenarios for distinct mechanics, because a happy path cannot protect validation and failure behaviour.
+- **`edge-conditions-walked`** - For every Story, walk the nine edge conditions of this fidelity's Guidance: missing or empty input; malformed input, or input at or past a limit; a duplicate of something that exists; the same action repeated; two actors acting on the same thing at once; an action interrupted partway; a dependency absent, unavailable, slow, or wrong; the thing acted on changed or gone since it was last seen; and an actor not allowed to act. Under `### Edge conditions` in the Story's scenarios file, give each condition a Scenario, one line "does not apply, because ..." with its reason, or a question for the person where the source and the running product are silent. Take each answer from the source, the running product, or the person, because a condition left out with no line is behaviour nobody decided, and it stays undecided until a user meets it. This rule is judged, not checked by the graph: whether a Scenario is a refusal or a failure is read from its meaning, which matching words cannot decide.
 - **`examples-trace-domain-model`** - Provide an example for every domain concept the scenario mentions. Use that concept's own terms and the values the source gives, because a step that names a concept without an example leaves the behaviour unagreed.
 - **`reconcile-live-immediately`** - In brownfield work, update the map and Scenario in the same increment when the running product contradicts the current description. Mark intended changes separately, because observed and desired behaviour are different evidence.
 - **`flagged-writes-intended-gwt`** - When available evidence cannot exercise required behaviour, write the intended Given, When, and Then and state what evidence is missing, because an evidence gap must not erase the requirement or turn an expectation into an observed fact.
@@ -230,6 +250,7 @@ outputs:
     - "story_tests/{epic}/{epic_slug}.story.ui.spec.js"
     - "story_tests/{epic}/examples/{concept}.examples.js"
     - "story_tests/**/story-test.js"
+example: "_examples/telco-website/onboard-a-customer"
 ```
 
 #### Overview

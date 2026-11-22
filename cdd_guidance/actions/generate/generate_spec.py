@@ -259,6 +259,27 @@ with description("a generate action on practice guidance") as self:
             with it("should log a generate line that names the practice, fidelity, and format"):
                 expect(_generate_line(self.project)).to(contain(" ux ia drawio "))
 
+        # The person's decision (2026-11-22): nobody fills the record of a module's test tiers by hand; the generate
+        # that writes the module's tests fills it, and asks for what it cannot tell.
+        with context("that generates BDD development for a module the session writes its specs under"):
+            with before.each:
+                (self.project / "shop" / ".context").mkdir(parents=True)
+                (self.project / "shop" / ".context" / "module-context.md").write_text("# shop\n", encoding="utf-8")
+                self.session = Sessions(self.project).current()
+                self.session.practice("bdd").guidance.fidelities.called("development").session_output.choose_root("shop")
+                self.prose = _expanded_generate(self.action, {"guidance": ["bdd-development"]}).instructions
+
+            with it("should record the unit tier for that module in session.json"):
+                expect(self.session.test_tiers.recorded).to(equal({"shop": {"unit": "mamba"}}))
+
+            with it("should ask the agent to decide the server and web tiers and record them"):
+                expect(self.prose).to(contain("cannot tell whether shop", "session.record_test_tier"))
+
+        with context("that generates a fidelity that keeps no test tiers"):
+            with it("should say nothing of test tiers"):
+                prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
+                expect(prose).not_to(contain("session.record_test_tier"))
+
     with context("with Bdd listed"):
         with it("should run generate using the practice default generate_output"):
             self.action.generate(["bdd"])

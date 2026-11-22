@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, Iterator, TypeVar
 
 from harness.installation.json_file import HeldJsonFile, JsonFile
 from harness.process.answer_reads import ANSWER_READS, HeldForAnswer
+from space.session.session_saves import SessionSaves
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -19,6 +21,15 @@ _SHOWN_CHARACTERS = 40
 _RETIRED_KEYS = ("outputs", "repo_path")
 _PRACTICES = "practices"
 _FIDELITIES = "fidelities"
+_TEST_TIERS = "test_tiers"
+# The tiers a module's tests can use: unit for every module, server for one that publishes operations through a server,
+# web for one that shows a page.
+TEST_TIERS = ("unit", "server", "web")
+
+# What a change to session.json leaves beside it, which no save commits: the lock file a change holds it by, and the
+# text a writer staged and was killed before it swapped it in.
+SessionSaves.leave_out(f"**/{SESSION_FILE}.lock")
+SessionSaves.leave_out(f"**/{SESSION_FILE}.*.tmp")
 
 Value = TypeVar("Value")
 
@@ -131,7 +142,7 @@ class SessionFields:
     what it keeps for each practice. A file in an older shape is upgraded as it is read; what other owners keep there,
     such as the board's stage, is kept as it is and changed only through their own part (``SessionRecord.extra``)."""
 
-    KEYS = frozenset({"name", "title", "scope", "workpath", "tags", "overlays", "parent", "pulled_out", "branch", "worktree", "chat", "guidance", _PRACTICES})
+    KEYS = frozenset({"name", "title", "scope", "workpath", "tags", "overlays", "parent", "pulled_out", "branch", "worktree", "chat", "guidance", _PRACTICES, _TEST_TIERS})
 
     name = _Field("name", "")
     title = _Field("title", "")
@@ -156,11 +167,37 @@ class SessionFields:
         """What session.json keeps for the practice whose key is key; nothing saved yet reads as the defaults."""
         return PracticeFields(self.raw.setdefault(_PRACTICES, {}).setdefault(key, {}))
 
+    @property
+    def test_tiers(self) -> dict[str, dict[str, str]]:
+        """The test tiers each module uses, by the module's path from the project, each tier with its test tool; none
+        before a generate or a render recorded any. A record in another shape is refused with MisshapenTestTiersError,
+        never read as no tiers chosen, which would let a story of an app pass with no server or web test."""
+        held = self.raw.get(_TEST_TIERS)
+        if held is None:
+            return {}
+        if not isinstance(held, dict):
+            raise MisshapenTestTiersError(held)
+        return {module: self._tiers_of(module, tiers) for module, tiers in held.items()}
+
+    @test_tiers.setter
+    def test_tiers(self, recorded: dict[str, dict[str, str]]) -> None:
+        self.raw[_TEST_TIERS] = {module: dict(tiers) for module, tiers in recorded.items()}
+
+    def _tiers_of(self, module: str, tiers: object) -> dict[str, str]:
+        if not isinstance(tiers, dict):
+            raise MisshapenTestTiersError({module: tiers})
+        misshapen = {tier: tool for tier, tool in tiers.items() if tier not in TEST_TIERS or not isinstance(tool, str) or not tool}
+        if misshapen:
+            raise MisshapenTestTiersError({module: misshapen})
+        return dict(tiers)
+
     def as_dict(self) -> dict:
         """The fields as session.json writes them, empty parts left out."""
         written = {key: value for key, value in self.raw.items() if key not in _RETIRED_KEYS}
         if not written.get("guidance"):
             written.pop("guidance", None)
+        if _TEST_TIERS in written and not written[_TEST_TIERS]:
+            written.pop(_TEST_TIERS)
         practices = {key: _kept(practice) for key, practice in dict(written.get(_PRACTICES) or {}).items()}
         practices = {key: practice for key, practice in practices.items() if practice}
         if practices:
@@ -241,6 +278,18 @@ class SessionFieldOwnedError(ValueError):
         self.key = key
 
 
+class MisshapenTestTiersError(ValueError):
+    """A session.json keeps its test tiers in a shape that cannot be read: anything other than, for each module, a test
+    tool for each of the tiers unit, server and web it uses."""
+
+    def __init__(self, found: object) -> None:
+        super().__init__(
+            f"session.json keeps {_TEST_TIERS} as {found!r}: it holds, for each module's path, the test tool of each "
+            f'tier the module uses ({", ".join(TEST_TIERS)}), such as {{"space/kanban": {{"unit": "mamba"}}}}'
+        )
+        self.found = found
+
+
 class SessionRecord:
     """The ``session.json`` in one session's folder, which holds its typed fields (*SessionFields*). It is read once for
     each answer that asks (*AnswerReads*), and between answers again only once the file changes. Every change a session
@@ -251,12 +300,15 @@ class SessionRecord:
         self._session = session
         # Its session.json, read again only once the file changes; none before the session has a folder.
         self._held: HeldJsonFile | None = None
+        # The file itself, which a change holds, reads and writes; none before the session has a folder.
+        self._kept: JsonFile | None = None
         # What its session.json holds, read into its typed fields once for each answer that asks.
         self._fields = HeldForAnswer[SessionFields]()
 
     def kept_in(self, folder: Path | None) -> None:
         """Read the session.json of folder from now on, the session's folder since it was given one or moved."""
-        self._held = HeldJsonFile(JsonFile(folder / SESSION_FILE)) if folder is not None else None
+        self._kept = JsonFile(folder / SESSION_FILE) if folder is not None else None
+        self._held = HeldJsonFile(self._kept) if self._kept is not None else None
         self._fields.drop()
 
     @property
@@ -284,16 +336,41 @@ class SessionRecord:
         """Change the fields as ``session.json`` holds them now, not as this answer read them, keeping what others store
         there, and make the session's folder when it has none yet, as a project's main session has none until something
         is saved in it. said names the change in the commit that saves it on main. It begins a new answer, so no read in
-        this process answers what the file held before."""
-        file = self._held if self._held is not None else JsonFile(self._session.session_file)
+        this process answers what the file held before. The file is held from the read to the write (``held``), so a
+        change another chat or process makes to the same session at the same moment waits its turn and neither is lost.
+        A session.json that is not a readable JSON object, such as one a killed writer left half written, is refused by
+        name (*JsonFileUnreadable*) and left as it is, never read as empty and written over."""
+        file = self._file
         try:
-            fields = SessionFields(file.read())
-            change(fields)
-            file.write(fields.as_dict())
+            with self.held():
+                # Read from the file itself, past what a read before the hold kept, which another holder has since changed.
+                fields = SessionFields(file.read())
+                change(fields)
+                file.write(fields.as_dict())
         finally:
-            self._fields.drop()
+            self._forget_what_was_read()
             ANSWER_READS.begin()
         self.saved(self._shown(said))
+
+    @contextmanager
+    def held(self) -> Iterator[None]:
+        """Hold ``session.json`` for one change, from its read to its write (``JsonFile.held``, the operating system's
+        lock on ``session.json.lock`` beside it). Every change to the record goes through ``update``, which holds it,
+        so no caller changes it unheld. The lock ends when its holder lets go or its process ends, however it ends, so
+        a killed holder blocks nobody; a holder that keeps it past the wait refuses the waiting change (*JsonFileBusy*)."""
+        with self._file.held():
+            yield
+
+    @property
+    def _file(self) -> JsonFile:
+        """Its session.json: in the folder it was given, else where the session's file will be once something is saved."""
+        return self._kept if self._kept is not None else JsonFile(self._session.session_file)
+
+    def _forget_what_was_read(self) -> None:
+        """Read the file again on the next ask, in this answer and between answers."""
+        self._fields.drop()
+        if self._kept is not None:
+            self._held = HeldJsonFile(self._kept)
 
     def save(self) -> None:
         """Save the session's name and workpath, creating its folder, and keep the fields others store there, such as a

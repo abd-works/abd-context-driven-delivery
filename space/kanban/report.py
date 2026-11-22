@@ -48,6 +48,12 @@ class ListedViolation:
 
 # A fix in one format alone leaves the fidelity's other formats still breaking the rule, so every fix asks for all of them.
 _EVERY_FORMAT = "Fix every format of the fidelity: its documents, its diagrams, and its code."
+# A finding cleared by changing what the code does is not fixed, so every fix names the tests that state the behaviour.
+_KEEP_BEHAVIOUR = (
+    "Keep what the code does: before changing code, name the scenarios and tests that state what it does today, write the missing test first "
+    "where none covers the behaviour you are about to reshape and see it pass on the code as it is, and run them again after the change. "
+    "A finding cleared by changing what the code does is not fixed."
+)
 # What a prompt's lines are joined with.
 _LINE = "\n"
 
@@ -87,7 +93,7 @@ class ViolationPrompts:
             "",
             f"1. {_LINE.join(_error_lines(self._violation))}",
             "",
-            f"Change each file so the content marked > follows the rule, and change nothing the errors do not name. {_EVERY_FORMAT} Then validate {slug} with rule {rule} on the files you changed.",
+            f"Change each file so the content marked > follows the rule, and change nothing the errors do not name. {_EVERY_FORMAT} {_KEEP_BEHAVIOUR} Then validate {slug} with rule {rule} on the files you changed.",
         ]), self._fidelity)
 
     @property
@@ -152,7 +158,7 @@ class ReportRule:
     @data_field
     def fix_prompt(self) -> str:
         """Fix every violation of the rule the report found, read from the report itself."""
-        return _in_session(f"Fix all violations of {self._rule.slug} found in this report: {self._report_path}. {_EVERY_FORMAT}", self._fidelity)
+        return _in_session(f"Fix all violations of {self._rule.slug} found in this report: {self._report_path}. {_EVERY_FORMAT} {_KEEP_BEHAVIOUR}", self._fidelity)
 
     @property
     def identity(self) -> tuple:
@@ -231,7 +237,7 @@ class Report:
         from a copy in the message. It names the session of the report's rules' ticket; empty for a report of none."""
         if not self._rules:
             return ""
-        return _in_session(f"Fix all violations found in this report: {self._path}. {_EVERY_FORMAT}", self._rules[0].fidelity)
+        return _in_session(f"Fix all violations found in this report: {self._path}. {_EVERY_FORMAT} {_KEEP_BEHAVIOUR}", self._rules[0].fidelity)
 
     @property
     @data_field

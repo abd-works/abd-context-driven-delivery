@@ -16,5 +16,59 @@
     "*": ["default", "drawio", "whiteboard"],
     "ux": ["default"],
     "ux.mockup": ["claude_design"]
+  },
+  "code_measures": {
+    "tools": {
+      "paths_through": {
+        "python": "lizard",
+        "typescript": "lizard"
+      },
+      "readability_score": {
+        "python": "lizard",
+        "typescript": "lizard"
+      },
+      "total_complexity": {
+        "python": "lizard",
+        "typescript": "lizard"
+      },
+      "classes_depended_on": {
+        "python": "reader",
+        "typescript": "reader"
+      },
+      "unshared_method_groups": {
+        "python": "reader",
+        "typescript": "not measured"
+      },
+      "modules_importing": {
+        "python": "reader",
+        "typescript": "reader"
+      },
+      "maintainability_score": {
+        "python": "radon",
+        "typescript": "not measured"
+      },
+      "copied_code_blocks": {
+        "python": "not measured",
+        "typescript": "not measured"
+      },
+      "abstractness": {
+        "python": "reader",
+        "typescript": "reader"
+      },
+      "instability": {
+        "python": "reader",
+        "typescript": "reader"
+      }
+    },
+    "limits": {
+      "paths_through": 10,
+      "readability_score": 15,
+      "code_lines": 50,
+      "parameters_taken": 5,
+      "total_complexity": 100,
+      "method_count": 30,
+      "unshared_method_groups": 1,
+      "import_loops": 0
+    }
   }
 }

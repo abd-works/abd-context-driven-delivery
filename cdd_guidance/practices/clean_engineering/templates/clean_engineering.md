@@ -191,14 +191,14 @@ Do not sketch Fake{ClassName} / Isolated{ClassName} / Production{ClassName} type
 I{ClassName}ExampleFactory()
 ------
 ----
-load_{example_key}(mode): I{ClassName}
+load_{example_key}(mode: {GenerationMode}): I{ClassName}
 
 ## {ClassName}ExampleFactory                                      <!-- Md -->
 
 + {ClassName}ExampleFactory()
 ------
 ----
-+ load_{example_key}(mode): I{ClassName}
++ load_{example_key}(mode: {GenerationMode}): I{ClassName}
 	// examples[{example_key}] multi-type bundle
 	// Fake: mock/stub framework + feed examples
 	// Isolated: new {ClassName}(ctor-injected mocks/stubs)

@@ -341,7 +341,14 @@ class FidelitySessionOutput:
     @noSessionLog
     def add_root(self, path: str) -> FidelitySessionOutput:
         """Write this fidelity's files under path as well, a folder in the repository, beside the roots it has; an empty path and a file are refused: such as one more sub-epic's folder in story_tests that the session's ticket works on, so the session holds that sub-epic's scenarios and story tests and no other's."""
-        self.keep_roots([*self.roots, self._practice.root_named(path)])
+        added = self._relative(self._practice.root_named(path))
+        before = [self._relative(root) for root in self.roots]
+
+        def with_root(fields: FidelityFields) -> None:
+            # Added to the roots the file holds inside the change, so a root another chat adds at the same moment stays.
+            fields.roots = list(dict.fromkeys([*(fields.roots or before), added]))
+
+        self._change(with_root, f"root {added} added")
         return self
 
     @mcp
@@ -360,9 +367,16 @@ class FidelitySessionOutput:
         named = Format(format).name
         if named not in self.offered_formats:
             raise FormatNotOfferedError(self._fidelity, format)
-        others = [each for each in self.chosen_formats if each != named]
-        chosen = self.chosen_formats if is_chosen and named in self.chosen_formats else others + ([named] if is_chosen else [])
-        self._change(lambda fields: setattr(fields, "formats", chosen), f"formats {', '.join(chosen)}")
+        defaults = self.formats.default_formats
+
+        def chosen(fields: FidelityFields) -> None:
+            # Worked out from the formats the file holds inside the change, so a format another chat chooses at the
+            # same moment stays chosen.
+            held = defaults if fields.formats is None else fields.formats
+            others = [each for each in held if each != named]
+            fields.formats = held if is_chosen and named in held else others + ([named] if is_chosen else [])
+
+        self._change(chosen, f"format {named} {'chosen' if is_chosen else 'left out'}")
         self._session.guidance.changed()
         return self
 
@@ -405,8 +419,12 @@ class FidelitySessionOutput:
         """Write this fidelity's files under each of roots, such as the folders of the sub-epics a ticket works on in
         story_tests, apart from its practice's root; kept in session.json relative to the workpath, in place of every
         root it had."""
-        relative = list(dict.fromkeys(Path(os.path.relpath(Path(root).resolve(), self._session.work_root)).as_posix() for root in roots))
+        relative = list(dict.fromkeys(self._relative(root) for root in roots))
         self._change(lambda fields: setattr(fields, "roots", relative), f"roots {', '.join(relative)}")
+
+    def _relative(self, root: Path) -> str:
+        """root as session.json keeps it: its path from the folder the session works in."""
+        return Path(os.path.relpath(Path(root).resolve(), self._session.work_root)).as_posix()
 
     @property
     def root(self) -> Path:

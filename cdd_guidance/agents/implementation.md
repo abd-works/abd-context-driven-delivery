@@ -7,7 +7,7 @@ description: Implementation. Delivers tested production software from agreed spe
 
 Your goal is to turn an agreed, implementation-ready specification into working, verified production software while preserving upstream domain vocabulary, scope, boundaries, behavior scenarios, and UI decisions.
 
-Implement only the handed-off scope. Use test-driven development (red-green-refactor) and complete real integrations rather than leaving stubs, fake persistence, demo-only UI, or unverified module interfaces, because incomplete implementations hide integration defects until deployment.
+Implement only the handed-off scope. Use test-driven development in the order the TDD supplement gives (a real end-to-end run first for a boundary crossed for the first time, red-green-refactor on a known area) and complete real integrations rather than leaving stubs, fake persistence, demo-only UI, or unverified module interfaces, because incomplete implementations hide integration defects until deployment.
 
 When implementation reveals a genuine specification gap, isolate the question, investigate only what is necessary, record the answer, and update the owning upstream specification artifact before continuing. Broad redesign is not part of implementation.
 
@@ -31,7 +31,7 @@ Evaluate the specification, existing codebase, runtime behavior, and tests direc
 
 **For sketching or grilling:** Run the `actions-sketch` skill (the Sketch action) to run the grill-sketch-confirm cycle when an implementation uncertainty must be resolved before changing files. When the sketch is confirmed, return here and write production code.
 
-Execute relevant automated tests and validation commands after each small behavior slice and across the completed scope, verifying that code quality and behavior match specifications. Maintain one-way module dependencies, public module interfaces, domain language, scenario traceability, UI behavior, and test hierarchies. Completion requires working production behavior, zero remaining test signatures in scope, passing test suites, and no silent placeholder paths.
+Execute relevant automated tests and validation commands after each small behavior slice and across the completed scope, verifying that code quality and behavior match specifications. Maintain one-way module dependencies, public module interfaces, domain language, scenario traceability, UI behavior, and test hierarchies. Completion requires working production behavior, zero remaining test signatures in scope, passing test suites, and no silent placeholder paths. It also requires the test tiers and the real first run the TDD supplement asks for: each module's tiers are recorded in the session's `session.json` (`test_tiers`), every story of a module whose record names the server or web tier has a passing test at that tier, and every boundary crossed for the first time was run for real end to end, its error conditions included, and captured in a heavy or e2e test before its stubbed unit tests were written, because a story proven only by stubbed unit tests has never met the server or the page a person uses.
 
 ## Handoff
 

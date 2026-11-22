@@ -26,6 +26,7 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
 from harness.installation.data_class import data_of
+from space.session import Sessions
 from space.session.files.session_files import NamedPathNotFoundError
 from space.session.spec_support.throwaway_project import ThrowawayProject
 from harness.whiteboard import Whiteboard
@@ -91,6 +92,11 @@ _CART_SPEC = """from mamba import description, it
 with description("a cart"):
     with it("should total its lines"):
         pass
+"""
+_CART_SPEC_IN_TYPESCRIPT = """describe('a cart', () => {
+  it('should total its lines', () => {
+  });
+});
 """
 _REALIZATION = """# Bookshop BDD realization
 
@@ -592,6 +598,29 @@ with description("Render asked for a path, in a session") as self:
         with it("should save one spec named for the realization's scope, in the folder its .context sits in"):
             saved = [Path(path).relative_to(self.project.root).as_posix() for path in self.results[0].paths]
             expect(saved).to(equal(["bookshop_spec.py"]))
+
+    # The person's decision (2026-11-22): nobody fills the record of a module's test tiers by hand; the render that
+    # writes the module's tests fills it.
+    with context("that is a TypeScript spec in a module's folder, rendered to the Python spec BDD development fills"):
+        with before.each:
+            module = self.project.root / "shop" / ".context"
+            module.mkdir(parents=True)
+            (module / "module-context.md").write_text("# shop\n", encoding="utf-8")
+            (self.project.root / "shop" / "cart.spec.ts").write_text(_CART_SPEC_IN_TYPESCRIPT, encoding="utf-8")
+            self.results = self.action.render("bdd-development", format="python", paths=["shop/cart.spec.ts"])
+            self.session = Sessions(self.project.root).current()
+
+        with it("should record the unit tier, with its test tool, for the module the spec was saved in"):
+            expect(self.session.test_tiers.recorded).to(equal({"shop": {"unit": "mamba"}}))
+
+        with it("should answer what it recorded and what is left for the agent to decide"):
+            expect(data_of(self.results[0])["test_tiers"]).to(contain("shop: unit (mamba)", "cannot tell whether shop"))
+
+    with context("that is a realization in markdown, rendered to the Python spec of a fidelity that keeps no test tiers"):
+        with it("should answer nothing about test tiers"):
+            (self.folder / "bookshop-bdd-realization.md").write_text(_REALIZATION, encoding="utf-8")
+            results = self.action.render("bdd-realization", format="python", paths=[".context/bookshop-bdd-realization.md"])
+            expect(data_of(results[0])).not_to(have_key("test_tiers"))
 
     # Exploratory testing, r3-bolt-06 and r3-sparky-07: a render to code answered its content and saved nothing. The
     # person's answer (2026-11-20): every render ends in a saved file.
