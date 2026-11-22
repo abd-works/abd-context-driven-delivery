@@ -19,9 +19,9 @@ from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import mcp
 from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
+from space.kanban.backlog_folder import BacklogFolder
 from space.kanban.card_name import CardName, TicketNameTakenError
 from space.kanban.unreadable_session_file import UnreadableSessionFile
-from space.session.session_record import SESSION_FILE
 from space.session.session_saves import SaveFailure
 from space.session.sessions import BoardPractices, Sessions, SessionsRead
 
@@ -245,6 +245,11 @@ class Board:
     @property
     def backlog_items(self) -> list[BacklogItem]:
         return self.reads.backlog_items
+
+    @property
+    def backlog_folder(self) -> BacklogFolder:
+        """The Backlog's folder, which answers which of its files are ideas and where each lies."""
+        return BacklogFolder(self._sessions.backlog_folder)
 
     @property
     def cards(self) -> list[Card]:
@@ -489,18 +494,7 @@ class BoardReads:
     @cached_property
     def backlog_items(self) -> list[BacklogItem]:
         board = self._board
-        folder = board.sessions.backlog_folder
-        if not folder.is_dir():
-            return []
-        # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
-        # whole folder, history and all. A folder beside a file of its name is that file's ticket, not a second item.
-        # A folder that holds no ticket's work is a parent: every other markdown file in it is one of its children.
-        files = list(folder.glob("*.md"))
-        kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
-        parents = [path for path in kept if path.is_file()]
-        children = [child for parent in parents if not (parent.parent / SESSION_FILE).is_file() for child in parent.parent.glob("*.md") if child != parent]
-        found = sorted([*files, *parents, *children], key=lambda path: path.stem)
-        return [board.placement.make_backlog_item(path) for path in found]
+        return [board.placement.make_backlog_item(path) for path in board.backlog_folder.idea_files()]
 
     @cached_property
     def chats(self) -> list[Chat]:

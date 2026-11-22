@@ -106,7 +106,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 	-> Sessions.all
 + << aggregation >> backlog_items: list[BacklogItem]
 	// every idea file in `.sessions/_backlog/`, and every ticket folder kept there, read once per board read and kept until `CardPlacement.reread`
-	-> Sessions.backlog_folder
+	-> BacklogFolder.idea_files
 + cards: list[Card]
 	// its tickets, then its backlog items
 + active: Ticket
@@ -195,6 +195,8 @@ What one read of a board finds, each read once when first asked for: its tickets
 	-> Sessions.all
 + backlog_items: list[BacklogItem]
 	-> Sessions.backlog_folder
++ backlog_folder: BacklogFolder
+	// the Backlog's folder, which answers which of its files are ideas and where each lies
 ----
 + backlog_item_called(title: str): BacklogItem
 	// the backlog item titled title, of those this read found, raising `BacklogItemNotFoundError` when the board has none
@@ -808,6 +810,33 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 + offered_by(read: list[tuple[FidelityGuidance, dict[str, list[FileEntry]]]]): list[FormatChoice]
 	// a chip per group the fidelities offer, in the order of `Format.GROUPS`
 	-> Format.group
+
+## BacklogFolder
+
+The Backlog's folder, `.sessions/_backlog` (in `backlog_folder.py`): it answers which of its files are ideas. An idea is a markdown file in it, or a folder holding a file of its own name: a ticket moved back keeps its whole folder, and a parent keeps its children's files beside its own.
+
++ BacklogFolder(folder: Path)
+------
++ folder: Path
+----
++ idea_files(): list[Path]
++ place_of(file: Path): IdeaPlace
+
+## IdeaPlace
+
+Where one idea's file lies in the Backlog, and the only mover of it. An idea's file is its only copy, so a move never deletes it or writes over another file; a folder a move leaves empty goes. *BacklogItem* holds one and asks it, and refuses a nesting (`_nesting_refusal`) before a move could write over a file.
+
++ IdeaPlace(file: Path, backlog_folder: BacklogFolder)
+------
++ file: Path
++ is_in_own_folder: bool
++ ticket_folder: Path
++ holds_ticket: bool
++ parent_file: Path | None
+----
++ move_under(parent: IdeaPlace)
++ move_out()
++ remove_emptied_folder()
 
 ## BacklogItem : Card
 
