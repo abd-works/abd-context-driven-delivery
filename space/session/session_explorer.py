@@ -16,8 +16,8 @@ from space.session.node_spans import NodeSpans
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
-    from space.session.file_graphs import FileGraphs
-    from space.session.practice_outputs import PracticeOutputs
+    from space.session.session_graph import SessionGraph
+    from space.session.session_practices import SessionPractices
     from space.session.session_file import SessionFile
     from space.session.session_checkout import SessionCheckout
     from space.session.session_paths import SessionPaths
@@ -34,8 +34,8 @@ class SessionExplorer:
     graph: Graph
     checkout: SessionCheckout
     work_root: Path
-    practice_outputs: PracticeOutputs
-    file_graphs: FileGraphs
+    session_practices: SessionPractices
+    session_graph: SessionGraph
     file: Callable[[str], SessionFile]
 
     @long_call
@@ -45,11 +45,11 @@ class SessionExplorer:
     def graph_trees(self, paths: list[str], node_filter: FilterRequest | None = None, call: ToolCall | None = None) -> list[ExplorerEntry]:
         """Return the practice trees of this session's graph read from exactly the files at paths, each named from the project as the Files app lists them, and holding only the nodes read from them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The files the page lists are the one filter: the graph reads them, its story tests in code and in markdown alike, and keeps what they hold. node_filter is a node filter as graph.explorer_trees takes it (types, relationships, violations, rules): it applies with the file list, narrowing the nodes of the files listed, and never widens the list, so any paths it names are the list's. No paths, or none in the project, answer no tree, and so does a session with every practice turned off, since no practice reads the files."""
         listed = self.paths.in_project(paths)
-        if not listed or not self.practice_outputs.working:
+        if not listed or not self.session_practices.working:
             return []
         graph = self.graph
-        graph.load_files(str(self.checkout.root.resolve()), self.practice_outputs.working, listed, graph.overlays, call)
-        self.file_graphs.listed([self.paths.path_named(path) for path in listed])
+        graph.load_files(str(self.checkout.root.resolve()), self.session_practices.working, listed, graph.overlays, call)
+        self.session_graph.listed([self.paths.path_named(path) for path in listed])
         return graph.explorer_trees(self._narrowed_to(listed, node_filter))
 
     @mcp
@@ -79,7 +79,7 @@ class SessionExplorer:
         node_spans = NodeSpans(self.graph, {"paths": self.paths.in_project(paths)}, self.work_root)
         read_from = node_spans.file_of(node_id)
         if read_from is not None:
-            self.file_graphs.listed_file_as_it_is_now(read_from)
+            self.session_graph.as_it_is_now(read_from)
         spans = node_spans.collect(node_id).spans
         return [self.file(self.paths.from_project(path)).range(start, end) for path, (start, end) in spans.items()]
 

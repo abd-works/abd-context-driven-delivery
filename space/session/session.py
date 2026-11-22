@@ -24,9 +24,9 @@ from space.session.file_manager import FileEntry, FileText
 from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
 from space.session.practice_session_output import PracticeSessionOutput
-from space.session.practice_outputs import PracticeOutputs
+from space.session.session_practices import SessionPractices
 from space.session.progress_cache import ProgressCache
-from space.session.file_graphs import FileGraphs
+from space.session.session_graph import SessionGraph
 from space.session.format_alignment import SessionAlignmentTools
 from space.session.guidance_selection import GuidanceSelection, SelectionPart
 from space.session.file_view_filter import FileViewFilter
@@ -371,7 +371,6 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         self.checkout = SessionCheckout(self)
         self.folder = SessionFolder(self)
         self.hierarchy = SessionHierarchy(self)
-        self.file_graphs = FileGraphs(self)
         self.guidance = GuidanceSelection(self)
         self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
         self.handoffs: Handoffs | None = None
@@ -381,7 +380,8 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         self.session_files = SessionFiles(self)
         self.chat_injections = ChatInjections(self)
         # The practices and graph this session keeps between calls, made when first asked for.
-        self.practice_outputs = PracticeOutputs(self)
+        self.session_practices = SessionPractices(self)
+        self.session_graph = SessionGraph(self, self.session_practices)
 
     @classmethod
     @tool_subject
@@ -441,7 +441,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         are made again on the new one when next asked for."""
         self._workpath = folder
         self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
-        self.practice_outputs.forget()
+        self._forget_practices()
 
     @property
     def record_folder(self) -> Path:
@@ -474,7 +474,13 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         self._work_folder = folder
         self.handoffs = Handoffs(folder) if folder is not None else None
         self.progress_cache = ProgressCache(folder)
-        self.practice_outputs.forget()
+        self._forget_practices()
+
+    def _forget_practices(self) -> None:
+        """The practices and graph were made on the session's old root or work folder, so both are made again when next
+        asked for."""
+        self.session_practices.forget()
+        self.session_graph.forget()
 
     @property
     def is_closed(self) -> bool:
@@ -507,7 +513,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         the graph saved on its root, so a session opened again, such as a ticket just activated, shows what was loaded
         in it before. A session whose root has moved gets a new graph, with new practices, on the new root. It holds only
         the practices the session works on, so turning one on or off makes it again with those."""
-        return self.practice_outputs.graph
+        return self.session_graph.graph
 
     @property
     @data_field
@@ -601,7 +607,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         if unknown:
             raise NotAPatternError(unknown, patterns)
         self.record.update(lambda fields: setattr(fields, "overlays", list(overlays)), f"overlays {', '.join(overlays)}")
-        self.practice_outputs.overlay(overlays)
+        self.session_graph.overlay(overlays)
 
     def log_tool(self, call: ToolCall, tool: str) -> None:
         """Log that call ran tool, with the paths it named, pointing at the call's chat (*CallSession*)."""
@@ -651,7 +657,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     def practice(self, name: str) -> PracticeSessionOutput:
         """The practice called name in this session, on or off for it: the session's one instance of it, so a practice
         turned off can be turned on again. One the session works on is opened in its graph first."""
-        found = self.practices.get(name) or self.practice_outputs.every.get(name)
+        found = self.practices.get(name) or self.session_practices.every.get(name)
         if found is None:
             raise UnknownPracticeError(name)
         return found
@@ -661,7 +667,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         """The practices the session works on, by practice key, each the session's one instance of it: the ones its
         graph holds, kept between calls with the graph, which opening here gives each practice to work in. A practice
         turned off for the session is in ``own_practices`` and ``practice(name)``, not here."""
-        outputs = self.practice_outputs.every
+        outputs = self.session_practices.every
         return {key: outputs[key] for key in self.graph.practices.held}
 
     @property
@@ -670,7 +676,7 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         """The same practices, without opening the graph, for reading what each one declares, its folder and fidelities:
         a board listing every session would otherwise read every session's saved graph. A practice that runs is reached
         through ``practices``, so it works in the graph."""
-        return dict(self.practice_outputs.every)
+        return dict(self.session_practices.every)
 
     @property
     @data_field(key="handoff")

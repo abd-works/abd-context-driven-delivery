@@ -1219,7 +1219,7 @@ Built: the rules the session's saved graph found broken in the file mark their l
 
 ### (S) Person --> Browse Files Without Reading Rules
 
-Built (2026-11-15): Rules and Cross-file toggles at the top of the Files app, both off by default. With Rules on, `Session.file(rules=True)` reads the open file into the session's live graph when it changed (about 1.5 s) and answers its folds and broken rules, with the last validate's saved findings beside them, as the Graph app's source view shows them; Cross-file has the graph hold the whole working copy first (`Graph.hold_whole`). Fixed (2026-11-15): the two toggles are independent; Rules reads the file alone (`FileGraphs.file_alone`, about 0.8 s), Cross-file adds only what the whole working copy finds. The person: "when loading files don't use cross file unless cross file is toggled, and vice versa". Requested (the person, 2026-11-15): "I don't see code folding in here I don't see any of the violations", then "toggle at top and have it off by default; for rules; same with cross file that way we don't incur a performance penalty when we just want to browse files".
+Built (2026-11-15): Rules and Cross-file toggles at the top of the Files app, both off by default. With Rules on, `Session.file(rules=True)` reads the open file into the session's live graph when it changed (about 1.5 s) and answers its folds and broken rules, with the last validate's saved findings beside them, as the Graph app's source view shows them; Cross-file has the graph hold the whole working copy first (`Graph.hold_whole`). Fixed (2026-11-15): the two toggles are independent; Rules reads the file alone (`SessionGraph.alone`, a *DocumentGraph*, about 0.8 s), Cross-file adds only what the whole working copy finds. The person: "when loading files don't use cross file unless cross file is toggled, and vice versa". Requested (the person, 2026-11-15): "I don't see code folding in here I don't see any of the violations", then "toggle at top and have it off by default; for rules; same with cross file that way we don't incur a performance penalty when we just want to browse files".
 
 ### (S) Person --> [Save Edited File](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-save-edited-file)
 
@@ -2372,7 +2372,7 @@ Requested (2026-11-06, "validate still exists as independent action"; "validate 
 
 ### (S:system) Claude Code --> Check Graph Rules When An Artifact Changes
 
-Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate. Built on release-2 (2026-11-15) for one file: with the Files app's Rules toggle on, `FileGraphs.file_alone` reads the open file into the session's live graph when it changed, in under a second, and answers its broken rules.
+Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate. Built on release-2 (2026-11-15) for one file: with the Files app's Rules toggle on, `SessionGraph.alone`, a *DocumentGraph* reads the open file into the session's live graph when it changed, in under a second, and answers its broken rules.
 
 ## (E) Change Stories From Canvas And Story UI
 

@@ -3834,8 +3834,9 @@ One named piece of work in a project, its record (session.json, idea file) kept 
 + session_file_from_project: str
 + work_root: Path
 + << composition >> graph: Graph
-	-> PracticeOutputs.graph
-+ << composition >> practice_outputs: PracticeOutputs
+	-> SessionGraph.graph
++ << composition >> session_practices: SessionPractices
++ << composition >> session_graph: SessionGraph
 + workpath_from_checkout: str
 + title: str
 + scope: str
