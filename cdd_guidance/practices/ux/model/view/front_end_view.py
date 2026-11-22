@@ -17,6 +17,8 @@ import re
 from dataclasses import dataclass
 from functools import cached_property
 
+from harness.guidance.practice_formats import KeptMark, OutlinedMember
+
 # What stands for each character that is not code, where the code is searched.
 _NOT_CODE = "\0"
 _OPENERS = {"(": ")", "[": "]", "{": "}", "<": ">"}
@@ -58,6 +60,16 @@ _FUNCTION_COMPONENT = re.compile(r"^(?:export[ \t]+)?(?:default[ \t]+)?(?:async[
 _ARROW_COMPONENT = re.compile(r"^(?:export[ \t]+)?const[ \t]+(?P<name>[A-Z][\w$]*)[^=\n]*=[ \t]*(?:async[ \t]*)?\(", re.MULTILINE)
 _EVENT_ATTRIBUTE = re.compile(r"\b(?P<event>on[A-Z]\w*)=\{")
 _HANDLER_NAME = re.compile(r"\s*(?P<name>[\w$.]+)\s*\}")
+_COMMENT_STARTS = ("//", "/*", "*")
+_FUNCTION = re.compile(r"[ \t]*(?:async[ \t]+)?function[ \t]+(?P<name>[\w$]+)[^(\n]*\(")
+_DECLARED = re.compile(r"[ \t]*(?:const|let)[ \t]+(?P<pattern>[\w$]+|\[[^\]\n]*\]|\{[^}\n]*\})")
+_ASSIGNED = re.compile(r"=(?![>=])")
+_HOOK = re.compile(r"\s*use[A-Z][\w$]*\b")
+_FUNCTION_VALUE = re.compile(r"\s*(?:async\s+)?function\b[^(\n]*\(")
+_ARROW_PARAMETERS = re.compile(r"\s*(?:async\s*)?\(")
+_ARROW_OF_ONE = re.compile(r"\s*(?:async\s+)?[\w$]+\s*=>")
+_RETURN = re.compile(r"[ \t]*return\b")
+_FIRST_NAME = re.compile(r"[\w$]+")
 
 
 class ViewSyntaxNotConverted(ValueError):
@@ -124,6 +136,29 @@ class ViewText:
         """The place after the end of the line that holds position, its line end included."""
         end = self.text.find("\n", position)
         return len(self.text) if end < 0 else end + 1
+
+    def top_level_line_starts(self, body: int) -> list[int]:
+        """The start of each line of the body whose brace opens at body that is the body's own, outside the brackets
+        of anything written in it."""
+        code, starts, depth = self.code, [], 0
+        for position in range(body + 1, self.closing(body)):
+            character = code[position]
+            depth += (character in "([{") - (character in ")]}")
+            if character == "\n" and depth == 0:
+                starts.append(position + 1)
+        return starts
+
+    def statement_end(self, position: int) -> int:
+        """The place after the line the statement that holds position ends on: its semicolon, or its line's end,
+        outside any bracket it opens."""
+        code, depth = self.code, 0
+        while position < len(code):
+            character = code[position]
+            if depth <= 0 and character in ";\n":
+                break
+            depth += (character in "([{") - (character in ")]}")
+            position += 1
+        return self.line_end(min(position, len(code) - 1)) if code else 0
 
     def closing(self, opening: int) -> int:
         """The place of the bracket that closes the one at opening; the end of the code when none does."""
@@ -633,6 +668,165 @@ class TypeAnnotations:
         return position
 
 
+class ComponentMember(OutlinedMember):
+    """A hook or a handler a component declares: its name, the place the comments above it start, the places its own
+    lines start and end, each a place in the view's text, and how a render writes it into a file that lacks it (a
+    handler empty, a hook as declared)."""
+
+    def __init__(self, name: str, lead: int, start: int, end: int, is_hook: bool, written_new: str) -> None:
+        super().__init__(name, lead, start, end)
+        self.is_hook = is_hook
+        self.written_new = written_new
+
+
+class Component:
+    """One component of a view, read from its text: its props, the hooks and handlers its body declares, and the places
+    a render writes into."""
+
+    def __init__(self, text: ViewText, name: str, opening: int) -> None:
+        self._text = text
+        self._annotations = TypeAnnotations(text)
+        self.name = name
+        self.opening = opening
+        self.start = self._text.line_start(opening)
+        self.lead = self._lead_of(self.start)
+        self.props = self._taken_apart()
+        self._body = self._annotations.body_after(self._text.closing(opening))
+        self.members = self._members() if self._body >= 0 else []
+
+    @property
+    def props_named(self) -> list[str]:
+        """The props it takes: those it takes apart in its parameter, or, for a component that takes its props whole,
+        each one its text reads from them."""
+        if self.props:
+            return self.props
+        code = self._text.code
+        whole = _IDENTIFIER.match(code, self._text.past_space(self.opening + 1))
+        if whole is None:
+            return []
+        read: list[str] = []
+        for prop in re.finditer(rf"(?<![\w$.]){re.escape(whole.group())}\.([\w$]+)", code[self.opening:self.end]):
+            if prop.group(1) not in read:
+                read.append(prop.group(1))
+        return read
+
+    def _taken_apart(self) -> list[str]:
+        """The props the component takes apart in braces; none for a component that takes its props whole."""
+        inner = self._text.past_space(self.opening + 1)
+        if self._text.code[inner:inner + 1] != "{":
+            return []
+        taken = _top_level_parts(self._text.code[inner + 1:self._text.closing(inner)])
+        return [re.split(r"[:=]", part, 1)[0].strip().lstrip(".") for part in taken if part.strip()]
+
+    @property
+    def end(self) -> int:
+        """The place after the component's last line: after its body, or after the statement of one with no body in
+        braces."""
+        if self._body >= 0:
+            return self._text.line_end(self._text.closing(self._body))
+        return self._text.statement_end(self._text.closing(self.opening))
+
+    @property
+    def text(self) -> str:
+        """The component as it is written, with the comments above it."""
+        return self._text.text[self.lead:self.end]
+
+    @property
+    def marks(self) -> str:
+        """The comments written above the component, where a line says which of its props are no longer in the model."""
+        return self._text.text[self.lead:self.start]
+
+    @property
+    def opening_line(self) -> str:
+        return self._text.text[self.start:self._text.line_end(self.start)].rstrip("\n")
+
+    @property
+    def props_braces(self) -> tuple[int, int]:
+        """The places of the braces the component takes its props apart in."""
+        inner = self._text.past_space(self.opening + 1)
+        return inner, self._text.closing(inner)
+
+    @property
+    def new_handlers_at(self) -> int:
+        """Where a handler the render adds is written: before what the component returns, with the comments above
+        that; before the brace that closes its body when it returns nothing there."""
+        returned = next((start for start in self._text.top_level_line_starts(self._body) if _RETURN.match(self._text.code, start)), -1)
+        return self._lead_of(returned) if returned >= 0 else self._text.line_start(self._text.closing(self._body))
+
+    @property
+    def new_hooks_at(self) -> int:
+        """Where a hook the render adds is written: after the last hook the component declares, else where its body
+        starts."""
+        hooks = [member.end for member in self.members if member.is_hook]
+        return max(hooks) if hooks else self._text.line_end(self._body)
+
+    def marked(self, member: ComponentMember) -> bool:
+        """Whether an earlier render set the member apart: its marking line is among the comments above it."""
+        return KeptMark.marks(self._text.text[member.lead:member.start])
+
+    def indent_of(self, position: int) -> str:
+        line = self._text.text[self._text.line_start(position):]
+        return line[:len(line) - len(line.lstrip(" \t"))]
+
+    def indent_below(self, position: int) -> str:
+        """The indent of the line after the one that holds position."""
+        return self.indent_of(self._text.line_end(position))
+
+    def _lead_of(self, start: int) -> int:
+        """The place the comment lines written directly above the line at start begin; start when none are."""
+        text, lead = self._text.text, start
+        while lead > 0:
+            above = self._text.line_start(lead - 1)
+            if not text[above:lead].strip().startswith(_COMMENT_STARTS):
+                break
+            lead = above
+        return lead
+
+    def _members(self) -> list[ComponentMember]:
+        found = (self._function_at(start) or self._declared_at(start) for start in self._text.top_level_line_starts(self._body))
+        return [member for member in found if member is not None]
+
+    def _function_at(self, start: int) -> ComponentMember | None:
+        """The handler declared with `function` on the line at start; none when the line declares none."""
+        declared = _FUNCTION.match(self._text.code, start)
+        body = self._annotations.body_after(self._text.closing(declared.end() - 1)) if declared is not None else -1
+        if body < 0:
+            return None
+        end = self._text.line_end(self._text.closing(body))
+        return ComponentMember(declared.group("name"), self._lead_of(start), start, end, False, f"{self._text.text[start:body]}{{}}")
+
+    def _declared_at(self, start: int) -> ComponentMember | None:
+        """The hook or the handler a `const` on the line at start declares; none for a plain value."""
+        code = self._text.code
+        declared = _DECLARED.match(code, start)
+        assigned = _ASSIGNED.search(code, declared.end(), self._text.line_end(start)) if declared is not None else None
+        if assigned is None:
+            return None
+        name = _FIRST_NAME.search(declared.group("pattern")).group()
+        end = self._text.statement_end(assigned.end())
+        if _HOOK.match(code, assigned.end()):
+            return ComponentMember(name, self._lead_of(start), start, end, True, self._text.text[start:end].rstrip("\n"))
+        empty = self._empty_function_from(assigned.end())
+        return ComponentMember(name, self._lead_of(start), start, end, False, f"{self._text.text[start:empty]} {{}};") if empty >= 0 else None
+
+    def _empty_function_from(self, assigned_at: int) -> int:
+        """Where the function assigned at assigned_at stops being its heading and starts being its body: after its
+        `=>`, or before the brace of one written with `function`; -1 when what is assigned there is no function."""
+        code = self._text.code
+        of_one = _ARROW_OF_ONE.match(code, assigned_at)
+        if of_one is not None:
+            return of_one.end()
+        parameters = _ARROW_PARAMETERS.match(code, assigned_at) or _FUNCTION_VALUE.match(code, assigned_at)
+        if parameters is None:
+            return -1
+        closing = self._text.closing(parameters.end() - 1)
+        arrow = self._annotations.arrow_after(closing)
+        if arrow >= 0:
+            return arrow
+        body = self._annotations.body_after(closing)
+        return len(self._text.text[:body].rstrip()) if body >= 0 else -1
+
+
 class FrontEndView:
     """One front-end view: its text, whether that text is written with types, and what is read from it: its
     components, the props each takes, and its handlers."""
@@ -646,35 +840,27 @@ class FrontEndView:
         return "FrontEndView"
 
     @property
-    def scanned(self) -> ViewText:
-        """The view's text with its code told apart from what a screen shows."""
-        return self._view
-
-    def taken_apart(self, opening: int) -> list[str]:
-        """The props the component whose parameters open at opening takes apart in braces; none for a component that
-        takes its props whole."""
-        inner = self._view.past_space(opening + 1)
-        if self._view.code[inner:inner + 1] != "{":
-            return []
-        taken = self._top_level_parts(self._view.code[inner + 1:self._view.closing(inner)])
-        return [re.split(r"[:=]", part, 1)[0].strip().lstrip(".") for part in taken if part.strip()]
-
-    @property
     def without_types(self) -> str:
         """The view as JavaScript: its own text when it is written without types, else its text with every type
         annotation dropped."""
         return TypeAnnotations(self._view).dropped() if self.typed else self.text
 
-    @property
-    def components(self) -> list[str]:
-        """The name of each component the view declares, in the order it declares them."""
-        return [name for name, _parameters in self.declared_components()]
+    @cached_property
+    def components(self) -> list[Component]:
+        """Each component the view declares, in the order it declares them."""
+        code = self._view.code
+        found = [(match.start(), match.group("name"), match.end() - 1) for pattern in (_FUNCTION_COMPONENT, _ARROW_COMPONENT) for match in pattern.finditer(code)]
+        return [Component(self._view, name, opening) for _start, name, opening in sorted(found)]
 
     @property
     def props(self) -> dict[str, list[str]]:
         """The props each component takes: the names it takes apart in its parameter, or, for a component that takes
         its props whole, each one it reads from them."""
-        return {name: self._props_of(parameters) for name, parameters in self.declared_components()}
+        return {component.name: component.props_named for component in self.components}
+
+    def edited(self, edits: list[Edit]) -> str:
+        """The view's text with each of edits made."""
+        return self._view.edited(edits)
 
     @property
     def handlers(self) -> list[str]:
@@ -690,34 +876,13 @@ class FrontEndView:
                 found.append(handler)
         return found
 
-    def declared_components(self) -> list[tuple[str, int]]:
-        """Each component's name with the place its parameters open, in the order of the text."""
-        code = self._view.code
-        found = [(match.start(), match.group("name"), match.end() - 1) for pattern in (_FUNCTION_COMPONENT, _ARROW_COMPONENT) for match in pattern.finditer(code)]
-        return [(name, opening) for _start, name, opening in sorted(found)]
 
-    def _props_of(self, opening: int) -> list[str]:
-        code = self._view.code
-        inner = self._view.past_space(opening + 1)
-        if code[inner:inner + 1] == "{":
-            return self.taken_apart(opening)
-        whole = _IDENTIFIER.match(code, inner)
-        if whole is None:
-            return []
-        following = [start for _name, start in self.declared_components() if start > opening]
-        body = code[opening:following[0] if following else len(code)]
-        read: list[str] = []
-        for prop in re.finditer(rf"(?<![\w$.]){re.escape(whole.group())}\.([\w$]+)", body):
-            if prop.group(1) not in read:
-                read.append(prop.group(1))
-        return read
-
-    def _top_level_parts(self, held: str) -> list[str]:
-        """What held lists between its commas, leaving the commas inside brackets alone."""
-        parts, depth, start = [], 0, 0
-        for position, character in enumerate(held):
-            depth += (character in "([{") - (character in ")]}")
-            if character == "," and depth == 0:
-                parts.append(held[start:position])
-                start = position + 1
-        return [*parts, held[start:]]
+def _top_level_parts(held: str) -> list[str]:
+    """What held lists between its commas, leaving the commas inside brackets alone."""
+    parts, depth, start = [], 0, 0
+    for position, character in enumerate(held):
+        depth += (character in "([{") - (character in ")]}")
+        if character == "," and depth == 0:
+            parts.append(held[start:position])
+            start = position + 1
+    return [*parts, held[start:]]
