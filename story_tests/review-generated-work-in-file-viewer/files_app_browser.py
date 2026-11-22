@@ -127,6 +127,12 @@ def _write(root: Path, path: str, text: str) -> None:
     (root / path).write_text(text, encoding="utf-8")
 
 
+# Seed: the person turned every stage filter off, so a session's files show from every stage and in every format. Until
+# someone chooses, a session's guidance selection shows only the stage its ticket stands in, whose format chips can leave
+# out the files these scenarios list.
+EVERY_STAGE = {"guidance": {"stages": []}}
+
+
 def _seed_project(root: Path) -> None:
     """A git project holding checkout-flow's story test and ticket code, design-review's canvas and whiteboard, and
     story-review's story map."""
@@ -144,17 +150,17 @@ def _seed_project(root: Path) -> None:
     _git(root, "checkout", "-b", CHECKOUT_FLOW.name)
     for path, text in ((STEP_STORY, STEP_STORY_TEXT), (TICKET_CODE, TICKET_TEXT), (TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT)):
         _write(root, path, text)
-    _write(root, ".sessions/checkout-flow/session.json", json.dumps({"name": CHECKOUT_FLOW.name, "title": CHECKOUT_FLOW.title, **CHECKOUT_FLOW.fields}))
+    _write(root, ".sessions/checkout-flow/session.json", json.dumps({"name": CHECKOUT_FLOW.name, "title": CHECKOUT_FLOW.title, **CHECKOUT_FLOW.fields, **EVERY_STAGE}))
     _write(root, ".sessions/checkout-flow/session.log", "")
     _write(root, CANVAS, "{}\n")
     _write(root, "design/ux/design-canvas/versions.json", json.dumps({"version-1": CANVAS_LINK}))
     _write(root, WHITEBOARD, WHITEBOARD_TEXT)
     _write(root, "design/.context/whiteboards.json", json.dumps({"story-map.whiteboard": BOARD_LINK}))
-    _write(root, f".sessions/{DESIGN_REVIEW}/session.json", json.dumps({"name": DESIGN_REVIEW, "title": "Design review", "workpath": str(root / "design")}))
+    _write(root, f".sessions/{DESIGN_REVIEW}/session.json", json.dumps({"name": DESIGN_REVIEW, "title": "Design review", "workpath": str(root / "design"), **EVERY_STAGE}))
     _write(root, f".sessions/{DESIGN_REVIEW}/session.log", "")
     _write(root, REVIEW_MAP, VIOLATING_MAP_TEXT)
     review = {"practices": {key: {"enabled": False} for key in ("ux", "ddd", "bdd", "clean_engineering")}, "outputs": {"stories": {"root": ".context"}}}
-    _write(root, f".sessions/{STORY_REVIEW}/session.json", json.dumps({"name": STORY_REVIEW, "title": "Story review", "workpath": str(root / "review"), **review}))
+    _write(root, f".sessions/{STORY_REVIEW}/session.json", json.dumps({"name": STORY_REVIEW, "title": "Story review", "workpath": str(root / "review"), **review, **EVERY_STAGE}))
     _write(root, f".sessions/{STORY_REVIEW}/session.log", "")
 
 

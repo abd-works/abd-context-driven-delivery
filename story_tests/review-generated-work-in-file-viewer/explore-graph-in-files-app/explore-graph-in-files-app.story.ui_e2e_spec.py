@@ -205,6 +205,9 @@ with description("Story: Show Graph Load Steps In Files App") as self:
             self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
             self.page.get_by_role("button", name="All session files").click()
             self.page.locator(".file-list, .file-tree").first.wait_for(timeout=SHOWN_MILLISECONDS)
+            # The first file the page opens is read before the server stops, so its Opening note is gone and the only
+            # note left is the graph's.
+            self.page.locator(".view-lines").first.wait_for(timeout=SHOWN_MILLISECONDS)
             self.stack.cdd.stop()
             self.page.get_by_role("button", name="Graph", exact=True).click()
             self.page.locator(".files-note, .scan-error").first.wait_for(timeout=GRAPH_READ_MILLISECONDS)
