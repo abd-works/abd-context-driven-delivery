@@ -29,7 +29,7 @@ import space.kanban.backlog_item as backlog_item_module  # noqa: E402
 from space.kanban.backlog_item import BacklogNestingError  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help, RequiredFidelity  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
-from space.kanban.ticket_checkout import TicketCheckout  # noqa: E402
+from space.kanban.ticket_checkout import TicketCheckout, UnknownLeavingStepError  # noqa: E402
 from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: E402
 
 
@@ -796,6 +796,22 @@ with description("a ticket") as self:
 
         with it("should have its folder in closed"):
             expect((self.root / "_complete" / "pet-visits" / "session.log").is_file()).to(be_true)
+
+    # A misspelt step was once ignored, so a person's choice silently did nothing; it is refused before anything changes.
+    with context("that a close names a step leaving does not take"):
+        with before.each:
+            self.root, board = board_with([GENERATE_STORY_MAP])
+            self.ticket = board.placement.ticket("pet-visits")
+
+        with it("should refuse the close, naming the step"):
+            expect(lambda: self.ticket.close(["comit"])).to(raise_error(UnknownLeavingStepError, contain("comit")))
+
+        with it("should leave the ticket open"):
+            try:
+                self.ticket.close(["comit"])
+            except UnknownLeavingStepError:
+                pass
+            expect((self.root / "pet-visits" / "session.log").is_file()).to(be_true)
 
     # (S) Person --> Archive Ticket
     with context("that has been archived"):

@@ -449,6 +449,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.move_to`: a person's drag into a stage's In progress or Done; into the Backlog from any column it returns to the Backlog with its whole folder; raises `NotAStageError` for any other column
 	-> TicketMoves.move_to
 + close(leaving: list[str]): Ticket
+	// leaving is read into a Leaving, which refuses a step it does not take
 	// `ticket.close`, from *TicketEnding*: does with its work what leaving names (handoff, commit, push, merge, delete_branch, delete_worktree); its session closes, its folder moves to `_complete/`, and that move is committed on main and pushed; main raises `MainStaysOpenError`
 	-> TicketCheckout.write_handoff
 	-> TicketCheckout.free_worktree
@@ -586,9 +587,31 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 	-> Branch.open_in_worktree
 	-> CardPlacement.reread
 	-> SessionCheckout.record_opened
-+ keep_landing_release(leaving: list[str])
++ keep_landing_release(leaving: Leaving)
 	// a ticket closed with its branch merged keeps its end-to-end results only
 	-> LatestRelease.keep
+
+## Leaving
+
+What a person chose to do with a ticket's work as it closes, made by `Ticket.close` from its published `leaving` list (in `ticket_checkout.py`). A step leaving does not take, such as a misspelt one, is refused with UnknownLeavingStepError before anything changes; it was ignored before. Each step of *TicketCheckout* (`write_handoff`, `save_work`, `keep_landing_release`, `leave_branch`) asks it what was chosen, in the documented order of the close.
+
++ Leaving(steps: list[str])
+------
++ writes_handoff: bool
++ commits: bool
++ pushes: bool
++ merges: bool
++ deletes_branch: bool
++ deletes_worktree: bool
++ changes_branch: bool
+	// merges, deletes the branch, or deletes its worktree
++ saves_work: bool
+	// commits, pushes, or changes the branch, which saves what a worktree about to go holds
++ removes_worktree: bool
+	// deletes the worktree, or the branch, which takes its worktree with it
+----
++ freeing_worktree(): Leaving
+	// deletes the worktree alone, as archiving or deleting a ticket does
 
 ## StagePlace
 

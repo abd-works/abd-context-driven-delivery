@@ -4573,12 +4573,12 @@ Where one ticket's work sits in git: its own branch, the worktree that branch is
 	// opens the ticket in its own worktree, the one it has or a new one on its own branch; a folder in the way raises TicketWorktreeBlockedError
 	-> Branch.open_in_worktree
 	-> SessionCheckout.record_opened
-+ keep_landing_release(leaving: list[str]): None
-+ write_handoff(leaving: list[str]): None
-+ save_work(leaving: list[str]): None
++ keep_landing_release(leaving: Leaving): None
++ write_handoff(leaving: Leaving): None
++ save_work(leaving: Leaving): None
 	// commits, pushes, and merges only; nothing of the ticket is removed here, so a merge git refuses leaves its worktree, branch, and session as they were
 	-> Branch.land_on_default
-+ leave_branch(leaving: list[str]): None
++ leave_branch(leaving: Leaving): None
 	// after the work is saved and merged: deletes the ticket's worktree and its branch, each when leaving names it
 	-> Repo.close
 	-> Branch.delete

@@ -34,7 +34,7 @@ from harness.graph.location import Location
 from harness.graph.violation import FoundBy, FoundOn, Violation
 from space.kanban.report import Report, ReportFile
 from space.kanban.ticket_choices import TicketChoices
-from space.kanban.ticket_checkout import LeaveChoices, TicketCheckout
+from space.kanban.ticket_checkout import LeaveChoices, Leaving, TicketCheckout
 from space.kanban.ticket_tree import NotAChildError, ParentLoopError, TicketTree
 from space.repo.repo import Branch
 from space.session import Session
@@ -328,18 +328,18 @@ class TicketEnding:
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree), its work committed where it is and its branch merged before anything is removed or moved, so a merge git refuses, or a worktree a running program holds open, stops the close with ticket still open; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main, and what is uncommitted there is never committed for a ticket that has its own worktree."""
+        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree; any other is refused with UnknownLeavingStepError, before anything changes), its work committed where it is and its branch merged before anything is removed or moved, so a merge git refuses, or a worktree a running program holds open, stops the close with ticket still open; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main, and what is uncommitted there is never committed for a ticket that has its own worktree."""
         self._refuse_main("close")
-        leaving = leaving or []
+        chosen = Leaving(leaving or [])
         checkout = self.checkout
-        checkout.write_handoff(leaving)
+        checkout.write_handoff(chosen)
         # The work is saved and the branch merged while the ticket still has its worktree and its open session, so a
         # merge git refuses leaves both as they were. The branch also merges before the record moves: the session's work
         # folder on the branch lands beside the record in main's .sessions, and the move takes both among the closed
         # sessions. Moved first, git would find the work folder added inside a folder main renamed, and refuse the merge.
-        checkout.save_work(leaving)
-        checkout.keep_landing_release(leaving)
-        checkout.leave_branch(leaving)
+        checkout.save_work(chosen)
+        checkout.keep_landing_release(chosen)
+        checkout.leave_branch(chosen)
         self._end_session()
         closed = self.board.placement.ticket_of(self.session.folder.move_to_closed())
         checkout.return_to_default_branch()
