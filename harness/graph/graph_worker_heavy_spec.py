@@ -352,9 +352,9 @@ with description("a graph built for a chat's call"):
     with context("whose worker reports its progress"):
         with before.all:
             self.heard: list[str] = []
-            from harness.agent_tools.progress import reporting_to
+            from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 
-            with reporting_to(self.heard.append):
+            with CALLS_BEING_ANSWERED.answering(ToolCall(reporter=self.heard.append)):
                 _CountingReads().load_files(str(self.root), ["clean_engineering"], ["src"], call=_FROM_A_CHAT)
 
         with it("should pass on the worker's reports, before its own of what the worker built"):

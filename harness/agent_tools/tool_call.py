@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Iterator, Protocol
+from typing import Any, Callable, Iterator, Protocol
 
 from harness.agent_tools.chat_pointer import ChatPointer
 
@@ -104,7 +104,11 @@ class CallsBeingAnswered:
 
     @contextmanager
     def answering(self, call: ToolCall) -> Iterator[ToolCall]:
-        """Mark call as the one being answered on this thread while its tool runs."""
+        """Mark call as the one being answered on this thread while its tool runs. A call made inside another that no
+        one listens to of its own reports its progress to whoever listens to the other."""
+        outer = self._answering.get()
+        if outer is not None and call.reporter is None:
+            call.reporter = outer.reporter
         token = self._answering.set(call)
         try:
             yield call
@@ -162,11 +166,20 @@ class ToolCall:
         arguments: dict[str, Any] | None = None,
         project: Path | str | None = None,
         request: ToolRequest = ToolRequest(),
+        reporter: Callable[[str], None] | None = None,
     ) -> None:
         self.arguments = dict(arguments or {})
         self.project = Path(project).resolve() if project is not None else None
         self.request = request
+        self.reporter = reporter
+        """Whoever listens to the call's progress, such as the MCP host sending it to the chat as notifications; none
+        for a call no one listens to, whose reports go nowhere."""
         self._session: CallSession | None = None
+
+    def report_progress(self, message: str) -> None:
+        """Tell whoever listens to this call what its tool is doing now; nothing when no one listens."""
+        if self.reporter is not None:
+            self.reporter(message)
 
     @classmethod
     def sent(cls, arguments: dict[str, Any] | None, project: Path | str | None, request: ToolRequest = ToolRequest()) -> ToolCall:

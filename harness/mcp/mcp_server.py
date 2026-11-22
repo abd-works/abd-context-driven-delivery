@@ -837,15 +837,15 @@ class McpHost:
         return ThrottledReporter(report)
 
     def _answer_reporting(self, call: ToolCall, reporter: Callable[[str], None] | None) -> object:
-        """Answer a chat's call on its worker thread: its progress goes to reporter. The call says it answers a chat
+        """Answer a chat's call on its worker thread: reporter listens to its progress. The call says it answers a chat
         (``call.request.answers_a_chat``), so work it starts that would hold the interpreter runs in a worker process."""
-        # Read them from their modules as they are now: a restart imports them again, and tools read the new ones.
-        from harness.agent_tools.progress import reporting_to
+        # Read from its module as it is now: a restart imports it again, and tools read the new one.
         from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED
 
+        call.reporter = reporter
         # The answer is read into JSON while the call is still the one being answered: properties such as a board's
         # active ticket depend on the chat that asked, and read after the call they would answer for no chat.
-        with reporting_to(reporter), CALLS_BEING_ANSWERED.answering(call):
+        with CALLS_BEING_ANSWERED.answering(call):
             value = self.answer(call)
             return value if isinstance(value, str) else data_of(value)
 

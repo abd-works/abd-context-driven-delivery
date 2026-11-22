@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 from cdd_guidance.actions.render.render_order import RenderOrder
-from harness.agent_tools.progress import reporting_to
+from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 from harness.guidance_actions import GuidanceCommand, WorkList
 from harness.installation.data_class import data_of
 from harness.mcp.tool_calls import ThrottledReporter
@@ -34,7 +34,8 @@ def main(arguments: list[str]) -> None:
     if len(arguments) != 2:
         raise SystemExit("usage: python -m cdd_guidance.actions.render.render_worker ORDER ANSWER")
     order = RenderOrder.from_text(Path(arguments[0]).read_text(encoding="utf-8"))
-    with reporting_to(ThrottledReporter(_report_line)):
+    # The render is this process's one call; whoever started the worker reads its progress lines.
+    with CALLS_BEING_ANSWERED.answering(ToolCall(reporter=ThrottledReporter(_report_line))):
         rendered = order.request_at(_fidelity_of(order)).render()
     Path(arguments[1]).write_text(json.dumps(data_of(rendered)), encoding="utf-8")
 

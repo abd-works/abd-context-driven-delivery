@@ -157,7 +157,12 @@ chat: ChatPointer | None
 session: Session | None
 	// the session saved as open in the project's checkout, read once for this call; none when the call names no project or no opener is registered
 	-> SessionOpening.open_in(self)
+reporter: Callable[[str], None] | None
+	// whoever listens to the call's progress, such as the MCP host's notifications; none for a call made in process, which reports nowhere
 ----
+report_progress(message: str): None
+	// tells reporter; nothing when no one listens. The function report_progress(message) reports to CALLS_BEING_ANSWERED.current, and a call
+	// answered inside another that has no reporter of its own reports to the other's
 sent(arguments: dict | None, project: Path | None): ToolCall
 	// the chat named in the arguments is taken out and kept as the call's chat
 	-> ChatPointer.taken_from
