@@ -24,7 +24,7 @@ const CLEAN_REPORT = 'stories-story-map-20261101T120000'
 const CLEAN_STAMP = '2026-11-01T12:00:00Z'
 // A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 6).
 const CLEAN_GRAPH = {
-  version: 6,
+  version: 7,
   overlays: [],
   practices: { stories: { source_root: '', root_facts: {}, nodes: [{ node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: '.context/story-map.md', line: 6, end_line: 6, stage: '', facts: {} }], edges: [], violations: [] } },
 }
@@ -36,7 +36,7 @@ const acceptedInProject = (): { rule: string; node_id: string; message: string }
 const REWORDED_REPORT = 'stories-story-map-20261101T120000'
 const REWORDED_STAMP = '2026-11-01T12:00:00Z'
 const REWORDED_GRAPH = {
-  version: 6,
+  version: 7,
   overlays: [],
   practices: {
     stories: {

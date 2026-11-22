@@ -64,9 +64,11 @@ section: body
 
 #### Scenario: Opening a node shows one level of its children
 
+Changed on 2026-11-22: the graph now records each class another class's operations create, call, or read (a `dependsOn` edge between classes), so Ticket, whose Ticket.delete is handed Board and calls Board.reread, shows a dependsOn group beside its operations, as every node shows its relationship groups (Follow Relationships Under Node In Files App). The group is one level of Ticket's children like its operations, and what it holds stays hidden until it is opened.
+
 *Given* the Files app shows checkout-flow's graph with the Clean Engineering tree collapsed  
 *When* the Person opens Ticket  
-*Then* Ticket shows its operations, such as Ticket.activate and Ticket.close  
+*Then* Ticket shows its operations, such as Ticket.activate and Ticket.close, and its dependsOn group, for the Board it depends on  
   *But* their own children stay hidden until they are opened
 
 #### Scenario: Each node shows the mark of its kind

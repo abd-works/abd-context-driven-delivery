@@ -17,6 +17,8 @@ import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the gra
 from harness.graph.pattern_overlays import PatternOverlays
 
 _CART = "export class Cart {\n  total() { return 1; }\n  place(a, b, c, d, e, f) { return a; }\n}\n"
+# A till handed the cart it charges: its dependency on the cart is an edge that keeps how the till reaches it.
+_TILL = "import { Cart } from './cart';\n\nexport class Till {\n  charge(cart: Cart): number { return cart.total(); }\n}\n"
 
 
 def _nodes(graph: Graph) -> list[tuple]:
@@ -30,6 +32,12 @@ def _edges(graph: Graph) -> list[tuple]:
     return sorted((edge.parent.node_id, edge.child.node_id, edge.kind, edge.type.order, edge.display) for edge in practice.reading.in_graph.edge_index.of())
 
 
+def _dependency_facts(graph: Graph) -> dict:
+    """The facts the till's dependency on the cart keeps."""
+    practice = graph.practices.named("clean_engineering")
+    return next((edge.facts for edge in practice.reading.in_graph.edge_index.of("dependsOn") if edge.parent.name == "Till" and edge.child.name == "Cart"), {})
+
+
 def _violations(graph: Graph) -> list[tuple]:
     practice = graph.practices.named("clean_engineering")
     found = [violation for node in practice.reading.in_graph.nodes() for violation in node.rules.violations]
@@ -41,6 +49,7 @@ with description("a saved graph"):
         self.root = Path(tempfile.mkdtemp())
         (self.root / "src").mkdir()
         (self.root / "src" / "cart.ts").write_text(_CART, encoding="utf-8")
+        (self.root / "src" / "till.ts").write_text(_TILL, encoding="utf-8")
         self.graph = Graph()
         self.graph.load_files(str(self.root), ["clean_engineering"], ["src"])
         self.text = SavedGraph.from_graph(self.graph).text
@@ -56,6 +65,9 @@ with description("a saved graph"):
 
         with it("should hold the same edges"):
             expect(_edges(self.restored)).to(equal(_edges(self.graph)))
+
+        with it("should hold the same facts on each edge"):
+            expect(_dependency_facts(self.restored)).to(equal({"reached": ["handed in as a parameter"], "through": ["charge"]}))
 
         with it("should hold the same violations at the same places"):
             expect(_violations(self.restored)).to(equal(_violations(self.graph)))
@@ -95,6 +107,13 @@ with description("a saved graph"):
             saved.parent.mkdir(parents=True)
             saved.write_text(json.dumps(self.old), encoding="utf-8")
             expect(SavedGraphFile(self.root / "old", lambda message: None).read()).to(be_none)
+
+    with context("in the shape saved before an edge kept facts"):
+        with before.all:
+            self.old = {"version": 6, "overlays": [], "practices": {"clean_engineering": {"source_root": ".", "nodes": [], "edges": []}}}
+
+        with it("should be refused by name"):
+            expect(lambda: SavedGraph.from_document(self.old, "graph.json")).to(raise_error(SavedGraphOutdated))
 
     with context("in the shape saved before the story map's class was named StoryMap"):
         with before.all:

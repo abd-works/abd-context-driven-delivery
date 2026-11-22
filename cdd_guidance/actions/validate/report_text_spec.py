@@ -33,6 +33,7 @@ class _CheckedGraph:
         self.files = [Path("graph.json")]
         self.held_beside: list[str] = []
         self.edited: list[str] = []
+        self.files_built_from: list[str] = []
         self.unread: list[str] = []
 
     def violations(self) -> list[Violation]:
@@ -104,3 +105,24 @@ with description("a validation report"):
 
             with it("should head the candidate's rule with its candidates, not with graph violations"):
                 expect(self.report).to(contain("**Candidates for the judge to read:** 1\n"))
+
+        # A rule of scope all runs over the whole working copy, so what it finds outside the paths given is reported too.
+        with context("with a violation of a rule that runs over the whole working copy, outside the paths it was given"):
+            with before.each:
+                session = Sessions(self.root).named("main")
+                session.workpath = self.root
+                session.work_folder = self.session_dir
+                elsewhere = Violation(
+                    FoundBy("no-use-delete", found_on=FoundOn(subject="OoadClass `Invoice`"), scope="all"),
+                    "nothing uses Invoice.",
+                    Location("src/billing/invoice.ts", 3),
+                )
+                checked = _CheckedGraph(session, [*self.violations, elsewhere])
+                checked.files_built_from = ["src/customer"]
+                self.report = ReportText([], checked).for_saving()
+
+            with it("should mark it as outside the paths given"):
+                expect(self.report).to(contain("invoice.ts#L3): OoadClass `Invoice`: nothing uses Invoice. *(outside the paths this validate was given)*"))
+
+            with it("should not mark a violation inside the paths given"):
+                expect(self.report).to(contain("takes 4 parameters.\n"))

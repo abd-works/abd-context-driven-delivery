@@ -16,11 +16,19 @@ statements answer, what the constructor assigns to a field, and what a module as
 
 from __future__ import annotations
 
+import keyword
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, NamedTuple
 
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES, MODULE_FUNCTION_HOLDER
+from cdd_guidance.practices.clean_engineering.reading.receiver_causes import (
+    ON_OUTSIDE_OBJECTS,
+    OTHERWISE,
+    UNRESOLVED_CALLS_FACTS,
+    ReceiverCauses,
+    UnjoinedCalls,
+)
 from cdd_guidance.practices.source_code import STAR, ClassReference
 
 if TYPE_CHECKING:
@@ -101,18 +109,54 @@ _OBJECT_FIELD = re.compile(r"\s*([A-Za-z_$][\w$]*)\s*(:\s*)?")
 # The comma before a tuple's next part, when a part follows it on its line.
 _NEXT_PART = re.compile(r"[ \t]*,[ \t]*(?=[A-Za-z_$])")
 _QUOTES = frozenset("'\"`")
+# A call's arguments that look an object up rather than hand it one: a string, or a name, path, key, or slug.
+_LOOKUP_ARGUMENTS = re.compile(r"[\"'`]|(?i:\b\w*(?:name|path|key|slug)s?\b)")
+
+# How the code of one class reaches another class it depends on, which its dependency edge keeps (``reached``): the
+# class is built on each call, or in the constructor or a field's initializer; found through a class operation, a call
+# with a name, path, or key, or a mapping's item; held in a field of its own; handed in as a parameter; reached through
+# another object it calls or reads; a module's own object, such as a registry a module assigns; or named as a value,
+# as an isinstance check, a list, or a call it is handed to names the class itself.
+CREATED_ON_EACH_CALL = "created on each call"
+CREATED_IN_THE_CONSTRUCTOR = "created in the constructor"
+LOOKED_UP_BY_NAME = "looked up by name"
+HELD_AS_A_FIELD = "held as a field"
+HANDED_IN_AS_A_PARAMETER = "handed in as a parameter"
+REACHED_THROUGH_ANOTHER_OBJECT = "reached through another object"
+A_MODULES_OBJECT = "a module's object"
+NAMED_AS_A_VALUE = "named as a value"
+# A receiver that is the object itself or the class it extends, which no dependency reaches, and a class named outright,
+# whose operation a call reaches through the class.
+_ITSELF = ""
+_THE_CLASS = "the class itself"
+_CREATED = frozenset({CREATED_ON_EACH_CALL, CREATED_IN_THE_CONSTRUCTOR})
+# The facts a dependency edge keeps: how the class reaches the class it depends on, and the members it reaches it
+# through. The fact an invokes edge keeps when no call it records was joined by its receiver's class, only by a guess.
+REACHED_FACT = "reached"
+THROUGH_FACT = "through"
+JOINED_FACT = "joined"
+JOINED_BY_A_GUESS = "by a guess: one class in reach declares the name"
+# Where a class named as a value is a type instead: after these, or as the subject of a generic or a subscript.
+_TYPE_MARKS = ("->", "|", "&", "<", "@")
+_AS_CAST = re.compile(r"\bas$")
+# The name a subscript is taken on, `list` in `list[Line]`, and the words after which a bracket opens a list instead.
+_SUBSCRIPTED = re.compile(r"[A-Za-z_$][\w$.]*$")
+_VALUE_WORDS = frozenset({*keyword.kwlist, "return", "yield", "await", "in", "of", "typeof", "new", "case", "throw"})
+# A string written on one line, which a span's bare class names are not read inside.
+_STRING = re.compile(r"\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`")
 
 
 class CodeSpan(NamedTuple):
     """A span of code to read for what it calls: its text, the class it is written in (none outside a class, such as
-    a spec's block), the type hint of each parameter it takes, by the parameter's name, and the code that runs before
-    it, such as a spec's setups, read only for the locals it makes. A parameter with no hint is a name whose class the
-    code does not say."""
+    a spec's block), the type hint of each parameter it takes, by the parameter's name, the code that runs before
+    it, such as a spec's setups, read only for the locals it makes, and whether it runs while its object is built, as a
+    constructor and a field's initializer do. A parameter with no hint is a name whose class the code does not say."""
 
     text: str
     owner: "Node | None" = None
     typed: dict[str, str] = {}
     before: str = ""
+    builds_its_object: bool = False
 
     @staticmethod
     def code_of(text: str) -> str:
@@ -131,6 +175,50 @@ class Typed(NamedTuple):
     by_key: "Typed | None" = None
     fields: tuple = ()
 
+    @property
+    def class_held(self) -> "Node | None":
+        """The class of the object this value is, or of each element or each value it holds; none for a tuple or a
+        script's object of fields."""
+        inner = self.each or self.by_key
+        return self.of if self.of is not None else inner.class_held if inner is not None else None
+
+    @property
+    def is_many(self) -> bool:
+        """Whether this value holds many objects: a collection or a mapping."""
+        return self.each is not None or self.by_key is not None
+
+
+class _Read(NamedTuple):
+    """What an expression of the code is, where it ends, how the code reaches the object it is, and, when the read
+    cannot tell its class, why (a cause of ``receiver_causes``)."""
+
+    value: "Typed | None"
+    end: int
+    reach: str = REACHED_THROUGH_ANOTHER_OBJECT
+    cause: str = OTHERWISE
+
+
+class SpanReach:
+    """What one span of code reaches: each member it calls or reads, in the order its code names them, and those of them
+    joined by a guess, since one class in reach alone declares the name its receiver of no known class is called by;
+    each class of the code it creates, calls, reads, or names as a value, with how it reaches that class; and, by cause,
+    how many of its calls name an operation some class of the code declares on a receiver whose class the read cannot
+    tell, which are joined to nothing, so a rule can tell a call the read cannot see from one the code does not make."""
+
+    def __init__(self) -> None:
+        self.members: list["Node"] = []
+        self.guessed: list["Node"] = []
+        self.classes: list[tuple["Node", str]] = []
+        self.unresolved_calls: dict[str, int] = {cause: 0 for cause in UNRESOLVED_CALLS_FACTS}
+
+    def reach_class(self, reached: "Node", reach: str) -> None:
+        """Keep that the span reaches the class reached the way reach says; a class named outright is looked up."""
+        self.classes.append((reached, LOOKED_UP_BY_NAME if reach == _THE_CLASS else reach))
+
+    def joined_only_by_a_guess(self, member: "Node") -> bool:
+        """Whether every call of member the span makes was joined to it by a guess."""
+        return sum(1 for found in self.members if found is member) == sum(1 for found in self.guessed if found is member)
+
 
 class CodeFile:
     """One file of the code read, as the code in it can name things: the classes and module functions it declares,
@@ -143,6 +231,14 @@ class CodeFile:
         self.relative = relative
         self._imports = imports
         self._whole = whole
+        self._causes: ReceiverCauses | None = None
+
+    @property
+    def receiver_causes(self) -> ReceiverCauses:
+        """Why a receiver of this file's code has no class the read can tell, as the file's text says, read once."""
+        if self._causes is None:
+            self._causes = ReceiverCauses(self, self._index.answers.text_of(self.relative), Path(self._index.source_root))
+        return self._causes
 
     def class_named(self, name: str) -> "Node | None":
         """The class this file means by name: the one it declares, else the one it imports; none when it names
@@ -167,7 +263,12 @@ class CodeFile:
 
     def members_called_in(self, span: CodeSpan) -> "list[Node]":
         """The members span calls and the properties it reads, in the order its code names them, each once."""
-        return list(dict.fromkeys(_SpanCalls(self, self._index, span).called()))
+        return list(dict.fromkeys(self.reach_of(span).members))
+
+    def reach_of(self, span: CodeSpan) -> SpanReach:
+        """What span reaches: the members it calls and reads, the classes it reaches and how, and the calls it makes on
+        a receiver whose class its code does not say."""
+        return _SpanCalls(self, self._index, span).reach()
 
     def module_value(self, name: str) -> "Typed | None":
         """What a module variable this file names is: the one this file assigns, else the one a file its imports name
@@ -341,6 +442,13 @@ class MemberAnswers:
         """What the field name of holder is when no hint types it: what holder's constructor assigns it."""
         return self._once(self._fields, (holder.node_id, name), lambda: self._field_of(holder, name))
 
+    def held_in(self, holder: "Node", name: str) -> "Typed | None":
+        """What holder's own field name holds, private or public: what the type hint holder keeps for it names
+        (``held_fields``), else what its constructor or its initializer assigns it."""
+        hint = (holder.get_fact("held_fields") or {}).get(name)
+        typed = self._index.file(holder.source.file).typed_by_hint(str(hint), holder) if hint else None
+        return typed if typed is not None else self.field_of(holder, name)
+
     def module_value(self, relative: str, name: str) -> "Typed | None":
         """What the module variable name the file at relative assigns at the start of a line is."""
         return self._once(self._modules, (relative, name), lambda: self._module_value(relative, name))
@@ -401,7 +509,7 @@ class MemberAnswers:
         return None
 
     def _module_value(self, relative: str, name: str) -> "Typed | None":
-        text = CodeSpan.code_of(self._text_of(relative))
+        text = CodeSpan.code_of(self.text_of(relative))
         match = re.search(_MODULE_ASSIGNMENT.format(name=re.escape(name)), text)
         file = self._index.file(relative)
         if match is None:
@@ -412,7 +520,7 @@ class MemberAnswers:
         return _SpanCalls(file, self._index, CodeSpan("")).typed_at(match.end(), text)[0]
 
     def _declared_function(self, relative: str, name: str) -> "Typed | None":
-        text = self._text_of(relative)
+        text = self.text_of(relative)
         file = self._index.file(relative)
         found = _script_function(text, name) if file.is_script else _python_function(text, name)
         if found is None:
@@ -425,7 +533,7 @@ class MemberAnswers:
         answers = [answer for answer in (calls.typed_at(match.end())[0] for match in _RETURN.finditer(code)) if answer is not None]
         return answers[0] if answers and all(answer == answers[0] for answer in answers) else None
 
-    def _text_of(self, relative: str) -> str:
+    def text_of(self, relative: str) -> str:
         if relative not in self._texts:
             try:
                 self._texts[relative] = (Path(self._index.source_root) / relative).read_text(encoding="utf-8")
@@ -459,44 +567,54 @@ class _SpanCalls:
         self._answers = index.answers
         self._code = span.text
         self._owner = span.owner
-        # What each local is, by its name, from its first assignment the code types.
+        # How the span reaches an object it builds: while its object is built, or on each call.
+        self._creates = CREATED_IN_THE_CONSTRUCTOR if span.builds_its_object else CREATED_ON_EACH_CALL
+        # What each local is, by its name, from its first assignment the code types, and how the code reaches it; and
+        # the calls the span makes that the read cannot join, with why each name it writes has no class.
         self._locals: dict[str, Typed] = {}
+        self._reaches: dict[str, str] = {}
+        self._unjoined = UnjoinedCalls(file, index)
         for name, hint in span.typed.items():
-            self._keep_local(name, file.typed_by_hint(hint, self._owner))
+            self._keep_local(name, file.typed_by_hint(hint, self._owner), HANDED_IN_AS_A_PARAMETER, file.receiver_causes.of_hint(hint))
         for code in (span.before, self._code):
             self._name_locals_in(code)
 
-    def called(self) -> "list[Node]":
-        """The members its code calls and the properties it reads, in the order the code names them."""
-        return [*self._reached_through_receivers(), *self._called_by_name()]
+    def reach(self) -> SpanReach:
+        """The members its code calls and the properties it reads, in the order the code names them, the classes it
+        reaches and how, and the calls it could not join."""
+        found = SpanReach()
+        self._reach_through_receivers(found)
+        found.members.extend(self._called_by_name())
+        return found
 
-    def typed_at(self, start: int, code: str | None = None) -> "tuple[Typed | None, int]":
-        """What the expression that starts at start in code (the span's own by default) is, and where it ends: one
-        chain, a tuple of chains separated by commas, or a script's chain cast `as` a class. None when it is anything
-        else, such as a sum or a condition."""
+    def typed_at(self, start: int, code: str | None = None) -> _Read:
+        """What the expression that starts at start in code (the span's own by default) is, where it ends, and how the
+        code reaches it: one chain, a tuple of chains separated by commas, or a script's chain cast `as` a class. None
+        when it is anything else, such as a sum or a condition."""
         code = self._code if code is None else code
-        parts: list = []
+        parts: list[_Read] = []
         position = start
         while True:
-            found, end = self._typed_chain_at(code, position)
-            parts.append(found)
-            comma = _NEXT_PART.match(code, end)
+            read = self._typed_chain_at(code, position)
+            parts.append(read)
+            comma = _NEXT_PART.match(code, read.end)
             if comma is None:
                 break
             position = comma.end()
         if len(parts) > 1:
-            return (Typed(items=tuple(parts)) if any(part is not None for part in parts) else None), end
-        return parts[0], end
+            values = tuple(part.value for part in parts)
+            return _Read(Typed(items=values) if any(value is not None for value in values) else None, parts[-1].end, parts[0].reach)
+        return parts[0]
 
-    def _typed_chain_at(self, code: str, start: int) -> "tuple[Typed | None, int]":
+    def _typed_chain_at(self, code: str, start: int) -> _Read:
         """What the one chain at start is, when the statement or tuple part ends with it."""
-        found, end = self._chain_value(code, start)
-        rest = code[end:].lstrip(" \t")
+        read = self._chain_value(code, start)
+        rest = code[read.end:].lstrip(" \t")
         if rest and rest[0] not in _ENDS and _ALTERNATIVE.match(rest) is None:
-            return None, end
-        return found, end
+            return _Read(None, read.end)
+        return read
 
-    def _chain_value(self, code: str, start: int) -> "tuple[Typed | None, int]":
+    def _chain_value(self, code: str, start: int) -> _Read:
         """What the chain at start is, after an `await` or `new`, and cast `as` a class in a script, and where it ends."""
         prefix = _PREFIX.match(code, start)
         position = prefix.end() if prefix else start
@@ -504,18 +622,18 @@ class _SpanCalls:
             return self._object_at(code, position)
         chain = _chain_at(code, position)
         if chain is None:
-            return None, start
-        found = self._walk(chain, [])
+            return _Read(None, start, cause=ON_OUTSIDE_OBJECTS if ReceiverCauses.is_literal(code, position) else OTHERWISE)
+        found, reach, cause = self._walk(chain, None)
         cast = _CAST.match(code, chain.end) if self._file.is_script else None
         if cast is not None:
-            return self._file.typed_by_hint(cast.group(1), self._owner), cast.end()
-        return found, chain.end
+            return _Read(self._file.typed_by_hint(cast.group(1), self._owner), cast.end(), reach, self._file.receiver_causes.of_hint(cast.group(1)))
+        return _Read(found, chain.end, reach, cause)
 
-    def _object_at(self, code: str, opening: int) -> "tuple[Typed | None, int]":
+    def _object_at(self, code: str, opening: int) -> _Read:
         """What a script's object literal at opening holds, field by field: `{ page, opened: board.openedChats() }`."""
         closing = _closing(code, opening)
         if closing is None:
-            return None, opening
+            return _Read(None, opening)
         fields = []
         position = opening + 1
         while position < closing:
@@ -523,7 +641,7 @@ class _SpanCalls:
             if named is None:
                 break
             if named.group(2):
-                value, end = self._typed_chain_at(code, named.end())
+                value, end, _reach, _cause = self._typed_chain_at(code, named.end())
             else:
                 value, end = self._locals.get(named.group(1)), named.end()
             fields.append((named.group(1), value))
@@ -532,97 +650,124 @@ class _SpanCalls:
                 break
             position = following.end()
         found = Typed(fields=tuple(fields)) if any(value is not None for _name, value in fields) else None
-        return found, closing + 1
+        return _Read(found, closing + 1)
 
     def _name_locals_in(self, code: str) -> None:
         """Type each local code declares, assigns, loops over, or opens a block on, in the order the code writes them:
-        by its hint, else by what the expression assigned to it is."""
+        by its hint, else by what the expression assigned to it is, with how the code reaches it."""
         readers = (
-            (_DECLARED_LOCAL, lambda match: [(match.group(1), self._file.typed_by_hint(match.group(2), self._owner))]),
+            (_DECLARED_LOCAL, lambda match: [(match.group(1), self._hinted(match.group(2), _Read(None, 0)))]),
             (_ASSIGNMENT, lambda match: self._assigned(code, match)),
             (_DESTRUCTURED, lambda match: self._destructured(code, match)),
-            (_LOOP, lambda match: [(match.group(1), self._element_of(self._typed_chain_at(code, match.end())[0]))]),
+            (_LOOP, lambda match: [(match.group(1), self._element_read(self._typed_chain_at(code, match.end())))]),
             (_WITH, lambda match: self._opened(code, match.end())),
         )
         # Each is typed after the ones written before it, which its expression may use.
         found = sorted(((match.start(), read, match) for pattern, read in readers for match in pattern.finditer(code)), key=lambda item: item[0])
         for _position, read, match in found:
             for name, value in read(match):
-                self._keep_local(name, value)
+                self._keep_local(name, value.value, value.reach, value.cause)
 
-    def _assigned(self, code: str, match: re.Match) -> "list[tuple[str, Typed | None]]":
+    def _hinted(self, hint: str, read: _Read) -> _Read:
+        """What a value a type hint types is, reached as read says, with why it has no class when the hint names none."""
+        return _Read(self._file.typed_by_hint(hint, self._owner), read.end, read.reach, self._file.receiver_causes.of_hint(hint))
+
+    def _assigned(self, code: str, match: re.Match) -> "list[tuple[str, _Read]]":
         names = [name.strip() for name in match.group(1).strip("()").split(",")]
+        read = self.typed_at(match.end(), code)
         if match.group(2) and len(names) == 1:
-            return [(names[0], self._file.typed_by_hint(match.group(2), self._owner))]
-        value, _end = self.typed_at(match.end(), code)
+            return [(names[0], self._hinted(match.group(2), read))]
         if len(names) == 1:
-            return [(names[0], value)]
-        items = value.items if value is not None else ()
-        return [(name, items[position] if position < len(items) else None) for position, name in enumerate(names)]
+            return [(names[0], read)]
+        items = read.value.items if read.value is not None else ()
+        return [(name, _Read(items[position] if position < len(items) else None, read.end, read.reach, read.cause)) for position, name in enumerate(names)]
 
-    def _destructured(self, code: str, match: re.Match) -> "list[tuple[str, Typed | None]]":
+    def _destructured(self, code: str, match: re.Match) -> "list[tuple[str, _Read]]":
         """Each local a script takes out of an object by its field's name: `const { page, stop } = await opened()`."""
-        value, _end = self.typed_at(match.end(), code)
-        fields = dict(value.fields) if value is not None else {}
+        read = self.typed_at(match.end(), code)
+        fields = dict(read.value.fields) if read.value is not None else {}
         found = []
         for part in _top_level_parts(match.group(1)):
             field, _colon, local = part.split("=")[0].partition(":")
             local = (local or field).strip()
             if _NAME.match(local):
-                found.append((local, fields.get(field.strip())))
+                found.append((local, _Read(fields.get(field.strip()), read.end, read.reach, read.cause)))
         return found
 
-    def _opened(self, code: str, start: int) -> "list[tuple[str, Typed | None]]":
+    def _opened(self, code: str, start: int) -> "list[tuple[str, _Read]]":
         """Each local a Python `with` opens, as the object it opens is."""
         opened = []
         position = start
         while True:
-            value, end = self._chain_value(code, position)
-            local = _AS_LOCAL.match(code, end)
+            read = self._chain_value(code, position)
+            local = _AS_LOCAL.match(code, read.end)
             if local is None:
                 return opened
-            opened.append((local.group(1), value))
+            opened.append((local.group(1), read))
             following = _NEXT_PART.match(code, local.end())
             if following is None:
                 return opened
             position = following.end()
 
-    def _keep_local(self, name: str, found: "Typed | None") -> None:
-        if found is not None and name not in _OWN_OBJECT:
-            self._locals.setdefault(name, found)
+    def _element_read(self, read: _Read) -> _Read:
+        """Each element a loop over what read is takes, reached as the collection is."""
+        return _Read(self._element_of(read.value), read.end, read.reach, read.cause)
 
-    def _reached_through_receivers(self) -> "Iterator[Node]":
+    def _keep_local(self, name: str, found: "Typed | None", reach: str, cause: str) -> None:
+        if name in _OWN_OBJECT or name in self._locals:
+            return
+        if found is None:
+            self._unjoined.keep_local(name, cause)
+            return
+        self._locals[name] = found
+        self._reaches[name] = reach
+
+    def _reach_through_receivers(self, found: SpanReach) -> None:
         """Each member a chain reaches: every member it names after its first name is a member of what the part before
         it is, and a call's answer or an item it takes is what the next member is found on. A member with a call after
         it may be an operation; any other is a property read. A name of no known class followed by one member reaches
-        the member the file's reach declares once."""
+        the member the file's reach declares once. A class the code names alone, as a value, is reached that way."""
+        # The code with each string blanked, where a bare name is read only outside a string.
+        masked = _STRING.sub(lambda written: " " * len(written.group(0)), self._code)
         for head in _HEAD.finditer(self._code):
             chain = _chain_at(self._code, head.start())
             if chain is not None and chain.steps:
-                reached: list = []
-                self._walk(chain, reached)
-                yield from reached
+                self._walk(chain, found)
+            elif chain is not None and masked[head.start()] != " ":
+                self._name_value(found, chain.head, masked, head.start())
 
-    def _walk(self, chain: _Chain, reached: list) -> "Typed | None":
-        """What chain is, adding to reached each member it calls or reads on the way."""
+    def _name_value(self, found: SpanReach, head: str, masked: str, start: int) -> None:
+        """Keep the class a bare name names, when it names a class of the code as a value and not as a type."""
+        named = self._file.class_named(head) if _is_class_name(head) and head not in self._locals else None
+        if named is not None and named is not self._owner and not _names_a_type(masked, start):
+            found.reach_class(named, NAMED_AS_A_VALUE)
+
+    def _walk(self, chain: _Chain, found: SpanReach | None) -> "tuple[Typed | None, str, str]":
+        """What chain is, how the code reaches it, and, when the read cannot tell its class, why; adding to found, when
+        given, each member it calls or reads on the way, each class it reaches and how, and each call it cannot join."""
         steps = chain.steps
-        value, at = self._typed_head(chain.head, steps)
+        value, at, reach = self._typed_head(chain.head, steps)
         if value is None and at == 0 and steps and steps[0].kind == "member" and _is_class_name(steps[0].text):
-            value, at = self._through_module(chain.head, steps, reached)
-        guessed =at == 0 and _is_local_name(chain.head) and bool(steps) and steps[0].kind == "member"
+            value, at, reach = self._through_module(chain.head, steps, found)
+        cause = self._unjoined.of_head(chain.head, bool(steps) and steps[0].kind == "call") if value is None else OTHERWISE
+        guessed = at == 0 and _is_local_name(chain.head) and bool(steps) and steps[0].kind == "member"
         guessed = guessed and (len(steps) == 1 or steps[1].kind != "member")
         # A local of no known class, or of a class that neither declares nor inherits the member, such as one a
         # decorator gives its members, reaches the one member of that name the file's reach declares.
         if guessed and (value is None or (value.of is not None and self._member_of(value.of, steps[0].text) is None)):
-            only = self._file.only_member_named(steps[0].text, len(steps) > 1 and steps[1].kind == "call")
-            if only is not None:
-                reached.append(only)
-            return None
+            self._guess(steps, value, found, cause)
+            return None, reach, cause
+        if found is not None and value is not None and value.of is not None and reach in _CREATED:
+            found.reach_class(value.of, reach)
         while at < len(steps):
             step = steps[at]
+            calls = at + 1 < len(steps) and steps[at + 1].kind == "call"
             if value is None:
-                return None
+                if found is not None and step.kind == "member" and calls:
+                    self._unjoined.count(found.unresolved_calls, step.text, cause)
+                return None, reach, cause
             if step.kind == "item":
+                reach = LOOKED_UP_BY_NAME if value.by_key is not None else reach
                 value = self._item_of(value, step.text)
                 at += 1
                 continue
@@ -631,54 +776,84 @@ class _SpanCalls:
                 at += 1
                 continue
             if step.kind == "call" or value.of is None:
-                return None
-            called = at + 1 < len(steps) and steps[at + 1].kind == "call"
+                return None, reach, ON_OUTSIDE_OBJECTS if value.is_many else OTHERWISE
             member = self._member_of(value.of, step.text)
-            if member is not None and (member.type == "Property" or called or self._file.getter_of(member) is member):
-                reached.append(member)
-            value = self._as_receiver(self._answer_of(value.of, step.text, member, called), value.of, member)
-            at += 2 if called else 1
-        return value
+            if found is not None:
+                self._reach_member(found, value.of, member, reach, calls)
+            answer = self._answer_of(value.of, step.text, member, calls)
+            if answer is None:
+                cause = self._unjoined.of_member([value.of, *self._bases_of(value.of)], step.text, member, calls)
+            value = self._as_receiver(answer, value.of, member)
+            reach = _reach_after(reach, steps[at + 1].text if calls else None)
+            at += 2 if calls else 1
+        return value, reach, cause
 
-    def _through_module(self, head: str, steps: list, reached: list) -> "tuple[Typed | None, int]":
+    def _reach_member(self, found: SpanReach, holder: "Node", member: "Node | None", reach: str, called: bool) -> None:
+        """Keep the member a step reaches on holder, and the class holder when the code reaches another object."""
+        if member is not None and (member.type == "Property" or called or self._file.getter_of(member) is member):
+            found.members.append(member)
+        if reach != _ITSELF:
+            found.reach_class(holder, reach)
+
+    def _guess(self, steps: list, value: "Typed | None", found: SpanReach | None, cause: str) -> None:
+        """The one member of the step's name the file's reach declares, for a receiver of no known class, joined by a
+        guess; a call of a name more than one class declares, on a receiver of no known class, is counted under cause
+        as a call the read cannot join."""
+        if found is None:
+            return
+        called = len(steps) > 1 and steps[1].kind == "call"
+        only = self._file.only_member_named(steps[0].text, called)
+        if only is not None:
+            found.members.append(only)
+            found.guessed.append(only)
+        elif value is None and called:
+            self._unjoined.count(found.unresolved_calls, steps[0].text, cause)
+
+    def _through_module(self, head: str, steps: list, found: SpanReach | None) -> "tuple[Typed | None, int, str]":
         """A class the file reaches through a module it imports, `prompt_log.LoggedFile(path)`: built when called, which
         runs its constructor, else the class itself."""
         if head in self._locals or head in _OWN_OBJECT:
-            return None, 0
+            return None, 0, _ITSELF
         named = self._file.class_named(steps[0].text)
         if named is None:
-            return None, 0
+            return None, 0, _ITSELF
         if len(steps) > 1 and steps[1].kind == "call":
-            reached.extend(self._index.constructors_of(named))
-            return Typed(named), 2
-        return Typed(named), 1
+            if found is not None:
+                found.members.extend(self._index.constructors_of(named))
+            return Typed(named), 2, self._creates
+        return Typed(named), 1, _THE_CLASS
 
-    def _typed_head(self, head: str, steps: list) -> "tuple[Typed | None, int]":
-        """What a chain's first name is, and the step its walk goes on from: a call of a class builds one of it, a call
-        of a function answers what the function returns."""
+    def _typed_head(self, head: str, steps: list) -> "tuple[Typed | None, int, str]":
+        """What a chain's first name is, the step its walk goes on from, and how the code reaches it: a call of a class
+        builds one of it, a call of a function answers what the function returns."""
         called = bool(steps) and steps[0].kind == "call"
         if head in _BASE_OBJECT:
             base = next(iter(self._bases_of(self._owner)), None) if self._owner is not None else None
-            return (Typed(base) if base is not None else None), (1 if called else 0)
+            return (Typed(base) if base is not None else None), (1 if called else 0), _ITSELF
         if called:
-            if head in self._locals:
-                return None, 1
-            built = self._owner if head == "cls" else self._file.class_named(head) if _is_class_name(head) else None
-            if built is not None:
-                return Typed(built), 1
-            function = self._file.function_named(head)
-            if function is None:
-                return self._answers.declared_function(self._file.relative, head), 1
-            return self._answers.answer_of(function), 1
+            return self._called_head(head, steps[0].text)
         if head in _OWN_OBJECT:
-            return (Typed(self._owner) if self._owner is not None else None), 0
+            return (Typed(self._owner) if self._owner is not None else None), 0, _ITSELF
         if head in self._locals:
-            return self._locals[head], 0
+            return self._locals[head], 0, self._reaches[head]
         if _is_class_name(head):
             named = self._file.class_named(head)
             if named is not None:
-                return Typed(named), 0
-        return self._file.module_value(head), 0
+                return Typed(named), 0, _THE_CLASS
+        return self._file.module_value(head), 0, A_MODULES_OBJECT
+
+    def _called_head(self, head: str, arguments: str) -> "tuple[Typed | None, int, str]":
+        """What a chain that opens with a call is: an object of the class it builds, or what the function answers."""
+        if head in self._locals:
+            return None, 1, _ITSELF
+        if head == "cls":
+            return (Typed(self._owner) if self._owner is not None else None), 1, _ITSELF
+        built = self._file.class_named(head) if _is_class_name(head) else None
+        if built is not None:
+            return Typed(built), 1, self._creates
+        function = self._file.function_named(head)
+        answer = self._answers.declared_function(self._file.relative, head) if function is None else self._answers.answer_of(function)
+        return answer, 1, _reach_after(REACHED_THROUGH_ANOTHER_OBJECT, arguments)
 
     def _answer_of(self, holder: "Node", name: str, member: "Node | None", called: bool) -> "Typed | None":
         """What holder's member called name answers: a call's return, else the member's or field's value."""
@@ -694,10 +869,7 @@ class _SpanCalls:
         if member is not None and member.type == "Operation":
             return None
         for owner in [holder, *self._bases_of(holder)]:
-            hint = (owner.get_fact("held_fields") or {}).get(name)
-            if hint:
-                return self._index.file(owner.source.file).typed_by_hint(str(hint), owner)
-            found = self._answers.field_of(owner, name)
+            found = self._answers.held_in(owner, name)
             if found is not None:
                 return found
         return None
@@ -847,6 +1019,49 @@ def _top_level_parts(written: str, separators: str = ",") -> list[str]:
     if current.strip():
         parts.append(current.strip())
     return parts
+
+
+def _names_a_type(code: str, start: int) -> bool:
+    """Whether the bare name at start names a type rather than a value: a hint after a colon outside a mapping's
+    braces, a return type, a part of a union, a generic's argument, the subject of a subscript (`list[Line]`), a cast,
+    or a decorator."""
+    before = code[:start].rstrip()
+    if before.endswith(_TYPE_MARKS) or _AS_CAST.search(before):
+        return True
+    opener = _opening_before(code, start)
+    if before.endswith(":"):
+        return opener != "{"
+    if before.endswith(("[", ",")) and opener is not None:
+        subject = _SUBSCRIPTED.search(code[:code.rfind(opener, 0, start)].rstrip())
+        return opener == "<" or (opener == "[" and subject is not None and subject.group(0) not in _VALUE_WORDS)
+    return False
+
+
+def _opening_before(code: str, start: int) -> "str | None":
+    """The bracket open around start: the nearest one before it that no bracket between them closes."""
+    depth = 0
+    for position in range(start - 1, -1, -1):
+        character = code[position]
+        if character in ")]}":
+            depth += 1
+        elif character in "([{<":
+            if depth == 0:
+                return character
+            if character != "<":
+                depth -= 1
+    return None
+
+
+def _reach_after(reach: str, arguments: str | None) -> str:
+    """How the code reaches what one step of a chain answers, from how it reached the object the step is taken on and
+    the arguments of the step's call (none for a member read): an object a call with a string, name, path, or key
+    answers, or one a class named outright answers, is looked up by name; a field of the object itself is held; any
+    other is reached through another object."""
+    if (arguments is not None and _LOOKUP_ARGUMENTS.search(arguments)) or reach == _THE_CLASS:
+        return LOOKED_UP_BY_NAME
+    if reach == _ITSELF and arguments is None:
+        return HELD_AS_A_FIELD
+    return REACHED_THROUGH_ANOTHER_OBJECT
 
 
 def _is_local_name(head: str) -> bool:

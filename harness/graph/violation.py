@@ -8,6 +8,7 @@ import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, TypedDict
 
+from harness.graph.practice_rule import SCOPE_ALL, SCOPE_PATHS
 from harness.graph.location import Location
 from harness.installation.data_class import SourceFile, data_field
 
@@ -75,12 +76,14 @@ class FoundBy:
     """What found a violation: the rule, the practice that checks it, and the node it was found on, when it names
     one."""
 
-    def __init__(self, rule: str, practice: str = "", found_on: FoundOn = NO_NODE, requires_judge: bool = False) -> None:
+    def __init__(self, rule: str, practice: str = "", found_on: FoundOn = NO_NODE, requires_judge: bool = False, scope: str = SCOPE_PATHS) -> None:
         self.rule = rule
         self.practice = practice
         self.found_on = found_on
         # Whether the rule requires a judge, so what it found is a candidate for a reading, not an error.
         self.requires_judge = requires_judge
+        # Where the rule runs for a validate given paths (``PracticeGraphRule.scope``).
+        self.scope = scope
 
 
 # What a checked rule finds is an error: a program decided it.
@@ -109,7 +112,7 @@ class Violation:
     def from_data(cls, sent: ViolationData) -> Violation:
         """A violation sent as data, the way ``data_of`` writes it for ``graph.return_nodes`` and the saved graph."""
         found_on = FoundOn(str(sent.get("node_id") or ""), str(sent.get("subject") or ""))
-        found_by = FoundBy(str(sent.get("rule") or ""), str(sent.get("practice") or ""), found_on, sent.get("severity") == CANDIDATE)
+        found_by = FoundBy(str(sent.get("rule") or ""), str(sent.get("practice") or ""), found_on, sent.get("severity") == CANDIDATE, str(sent.get("scope") or SCOPE_PATHS))
         location = Location(str(sent.get("location") or ""), sent.get("line"), sent.get("end_line"))
         return cls(found_by, str(sent.get("message") or ""), location)
 
@@ -164,6 +167,25 @@ class Violation:
     def is_candidate(self) -> bool:
         """Whether a rule that requires a judge listed this for a reading, so nothing has decided it is wrong."""
         return self._found_by.requires_judge
+
+    @property
+    @data_field
+    def scope(self) -> str:
+        """Where the rule that found it runs for a validate given paths: ``paths`` or ``all``."""
+        return self._found_by.scope
+
+    @property
+    def runs_over_all(self) -> bool:
+        """Whether the rule that found it runs over the whole working copy, whatever paths a validate is given."""
+        return self.scope == SCOPE_ALL
+
+    def is_reported_for(self, paths: list[str], judge_all: bool) -> bool:
+        """Whether a validate given paths (none: every place) reports it: one in those paths, as every validate does; one anywhere, of a
+        rule that runs over the whole working copy; but a candidate of such a rule only when the validate asks for the
+        judged pass (judge_all), since reading every candidate in a repository is work a person chooses to start."""
+        if self.runs_over_all:
+            return judge_all or not self.is_candidate
+        return not paths or self.is_under(paths)
 
     @property
     @data_field
@@ -275,3 +297,8 @@ class NodeViolation(Violation):
     @property
     def is_candidate(self) -> bool:
         return self.found_by.requires_judge
+
+    @property
+    @data_field
+    def scope(self) -> str:
+        return self.found_by.scope

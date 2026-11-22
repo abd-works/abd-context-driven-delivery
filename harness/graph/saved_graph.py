@@ -26,8 +26,9 @@ if TYPE_CHECKING:
 
 GRAPH_FILE_NAME = "graph.json"
 # The shape this code writes. A saved graph of any other shape is read as no saved graph, so the next load replaces it.
-# Shape 6 names the story map's class StoryMap, where shape 5 named it StoryModel.
-SAVED_SHAPE_VERSION = 6
+# Shape 6 names the story map's class StoryMap, where shape 5 named it StoryModel; shape 7 keeps each edge's facts, such
+# as how a class reaches the class it depends on, which a graph saved in shape 6 lacks.
+SAVED_SHAPE_VERSION = 7
 
 # What a node knows about itself beyond its place, by name, as a graph's parser read it and ``graph.json`` keeps it.
 # One fact a node records: plain JSON data, as a parser read it.
@@ -171,7 +172,7 @@ class SavedPractice:
     def from_practice(cls, practice: PracticeGuidance, files: SavedFiles) -> SavedPractice:
         """The practice as the graph that holds it has it now, only its nodes read from files and the edges files
         keeps."""
-        nodes = [node for node in practice.reading.in_graph.nodes() if files.reads(node)]
+        nodes = [node for node in practice.reading.in_graph.nodes() if files.keeps_node(node)]
         edges = [edge for edge in practice.reading.in_graph.edge_index.of() if files.keeps(edge)]
         return cls.from_fields(
             practice.key,
@@ -392,6 +393,11 @@ class SavedFiles:
             return True
         file = (node.source.file or "").replace("\\", "/")
         return any(file == item or file.startswith(f"{item}/") for item in self._named)
+
+    def keeps_node(self, node: Node) -> bool:
+        """Whether a save keeps node: one read from the files, or one holding a violation of a rule that runs over the
+        whole working copy, which a validate reports wherever it is."""
+        return self.reads(node) or any(violation.runs_over_all for violation in node.rules.violations)
 
     def keeps(self, edge: Edge[Node]) -> bool:
         """Whether edge joins two nodes read from the files, or one of them to its practice's root."""

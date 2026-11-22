@@ -59,6 +59,7 @@ class Validate(GuidanceAction):
         rule: str | None = None,
         graph: bool | str | list[str] | None = None,
         paths: list[str] | None = None,
+        judge_all: bool = False,
     ) -> str:
         """Check artifacts against rules.
         rule: the name of one rule to check, such as verb-noun-format. A name none of the listed guidance checks is refused. Omit it to walk each guidance's rules.
@@ -68,10 +69,13 @@ class Validate(GuidanceAction):
         paths: the files or folders being edited, named from the project's root or absolute (e.g. src/my-paradise/order.ts).
         For graph-backed guidance, the session's graph is refreshed with exactly these files as they are now and its rules
         run on them; the saved graph is not read or rebuilt. A path that is not there, or not under the session's root, is refused.
-        With no paths and no graph, the folders holding the fidelity's written output are checked."""
+        With no paths and no graph, the folders holding the fidelity's written output are checked. A graph rule of scope
+        all runs over the whole working copy whatever paths are given, and what it finds outside them is reported, marked.
+        judge_all: true to run the judged pass, which lists for the judge the candidates of the judged rules of scope all,
+        over the whole working copy. Without it those rules list nothing; checked rules run on every validate."""
         self._work_on(guidance)
         self._rule = self._rule_named(rule)
-        self._check(NamedToCheck(paths, graph, self.call))
+        self._check(NamedToCheck(paths, graph, self.call, judge_all))
         report = self._report(graph_named=bool(graph))
         return self._saved(report)
 

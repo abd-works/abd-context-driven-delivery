@@ -2,6 +2,8 @@
 observations and steps to the operations they invoke, each test file's tier, and the test files' own text. Every
 fixture is a small project read once, through the real working-copy build, for the examples that look at it."""
 
+import json
+
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
@@ -31,9 +33,15 @@ with description("a cart"):
     with it("should add an item"):
         Cart().add("book")
 """
-# Operations the framework calls by name, never through a call the graph can follow: a graph rule's check, which the rule
-# registry runs; an operation published as a tool or a hook; and an operation a class registered with a catalogue
-# overrides, which the framework calls through the base. A helper beside each is called by nothing and stays listed.
+# Operations the project's ways of reaching code reach, as its config names them, never through a call the graph can
+# follow: a graph rule's check, which the rule registry runs through the base it scans for; an operation published as a
+# tool or a hook; and an operation a class registered with a catalogue overrides, which the framework calls through the
+# base. A helper beside each is called by nothing and stays listed.
+_REACHING_CONFIG = json.dumps({"code_reach": {
+    "publishing_decorators": ["agent_tool", "hook"],
+    "registries": ["CATALOGUE.register"],
+    "scanned_bases": ["PracticeGraphRule", "GraphOverlay"],
+}})
 _RULE = """
 class PracticeGraphRule:
     def check(self, node):
@@ -137,15 +145,15 @@ with description("a public operation TDD checks for a test in the graph") as sel
         with it("should not be judged"):
             expect(self.with_no_test_read).to(equal([]))
 
-    with context("that the framework calls by name, as a graph rule's check, a published tool or hook, or a registered class's override"):
+    with context("that a way the project's config names reaches, as a graph rule's check, a published tool or hook, or a registered class's override"):
         with it("should pass, leaving listed only the helpers nothing calls"):
-            files = {**EXAMPLES[_OPERATION][1], "rules.py": _RULE, "shop.py": _PUBLISHED, "bookshop.py": _REGISTERED}
+            files = {**EXAMPLES[_OPERATION][1], "rules.py": _RULE, "shop.py": _PUBLISHED, "bookshop.py": _REGISTERED, ".context/config.json": _REACHING_CONFIG}
             listed = tested_code_fixture(files).hits(BY_SLUG[_OPERATION])
             expect(sorted(message.split("'")[1] for message in listed)).to(equal(["check_out", "label", "price"]))
 
     with context("that overrides a base a catalogue scanning folders holds, as a pattern's graph overlay overrides read"):
         with it("should pass, leaving listed only the helper nothing calls"):
-            listed = tested_code_fixture({**EXAMPLES[_OPERATION][1], "overlay.py": _SCANNED}).hits(BY_SLUG[_OPERATION])
+            listed = tested_code_fixture({**EXAMPLES[_OPERATION][1], "overlay.py": _SCANNED, ".context/config.json": _REACHING_CONFIG}).hits(BY_SLUG[_OPERATION])
             expect(sorted(message.split("'")[1] for message in listed)).to(equal(["check_out", "tally"]))
 
     with it("should require a judge, since the links a load finds miss a call made by a name or through a tool"):

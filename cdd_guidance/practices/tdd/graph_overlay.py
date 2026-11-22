@@ -8,8 +8,8 @@ import re
 from pathlib import Path
 
 from cdd_guidance.practices.bdd.bdd import Bdd
-from cdd_guidance.practices.tdd.called_by_name import CalledByName
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.source_code.code_reach import CodeReach
 from cdd_guidance.practices.source_code.test_files import is_example_code
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.tdd.tiers import is_code_file, real_resources_in, stubs_in, tier_of
@@ -108,8 +108,8 @@ class HeavyExamples:
 
 class CodeUnderTest:
     """What the tests the graph read reach in the code Clean Engineering read. A test reaches an operation when an
-    observation or a step invokes it, when test code invokes it (a helper a spec calls), when the framework calls it by
-    name (*CalledByName*: a graph rule's check, a published tool or hook, a registered class's override), or when an
+    observation or a step invokes it, when test code invokes it (a helper a spec calls), when one of the ways the
+    project names in its config reaches it (*CodeReach*: a publishing decorator, a registry, an entry point), or when an
     operation a test reaches invokes it. A test names an exception when the class's name is written in a test file or in test code.
     Each public operation that has a body keeps whether a test reaches it (``reached_by_a_test``), and each public
     exception class whether a test names it (``named_by_a_test``); a graph that read no test records neither."""
@@ -131,12 +131,12 @@ class CodeUnderTest:
                 declared.set_fact("named_by_a_test", declared.name in named)
 
     def _reached(self, operations: list[Node]) -> set[int]:
-        """Every member a test reaches: those an observation or step invokes, those in test code and those the framework
-        calls by name, then every member one of them invokes, followed through Clean Engineering's own invokes links."""
+        """Every member a test reaches: those an observation or step invokes, those in test code and those the project's
+        ways reach, then every member one of them invokes, followed through Clean Engineering's own invokes links."""
         edges = self._clean.edge_index
         reached = {id(edge.parent): edge.parent for edge in edges.of("invokedBy")}
         reached.update((id(operation), operation) for operation in operations if is_example_code(operation.source.file))
-        reached.update((id(operation), operation) for operation in CalledByName(self._graph, operations).operations())
+        reached.update((id(operation), operation) for operation in CodeReach.from_graph(self._graph).operations(operations))
         waiting = list(reached.values())
         while waiting:
             for edge in edges.from_parent("invokes", waiting.pop()):

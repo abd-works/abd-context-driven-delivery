@@ -14,7 +14,7 @@ from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_annotations import long_call, mcp
-from harness.graph.edge import Display, Edge, EdgeIndex, EdgeType
+from harness.graph.edge import Display, Edge, EdgeFacts, EdgeIndex, EdgeType
 from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
 from harness.graph.file_lines import FileLines, PathKind
 from harness.markdown.markdown import MarkdownText
@@ -1181,7 +1181,7 @@ class PracticeRestore:
         for kept in saved.edges:
             parent, child = graph.node(kept.parent), graph.node(kept.child)
             if parent is not None and child is not None:
-                graph.edges.record(kept.type, parent, child)
+                graph.edges.record(kept.type, parent, child, kept.facts)
         for node_id, hits in saved.violations_by_node.items():
             node = graph.node(node_id)
             if node is not None:
@@ -1203,18 +1203,19 @@ class GraphEdges:
         """Record a direct edge of kind from parent to child: child is one of parent's parts."""
         self.record(EdgeType.from_kind(kind, "direct"), parent, child)
 
-    def relate(self, kind: str, parent: Node, child: Node) -> None:
-        """Record a relationship edge of kind from parent to child: parent refers to child, which stays where it is."""
-        self.record(EdgeType.from_kind(kind, "relationship"), parent, child)
+    def relate(self, kind: str, parent: Node, child: Node, facts: EdgeFacts | None = None) -> None:
+        """Record a relationship edge of kind from parent to child: parent refers to child, which stays where it is. The
+        edge keeps facts about the relationship, beside those it kept when it was recorded before."""
+        self.record(EdgeType.from_kind(kind, "relationship"), parent, child, facts)
 
     def group(self, kind: str, parent: Node, child: Node) -> None:
         """Record a grouped edge of kind from parent to child, which the tree shows under a child of parent named for
         kind."""
         self.record(EdgeType.from_kind(kind, "grouped"), parent, child)
 
-    def record(self, edge_type: EdgeType, parent: Node, child: Node) -> None:
-        """Record an edge of edge_type from parent to child on the parent's practice, once."""
-        self._graph.practices.part_of(parent.practice).edge_index.record(edge_type, parent, child)
+    def record(self, edge_type: EdgeType, parent: Node, child: Node, facts: EdgeFacts | None = None) -> None:
+        """Record an edge of edge_type from parent to child on the parent's practice, once, keeping facts on it."""
+        self._graph.practices.part_of(parent.practice).edge_index.record(edge_type, parent, child, facts)
 
     def from_parent(self, kind: str, parent: Node) -> list[Edge]:
         """Edges of one kind leaving parent, in recorded order."""

@@ -686,19 +686,31 @@ with description("Render asked for a path, in a session") as self:
         with it("should name the file as holding the render, with nothing to migrate"):
             expect((len(self.results[0].paths), self.results[0].migrate)).to(equal((1, [])))
 
-        with context("then with total renamed to subtotal in the markdown, rendered again"):
-            with before.each:
-                self.model.write_text(_CART_MODEL.replace("+ total(): int", "+ subtotal(): int"), encoding="utf-8")
-                self.results = self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
-                self.migrate = self.results[0].migrate
+    # The same class model, its code written, then total renamed to subtotal in the markdown and rendered again: three
+    # renders, made once in a project of their own so each example only reads what they left.
+    with context("that is a class model whose class has code, with total then renamed to subtotal in the markdown, rendered again"):
+        with before.all:
+            self.renamed_project = ThrowawayProject()
+            rendering = Render().for_call(ToolCall({}, self.renamed_project.root))
+            model = self.renamed_project.root / "src" / "ordering" / ".context" / "ordering-model.md"
+            model.parent.mkdir(parents=True)
+            model.write_text(_CART_MODEL, encoding="utf-8")
+            rendering.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
+            self.renamed_code = self.renamed_project.root / "src" / "ordering" / "ordering.py"
+            self.renamed_code.write_text(self.renamed_code.read_text(encoding="utf-8").replace(_EMPTY_TOTAL, _TOTAL_WITH_CODE), encoding="utf-8")
+            model.write_text(_CART_MODEL.replace("+ total(): int", "+ subtotal(): int"), encoding="utf-8")
+            self.renamed_migrate = rendering.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])[0].migrate
 
-            with it("should list total as kept, and subtotal among what may have replaced it"):
-                kept = next(each for each in self.migrate if each.kept == "Cart.total")
-                expect("Cart.subtotal" in kept.may_have_replaced_it).to(equal(True))
+        with after.all:
+            self.renamed_project.close()
 
-            with it("should keep total's code in the file, marked as no longer in the model"):
-                written = self.code.read_text(encoding="utf-8")
-                expect(written.index("no longer in the model: Cart.total") < written.index("return sum(line.subtotal for line in self.lines)")).to(equal(True))
+        with it("should list total as kept, and subtotal among what may have replaced it"):
+            kept = next(each for each in self.renamed_migrate if each.kept == "Cart.total")
+            expect("Cart.subtotal" in kept.may_have_replaced_it).to(equal(True))
+
+        with it("should keep total's code in the file, marked as no longer in the model"):
+            written = self.renamed_code.read_text(encoding="utf-8")
+            expect(written.index("no longer in the model: Cart.total") < written.index("return sum(line.subtotal for line in self.lines)")).to(equal(True))
 
     with context("that tells the agent what to do after a render kept members no longer in the model"):
         with it("should tell it to move each kept body into the member that replaced it, and only then delete it"):

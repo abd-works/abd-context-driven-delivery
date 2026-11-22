@@ -26,7 +26,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import MODU
 from cdd_guidance.practices.clean_engineering.measures.checked_measures import CheckedCodeMeasures
 from cdd_guidance.practices.clean_engineering.measures.code_measures import MEASURES, NODE_TYPES, SHOWN_WITHOUT_LIMIT, ChosenTools
 from cdd_guidance.practices.clean_engineering.measures.measuring_tools import TOOLS, MeasuringTool
-from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassLinks
+from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassLinks, FieldLinks
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.reading.code_file import CodeFile, CodeSpan, MemberAnswers
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
@@ -121,6 +121,7 @@ class GraphReading(PracticeReading):
             CodeRead(self).read()
         ClassLinks(self).link()
         CallLinks(self).link()
+        FieldLinks(self).link()
         ComparedFacts(self).record()
         self.keep_code_measures(list(self.graph.scope.edited_files or []))
         self._exempt_test_code()
@@ -181,10 +182,12 @@ class CodeIndex:
         ]
 
     def span_of(self, member: Node) -> CodeSpan:
-        """The member's own code, the class that declares it, and the type hint of each of its parameters."""
+        """The member's own code, the class that declares it, the type hint of each of its parameters, and whether it
+        runs while its object is built: a constructor, or a field, whose initializer does."""
         text = CodeSpan.code_of(member.source.text) if member.source.file else ""
         typed = {edge.child.name: str(edge.child.get_fact("type_hint") or "") for edge in self._reading.graph.edges.from_parent("hasParameter", member)}
-        return CodeSpan(text, self.class_declaring(member), typed)
+        builds = member.name in CONSTRUCTOR_NAMES or (member.type == "Property" and not member.get_fact("is_property"))
+        return CodeSpan(text, self.class_declaring(member), typed, builds_its_object=builds)
 
     def file(self, relative: str, imports: list[ClassReference] | None = None) -> CodeFile:
         """The file at relative, from the source root, as its code names things. A production file's imports are those

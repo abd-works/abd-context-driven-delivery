@@ -22,12 +22,14 @@ if TYPE_CHECKING:
 @dataclass(frozen=True)
 class NamedToCheck:
     """What one validate call names to check: the files being edited (paths), the graph it names (graph: true for the
-    session's saved graph, or the graph files), and the call naming them, which says where a graph build runs; none in
-    process."""
+    session's saved graph, or the graph files), the call naming them, which says where a graph build runs, none in
+    process; and whether it asks for the judged pass (judge_all), which lists the candidates of the judged rules that
+    run over the whole working copy."""
 
     paths: list[str] | None = None
     graph: bool | str | list[str] | None = None
     call: ToolCall | None = None
+    judge_all: bool = False
 
 
 class CheckedGraph:
@@ -43,6 +45,7 @@ class CheckedGraph:
         self._call = to_check.call
         self._checked_fidelities = list(checked)
         self._named = to_check.graph
+        self._judge_all = to_check.judge_all
         # Read now, so a path that is not there is refused before the call claims any report file.
         self._names_paths = bool(to_check.paths)
         self._edited = self._edited_in_checked_format(to_check.paths)
@@ -119,11 +122,12 @@ class CheckedGraph:
         return self._session.accepted_violations.accepted_among(self.found())
 
     def found(self) -> list[Violation]:
-        """The listed practices' violations in the graph this call checks, accepted or not."""
+        """The listed practices' violations in the graph this call checks, accepted or not: those in the files it was
+        built from, and, of a rule that runs over the whole working copy, those anywhere, its candidates only when the
+        call asks for the judged pass."""
         keys = [checked.fidelity.practice_guidance.key for checked in self._checked_fidelities]
         found = self._checked.violations(keys) if self._checked is not None else []
-        if self._built_from:
-            found = [violation for violation in found if violation.is_under(self._built_from)]
+        found = [violation for violation in found if violation.is_reported_for(self._built_from, self._judge_all)]
         found = self._on_session_stories(found)
         return self._in_one_format(found)
 

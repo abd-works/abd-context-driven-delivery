@@ -47,11 +47,11 @@ def _(s):
     def _(world):
         world.ticket = world.data_of(session_of(world).graph_branch(node_id=node_id_of(world, "Ticket", LISTED), paths=LISTED))
 
-    @s.then("Ticket shows its operations, but their own children stay hidden until they are opened")
+    @s.then("Ticket shows its operations and its dependsOn group, but their own children stay hidden until they are opened")
     def _(world):
-        operations = [child for child in world.ticket["children"] if "children_left_out" in child]
-        shown_below = [grandchild for child in operations for grandchild in child["children"] if "children_left_out" in grandchild]
-        expect(([child["name"] for child in operations], shown_below)).to(equal((["activate", "close", "delete"], [])))
+        shown = [child for child in world.ticket["children"] if "children_left_out" in child]
+        shown_below = [grandchild for child in shown for grandchild in child["children"] if "children_left_out" in grandchild]
+        expect(([child["name"] for child in shown], shown_below)).to(equal((["activate", "close", "delete", "dependsOn"], [])))
 
 
 # --- Follow Relationships Under Node In Files App -----------------------------------------------------------------

@@ -75,5 +75,34 @@
       "unshared_method_groups": 1,
       "import_loops": 0
     }
+  },
+  "code_reach": {
+    "publishing_decorators": [
+      "mcp",
+      "agent_tool",
+      "agent_toolset",
+      "agent_instructions",
+      "skill",
+      "command",
+      "rules",
+      "hook"
+    ],
+    "registries": [
+      "PRACTICE_CATALOGUE.register",
+      "ACTION_CATALOGUE.register",
+      "REGISTERED_PATTERNS.register",
+      "annotation_kinds.register"
+    ],
+    "scanned_bases": [
+      "PracticeGraphRule",
+      "PracticeGuidance",
+      "GuidanceAction",
+      "GraphOverlay"
+    ],
+    "entry_points": [
+      "*.py:main"
+    ],
+    "naming_conventions": [],
+    "generated_adapters": []
   }
 }

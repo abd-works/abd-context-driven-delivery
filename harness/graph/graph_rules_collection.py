@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.practice_rule import SCOPE_PATHS, PracticeGraphRule
 from harness.graph.location import Location
 from harness.graph.violation import Finding, NodeViolation, Violation
 from harness.graph.violation_correction import CorrectedPlace, ViolationCorrection
@@ -30,6 +30,7 @@ class GraphRule:
         self._check = check
         self.executable = check is not None
         self._requires_judge = check is not None and check.requires_judge
+        self._scope = check.scope if check is not None else SCOPE_PATHS
         self.runs = check is not None and any(check.applies_to(type_name) for type_name in self._applying_types())
         """Whether its check runs on this node: the check applies to the node's type, or to the type it is anchored to."""
         self._violations: list[Violation] = []
@@ -56,6 +57,12 @@ class GraphRule:
     def body(self) -> str:
         """What the rule asks for, as its node's schema gives its prose."""
         return self._body
+
+    @property
+    @data_field
+    def scope(self) -> str:
+        """Where its check runs for a validate given paths, as its *PracticeGraphRule* declares: ``paths`` or ``all``."""
+        return self._scope
 
     @property
     @data_field

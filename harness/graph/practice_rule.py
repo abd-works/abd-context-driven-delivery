@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 # What a rule's text says of how it is decided, written into the practice's document from the rule's own property.
 CHECKED = "Checked: the graph decides this rule, and what it finds is a violation."
 JUDGED = "Judged: the graph only lists candidates for this rule, and a judge or a person reads each to decide."
+# Where a rule runs when a validate is given paths: on those paths, or over the whole working copy.
+SCOPE_PATHS = "paths"
+SCOPE_ALL = "all"
 
 
 def decided_values(rules: Iterable[PracticeGraphRule]) -> dict[str, str]:
@@ -36,6 +39,11 @@ class PracticeGraphRule:
     A rule that leaves this false is checked: its check decides, and what it finds is a violation. A rule that sets it
     is judged: its check only lists candidates for a judge or a person to read, and each is reported as a candidate,
     never as an error."""
+    scope = SCOPE_PATHS
+    """Where a validate given paths reports what the rule finds. ``paths``: only in those paths. ``all``: anywhere in
+    the whole working copy, for a rule about how files use one another, such as whether anything uses a class, which
+    the paths alone cannot answer. A judged rule of scope ``all`` lists its candidates only when the validate asks for
+    the judged pass."""
 
     @property
     def how_decided(self) -> str:

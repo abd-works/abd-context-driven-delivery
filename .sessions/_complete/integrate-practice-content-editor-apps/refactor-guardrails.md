@@ -35,10 +35,10 @@ Read your own diff and answer, in your final report, for each new or changed cla
 
 ## 4. The code metrics may not get worse
 
-Run the metrics gate before every commit (`cdd_guidance/rules/metrics-gate.md`):
+Run the metrics gate before every commit (its usage is the docstring of `.context/model/repo-review/metrics_gate.py`):
 
 ```
-<metrics venv python> .context/repo-review/metrics_gate.py --base <your start commit> --head . --node-tools <node tools folder>
+<metrics venv python> .context/model/repo-review/metrics_gate.py --base <your start commit> --head . --node-tools <node tools folder>
 ```
 
 It must pass. Add its table to your report.

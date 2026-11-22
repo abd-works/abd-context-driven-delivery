@@ -143,8 +143,9 @@ with description("a session"):
                 expect(ToolCall({}, self.repo).session is ToolCall({}, self.repo).session).to(equal(True))
 
     # (S:system) Cdd Server --> Queue Handoff Steps On Session Start
+    # The switch and the handoff's queue are made once; each example reads what they left, and the last switches again.
     with context("that a chat switches to it with a handoff written"):
-        with before.each:
+        with before.all:
             self.repo = Path(tempfile.mkdtemp())
             work = self.repo / "work"
             work.mkdir()

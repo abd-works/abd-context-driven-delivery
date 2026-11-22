@@ -30,6 +30,8 @@ _RULES_SAVED = [
     f"after the rules, in the shape the Validate action gives (`cdd_guidance/actions/validate/validate.md`, step 6). {_CANDIDATES_NOTE}",
     "",
 ]
+# What a hit of a rule that runs over the whole working copy says when it is outside the paths a validate was given.
+_OUTSIDE_PATHS = " *(outside the paths this validate was given)*"
 # A rule as a practice document lists it: a bullet opening with its slug, in backticks or bold.
 _RULE_BULLET = re.compile(r"^\s*[-*]\s+(?:\*\*`?|`)(?P<slug>[^`*]+)`?(?:\*\*)?\s*[—:-]")
 
@@ -163,11 +165,13 @@ class ReportText:
         return [*lines, ""]
 
     def _violation_lines(self, violation: Violation) -> list[str]:
-        """One graph rule's violation as report lines, linked to its file and line; a candidate is marked ``[?]``."""
+        """One graph rule's violation as report lines, linked to its file and line; a candidate is marked ``[?]``, and a
+        hit of a rule that runs over the whole working copy is marked when it is outside the paths the call was given."""
         severity = violation.severity
         icon = "[?]" if violation.is_candidate else "[X]"
         parts = str(violation.described or "No message").split("\n")
-        lines = [f"- {icon} **{severity.upper()}** **[graph rule]** - {self._file_link(violation)}: {parts[0]}"]
+        outside = _OUTSIDE_PATHS if self._is_outside_given_paths(violation) else ""
+        lines = [f"- {icon} **{severity.upper()}** **[graph rule]** - {self._file_link(violation)}: {parts[0]}{outside}"]
         for part in parts[1:]:
             if part.strip().startswith("```"):
                 lines.append(f"    {part}")
@@ -176,6 +180,10 @@ class ReportText:
             else:
                 lines.append(f"  {part}")
         return lines
+
+    def _is_outside_given_paths(self, violation: Violation) -> bool:
+        given = self._checked.files_built_from
+        return bool(given) and violation.runs_over_all and not violation.is_under(given)
 
     def _file_link(self, violation: Violation) -> str:
         """The violation's file, named from the session's root and linked by absolute path with its line, which a

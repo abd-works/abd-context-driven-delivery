@@ -7,6 +7,7 @@ from pathlib import Path
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
+from cdd_guidance.practices.clean_engineering.reading.code_file import HELD_AS_A_FIELD
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 
 BOOKSHOP = Path(__file__).resolve().parent / "fixtures" / "bookshop"
@@ -45,8 +46,14 @@ def _reads(fixture, caller: str) -> list:
     return sorted(_owned(fixture, edge.child) for edge in edges)
 
 
-def _between_classes(fixture, kind: str) -> list:
-    return sorted(f"{edge.parent.name} -> {edge.child.name}" for edge in _edges(fixture, kind) if edge.parent.type == edge.child.type == "OoadClass")
+def _between_classes(fixture, kind: str, keeps=lambda edge: True) -> list:
+    return sorted(f"{edge.parent.name} -> {edge.child.name}" for edge in _edges(fixture, kind) if edge.parent.type == edge.child.type == "OoadClass" and keeps(edge))
+
+
+def _related_kinds(fixture, written_in) -> dict:
+    """The composition, aggregation, and association edges from Cart and Order, of the classes written_in keeps."""
+    kinds = {kind: _between_classes(fixture, kind, lambda edge: written_in(edge.parent)) for kind in ("composition", "aggregation", "association")}
+    return {kind: [pair for pair in pairs if pair.startswith(("Cart ->", "Order ->"))] for kind, pairs in kinds.items()}
 
 
 def _code_file(node) -> bool:
@@ -93,8 +100,8 @@ with description("Clean Engineering reading the Bookshop into its graph") as sel
         with it("should join a subclass to the class it extends"):
             expect(_between_classes(self.fixture, "baseClass")).to(equal(["ExpressShipment -> Shipment"]))
 
-        with it("should join a class to each class a property of it is typed as, a list's element included"):
-            expect(_between_classes(self.fixture, "dependsOn")).to(equal([
+        with it("should join a class to each class a field of it holds, a list's element included"):
+            expect(_between_classes(self.fixture, "dependsOn", lambda edge: HELD_AS_A_FIELD in edge.facts.get("reached", []))).to(equal([
                 "Cart -> CartLine", "CartLine -> Book", "Catalogue -> Book", "Order -> CartLine", "Order -> Payment", "Shipment -> Order",
             ]))
 
@@ -124,8 +131,14 @@ with description("Clean Engineering reading the Bookshop into its graph") as sel
             expect(cart.get_fact("stereotypes")).to(equal(["Aggregate Root"]))
 
         with it("should join a model class to the class a property of it relates to, by the kind the model writes"):
-            kinds = {kind: _between_classes(self.fixture, kind) for kind in ("composition", "aggregation", "association")}
-            expect({kind: [pair for pair in pairs if pair.startswith(("Cart ->", "Order ->"))] for kind, pairs in kinds.items()}).to(equal({
+            expect(_related_kinds(self.fixture, lambda node: not _code_file(node))).to(equal({
+                "composition": ["Cart -> CartLine"],
+                "aggregation": ["Order -> CartLine"],
+                "association": ["Order -> Payment"],
+            }))
+
+        with it("should read the same kinds from the code that implements the model, by what each class builds or is handed"):
+            expect(_related_kinds(self.fixture, _code_file)).to(equal({
                 "composition": ["Cart -> CartLine"],
                 "aggregation": ["Order -> CartLine"],
                 "association": ["Order -> Payment"],

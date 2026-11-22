@@ -269,7 +269,7 @@ class ModelNode(Node, metaclass=_SyncedOnceBuilt):
                 node._move_to(practice)
         graph = practice.reading.graph
         for edge in carried:
-            graph.edges.record(edge.type, edge.parent, edge.child)
+            graph.edges.record(edge.type, edge.parent, edge.child, edge.facts)
         for node in subtree:
             node._record_held_edges()
 

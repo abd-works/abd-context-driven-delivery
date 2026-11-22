@@ -33,7 +33,7 @@ class UnitTierFakesEveryBoundary(SharedPracticeGraphRule):
 
 class OperationHasAProvingTest(SharedPracticeGraphRule):
     """A public operation with a body that no test the graph read reaches: no observation or step invokes it, no test
-    code calls it, the framework does not call it by name (``called_by_name.py``), and no operation a test reaches goes
+    code calls it, none of the ways the project names in its config reaches it (``source_code/code_reach.py``), and no operation a test reaches goes
     on to invoke it. It requires a judge, because the links a load finds miss a call made by a name the code builds,
     such as a test that loads a module by a path, or a call from another language, so each operation it lists is a candidate to read. A graph that read no test records nothing to judge."""
 
