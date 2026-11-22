@@ -190,6 +190,7 @@ class SessionTestTierTools:
         return {self.test_tiers.path_of(module): tiers}
 
 
+@hosted_only
 class SessionLogTools:
     """The tools that mark and read a session's log loops, add notes to it, and hand its work on: each asks the
     session's *SessionLog* or its *Handoffs*."""
