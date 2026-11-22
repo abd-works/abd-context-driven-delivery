@@ -35,10 +35,12 @@ Convert between formats through *Ux*'s `render` or a format class's `parse` and 
 
 *Story Demo* runs a mockup against its stories in the browser, so a person can watch a story play through the screens or drive the screens themselves. `StoryDemoPage.load(createStory, mode)` loads a story into the page in one of two modes: *Play*, where the explorer steps through the story's scenarios with `playNext`, and *Interactive*, where using a *StoryDemoControl* runs the story steps attached to it. The mockup's HTML marks which controls, lists, and inputs take part through `data-` attributes the generated mockup already writes.
 
+`mountGeneratedMockup` plays a UX-generated page (`mount-generated-mockup.js`): *GeneratedMockup* owns what it paints, its *ProductScreens* (which screens show for a story, the current one, a region's selection), the explorer and product panels, and the values Interactive carries between stories; *ControlWiring* holds how the page's controls, list lines and links reach the stories; *Snapshot* reads what a scenario exposed by the dotted path a field names. The runner names no product's objects: the values it carries are those under the first name of every path the page's fields and lists are bound to.
+
 *PlayDualRunner* collects a story's Given/When/Then steps and plays them one at a time in the browser, reporting a failed Then without stopping the page. `story-test-core` defines stories with `story`, `scenario`, and `collect` in a form that runs both in the browser and under Node's test runner (`story-test-node`), and `soft-assert` gives browser-safe Then assertions.
 
 - **Purpose:** Show a mockup working through its stories, step by step or by hand, without a backend.
-- **Terms other packages use:** StoryDemoPage, PlayDualRunner, StoryDemoControl, `story-test-core`, `story-test-node`, `soft-assert`
+- **Terms other packages use:** StoryDemoPage, PlayDualRunner, StoryDemoControl, `mountGeneratedMockup`, `story-test-core`, `story-test-node`, `soft-assert`
 - **Uses:** `cdd_guidance/practices/ux/model` (*StoryDemoControl*, which the HTML mockup is rendered from)
 
 **Constraint.**
