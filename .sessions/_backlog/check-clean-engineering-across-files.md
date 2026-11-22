@@ -12,7 +12,7 @@ From the codebase-wide checker backlog ("Checker that reads the whole codebase f
 >
 > ## Every class is used or uses something
 >
-> Every production class must have at least one relationship: it uses another class (calls, creates, holds, reads), something uses it, or something builds, reads or installs it at build time (an annotation kind the installer reads, a toolset the installer publishes, a registration at import, a TypeScript adapter generated from it). A class with none of these has no reason to exist: report it as **no use — delete**, and delete it with its specs. Check every way it can be used before calling it unused: a class that others use but that uses nothing (`Name`, `Git`) is in use.
+> Every production class must be reached somehow: it uses another class, another class uses it, or something outside the code's own calls reaches it, in whatever ways the project's frameworks and build reach classes. A class reached by none of these has no reason to exist: report it as **no use — delete**, and delete it with its specs. Check every way it can be reached before calling it unused: a class that others use but that uses nothing itself is in use.
 >
 > ## A runtime dependency must earn its place
 >
@@ -38,9 +38,10 @@ Validate at Clean Engineering's modules, model and code fidelities checks what o
 
 #### Story: Report Unused Class For Deletion
 
-- Every production class has at least one relationship: it uses another class (calls, creates, holds, reads), something uses it, or something builds, reads or installs it at build time (an annotation kind the installer reads, a toolset the installer publishes, a registration at import, a TypeScript adapter generated from it).
-- A class with none is reported as **no use — delete**, to be deleted with its specs.
-- Check every way it can be used first: a class that others use but that uses nothing (`Name`, `Git`) is in use.
+- Every production class is reached somehow: it uses another class, another class uses it, or something outside the code's own calls reaches it. That last way differs from one project to the next: a framework that finds classes by a decorator, an annotation or a naming convention; a registry or plugin list; dependency injection; an entry point declared in the project's configuration; reflection or serialization by name; a build step that generates code or an adapter from it.
+- Each project says in its configuration which of these ways it uses, so the rule fits any language and framework rather than one codebase's.
+- A class reached by none of these is reported as **no use — delete**, to be deleted with its specs.
+- Check every way it can be reached before calling it unused: a class that others use but that uses nothing itself is in use.
 
 #### Story: Report Runtime Dependency That Should Be Owned
 

@@ -187,7 +187,7 @@ describe('Render Fidelity Format', () => {
     await page.tileActions.toggleFormat(barAt(page)!, 'markdown')
     await page.tileActions.toggleFormat(barAt(page)!, 'diagram')
     await page.tileActions.run(barAt(page)!)
-    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio' }])
+    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio,whiteboard' }])
   })
 })
 
