@@ -21,9 +21,9 @@ import cdd_guidance.practices  # noqa: F401 - registers the practices with the p
 from harness.graph.explorer import ExplorerEntry
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from space.session import Sessions
-from space.session.session_file import VIEWER_SHOWS_LINES, FileTooLongToShowError
-from space.session.session_files import NamedPathNotFoundError
-from space.session.throwaway_project import ExampleHome
+from space.session.files.session_file import VIEWER_SHOWS_LINES, FileTooLongToShowError
+from space.session.files.session_files import NamedPathNotFoundError
+from space.session.spec_support.throwaway_project import ExampleHome
 
 PRACTICE_CATALOGUE.create_all()
 

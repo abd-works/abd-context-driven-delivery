@@ -20,7 +20,7 @@ from harness.agent_tools.agent_tools import ToolsetReference, AgentToolSet, SubA
 from space.session.handoffs import Handoffs
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 from space.work_state import WorkState
 
 

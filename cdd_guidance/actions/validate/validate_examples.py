@@ -8,7 +8,7 @@ from pathlib import Path
 from cdd_guidance.actions.validate.validate import Validate
 from harness.agent_tools.tool_call import ToolCall
 from space.session import Session, Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _SAMPLE = _REPO_ROOT / "harness" / "graph" / "_examples" / "input"

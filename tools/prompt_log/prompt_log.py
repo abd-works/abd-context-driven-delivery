@@ -20,7 +20,8 @@ from harness.hooks.hook_server import HookPayload
 from harness.hooks.hooks import Hook, Hooks, hook
 from harness.annotations.annotation import noCatalog
 from harness.installation.ide_layout import installed_guidance_kind
-from space.session.session_log import HookLog, LogTimestamp
+from harness.process.log_timestamp import LogTimestamp
+from space.session.session_log import HookLog
 
 # A long prompt or file is shown by its first lines, cut at a length a person can still scan in the log.
 _PREVIEW_LINES = 8

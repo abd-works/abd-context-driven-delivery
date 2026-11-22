@@ -17,7 +17,7 @@ from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 if TYPE_CHECKING:
     from space.session.session import Session
-    from space.session.session_practices import SessionPractices
+    from space.session.practices.session_practices import SessionPractices
 
 
 class DocumentGraph:

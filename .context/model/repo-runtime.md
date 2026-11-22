@@ -67,7 +67,7 @@ Read `annotation_kinds` as the one registry of annotation kinds in harness/annot
 
 - `Session.practices` `-> PracticeCatalogue.keys` lists every practice · space/session/session.py:264
 - `Session.practices` `-> PracticeSessionOutput(name, session)` creates one per practice, kept by key · space/session/session.py:265
-- `PracticeSessionOutput.graph` `-> Graph.of_practice(repo_path, name, folder)` loads the practice's graph once · space/session/practice_session_output.py:111
+- `PracticeSessionOutput.graph` `-> Graph.of_practice(repo_path, name, folder)` loads the practice's graph once · space/session/practices/practice_session_output.py:111
 - `Graph.of_practice` `-> Graph.load_working_copy` · harness/graph/graph.py:1013
 - `Graph._build_working_copy` `-> Graph.practice(name) -> PracticeGraph(name)` creates the practice's node store, keyed by the practice name · harness/graph/graph.py:1055
 - `Graph._build_working_copy` `-> WorkingCopy(graph).fill` · harness/graph/graph.py:1192
@@ -1311,62 +1311,62 @@ No class of this module acts on another class of the model at run time.
 ## PracticeSessionOutput
 
 - `PracticeSessionOutput.load`
-  - `-> Session.from_file` loads · space/session/practice_session_output.py:64
+  - `-> Session.from_file` loads · space/session/practices/practice_session_output.py:64
   - `<- PracticeSessionOutput`
 - `PracticeSessionOutput.session_file`
-  - `-> Session.session_file_from_project` reads session file from project of · space/session/practice_session_output.py:79
+  - `-> Session.session_file_from_project` reads session file from project of · space/session/practices/practice_session_output.py:79
 - `PracticeSessionOutput.guideline`
-  - `-> PracticeCatalogue.create` loads · space/session/practice_session_output.py:86
-  - `-> PracticeGuidance.work_in` calls work_in on · space/session/practice_session_output.py:93
+  - `-> PracticeCatalogue.create` loads · space/session/practices/practice_session_output.py:86
+  - `-> PracticeGuidance.work_in` calls work_in on · space/session/practices/practice_session_output.py:93
   - `<- PracticeGuidance`
 - `PracticeSessionOutput.fidelities`
-  - `-> PracticeGuidance.fidelities` reads fidelities of · space/session/practice_session_output.py:103
+  - `-> PracticeGuidance.fidelities` reads fidelities of · space/session/practices/practice_session_output.py:103
   - `<- GuidanceCollection`
 - `PracticeSessionOutput.graph`
-  - `-> Graph.of_practice` loads · space/session/practice_session_output.py:111
-  - `-> Session.repo_path` reads repo path of · space/session/practice_session_output.py:111
+  - `-> Graph.of_practice` loads · space/session/practices/practice_session_output.py:111
+  - `-> Session.repo_path` reads repo path of · space/session/practices/practice_session_output.py:111
   - `<- Graph`
 - `PracticeSessionOutput.root_node_name`
-  - `-> Graph.practices` reads practices of · space/session/practice_session_output.py:118
+  - `-> Graph.practices` reads practices of · space/session/practices/practice_session_output.py:118
 - `PracticeSessionOutput._saved`
-  - `-> Session.fields` reads fields of · space/session/practice_session_output.py:125
+  - `-> Session.fields` reads fields of · space/session/practices/practice_session_output.py:125
 - `PracticeSessionOutput._save`
-  - `-> Session.fields` reads fields of · space/session/practice_session_output.py:128
-  - `-> SessionRecord.save_fields` saves fields · space/session/practice_session_output.py:129
+  - `-> Session.fields` reads fields of · space/session/practices/practice_session_output.py:128
+  - `-> SessionRecord.save_fields` saves fields · space/session/practices/practice_session_output.py:129
 - `PracticeSessionOutput._current_fidelity`
-  - `-> PracticeGuidance.fidelities` reads fidelities of · space/session/practice_session_output.py:147
+  - `-> PracticeGuidance.fidelities` reads fidelities of · space/session/practices/practice_session_output.py:147
 - `PracticeSessionOutput.working_format`
-  - `-> PracticeGuidance.format` reads format of · space/session/practice_session_output.py:158
+  - `-> PracticeGuidance.format` reads format of · space/session/practices/practice_session_output.py:158
 - `PracticeSessionOutput.log_validation`
-  - `-> Session.log` reads log of · space/session/practice_session_output.py:178
+  - `-> Session.log` reads log of · space/session/practices/practice_session_output.py:178
 - `PracticeSessionOutput._chosen_outputs`
-  - `-> Session.fields` reads fields of · space/session/practice_session_output.py:184
+  - `-> Session.fields` reads fields of · space/session/practices/practice_session_output.py:184
 - `PracticeSessionOutput._save_chosen_outputs`
-  - `-> Session.fields` reads fields of · space/session/practice_session_output.py:187
-  - `-> SessionRecord.save_fields` saves fields · space/session/practice_session_output.py:188
+  - `-> Session.fields` reads fields of · space/session/practices/practice_session_output.py:187
+  - `-> SessionRecord.save_fields` saves fields · space/session/practices/practice_session_output.py:188
 - `PracticeSessionOutput._chosen_or_configured_root`
-  - `-> ContextConfig().practice_folder` creates · space/session/practice_session_output.py:194
-  - `-> ContextConfig()` creates · space/session/practice_session_output.py:194
-  - `-> Session.repo_path` reads repo path of · space/session/practice_session_output.py:194
+  - `-> ContextConfig().practice_folder` creates · space/session/practices/practice_session_output.py:194
+  - `-> ContextConfig()` creates · space/session/practices/practice_session_output.py:194
+  - `-> Session.repo_path` reads repo path of · space/session/practices/practice_session_output.py:194
 - `PracticeSessionOutput.folder`
-  - `-> PracticeGuidance.default_workspace_folder` reads default workspace folder of · space/session/practice_session_output.py:200
-  - `-> Session.root` reads root of · space/session/practice_session_output.py:201
+  - `-> PracticeGuidance.default_workspace_folder` reads default workspace folder of · space/session/practices/practice_session_output.py:200
+  - `-> Session.root` reads root of · space/session/practices/practice_session_output.py:201
 - `PracticeSessionOutput.output_root`
-  - `-> Session.root` reads root of · space/session/practice_session_output.py:208
+  - `-> Session.root` reads root of · space/session/practices/practice_session_output.py:208
 - `PracticeSessionOutput.root`
-  - `-> SessionPaths.from_project` loads · space/session/practice_session_output.py:215
+  - `-> SessionPaths.from_project` loads · space/session/practices/practice_session_output.py:215
 - `PracticeSessionOutput.choose_root`
-  - `-> Session.repo_path` reads repo path of · space/session/practice_session_output.py:228
+  - `-> Session.repo_path` reads repo path of · space/session/practices/practice_session_output.py:228
   - `<- PracticeSessionOutput`
 - `PracticeSessionOutput.keep_root`
-  - `-> Session.root` reads root of · space/session/practice_session_output.py:237
+  - `-> Session.root` reads root of · space/session/practices/practice_session_output.py:237
 
 ## SessionDiagnostics
 
 - `SessionDiagnostics.__init__`
-  - `-> ToolCall()` creates · space/session/session_diagnostics.py:19
+  - `-> ToolCall()` creates · cdd_guidance/diagnostics/session_diagnostics.py:19
 - `SessionDiagnostics.session_diagnostics`
-  - `-> Installer()` creates · space/session/session_diagnostics.py:36
+  - `-> Installer()` creates · cdd_guidance/diagnostics/session_diagnostics.py:36
 
 # space/kanban
 

@@ -17,33 +17,31 @@ from harness.installation.files import command, skill
 from harness.mcp.mcp_annotations import long_call, mcp
 from harness.installation.context_config import CONTEXT_FOLDER, ContextConfig
 from space.repo.repo import Repo
-from space.session.accepted_violations import ACCEPTED_VIOLATIONS_FILE, AcceptedViolations
 from space.session.chat_injections import ChatInjections
 from space.session.decision_records import FORMAT_FILE, DecisionRecords
-from space.session.file_manager import FileEntry, FileText
+from space.session.files.file_manager import FileEntry, FileText
+from space.session.files.file_view_filter import FileViewFilter
+from space.session.files.session_explorer import SessionExplorer
+from space.session.files.session_file import RuleReads, SessionFile
+from space.session.files.session_files import SessionFiles
 from space.session.handoffs import HANDOFF_FORMAT_FILE, Handoffs
 from space.session.idea_file import IdeaFile
-from space.session.practice_session_output import PracticeSessionOutput
-from space.session.session_practices import SessionPractices
-from space.session.progress_cache import ProgressCache
-from space.session.session_graph import SessionGraph
-from space.session.format_alignment import SessionAlignmentTools
-from space.session.guidance_selection import GuidanceSelection, SelectionPart
-from space.session.file_view_filter import FileViewFilter
-from space.session.session_file import RuleReads, SessionFile
-from space.session.session_explorer import SessionExplorer
-from space.session.session_files import SessionFiles
+from space.session.practices.guidance_selection import GuidanceSelection, SelectionPart
+from space.session.practices.practice_session_output import PracticeSessionOutput
+from space.session.practices.session_practices import SessionPractices
+from space.session.session_checkout import SessionCheckout
 from space.session.session_folder import COMPLETE_FOLDER, SessionFolder
+from space.session.session_graph import SessionGraph
 from space.session.session_hierarchy import SessionHierarchy
 from space.session.session_log import SessionLog
 from space.session.session_paths import SessionPaths
-from space.session.session_checkout import SessionCheckout
 from space.session.session_record import SESSION_FILE, SessionRecord
+from space.session.validation.accepted_violations import ACCEPTED_VIOLATIONS_FILE, AcceptedViolations
 from space.work_state import SESSIONS_FOLDER
 
 if TYPE_CHECKING:
     # Named only for typing: a toolset the module holds at run time would be published again as this toolset's tools.
-    from space.session.file_comments import FileComments
+    from space.session.files.file_comments import FileComments
     from space.session.sessions import Sessions
 
 MAIN_SESSION_NAME = "main"
@@ -336,7 +334,7 @@ class SessionDecisionTools:
 @identity("session_file")
 @language_adapter(language="typescript")
 @agent_toolset
-class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAlignmentTools, SessionLogTools, SessionDecisionTools):
+class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionLogTools, SessionDecisionTools):
     """One named piece of work in a project. Its record, the session.json the board reads, is kept on main in
     ``.sessions/{name}/`` (``record_folder``); everything else it writes goes to its work folder, the same folder in its
     ticket's worktree when it has one (``work_folder``). It holds where it works, the practices it
@@ -374,8 +372,6 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
         self.guidance = GuidanceSelection(self)
         self.decision_records = DecisionRecords(self.work_root / CONTEXT_FOLDER / _DECISION_RECORDS_FOLDER)
         self.handoffs: Handoffs | None = None
-        # What a board read costs most to work out for each of its fidelities, kept in its folder between reads.
-        self.progress_cache = ProgressCache(None)
         self.log = SessionLog(self)
         self.session_files = SessionFiles(self)
         self.chat_injections = ChatInjections(self)
@@ -467,13 +463,12 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
 
     @work_folder.setter
     def work_folder(self, folder: Path | None) -> None:
-        """Write the session's work in folder from now on. Its handoffs, progress cache, and graph were kept in the old
-        one, so they are made again in the new one."""
+        """Write the session's work in folder from now on. Its handoffs and graph were kept in the old one, so they are
+        made again in the new one."""
         if folder == self._work_folder:
             return
         self._work_folder = folder
         self.handoffs = Handoffs(folder) if folder is not None else None
-        self.progress_cache = ProgressCache(folder)
         self._forget_practices()
 
     def _forget_practices(self) -> None:
@@ -721,6 +716,6 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionAl
     @property
     def file_comments(self) -> FileComments:
         """The comments a person wrote on this session's files, kept in its folder."""
-        from space.session.file_comments import FileComments
+        from space.session.files.file_comments import FileComments
 
         return FileComments(self)

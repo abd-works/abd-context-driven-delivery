@@ -583,7 +583,7 @@ Observed: Fix sends the chat the rule, the error at its file and line, and the c
 
 #### (S) Person --> [Accept Report Violation](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-accept-report-violation)
 
-Requested (2026-11-21, "we need a way to accept violations so we dont see them again if we click accept; a simple violations accepted json which match acceptances to node id; ignore these exact same on subsequent passes"). Built (2026-11-21): Accept beside Fix and False on the board's report keeps the acceptance in the project's `.context/violations-accepted.json` by the violation's rule, the id of its node and its message (`space/session/accepted_violations.py` *AcceptedViolations*); that violation is left out of every later report, count and validation while it stays the same, and Take back shows it again. The Files app and the Graph app still mark an accepted violation.
+Requested (2026-11-21, "we need a way to accept violations so we dont see them again if we click accept; a simple violations accepted json which match acceptances to node id; ignore these exact same on subsequent passes"). Built (2026-11-21): Accept beside Fix and False on the board's report keeps the acceptance in the project's `.context/violations-accepted.json` by the violation's rule, the id of its node and its message (`space/session/validation/accepted_violations.py` *AcceptedViolations*); that violation is left out of every later report, count and validation while it stays the same, and Take back shows it again. The Files app and the Graph app still mark an accepted violation.
 
 #### (S) Board App --> [Display Violations Band](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/validate-fidelity-outputs-on-board/validate_fidelity_outputs_on_board_story.test.md#story-display-violations-band)
 
@@ -1309,7 +1309,7 @@ Requested (2026-11-16, "observes and invokes do not reach the Python code; teste
 
 ### (S) Files App --> [Filter Callouts Like The Graph](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-callouts-like-the-graph)
 
-Requested (2026-11-20, "callout filtering should be done exactly the same way knowledge graph filtering is done"). Built (2026-11-20): the session answers only the callouts the file view's filters show: the files listed for the stages, practices and formats chosen, and the graph view's node filter, decided in Python by the graph's own filter (`space/session/file_view_filter.py` *FileViewFilter*); the page sends its filters with `session.file` and draws what comes back.
+Requested (2026-11-20, "callout filtering should be done exactly the same way knowledge graph filtering is done"). Built (2026-11-20): the session answers only the callouts the file view's filters show: the files listed for the stages, practices and formats chosen, and the graph view's node filter, decided in Python by the graph's own filter (`space/session/files/file_view_filter.py` *FileViewFilter*); the page sends its filters with `session.file` and draws what comes back.
 
 ## (E) Explore Graph In Files App
 
@@ -1383,7 +1383,7 @@ Requested (2026-11-06, "default is to have a graph and just read the violations"
 
 ### (S) Person --> [Diagnose And Align Session Formats](../story_tests/review-generated-work-in-file-viewer/align-formats-in-files-app/align_formats_in_files_app_story.test.md#story-diagnose-and-align-session-formats)
 
-Requested (2026-11-20, "we need a diagnose and align button that goes on context viewer through graph and selected stages, fidelities, formats and determines gaps and then syncs, failures can be fixed; check graphs for alignment; check callouts match"). Built (2026-11-20): Diagnose goes through the session's selected stages, practices and chosen formats and its graph and lists each gap in plain words: a chosen format with no file, formats of one document whose graph readings differ, callouts that match no edge (`session.diagnose_alignment`). Align renders the format that lacks from the one that holds more through the Render action; formats that conflict wait for the person; each failure can be sent to be fixed (`session.align_formats`).
+Requested (2026-11-20, "we need a diagnose and align button that goes on context viewer through graph and selected stages, fidelities, formats and determines gaps and then syncs, failures can be fixed; check graphs for alignment; check callouts match"). Built (2026-11-20): Diagnose goes through the session's selected stages, practices and chosen formats and its graph and lists each gap in plain words: a chosen format with no file, formats of one document whose graph readings differ, callouts that match no edge (`format-alignment.diagnose_alignment`). Align renders the format that lacks from the one that holds more through the Render action; formats that conflict wait for the person; each failure can be sent to be fixed (`format-alignment.align_formats`).
 
 # (E) Author Story Maps
 

@@ -1,5 +1,6 @@
 """Specs for the session log reading a loop back with the chat each line came from."""
 import json
+import shutil
 import sys
 import tempfile
 from datetime import datetime, timedelta, timezone
@@ -18,9 +19,10 @@ from harness.mcp.mcp_server import ProjectToolsets
 from space.session.session import Session
 from harness.process.capped_log_file import LOG_SIZE_LIMIT_BYTES
 from harness.agent_tools.chat_pointer import ChatPointer
-from space.session.session_log import LogLine, LogTimestamp
-from space.session.sessions import Sessions
-from space.session.throwaway_project import ExampleHome
+from harness.process.log_timestamp import LogTimestamp
+from space.session.session_log import LogLine
+from space.session.sessions import SERVED_SESSIONS, Sessions
+from space.session.spec_support.throwaway_project import ExampleHome
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
@@ -94,19 +96,28 @@ with description("a session loop"):
             (self.repo / ".git").mkdir()
             (self.repo / "docs").mkdir()
             for chat in ("chat-1", "chat-2"):
-                Sessions(self.repo).switch("alpha", self.repo, ToolCall.sent({"conversation_id": chat}, self.repo))
-            self.session = ToolCall.sent({"conversation_id": "chat-1"}, self.repo).session
+                Sessions.of_project(self.repo).switch("alpha", self.repo, self.call_from(chat, self.repo))
+            self.session = self.call_from("chat-1", self.repo).session
+
+        # The process lets go of the checkout's sessions, so a run of many examples does not keep each one's.
+        with after.each:
+            SERVED_SESSIONS.forget_under(self.repo)
+            shutil.rmtree(self.repo, ignore_errors=True)
 
         with it("should be the session object a call naming the checkout's top reads"):
-            inside = ToolCall.sent({"conversation_id": "chat-2"}, self.repo / "docs").session
+            inside = self.call_from("chat-2", self.repo / "docs").session
             expect(inside is self.session).to(equal(True))
 
         with it("should be the session object a board command naming its session.json with no project reads"):
-            named = ToolCall.sent({"conversation_id": "chat-3"}, None).session_named(str(self.repo / ".sessions" / "alpha" / "session.json"))
+            named = self.call_from("chat-3", None).session_named(str(self.repo / ".sessions" / "alpha" / "session.json"))
             expect(named is self.session).to(equal(True))
 
         with it("should be held by one sessions object for the checkout"):
             expect(Sessions.of_project(self.repo / "docs") is Sessions.of_project(self.repo)).to(equal(True))
+
+        def call_from(self, chat: str, project: Path | None) -> ToolCall:
+            """A call from chat, naming its transcript, so the call never searches the Claude projects folder for it."""
+            return ToolCall.sent({"conversation_id": chat, "transcript_path": str(self.repo / f"{chat}.jsonl")}, project)
 
     with context("whose practice a call reaches"):
         with it("should be the practice's own session, the one the call opened"):

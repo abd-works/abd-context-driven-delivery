@@ -6,7 +6,7 @@ from typing import Any
 
 from expects import be_true, equal, expect
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _AGENT_BDD_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _AGENT_BDD_DIR.parents[2]

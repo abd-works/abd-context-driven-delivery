@@ -7,17 +7,17 @@ section: body
 
 # Epic: Align Formats In Files App
 
-Map: [story-map.md](../../../.context/story-map.md#e-align-formats-in-files-app). Acceptance tests: `space/session/format_alignment_heavy_spec.py` for what the session answers on a real project, in process and through the cdd server; `space/session/format_alignment_spec.py` for the rules one object decides; `harness/files_app/app/files/format-alignment.spec.ts` for what only the page shows; `align-formats-in-files-app.story.ui_e2e_spec.py` beside this file for the page on its real server.
+Map: [story-map.md](../../../.context/story-map.md#e-align-formats-in-files-app). Acceptance tests: `cdd_guidance/align/format_alignment_heavy_spec.py` for what the session answers on a real project, in process and through the cdd server; `cdd_guidance/align/format_alignment_spec.py` for the rules one object decides; `harness/files_app/app/files/format-alignment.spec.ts` for what only the page shows; `align-formats-in-files-app.story.ui_e2e_spec.py` beside this file for the page on its real server.
 
 ### Domain terms
 
-- guidance selection: the stages and practices a session has selected and the formats chosen for each fidelity they cover (`space/session/guidance_selection.py` *GuidanceSelection*).
+- guidance selection: the stages and practices a session has selected and the formats chosen for each fidelity they cover (`space/session/practices/guidance_selection.py` *GuidanceSelection*).
 - chosen format: a format a person or an action chose for a fidelity in the session, such as the story map's markdown, drawio and whiteboard (`FidelitySessionOutput.chosen_formats`).
 - document: one piece of a fidelity's work as the file each chosen format writes it to, such as `.context/story-map.md`, `.context/story-map.drawio` and `.context/story-map.whiteboard`, which the fidelity declares beside one another.
-- graph reading: the nodes and edges the knowledge graph reads from one file, each node by its type and name, each edge by its kind and the two nodes it joins (`space/session/format_alignment.py` *GraphReading*). A format the graph does not read itself is first rendered into the fidelity's leading format.
+- graph reading: the nodes and edges the knowledge graph reads from one file, each node by its type and name, each edge by its kind and the two nodes it joins (`cdd_guidance/align/format_alignment.py` *GraphReading*). A format the graph does not read itself is first rendered into the fidelity's leading format.
 - gap: one thing a diagnosis found, in plain words, with its kind, its file, and the file it is aligned from when a render closes it (*AlignmentGap*).
-- diagnosis: every gap of a session, and the fidelities checked (*AlignmentDiagnosis*, `session.diagnose_alignment`).
-- alignment: the renders that close the gaps a render can close, each file rendered, each failure met, and the diagnosis afterwards (*AlignmentResult*, `session.align_formats`).
+- diagnosis: every gap of a session, and the fidelities checked (*AlignmentDiagnosis*, `format-alignment.diagnose_alignment`).
+- alignment: the renders that close the gaps a render can close, each file rendered, each failure met, and the diagnosis afterwards (*AlignmentResult*, `format-alignment.align_formats`).
 - failure: a render the alignment could not make, answered as its kind, the file it was writing, and what the render said (*AlignmentFailure*).
 - callout: what a link to a heading of another file opens in place under its line (`session.file` callouts).
 
@@ -25,7 +25,7 @@ Map: [story-map.md](../../../.context/story-map.md#e-align-formats-in-files-app)
 
 Requested 2026-11-20, the person: "we need a diagnose and align button that goes on context viewer through graph and selected stages, fidelities, formats and determines gaps and then syncs, failures can be fixed; check graphs for alignment; check callouts match".
 
-Decided in the code, since the request leaves it open (`space/session/format_alignment.py`): a missing file is rendered from the fidelity's leading format, its first chosen document format; a file that lacks what another holds is rendered from the one that holds more; two files that each hold something the other lacks are a person's decision, and while they conflict no file of that document is rendered.
+Decided in the code, since the request leaves it open (`cdd_guidance/align/format_alignment.py`): a missing file is rendered from the fidelity's leading format, its first chosen document format; a file that lacks what another holds is rendered from the one that holds more; two files that each hold something the other lacks are a person's decision, and while they conflict no file of that document is rendered.
 
 ##### Example: fill-cart
 

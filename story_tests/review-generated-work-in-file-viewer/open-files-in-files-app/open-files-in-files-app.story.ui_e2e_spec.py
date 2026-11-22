@@ -15,8 +15,8 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from files_app_browser import BOARD_LINK, BOARD_STORY, DESIGN_REVIEW, NBSP, SHOWN_MILLISECONDS, WHITEBOARD, FilesStack, all_session_files
-from space.session.graph_view_examples import BOARD_CODE, BOARD_TEXT, CHECKOUT_FLOW
-from space.session.session_file import VIEWER_SHOWS_LINES
+from space.kanban.graph_view_examples import BOARD_CODE, BOARD_TEXT, CHECKOUT_FLOW
+from space.session.files.session_file import VIEWER_SHOWS_LINES
 
 FIDELITIES = "ux-mockup,stories-story-map"
 CODE_FIDELITIES = "stories-acceptance-tests,clean-engineering-code"

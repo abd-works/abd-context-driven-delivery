@@ -18,7 +18,7 @@ from mamba import after, before, context, description, it
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph, NamedToCheck
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 _FIXTURES = Path(__file__).resolve().with_name("fixtures")
 _SAVED_GRAPH = _FIXTURES / "saved-graph" / ".context" / "graph.json"

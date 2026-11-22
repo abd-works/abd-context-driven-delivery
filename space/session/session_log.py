@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import re
 import traceback
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
 
 from harness.agent_tools.chat_pointer import NO_CHAT, ChatPointer
 from harness.process.capped_log_file import CappedLogFile
+from harness.process.log_timestamp import LogTimestamp
 from space.work_state import SESSIONS_FOLDER
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
     from harness.guidance.rule import RulesCollection
-    from space.session.practice_session_output import FidelitySessionOutput
+    from space.session.practices.practice_session_output import FidelitySessionOutput
     from space.session.session import Session
 
 LOG_FILE = "session.log"
@@ -25,10 +25,6 @@ _INSTRUCTIONS_FILE = Path(__file__).parent / "SESSION-LOG.md"
 # The rules a hook gave the agent since the last log line. The hook server notes them and the cdd server writes the next
 # line, so they wait in the session's work folder rather than in either process.
 _INJECTED_RULES_FILE = "injected-rules.txt"
-_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
-# The second, in UTC, that the name of a validation report or a handoff ends with, written so names sort by time:
-# ``clean-engineering-code-20261116T075749.md``.
-REPORT_DATE_FORMAT = "%Y%m%dT%H%M%S"
 # The verb of the line a tool call writes first, naming the tool: every line that call writes follows it.
 _TOOL_VERB = "tool"
 # The verb of the marker line that starts a loop: ``--- N``.
@@ -44,27 +40,6 @@ class LoopNotFoundError(LookupError):
         super().__init__(detail)
         self.asked = asked
         self.highest_marked = highest_marked
-
-
-class LogTimestamp:
-    """The time a session log line, a hook log entry, or a toast is stamped with: a moment in UTC, to the second, such
-    as ``2026-11-07T17:30:05Z``. Every log a session keeps writes its times this one way, so their lines sort and compare
-    alike."""
-
-    def __init__(self, moment: datetime) -> None:
-        self.moment = moment.astimezone(timezone.utc).replace(microsecond=0)
-
-    @classmethod
-    def now(cls) -> LogTimestamp:
-        return cls(datetime.now(timezone.utc))
-
-    @classmethod
-    def read(cls, text: str) -> LogTimestamp:
-        """The timestamp text names, as a log wrote it; raises ``ValueError`` for text that names no time."""
-        return cls(datetime.strptime(text.strip(), _TIMESTAMP_FORMAT).replace(tzinfo=timezone.utc))
-
-    def __str__(self) -> str:
-        return self.moment.strftime(_TIMESTAMP_FORMAT)
 
 
 class HookLog:

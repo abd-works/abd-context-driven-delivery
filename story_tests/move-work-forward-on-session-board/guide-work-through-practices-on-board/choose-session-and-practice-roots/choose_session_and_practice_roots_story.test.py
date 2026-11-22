@@ -3,9 +3,9 @@ from __future__ import annotations
 from expects import contain, equal, expect, raise_error
 
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
-from space.session.practice_session_output import OutputRootRefused
+from space.session.practices.practice_session_output import OutputRootRefused
 from space.session.session import Session
-from space.session.session_roots_examples import (
+from space.session.spec_support.session_roots_examples import (
     PAYMENT_CODE,
     PAYMENT_DOMAIN,
     PLACE_ORDER_STORIES,

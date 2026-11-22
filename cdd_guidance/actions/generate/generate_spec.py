@@ -25,7 +25,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 )
 from harness.mcp.mcp_server import ProjectToolsets
 from space.session import Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns a session can overlay
 
 

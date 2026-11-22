@@ -310,6 +310,27 @@ A server was started but did not answer within its wait.
 + daemon: ServerDaemon
 ----
 
+## ServedAnswers
+
+The answers the process gives from one checkout's sessions (`answer_reads.py`): none until *CallSessions* begins one.
+
++ ServedAnswers()
+------
++ current: int | None
+----
++ begin(): None
+
+## LogTimestamp
+
+The time a session log line, a hook log entry, or a toast is stamped with: a moment in UTC, to the second, such as `2026-11-07T17:30:05Z`, so every log's lines sort and compare alike.
+
++ LogTimestamp(moment: datetime)
+------
++ moment: datetime
+----
++ now(): LogTimestamp
++ read(text: str): LogTimestamp
+
 # harness/git
 
 *Git* runs every git command in one folder with the same time limits and errors.
@@ -3670,8 +3691,8 @@ Git refused to merge one branch into the branch a checkout has checked out, such
 A *Session* is one named piece of work in `.sessions/{name}/`; *Sessions* are all of a checkout's sessions; its *SessionLog* records each action, a *PracticeSessionOutput* is what one practice has in it, and its *FileManager* lists and reads the files under its roots.
 
 - **Purpose:** Keep the state of one piece of work — where it works, which practices it uses and where they write, the files it works with, the log of what was done, the handoff the next agent resumes from, and the reasons behind hard-to-reverse choices — so any chat or tool can pick the work up from its folder.
-- **Seam (terms):** Sessions, Session, BoardPractices, CallSessions, SessionLog, ChatLog, LogLine, LogTimestamp, HookLog, PracticeSessionOutput, FidelitySessionOutput, FileManager, FileEntry, FileText, PathOutsideRootsError, ThrowawayProject, SessionDiagnostics, SessionsRead, OutputRootRefused, FileTooLongToShowError, SessionFolderHeldError
-- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/graph, harness/diagnostics, harness/catalog_generator, harness/git, space/work_state, space/repo, cdd_guidance/actions (the session diagnostics probe runs Generate and Validate)
+- **Seam (terms):** Sessions, Session, CallSessions, SessionLog, ChatLog, LogLine, HookLog, SessionsRead, SessionFolderHeldError
+- **Dependencies (one-way):** space/session/practices, space/session/files, space/session/validation, harness/process, harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/graph, harness/chat, harness/git, space/work_state, space/repo
 
 ## Sessions
 
@@ -3687,7 +3708,6 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 + << composition >> listing: SessionListing
 + << composition >> held: HeldSessions
 + << composition >> answers: ServedAnswers
-+ << composition >> board_practices: BoardPractices
 + << composition >> file_manager: FileManager
 ----
 + of_project(project: Path): Sessions
@@ -3790,29 +3810,6 @@ One switch of a chat to a session: the session opened, what the modules listenin
 + default_roots: list[str]
 + instructions: str
 	-> SessionLog.instructions
-
-## ServedAnswers
-
-The answers the process gives from one checkout's sessions (`answer_reads.py`): none until *CallSessions* begins one.
-
-+ ServedAnswers()
-------
-+ current: int | None
-----
-+ begin(): None
-
-## BoardPractices
-
-The practices a checkout's session board works through, each as the catalog shows it, made once for the checkout and kept by its *Sessions*.
-
-+ BoardPractices(catalogued: list[CatalogPractice])
-------
-+ << aggregation >> catalogued: list[CatalogPractice]
-----
-+ of(kind: type): CatalogPractice
-+ works_through(kind: type): bool
-+ keyed(key: str): CatalogPractice
----<<raises>>--> PracticeNotFoundError
 
 ## CallSessions
 
@@ -3937,22 +3934,6 @@ Mixed into *Session*: the published tools that list, read, and write a session's
 + file(path: str, rules: bool = False, cross_file: bool = False): SessionFile
 + add_to_chat_context(chat: str, path: str, start_line: int = 0, end_line: int = 0): Chat
 
-## SessionExplorer
-
-Mixed into *Session*: the published graph tools a page browsing the session's files calls, each reading the session's graph itself.
-
-----
-+ graph_trees(paths: list[str], call: ToolCall | None = None): list[ExplorerEntry]
-	-> SessionPaths.in_project
-	-> Graph.load_files
-	-> Graph.explorer_trees
-+ graph_branch(node_id: str, paths: list[str]): ExplorerEntry | None
-	-> Graph.explorer_branch
-+ graph_node_ranges(node_id: str, paths: list[str]): list[Range]
-	-> NodeSpans.collect
-+ graph_members(): list[NodeSource]
-	-> Graph.source_members
-
 ## SessionGuidanceTools
 
 Mixed into *Session*: the published tools that read and change its guidance selection, which the session holds (`session.guidance`, a *GuidanceSelection* that changes itself and raises its own version).
@@ -4076,17 +4057,6 @@ One line of a session log, which writes and reads itself: `<time> <verb> <words.
 ---<<reads practice guidance of>>--> FidelityGuidance
 ---<<reads name of>>--> FidelityGuidance
 
-## LogTimestamp
-
-The time a session log line, a hook log entry, or a toast is stamped with: a moment in UTC, to the second, such as `2026-11-07T17:30:05Z`, so every log's lines sort and compare alike.
-
-+ LogTimestamp(moment: datetime)
-------
-+ moment: datetime
-----
-+ now(): LogTimestamp
-+ read(text: str): LogTimestamp
-
 ## HookLog
 
 A log a hook appends to while a session is open, such as `dispatch.debug` or the prompt log, in the `logs` folder of the session's work folder.
@@ -4098,6 +4068,23 @@ A log a hook appends to while a session is open, such as `dispatch.debug` or the
 + append(text: str): None
 + stamped(line: str): None
 ---<<stamps lines with>>--> LogTimestamp
+
+## SessionFolderHeldError : RuntimeError
+
+A session's record folder cannot be removed because a running program holds it open. Nothing in the folder was deleted; it names the folder.
+
++ SessionFolderHeldError(folder: Path)
+------
++ folder: Path
+----
+
+# space/session/practices
+
+What each practice and fidelity has in a session, and the guidance selection a page shows: the session's core makes these and holds them.
+
+- **Purpose:** Keep what each practice and each of its fidelities has in one session, where it writes, which files it declares and holds there, and the guidance selection a page shows and acts on.
+- **Seam (terms):** PracticeSessionOutput, FidelitySessionOutput, WrittenFiles, ProposedRoots, SessionPractices, GuidanceSelection, FileListing, OutputRootRefused
+- **Dependencies (one-way):** space/session/files, space/session/validation, harness/process, harness/guidance, harness/agent_tools, harness/installation, harness/mcp, harness/markdown, harness/design_canvas, harness/whiteboard
 
 ## PracticeSessionOutput
 
@@ -4182,6 +4169,39 @@ The files one fidelity writes in a session (`session_output.written`): where it 
 ---<<matches declared paths with>>--> DeclaredFile
 ---<<lists the declared files as>>--> FileEntry
 
+## OutputRootRefused : ValueError
+
+A path was chosen as the root a practice or a fidelity writes under that names no folder: an empty path, or a file.
+
++ OutputRootRefused(path: str, reason: str)
+------
++ path: str
+----
+
+# space/session/files
+
+The files a session works with, as its pages list, read, show, and comment on them; the session's core makes these and mixes *SessionExplorer* into *Session*.
+
+- **Purpose:** List, read, save, show, and comment on the files a session works with, without letting a call reach a file outside the session's roots.
+- **Seam (terms):** SessionFiles, FileManager, FileEntry, FileText, PathOutsideRootsError, SessionFile, FileTooLongToShowError, FileComments, SessionExplorer
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp, harness/chat, harness/graph, harness/markdown, harness/git
+
+## SessionExplorer
+
+Mixed into *Session*: the published graph tools a page browsing the session's files calls, each reading the session's graph itself.
+
+----
++ graph_trees(paths: list[str], call: ToolCall | None = None): list[ExplorerEntry]
+	-> SessionPaths.in_project
+	-> Graph.load_files
+	-> Graph.explorer_trees
++ graph_branch(node_id: str, paths: list[str]): ExplorerEntry | None
+	-> Graph.explorer_branch
++ graph_node_ranges(node_id: str, paths: list[str]): list[Range]
+	-> NodeSpans.collect
++ graph_members(): list[NodeSource]
+	-> Graph.source_members
+
 ## FileManager
 
 List and read the files under a session's roots, the folders its practices work in, named from its workpath. Moved here from tools/file_manager.
@@ -4234,15 +4254,6 @@ A path outside every root of the session, which a page may name but never reach.
 ------
 ----
 
-## OutputRootRefused : ValueError
-
-A path was chosen as the root a practice or a fidelity writes under that names no folder: an empty path, or a file.
-
-+ OutputRootRefused(path: str, reason: str)
-------
-+ path: str
-----
-
 ## FileTooLongToShowError : ValueError
 
 The viewer asked for a file longer than it shows, `VIEWER_SHOWS_LINES` (30,000) lines: drawing it would freeze the page.
@@ -4254,14 +4265,13 @@ The viewer asked for a file longer than it shows, `VIEWER_SHOWS_LINES` (30,000) 
 + shown: int
 ----
 
-## SessionFolderHeldError : RuntimeError
+# space/session/spec_support
 
-A session's record folder cannot be removed because a running program holds it open. Nothing in the folder was deleted; it names the folder.
+What a spec works in; only specs import it.
 
-+ SessionFolderHeldError(folder: Path)
-------
-+ folder: Path
-----
+- **Purpose:** Give every spec that runs actions a project and a cdd home of its own.
+- **Seam (terms):** ThrowawayProject, ExampleHome, OPEN_PROJECTS
+- **Dependencies (one-way):** harness/mcp
 
 ## ThrowawayProject
 
@@ -4274,23 +4284,6 @@ An empty project named by `CDD_PROJECT` while a spec runs, so the actions a spec
 ----
 + close_all(): None
 + close(): None
-
-## SessionDiagnostics : CallDiagnostics
-
-Probe session logging (generate, validate, loops, chat pointers). Made for one call, as every diagnostics toolset is, so it writes the report into the install of the project that call names.
-
-------
-----
-+ session_diagnostics(): str
-+ write_to(diagnostics: InstallDiagnostics): str
-	-> SessionProbe.run
----<<writes a section of>>--> InstallDiagnostics
----<<runs>>--> Generate
----<<runs>>--> Validate
----<<annotated with>>--> AgentToolSetAnnotation
----<<annotated with>>--> Mcp
----<<annotated with>>--> Skill
----<<annotated with>>--> Command
 
 # space/kanban
 
@@ -4845,6 +4838,19 @@ A validation report of one fidelity as the board reads it, with the violations o
 ---<<creates>>--> ReportRule
 ---<<creates>>--> Report
 ---<<creates>>--> Violation
+
+## BoardPractices
+
+The practices a checkout's session board works through, each as the catalog shows it, made once for the checkout and kept by its *Sessions*.
+
++ BoardPractices(catalogued: list[CatalogPractice])
+------
++ << aggregation >> catalogued: list[CatalogPractice]
+----
++ of(kind: type): CatalogPractice
++ works_through(kind: type): bool
++ keyed(key: str): CatalogPractice
+---<<raises>>--> PracticeNotFoundError
 
 # tools
 
@@ -6215,3 +6221,29 @@ What turns text into vectors; OpenAI's embedding service by default.
 ----
 + embed_texts(texts: list[str]): list[list[float]]
 + embed_query(text: str): list[float]
+
+
+# cdd_guidance/diagnostics
+
+Diagnostics that run the guidance actions in a probe session.
+
+- **Purpose:** Check, through the live MCP host, that the guidance actions log their work in the session they run in.
+- **Seam (terms):** SessionDiagnostics, SessionProbe
+- **Dependencies (one-way):** cdd_guidance/actions, space/session, harness/agent_tools, harness/diagnostics, harness/installation, harness/mcp
+
+## SessionDiagnostics : CallDiagnostics
+
+Probe session logging (generate, validate, loops, chat pointers). Made for one call, as every diagnostics toolset is, so it writes the report into the install of the project that call names.
+
+------
+----
++ session_diagnostics(): str
++ write_to(diagnostics: InstallDiagnostics): str
+	-> SessionProbe.run
+---<<writes a section of>>--> InstallDiagnostics
+---<<runs>>--> Generate
+---<<runs>>--> Validate
+---<<annotated with>>--> AgentToolSetAnnotation
+---<<annotated with>>--> Mcp
+---<<annotated with>>--> Skill
+---<<annotated with>>--> Command

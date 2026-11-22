@@ -36,7 +36,7 @@ from cdd_guidance.context_setup.context_setup import ContextSetup, ConversionRes
 from cdd_guidance.context_setup.live_app_capture import CaptureResult, PageCapture, ScoutResult, ScreenResult, SmokeTestResult
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────

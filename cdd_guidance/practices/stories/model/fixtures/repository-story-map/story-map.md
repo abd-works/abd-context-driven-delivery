@@ -562,7 +562,7 @@ Intended (`.sessions/_backlog/review-work-in-board-files.md` "session informatio
 
 #### (S) Person --> [View Files In Rich Viewer](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-view-files-in-rich-viewer)
 
-Intended (`.sessions/_backlog/review-work-in-board-files.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type. Requested (2026-11-12, "use the graph app file viewer for this - make this a common component ... with a typed file shape along with typescript monaco viewer that renders"): one Monaco file viewer in `space/`, beside `space/session/file_manager.py`, shared by the board and the graph app, typed on the file manager's `FileText` (`.sessions/review-work-in-board-files/file-viewer-research.md`).
+Intended (`.sessions/_backlog/review-work-in-board-files.md` "integrate with monaco viewer OR native file rendering"): files open in an editor-grade viewer, or rendered as the file type. Requested (2026-11-12, "use the graph app file viewer for this - make this a common component ... with a typed file shape along with typescript monaco viewer that renders"): one Monaco file viewer in `space/`, beside `space/session/files/file_manager.py`, shared by the board and the graph app, typed on the file manager's `FileText` (`.sessions/review-work-in-board-files/file-viewer-research.md`).
 
 #### (S) Person --> [Save Edited File](move-work-forward-on-session-board/work-fidelity-outputs-on-board/review-files-in-viewer/review_files_in_viewer_story.test.md#story-save-edited-file)
 

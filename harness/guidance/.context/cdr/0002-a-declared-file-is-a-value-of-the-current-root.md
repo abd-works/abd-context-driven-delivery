@@ -1,6 +1,6 @@
 # A declared file under a session's root is a value of that root
 
-The round-6 review (harness core, row 10) flagged `FidelitySessionOutput` in `space/session/practice_session_output.py` for making a `DeclaredFile` on each call, and asked that the session output ask `fidelity.declares(path)` instead.
+The round-6 review (harness core, row 10) flagged `FidelitySessionOutput` in `space/session/practices/practice_session_output.py` for making a `DeclaredFile` on each call, and asked that the session output ask `fidelity.declares(path)` instead.
 
 The session output already asks the fidelity whether a found file is one it declares (`_found` calls `fidelity.declared.includes(file, label)`), so matching has one owner: the fidelity's *DeclaredOutputs* (`fidelity.declared`), which holds a `DeclaredFile` for each name its outputs declare, made once.
 

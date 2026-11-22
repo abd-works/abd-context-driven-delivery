@@ -7,7 +7,7 @@ from mamba import after, before, context, description, it
 
 from space.session import Sessions
 from space.session.session_record import SessionFieldOwnedError
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 # Seed: a session.json as a server before the typed record wrote it: a practice's on-switch and formats under
 # ``practices``, its roots and file names apart under ``outputs``, and the checkout's folder it never read.

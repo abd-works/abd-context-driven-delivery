@@ -17,7 +17,7 @@ RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
 from expects import contain, equal, expect, have_key
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 from harness.diagnostics import agent_tools_probe
 from harness.diagnostics.agent_tools_diagnostics import AgentToolsDiagnostics

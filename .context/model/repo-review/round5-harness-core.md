@@ -46,7 +46,7 @@ Many items from round 4 are fixed and are not repeated here. Fixed: AgentToolSet
 | 27 | `harness/annotations/name.py` `Name` (case conversion) sits in the annotations package | 8, 10 | graph (deep-module) + AI | new | Its own small module or `markdown`; annotations keeps only annotation kinds | low |
 | 28 | `harness/agent_tools/sub_agent/` is a one-class package (SubAgentAnnotation) | 8 | AI | new | Fold into `agent_tools.py` beside the other annotations | low |
 | 29 | `harness/process/running_process.py` and `stoppable_process.py`, one class each | 8 | graph (deep-module 7/7) + AI | new | Fold into `process.py` | low |
-| 30 | `harness/installation/bootstrap.py` `repo_root` / `ensure_import_path` free functions wrap `RepositoryToolsets.ensure_import_path` | 1, 11 | AI | new | Callers (`space/session/session_probe.py:32`, two scripts) use RepositoryToolsets | low |
+| 30 | `harness/installation/bootstrap.py` `repo_root` / `ensure_import_path` free functions wrap `RepositoryToolsets.ensure_import_path` | 1, 11 | AI | new | Callers (`cdd_guidance/diagnostics/session_probe.py:32`, two scripts) use RepositoryToolsets | low |
 | 31 | `harness/mcp/mcp_server.py:289-291` `_project_root` knows only `.cursor` and `.claude`; `_drop_cdd_entry` hard-codes `mcpServers` (:229) | 10, 1 | AI | new | Ask IdeLayout (`folder_name`, `mcp_servers_key`) | low |
 | 32 | `harness/markdown/markdown.py:871-881` `markdown()` makes `Markdown.from_label(None, ...)`, a stand-in Markdown only to build a property | 5 | AI | new | A small property factory that holds the label | low |
 | 33 | `ToolSetCollection.name/slug/registration_name` (agent_tools.py:78-89) repeat `AgentToolSetOrigin` (:425-450) | 1 | AI | new | ToolSetCollection derives from AgentToolSetOrigin | low |

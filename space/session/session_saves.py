@@ -5,19 +5,17 @@ import logging
 import threading
 import time
 from pathlib import Path
+from typing import ClassVar
 
 from harness.installation.data_class import data_field
 from harness.git.git import RepoConnectError
 from space.repo.repo import Repo
-from space.session.progress_cache import PROGRESS_CACHE_FILE
 
 logger = logging.getLogger(__name__)
 
 # How long a queued save waits before it commits, so every file one change writes, such as a ticket's folder moved to
 # the Backlog and then its item file, goes into the one commit. Also how often it looks again while a merge is going on.
 SETTLE_SECONDS = 0.5
-# The line in the session folders' .gitignore that keeps every session's progress cache out of the saves.
-_IGNORED_CACHES = f"**/{PROGRESS_CACHE_FILE}"
 
 
 class SaveFailure:
@@ -49,6 +47,17 @@ class SessionSaves:
     A save git refuses is kept as the failure, which the board shows with a way to save again; the next save that
     succeeds clears it. Work that needs main committed before it goes on, such as opening a ticket's worktree, saves
     ``now``, which waits for the queued saves and makes its own in the caller's thread."""
+
+    # The files in the session folders that no save commits, each a .gitignore pattern a module that writes such a file
+    # registers when it is imported (``leave_out``), such as the board's progress caches, which are worked out again
+    # wherever they are missing. The saves name none of them themselves.
+    _left_out: ClassVar[list[str]] = []
+
+    @classmethod
+    def leave_out(cls, pattern: str) -> None:
+        """Leave every file pattern names, a .gitignore pattern such as ``**/progress-cache.json``, out of every save."""
+        if pattern not in cls._left_out:
+            cls._left_out.append(pattern)
 
     def __init__(self, repository: Repo, folder: Path, settle_seconds: float = SETTLE_SECONDS) -> None:
         self._repository = repository
@@ -127,7 +136,7 @@ class SessionSaves:
         repository = self._repository
         if not repository.is_clone or not self._folder.is_dir() or repository.current_branch != repository.default_branch:
             return
-        self._keep_caches_out()
+        self._keep_left_out()
         if repository.working_tree.is_dirty(self._folder):
             repository.working_tree.commit([str(self._folder)], "\n".join(changes), untracked=True)
             self._is_unpushed = True
@@ -136,15 +145,16 @@ class SessionSaves:
         self._is_unpushed = False
         self._failure = None
 
-    def _keep_caches_out(self) -> None:
-        """List the board's progress caches in the session folders' own .gitignore, so a save never commits one, in a
-        project whose own .gitignore does not name them: a cache is worked out again wherever it is missing."""
+    def _keep_left_out(self) -> None:
+        """List each file the saves leave out (``leave_out``) in the session folders' own .gitignore, so a save never
+        commits one, in a project whose own .gitignore does not name it."""
         ignore = self._folder / ".gitignore"
         written = ignore.read_text(encoding="utf-8") if ignore.is_file() else ""
-        if _IGNORED_CACHES in written.splitlines():
+        missing = [pattern for pattern in self._left_out if pattern not in written.splitlines()]
+        if not missing:
             return
         lead = "" if not written or written.endswith("\n") else "\n"
-        ignore.write_text(f"{written}{lead}{_IGNORED_CACHES}\n", encoding="utf-8")
+        ignore.write_text(written + lead + "".join(f"{pattern}\n" for pattern in missing), encoding="utf-8")
 
 
 class _ServedSaves:

@@ -17,7 +17,7 @@ from mamba import after, before, context, description, it
 from cdd_guidance.actions.diagnose.diagnose import Diagnose
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.agent_tools import SUB_AGENT_CALLER_PREAMBLE, SubAgentAnnotation
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 
 def diagnose_tool():

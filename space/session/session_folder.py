@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from space.repo.repo import Repo
 from space.session.session_log import HookLog
-from space.session.violation_history import VIOLATION_HISTORY_FILE, ViolationHistory
+from space.session.validation.violation_history import VIOLATION_HISTORY_FILE, ViolationHistory
 
 if TYPE_CHECKING:
     from space.session.session import Session

@@ -7,7 +7,7 @@ section: body
 
 # Epic: Open Files In Files App
 
-Map: [story-map.md](../../../.context/story-map.md#e-open-files-in-files-app). Acceptance tests: `harness/whiteboard/whiteboard_spec.py` and `space/session/practice_session_output_spec.py` for what the session answers; `harness/files_app/app/files/file-bar.spec.ts` for what only the page shows. The other scenarios of this epic are in [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md).
+Map: [story-map.md](../../../.context/story-map.md#e-open-files-in-files-app). Acceptance tests: `harness/whiteboard/whiteboard_spec.py` and `space/session/practices/practice_session_output_spec.py` for what the session answers; `harness/files_app/app/files/file-bar.spec.ts` for what only the page shows. The other scenarios of this epic are in [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md).
 
 ### Domain terms
 

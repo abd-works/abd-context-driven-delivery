@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from .story_file import StoryBlock
     from harness.guidance.guidance import PracticeGuidance
 
-    from space.session.practice_session_output import FidelitySessionOutput
+    from space.session.practices.practice_session_output import FidelitySessionOutput
 
 # A step goes by its text, cut to this many characters, so a long step still reads as one name.
 _STEP_NAME_LENGTH = 80

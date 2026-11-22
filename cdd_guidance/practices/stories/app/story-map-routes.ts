@@ -9,7 +9,7 @@ import { scenarioRoutes } from '@cdd/practices/stories/model/scenario'
 import { stepRoutes } from '@cdd/practices/stories/model/step'
 import { storyRoutes } from '@cdd/practices/stories/model/story'
 import { storyMapRoutes as storyMapObjectRoutes } from '@cdd/practices/stories/model/story-map'
-import { fidelitySessionOutputRoutes } from '@cdd/space/session/fidelity-session-output'
+import { fidelitySessionOutputRoutes } from '@cdd/space/session/practices/fidelity-session-output'
 
 // What a server mounts to serve the Story UI editor: the generated routes of the story map's objects, of the formats
 // chosen for a fidelity, and of the chat the page was opened beside, which shows an acceptance-test file in its chat

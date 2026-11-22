@@ -19,7 +19,7 @@ from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.stories.model.fixtures.pack_orders_project import PACK_ORDERS_FILES, PACK_ORDERS_STORY_MAP
 from harness.mcp.spec_support import SpecServer
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _RENDER = "cdd_guidance.actions.render.render:Render"
 _SESSIONS = "space.session.sessions:Sessions"

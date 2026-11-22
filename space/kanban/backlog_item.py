@@ -20,7 +20,8 @@ from space.kanban.card_name import BacklogItemTakenError, CardName
 # ticket the call names.
 from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
-from space.session.session_log import LogLine, LogTimestamp
+from harness.process.log_timestamp import LogTimestamp
+from space.session.session_log import LogLine
 from harness.mcp.mcp_annotations import mcp
 
 

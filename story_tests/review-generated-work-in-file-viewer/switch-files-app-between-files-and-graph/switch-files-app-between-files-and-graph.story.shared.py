@@ -19,7 +19,7 @@ from __future__ import annotations
 from expects import contain, equal, expect
 
 from space.kanban.story_test import SharedStories
-from space.session.graph_view_examples import (
+from space.kanban.graph_view_examples import (
     opened_entries,
     opened_entry_named,
     BOARD_CODE,

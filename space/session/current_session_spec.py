@@ -16,7 +16,7 @@ if str(_REPO_ROOT) not in sys.path:
 from harness.agent_tools.tool_call import ToolCall
 from space.repo.mock_repo import MockGit
 from space.session import Sessions
-from space.session.throwaway_project import ExampleHome
+from space.session.spec_support.throwaway_project import ExampleHome
 
 
 def _project() -> Path:

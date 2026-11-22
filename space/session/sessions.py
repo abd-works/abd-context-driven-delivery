@@ -10,15 +10,13 @@ from harness.installation.json_file import JsonFileUnreadable
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall
-from harness.catalog_generator.catalog_practice import CatalogPractice
-from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.files import command
 from harness.mcp.mcp_annotations import mcp
 from harness.annotations.name import Name
 from space.repo.repo import Repo
-from space.session.file_manager import FileManager
+from space.session.files.file_manager import FileManager
 from space.session.session_saves import SERVED_SAVES, SessionSaves
-from space.session.answer_reads import ServedAnswers
+from harness.process.answer_reads import ServedAnswers
 from space.session.open_sessions import OpenSessions
 from space.session.session import MAIN_SESSION_NAME, Session, SessionNotFoundError
 from space.session.session_folder import COMPLETE_FOLDER
@@ -29,52 +27,6 @@ from space.work_state import SESSIONS_FOLDER
 BACKLOG_FOLDER = "_backlog"
 # Folders in `.sessions` whose names start with this are the ones the sessions share, such as the backlog.
 _SHARED_FOLDER_MARK = "_"
-class PracticeNotFoundError(LookupError):
-    """Raised when a caller names a practice, such as clean_engineering, that the board or ticket does not have. It
-    names the practice and what was searched for it."""
-
-    def __init__(self, practice: str, within: str) -> None:
-        self.practice = practice
-        self.within = within
-        super().__init__(f"no practice named {practice!r} on {within}")
-
-
-class BoardPractices:
-    """*BoardPractices* are the practices a checkout's session board works through, each as the catalog shows it: its
-    name, colour, fidelities, pages, and skills. They are the same for every session, so they are made once for the
-    checkout and kept by its *Sessions*; every board read asks them for a practice by its class, which the board's own
-    instance and each session's share, rather than searching the list again."""
-
-    def __init__(self, catalogued: list[CatalogPractice]) -> None:
-        # Each practice's catalog view by the practice's class, in the order the board shows them.
-        self._by_class = {type(entry.practice): entry for entry in catalogued}
-
-    @property
-    def catalogued(self) -> list[CatalogPractice]:
-        """The catalog's view of each practice, in the order the board shows them."""
-        return list(self._by_class.values())
-
-    def of(self, kind: type) -> CatalogPractice:
-        """The catalog's view of the practice of class kind, the class of the board's own instance and of every
-        session's."""
-        found = self._by_class.get(kind)
-        if found is None:
-            raise PracticeNotFoundError(kind.__name__, "the board")
-        return found
-
-    def works_through(self, kind: type) -> bool:
-        """Whether the practice of class kind is one the board works through."""
-        return kind in self._by_class
-
-    def keyed(self, key: str) -> CatalogPractice:
-        """The catalog's view of the board's practice whose folder name is key, such as clean_engineering, as a tool
-        names it."""
-        found = next((entry for entry in self._by_class.values() if entry.practice.key == key), None)
-        if found is None:
-            raise PracticeNotFoundError(key, "the board")
-        return found
-
-
 @agent_toolset
 class Sessions:
     """The work sessions of one checkout: open ones in ``.sessions/{name}/``, closed ones in ``.sessions/_complete/``.
@@ -106,15 +58,6 @@ class Sessions:
     def of_project(cls, project: Path) -> Sessions:
         """The sessions of project, the project the running call names, as this process holds them between calls."""
         return SERVED_SESSIONS.of_project(project)
-
-    @cached_property
-    def board_practices(self) -> BoardPractices:
-        """Every practice CDD has, as the catalog shows it, made once for this checkout's board with the one skill
-        install their slash commands are named by: what the board shows of a practice, its name, colour, fidelities,
-        pages, and skills, is the same for every session, so no single session's instances stand for it, and no other
-        reader changes these. The board is made again for every call, so it is held here, where the process keeps the
-        checkout's sessions."""
-        return BoardPractices(CatalogPractice.of_practices(PRACTICE_CATALOGUE.create_all()))
 
     @cached_property
     def file_manager(self) -> FileManager:
@@ -353,6 +296,15 @@ class CallSessions:
         # Each call, and each hook event, finds its sessions here, so each begins an answer of its own.
         held.answers.begin()
         return held
+
+    def forget_under(self, folder: Path) -> None:
+        """Let go of the sessions of every checkout inside folder, such as a spec's throwaway project once it is removed,
+        so their graphs and practices are not kept for as long as the process runs; a later call in a project there
+        makes its sessions again."""
+        top = folder.resolve()
+        with self._lock:
+            for root in [root for root in self._of_project if root.is_relative_to(top)]:
+                del self._of_project[root]
 
     def saved_in(self, project: Path) -> Session:
         return self.of_project(project).current()

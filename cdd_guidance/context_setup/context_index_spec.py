@@ -33,8 +33,8 @@ from cdd_guidance.context_setup.context_index import (
 )
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.session_files import NamedPathNotFoundError
-from space.session.throwaway_project import ThrowawayProject
+from space.session.files.session_files import NamedPathNotFoundError
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 # The index imports faiss and numpy on its first embed, so the cdd server starts without them; the spec imports them
 # once here, so no example pays for it.

@@ -12,4 +12,4 @@ The Clean Engineering rules judge production code only, so each rule has to know
 
 - A name decides, so a file is judged the same way whether a whole folder or only that file is loaded.
 - A production module whose name ends in a support word is read as test code. `harness/catalog_generator/catalog_examples.py` is one: it holds the example files the catalog shows, and its name ends in `examples`. The rules pass it until it is renamed for what it does (for example `catalog_example_files.py`); that rename belongs to the catalog generator's owner.
-- A support module whose name says nothing about tests is read as production code. `space/session/throwaway_project.py` ("a project for a spec to work in") is one; naming it as support (for example `throwaway_project_fixture.py`) lets the rules pass it.
+- A support module whose name says nothing about tests is read as production code. `space/session/spec_support/throwaway_project.py` ("a project for a spec to work in") is one; naming it as support (for example `throwaway_project_fixture.py`) lets the rules pass it.

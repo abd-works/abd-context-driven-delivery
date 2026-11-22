@@ -27,7 +27,7 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from space.session import Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 _STORY_MAP = "stories-story-map"
 _SCENARIOS = "stories-scenarios"

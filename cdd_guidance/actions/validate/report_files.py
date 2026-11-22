@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from harness.graph.saved_graph import GRAPH_FILE_NAME
 from harness.installation.context_config import CONTEXT_FOLDER
-from space.session.validation_report import ValidationReport
+from space.session.validation.validation_report import ValidationReport
 
 if TYPE_CHECKING:
     from cdd_guidance.actions.validate.checked_fidelity import CheckedFidelity

@@ -36,8 +36,8 @@ if str(_REPO_ROOT) not in sys.path:
 from playwright.sync_api import Page, sync_playwright
 
 from harness.mcp.spec_support import SpecServer
-from space.session.graph_view_rule_examples import VIOLATING_MAP_TEXT
-from space.session.graph_view_examples import BOARD_CODE, BOARD_TEXT, CHECKOUT_FLOW, STEP_STORY, STEP_STORY_TEXT, TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT
+from space.kanban.graph_view_rule_examples import VIOLATING_MAP_TEXT
+from space.kanban.graph_view_examples import BOARD_CODE, BOARD_TEXT, CHECKOUT_FLOW, STEP_STORY, STEP_STORY_TEXT, TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT
 
 _APP = _REPO_ROOT / "harness" / "files_app" / "app"
 _NODE_TSX = _APP / "node_modules" / "tsx" / "dist" / "cli.mjs"

@@ -19,7 +19,7 @@ from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
 )
 from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
 from space.session.sessions import Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 import cdd_guidance.actions.sketch.sketch  # noqa: F401 - imported once here, not by the first run request that names it
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]

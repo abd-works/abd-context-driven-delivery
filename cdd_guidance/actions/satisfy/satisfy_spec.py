@@ -17,7 +17,7 @@ from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngi
 from cdd_guidance.actions.satisfy.satisfy import Satisfy
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 
 def _expanded(project: Path, guidance) -> str:

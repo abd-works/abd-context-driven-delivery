@@ -6,10 +6,11 @@ import type { CddConnection, ProjectConnections } from '@cdd/cdd-connection'
 import { CddRequestError, PROJECT_HEADER, cddProgressRoutes, type CddRoute } from '@cdd/cdd-shared'
 import { ChatAdapter, chatRoutes } from '@cdd/harness/chat/chat'
 import { failureRoutes, type FailureData } from '@cdd/tools/error_display/failure'
+import { formatAlignmentRoutes } from '@cdd/align/format-alignment'
 import { fidelityProgressRoutes } from '@cdd/space/kanban/fidelity-progress'
 import { ticketRoutes } from '@cdd/space/kanban/ticket'
-import { fileCommentsRoutes } from '@cdd/space/session/file-comments'
-import { practiceSessionOutputRoutes } from '@cdd/space/session/practice-session-output'
+import { fileCommentsRoutes } from '@cdd/space/session/files/file-comments'
+import { practiceSessionOutputRoutes } from '@cdd/space/session/practices/practice-session-output'
 import { sessionRoutes } from '@cdd/space/session/session'
 
 import { DrawioViewer } from './drawio-viewer'
@@ -32,6 +33,7 @@ const TICKET_ROUTES = ['/ticket/:ticket/fidelity-files', '/ticket/:ticket/root-f
 // asks for the most common causes of a failure its Fix button sends that chat (failure.describe); it never reads the board.
 export const filesRoutes: CddRoute[] = [
   ...sessionRoutes,
+  ...formatAlignmentRoutes,
   ...cddProgressRoutes,
   ...fileCommentsRoutes,
   ...fidelityProgressRoutes,

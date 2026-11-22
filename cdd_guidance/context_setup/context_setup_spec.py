@@ -11,7 +11,7 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance_actions import ActionWorksInNoSession
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 from cdd_guidance.context_setup.context_index import ContextIndex
 from cdd_guidance.context_setup.context_setup import ContextSetup
 from cdd_guidance.context_setup.live_app_capture import LiveAppCapture
