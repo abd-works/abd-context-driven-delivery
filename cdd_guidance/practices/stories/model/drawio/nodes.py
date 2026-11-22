@@ -12,13 +12,17 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
-    DiagramStoryCell,
-    LaidOutEpic,
-    LaidOutStory,
     DiagramEpic,
     DiagramIncrement,
     DiagramStory,
+    DiagramStoryCell,
     DiagramStoryModel,
+    LaidOutEpic,
+    LaidOutStory,
+    ThinSliceColumn,
+    ThinSliceLane,
+    ThinSliceLayout,
+    ThinSliceSurface,
 )
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
 from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel, StoryType
@@ -425,42 +429,35 @@ class DrawIOStoryModel(DiagramStoryModel):
         return names, lanes
 
 
-class _ThinSliceDrawing:
-    """A story map's increments drawn as a swim-lane grid on one draw.io page: its epics and sub-epics as column
-    headers, and one lane per increment holding its stories under their sub-epics' columns."""
+class _ThinSliceDrawing(ThinSliceSurface):
+    """The draw.io page a story map's thin slice is drawn on: its epics and sub-epics as column headers, and one lane
+    per increment holding its stories under their sub-epics' columns, as the layout places them."""
 
     def __init__(self, story_map: DrawIOStoryModel, drawing: DrawioFile) -> None:
         self.drawing = drawing
         self.page = drawing.add_page("Thin Slicing", "thin-slicing")
-        self.columns = story_map.thin_slice_columns()
-        self.lanes = story_map.thin_slice_lanes(self.columns)
-        self.widths = story_map.thin_slice_widths(self.lanes, DiagramStory.size + DrawIOIncrement.card_gap, DrawIOIncrement.card_gap)
-        self.width = DrawIOIncrement.label_width + sum(self.widths)
+        self.layout = ThinSliceLayout(story_map, DiagramStory.size + DrawIOIncrement.card_gap, DrawIOIncrement.card_gap, DiagramEpic.left_margin)
+        self.width = DrawIOIncrement.label_width + self.layout.width
+        self._lane_y = DiagramEpic.nested_row_y + DiagramEpic.bar_height + DrawIOIncrement.header_gap
 
     def _draw(self, vertex: "DrawIOStoryModel.Vertex") -> None:
         vertex.draw_on(self.page)
 
     def text(self) -> str:
-        lane_y = self._headers() + DrawIOIncrement.header_gap
-        for increment, held in self.lanes:
-            self._lane(increment, held, lane_y)
-            lane_y += DrawIOIncrement.lane_height + DrawIOIncrement.lane_gap
+        self.layout.draw_on(self)
         return self.drawing.save()
 
-    def _headers(self) -> int:
-        """Each epic over the columns it spans, and each column's sub-epic under it; answers the headers' bottom."""
-        x = DiagramEpic.left_margin
-        for index, (epic, sub) in enumerate(self.columns):
-            if index == 0 or self.columns[index - 1][0] is not epic:
-                span = sum(width for (top, _), width in zip(self.columns, self.widths) if top is epic)
-                self._draw(DrawIOStoryModel.Vertex.make(epic.slug, epic.name, x, DiagramEpic.row_y, span - _HEADER_INSET, DiagramEpic.bar_height, epic.style))
-            if sub is not epic:
-                self._draw(DrawIOStoryModel.Vertex.make(sub.cell_id, sub.name, x, DiagramEpic.nested_row_y, self.widths[index] - _HEADER_INSET, DiagramEpic.bar_height, sub.style))
-            x += self.widths[index]
-        return DiagramEpic.nested_row_y + DiagramEpic.bar_height
+    def epic_header(self, epic: Epic, x: float, width: float) -> None:
+        self._draw(DrawIOStoryModel.Vertex.make(epic.slug, epic.name, x, DiagramEpic.row_y, width - _HEADER_INSET, DiagramEpic.bar_height, epic.style))
 
-    def _lane(self, increment: DiagramIncrement, held: Dict[int, List[Story]], lane_y: int) -> None:
+    def sub_epic_header(self, column: ThinSliceColumn) -> None:
+        sub = column.sub
+        self._draw(DrawIOStoryModel.Vertex.make(sub.cell_id, sub.name, column.x, DiagramEpic.nested_row_y, column.width - _HEADER_INSET, DiagramEpic.bar_height, sub.style))
+
+    def lane(self, lane: ThinSliceLane, layout: ThinSliceLayout) -> None:
         """One increment's lane: its label at the left and its stories in one row under their sub-epics."""
+        increment, lane_y = lane.increment, self._lane_y
+        self._lane_y += DrawIOIncrement.lane_height + DrawIOIncrement.lane_gap
         left = DiagramEpic.left_margin - DrawIOIncrement.label_width
         height = DrawIOIncrement.lane_height
         self._draw(DrawIOStoryModel.Vertex.make(f"inc-lane/{increment.slug}/bg", "", left, lane_y, self.width, height, DrawIOIncrement.lane_style))
@@ -468,8 +465,8 @@ class _ThinSliceDrawing:
         story_y = lane_y + (DrawIOIncrement.lane_height - DiagramStory.size) // 2
         pitch = DiagramStory.size + DrawIOIncrement.card_gap
         seen: Dict[str, int] = {}
-        for column, stories in held.items():
-            column_x = DiagramEpic.left_margin + sum(self.widths[:column])
+        for column, stories in lane.stories.items():
+            column_x = layout.columns[column].x
             for place, story in enumerate(stories):
                 count = seen[story.slug] = seen.get(story.slug, 0) + 1
                 cell_id = f"inc-lane/{increment.slug}/{story.slug}" + (f"-{count}" if count > 1 else "")

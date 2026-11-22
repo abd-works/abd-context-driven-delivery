@@ -348,6 +348,28 @@ The layout shared by the diagram formats. Nodes: DiagramEpic, DiagramStory, Diag
 ------
 + max_sub_epic_depth: int
 + actor_y: int
+----
++ place_cells(cells: list[DiagramStoryCell]): list[DiagramStoryCell]
+	// reads the epics and stories by where their cells sit: the one reading draw.io, the whiteboard, and Miro share
+
+## ThinSliceLayout
+
+A map's increments laid out as a thin slice, the one layout the drawn formats draw (draw.io's page and the whiteboard):
+a column for each sub-epic, or epic with none, each as wide as the most stories any increment puts in it, and a lane
+for each increment. Each format draws it on its own *ThinSliceSurface* (epic_header, sub_epic_header, lane).
+
++ ThinSliceLayout(story_map: DiagramStoryModel, pitch: float, gap: float, left: float)
+------
++ columns: list[ThinSliceColumn]
+	// epic, sub, x, width
++ lanes: list[ThinSliceLane]
+	// increment, stories by column
++ width: float
+----
++ epic_headers(): list[tuple[Epic, float, float]]
++ sub_epic_headers(): list[ThinSliceColumn]
++ draw_on(surface: ThinSliceSurface): None
+	// each epic's header, then its sub-epics', column by column, then each lane
 
 ## DiagramStoryNode
 
@@ -376,6 +398,7 @@ The `miro` format: a canvas-composer SVG, with increments as a thin-slice table.
 
 ----
 + parse(text: str): MiroStoryModel
+	// reads cards by where they sit (place_cells), as the other drawn formats do; the thin-slice table keeps its own headings
 + render(canonical: StoryModel | None = None, previous: str | None = None): str
 	-> save
 + save(): str
