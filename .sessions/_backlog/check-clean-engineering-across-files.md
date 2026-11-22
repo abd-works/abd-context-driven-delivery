@@ -91,3 +91,10 @@ The checked rules raise violations. The judged rules raise candidates, which the
 2. **The rules**, each as scenario, then a failing and a repaired example, then the rule: unused class and operation, dependency that should be owned, disconnected class, one-class package, duplicated behaviour, state passed down, second object model, two names for one concept, and the judged pass over what the graph cannot find.
 3. **Calibration on this repository:** run every rule and compare with the seven judgment reports and `.context/model/repo-model-disconnected.md`. Each finding the judges made by hand that no rule lists means the graph is still blind there, and becomes a defect.
 4. **Where it runs:** validate given the whole graph, at the modules, model and code fidelities. The checked rules run every time; the judged pass runs on the candidates only.
+
+### Decided by the person on 2026-11-22
+
+- The ways a project reaches code are named in the project's `.context/config.json`, beside the code measures.
+- A graph rule can have scope "all": validate runs it on the whole repository, not only the paths it was given. The cross-file rules have that scope.
+- The checked rules run on every validate; the judged pass over the whole repository runs only when validate is asked for it.
+- Building started the same day: step 0 (the graph's class-to-class edges) and step 1 (the shared list and scope "all") first, then the rules of step 2.
