@@ -19,7 +19,7 @@ from cdd_guidance.practices.source_code.code_body import (
     WrittenKey,
 )
 from cdd_guidance.practices.source_code.script_imports import STAR, ClassReference, ScriptImports, imported_files
-from cdd_guidance.practices.source_code.source_text import SourceText, SpanCollaborators, SpanFailures
+from cdd_guidance.practices.source_code.source_text import MeasuredBody, SourceText, SpanCollaborators, SpanFailures
 from cdd_guidance.practices.source_code.test_files import TestFileName, is_example_code, is_spec_file, is_test_code
 
 __all__ = [
@@ -34,6 +34,7 @@ __all__ = [
     "CodeSpelling",
     "InsideLines",
     "JAVASCRIPT",
+    "MeasuredBody",
     "PYTHON",
     "STAR",
     "ScriptImports",

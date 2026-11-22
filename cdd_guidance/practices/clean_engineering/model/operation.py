@@ -163,7 +163,6 @@ class Operation(InvariantHolder, OoadNode):
         self.has_bare_catch: bool = False
         self.swallows_exceptions: bool = False
         self.unnamed_literal_numbers: list[str] = []
-        self.narrative_comment_lines: int = 0
         self.peer_private_access: bool = False
         # Each parameter that packs several values, with how many; only Python's parse measures it.
         self.packed_parameters: dict[str, int] = {}
@@ -282,7 +281,6 @@ class Operation(InvariantHolder, OoadNode):
         self.has_bare_catch = source.has_bare_catch
         self.swallows_exceptions = source.swallows_exceptions
         self.unnamed_literal_numbers = list(source.unnamed_literal_numbers)
-        self.narrative_comment_lines = source.narrative_comment_lines
         self.peer_private_access = source.peer_private_access
 
     @property

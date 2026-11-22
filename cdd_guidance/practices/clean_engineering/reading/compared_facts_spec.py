@@ -8,16 +8,21 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import equal, expect
+from expects import be_false, be_true, equal, expect, have_len
 from mamba import before, context, description, it
 
 from harness.graph.graph import Graph
+from harness.graph.rule_context import RuleCheckContext
+from harness.graph.rule_fixture import SchemaRuleRun
 from harness.graph.saved_graph import SavedGraph
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import practice_from_files
 
 _CARD = "# module\n"
+# A Clean Engineering class model of the shop folder, describing a ledger no code declares.
+_SHOP_MODEL = "# shop\n\n## Ledger <<Entity>>\n\n------\n+ balance: int\n----\n+ record(entry: str): str\n"
 _CART = "".join(f"class {name}:\n    def run(self) -> int:\n        return 1\n\n\n" for name in ("Cart", "Line", "Price"))
 _EXPOSURE = (
     "subtree_class_count",
@@ -109,3 +114,28 @@ with description("compared facts"):
 
         with it("should keep it in a graph read back from its saved file"):
             expect(self.restored.get_fact("forwards_to")).to(equal("Cart"))
+
+
+with description("a graph read back from its saved file"):
+    with context("with a class read from code that swaps an object's class, and a class its model document describes"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/.context/shop-model.md": _SHOP_MODEL,
+                    "shop/loader.py": "class Loader:\n    def load(self, made) -> None:\n        made.__class__ = Loader\n",
+                }
+            )
+            restored = Graph()
+            restored.practices.of(CleanEngineering)
+            restored.practices.restore(SavedGraph.from_text(SavedGraph.from_graph(self.fixture.practice.reading.graph).text))
+            self.practice = restored.practices.of(CleanEngineering)
+            self.classes = {node.source.file: node for node in self.practice.reading.in_graph.nodes("OoadClass")}
+
+        with it("should keep the measures of code on the class read from code"):
+            expect(self.classes["shop/loader.py"].has_fact("method_count")).to(be_true)
+
+        with it("should keep no measure of code on the class the document describes"):
+            expect(self.classes["shop/.context/shop-model.md"].has_fact("method_count")).to(be_false)
+
+        with it("should still find the swap with the rule that judges code, without the source"):
+            expect(SchemaRuleRun(BY_SLUG["no-prototype-swapping"], RuleCheckContext(self.practice)).hits()).to(have_len(1))

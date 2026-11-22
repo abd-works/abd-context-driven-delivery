@@ -390,6 +390,14 @@ with description("Clean Engineering reading the classes its model documents desc
         with it("should answer the code's class first for the class's name"):
             expect(self.fixture.practice.reading.code_index.classes_named("Ledger")[0].source.file).to(equal("shop/ledger.py"))
 
+        with it("should keep the measures of code on the code's class alone"):
+            expect([(node.source.file, node.has_fact("method_count")) for node in _classes(self.fixture)]).to(
+                equal([("shop/.context/shop-model.md", False), ("shop/ledger.py", True)])
+            )
+
+        with it("should take only the code's class as a production class the compared facts measure"):
+            expect([each.file for each in ProductionClasses(self.fixture.practice.reading)]).to(equal(["shop/ledger.py"]))
+
     with context("with a folder whose only file is a DDD domain model"):
         with before.all:
             self.fixture = practice_from_files({"shop/.context/domain-model.md": _SHOP_DOMAIN_MODEL})

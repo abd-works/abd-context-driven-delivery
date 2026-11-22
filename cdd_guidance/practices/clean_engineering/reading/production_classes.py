@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Callable, Iterator
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
 from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
@@ -115,7 +116,7 @@ class ProductionClass:
         graph holds as property nodes, so they are read from the class's own fact."""
         return any(
             not shape.get("is_property") and shape["name"] not in CONSTRUCTOR_NAMES and not shape["name"].startswith("__")
-            for shape in self.node.get_fact("operation_shapes", []) or []
+            for shape in self.node.get_fact("operation_shapes")
         )
 
     @property
@@ -137,7 +138,8 @@ class ProductionClass:
 
 
 class ProductionClasses:
-    """Every production class in the practice, each a *ProductionClass*, read once after each read; it answers by class
+    """Every production class in the practice read from code, each a *ProductionClass*, read once after each read; a
+    class a model document describes has no code to measure, so it is none of them. It answers by class
     name, so each fact compares classes instead of rescanning every edge for every class, and says what kind of class a
     type name stands for: a value, a failure, or a failure that writes its own message."""
 
@@ -217,8 +219,9 @@ class ProductionClasses:
 
 
 def _is_production(node: "Node") -> bool:
-    """A class of production code: neither read from a spec or test support, nor the holder of a file's functions."""
-    return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file)
+    """A class of production code, read from code: neither one a model document describes, which has no code to
+    measure, nor one read from a spec or test support, nor the holder of a file's functions."""
+    return node.name != MODULE_FUNCTION_HOLDER and not is_test_code(node.source.file) and not node.has_fact(DESCRIBED_FACT)
 
 
 def _declares_value(node: "Node") -> bool:

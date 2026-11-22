@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, TypedDict
 
 from cdd_guidance.practices.source_code import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -15,7 +15,19 @@ from cdd_guidance.practices.clean_engineering.model.operation_metrics import MIN
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
+    from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeClass
     from cdd_guidance.practices.clean_engineering.model.operation import Operation
+
+
+class OperationShape(TypedDict):
+    """<<Value Object>> What a class read from code saves of each of its operations: its name, whether it reads or
+    sets a property, whether its language's keyword makes it private, and the operations it calls. A getter is a
+    property node in the graph, so a class's own shapes are where a rule finds its getters among its operations."""
+
+    name: str
+    is_property: bool
+    is_private: bool
+    callees: list[str]
 
 # `self.column_name = ...` or `this.columnName: string = ...` in a constructor: a field the class holds.
 _ASSIGNED_FIELD = re.compile(r"(?:self|this)\.(\w+)\s*(?::\s*([^=\n]+?))?\s*=(?!=)")
@@ -70,26 +82,11 @@ class ClassSourceFacts:
             operation.source_facts.take_lines(lines)
 
     def load(self) -> None:
-        """Keep the shape and source-span facts its source gives as the class's own graph facts, so a rule reads them
-        from a class read now or read back from a saved graph alike."""
-        for name, fact in self._facts().items():
-            setattr(self._class, name, fact)
-
-    def _facts(self) -> dict[str, Any]:
-        """Each fact by the name the class keeps it under."""
-        oclass = self._class
-        operations = list(oclass.operations)
-        constructor = next((op for op in operations if op.is_constructor), None)
-        span = self.span
-        return {
-            "method_count": len(operations),
-            "operation_shapes": [self._shape(op) for op in operations],
-            "property_names": sorted(prop.name for prop in oclass.properties),
-            "constructs": [type_name for type_name, _line in constructor.constructed_types] if constructor else [],
-            "prose_comment": span.has_prose_comment(hash_only=True),
-            "prototype_swap": span.prototype_swap(oclass.line or 1),
-            **CardBullets(span.text).lines(),
-        }
+        """Keep the facts the lines it spans give in the class's own fields, which save with the graph, so a rule reads
+        them from a class read now or read back from a saved graph alike: the bold bullets a markdown card writes."""
+        bullets = CardBullets(self.span.text)
+        self._class.bold_interaction_lines = bullets.interaction_lines
+        self._class.bold_invariant_lines = bullets.invariant_lines
 
     def held_fields(self) -> dict[str, str]:
         """Each field the class holds, with its type hint: its declared properties, then the fields its constructor
@@ -128,7 +125,28 @@ class ClassSourceFacts:
         lines = self.span.text.split("\n")
         return [(number, lines[number - first]) for number in range(start, end + 1) if 0 <= number - first < len(lines)]
 
-    def _shape(self, operation: Operation) -> dict[str, Any]:
+
+class CodeClassSourceFacts(ClassSourceFacts):
+    """The facts the source of a class read from code gives, beyond a card's bullets: the measures of its code, which it
+    keeps in the fields only a class read from code declares. A class read from a markdown model document has none of
+    them, so no rule that measures code ever measures one. Only a class read from code makes one."""
+
+    _class: CodeClass
+
+    def load(self) -> None:
+        """Keep the measures of its code in the class's own fields, as well as what every class's lines give."""
+        super().load()
+        oclass = self._class
+        operations = list(oclass.operations)
+        constructor = next((op for op in operations if op.is_constructor), None)
+        oclass.method_count = len(operations)
+        oclass.operation_shapes = [self._shape(op) for op in operations]
+        oclass.property_names = sorted(prop.name for prop in oclass.properties)
+        oclass.constructs = [type_name for type_name, _line in constructor.constructed_types] if constructor else []
+        oclass.prose_comment = self.span.has_prose_comment(hash_only=True)
+        oclass.prototype_swap = self.span.prototype_swap(oclass.line or 1)
+
+    def _shape(self, operation: Operation) -> OperationShape:
         return {
             "name": operation.name,
             "is_property": operation.is_property or operation.is_setter,
@@ -163,29 +181,23 @@ class OperationSourceFacts:
         self.span = SourceText("\n".join(lines[start - 1 : end]))
 
     def load(self) -> None:
-        """Keep the facts the operation's source span carries, beyond what the parser measured, as its own graph
-        facts."""
-        for name, fact in self._facts().items():
-            setattr(self._operation, name, fact)
-
-    def _facts(self) -> dict[str, Any]:
-        """Each fact by the name the operation keeps it under."""
+        """Keep the facts the operation's source span carries, beyond what the parser measured, in the operation's own
+        fields, which save with the graph."""
         operation = self._operation
         span = self.span
+        operation.body_fingerprint = operation.body_fingerprint or BodyFingerprint(span.text).of_span()
+        operation.io_and_domain_callees = self._delegates_io_and_domain()
+        operation.io_and_domain = span.mixes_io_and_domain()
+        operation.raises_on_empty = operation.name not in _BUILDING_NAMES and span.failures.raises_on_empty()
+        operation.exception_without_message = span.failures.exception_without_message()
+        operation.generic_exception_message = span.failures.generic_exception_message()
         # A constructor, or a JavaScript constructor function, sets up the object it builds and cannot return a record,
         # so it is not a state change to report.
-        return {
-            "body_fingerprint": operation.body_fingerprint or BodyFingerprint(span.text).of_span(),
-            "io_and_domain_callees": self._delegates_io_and_domain(),
-            "io_and_domain": span.mixes_io_and_domain(),
-            "raises_on_empty": operation.name not in _BUILDING_NAMES and span.failures.raises_on_empty(),
-            "exception_without_message": span.failures.exception_without_message(),
-            "generic_exception_message": span.failures.generic_exception_message(),
-            "mutates_without_record": not (operation.is_constructor or operation.is_constructor_function)
-            and span.mutates_without_record(),
-            "prose_comment": span.has_prose_comment(),
-            **CardBullets(span.text).lines(),
-        }
+        operation.mutates_without_record = not (operation.is_constructor or operation.is_constructor_function) and span.mutates_without_record()
+        operation.prose_comment = span.has_prose_comment()
+        bullets = CardBullets(span.text)
+        operation.bold_interaction_lines = bullets.interaction_lines
+        operation.bold_invariant_lines = bullets.invariant_lines
 
     def _delegates_io_and_domain(self) -> bool:
         """A long operation that calls both I/O, such as `save`, and a domain calculation, such as `total`, does two

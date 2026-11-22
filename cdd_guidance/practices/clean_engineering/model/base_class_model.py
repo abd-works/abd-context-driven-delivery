@@ -100,16 +100,10 @@ class OoadClass(OoadNode):
     graph_facts = (
         "bases",
         "stereotypes",
-        "method_count",
-        "operation_shapes",
-        "property_names",
         "held_fields",
-        "constructs",
         "composes_peers",
         "peer_names",
         "module_helpers",
-        "prose_comment",
-        "prototype_swap",
         "bold_interaction_lines",
         "bold_invariant_lines",
     )
@@ -138,13 +132,21 @@ class OoadClass(OoadNode):
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
         # What its source says, as its parser reads it: the lines it spans and the facts they give.
-        self.source_facts = ClassSourceFacts(self)
+        self.source_facts = self._source_facts()
+        # The lines, counted in the lines it spans, of each bold Interaction and Invariant bullet its markdown card
+        # writes; none until its source facts load.
+        self.bold_interaction_lines: List[int] = []
+        self.bold_invariant_lines: List[int] = []
         # Where each relationship drawn from it lands: on the properties it types, or among its dependencies.
         self.arrows = ClassArrows(self)
         # The classes drawn inside this class's card, as a root's card holds the repository that keeps it, and the
         # class whose card draws this one when it is folded into another.
         self.folded: List["OoadClass"] = []
         self.folded_into = ""
+
+    def _source_facts(self) -> ClassSourceFacts:
+        """The facts its source gives, which a class read from code extends with the measures of its code."""
+        return ClassSourceFacts(self)
 
     def fold(self, other: "OoadClass") -> None:
         """Draw other inside this class's card, under its own heading, in place of a card of its own."""

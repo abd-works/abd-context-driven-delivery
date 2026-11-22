@@ -5649,7 +5649,7 @@ One line in an indented call graph.
 + text: str
 ----
 
-## SourceText
+## SourceText : MeasuredBody
 
 A span of source in any language, such as an operation body, a class, or a markdown card, and what the rules measure in it.
 
@@ -5661,11 +5661,13 @@ A span of source in any language, such as an operation body, a class, or a markd
 ----
 + control_flow_depth(): int
 + unnamed_numbers(): list[str]
++ catches_everything(): bool
++ swallows(): bool
 + mixes_io_and_domain(): bool
 + calls_io_and_domain(): bool
 + mutates_without_record(): bool
 + has_prose_comment(hash_only: bool = False): bool
-+ prototype_swap(start_line: int): dict
++ prototype_swap(start_line: int): dict[str, str | int]
 + markdown_bullet_lines(): dict
 + line_of(index: int): int
 + hits(pattern: re.Pattern[str]): list[list]

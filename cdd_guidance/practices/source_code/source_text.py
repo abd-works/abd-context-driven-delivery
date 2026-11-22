@@ -1,10 +1,11 @@
 """A span of source in any language, read for what the rules of several practices measure in it: *SourceText* and the
-parts it holds, *SpanFailures* (how the span handles failure) and *SpanCollaborators* (the objects it reaches)."""
+parts it holds, *SpanFailures* (what the span raises) and *SpanCollaborators* (the objects it reaches)."""
 
 from __future__ import annotations
 
 import builtins
 import re
+from typing import Protocol
 
 from cdd_guidance.practices.source_code.bracket_structure import BracketStructure
 
@@ -129,7 +130,31 @@ _PROTOTYPE_SWAP = re.compile(r"\bObject\.setPrototypeOf\s*\(|\.__proto__\s*=(?!=
 # Below these sizes a body is too small for the mixed-concerns and unrecorded-mutation measures to mean anything.
 MIN_SIGNAL_BODY = 40
 MIN_MUTATION_BODY = 30
-class SourceText:
+
+
+class MeasuredBody(Protocol):
+    """An operation's body as the rules measure it, whichever way its parser reads it: as a span of text in any
+    language (*SourceText*), or as a Python function's syntax tree (Clean Engineering's *PythonFunctionBody*). An
+    operation keeps the same measures from either, so a rule never asks which language it was read from."""
+
+    def control_flow_depth(self) -> int:
+        """The deepest nesting of if, for, and while blocks."""
+        ...
+
+    def unnamed_numbers(self) -> list[str]:
+        """Each number literal no name explains."""
+        ...
+
+    def catches_everything(self) -> bool:
+        """True when a catch names no failure, so it catches every one, the broken invariant included."""
+        ...
+
+    def swallows(self) -> bool:
+        """True when a catch drops what it caught: an empty one, or one that hands back a fallback value instead."""
+        ...
+
+
+class SourceText(MeasuredBody):
     """A span of source in any language, an operation body or a class, and what the rules measure in its code.
     Brace-language measures count `{` blocks; Python measures count indentation."""
 
@@ -137,8 +162,8 @@ class SourceText:
         self._text = text
         # Which bracket closes which in the text, for the measures that read its blocks.
         self._brackets = BracketStructure(text)
-        # What it raises and catches, and the objects it builds and reads: each a part the span makes once.
-        self.failures = SpanFailures(self, self._brackets)
+        # What it raises, and the objects it builds and reads: each a part the span makes once.
+        self.failures = SpanFailures(self)
         self.collaborators = SpanCollaborators(self)
 
     @property
@@ -165,6 +190,27 @@ class SourceText:
         """Each number literal outside strings and regular expressions that no name explains."""
         code = _REGEXP_LITERAL.sub('""', STRING_LITERAL.sub('""', self._text))
         return [raw for raw in _NUMBER.findall(code) if float(raw) not in SAFE_NUMBERS]
+
+    def catches_everything(self) -> bool:
+        """A catch with no failure named, `catch ()` or Python's bare `except:`. TypeScript's optional catch binding,
+        `catch {`, is written on purpose and is not one."""
+        if _OPTIONAL_CATCH_BINDING.search(self._text):
+            return False
+        return bool(_EMPTY_CATCH_BINDING.search(self._text) or _BARE_EXCEPT.search(self._text))
+
+    def swallows(self) -> bool:
+        """An empty catch, or one that hands back a fallback value without throwing again."""
+        for match in _CATCH.finditer(self._text):
+            catch_body = self._brackets.braced(match.end() - 1)
+            if catch_body is None:
+                continue
+            stripped = catch_body.strip()
+            if not stripped or stripped in _IGNORED_CATCH_BODIES or self._returns_fallback(stripped):
+                return True
+        return any(_PASS_LINE.match(self._text[match.end() :]) for match in _PY_EXCEPT.finditer(self._text))
+
+    def _returns_fallback(self, catch_body: str) -> bool:
+        return _THROW.search(catch_body) is None and _FALLBACK_RETURN.search(catch_body) is not None
 
     def mixes_io_and_domain(self) -> bool:
         """A body long enough to mean something that calls both I/O and a domain calculation."""
@@ -195,7 +241,7 @@ class SourceText:
         start = code.find("//")
         return line[start:] if start >= 0 else ""
 
-    def prototype_swap(self, start_line: int) -> dict:
+    def prototype_swap(self, start_line: int) -> dict[str, str | int]:
         """The code that swaps an object's class and the line it is on, when the text does; empty when it does not."""
         found = _PROTOTYPE_SWAP.search(self._text)
         if found is None:
@@ -233,29 +279,12 @@ class SourceText:
         opening = BracketStructure(head).opening_bracket(len(head) - 1)
         return opening >= 0 and _CONTROL_CONDITION.search(head[:opening]) is not None
 class SpanFailures:
-    """The failures a span of source raises and catches: a catch that catches everything or swallows what it caught, a
-    builtin failure raised on an empty value, and a raise with no message or a generic one."""
+    """The failures a span of source raises: a builtin failure raised on an empty value, and a raise with no message or
+    a generic one. What it catches the span answers itself, as every measured body does (``catches_everything``,
+    ``swallows``)."""
 
-    def __init__(self, span: SourceText, brackets: BracketStructure) -> None:
+    def __init__(self, span: SourceText) -> None:
         self._span = span
-        # Which bracket closes which in the span, for finding each catch's body.
-        self._brackets = brackets
-
-    def has_bare_catch(self) -> bool:
-        if _OPTIONAL_CATCH_BINDING.search(self._span.text):
-            return False
-        return bool(_EMPTY_CATCH_BINDING.search(self._span.text) or _BARE_EXCEPT.search(self._span.text))
-
-    def swallows_exceptions(self) -> bool:
-        """An empty catch, or one that hands back a fallback value without throwing again."""
-        for match in _CATCH.finditer(self._span.text):
-            catch_body = self._brackets.braced(match.end() - 1)
-            if catch_body is None:
-                continue
-            stripped = catch_body.strip()
-            if not stripped or stripped in _IGNORED_CATCH_BODIES or self._returns_fallback(stripped):
-                return True
-        return any(_PASS_LINE.match(self._span.text[match.end() :]) for match in _PY_EXCEPT.finditer(self._span.text))
 
     def raises_on_empty(self) -> bool:
         """True when the body raises a builtin failure on an empty or missing value. A raise of a failure the program
@@ -291,9 +320,6 @@ class SpanFailures:
         `UnknownPractice(key, known)`, `CommitPathsRequiredError()`; not `ValueError("missing")`."""
         named = _RAISED_CLASS.match(raised)
         return named is not None and named.group(1) not in _BUILTIN_FAILURES
-
-    def _returns_fallback(self, catch_body: str) -> bool:
-        return _THROW.search(catch_body) is None and _FALLBACK_RETURN.search(catch_body) is not None
 class SpanCollaborators:
     """The objects a brace-language span builds and reads: the collaborators its constructor builds that a caller cannot
     hand it, the locals it builds of a class, and whether it reads another object's private state."""

@@ -8,7 +8,7 @@ One format's model becomes another's through `translate_from(source)`: each node
 
 Callers use the base nodes. The practice picks a format by name from `CleanEngineering(...).formats`. A class's bases and stereotypes are part of what it says itself, so every format writes and reads them and `update_self`, `clone`, and `as_record` copy them. Text a format cannot read raises *UnreadableSource*; the graph read records each such file on its folder, where the `source-parses` rule reports it.
 
-*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) holds its reading part, a *GraphReading* (`practices/clean_engineering/reading/graph_reading.py`), which says what the graph reads from the practice. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its practice's formats by the file's extension (`formats.for_file`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`module.source_facts.load_folder`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class's and operation's source facts (`source_facts.take_lines`), so `ClassSourceFacts.load` and `OperationSourceFacts.load` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the classes each of its production files imports, re-exports, or reaches as `module.Class`, each with the module it names it from, by the file's path (`imported_classes_by_file`), so a refresh that reads a file again replaces only that file's references. A getter is the operation its class shows as a property, so its node is that property (`Operation.is_property` makes its kind `Property`), typed by the type it returns (`value_type`); an operation's parameters are the *Parameter* nodes its `hasParameter` edges lead to (`parameters_of`, in `class_graph.py`), which every rule and BDD read. The practice's operations and properties are indexed once by name after each read, with its classes, in the reading's *CodeIndex* (`reading.code_index.members_named`, `classes_named`), so the type linking, every rule, and every practice that links to the code ask one index. Once every class is linked, *ComparedFacts* (`model/compared_facts.py`, with `folder_facts.py`, `class_facts.py`, and `operation_facts.py`) records on each node the facts that compare it with the rest of the graph, so every rule reads facts and compares them with its limit and none works anything out across nodes when it checks: it reads every node the practice holds, those read now and those a refresh kept, through their saved facts and the graph's edges, so a refresh records them again over the whole practice and a graph read back from `graph.json` holds them as saved. Its parts are *ProductionClasses* (the production classes by name, each a *ProductionClass* that answers its own operations, fields, bases, and kind) and the recorders that compare them (*ComparedFact*: *ServicesTakingDataBags*, *CopiedModels*, *PassThroughClasses*, *DomainExtensions*, *BuiltCollaborators*; *FolderImportCycles* on folders), *ImportCycles*, and *NearCopies*. On each folder it records the imports that close a cycle (`import_cycles`, `file_import_cycles`) and the folder its classes only forward to (`forwards_to_module`); on each module the sibling modules it imports (`sibling_modules_imported`) and the classes of its whole subtree — its files, its packages, and its nested modules, each nested module measured again on its own — with the class definitions that leave it, each import resolved to the definition it names (`subtree_class_count`, `public_classes` by `file:Name` with the routes that reach each: `named` with the folders, `registered` with the registry, `published`; `public_class_count`, `private_class_count`), and their operations (`operations_total`, `operations_public`, `operations_private`, `seam_operations`); on each production class the data bags it takes (`data_bags_taken`), what it copies of another class (`copied_fields`, `copied_references`), the class it only forwards to (`forwards_to`), the domain it extends from another package (`extends_domain`), and the collaborator its constructor builds (`constructs_collaborator`); and on each operation the body it copies (`duplicate_of`, `near_copy_of`) and whether the failure it raises without a message writes its own (`exception_gives_own_message`). Each read is a *CodeRead* (`code_read.py`) made for that read, with the folders it takes (*CodeFolders*), the class names outside an edited-file scope (*OutsideScope*), and the class nodes it adds and links (*ClassNodes*), so nothing one read finds stays on the practice. It then reads every `.context/*-model.md` in scope with the format the practice names for its model documents (`model_document_format`, its markdown format) and keeps the class model each one describes in the reading part's *ModelDocuments*, which answers `reading.model_documents.described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
+*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) holds its reading part, a *GraphReading* (`practices/clean_engineering/reading/graph_reading.py`), which says what the graph reads from the practice. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its practice's formats by the file's extension (`formats.for_file`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`module.source_facts.load_folder`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class's and operation's source facts (`source_facts.take_lines`), so `ClassSourceFacts.load` and `OperationSourceFacts.load` read no file again; each assigns the facts to the fields its class or operation declares. Only a class read from code, a *CodeClass*, declares the measures of its code and makes a *CodeClassSourceFacts* that fills them; a class a model document describes has none of them, so no rule that measures code measures it. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the classes each of its production files imports, re-exports, or reaches as `module.Class`, each with the module it names it from, by the file's path (`imported_classes_by_file`), so a refresh that reads a file again replaces only that file's references. A getter is the operation its class shows as a property, so its node is that property (`Operation.is_property` makes its kind `Property`), typed by the type it returns (`value_type`); an operation's parameters are the *Parameter* nodes its `hasParameter` edges lead to (`parameters_of`, in `class_graph.py`), which every rule and BDD read. The practice's operations and properties are indexed once by name after each read, with its classes, in the reading's *CodeIndex* (`reading.code_index.members_named`, `classes_named`), so the type linking, every rule, and every practice that links to the code ask one index. Once every class is linked, *ComparedFacts* (`model/compared_facts.py`, with `folder_facts.py`, `class_facts.py`, and `operation_facts.py`) records on each node the facts that compare it with the rest of the graph, so every rule reads facts and compares them with its limit and none works anything out across nodes when it checks: it reads every node the practice holds, those read now and those a refresh kept, through their saved facts and the graph's edges, so a refresh records them again over the whole practice and a graph read back from `graph.json` holds them as saved. Its parts are *ProductionClasses* (the production classes read from code by name, leaving out each class a model document describes, each a *ProductionClass* that answers its own operations, fields, bases, and kind) and the recorders that compare them (*ComparedFact*: *ServicesTakingDataBags*, *CopiedModels*, *PassThroughClasses*, *DomainExtensions*, *BuiltCollaborators*; *FolderImportCycles* on folders), *ImportCycles*, and *NearCopies*. On each folder it records the imports that close a cycle (`import_cycles`, `file_import_cycles`) and the folder its classes only forward to (`forwards_to_module`); on each module the sibling modules it imports (`sibling_modules_imported`) and the classes of its whole subtree — its files, its packages, and its nested modules, each nested module measured again on its own — with the class definitions that leave it, each import resolved to the definition it names (`subtree_class_count`, `public_classes` by `file:Name` with the routes that reach each: `named` with the folders, `registered` with the registry, `published`; `public_class_count`, `private_class_count`), and their operations (`operations_total`, `operations_public`, `operations_private`, `seam_operations`); on each production class the data bags it takes (`data_bags_taken`), what it copies of another class (`copied_fields`, `copied_references`), the class it only forwards to (`forwards_to`), the domain it extends from another package (`extends_domain`), and the collaborator its constructor builds (`constructs_collaborator`); and on each operation the body it copies (`duplicate_of`, `near_copy_of`) and whether the failure it raises without a message writes its own (`exception_gives_own_message`). Each read is a *CodeRead* (`code_read.py`) made for that read, with the folders it takes (*CodeFolders*), the class names outside an edited-file scope (*OutsideScope*), and the class nodes it adds and links (*ClassNodes*), so nothing one read finds stays on the practice. It then reads every `.context/*-model.md` in scope with the format the practice names for its model documents (`model_document_format`, its markdown format) and keeps the class model each one describes in the reading part's *ModelDocuments*, which answers `reading.model_documents.described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
 
 ```
 model = CleanEngineering().formats["markdown"]().parse(text)
@@ -166,7 +166,10 @@ What the file and the folder a module was read from say (`base_class_model.py`),
 + module_helpers: list[list]
 	// the module's private functions only this class calls
 + << composition >> source_facts: ClassSourceFacts
-	// made once: the lines it spans and the facts they give
+	// made once: the lines it spans and the facts they give; a class read from code makes a CodeClassSourceFacts
++ bold_interaction_lines: list[int]
++ bold_invariant_lines: list[int]
+	// the bold Interaction and Invariant bullets its markdown card writes, by line in the card; filled when its source facts load
 + << composition >> arrows: ClassArrows
 	// made once: where each relationship drawn from it lands
 ----
@@ -301,7 +304,19 @@ A rule that must stay true for one property or one operation. The text is the //
 ------
 + text: str
 
-## SourceText
+## MeasuredBody (Protocol)
+
+An operation's body as the rules measure it, whichever way its parser read it (`practices/source_code/source_text.py`): as a span of text in any language (*SourceText*) or as a Python function's syntax tree (*PythonFunctionBody*). An operation keeps the same measures from either (`CodeOperation.measure_body`).
+
+----
++ control_flow_depth(): int
++ unnamed_numbers(): list[str]
++ catches_everything(): bool
+	// a catch that names no failure
++ swallows(): bool
+	// a catch that drops what it caught: an empty one, or one that hands back a fallback value
+
+## SourceText : MeasuredBody
 
 A span of source in any language, an operation body or a class, and what the rules measure in its code. A markdown card's bullets are *CardBullets*' job.
 
@@ -310,30 +325,31 @@ A span of source in any language, an operation body or a class, and what the rul
 ----
 + control_flow_depth(): int
 + unnamed_numbers(): list[str]
++ catches_everything(): bool
+	// `catch ()` or a bare `except:`; TypeScript's optional catch binding, `catch {`, is written on purpose and is not one
++ swallows(): bool
 + mixes_io_and_domain(): bool
 + calls_io_and_domain(): bool
 + mutates_without_record(): bool
 + has_prose_comment(hash_only: bool = False): bool
 	// a `#` line, or a `//` comment outside every string literal, that narrates
-+ prototype_swap(start_line: int): dict
++ prototype_swap(start_line: int): dict[str, str | int]
 + line_of(index: int): int
 	// the line, counted from 1, holding the character at index
 + hits(pattern: Pattern): list[list]
 	// [line, matched code] for each match
 + << composition >> brackets: BracketStructure
 + << composition >> failures: SpanFailures
-	// made once: what the span raises and catches
+	// made once: what the span raises
 + << composition >> collaborators: SpanCollaborators
 	// made once: the objects the span builds and reads
 
 ## SpanFailures
 
-The failures a span of source raises and catches (`operation_metrics.py`), which its *SourceText* makes once and keeps (`span.failures`).
+The failures a span of source raises (`practices/source_code/source_text.py`), which its *SourceText* makes once and keeps (`span.failures`). What it catches the span answers itself, as every *MeasuredBody* does.
 
-+ SpanFailures(span: SourceText, brackets: BracketStructure)
++ SpanFailures(span: SourceText)
 ----
-+ has_bare_catch(): bool
-+ swallows_exceptions(): bool
 + raises_on_empty(): bool
 	// a builtin failure raised on an empty value; a failure the program declares is a named refusal and is left out
 + exception_without_message(): str
@@ -365,7 +381,7 @@ The objects a brace-language span builds and reads (`operation_metrics.py`), whi
 + top_level_index(mark: str): int
 + braced(open_at: int): str | None
 
-## PythonFunctionBody
+## PythonFunctionBody : MeasuredBody
 
 A Python function read from its syntax tree, and what the rules measure in it.
 
@@ -381,8 +397,12 @@ A Python function read from its syntax tree, and what the rules measure in it.
 + parameters(): list[str]
 + callees(): list[str]
 + body(source: str): CodeBody
-+ except_flags(): tuple[bool, bool]
-	-> CatchClause
++ catches_everything(): bool
+	// any `except` clause catches everything
+	-> CatchClause.catches_everything
++ swallows(): bool
+	// any `except` clause drops the failure it caught
+	-> CatchClause.swallows
 + unnamed_numbers(): list[str]
 + packed_parameters(): dict[str, int]
 
@@ -516,7 +536,7 @@ The routes besides naming that make a class public: registered with a framework 
 
 ## ClassSourceFacts
 
-What a class's source says (`source_facts.py`), which the class makes once and keeps (`oclass.source_facts`): the lines it spans, and the facts they give the rules, which the class keeps as its graph facts.
+What a class's source says (`source_facts.py`), which the class makes once and keeps (`oclass.source_facts`): the lines it spans, and the facts they give the rules, which it assigns to the class's declared fields, saved with the graph.
 
 + ClassSourceFacts(oclass: OoadClass)
 ------
@@ -527,10 +547,32 @@ What a class's source says (`source_facts.py`), which the class makes once and k
 	// keeps the lines from its line to its end line, and each operation's
 	-> OperationSourceFacts.take_lines
 + load(): None
-	// keeps operation shapes, property names, what the constructor builds, prose comments, a prototype swap, and its card bullets as the class's graph facts
-	-> CardBullets.lines
+	// assigns the bold bullets its markdown card writes to the class's bold_interaction_lines and bold_invariant_lines
+	-> CardBullets
 + held_fields(): dict[str, str]
 	// its declared properties, then the fields its constructor assigns
+
+## CodeClassSourceFacts : ClassSourceFacts
+
+What the source of a class read from code says (`source_facts.py`): only a *CodeClass* makes one, so only a class read from code is measured. A class read from a markdown model document has none of these measures, not even empty ones.
+
++ CodeClassSourceFacts(oclass: CodeClass)
+----
++ load(): None
+	// what every class's lines give, then the measures of its code in the CodeClass's declared fields: method_count, operation_shapes, property_names, constructs, prose_comment, prototype_swap
+	-> ClassSourceFacts.load
+	-> SourceText.has_prose_comment
+	-> SourceText.prototype_swap
+
+## OperationShape
+
+<<Value Object>> What a class read from code saves of each of its operations (`source_facts.py`, a TypedDict): a getter is a property node in the graph, so the class's own shapes are where a rule finds its getters among its operations.
+
+------
++ name: str
++ is_property: bool
++ is_private: bool
++ callees: list[str]
 
 ## OperationSourceFacts
 
@@ -547,10 +589,10 @@ What an operation's source says (`source_facts.py`), which the operation makes o
 	-> BodyFingerprint.of_body
 + take_lines(lines: list[str]): None
 + load(): None
-	// keeps its span's fingerprint when its parser took none, I/O mixed with domain work, empty-case and message-less exceptions, unrecorded state changes, prose comments, its card bullets as the operation's graph facts
+	// assigns to the operation's declared fields its span's fingerprint when its parser took none, I/O mixed with domain work, empty-case and message-less exceptions, unrecorded state changes, prose comments, and its card bullets
 	-> SpanFailures
 	-> BodyFingerprint.of_span
-	-> CardBullets.lines
+	-> CardBullets
 
 ## BodyFingerprint
 
@@ -567,8 +609,10 @@ What an operation's source says (`source_facts.py`), which the operation makes o
 <<Value Object>> The bold Interaction and Invariant bullets of a span that is a markdown card (`operation_metrics.py`).
 
 + CardBullets(text: str)
-----
-+ lines(): dict[str, list[int]]
+------
++ interaction_lines: list[int]
++ invariant_lines: list[int]
+	// by line, counted from 1; none of either for a span that is not markdown, and an Invariant bullet in a language section is left out
 
 ## DocComment
 
@@ -910,10 +954,19 @@ A class model written as code. The walk and the body rule live here; each langua
 
 ## CodeClass : OoadClass
 
-A class as one language writes it.
+A class as one language writes it. Only a class read from code is one, so only it declares the measures of its code; its source facts fill them when they load.
 
 ------
 + language: CodeLanguage
++ method_count: int
++ operation_shapes: list[OperationShape]
++ property_names: list[str]
++ constructs: list[str]
+	// the classes its constructor builds that its caller cannot hand it
++ prose_comment: bool
++ prototype_swap: dict[str, str | int]
+	// the code that swaps an object's class and its line; empty when it swaps none
++ << composition >> source_facts: CodeClassSourceFacts
 + property_type: type[CodeProperty]
 + operation_type: type[CodeOperation]
 + is_contract: bool
@@ -941,8 +994,11 @@ A class as one language writes it.
 + take_brace_body(text: str, callees: list[str]): None
 	// a brace-language parser gives it the statements inside its braces, which it keeps as its body
 + load_brace_body_facts(): None
-	// what the rules measure on its brace-language body, once its class holds it: control-flow depth, catches, unnamed numbers, reads of another object's private members (an object of its own class, by the class's name, a parameter typed as it, or a `new` of it, and a member its class declares, are its own)
-	-> SourceText
+	// what the rules measure on its brace-language body, once its class holds it: the measures of its body, then reads of another object's private members (an object of its own class, by the class's name, a parameter typed as it, or a `new` of it, and a member its class declares, are its own)
+	-> measure_body
+	-> SpanCollaborators.reaches_peer_private
++ measure_body(body: MeasuredBody): None
+	// control-flow depth, a catch that catches everything, a catch that swallows, and unnamed numbers, from the body its parser read as text or as a syntax tree
 + doc_text(): str
 	// the description when it is the operation's own text, not one joined from its comments
 + signature(contract: bool): list[str]

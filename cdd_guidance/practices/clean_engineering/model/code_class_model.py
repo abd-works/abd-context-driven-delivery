@@ -18,7 +18,12 @@ from cdd_guidance.practices.source_code import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.source_code import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model.source_facts import (
+    CONSTRUCTOR_NAMES,
+    CodeClassSourceFacts,
+    OperationShape,
+)
+from cdd_guidance.practices.source_code import MeasuredBody
 from harness.guidance.practice_formats import Written
 
 
@@ -64,14 +69,18 @@ class CodeOperation(Operation):
     def load_brace_body_facts(self) -> None:
         """Fill the facts the rules measure on its brace-language body."""
         measured = self._brace_text
-        self.max_control_flow_depth = measured.control_flow_depth()
-        self.has_bare_catch = measured.failures.has_bare_catch()
-        self.swallows_exceptions = measured.failures.swallows_exceptions()
-        self.unnamed_literal_numbers = measured.unnamed_numbers()
+        self.measure_body(measured)
         self.peer_private_access = measured.collaborators.reaches_peer_private(self._own_objects(), self._own_members())
         if self.is_constructor_of(self.parent):
             parameters = frozenset(parameter.name for parameter in self.parameters if parameter.name)
             self.constructed_types = measured.collaborators.built(parameters, self.line or 1)
+
+    def measure_body(self, body: MeasuredBody) -> None:
+        """Keep what the rules measure in its body, which its parser read as a span of text or as a syntax tree."""
+        self.max_control_flow_depth = body.control_flow_depth()
+        self.has_bare_catch = body.catches_everything()
+        self.swallows_exceptions = body.swallows()
+        self.unnamed_literal_numbers = body.unnamed_numbers()
 
     def _own_objects(self) -> frozenset[str]:
         """The names its body holds an object of its own class by, since privacy is per class: the class itself, each
@@ -108,11 +117,37 @@ class CodeOperation(Operation):
 
 
 class CodeClass(OoadClass):
-    """A class as one language writes it: its doc comment, its declaration, its constructor, and its close."""
+    """A class as one language writes it: its doc comment, its declaration, its constructor, and its close. Only a
+    class read from code is one, so only it declares the measures of its code, which its source facts fill when they
+    load; a class read from a markdown model document has none of them."""
 
     language: CodeLanguage
     property_type: type = CodeProperty
     operation_type: type = CodeOperation
+    graph_facts = (
+        *OoadClass.graph_facts,
+        "method_count",
+        "operation_shapes",
+        "property_names",
+        "constructs",
+        "prose_comment",
+        "prototype_swap",
+    )
+
+    def __init__(self, name: str, sequential_order: int, intent: str = "") -> None:
+        super().__init__(name, sequential_order, intent)
+        self.method_count = 0
+        self.operation_shapes: List[OperationShape] = []
+        self.property_names: List[str] = []
+        # The classes its constructor builds that its caller cannot hand it.
+        self.constructs: List[str] = []
+        # Whether a `#` comment in the lines it spans narrates what the code already says.
+        self.prose_comment = False
+        # The code that swaps an object's class, and its line; empty when the class swaps none.
+        self.prototype_swap: dict[str, str | int] = {}
+
+    def _source_facts(self) -> CodeClassSourceFacts:
+        return CodeClassSourceFacts(self)
 
     @property
     def is_contract(self) -> bool:

@@ -7,10 +7,13 @@ _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
+import ast
+
 from expects import equal, expect
-from mamba import description, it
+from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.operation_metrics import PythonFunctionBody
 from cdd_guidance.practices.source_code import SourceText
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 
@@ -49,6 +52,39 @@ with description("peer private access in operation bodies"):
     with it("should read an object a parsed operation builds of its own class as its own"):
         body = "copy() { const made = new Account(); made._email = this._email; return made; }"
         expect(_parsed_operation(body).peer_private_access).to(equal(False))
+
+
+def _python_body(source: str) -> PythonFunctionBody:
+    """The one function of source, read from its syntax tree as the Python parser reads a module function."""
+    return PythonFunctionBody(ast.parse(source).body[0], None)
+
+
+with description("a measured body, as a span of any language and as a Python function"):
+    with context("that catches every failure and drops it"):
+        with before.all:
+            self.bodies = [
+                SourceText("try { run(); } catch () { return null; }"),
+                _python_body("def run():\n    try:\n        go()\n    except:\n        pass\n"),
+            ]
+
+        with it("should say each catches everything"):
+            expect([body.catches_everything() for body in self.bodies]).to(equal([True, True]))
+
+        with it("should say each swallows what it caught"):
+            expect([body.swallows() for body in self.bodies]).to(equal([True, True]))
+
+    with context("that catches a named failure and raises it again"):
+        with before.all:
+            self.bodies = [
+                SourceText("try { run(); } catch (error) { throw error; }"),
+                _python_body("def run():\n    try:\n        go()\n    except KeyError:\n        raise\n"),
+            ]
+
+        with it("should say neither catches everything"):
+            expect([body.catches_everything() for body in self.bodies]).to(equal([False, False]))
+
+        with it("should say neither swallows what it caught"):
+            expect([body.swallows() for body in self.bodies]).to(equal([False, False]))
 
 
 with description("descriptive comments in a span"):

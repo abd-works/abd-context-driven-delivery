@@ -136,10 +136,7 @@ class PythonOperation(CodeOperation):
         self.is_static = function.decorated("staticmethod")
         self.is_classmethod = function.decorated("classmethod")
         self.constructed_types = function.collaborators.built() if self.is_constructor else []
-        self.max_control_flow_depth = function.control_flow_depth()
-        self.has_bare_catch, self.swallows_exceptions = function.except_flags()
-        self.unnamed_literal_numbers = function.unnamed_numbers()
-        self.narrative_comment_lines = 0
+        self.measure_body(function)
         self.peer_private_access = function.collaborators.reaches_peer_private()
         self.packed_parameters = function.packed_parameters()
 

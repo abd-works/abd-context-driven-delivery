@@ -10,6 +10,7 @@ import re
 import sys
 import textwrap
 
+from cdd_guidance.practices.source_code import MeasuredBody
 from cdd_guidance.practices.source_code.source_text import OWN_CLASS_RECEIVERS, OWN_RECEIVERS, SAFE_NUMBERS, STRING_LITERAL, WIRED_PEER_FIELDS, is_dunder
 
 # The dunders Python calls with another object of the same class as the operand: comparison and arithmetic.
@@ -43,24 +44,23 @@ class CardBullets:
     of code has none."""
 
     def __init__(self, text: str) -> None:
-        self._text = text
+        # The lines, counted from 1, of each bold Interaction bullet and each bold Invariant bullet outside a language
+        # section; none of either for a span that is not markdown.
+        self.interaction_lines: list[int] = []
+        self.invariant_lines: list[int] = []
+        if text.strip() and text.lstrip().startswith("#"):
+            self._read(text)
 
-    def lines(self) -> dict[str, list[int]]:
-        """The lines, counted from 1, of each bold Interaction bullet and each bold Invariant bullet outside a
-        language section; none of either for a span that is not markdown."""
-        interactions: list[int] = []
-        invariants: list[int] = []
-        if self._text.strip() and self._text.lstrip().startswith("#"):
-            in_language = False
-            for line_number, line in enumerate(self._text.splitlines(), start=1):
-                in_language = _LANGUAGE_HEADING.match(line) is not None or (in_language and not _ANY_HEADING.match(line))
-                if _META.search(line):
-                    continue
-                if _BOLD_INTERACTION.search(line):
-                    interactions.append(line_number)
-                if _BOLD_INVARIANT_BULLET.search(line) and not (in_language or _L_TAG.search(line)):
-                    invariants.append(line_number)
-        return {"bold_interaction_lines": interactions, "bold_invariant_lines": invariants}
+    def _read(self, text: str) -> None:
+        in_language = False
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            in_language = _LANGUAGE_HEADING.match(line) is not None or (in_language and not _ANY_HEADING.match(line))
+            if _META.search(line):
+                continue
+            if _BOLD_INTERACTION.search(line):
+                self.interaction_lines.append(line_number)
+            if _BOLD_INVARIANT_BULLET.search(line) and not (in_language or _L_TAG.search(line)):
+                self.invariant_lines.append(line_number)
 
 
 class StatementCount:
@@ -115,7 +115,7 @@ class StatementCount:
         return isinstance(value, ast.Constant) and isinstance(value.value, str)
 
 
-class PythonFunctionBody:
+class PythonFunctionBody(MeasuredBody):
     """A Python function read from its syntax tree, and what the rules measure in it. A method keeps the class that
     declares it, since what counts as reaching another object's private state depends on that class; a module function
     has none. It holds the objects it builds and reads, read from the tree."""
@@ -184,10 +184,16 @@ class PythonFunctionBody:
             start -= 1
         return "\n".join(lines[start - 1 : node.end_lineno])
 
-    def except_flags(self) -> tuple[bool, bool]:
-        """(catches everything, swallows a failure), over every ``except`` clause of the function."""
-        clauses = [CatchClause(child) for child in ast.walk(self._node) if isinstance(child, ast.ExceptHandler)]
-        return any(clause.catches_everything() for clause in clauses), any(clause.swallows() for clause in clauses)
+    def catches_everything(self) -> bool:
+        """True when any ``except`` clause of the function catches everything."""
+        return any(clause.catches_everything() for clause in self._catch_clauses())
+
+    def swallows(self) -> bool:
+        """True when any ``except`` clause of the function drops the failure it caught."""
+        return any(clause.swallows() for clause in self._catch_clauses())
+
+    def _catch_clauses(self) -> list["CatchClause"]:
+        return [CatchClause(child) for child in ast.walk(self._node) if isinstance(child, ast.ExceptHandler)]
 
     def unnamed_numbers(self) -> list[str]:
         return [
