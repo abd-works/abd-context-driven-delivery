@@ -648,11 +648,30 @@ SchemaType(key: str)
 ------
 key: str
 fields: list[tuple[str, str]]
+optional: set[str]
+relationships: list[SchemaRelationship]
+	// every field with a value that does not describe the type itself (is, fidelity, path, name), read once
+required_relationships: dict[str, tuple[str, ...]]
+	// derives from relationships: those is_required says
 rules: list[str]
 fidelity: str
 supertype: str
 ----
 field(name: str): str
+add_field(name: str, value: str, optional: bool): None
+
+## SchemaRelationship
+
+One field of a schema type that relates a node of the type to others; the graph's edges, its required relationships, and a pattern's added edge kinds all read a type's fields through these.
+
+SchemaRelationship(name: str, written: str, optional: bool)
+------
+targets: tuple[str, ...]
+	// each word of the value that names a type, value types left out; none for a quoted value
+references: tuple[str, ...]
+	// the schema types the value names, when it names only types
+is_required: bool
+	// not optional, naming only types, and not the belongsTo back-edge
 
 ## load_document
 

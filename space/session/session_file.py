@@ -11,8 +11,6 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal
 
-from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.stories.stories import Stories
 from harness.graph.explorer import NodeSource
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph, SavedGraphOutdated
@@ -33,10 +31,6 @@ FoldKind = Literal["class", "block"]
 FileChangeKind = Literal["changed", "added", "removed"]
 # How difflib names each kind of change, from the text sent to the text now.
 _CHANGE_KINDS: dict[str, FileChangeKind] = {"replace": "changed", "insert": "added", "delete": "removed"}
-# The node types a graph folds on, as the graph's source view does: a class folds whole, each operation and property as
-# a block (harness/graph/app/source/call-expansion.ts). The classes are Clean Engineering's and DDD's class types.
-CLASS_TYPES = frozenset({"OoadClass", "Aggregate", "DomainEvent", "EntityRoot", "Entity", "ValueObject", "Repository", "DomainService", "Factory", "Specification"})
-MEMBER_TYPES = frozenset({"Operation", "Property"})
 # A markdown link to another file: its words, the file named from the linking one, and the anchor of the heading it
 # names there, when it names one. An image and a web address are not one.
 _FILE_LINK = re.compile(r"(?<!!)\[([^\]]+)\]\(([^)\s#:]+)(?:#([^)\s]+))?\)")
@@ -304,30 +298,38 @@ class SessionFile:
         for no folds and no rules."""
         if not self._reads_graph:
             return []
-        nodes = [node for node in self._nodes() if node.type in CLASS_TYPES | MEMBER_TYPES]
-        folds = [Fold(self.range(node.line, node.end_line), "class" if node.type in CLASS_TYPES else "block", node.name) for node in nodes if node.end_line > node.line]
+        kinds = self._fold_kinds
+        nodes = [node for node in self._nodes() if node.type in kinds and node.end_line > node.line]
+        folds = [Fold(self.range(node.line, node.end_line), kinds[node.type], node.name) for node in nodes]
         return sorted(folds, key=lambda fold: (fold.range.start_line, -fold.range.end_line))
+
+    @property
+    def _fold_kinds(self) -> dict[str, FoldKind]:
+        """The node types a file folds on, as the graph's source view does: each practice's classes fold whole, its
+        operations and properties as a block (harness/graph/app/source/call-expansion.ts)."""
+        readings = [output.guidance.reading for output in self._session.practice_outputs.every.values()]
+        members: dict[str, FoldKind] = {kind: "block" for reading in readings for kind in reading.member_types}
+        return {**members, **{kind: "class" for reading in readings for kind in reading.class_types}}
 
     @property
     @data_field
     def steps(self) -> list[FileStep]:
         """Each step of a story test in this file that invokes or observes something the file view's filters show, in
         line order, as the session's graph links it; none while the viewer reads no rules, which never reads a graph,
-        or while the graph holds no Stories."""
+        or while the graph holds no practice that reads steps."""
         if not (self._reads_rules or self._cross_file):
             return []
         graph = self._session.graph
-        stories = graph.practices.loaded(Stories)
-        nodes = [node for node in (stories.reading.in_graph.nodes() if stories is not None else []) if node.source is not None and self._holds(node.source)]
+        steps = (node for practice in graph.practices.opened.values() for node in practice.reading.steps())
+        nodes = [node for node in steps if node.source is not None and self._holds(node.source)]
         found = [FileStep(node.source.start_line, self._sources(graph, "invokes", node), self._sources(graph, "observes", node)) for node in nodes]
         return sorted((step for step in found if step.invokes or step.observes), key=lambda step: step.line)
 
     def _sources(self, graph: Graph, kind: str, node: Node) -> list[NodeSource]:
         """What node reaches by kind that the file view's filters show, each with its source and the class it belongs
-        to; a module's function belongs to none."""
+        to as its practice names it (``owner_of``)."""
         reached = (edge.child for edge in graph.edges.from_parent(kind, node) if edge.child.source is not None and self._shown.shows(kind, edge.child))
-        owners = ((child, str(child.get_fact("owner", "") or "")) for child in reached)
-        return [NodeSource(child, owner="" if owner == MODULE_FUNCTION_HOLDER else owner) for child, owner in owners]
+        return [NodeSource(child, owner=child.practice.reading.owner_of(child)) for child in reached]
 
     def _holds(self, source: Source) -> bool:
         """Whether source, named from its own root, sits in this file."""

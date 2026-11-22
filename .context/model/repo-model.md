@@ -5684,7 +5684,7 @@ How Stories takes part in the graph: it reads the story tests under its root, or
 
 ## StoryTree
 
-The story map as the graph holds it (`stories/model/story_tree.py`): each epic's sub-epics and stories, each story's scenarios, each scenario's steps, and the one definition of the step and epic node types (`STEP_TYPES`, `EPIC_TYPES`, `LINKED_TYPES`, `STORY_MAP_TYPES`) and of a node's key (`KEY_SEPARATOR`). UX and the Validate action ask it rather than keeping copies.
+The story map as the graph holds it (`stories/model/story_tree.py`): each epic's sub-epics and stories, each story's scenarios, each scenario's steps, and the one definition of the step and epic node types (`STEP_TYPES`, `EPIC_TYPES`, `LINKED_TYPES`, `STORY_MAP_TYPES`) and of a node's key (`KEY_SEPARATOR`), and the type of a story's example (`EXAMPLE_TYPE`). UX asks it rather than keeping copies; the Validate action asks each checked practice's node types (`PracticeNodeTypes.scope_types`, Stories' *StoryNodeTypes*) which types a session's stories scope.
 
 + StoryTree(stories: PracticeReading)
 ------

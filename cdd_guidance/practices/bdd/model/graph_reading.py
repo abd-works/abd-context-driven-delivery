@@ -12,17 +12,21 @@ from harness.agent_tools.progress import report_progress
 from harness.annotations.name import Name
 from harness.graph.graph import Node
 from harness.graph.location import Location
+from harness.graph.practice_node_types import PracticeNodeTypes
 from harness.graph.practice_reading import PracticeReading
 from harness.graph.model_node import schema_sync_paused
 
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.reading.imported_classes import ImportedClasses
+from cdd_guidance.practices.clean_engineering.reading.node_evidence import NodeEvidence
 from cdd_guidance.practices.source_code import is_spec_file, is_test_code
 from cdd_guidance.practices.source_code import ClassReference, ScriptImports
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
 
 if TYPE_CHECKING:
+    from harness.graph.model_node import ModelNode
+
     from cdd_guidance.practices.bdd.model.bdd_model import BddModel
     from cdd_guidance.practices.bdd.model.nodes import Reach
 
@@ -32,12 +36,25 @@ _PYTHON = "python"
 _ARTICLES = ("a ", "an ", "the ")
 
 
+class BddNodeTypes(PracticeNodeTypes):
+    """BDD's node types: an observation ``invokes`` the members its source calls and ``demonstrates`` what it names."""
+
+    evidence_kinds = frozenset({"invokes", "demonstrates"})
+
+    def links(self, owner: ModelNode, kind: str, target: ModelNode) -> bool:
+        evidence = NodeEvidence(owner)
+        if kind == "invokes":
+            return evidence.invokes(target.name)
+        return kind == "demonstrates" and evidence.mentions(target.name)
+
+
 class BddGraphReading(PracticeReading):
     """How BDD takes part in the graph: it reads each spec file's describe tree, after Clean Engineering's code, then
     links each observation to the code it drives."""
 
     reads_after = (CleanEngineering,)
     node_types = ("Spec", "Description", "Context", "Observation")
+    types = BddNodeTypes()
     # A describe's states and observations are listed as its spec writes them, in turn, not kind by kind.
     source_ordered_types = frozenset({"Description", "Context", "Observation"})
 

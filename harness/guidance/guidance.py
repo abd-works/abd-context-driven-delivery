@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from dataclasses import replace
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from harness.annotations.annotation import hosted_only
@@ -30,6 +30,7 @@ from harness.agent_tools.agent_tools import (
     instructions,
     toolset_collection,
 )
+from harness.installation.context_config import CONTEXT_FOLDER
 from harness.installation.files import rules, skill
 from harness.installation.data_class import data_field, identity
 from harness.hooks.hooks import Hook
@@ -307,6 +308,22 @@ class PracticeGuidance(Guidance):
         a fidelity that declares a folder per module, such as Clean Engineering's ``{module}/``, names no file, so the
         practice says which code there is its. Every practice claims all of it unless it narrows that."""
         return True
+
+    def is_production_code(self, file: str) -> bool:
+        """Whether file, named from the project's root, is production code a fidelity of this practice that writes a
+        folder per module writes there, rather than a test of it. Every file is, unless the practice tells its tests
+        apart, as a practice that writes code does."""
+        return True
+
+    def placed_under(self, declared: PurePosixPath, root: Path) -> Path | None:
+        """Where a path one of its fidelities declares, such as ``.context/story-map.md``, lands under root, that
+        fidelity's root in a session: ``root / declared``. A root inside a ``.context`` folder, such as
+        ``harness/.context/stories``, holds the practice's documents itself, so a declared ``.context/...`` file lands in
+        it rather than in a ``.context`` within the ``.context``. None when the path lands nowhere under root; a practice
+        that keeps files of its own beside the ``.context`` places those itself."""
+        if CONTEXT_FOLDER in root.parts and declared.parts[:1] == (CONTEXT_FOLDER,):
+            declared = PurePosixPath(*declared.parts[1:])
+        return root / declared
 
     claims_some_code: ClassVar[bool] = False
     """True for a practice whose claim narrows to some code, as DDD's does to a domain's. A practice that claims all code,

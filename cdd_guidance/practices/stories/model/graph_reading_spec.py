@@ -104,3 +104,19 @@ with description("a story map read into the graph with two scenarios files, one 
     with it("should chain the Given's And onto it"):
         given = self.project.graph.edges.from_parent("given", self.backgrounds[0])[0].child
         expect([edge.child.source.start_line for edge in self.project.graph.edges.from_parent("ands", given)]).to(equal([38]))
+
+
+with description("the steps and examples of a story map read into the graph") as self:
+    with before.all:
+        self.fixture, self.read = _read("Place Order", "Cancel Order")
+        self.reading = self.fixture.practice.reading
+
+    with it("should name each step a file view shows the calls of"):
+        expect(len(self.reading.steps())).to(equal(6))
+
+    with it("should take an example as used from where the story declares it"):
+        example = type("Node", (), {"type": "Example"})()
+        expect(self.reading.is_used_from_elsewhere(example)).to(equal(True))
+
+    with it("should take a scenario as part of the story above it"):
+        expect(self.reading.is_used_from_elsewhere(self.read.nodes("Scenario")[0])).to(equal(False))

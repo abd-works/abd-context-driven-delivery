@@ -19,9 +19,11 @@ EPIC_TYPES = ("Epic", "SubEpic")
 """The node types of the story map's epics: an Epic, and a SubEpic under another epic."""
 KEY_SEPARATOR = " › "
 """What parts a story's name from its scenario's, and a scenario's from its step's, in a key."""
+EXAMPLE_TYPE = "Example"
+"""The node type of a story's example: a fixture a scenario uses, declared in the story test or in an examples module."""
 LINKED_TYPES = {"Story": ("Story",), "Scenario": ("Scenario", "Background"), "Step": STEP_TYPES}
 """The Stories node types a link of each kind can name; a background is a scenario a story runs first."""
-STORY_MAP_TYPES = frozenset({*EPIC_TYPES, "Story", "Scenario", "Background", "Example", *STEP_TYPES})
+STORY_MAP_TYPES = frozenset({*EPIC_TYPES, "Story", "Scenario", "Background", EXAMPLE_TYPE, *STEP_TYPES})
 """Every node type of the story map itself, as opposed to the test files a pattern reads into the practice."""
 _ANCHOR_MARK = "#"
 

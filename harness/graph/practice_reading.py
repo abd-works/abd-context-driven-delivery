@@ -5,12 +5,13 @@ import functools
 import importlib
 from typing import TYPE_CHECKING
 
+from harness.graph.practice_node_types import PracticeNodeTypes
 from harness.guidance.guidance import PracticeGuidance
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from harness.graph.graph import Graph, PracticeNodes
+    from harness.graph.graph import Graph, Node, PracticeNodes
     from harness.graph.practice_rule import PracticeGraphRule
 
 
@@ -50,6 +51,10 @@ class PracticeReading:
     (``class`` for a Clean Engineering class), each with the node type it names."""
 
     rule_types: dict[str, tuple[str, ...]] = {}
+
+    types: PracticeNodeTypes = PracticeNodeTypes()
+    """What the practice says of its node types to the graph's shared tables: the relationships its nodes' evidence
+    decides, and the types a session's stories scope."""
     """Node types that also carry the rules the schema gives other types, such as every story node's rules on a story."""
 
     def __init__(self, practice: PracticeGuidance) -> None:
@@ -79,6 +84,21 @@ class PracticeReading:
         map and the story tests that give its stories their scenarios, say. A refresh drops their nodes too and reads
         them all, so the graph holds what a load of them holds. A practice that reads each file by itself names none."""
         return []
+
+    def steps(self) -> list[Node]:
+        """This practice's nodes that are a story test's steps, whose calls a file view shows beside the step; none
+        unless the practice reads steps."""
+        return []
+
+    def is_used_from_elsewhere(self, node: Node) -> bool:
+        """Whether node, one of this practice's, is used from where something else declares it, so it is no part of
+        the node above it and that node's lines open without it; none is, unless the practice says."""
+        return False
+
+    def owner_of(self, node: Node) -> str:
+        """The class node, one of this practice's operations or properties, belongs to, as a file view names it: its
+        ``owner`` fact; empty for any other node."""
+        return str(node.get_fact("owner", "") or "")
 
     def reads_model_document(self, file: Path) -> bool:
         """Whether this practice reads file, a model document in a ``.context`` folder, in a model format of its own,

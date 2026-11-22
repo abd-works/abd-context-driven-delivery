@@ -1,5 +1,5 @@
 """A guidance's own instructions tool, and how a guidance's tools are published and installed."""
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from expects import be_a, be_true, contain, equal, expect
 from mamba import before, context, description, it
@@ -75,3 +75,20 @@ with description("a practice"):
     with it("should install its files in its own folder, named after it"):
         practice = SamplePracticeWithFidelities(format="markdown")
         expect(practice.installed_as(practice.tools["instructions"])).to(equal(InstalledName(practice.install_folder, is_own=True)))
+
+
+with description("where a practice places a declared path under a fidelity's root"):
+    with before.each:
+        self.practice = SamplePracticeWithFidelities(format="markdown")
+
+    with it("should place it under the root"):
+        placed = self.practice.placed_under(PurePosixPath("docs/map.md"), Path("billing"))
+        expect(placed).to(equal(Path("billing/docs/map.md")))
+
+    with context("that is a .context document, under a root inside .context"):
+        with it("should land in that root itself, not in a .context within it"):
+            placed = self.practice.placed_under(PurePosixPath(".context/map.md"), Path("harness/.context/sample"))
+            expect(placed).to(equal(Path("harness/.context/sample/map.md")))
+
+    with it("should take every file as production code"):
+        expect(self.practice.is_production_code("billing/invoice_spec.py")).to(be_true)

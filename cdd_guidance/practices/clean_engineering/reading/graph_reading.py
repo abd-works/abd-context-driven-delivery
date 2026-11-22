@@ -21,11 +21,12 @@ from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 from harness.graph.schema_conformance import EXEMPT_FACT
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, OoadClass
+from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER, CleanEngineeringModel, OoadClass
 from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassesInReach, ClassLinks
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
 from cdd_guidance.practices.clean_engineering.reading.compared_facts import ComparedFacts
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
+from cdd_guidance.practices.clean_engineering.reading.node_evidence import CodeNodeTypes
 from cdd_guidance.practices.source_code import is_test_code
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -40,6 +41,7 @@ class GraphReading(PracticeReading):
     class_types = ("OoadClass",)
     member_types = ("Operation", "Property")
     class_node_type = "OoadClass"
+    types = CodeNodeTypes()
     anchor_types = {
         "module": "Module",
         "class": "OoadClass",
@@ -48,6 +50,12 @@ class GraphReading(PracticeReading):
         "parameter": "Parameter",
         "package": "Package",
     }
+
+    def owner_of(self, node: Node) -> str:
+        """The class an operation or property belongs to; none for a module's function, which the class model gathers
+        under a holder of its own (``MODULE_FUNCTION_HOLDER``)."""
+        owner = super().owner_of(node)
+        return "" if owner == MODULE_FUNCTION_HOLDER else owner
 
     def __init__(self, practice: PracticeGuidance) -> None:
         super().__init__(practice)
