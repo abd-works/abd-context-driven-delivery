@@ -27,9 +27,9 @@ from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
-import space.session.practice_session_output as session_output_module
+import space.session.validation_report as validation_report_module
 from harness.graph.saved_graph import SavedGraph
-from cdd_guidance.actions.validate.checked_graph import CheckedGraph
+from cdd_guidance.actions.validate.report_files import ReportFiles
 from space.session.session_files import NamedPathNotFoundError
 from cdd_guidance.actions.validate.validate import UnknownRule, Validate
 from cdd_guidance.actions.validate.validate_examples import ENTITY_ROOT_FILE, SPEC_FILE, STORY_FILE, SampleWorkingCopy, working_in
@@ -551,20 +551,20 @@ with description("a validate action on practice guidance") as self:
                     with before.all:
                         self.racing = _StoryMapFolder(declared=True, drawio=True)
                         validate = self.racing.action
-                        resolve = CheckedGraph.check_beside
+                        resolve = ReportFiles.graph_file
                         markdown_call_waiting = threading.Event()
                         drawio_call_done = threading.Event()
 
-                        def resolve_after_the_drawio_call(checked_graph, reports):
+                        def resolve_after_the_drawio_call(reports):
                             if threading.current_thread() is markdown_call:
                                 markdown_call_waiting.set()
                                 drawio_call_done.wait(60)
-                            return resolve(checked_graph, reports)
+                            return resolve(reports)
 
                         def check_the_markdown():
                             self.racing_report = validate.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
 
-                        CheckedGraph.check_beside = resolve_after_the_drawio_call
+                        ReportFiles.graph_file = resolve_after_the_drawio_call
                         try:
                             markdown_call = threading.Thread(target=check_the_markdown)
                             markdown_call.start()
@@ -573,7 +573,7 @@ with description("a validate action on practice guidance") as self:
                             drawio_call_done.set()
                             markdown_call.join()
                         finally:
-                            CheckedGraph.check_beside = resolve
+                            ReportFiles.graph_file = resolve
 
                     with after.all:
                         self.racing.close()
@@ -789,13 +789,13 @@ with description("a validate action on practice guidance") as self:
         # A report's name is dated to the second, so a second call in that second would write over the first's report.
         with context("that is validated twice in the same second"):
             with before.all:
-                clock = session_output_module.datetime
-                session_output_module.datetime = _ClockAtOneSecond
+                clock = validation_report_module.datetime
+                validation_report_module.datetime = _ClockAtOneSecond
                 try:
                     _, first = self.sample_validated(["ddd-tactics"], [ENTITY_ROOT_FILE])
                     _, second = self.sample_validated(["ddd-tactics"], [ENTITY_ROOT_FILE])
                 finally:
-                    session_output_module.datetime = clock
+                    validation_report_module.datetime = clock
                 self.same_second_reports = sorted(path for path in first + second if path.suffix == ".md")
 
             with it("should save a report for each call"):

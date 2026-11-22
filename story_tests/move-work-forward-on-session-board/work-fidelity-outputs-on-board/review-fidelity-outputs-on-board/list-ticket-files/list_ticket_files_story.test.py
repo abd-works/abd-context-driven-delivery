@@ -20,7 +20,7 @@ with story("List Ticket Files"):
             # Ticket -> FidelityGuidance(Stories story_map).session_output.written.output_paths()
             # Ticket <- markdown .context/story-map.md exists, drawio .context/story-map.drawio missing
             pass
-        with then("the files panel lists .context/story-map.md as there"):
+        with then("the Files app lists .context/story-map.md as there"):
             pass
         with but_("no file of another fidelity is listed"):
             pass
@@ -34,7 +34,7 @@ with story("List Ticket Files"):
             # Person -> Ticket.files(['bdd-behavior'])
             # Ticket -> Branch('pet-visits').changed_files()
             pass
-        with then("the files panel lists src/mine_spec.py"):
+        with then("the Files app lists src/mine_spec.py"):
             pass
         with but_("src/theirs_spec.py is not listed"):
             pass

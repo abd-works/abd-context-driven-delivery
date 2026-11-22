@@ -33,9 +33,8 @@ export function CheckIcon() {
   )
 }
 
-// The three ways the files panel shows a fidelity's files: a list, the folder they sit in, and the files themselves.
+// The controls that open a ticket's files and graph in an app of their own: its files in the Files app, its knowledge graph in the Graph app.
 const FILE_VIEW_SHAPES: Record<string, string> = {
-  folder: 'M2 4.5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z',
   files: 'M5 2.5h5l3 3V12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1zM10 2.5V5.5h3M3 5v8.5a1 1 0 0 0 1 1h6',
   // the knowledge graph: three nodes joined
   graph: 'M4 4.5a1.5 1.5 0 1 0 0 .01M12 4.5a1.5 1.5 0 1 0 0 .01M8 12a1.5 1.5 0 1 0 0 .01M5.3 5.3l1.9 5.4M10.7 5.3l-1.9 5.4M5.5 4.5h5',

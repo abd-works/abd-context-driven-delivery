@@ -64,7 +64,7 @@ class FormatChoice:
     def is_chosen(self) -> bool:
         """Whether every fidelity the chip covers has a format of the group chosen in the session, and for a diagram
         each format of it the fidelity writes: what the chip shows, the same choice the Story UI's toggles show."""
-        return self._group.is_chosen
+        return self._group.is_selected
 
     def choose(self, is_chosen: bool) -> None:
         """Choose every format each fidelity the chip covers would use from the group, or leave out every format of the

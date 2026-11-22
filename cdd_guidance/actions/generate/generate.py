@@ -8,7 +8,7 @@ from pathlib import Path
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.guidance_actions.generated_patterns import GeneratedPatterns
-from harness.guidance.stages import STEP, TAKES_FORMATS, on_stage
+from harness.guidance.action_catalogue import STEP, TAKES_FORMATS, on_stage
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import skill
 from harness.markdown.format import Format

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from abc import ABC, abstractmethod
 from functools import cached_property
 from pathlib import Path
 from enum import Enum
@@ -13,7 +14,7 @@ from harness.annotations.annotation import hosted_only
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.chat.chat import Chat, links_of_run
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
-from harness.guidance.stages import GENERATE, RENDER, VALIDATE
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import long_call, mcp
@@ -39,6 +40,7 @@ from space.session import Session
 from space.session.session import MAIN_SESSION_NAME
 from space.session.progress_cache import ACCEPTED_COUNT, HAS_OUTPUT, VIOLATION_COUNT
 from space.session.session_log import LogEntry
+from space.session.guidance_selection import GuidanceSelection
 from space.session.session_record import OwnedFields
 from space.session.file_manager import FileEntry
 
@@ -63,8 +65,32 @@ _STAGE_FIELD = "stage"
 Remembered = TypeVar("Remembered")
 _STAGE_MARK_FIELD = "stage_mark"
 _TICKET_FIELDS = "ticket"
-# The actions that check or convert a fidelity's output, so they wait until there is some.
-ONCE_THERE_IS_OUTPUT = (VALIDATE, RENDER)
+
+
+def _generate() -> str:
+    """The step that writes a fidelity's files, as the session log names it: the action catalogue's writing step."""
+    return ACTION_CATALOGUE.writing_step.name
+
+
+def _validate() -> str:
+    """The step that checks a fidelity's files, as the session log names it: the action catalogue's checking step."""
+    return ACTION_CATALOGUE.checking_step.name
+
+
+def _needing_output() -> list[str]:
+    """The actions that check or convert a fidelity's output, so they wait until there is some."""
+    return [action.name for action in ACTION_CATALOGUE.needing_output]
+
+
+def _ticket_stage_of(session: Session) -> str:
+    """The stage a session's ticket stands in on the board of the project whose sessions hold it, such as `Discovery`;
+    empty for one that is closed."""
+    column = Board.load(session.sessions.root).placement.make_ticket(session).column
+    return column.name if isinstance(column, Stage) else ""
+
+
+# Before anyone chose stages for a session, its guidance selection shows its ticket's stage selected.
+GuidanceSelection.start_on_ticket_stage_with(_ticket_stage_of)
 
 
 class MainStaysOpenError(ValueError):
@@ -746,12 +772,6 @@ class TicketWork:
         return self._entries
 
     @cached_property
-    def _session_file(self) -> str:
-        """Its session's session.json as a path from the project, which every command names: one per action on every
-        fidelity, so it is worked out once. A ticket whose folder moves is read again as another ticket."""
-        return self._ticket.session.session_file_from_project
-
-    @cached_property
     def _required(self) -> list[RequiredFidelity]:
         """Each fidelity a stage requires, as this ticket's session holds it, with its stage: one object per fidelity in
         a session, which finds its own files and reports there and is the one an action on it works with."""
@@ -781,7 +801,7 @@ class TicketWork:
         moves = [index for index, entry in enumerate(entries) if entry.verb == MOVED_INTO]
         since = entries[moves[-1] + 1:] if moves else entries
         for entry in reversed(since):
-            if entry.verb not in (GENERATE, VALIDATE):
+            if entry.verb not in (_generate(), _validate()):
                 continue
             stage = next((progress.stage for progress in self.enabled if entry.names(progress.fidelity)), None)
             if stage is not None:
@@ -807,13 +827,6 @@ class TicketWork:
     def in_stage(self, stage: Stage) -> StageWork:
         """Its work in stage: the progress of every fidelity stage requires whose practice its session works on."""
         return StageWork(self._ticket, stage, [progress for progress in self.enabled if progress.stage is stage])
-
-    def command(self, action: str, fidelities: list[FidelityGuidance]) -> str:
-        """The command that runs action on fidelities in the ticket's session, one command for them all so the chat
-        works on them in one turn. It names the session, because the chat that runs it can have another session open,
-        and no format, so the action works in the format each fidelity keeps in that session."""
-        named = " ".join(fidelity.slug for fidelity in fidelities)
-        return f"/actions-{action} {named} session={self._session_file}"
 
     def record(self, line: str) -> None:
         """Write line to the ticket's session log; its progress is read from the log again next time it is asked for."""
@@ -907,17 +920,47 @@ class LoggedWork:
 
     def failed_again(self) -> LoggedWork:
         """This work with its latest validate failed, so validate is to do again."""
-        return LoggedWork([action for action in self.done_actions if action == GENERATE], True, self.lines_logged)
+        return LoggedWork([action for action in self.done_actions if action == _generate()], True, self.lines_logged)
 
     def validated(self, steps: list[str]) -> LoggedWork:
         """This work with its latest validate passed, its done actions in the order of steps, its stage's."""
-        return LoggedWork([action for action in steps if action in (*self.done_actions, VALIDATE)], False, self.lines_logged)
+        return LoggedWork([action for action in steps if action in (*self.done_actions, _validate())], False, self.lines_logged)
+
+
+class Work(ABC):
+    """*Work* is a ticket's work on some fidelities of one stage: one fidelity's progress (*FidelityProgress*) or a
+    stage's work taken together (*StageWork*). Each answers the command a chat runs for every action of its stage on its
+    fidelities, which the ticket's session's guidance selection writes (``GuidanceSelection.command``): the one place a
+    command and its ``format=`` are written."""
+
+    _ticket: Ticket
+
+    @property
+    @abstractmethod
+    def stage(self) -> Stage: ...
+
+    @property
+    @abstractmethod
+    def fidelities(self) -> list[FidelityGuidance]:
+        """The fidelities its commands name."""
+
+    @property
+    @data_field
+    def commands(self) -> dict[str, str]:
+        """The command a chat runs for each action its stage offers on its fidelities, such as
+        ``/actions-generate ux-mockup session=.sessions/checkout-flow/session.json format=html``."""
+        return self._ticket.session.guidance.commands_on(self.fidelities)
+
+    def command(self, action: str) -> str:
+        """The command that runs action on its fidelities in its ticket's session, with the formats chosen there for an
+        action that takes them."""
+        return self.commands[action]
 
 
 @identity("ticket", "fidelity")
 @language_adapter(language="typescript")
 @agent_toolset
-class FidelityProgress:
+class FidelityProgress(Work):
     """*FidelityProgress* is how far one fidelity has got through its stage's actions on one ticket."""
 
     # Validate is done when its latest line names no graph-rule violations and the latest report's judgment fails no
@@ -935,14 +978,14 @@ class FidelityProgress:
         position; the latest report's judgment can still fail a validate the log shows passing."""
         entries = ticket.work.entries
         naming = [(index, entry.verb) for index, entry in enumerate(entries) if entry.names(required.fidelity)]
-        validations = [index for index, verb in naming if verb == VALIDATE]
+        validations = [index for index, verb in naming if verb == _validate()]
         latest_validation = validations[-1] if validations else None
         has_violations = latest_validation is not None and GRAPH_RULE_VIOLATION in entries[latest_validation].words
         validated = latest_validation is not None and not has_violations
         # Only the generate tool writes a generate line: an action started inside another, such as the generate a
         # Sketch prompt expands, logs nothing (GuidanceAction.log_running), so every generate line counts.
-        done_verbs = {verb for _index, verb in naming if verb == GENERATE}
-        done_verbs |= {VALIDATE} if validated else set()
+        done_verbs = {verb for _index, verb in naming if verb == _generate()}
+        done_verbs |= {_validate()} if validated else set()
         logged = LoggedWork([action for action in required.stage.steps if action in done_verbs], has_violations, len(naming))
         read = cls(required, logged, ticket)
         judged = read._with_violations() if read._is_judged_failing else read
@@ -1012,17 +1055,9 @@ class FidelityProgress:
         return remaining[0] if remaining else ""
 
     @property
-    @data_field
-    def commands(self) -> dict[str, str]:
-        """The command a chat runs for each action its stage offers on this fidelity, such as
-        ``/actions-generate ux-mockup session=.sessions/checkout-flow/session.json``."""
-        return {action: self.command(action) for action in self._required.stage.actions}
-
-    def command(self, action: str) -> str:
-        """The command that runs action on this fidelity in its ticket's session. It names the session, because the
-        chat that runs it can have another session open, and no format, so the action works in the format the fidelity
-        keeps in that session."""
-        return self._ticket.work.command(action, [self._required.fidelity])
+    def fidelities(self) -> list[FidelityGuidance]:
+        """Its one fidelity, which its commands name."""
+        return [self._required.fidelity]
 
     @property
     @data_field
@@ -1031,7 +1066,7 @@ class FidelityProgress:
         check or convert: an action on the fidelity is recorded, or a file it declares is already there, such as one a
         person wrote. A person can check the same output again as often as they like."""
         has_output = bool(self._logged.done_actions) or self._has_files
-        return [action for action in self._required.stage.actions if has_output or action not in ONCE_THERE_IS_OUTPUT]
+        return [action for action in self._required.stage.actions if has_output or action not in _needing_output()]
 
     @cached_property
     def _has_files(self) -> bool:
@@ -1072,7 +1107,7 @@ class FidelityProgress:
         """Each action as to_do, in_progress, or done. A validate that left violations is in progress until they are fixed."""
         states = {action: "done" if action in self._logged.done_actions else "to_do" for action in self._required.stage.steps}
         if self._logged.has_violations:
-            states[VALIDATE] = "in_progress"
+            states[_validate()] = "in_progress"
         return ActionStates(states)
 
     @property
@@ -1188,7 +1223,7 @@ class FidelityProgress:
     @property
     def _is_judged_failing(self) -> bool:
         """A validate the log shows passing still failed when the judgment the validating agent added to its report fails a rule."""
-        if VALIDATE not in self._logged.done_actions:
+        if _validate() not in self._logged.done_actions:
             return False
         latest = self.latest_report
         return latest is not None and latest.is_judged_failing
@@ -1205,7 +1240,7 @@ class ActionStates:
         """Where each action stands across several fidelities: done only once it is done on all of them, in progress
         once it is under way on any, else to do."""
         if not every:
-            return cls({action: "to_do" for action in (GENERATE, VALIDATE)})
+            return cls({action: "to_do" for action in (_generate(), _validate())})
         taken = every[0]
         for states in every[1:]:
             taken = taken._with(states)
@@ -1225,15 +1260,15 @@ class ActionStates:
     @property
     @data_field
     def generate(self) -> str:
-        return self._states[GENERATE]
+        return self._states[_generate()]
 
     @property
     @data_field
     def validate(self) -> str:
-        return self._states[VALIDATE]
+        return self._states[_validate()]
 
 
-class StageWork:
+class StageWork(Work):
     """*StageWork* is a ticket's work in one stage taken together: the progress of each fidelity the stage requires
     whose practice the ticket's session works on. A stage head's action bar shows how far it has got and acts on all of
     it at once."""
@@ -1272,11 +1307,9 @@ class StageWork:
         return sum(progress.violation_count for progress in self._progress)
 
     @property
-    @data_field
-    def commands(self) -> dict[str, str]:
-        """The command a chat runs for each action its stage offers, naming every one of its fidelities."""
-        fidelities = [progress.fidelity for progress in self._progress]
-        return {action: self._ticket.work.command(action, fidelities) for action in self._stage.actions}
+    def fidelities(self) -> list[FidelityGuidance]:
+        """Each of its fidelities, which one command names together."""
+        return [progress.fidelity for progress in self._progress]
 
     @property
     @data_field

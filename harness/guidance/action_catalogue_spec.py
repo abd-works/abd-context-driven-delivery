@@ -54,3 +54,30 @@ with description("the action catalogue"):
 
         with it("should list no name that no toolset publishes"):
             expect(("repair" in self.names, "review" in self.names)).to(equal((True, False)))
+
+    # Every stage offers the same actions on a fidelity, so the catalogue answers them once, by each action's @on_stage.
+    with description("that places the actions a person runs on a fidelity in its stage"):
+        with it("should take every fidelity through generate, then validate"):
+            expect([action.name for action in ACTION_CATALOGUE.steps]).to(equal(["generate", "validate"]))
+
+        with it("should name generate the step that writes and validate the step that checks"):
+            expect((ACTION_CATALOGUE.writing_step.name, ACTION_CATALOGUE.checking_step.name)).to(equal(("generate", "validate")))
+
+        with it("should offer the other actions after the steps"):
+            expect([action.name for action in ACTION_CATALOGUE.on_fidelities]).to(
+                equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"])
+            )
+
+        with it("should name generate and render as the actions that take the formats a person picks"):
+            expect([action.name for action in ACTION_CATALOGUE.taking_formats]).to(equal(["generate", "render"]))
+
+        with it("should leave validate out of the actions that write a fidelity's files"):
+            expect([action.name for action in ACTION_CATALOGUE.producing]).to(
+                equal(["partition", "generate", "iterate", "sketch", "render", "document"])
+            )
+
+        with it("should name validate and render as the actions that wait until a fidelity has output"):
+            expect([action.name for action in ACTION_CATALOGUE.needing_output]).to(equal(["validate", "render"]))
+
+        with it("should give an action run on no fidelity's stage no place"):
+            expect(_action_named("repair").place).to(equal(None))

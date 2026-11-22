@@ -95,11 +95,11 @@ Read `annotation_kinds` as the one registry of annotation kinds in harness/annot
 - `GuidanceAction.listed` `-> ToolsetReference.parsed(entry).made(**context)` builds each PracticeGuidance a call names by its reference, then has the session's practice adopt it · harness/guidance_actions/guidance_actions.py:496
 -   `<- list[PracticeGuidance]` · harness/guidance_actions/guidance_actions.py:248
 - `Validate._fidelities` `-> PracticeGuidance.fidelities.current` the FidelityGuidance each guidance is at · cdd_guidance/actions/validate/validate.py:100
-- `Validate.validate` `-> CheckedGraph(session, fidelities, NamedToCheck(paths, graph, call))` builds the graph from the checked files · cdd_guidance/actions/validate/validate.py:55
+- `Validate.validate` `-> CheckedGraph(session, [CheckedFidelity(session, fidelity)], NamedToCheck(paths, graph, call))` refuses a path that is not there, claims each fidelity's *ValidationReport* (*ReportFiles*), then builds the graph from the checked files · cdd_guidance/actions/validate/validate.py:55
 - `Validate.validate` `-> GuidanceAction.run(on, action="validate")` runs once per listed guidance and logs the action · cdd_guidance/actions/validate/validate.py:80
 - `Validate.listed_rules -> _rules_text` `-> PracticeGuidance.checked_rule_collections` the shared rules, then the current fidelity's · cdd_guidance/actions/validate/validate.py:218
 - `PracticeGuidance.checked_rule_collections` `-> FidelityGuidance.rules` <- list[RulesCollection] · harness/guidance/guidance.py:118
-- `Validate.validate` `-> ReportFiles(session, fidelities).save(ValidationReport.for_saving(), graph)` writes the report in the session, the graph's violations and their nodes beside it (`SavedGraph.violated`), and records the run in `session.folder.violation_history` · cdd_guidance/actions/validate/report_files.py:48
+- `Validate.validate` `-> CheckedGraph.save(ReportText.for_saving())` writes the report into each claimed *ValidationReport* (`ReportFiles.save`), the graph's violations and their nodes beside it (`SavedGraph.violated`, at `ValidationReport.saved_graph`), and records the run in `session.folder.violation_history` · cdd_guidance/actions/validate/checked_graph.py
 
 # harness/name
 
@@ -1433,11 +1433,9 @@ No class of this module acts on another class of the model at run time.
   - `-> ApproachStage.scope` reads scope of · space/kanban/board.py:299
   - `<- StageScope`
 - `Stage.actions`
-  - `-> ApproachStage.actions` reads actions of · space/kanban/board.py:305
+  - `-> ActionCatalogue.on_fidelities` reads the actions run on a fidelity · space/kanban/board.py
 - `Stage.producing_actions`
-  - `-> ApproachStage.producing_actions` reads producing actions of · space/kanban/board.py:311
-- `Stage.actions_with_formats`
-  - `-> ApproachStage.actions_with_formats` reads actions with formats of · space/kanban/board.py:317
+  - `-> ActionCatalogue.producing` reads the actions that write a fidelity's files · space/kanban/board.py
 - `Stage.work_required`
   - `-> ApproachStage.name` reads name of · space/kanban/board.py:323
   - `<- list[FidelityGuidance]`

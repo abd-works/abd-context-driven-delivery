@@ -14,7 +14,7 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { card, dragCard, expect, fixtureRoot, openWholeBoard, openCardOf, readBoardAgain, resetSessions, step, test, toast, writeInto, writeSession } from '../../../space/kanban/app/tests/story-ui'
+import { catchFilesAppLinks, card, dragCard, expect, fixtureRoot, openWholeBoard, openCardOf, readBoardAgain, resetSessions, step, test, toast, writeInto, writeSession } from '../../../space/kanban/app/tests/story-ui'
 import type { Locator, Page } from '../../../space/kanban/app/tests/story-ui'
 
 const sessions = join(fixtureRoot, '.sessions')
@@ -60,6 +60,7 @@ test.describe('Edit Ticket Text', () => {
 
   test("Show only the opening of a ticket's text, with a link to its file", async ({ page }) => {
     let opened: Locator
+    const links = await catchFilesAppLinks(page)
     await step(page, "Given checkout-flow's text is three paragraphs: Pay for the basket, Take the card, Send the receipt", async () => {
       writeInto(sessionFile('checkout-flow', 'checkout-flow.md'), '# Checkout flow\n\nPay for the basket.\n\nTake the card.\n\nSend the receipt.\n')
       await openWholeBoard(page)
@@ -73,8 +74,8 @@ test.describe('Edit Ticket Text', () => {
     await step(page, 'When the Person follows More in checkout-flow.md', async () => {
       await opened.getByRole('button', { name: 'More in checkout-flow.md' }).click()
     })
-    await step(page, 'Then the files panel shows the whole text, Send the receipt included', async () => {
-      await expect(page.locator('[data-panel="files"]')).toContainText('Send the receipt.')
+    await step(page, "Then the Files app opens checkout-flow.md in checkout-flow's session folder", async () => {
+      await expect.poll(async () => (await links()).map(url => [url.searchParams.get('session-folder'), url.searchParams.get('file')])).toEqual([['checkout-flow', '.sessions/checkout-flow/checkout-flow.md']])
     })
   })
 

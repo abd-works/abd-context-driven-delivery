@@ -50,11 +50,6 @@ export class ColumnClient {
     return this.column.producing_actions ?? []
   }
 
-  // The actions whose command takes the formats the bar's chips pick: generate and render.
-  get actionsWithFormats(): string[] {
-    return this.column.actions_with_formats ?? []
-  }
-
   // Each fidelity the stage requires, with the formats it writes and its default one.
   get workRequired(): RequiredFidelity[] {
     return this.column.work_required ?? []

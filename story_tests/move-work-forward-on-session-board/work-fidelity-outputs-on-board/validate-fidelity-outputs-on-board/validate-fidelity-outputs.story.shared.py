@@ -9,7 +9,7 @@ Steps reach the board, the session, and the Validate action only through the nam
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
 operation: Display Violations Band (both: board-page-view.tsx draws the band); Fix Report Violations (all four: the
 board app writes the fix message, and reads an open report again after a tool call); Open Validation Report "Open a
-violation's file at its line" (the files panel marks the line); Validate Fidelity "Send the fidelity to validate" (the
+violation's file at its line" (the Files app marks the line); Validate Fidelity "Send the fidelity to validate" (the
 board app writes the command) and "Keep Validate off with nothing to check".
 """
 

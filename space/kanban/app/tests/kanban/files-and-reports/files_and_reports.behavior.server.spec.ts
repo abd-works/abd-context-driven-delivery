@@ -8,11 +8,11 @@ import { SessionAdapter } from '@cdd/space/session/session'
 import { itBehavesLike } from 'test-utils/behavior-test/behavior-test'
 import { CddProject } from 'test-utils/behavior-test/cdd-project'
 
-import { filesAndReportsBehavior, type FilesAndReportsDriver } from './files_and_reports.spec.shared'
+import { filesBehavior, reportsBehavior, type FilesDriver, type ReportsDriver } from './files_and_reports.spec.shared'
 
 const project = new CddProject()
 
-class FilesAndReportsAdapterDriver implements FilesAndReportsDriver {
+class FilesAndReportsAdapterDriver implements FilesDriver, ReportsDriver {
   private progress(ticket: string, fidelity: string): FidelityProgressAdapter {
     return new FidelityProgressAdapter(project.cdd, ticket, fidelity)
   }
@@ -56,4 +56,5 @@ beforeEach(() => {
 
 afterAll(() => project.close())
 
-itBehavesLike(filesAndReportsBehavior, { describe, it, before: beforeEach, expect, driver: () => driver })
+itBehavesLike(filesBehavior, { describe, it, before: beforeEach, expect, driver: () => driver })
+itBehavesLike(reportsBehavior, { describe, it, before: beforeEach, expect, driver: () => driver })

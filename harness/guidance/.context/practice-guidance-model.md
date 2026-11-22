@@ -289,7 +289,7 @@ render_files(format: str, paths: list[str] | str, source: str | None): dict
 	-> practice_guidance.formats.read
 	-> practice_guidance.formats.render RenderRequest(fidelity=self)
 work_in(session_output: FidelitySessionOutput): None
-	// its reports and where a new one goes are its session output's: session_output.validation_reports.listed(), validation_reports.new_path()
+	// its reports and where a new one goes are its session output's: session_output.validation_reports.listed(), validation_reports.new(), each a ValidationReport
 
 ## DeclaredOutputs
 
@@ -412,6 +412,20 @@ _registered_runner: ActionRunner
 	// ActionsNotRegistered while no runner is registered
 _fidelity_actions: tuple[Action, ...]
 	// the actions the runner runs on a fidelity
+on_fidelities: tuple[Action, ...]
+	// every action placed on a fidelity's stage (Action.place), in rank order: partition, generate, validate, iterate, sketch, render, document; the same in every stage, made once
+steps: tuple[Action, ...]
+	// those placed with STEP: generate, validate
+writing_step: Action
+	// the step that does not check: generate
+checking_step: Action
+	// the step that checks: validate
+producing: tuple[Action, ...]
+	// every one but those that check (CHECKS): every action but validate
+taking_formats: tuple[Action, ...]
+	// those placed with TAKES_FORMATS: generate, render
+needing_output: tuple[Action, ...]
+	// those that check or convert (CHECKS, CONVERTS), which wait until a fidelity has output: validate, render
 ----
 register(*toolset_classes: type)
 	// called by cdd_guidance/actions when it is imported
@@ -429,6 +443,8 @@ toolset_class: type
 operation: Callable
 folder: Path
 	// the toolset's folder under cdd_guidance/actions
+place: OnStage | None
+	// where it sits among the actions run on a fidelity in its stage, read from its operation's @on_stage; none for repair
 ----
 _run_on(fidelity: WorkedFidelity, **arguments): Any
 	// through the runner the catalogue that made it holds
@@ -446,28 +462,18 @@ of(name: str): ApproachStage | None
 
 ## ApproachStage
 
-One stage: its name, its title, its scope, and the actions a person runs on a fidelity in it. The session board's and the catalog's stage columns are each built on one.
+One stage: its name, its title, and its scope. The session board's and the catalog's stage columns are each built on one. The actions a person runs on a fidelity are the same in every stage, so the action catalogue answers them (`on_fidelities`, `steps`, `producing`, `taking_formats`).
 
-One stage reads its actions from the action catalogue: each action's operation carries an `@on_stage` annotation (*OnStage*) saying where it sits, which the stage reads back with `OnStage.recorded_on`, so no list of action names is kept here.
-
-ApproachStage(name: str, scope: StageScope, catalogue: ActionCatalogue)
+ApproachStage(name: str, scope: StageScope)
 ------
 name: str
 title: str
 scope: StageScope
-steps: list[str]
-	// the actions annotated on_stage(rank, STEP), in rank order: generate, validate
-actions: list[str]
-	// every action annotated on_stage, in rank order: partition, generate, validate, iterate, sketch, render, document
-producing_actions: list[str]
-	// every one but those that check a fidelity's files (on_stage(rank, CHECKS)): every action but validate
-actions_with_formats: list[str]
-	// those annotated on_stage(rank, TAKES_FORMATS): generate, render
 ----
 
 ## OnStage : Annotation
 
-The annotation on an action's operation that says where it sits among the actions a person runs on a fidelity in its stage, typed `@on_stage(rank, *traits)` with the traits `STEP`, `TAKES_FORMATS`, and `CHECKS`, as `@on_stage(1, STEP, TAKES_FORMATS)` on generate.
+The annotation on an action's operation that says where it sits among the actions a person runs on a fidelity in its stage, typed `@on_stage(rank, *traits)` with the traits `STEP`, `TAKES_FORMATS`, `CHECKS`, and `CONVERTS`, as `@on_stage(1, STEP, TAKES_FORMATS)` on generate and `@on_stage(5, TAKES_FORMATS, CONVERTS)` on render. It lives in `action_catalogue.py`, beside the *Action* that reads it.
 
 OnStage(rank: int, *traits: str)
 ------
@@ -475,6 +481,8 @@ rank: int
 step: bool
 takes_formats: bool
 checks: bool
+needs_output: bool
+	// it checks or converts a fidelity's output
 ----
 
 ## StageScope

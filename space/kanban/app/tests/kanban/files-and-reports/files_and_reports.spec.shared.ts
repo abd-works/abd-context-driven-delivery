@@ -1,12 +1,16 @@
 /**
- * States each behavior of List Ticket Files, View Fidelity Files, and Open Validation Report once. Reaches the tier only through
- * its driver. The sentences match kanban_tools_spec.py.
+ * States each behavior of Open Validation Report once, and of List Ticket Files and View Fidelity Files as the cdd server
+ * answers them. Reaches the tier only through its driver. The sentences match kanban_tools_spec.py. The board's page
+ * shows no file itself, so its tier runs the report behavior alone; the Files app shows the files.
  */
 import { shareBehavior } from 'test-utils/behavior-test/behavior-test'
 
-export type FilesAndReportsDriver = {
+export type FilesDriver = {
   generatedFilesOf: (ticket: string, fidelity: string) => Promise<string[]>
   textOfFile: (ticket: string, fidelity: string, path: string) => Promise<string>
+}
+
+export type ReportsDriver = {
   reportPathOf: (ticket: string, fidelity: string) => Promise<string>
   ruleNamesOf: (ticket: string, fidelity: string) => Promise<string[]>
   failingLineOf: (ticket: string, fidelity: string) => Promise<number>
@@ -16,7 +20,7 @@ const TICKET = 'checkout-flow'
 const FIDELITY = 'stories-story-map'
 const STORY_MAP = '.context/story-map.md'
 
-export const filesAndReportsBehavior = shareBehavior<FilesAndReportsDriver>(({ describe, it, expect, driver }) => {
+export const filesBehavior = shareBehavior<FilesDriver>(({ describe, it, expect, driver }) => {
   describe('a ticket', () => {
     describe("with a fidelity's markdown generated", () => {
       it('should list the file with whether it exists', async () => {
@@ -27,7 +31,11 @@ export const filesAndReportsBehavior = shareBehavior<FilesAndReportsDriver>(({ d
         expect(await driver().textOfFile(TICKET, FIDELITY, STORY_MAP)).toContain('Check Out Order')
       })
     })
+  })
+})
 
+export const reportsBehavior = shareBehavior<ReportsDriver>(({ describe, it, expect, driver }) => {
+  describe('a ticket', () => {
     describe('with validation reports saved for a fidelity', () => {
       it("should show that fidelity's latest report", async () => {
         expect(await driver().reportPathOf(TICKET, FIDELITY)).toContain('stories-story-map-20261101T100000')

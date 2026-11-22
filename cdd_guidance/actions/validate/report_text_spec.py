@@ -18,7 +18,7 @@ from mamba import before, context, description, it
 from harness.graph.location import Location
 from harness.graph.violation import FoundBy, FoundOn, Violation
 from space.session import Session, Sessions
-from cdd_guidance.actions.validate.validation_report import ValidationReport
+from cdd_guidance.actions.validate.report_text import ReportText
 
 
 class _CheckedGraph:
@@ -64,7 +64,7 @@ with description("a validation report"):
             session = Sessions(self.root).named("main")
             session.workpath = self.root
             session.work_folder = self.session_dir
-            report_md = ValidationReport([], _CheckedGraph(session, self.violations)).for_judge()
+            report_md = ReportText([], _CheckedGraph(session, self.violations)).for_judge()
             report_path = self.session_dir / "validate-clean-engineering-code-src.md"
             report_path.write_text(report_md, encoding="utf-8")
             account = (self.root / "src/customer/account/account.ts").resolve()
@@ -78,5 +78,5 @@ with description("a validation report"):
             session = Sessions(self.root).named("main")
             session.workpath = self.root
             session.work_folder = self.session_dir
-            report_md = ValidationReport([], _CheckedGraph(session, [], self.violations)).for_saving()
+            report_md = ReportText([], _CheckedGraph(session, [], self.violations)).for_saving()
             expect(report_md).to(contain("**Accepted violations left out:** 1. A person accepted them as they are, in `.context/violations-accepted.json`"))

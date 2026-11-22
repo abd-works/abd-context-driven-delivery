@@ -17,7 +17,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { ACCENT, BOARD_POST_HEADERS, card, dragCard, expect, FakeChat, fixtureRoot, generatedLine, openBoard, openCard, openCardOf, resetSessions, seedActive, startBoard, test, toast, turnOffActiveSessionOnly, validatedLine, waitForChat, writeInto, writeSession } from '../../../space/kanban/app/tests/story-ui'
+import { catchFilesAppLinks, ACCENT, BOARD_POST_HEADERS, card, dragCard, expect, FakeChat, fixtureRoot, generatedLine, openBoard, openCard, openCardOf, resetSessions, seedActive, startBoard, test, toast, turnOffActiveSessionOnly, validatedLine, waitForChat, writeInto, writeSession } from '../../../space/kanban/app/tests/story-ui'
 import type { Page } from '../../../space/kanban/app/tests/story-ui'
 
 const PAGE_HEIGHT = 900
@@ -48,6 +48,8 @@ async function resizePanelTo(page: Page, kind: string, wanted: number): Promise<
 
 const openFilesOf = (page: Page, ticket: string) => card(page, ticket).getByRole('button', { name: 'files', exact: true }).first().click()
 const openReportOf = (page: Page, ticket: string) => card(page, ticket).locator('.card-violations').click()
+// The active ticket's story map help, from its tile in the details, as its ? opens it.
+const openHelpOf = (page: Page) => page.locator('.details-body [data-tile="stories-story-map"]').getByRole('button', { name: /^Help for/ }).click()
 
 test.beforeEach(() => resetSessions(fixtureRoot))
 test.afterAll(() => resetSessions(fixtureRoot))
@@ -342,11 +344,12 @@ test.describe('Expand Ticket From Empty Area', () => {
 
   // The card's own controls each do their work without opening the card. The scenario names the stories tile; a
   // collapsed card holds no tiles, and its segments open the card on purpose (Open a card on the fidelity of a pressed
-  // segment), so this presses the card's folder control, which opens the files panel on the card's fidelities.
+  // segment), so this presses the card's folder control, which opens the Files app on the card's fidelities.
   test("Leave a card's controls to do their own work", async ({ page }) => {
+    const links = await catchFilesAppLinks(page)
     await openBoard(page)
     await openFilesOf(page, 'checkout-flow')
-    await expect(page.locator('[data-panel="files"]')).toBeVisible()
+    await expect.poll(async () => (await links()).length).toBe(1)
     await expect(openCard(page, 'checkout-flow')).toHaveCount(0)
   })
 })
@@ -376,22 +379,22 @@ test.describe('Arrange Side Panel', () => {
   test.describe("Set a panel's width", () => {
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
-      await openFilesOf(page, 'checkout-flow')
-      await expect(page.locator('[data-panel="files"]')).toBeVisible()
-      await resizePanelTo(page, 'files', 700)
+      await openHelpOf(page)
+      await expect(page.locator('[data-panel="help"]')).toBeVisible()
+      await resizePanelTo(page, 'help', 700)
     })
 
-    test('Then the files panel is 700 pixels wide', async ({ page }) => {
-      expect((await page.locator('[data-panel="files"]').boundingBox())!.width).toBe(700)
+    test('Then the help panel is 700 pixels wide', async ({ page }) => {
+      expect((await page.locator('[data-panel="help"]').boundingBox())!.width).toBe(700)
     })
 
-    test.describe('the Person narrows the files panel to 10 pixels', () => {
+    test.describe('the Person narrows the help panel to 10 pixels', () => {
       test.beforeEach(async ({ page }) => {
-        await resizePanelTo(page, 'files', 10)
+        await resizePanelTo(page, 'help', 10)
       })
 
-      test('Then the files panel stops at 360 pixels', async ({ page }) => {
-        expect((await page.locator('[data-panel="files"]').boundingBox())!.width).toBe(360)
+      test('Then the help panel stops at 360 pixels', async ({ page }) => {
+        expect((await page.locator('[data-panel="help"]').boundingBox())!.width).toBe(360)
       })
     })
   })
@@ -400,15 +403,15 @@ test.describe('Arrange Side Panel', () => {
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
       await openReportOf(page, 'checkout-flow')
-      await openFilesOf(page, 'checkout-flow')
+      await openHelpOf(page)
       await page.getByRole('button', { name: 'Expand report' }).click()
-      await page.getByRole('button', { name: 'Expand files' }).click()
+      await page.getByRole('button', { name: 'Expand help' }).click()
     })
 
-    test("Then the files panel takes the board's width less the other open panels", async ({ page }) => {
-      const files = (await page.locator('[data-panel="files"]').boundingBox())!.width
+    test("Then the help panel takes the board's width less the other open panels", async ({ page }) => {
+      const help = (await page.locator('[data-panel="help"]').boundingBox())!.width
       const report = (await page.locator('[data-panel="report"]').boundingBox())!.width
-      expect(Math.round(files + report)).toBe(1600)
+      expect(Math.round(help + report)).toBe(1600)
     })
 
     test('And the report panel is no longer expanded', async ({ page }) => {
@@ -432,12 +435,12 @@ test.describe('Arrange Side Panel', () => {
   test.describe("Keep the columns' width when a panel opens", () => {
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
-      await openFilesOf(page, 'checkout-flow')
-      await expect(page.locator('[data-panel="files"]')).toBeVisible()
+      await openReportOf(page, 'checkout-flow')
+      await expect(page.locator('[data-panel="report"]')).toBeVisible()
     })
 
     // The canvas's five columns are 1488 pixels wide together.
-    test('Then the columns keep their width and scroll sideways beside the files panel', async ({ page }) => {
+    test('Then the columns keep their width and scroll sideways beside the report panel', async ({ page }) => {
       const scrolls = await page.locator('.board-region').evaluate(element => element.scrollWidth > element.clientWidth)
       expect([scrolls, (await page.locator('.column-grid').first().boundingBox())!.width >= 1488]).toEqual([true, true])
     })
@@ -480,13 +483,16 @@ test.describe('Restrict Actions To Active Session', () => {
   })
 
   test.describe('Keep information and moves open on a locked ticket', () => {
+    let links: () => Promise<URL[]>
+
     test.beforeEach(async ({ page }) => {
+      links = await catchFilesAppLinks(page)
       await openBoard(page)
       await openFilesOf(page, 'billing-report')
     })
 
-    test("Then the files panel lists billing-report's files", async ({ page }) => {
-      await expect(page.locator('[data-panel="files"] .files-subject')).toContainText('billing-report')
+    test("Then the Files app opens on billing-report's files", async () => {
+      await expect.poll(async () => (await links()).map(url => url.searchParams.get('files'))).toEqual(['billing-report'])
     })
 
     test.describe('the Person moves billing-report to Specification', () => {

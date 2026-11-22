@@ -10,7 +10,7 @@ from cdd_guidance.actions.generate.generate import Generate
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
 from harness.guidance.worked_session import WorkedSession
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
-from harness.guidance.stages import on_stage
+from harness.guidance.action_catalogue import on_stage
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.agent_tools.agent_tools import agent_tool
 from harness.agent_tools.tool_call import ToolCall

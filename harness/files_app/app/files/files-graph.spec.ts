@@ -99,7 +99,7 @@ class FakeFilesServer implements CddApi {
     this.posts.push({ path, body })
     if (path.endsWith('/graph-trees') && this.treesAnswer !== undefined) return this.treesAnswer as Result
     if (path.endsWith('/guidance-selection')) return this.selection() as Result
-    if (path.endsWith('/update-guidance-selection')) return this.update(body) as Result
+    if (path.endsWith('/toggle-guidance')) return this.toggle(String(body.part), String(body.name)) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
     if (path.endsWith('/fidelity-files')) return {} as Result
     if (path.endsWith('/root-files')) return CHECKOUT_FLOW_FILES as Result
@@ -113,6 +113,11 @@ class FakeFilesServer implements CddApi {
     if (path.endsWith('/cdd/progress')) return this.progress.map(message => ({ tool: 'session.graph_trees', message })) as Result
     if (path.endsWith('/file')) return { path: body.path, text: 'line\n'.repeat(700), language: 'python', comments: [], folds: [], violations: body.rules ? [BROKEN_RULE] : [], changes: [] } as Result
     return null
+  }
+
+  // A press on a practice's toggle, as Session.toggle_guidance answers it: the practice taken out of those selected, or put in.
+  toggle(_part: string, name: string): GuidanceSelectionData {
+    return this.update({ practices: this.practices.includes(name) ? this.practices.filter(each => each !== name) : [...this.practices, name] })
   }
 
   // A change made on the chat bar or in the page: the version moves and every waiting read answers.
@@ -137,6 +142,7 @@ class FakeFilesServer implements CddApi {
       practices: PRACTICES.map(practice => ({ ...practice, is_selected: this.practices.includes(practice.key) })),
       formats: [],
       fidelities,
+      commands: {},
     } as GuidanceSelectionData
   }
 
@@ -274,7 +280,7 @@ describe('Filter Graph Like The File List', () => {
   describe('with Stories and Clean Engineering on', () => {
     it('should hold only the Stories tree once the Person turns Clean Engineering off', async () => {
       const { page, stop } = await showingGraph()
-      await page.guidance.togglePractice('clean_engineering')
+      await page.guidance.toggle('practice', 'clean_engineering')
       await settled()
       stop()
       expect(treeNames(page)).toEqual(['Stories'])
@@ -282,7 +288,7 @@ describe('Filter Graph Like The File List', () => {
 
     it('should list only story-map.md when switched back to the files', async () => {
       const { page, stop } = await showingGraph()
-      await page.guidance.togglePractice('clean_engineering')
+      await page.guidance.toggle('practice', 'clean_engineering')
       await settled()
       page.fileBar.show('list')
       stop()
@@ -471,7 +477,7 @@ describe('Open Several Files From Graph Nodes', () => {
     it('should open ticket.py at lines 460 to 465 when the Person selects Ticket.activate', async () => {
       const { page, stop } = await selectedActivate()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
+      expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
     })
 
     it('should read ticket.py with its folds', async () => {
@@ -504,7 +510,7 @@ describe('Fold Open Files To Selected Nodes', () => {
       await page.graph.select(entryNamed(page, 'close'), true)
       await settled()
       stop()
-      expect(page.selectedLinesIn(TICKET_CODE)).toEqual([
+      expect(page.linesShownIn(TICKET_CODE)).toEqual([
         { start: 460, end: 465 },
         { start: 538, end: 555 },
       ])
@@ -519,7 +525,7 @@ describe('Open Every File Of A Folder Node', () => {
       await page.graph.select(entryNamed(page, 'Clean Engineering'))
       await settled()
       stop()
-      expect([page.state.openPath, page.state.moreFiles.map(file => file.path), page.selectedLinesIn(BOARD_CODE)]).toEqual([TICKET_CODE, [BOARD_CODE], [{ start: 104, end: 397 }]])
+      expect([page.state.openPath, page.state.moreFiles.map(file => file.path), page.linesShownIn(BOARD_CODE)]).toEqual([TICKET_CODE, [BOARD_CODE], [{ start: 104, end: 397 }]])
     })
   })
 })
@@ -657,13 +663,13 @@ describe("Open A Relationship's Member In Its Own File", () => {
     it('should open ticket.py at the lines close covers when the Person selects close there', async () => {
       const { page, stop } = await selectedInvokedClose()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
+      expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
     })
 
     it("should mark no line of the step's own file", async () => {
       const { page, stop } = await selectedInvokedClose()
       stop()
-      expect(page.selectedLinesIn(STORY_MAP)).toEqual([])
+      expect(page.linesShownIn(STORY_MAP)).toEqual([])
     })
   })
 })
@@ -691,7 +697,7 @@ describe('Go To A Fold-out File', () => {
       await page.graph.goToFile(CLOSE_FOLD_OUT)
       await settled()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
+      expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
     })
   })
 
@@ -703,7 +709,7 @@ describe('Go To A Fold-out File', () => {
       await page.graph.goToFile(SECTION_FOLD_OUT)
       await settled()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 315, end: 319 }]])
+      expect([page.state.openPath, page.linesShownIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 315, end: 319 }]])
     })
   })
 })
@@ -764,7 +770,7 @@ describe('Open Violation In Files App Source', () => {
       await page.graph.selectRule(entryNamed(page, 'activate'), ACTIVATE_RULES[0]!)
       await settled()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
+      expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
     })
   })
 })

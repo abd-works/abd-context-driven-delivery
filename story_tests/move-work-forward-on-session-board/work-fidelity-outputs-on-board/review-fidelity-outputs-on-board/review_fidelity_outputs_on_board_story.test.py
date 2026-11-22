@@ -20,7 +20,7 @@ with story("List Ticket Files"):
             pass
         with when("the Person lists checkout-flow's story_map files"):
             pass
-        with then("the files panel shows a .context/story-map.md tab, as there"):
+        with then("the Files app shows a .context/story-map.md tab, as there"):
             pass
         with but_("no file of another fidelity shows"):
             pass
@@ -61,7 +61,7 @@ with story("Browse Ticket Files By Practice"):
             pass
         with when("the Person browses checkout-flow's files"):
             pass
-        with then("the top of the files panel shows a Stories filter and a BDD filter, each by its short form"):
+        with then("the top of the Files app shows a Stories filter and a BDD filter, each by its short form"):
             pass
         with and_("the tabs below them show story-map.md and checkout_story.test.md together in Stories' color, then order_spec.py in BDD's color"):
             pass
@@ -119,7 +119,7 @@ with story("Open Session Files From Details"):
             pass
         with when("the Person opens checkout-flow's workpath from its details"):
             pass
-        with then("the files panel lists the entries of harness/.context"):
+        with then("the Files app lists the entries of harness/.context"):
             pass
         with but_("the root chooser does not open"):
             pass

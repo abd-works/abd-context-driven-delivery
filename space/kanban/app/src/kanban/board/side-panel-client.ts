@@ -10,7 +10,7 @@ const DEFAULT_WIDTH = 640
 export const SMALLEST_WIDTH = 360
 const LARGEST_WIDTH = 1200
 
-// The panels beside the board, and the report and help panels. The files panel has its own client.
+// The panels beside the board, the report and help panels. A ticket's files open in the Files app, never beside the board.
 export class SidePanelClient {
   constructor(
     private readonly store: BoardStore,
@@ -60,7 +60,7 @@ export class SidePanelClient {
     this.store.change(state => ({ panels: state.panels.filter(panel => panel.kind !== kind) }))
   }
 
-  // A ticket let go of takes its report and files panels with it; each board read makes new ticket clients, so a panel
+  // A ticket let go of takes its report panel with it; each board read makes new ticket clients, so a panel
   // holds the ticket it was opened on under the same name.
   closeTicketPanels(ticket: TicketClient): void {
     this.store.change(state => ({ panels: state.panels.filter(panel => panel.kind === 'help' || panel.ticket.name !== ticket.name) }))

@@ -4,9 +4,6 @@ import type { BoardPage } from './board-page'
 
 const REPORT_QUERY = 'report'
 const HELP_QUERY = 'help'
-const FILES_QUERY = 'files'
-const SESSION_FOLDER_QUERY = 'session-folder'
-const FILE_QUERY = 'file'
 const TICKET_QUERY = 'ticket'
 const FIDELITY_QUERY = 'fidelity'
 // Where every failure a link meets happened, as the chat that opened the page is told it.
@@ -15,8 +12,9 @@ const OPENING_FROM_A_LINK = 'Opening the Kanban board from a chat bar link'
 // One fidelity of one ticket a link names, such as ?report=<ticket>&fidelity=<slug>.
 type LinkedFidelity = { ticket: TicketClient; progress: FidelityProgressClient }
 
-// The links a chat bar opens the board with: each names a ticket, and some a fidelity of it or a file, and opens what a
-// press on the board would open, once the board has been read. A link naming nothing opens nothing; one naming what the
+// The links a chat bar opens the board with: each names a ticket, and some a fidelity of it, and opens what a press on
+// the board would open, once the board has been read. A ticket's files open in the Files app, which the chat bar links
+// itself. A link naming nothing opens nothing; one naming what the
 // board does not show says so.
 export class PageLinks {
   constructor(private readonly page: BoardPage) {}
@@ -42,34 +40,6 @@ export class PageLinks {
     if (linked) await this.page.panels.openFidelityHelp(linked.progress)
   }
 
-  // ?files=<ticket>&fidelity=<slug>,<slug>, from the chat bar's files button, opens the files panel on that ticket's
-  // stage with those fidelities' practices turned on, as their files button on the tile does.
-  async openFiles(search: string): Promise<void> {
-    const query = new URLSearchParams(search)
-    const name = query.get(FILES_QUERY)
-    const slugs = (query.get(FIDELITY_QUERY) ?? '').split(',').filter(Boolean)
-    if (!name || !slugs.length) return
-    const ticket = await this.ticketNamed(name)
-    const progress = slugs.flatMap(slug => ticket?.work.progressNamed(slug) ?? [])
-    if (!ticket || !progress.length) return this.page.failures.fail(`The board has no ${slugs.join(', ')} files for ${name}.`, OPENING_FROM_A_LINK)
-    this.select(ticket)
-    await this.page.files.openFiles(ticket, progress)
-  }
-
-  // ?session-folder=<ticket>, from the chat bar's session name, opens the files panel on that ticket's session folder, as
-  // the details' session link does; with &file=<path>, as a file the Story UI editor asks the chat to show, that file's
-  // tab is open.
-  async openSessionFolder(search: string): Promise<void> {
-    const query = new URLSearchParams(search)
-    const name = query.get(SESSION_FOLDER_QUERY)
-    if (!name) return
-    const ticket = await this.ticketNamed(name)
-    if (!ticket) return this.page.failures.fail(`The board has no ticket ${name}.`, OPENING_FROM_A_LINK)
-    this.select(ticket)
-    const file = query.get(FILE_QUERY)
-    await this.page.files.openFolder(ticket, 'session', file ?? '')
-  }
-
   // The ticket a link names, the board read first when it has not been yet.
   private async ticketNamed(name: string): Promise<TicketClient | undefined> {
     if (!this.page.store.state.board) await this.page.reader.refresh()
@@ -90,11 +60,5 @@ export class PageLinks {
     }
     this.page.store.change({ selected: ticket.address })
     return { ticket, progress }
-  }
-
-  // A ticket opened in the files panel is selected, with the details region open beside it.
-  private select(ticket: TicketClient): void {
-    this.page.store.change({ selected: ticket.address })
-    this.page.layout.expandRegion('details')
   }
 }

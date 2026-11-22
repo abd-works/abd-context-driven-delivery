@@ -74,6 +74,8 @@ export class FilesPage {
   readonly foldKeys: FilesFoldKeys
   readonly callouts: FileCallouts
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
+  // The link's line shows in the file the link opens until the person opens another file or selects a node.
+  private showsLinkedLine = true
 
   constructor(
     readonly api: CddApi,
@@ -107,7 +109,7 @@ export class FilesPage {
     // A link naming no session, such as the app's bare address, has nothing to ask cdd about: list() says so.
     if (this.link.namesFiles) void this.readPlace()
     if (this.link.namesFiles) void this.foldKeys.read()
-    if (this.link.namesFiles && !this.link.isSessionFolder) void this.readRootFiles()
+    if (this.link.namesFiles && !this.link.isFolder) void this.readRootFiles()
     const stopFollowing = this.follow()
     const reread = () => void this.refreshOpen()
     window.addEventListener('focus', reread)
@@ -124,7 +126,7 @@ export class FilesPage {
   // whenever the files it lists change, and reads the open files again whenever the file view's filters change. Answers
   // what stops all three.
   private follow(): () => void {
-    const stopGuidance = this.link.isSessionFolder || !this.link.namesFiles ? () => undefined : this.guidance.follow()
+    const stopGuidance = this.link.isFolder || !this.link.namesFiles ? () => undefined : this.guidance.follow()
     const stopGraph = this.graph.follow()
     const stopCallouts = this.followFilters()
     return () => {
@@ -182,7 +184,8 @@ export class FilesPage {
       this.store.change(state => ({ byFidelity, isListing: false, entries: this.shownFrom({ ...state, byFidelity }) }))
       const entries = this.state.entries
       const first = this.link.file || entries.find(entry => entry.exists && !isDrawio(entry.path) && !publishedOf(entry))?.path || ''
-      if (first) await this.open(first)
+      // The file the link names opens as the link opened it, at the line it names.
+      if (first) await this.openAt(first)
     } catch (failure) {
       this.store.change(() => ({ isListing: false, problem: `The files did not list: ${reasonOf(failure)}` }))
       this.notices.fail(`The Files app did not list the files: ${reasonOf(failure)}`, `Opening the Files app on ${this.link.subject}`, { isShownOnPage: true, kind: 'session_roots' })
@@ -199,7 +202,7 @@ export class FilesPage {
   // fidelity listed or to none. The file bar keeps the changed ones for This session.
   private shownFrom(state: FilesPage['state']): FileEntryData[] {
     const formats = selectedFormatsOf(state.guidance)
-    if (this.link.isSessionFolder) return filesShown(state.byFidelity, [''], formats)
+    if (this.link.isFolder) return filesShown(state.byFidelity, [''], formats)
     const listed = listedBy(state.guidance, this.link.fidelities)
     return eachOnce([...filesShown(state.byFidelity, listed, formats), ...rootFilesShown(state.rootFiles ?? [], listed, state.guidance)])
   }
@@ -217,7 +220,7 @@ export class FilesPage {
 
   // A session folder is one list of no fidelity; a ticket's fidelities are kept apart, so a practice can hide its own.
   private async filesByFidelity(slugs: string[]): Promise<FidelityFiles[]> {
-    if (this.link.isSessionFolder) return [{ slug: '', entries: (await this.session.folderFiles()) ?? [] }]
+    if (this.link.isFolder) return [{ slug: '', entries: (await (this.link.folder === 'workpath' ? this.session.workpathFiles() : this.session.folderFiles())) ?? [] }]
     if (!slugs.length) return []
     // One call for every fidelity, which shares one look at what the branch changed.
     const bySlug = (await TicketClientGenerated.named(this.api, this.link.ticket).fidelityFiles(slugs)) ?? {}
@@ -233,7 +236,7 @@ export class FilesPage {
   async showSelected(): Promise<void> {
     this.store.change(state => ({ entries: this.shownFrom(state) }))
     const missing = this.listed.filter(slug => !this.state.byFidelity.some(each => each.slug === slug))
-    if (this.link.isSessionFolder || this.state.isListing || !missing.length) return
+    if (this.link.isFolder || this.state.isListing || !missing.length) return
     try {
       const read = await this.filesByFidelity(missing)
       this.store.change(state => ({ byFidelity: [...state.byFidelity, ...read.filter(each => !state.byFidelity.some(held => held.slug === each.slug))] }))
@@ -248,7 +251,7 @@ export class FilesPage {
   // renamed, added or deleted on disk since the page opened is listed as it is now.
   showScope(scope: 'session' | 'all'): void {
     this.store.change(() => ({ scope }))
-    if (this.link.namesFiles && !this.link.isSessionFolder && !this.state.isListing) void this.listAgain()
+    if (this.link.namesFiles && !this.link.isFolder && !this.state.isListing) void this.listAgain()
   }
 
   // The files of the fidelities already listed and every file under the session's root, read again and shown.
@@ -287,6 +290,7 @@ export class FilesPage {
 
   // A file a person chooses from the list opens alone, leaving the nodes selected in the graph view.
   async open(path: string): Promise<void> {
+    this.showsLinkedLine = false
     this.store.change(({ graph }) => ({ moreFiles: [], graph: { ...graph, selected: [] } }))
     await this.openAt(path)
   }
@@ -296,6 +300,7 @@ export class FilesPage {
   async showNodes(selected: SelectedNode[]): Promise<void> {
     const [first, ...others] = [...new Set(selected.map(node => node.lines.path))]
     if (!first) return
+    this.showsLinkedLine = false
     if (this.state.openPath === first && this.state.file) await this.refreshOpen()
     else await this.openAt(first)
     const read = await Promise.all(others.map(path => this.readBeside(path)))
@@ -312,9 +317,12 @@ export class FilesPage {
     }
   }
 
-  // The lines of the nodes selected in the graph view that sit in the file at path.
-  selectedLinesIn(path: string): { start: number; end: number }[] {
-    return this.state.graph.selected.filter(node => node.lines.path === path).map(node => ({ start: node.lines.start_line, end: node.lines.end_line }))
+  // The lines of the file at path asked to show, which unfold and scroll into view: those of the nodes selected in the
+  // graph view that sit in it, else the line the page's link names, such as a violation's, while the link's file is the
+  // one it opened.
+  linesShownIn(path: string): { start: number; end: number }[] {
+    const selected = this.state.graph.selected.filter(node => node.lines.path === path).map(node => ({ start: node.lines.start_line, end: node.lines.end_line }))
+    return selected.length || !this.showsLinkedLine ? selected : this.link.linesIn(path)
   }
 
   private async openAt(path: string): Promise<void> {

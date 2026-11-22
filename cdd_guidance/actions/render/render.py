@@ -8,7 +8,7 @@ from cdd_guidance.actions.render.render_order import WorkerRender
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.practice_formats import RenderRequest
-from harness.guidance.stages import TAKES_FORMATS, on_stage
+from harness.guidance.action_catalogue import CONVERTS, TAKES_FORMATS, on_stage
 from pathlib import Path
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset, instructions, noSessionLog, tools
@@ -36,7 +36,7 @@ class BoardNotKept(LookupError):
 class Render(GuidanceAction):
     """Render already-generated output for the listed guidance."""
 
-    @on_stage(5, TAKES_FORMATS)
+    @on_stage(5, TAKES_FORMATS, CONVERTS)
     @mcp
     @skill
     @agent_tool

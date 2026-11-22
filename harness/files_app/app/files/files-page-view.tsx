@@ -258,7 +258,7 @@ function PracticeTogglesView({ page }: { page: FilesPage }) {
           style={{ '--practice-colour': practice.colour } as CSSProperties}
           aria-pressed={practice.is_selected}
           title={`${practice.short_name}: ${practice.is_selected ? 'on, press to turn it off here and on the chat bar' : 'off, press to turn it on here and on the chat bar'}`}
-          onClick={() => void page.guidance.togglePractice(practice.key)}
+          onClick={() => void page.guidance.toggle('practice', practice.key)}
         >
           {practice.short_name}
         </button>
@@ -367,7 +367,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
       {isOneOfSeveral ? <OpenFilesBarView page={page} /> : null}
       {isOneOfSeveral ? <OpenFileHeadView page={page} path={state.file.path} /> : null}
       {page.openFiles.isCollapsed(state.file.path) ? null : (
-        <FileView key={state.file.path} file={state.file} callouts={page.callouts} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileView key={state.file.path} file={state.file} callouts={page.callouts} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(state.file.path)} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
@@ -408,7 +408,7 @@ function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }
     <section className="open-file more-file" aria-label={file.path}>
       <OpenFileHeadView page={page} path={file.path} />
       {page.openFiles.isCollapsed(file.path) ? null : (
-        <FileView file={file} callouts={page.callouts} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} onGoToFile={goToFile} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileView file={file} callouts={page.callouts} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(file.path)} onGoToFile={goToFile} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
     </section>
   )
@@ -461,7 +461,7 @@ function StageTogglesView({ page }: { page: FilesPage }) {
           className={`stage-toggle ${stage.is_selected ? 'is-shown' : ''}`}
           aria-pressed={stage.is_selected}
           title={`${stage.title}: ${stage.is_selected ? 'selected, press to hide its files here and on the chat bar' : 'press to show its files here and on the chat bar'}`}
-          onClick={() => void page.guidance.toggleStage(stage.name)}
+          onClick={() => void page.guidance.toggle('stage', stage.name)}
         >
           {STAGE_ICONS[stage.title] ?? stage.title}
         </button>
@@ -485,7 +485,7 @@ function FormatTogglesView({ page }: { page: FilesPage }) {
           className={`format-toggle ${format.is_selected ? 'is-chosen' : 'is-not-made'}`}
           aria-pressed={format.is_selected}
           title={`${format.label}: offered by ${format.offered}; ${format.is_selected ? 'selected, press to show every format' : 'press to show only the formats selected'}`}
-          onClick={() => void page.guidance.toggleFormat(format.label)}
+          onClick={() => void page.guidance.toggle('format', format.label)}
         >
           {formatGlyphOf(format.label)}
         </button>

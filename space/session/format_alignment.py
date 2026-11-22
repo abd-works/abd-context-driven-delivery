@@ -45,7 +45,6 @@ from harness.installation.data_class import data_field
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import long_call, mcp
 from space.session.callout_alignment import CalloutAlignment
-from space.session.guidance_selection import GuidanceSelection
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
@@ -481,7 +480,7 @@ class SessionAlignment:
         # A diagnosis reads the files as they are now: a search made a moment ago does not hold a file written since,
         # such as one an alignment just rendered.
         self._session.session_files.file_manager.search_again()
-        covered = GuidanceSelection(self._session).covered
+        covered = self._session.guidance.covered
         comparison = _ComparisonGraph()
         try:
             gaps = [gap for fidelity in covered for gap in _FidelityAlignment(fidelity, self._session, comparison).gaps()]

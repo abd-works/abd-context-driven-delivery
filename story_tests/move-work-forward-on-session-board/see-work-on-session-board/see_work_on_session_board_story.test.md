@@ -324,18 +324,18 @@ section: body
 
 #### Scenario: Set a panel's width
 
-*Given* the files panel is open beside the board
-*When* the Person widens the files panel to 700 pixels
-*Then* the files panel is 700 pixels wide
-*When* the Person narrows the files panel to 10 pixels
-*Then* the files panel stops at 360 pixels
+*Given* the help panel is open beside the board
+*When* the Person widens the help panel to 700 pixels
+*Then* the help panel is 700 pixels wide
+*When* the Person narrows the help panel to 10 pixels
+*Then* the help panel stops at 360 pixels
 
 #### Scenario: Expand one panel at a time
 
-*Given* the report panel and the files panel are open
+*Given* the report panel and the help panel are open
 *And* the report panel is expanded
-*When* the Person expands the files panel
-*Then* the files panel takes the board's width less the other open panels
+*When* the Person expands the help panel
+*Then* the help panel takes the board's width less the other open panels
 *And* the report panel is no longer expanded
 
 #### Scenario: Close a side panel
@@ -347,8 +347,8 @@ section: body
 #### Scenario: Keep the columns' width when a panel opens
 
 *Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows its five [columns](../../../space/kanban/.context/kanban-model.md#column) at their own width
-*When* the Person opens checkout-flow's files list
-*Then* the columns keep their width and scroll sideways beside the files panel
+*When* the Person opens checkout-flow's validation report
+*Then* the columns keep their width and scroll sideways beside the report panel
 
 ## Story: Expand Ticket From Empty Area
 
@@ -393,7 +393,7 @@ section: body
 *Given* Active session only is on  
   *And* billing-report is not the active [ticket](../../../.context/kanban-model.md#ticket--card)  
 *When* the Person opens billing-report's files  
-*Then* the files panel lists billing-report's files  
+*Then* the Files app opens on billing-report's files  
 *When* the Person moves billing-report to Specification  
 *Then* billing-report moves to Specification  
   *And* Activate stays on for billing-report

@@ -6,13 +6,14 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from expects import contain, equal, expect, have_len
+from expects import contain, equal, expect, have_len, raise_error
 from mamba import after, before, context, description, it
 
 from harness.graph.location import Location
 from harness.graph.violation import FoundBy, FoundOn, Violation
 from space.repo.mock_repo import MockGit
-from space.session.violation_history import ViolationHistory
+from space.session.validation_report import ValidationReport
+from space.session.violation_history import FoundLine, HistoryLine, ViolationHistory
 
 _FIRST = "clean-engineering-code-20261116T075749.md"
 _SECOND = "clean-engineering-code-20261116T163159.md"
@@ -63,6 +64,18 @@ def _hit(rule: str, place: tuple[str, int], node: str) -> Violation:
     return Violation(FoundBy(rule, "clean_engineering", FoundOn(f"node:{node}", f"OoadClass `{node}`")), f"{node} breaks {rule}.", Location(file, line))
 
 
+class _Fidelity:
+    """The fidelity a report validated, as its reports' names open with its slug."""
+
+    def __init__(self, slug: str) -> None:
+        self.slug = slug
+
+
+def _report(file: Path) -> ValidationReport:
+    """A saved report, of the fidelity its name opens with."""
+    return ValidationReport(file, _Fidelity(file.stem.rsplit("-", 1)[0]))
+
+
 class _Session:
     """A session's folder with its reports folder, in a checkout on a commit."""
 
@@ -79,11 +92,12 @@ class _Session:
     def recorded(self, name: str, hits: list[Violation], scope: list[str] | None = None) -> Path:
         report = self.reports / name
         report.write_text("# Graph rule validation\n", encoding="utf-8")
-        self.history.record(report, hits, scope or [])
+        self.history.record(_report(report), hits, scope or [])
         return report
 
     def events(self, event: str, run: str = "") -> list[dict]:
-        return [line for line in self.history.events if line["event"] == event and (not run or line["run"] == run)]
+        """The history's lines of event, as the file keeps them."""
+        return [line.record for line in self.history.lines if line.event == event and (not run or line.run == run)]
 
     def close(self) -> None:
         shutil.rmtree(self.root, ignore_errors=True)
@@ -198,7 +212,7 @@ with description("a session's violation history") as self:
         with before.each:
             (self.session.reports / _FIRST).write_text(_SAVED_REPORT + _JUDGMENT, encoding="utf-8")
             (self.session.reports / _SECOND).write_text(_SAVED_REPORT.split("### `limit-operation-parameters`")[0], encoding="utf-8")
-            self.session.history.rebuild(sorted(self.session.reports.glob("*.md")), {_FIRST: "da77357"})
+            self.session.history.rebuild([_report(file) for file in self.session.reports.glob("*.md")], {_FIRST: "da77357"})
 
         with it("should record each hit the reports list, with its file, line, and node"):
             found = self.session.events("found", _FIRST)
@@ -223,7 +237,7 @@ with description("a session's violation history") as self:
             expect(sorted(line["verdict"] for line in self.session.events("judged", _FIRST))).to(equal(["noise", "stands", "stands"]))
 
         with it("should write the history again rather than add to it"):
-            self.session.history.rebuild(sorted(self.session.reports.glob("*.md")), {})
+            self.session.history.rebuild([_report(file) for file in self.session.reports.glob("*.md")], {})
             expect(self.session.events("run")).to(have_len(2))
 
     with context("that is kept in a folder git does not know"):
@@ -232,11 +246,32 @@ with description("a session's violation history") as self:
             self.loose = folder
             history = ViolationHistory(folder / "violation-history.jsonl", MockGit(folder).serve(folder))
             (folder / _FIRST).write_text("# Graph rule validation\n", encoding="utf-8")
-            history.record(folder / _FIRST, [_hit("keep-classes-single-responsibility", (_GRAPH, 40), "Graph")], [])
-            self.loose_events = history.events
+            history.record(_report(folder / _FIRST), [_hit("keep-classes-single-responsibility", (_GRAPH, 40), "Graph")], [])
+            self.loose_events = [line.record for line in history.lines]
 
         with after.each:
             shutil.rmtree(self.loose, ignore_errors=True)
 
         with it("should record each run at no commit"):
             expect({line["commit"] for line in self.loose_events}).to(equal({""}))
+
+    # The history is tracked in git and shared by both lanes, so a line an earlier version wrote reads as a typed line
+    # and is written again with exactly its keys, or a later run could not match its fixes against it.
+    with context("with a line written before the lines were typed"):
+        with before.each:
+            self.written = {
+                "event": "found", "run": _FIRST, "at": "2026-11-16T07:57:49Z", "commit": "da77357", "session": "pet-visits",
+                "fidelity": "clean-engineering-code", "rule": "keep-classes-single-responsibility", "file": _GRAPH, "line": 40,
+                "node": "Graph", "message": "Class 'Graph' has 61 operations.",
+            }
+            self.session.history.file.write_text(json.dumps(self.written) + chr(10), encoding="utf-8")
+            self.read = self.session.history.lines[0]
+
+        with it("should read it as the line its event names"):
+            expect(isinstance(self.read, FoundLine)).to(equal(True))
+
+        with it("should write it again with exactly its keys, in their order"):
+            expect(list(self.read.record.items())).to(equal(list(self.written.items())))
+
+        with it("should refuse a line that names no event it knows"):
+            expect(lambda: HistoryLine.read({"event": "moved"})).to(raise_error(ValueError))

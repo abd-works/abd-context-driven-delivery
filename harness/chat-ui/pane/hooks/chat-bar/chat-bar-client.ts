@@ -72,19 +72,13 @@ export class ChatBarClient {
     return this.ticket?.column.name ?? ''
   }
 
-  // The stages whose fidelities the dots show, in the board's order: those turned on with the stage buttons, here or in
-  // a page the chat opened, none turned on meaning every stage; before either chose, the stage the session is in.
+  // The stages whose fidelities the dots show, in the board's order: those the session's guidance selection has
+  // selected, here or in a page the chat opened, none selected meaning every stage. Before anyone chose, the session
+  // answers the stage its ticket is in selected.
   get shownStages(): string[] {
     const stages = (this.board?.columns ?? []).filter(column => column.kind === 'stage').map(column => column.name)
-    const selected = this.selectedStages
-    if (!this.guidance?.is_stage_chosen || selected.length) return stages.filter(stage => selected.includes(stage))
-    return stages
-  }
-
-  // The stages the stage buttons have turned on, by title; before any was chosen, the stage the session is in.
-  private get selectedStages(): string[] {
-    if (!this.guidance?.is_stage_chosen) return [this.stage]
-    return this.guidance.stages.filter((stage: { is_selected: boolean }) => stage.is_selected).map((stage: { title: string }) => stage.title)
+    const selected = (this.guidance?.stages ?? []).filter(stage => stage.is_selected).map(stage => stage.title)
+    return selected.length ? stages.filter(stage => selected.includes(stage)) : stages
   }
 
   // The first stage shown, whose actions the action button offers: every stage takes the same steps.
@@ -119,10 +113,10 @@ export class ChatBarClient {
     return this.ticket?.session_path ?? ''
   }
 
-  // The actions of the shown stage whose command takes the formats the chips pick, generate and render.
-  get actionsWithFormats(): string[] {
-    const column = this.board?.columns.find(column => column.name === this.shownStage) as { actions_with_formats?: string[] } | undefined
-    return column?.actions_with_formats ?? ['generate', 'render']
+  // The command the session's guidance selection writes for action on the fidelities selected, with the formats its chips
+  // chose for an action that takes them; empty before the selection is read.
+  commandOf(action: string): string {
+    return this.guidance?.commands[action] ?? ''
   }
 
   get actions(): string[] {

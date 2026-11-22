@@ -78,8 +78,7 @@ def _(s):
 
     @s.when("the Person turns DDD on")
     def _(world):
-        turned_on = [practice["key"] for practice in world.selection["practices"] if practice["is_selected"] or practice["key"] == "ddd"]
-        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=turned_on)
+        world.Ticket.load(CHECKOUT_FLOW.name).session.toggle_guidance(part="practice", name="ddd")
 
     @s.then("checkout-flow's session works on DDD, saved in its session.json")
     def _(world):
@@ -96,8 +95,7 @@ def _(s):
 
     @s.when("the Person turns Stories off")
     def _(world):
-        turned_on = [practice["key"] for practice in world.selection["practices"] if practice["is_selected"] and practice["key"] != "stories"]
-        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=turned_on)
+        world.Ticket.load(CHECKOUT_FLOW.name).session.toggle_guidance(part="practice", name="stories")
 
     @s.then("checkout-flow's session no longer works on Stories")
     def _(world):
@@ -118,8 +116,7 @@ def _(s):
 
     @s.when("the Person turns DDD on in the Files app")
     def _(world):
-        turned_on = [practice["key"] for practice in world.drawn["practices"] if practice["is_selected"] or practice["key"] == "ddd"]
-        world.Ticket.load(CHECKOUT_FLOW.name).session.update_guidance_selection(practices=turned_on)
+        world.Ticket.load(CHECKOUT_FLOW.name).session.toggle_guidance(part="practice", name="ddd")
 
     @s.then("checkout-chat's chat bar, waiting on session.guidance_selection_after, shows ddd-bounded-context's dot")
     def _(world):

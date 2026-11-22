@@ -551,8 +551,6 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 	// only that fidelity's progress is read; raises `FidelityNotFoundError` for a fidelity the ticket does not have
 + in_stage(stage: Stage): StageWork
 	// the progress of every fidelity stage requires whose practice its session works on
-+ command(action: str, fidelities: list[FidelityGuidance]): str
-	// one command running action on fidelities, naming its session.json and no format; FidelityProgress.commands and StageWork.commands both ask it
 + record(line: str)
 	// writes line to its session's log, a move, a mark, or a backlog line; its progress is read from the log again next time
 	-> SessionLog.record
@@ -622,6 +620,19 @@ The moves and marks a person made on one ticket's stages, made once with the tic
 + DONE = "done"
 + IN_PROGRESS = "in-progress"
 
+## Work
+
+A ticket's work on some fidelities of one stage: one fidelity's progress (*FidelityProgress*) or a stage's work taken together (*StageWork*), each a *Work*. Each answers the command a chat runs for every action of its stage on its fidelities, which the ticket's session's guidance selection writes: the one place a command and its `format=` are written.
+
++ stage: Stage
+	// abstract
++ fidelities: list[FidelityGuidance]
+	// abstract: its one fidelity, or each of its fidelities
++ commands: dict[str, str]
+	// data field: the command for each action of its stage
++ command(action: str): str
+	-> GuidanceSelection.command
+
 ## FidelityProgress
 
 How far one fidelity has got through its stage's actions on one ticket, read from session log lines. Marked `@identity("ticket", "slug")`: the ticket's name and the fidelity's slug are what its loader takes, so they are sent as strings until a language adapter can send an identity made of references.
@@ -644,8 +655,8 @@ How far one fidelity has got through its stage's actions on one ticket, read fro
 + next_action: str
 	// data field: the first of its stage's actions not done, which is validate again while it has violations
 + commands: dict[str, str]
-	// data field: the command for each action of its stage on this fidelity, naming its ticket's session.json and no format
-	-> TicketWork.command
+	// data field, from Work: the command for each action of its stage on this fidelity, naming its ticket's session.json and, for an action that takes them, the formats chosen there
+	-> GuidanceSelection.command
 + allowed_actions: list[str]
 	// data field: every action of its stage; validate and render only once an action is recorded or a declared file is there
 + state: str
@@ -740,8 +751,8 @@ A ticket's work in one stage taken together: the progress of each fidelity the s
 + violation_count: int
 	// data field: its fidelities' violations together
 + commands: dict[str, str]
-	// data field: the command for each action of its stage, one command naming every one of its fidelities
-	-> TicketWork.command
+	// data field, from Work: the command for each action of its stage, one command naming every one of its fidelities
+	-> GuidanceSelection.command
 + allowed_actions: list[str]
 	// data field: the actions every one of its fidelities allows
 ----
@@ -935,14 +946,14 @@ Whether the graph a validation checked is saved beside its report, and whether i
 
 ## ReportFile
 
-A validation report of one fidelity saved in a session folder, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for, and describes each from its practice: the saved report points at each rule's text instead of copying it.
+A validation report of one fidelity as the board reads it: the rules it finds broken, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for, and describes each from its practice: the saved report points at each rule's text instead of copying it.
 
-+ ReportFile(file: Path, fidelity: FidelityGuidance)
-	// fidelity is the one its session holds: its practice's session names the folder the saved graph names files from, and that session's repository names the report's files from its top
++ ReportFile(report: ValidationReport)
+	// the report's fidelity is the one its session holds: its practice's session names the folder the saved graph names files from, and that session's repository names the report's files from its top
 ------
 + file: Path
-+ stamp: str
-	// the date the report's name ends with, in a form that sorts by time
++ << association >> report: ValidationReport
+	// its name, when it was made, its saved graph, and its result are the session's ValidationReport's; an earlier fidelity's report is newer when ValidationReport.is_newer_than says so
 + text: str
 + has_result: bool
 	// it has a saved graph or a judgment; validate saves a report before the agent judges it
@@ -951,7 +962,7 @@ A validation report of one fidelity saved in a session folder, with the violatio
 ----
 + from_fidelity(fidelity: FidelityGuidance): ReportFile
 	// the fidelity's latest report in the session that has its result, else its latest; none when it has none
-	-> FidelityGuidance.reports
+	-> ValidationReports.listed
 + report(): Report
 	// the rules broken on the nodes of the saved graph, then each rule the judgment fails that the graph did not hit; each violation is named from the project, with the lines around it
 	// the rules it answers for: its practice's shared rules, its fidelity's own, and every earlier fidelity's but those an earlier fidelity's newer report answers for; each rule is the one its fidelity describes

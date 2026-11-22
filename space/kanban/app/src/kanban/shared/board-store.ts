@@ -9,7 +9,6 @@ import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
 import type { ReportClient } from '../ticket/report-client'
 import type { ColumnClient } from '../board/column-client'
 import type { TicketClient } from '../ticket/ticket-client'
-import type { FilesByFidelity } from '../ticket/ticket-work'
 
 export type Toast = { id: number; text: string; isFailure: boolean }
 export type Region = 'board' | 'details'
@@ -40,30 +39,8 @@ export type RootChoice = {
 
 // A report panel holds the progress whose report it shows, or none for the violations of every fidelity of its ticket.
 export type ReportPanel = { kind: 'report'; ticket: TicketClient; progress: FidelityProgressClient | null; report: ReportClient; closedRules: string[]; isExpanded: boolean }
-// Where a files panel's tabs come from: the fidelities of the ticket's stage, its session folder, or its workpath.
-export type FilesSource = 'fidelities' | 'session' | 'workpath'
-// What the open file is read with: its folds, and the rules it breaks; both on by default, as the graph's source view shows them.
-export type FileReads = { folds: boolean; rules: boolean }
-export const DEFAULT_FILE_READS: FileReads = { folds: true, rules: true }
-export type FilesPanel = {
-  kind: 'files'
-  ticket: TicketClient
-  source: FilesSource
-  // The fidelities of the ticket's stage, whose practices the panel offers as filters; none for a folder.
-  progress: FidelityProgressClient[]
-  files: FilesByFidelity
-  // The practices whose files show as tabs, and whether only the files the ticket's branch changed show.
-  practicesOn: string[]
-  changedOnly: boolean
-  reads: FileReads
-  activeTab: string
-  // The open file as the session reads it, with its comments, folds and violations; none for a file not there yet.
-  shown: SessionFileData | null
-  lines: Record<string, number>
-  isExpanded: boolean
-}
 export type HelpPanel = { kind: 'help'; help: HelpData; isExpanded: boolean }
-export type SidePanel = ReportPanel | FilesPanel | HelpPanel
+export type SidePanel = ReportPanel | HelpPanel
 
 export type BoardState = {
   board: BoardData | null

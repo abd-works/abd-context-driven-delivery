@@ -17,7 +17,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 
 import time
 
-from expects import be, be_a, contain, equal, expect, raise_error
+from expects import be, be_a, contain, end_with, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.graph.graph_reads import GraphReads
@@ -32,6 +32,7 @@ from space.repo.mock_repo import MockGit
 from tools.prompt_queue.prompt_queue import PromptQueue
 from space.repo.repo import Repo
 from space.session import Session, Sessions
+from space.session.guidance_selection import UnknownSelectionPart
 from harness.agent_tools.chat_pointer import ChatPointer
 from space.session.session_log import LoopNotFoundError
 from space.session.open_sessions import SessionNameRequiredError
@@ -1038,15 +1039,27 @@ with description("a practice"):
 
             with context("whose validation reports its session output keeps"):
                 with it("should save a new report in the session's reports folder"):
-                    expect(self.fidelity.session_output.validation_reports.new_path().parent).to(equal(self.session.reports_folder))
+                    expect(self.fidelity.session_output.validation_reports.new().file.parent).to(equal(self.session.reports_folder))
 
                 with it("should name a new report by the fidelity's slug"):
-                    expect(self.fidelity.session_output.validation_reports.new_path().name).to(contain("stories-story-map-"))
+                    expect(self.fidelity.session_output.validation_reports.new().name).to(contain("stories-story-map-"))
+
+                with it("should hold the fidelity a new report validates, rather than read it from the name"):
+                    expect(self.fidelity.session_output.validation_reports.new().fidelity).to(equal(self.fidelity))
 
                 with it("should list the reports saved there"):
-                    saved = self.fidelity.session_output.validation_reports.new_path()
-                    saved.write_text("# report\n", encoding="utf-8")
-                    expect(self.fidelity.session_output.validation_reports.listed()).to(equal([saved]))
+                    saved = self.fidelity.session_output.validation_reports.new()
+                    expect([report.file for report in self.fidelity.session_output.validation_reports.listed()]).to(equal([saved.file]))
+
+                # Two validates of one fidelity can start in the same second; each claims a file of its own.
+                with it("should give a second report made in the same second the next number"):
+                    reports = self.fidelity.session_output.validation_reports
+                    first, second = reports.new(), reports.new()
+                    expect(second.is_newer_than(first) or first.made_at.moment != second.made_at.moment).to(equal(True))
+
+                with it("should read when a report was made from its name"):
+                    saved = self.fidelity.session_output.validation_reports.new()
+                    expect(saved.name).to(contain(saved.made_at.moment.strftime("%Y%m%dT%H%M%S")))
 
             with context("whose file is written"):
                 with it("should be read by the session's file manager, though the practice's own folder is elsewhere"):
@@ -1515,12 +1528,14 @@ with description("a session's guidance selection") as self:
     # Requested 2026-11-16: "make sure design canvas is a filter option for UX".
     with context("that has Specification and UX selected"):
         with it("should offer the canvas format, the design canvas the UX mockup writes"):
-            selected = self.session.update_guidance_selection(stages=["specification"], practices=["ux"])
+            self.session.guidance.select(["specification"], ["ux"], None)
+            selected = self.session.guidance
             expect([(format.label, format.formats) for format in selected.formats if format.label == "canvas"]).to(equal([("canvas", ["claude_design"])]))
 
     with context("that has Discovery and Stories selected"):
         with before.each:
-            self.selected = self.session.update_guidance_selection(stages=["discovery"], practices=["stories"])
+            self.session.guidance.select(["discovery"], ["stories"], None)
+            self.selected = self.session.guidance
 
         with it("should cover Stories' Discovery fidelity alone"):
             expect(self.selected.fidelities).to(equal(["stories-story-map"]))
@@ -1534,9 +1549,46 @@ with description("a session's guidance selection") as self:
         with it("should keep the stages for the next read"):
             expect([stage.name for stage in Sessions(self.repo).current().guidance_selection().stages if stage.is_selected]).to(equal(["discovery"]))
 
+        # A press names one stage, practice, or format group; the session works out the selection it leaves.
+        with context("that has Specification pressed"):
+            with before.each:
+                self.selected = self.session.toggle_guidance("stage", "specification")
+
+            with it("should select Specification beside Discovery"):
+                expect([stage.name for stage in self.selected.stages if stage.is_selected]).to(equal(["discovery", "specification"]))
+
+            with it("should raise the version once more"):
+                expect(self.selected.version).to(equal(2))
+
+        with context("that has Stories pressed"):
+            with it("should turn Stories off, leaving no practice selected"):
+                expect([practice.key for practice in self.session.toggle_guidance("practice", "stories").practices if practice.is_selected]).to(equal([]))
+
+        with context("that has a part pressed there is none of"):
+            with it("should refuse it, naming the parts"):
+                expect(lambda: self.session.toggle_guidance("colour", "red")).to(raise_error(UnknownSelectionPart))
+
+        # The one place a command and its format= are written.
+        with context("that writes the command an action runs on the fidelities selected"):
+            with it("should name the fidelities and the session"):
+                expect(self.selected.command("validate")).to(equal(f"/actions-validate stories-story-map session={self.session.session_file_from_project}"))
+
+            with it("should name the formats chosen for an action that takes them, the story map's markdown by default"):
+                expect(self.selected.command("generate")).to(end_with(" format=markdown"))
+
+            with it("should name no format once none is chosen"):
+                self.session.toggle_guidance("format", "markdown")
+                expect(self.session.guidance.command("generate")).not_to(contain("format="))
+
+            with it("should name no format for an action that takes none"):
+                expect(self.selected.command("validate")).not_to(contain("format="))
+
+            with it("should answer a command for every action run on a fidelity"):
+                expect(list(self.selected.commands)).to(equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"]))
+
         with context("that has every stage turned off"):
             with before.each:
-                self.selected = self.session.update_guidance_selection(stages=[])
+                self.session.guidance.select([], None, None)
 
             with it("should keep the stages chosen"):
                 expect(self.selected.is_stage_chosen).to(equal(True))
@@ -1546,18 +1598,18 @@ with description("a session's guidance selection") as self:
 
         with context("that has every practice turned off"):
             with before.each:
-                self.selected = self.session.update_guidance_selection(practices=[])
+                self.session.guidance.select(None, [], None)
 
             with it("should cover every practice's Discovery fidelity, as no practice filter"):
                 expect(self.selected.fidelities).to(equal(["stories-story-map", "ddd-bounded-context", "ux-ia", "clean-engineering-modules", "bdd-behavior"]))
 
     with context("that a page waits on at version 0"):
         with it("should answer at once once the selection is past it"):
-            self.session.update_guidance_selection(stages=["discovery"])
+            self.session.toggle_guidance("stage", "discovery")
             expect(self.session.guidance_selection_after(0).version).to(equal(1))
 
         with it("should answer as soon as another call changes the selection"):
-            changer = threading.Timer(0.01, lambda: Sessions(self.repo).current().update_guidance_selection(stages=["specification"]))
+            changer = threading.Timer(0.01, lambda: Sessions(self.repo).current().guidance.select(["specification"], None, None))
             changer.start()
             answered = self.session.guidance_selection_after(0)
             changer.join()

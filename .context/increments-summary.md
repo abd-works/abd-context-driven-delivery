@@ -235,13 +235,13 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
 - *What you get:* a pass/fail report against the practice's written, named rules, saved in the session so you can come back to it. For graph-backed practices it also reports problems that only show across files.
 - *Try it:* validate the story map, then open the report under the session's `validation-reports/`.
 - *Or from the chat bar:* select the dot, pick validate from ▾ and send the prompt. A red violation count appears beside the dot; press it to open the report in its own tab.
-- *Under the hood:* `cdd_guidance/actions` (Validate, *CheckedGraph*, *ValidationReport*), plus the graph rules in `harness/graph`.
+- *Under the hood:* `cdd_guidance/actions` (Validate, *CheckedGraph*, *ReportText*), plus the graph rules in `harness/graph`.
 - *What happens underneath:*
   1. The agent calls `validate.validate`.
   2. A path that does not exist, or is outside the session's root, is refused, so a validate never checks nothing and reports it as clean.
   3. The server checks the files against every rule the fidelity holds, judging the prose rules with AI.
   4. For graph-backed practices, it refreshes the session's knowledge graph with just those files and runs the graph rules on the nodes they hold.
-  5. *ValidationReport* saves the report, with the checked graph beside it, under `validation-reports/`, and the log records a validate line.
+  5. *ReportText* writes the report, and *ReportFiles* saves it as each fidelity's *ValidationReport*, with the checked graph beside it, under `validation-reports/`, and the log records a validate line.
   6. The chat bar and board read the violation count through `fidelity-progress.report`.
 
 **Lesson 6. Satisfy: fix until clean**

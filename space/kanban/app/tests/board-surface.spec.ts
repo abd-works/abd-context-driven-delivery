@@ -118,19 +118,19 @@ test.describe('the session board on the page', () => {
     })
   })
 
-  test.describe('with the files button pressed on a card', () => {
-    test('should open the files list beside the board', async ({ page }) => {
-      await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
-      const panel = page.locator('[data-panel="files"]')
-      await expect(panel.getByRole('tab', { name: 'story-map.md', exact: true })).toBeVisible()
+  test.describe('with the report panel open', () => {
+    test('should open the report beside the board', async ({ page }) => {
+      await card(page, 'checkout-flow').locator('.card-violations').click()
+      const panel = page.locator('[data-panel="report"]')
+      await expect(panel).toBeVisible()
       const board = await page.locator('.board-main').boundingBox()
       const beside = await panel.boundingBox()
       expect(beside!.x).toBeGreaterThanOrEqual(board!.x + board!.width - 1)
     })
 
     test('should keep the header on one line', async ({ page }) => {
-      await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
-      await expect(page.locator('[data-panel="files"]')).toBeVisible()
+      await card(page, 'checkout-flow').locator('.card-violations').click()
+      await expect(page.locator('[data-panel="report"]')).toBeVisible()
       const header = await page.locator('.board-header').boundingBox()
       expect(header!.height).toBeLessThanOrEqual(CANVAS_HEADER_PIXELS)
     })

@@ -10,8 +10,10 @@ export const DRAWIO_PORT = 8791
 export const REVEAL_PATH = '/reveal'
 
 export const SESSION_FOLDER_QUERY = 'session-folder'
+export const WORKPATH_FOLDER_QUERY = 'workpath-folder'
 export const SESSION_QUERY = 'session'
 export const FILE_QUERY = 'file'
+export const LINE_QUERY = 'line'
 export const FILES_QUERY = 'files'
 export const FIDELITY_QUERY = 'fidelity'
 

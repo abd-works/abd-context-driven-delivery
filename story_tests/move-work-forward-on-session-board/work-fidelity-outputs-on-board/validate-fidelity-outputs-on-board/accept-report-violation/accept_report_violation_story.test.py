@@ -38,7 +38,7 @@ with story("Accept Report Violation"):
             pass
         with when("Claude Code validates ddd-tactics on that file again"):
             # Validate.validate() -> CheckedGraph.violations() -> AcceptedViolations.open_among(the graph's violations)
-            # ValidationReport -> CheckedGraph.accepted()
+            # ReportText -> CheckedGraph.accepted()
             pass
         with then("the validation report names no private-method-naming violation"):
             pass

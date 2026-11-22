@@ -19,7 +19,7 @@ with story("View Fidelity Files"):
             # Person -> Ticket.files(['stories-story-map'])
             # Person -> Ticket.read_file('.context/story-map.md')
             pass
-        with then("the files panel shows the tabs .context/story-map.md and .context/story-map.drawio"):
+        with then("the Files app shows the tabs .context/story-map.md and .context/story-map.drawio"):
             pass
         with and_("the .context/story-map.md tab shows # Check Out Order"):
             pass
@@ -30,10 +30,9 @@ with story("View Fidelity Files"):
         with given("the tabs .context/story-map.md and .context/story-map.drawio are open"):
             pass
         with when("the Person closes both tabs"):
-            # Person -> FilesPanelClient.closeTab('.context/story-map.md')
-            # Person -> FilesPanelClient.closeTab('.context/story-map.drawio')
+            # Person -> the Files app's tabs (harness/files_app), which the board opens with EditorAppClient.openFilesOn
             pass
-        with then("the files panel shows the list"):
+        with then("the Files app shows the list"):
             pass
     with scenario("Refuse a file outside the repository"):
         # Evidence: observed: kanban_tools_spec 'should refuse a file outside the repository, naming the path and the ticket'.

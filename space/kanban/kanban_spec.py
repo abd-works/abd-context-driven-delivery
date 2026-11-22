@@ -562,8 +562,15 @@ with description("a ticket") as self:
                 "Each fidelity goes through generate, then validate, and is done once its latest validate passes."
             ))
 
-        with it("should command an action on its next fidelity in its own session, naming no format so the fidelity's kept format holds"):
-            expect(self.ticket.next_fidelity.commands["generate"]).to(equal("/actions-generate stories-story-map session=.sessions/pet-visits/session.json"))
+        with it("should command an action on its next fidelity in its own session, naming the formats chosen for it there"):
+            expect(self.ticket.next_fidelity.commands["generate"]).to(equal("/actions-generate stories-story-map session=.sessions/pet-visits/session.json format=markdown"))
+
+        # Before anyone chose stages for its session, the chat bar and the Files app show the stage it stands in.
+        with it("should show its stage selected in its session's guidance selection"):
+            expect([stage.title for stage in self.ticket.session.guidance.stages if stage.is_selected]).to(equal([self.ticket.column.name]))
+
+        with it("should command an action that takes no formats naming none"):
+            expect(self.ticket.next_fidelity.commands["validate"]).to(equal("/actions-validate stories-story-map session=.sessions/pet-visits/session.json"))
 
         with it("should command every action its stage offers"):
             expect(list(self.ticket.next_fidelity.commands)).to(equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"]))

@@ -35,7 +35,7 @@ with story("Restrict Actions To Active Session"):
         with when("the Person opens billing-report's files"):
             # Person -> Ticket.files(['stories-story-map'])
             pass
-        with then("the files panel lists billing-report's files"):
+        with then("the Files app opens on billing-report's files"):
             pass
         with when("the Person moves billing-report to Specification"):
             # Person -> Ticket.move_to('Specification')

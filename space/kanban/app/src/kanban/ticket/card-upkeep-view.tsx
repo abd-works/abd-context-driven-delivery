@@ -53,7 +53,7 @@ function TicketTextView({ ticket }: { ticket: TicketClient }) {
   return (
     <>
       <div className="ticket-text">{opening}</div>
-      <button className="ticket-text-link" title={`Open ${file}`} onClick={withoutSelecting(() => page.files.openFolder(ticket, 'session', path))}>
+      <button className="ticket-text-link" title={`Open ${file}`} onClick={withoutSelecting(() => page.editorApp.openFilesOn(ticket, { folder: 'session', file: path }))}>
         {isCut ? `More in ${file}` : file}
       </button>
     </>

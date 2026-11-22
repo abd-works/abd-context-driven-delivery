@@ -11,7 +11,8 @@ from harness.graph.violation import UNKNOWN_LOCATION, Violation
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.guidance.rule import Rule
 from harness.installation.data_class import data_field
-from space.session.validation_judgment import JUDGMENT_SECTION, Judgment
+from space.session.validation_judgment import Judgment
+from space.session.validation_report import ValidationReport
 
 if TYPE_CHECKING:
     from space.repo.repo import Repo
@@ -174,34 +175,31 @@ class Report:
 
 
 class ReportFile:
-    """A validation report of one fidelity, saved in a session folder, with the violations of the graph the validation
-    checked saved beside it, each with the node it was found on. It knows which of its practice's rules it answers for,
-    and describes each from its practice, since the saved report points at a rule's text instead of copying it."""
+    """A validation report of one fidelity as the board reads it: the rules it finds broken, with the violations of the
+    graph the validation checked, saved beside it, each with the node it was found on. It knows which of its practice's
+    rules it answers for, and describes each from its practice, since the saved report points at a rule's text instead
+    of copying it."""
 
-    # The fidelity is the one its session holds, so it lists its own reports; the session its practice works in names
-    # the folder the saved graph names its files from, and its repository names the report's files from its top.
+    # The report's fidelity is the one its session holds, so it lists its own reports; the session its practice works
+    # in names the folder the saved graph names its files from, and its repository names the report's files from its top.
 
-    def __init__(self, file: Path, fidelity: FidelityGuidance) -> None:
-        self._file = file
-        self._fidelity = fidelity
+    def __init__(self, report: ValidationReport) -> None:
+        self._report = report
+        self._file = report.file
+        self._fidelity = report.fidelity
 
     @classmethod
     def from_fidelity(cls, fidelity: FidelityGuidance) -> ReportFile | None:
         """The latest report of fidelity in the session its practice works in that has its result, else its latest;
         none when it has none. Validate saves a report before the agent judges it, so a report with no judgment and no
         saved graph yet does not hide an earlier one that has its result."""
-        own = [cls(path, fidelity) for path in fidelity.session_output.validation_reports.listed()]
+        own = [cls(report) for report in fidelity.session_output.validation_reports.listed()]
         with_result = [report for report in own if report.has_result]
         return (with_result or own or [None])[-1]
 
     @property
     def file(self) -> Path:
         return self._file
-
-    @property
-    def stamp(self) -> str:
-        """The date the report's name ends with, in a form that sorts by time."""
-        return self._file.stem.rsplit("-", 1)[-1]
 
     @property
     def version(self) -> str:
@@ -214,12 +212,11 @@ class ReportFile:
 
     @property
     def text(self) -> str:
-        return self._file.read_text(encoding="utf-8", errors="replace")
+        return self._report.text
 
     @property
     def has_result(self) -> bool:
-        """Validate saves a report before the agent judges it, so one with no judgment and no saved graph has no result yet."""
-        return self._graph.is_file() or JUDGMENT_SECTION.search(self.text) is not None
+        return self._report.has_result
 
     @property
     def is_judged_failing(self) -> bool:
@@ -305,7 +302,7 @@ class ReportFile:
 
     @property
     def _graph(self) -> Path:
-        return self._file.with_suffix(".json")
+        return self._report.saved_graph
 
     @cached_property
     def _answered_rules(self) -> list[Rule]:
@@ -330,7 +327,7 @@ class ReportFile:
     def _has_newer_report(self, earlier: FidelityGuidance) -> bool:
         """Whether an earlier fidelity was validated after this report was written, so its own report answers for its rules."""
         latest = ReportFile.from_fidelity(earlier)
-        return latest is not None and latest.stamp > self.stamp
+        return latest is not None and latest._report.is_newer_than(self._report)
 
     def _rule_named(self, name: str) -> Rule:
         """The rule a graph hit or a judgment names, as this report's fidelity describes it; a rule no fidelity

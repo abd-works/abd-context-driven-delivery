@@ -2270,6 +2270,13 @@ Every action CDD ships: `cdd_guidance/actions` registers each action folder's to
 + toolsets(): tuple[type, ...]
 + actions(): tuple[Action, ...]
 + names(): tuple[str, ...]
++ on_fidelities: tuple[Action, ...]
++ steps: tuple[Action, ...]
++ writing_step: Action
++ checking_step: Action
++ producing: tuple[Action, ...]
++ taking_formats: tuple[Action, ...]
++ needing_output: tuple[Action, ...]
 + has(name: str): bool
 + action(name: str): Action | None
 ---<<creates>>--> Action
@@ -2286,23 +2293,20 @@ One action CDD ships: an operation an action toolset installs as a skill, such a
 + toolset_class: type
 + operation
 + folder: Path
++ place: OnStage | None
 ----
 + run_on(fidelity: WorkedFidelity, **arguments): Any
 	-> ActionRunner.run
 
 ## ApproachStage
 
-One stage of the CDD approach: the name each fidelity's **Stage:** gives it, its title, its scope, and the actions a person runs on a fidelity in it.
+One stage of the CDD approach: the name each fidelity's **Stage:** gives it, its title, and its scope. The actions run on a fidelity are the action catalogue's.
 
 + ApproachStage(name: str, scope: StageScope)
 ------
 + name: str
 + title: str
 + << composition >> scope: StageScope
-+ steps: list[str]
-+ actions: list[str]
-+ producing_actions: list[str]
-+ actions_with_formats: list[str]
 ----
 
 ## StageScope
@@ -3940,14 +3944,14 @@ Mixed into *Session*: the published graph tools a page browsing the session's fi
 
 ## SessionGuidanceTools
 
-Mixed into *Session*: the published tools that read and change its guidance selection, whose versions its *GuidanceVersion* keeps.
+Mixed into *Session*: the published tools that read and change its guidance selection, which the session holds (`session.guidance`, a *GuidanceSelection* that changes itself and raises its own version).
 
 ----
 + guidance_selection(): GuidanceSelection
-+ update_guidance_selection(stages: list[str] | None = None, practices: list[str] | None = None, formats: list[str] | None = None): GuidanceSelection
-	-> GuidanceVersion.select
++ toggle_guidance(part: "stage" | "practice" | "format", name: str): GuidanceSelection
+	-> GuidanceSelection.toggle
 + guidance_selection_after(version: int): GuidanceSelection
-	-> GuidanceVersion.wait_past
+	-> GuidanceSelection.wait_past
 
 ## SessionLogTools
 
@@ -4364,7 +4368,6 @@ Show one stage of the board, the tickets at work in it, and how many it takes be
 + << association >> scope: StageScope
 + actions: list[str]
 + producing_actions: list[str]
-+ actions_with_formats: list[str]
 + work_required: list[FidelityGuidance]
 + next_stage: Stage | None
 + previous_stage: Stage | None
@@ -4379,7 +4382,7 @@ Show one stage of the board, the tickets at work in it, and how many it takes be
 + set_wip_limit(limit: int): Stage
 	-> BoardFile.set_wip_limit
 ---<<reads title of>>--> ApproachStage
----<<reads steps of>>--> ApproachStage
+---<<reads the actions on a fidelity from>>--> ActionCatalogue
 ---<<annotated with>>--> LanguageAdapter
 ---<<annotated with>>--> AgentToolSetAnnotation
 ---<<annotated with>>--> Mcp
@@ -4484,7 +4487,6 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 ----
 + progress_of(slug: str): FidelityProgress
 + in_stage(stage: Stage): StageWork
-+ command(action: str, fidelities: list[FidelityGuidance]): str
 + record(line: str): None
 	-> SessionLog.record
 ---<<creates>>--> FidelityProgress
@@ -4745,7 +4747,7 @@ Hold an idea not yet started. Starting it opens a ticket for it.
 	-> Ticket.load
 	-> TicketWork.progress_of
 + command(action: str): str
-	-> TicketWork.command
+	-> GuidanceSelection.command
 + finish_review(): FidelityProgress
 	-> TicketWork.record
 + report(): Report
@@ -4799,12 +4801,12 @@ The rules a validation found broken. With no report it is empty, and it says whe
 
 ## ReportFile
 
-A validation report of one fidelity, saved in a session folder, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for.
+A validation report of one fidelity as the board reads it, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for.
 
-+ ReportFile(file: Path, fidelity: FidelityGuidance)
++ ReportFile(report: ValidationReport)
 ------
 + file: Path
-+ stamp: str
++ << association >> report: ValidationReport
 + text: str
 + has_result: bool
 + is_judged_failing: bool

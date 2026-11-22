@@ -100,7 +100,7 @@ export const register: Register = on => {
     // shows on the bar.
     $.clock.every(CHECK_IN_MILLISECONDS, () => void keepInTouch($, chat, isCheckInDue()))
     // The stages, practices and formats selected: the session's guidance selection, followed with one waiting read.
-    void followGuidance($, async () => (await currentChatBar($)).sessionFile, async () => (await currentChatBar($)).stage)
+    void followGuidance($, async () => (await currentChatBar($)).sessionFile)
     // The chat opens first and the bar fills in after it, so a slow or still-connecting cdd server never holds the chat up.
     const started = await next(e)
     void readBoardAfterStart($)
