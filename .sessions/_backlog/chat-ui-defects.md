@@ -219,18 +219,17 @@ Noticed 2026-11-21 while writing the chat bar's desktop story tests (release-1-2
 
 ## The chat bar fails to draw on release-1-2-fixes: `selectedStages` is gone
 
-Found 2026-11-21 by running the chat bar's own code on its test page (`harness/chat-ui/pane/test-page`), on its first
-run. `ChatBarClient.stages` (`harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts`, line 98) reads
+Found 2026-11-21 by running the chat bar's own code in a browser test page, since removed. `ChatBarClient.stages` (`harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts`, line 98) reads
 `this.selectedStages`, which commit 7e8473db9 removed when it renamed the getter `shownStages`. Once the board answers
 with its columns the draw throws, and the band shows only "chat bar failed to draw: Cannot read properties of undefined
 (reading 'includes')". The mod's own plugin test "once the repository is created the chat bar asks no more"
 (`make-repository.test.ts`) fails for the same reason, and passes with `selectedStages` changed to `shownStages`.
-main is not affected. Not fixed: reported to the coordinator.
+main is not affected. Fixed in commit 7273c61ee.
 
 ## The chat bar and three of its scenarios disagree
 
-Found 2026-11-21 by the page walk (`.sessions/release-1-2-fixes/chat-bar-page-walk/walk-report.md`); each is red in
-the browser story tests under `story_tests/move-work-forward-from-chat-bar/` until the person says which side is right:
+Found 2026-11-21 on a browser test page that stood in for the Claude app, since removed, so the two positions
+(the mark's side, the button's width) are not proven against the real app. Open until the person says which side is right:
 
 - Show the connected mark says the green ✓ sits left of the session's name; the line draws it right of the name and
   its buttons, before the version.
