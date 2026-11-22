@@ -870,3 +870,55 @@ describe('View File In Source View', () => {
     })
   })
 })
+
+// The board opens a violation's file here, at the violation's line (proposal 24: the board's own file panel is gone).
+describe('Open A File At A Line From A Link', () => {
+  const VIOLATION_LINK = `${STAGE_LINK}&file=src%2Forder.py&line=42`
+
+  it('should read the line its link names', () => {
+    expect(new FilesLink(VIOLATION_LINK).line).toBe(42)
+  })
+
+  it('should read no line from a link that names no file', () => {
+    expect(new FilesLink(`${STAGE_LINK}&line=42`).line).toBeNull()
+  })
+
+  describe('with the page opened from that link', () => {
+    async function opened(): Promise<FilesPage> {
+      const page = new FilesPage(new FakeFilesServer(), new FilesLink(VIOLATION_LINK))
+      await started(page)
+      return page
+    }
+
+    it('should open the file the link names', async () => {
+      expect((await opened()).state.openPath).toBe('src/order.py')
+    })
+
+    it('should show that line of it', async () => {
+      expect((await opened()).linesShownIn('src/order.py')).toEqual([{ start: 42, end: 42 }])
+    })
+
+    describe('that the Person opens another file from, then the linked file again', () => {
+      it('should show no line of it, the link having been followed', async () => {
+        const page = await opened()
+        await page.open('.context/stories-story-map.md')
+        await page.open('src/order.py')
+        expect(page.linesShownIn('src/order.py')).toEqual([])
+      })
+    })
+  })
+})
+
+// The board's details link the folder a ticket's session works in, as they link its session folder.
+describe('Browse The Folder A Session Works In', () => {
+  it('should read the workpath folder its link names', () => {
+    const link = new FilesLink('?workpath-folder=release-2')
+    expect([link.folder, link.ticket, link.isFolder]).toEqual(['workpath', 'release-2', true])
+  })
+
+  it("should list the files of the folder the session works in, not its session folder's", async () => {
+    const server = new FakeFilesServer()
+    await started(new FilesPage(server, new FilesLink('?workpath-folder=release-2')))
+    expect([server.posted('/workpath-files').length, server.posted('/folder-files').length]).toEqual([1, 0])
+  })
+})

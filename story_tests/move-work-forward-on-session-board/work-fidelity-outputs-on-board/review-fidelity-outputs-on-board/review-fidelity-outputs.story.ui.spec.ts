@@ -8,9 +8,10 @@
  * (space/kanban/app/test-utils/fixture-repo.ts) with its real cdd server. A Given seeds the fixture project's
  * `.sessions/` or its files.
  *
- * The fixture's checkout-flow works in Discovery on every practice, so the story map's Files button shows its files with
- * the Stories filter on, and BDD's behavior files a toggle away. Its tickets work on no branch of their own, so none of
- * their files is changed.
+ * The board shows no file itself (2026-11-21, proposal 24): each press opens the Files app on what it names, so this
+ * tier reads the Files app's link a press opens, with the Files app answered as running. What the Files app then shows,
+ * its filters, its list and the open file, is proved by the Files app's own specs
+ * (story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/).
  *
  * Left out here: the toast of List Ticket Files "Say in a toast when the list cannot be read", because the page lists
  * only the tickets the board just read, so a person cannot ask for a ticket the board does not have.
@@ -18,12 +19,8 @@
 import { rmSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { card, expect, fixtureRoot, openBoard, resetSessions, test, writeInto } from '../../../../space/kanban/app/tests/story-ui'
+import { card, catchFilesAppLinks, expect, fixtureRoot, openBoard, resetSessions, test, writeInto } from '../../../../space/kanban/app/tests/story-ui'
 import type { Locator, Page } from '../../../../space/kanban/app/tests/story-ui'
-
-const files = (page: Page) => page.locator('[data-panel="files"]')
-// The story_map fidelity writes the story map and its thin slice in three formats each, each a tab, generated or not.
-const STORY_MAP_TABS = ['story-map.md', 'story-map.drawio', 'story-map.whiteboard', 'thin-slice.md', 'thin-slice.drawio', 'thin-slice.whiteboard']
 
 async function openStoryMapBar(page: Page, ticket: string, title: string): Promise<Locator> {
   await card(page, ticket).getByRole('button', { name: `Show ${title}` }).click({ position: { x: 4, y: 4 } })
@@ -33,162 +30,51 @@ async function openStoryMapBar(page: Page, ticket: string, title: string): Promi
   return bar
 }
 
-async function openStoryMapFiles(page: Page): Promise<void> {
+// The board open, with the Files app's links a press opens kept, and what each link names.
+async function openedBoard(page: Page): Promise<() => Promise<Record<string, string>[]>> {
+  const opened = await catchFilesAppLinks(page)
   await openBoard(page)
-  await (await openStoryMapBar(page, 'checkout-flow', 'Checkout flow')).getByRole('button', { name: 'files', exact: true }).click()
-  await expect(files(page).getByRole('tab', { name: 'story-map.md' })).toBeVisible()
+  return async () => (await opened()).map(url => Object.fromEntries(url.searchParams))
 }
 
-// checkout-flow's BDD file, src/order_spec.py, as the Background names it: BDD lists only the specs that exist. The
-// cdd server keeps the files it found under a folder for FILES_KEPT_SECONDS (space/session/file_manager.py), so the
-// file is written once, before the first test, and the run waits that long for the next search to find it.
-const ORDER_SPEC = join(fixtureRoot, 'src', 'order_spec.py')
-const FILES_KEPT_MILLISECONDS = 3_100
-
-test.beforeAll(async () => {
-  writeInto(ORDER_SPEC, 'with description("an order"):\n    with it("should hold its lines"):\n        pass\n')
-  await new Promise(done => setTimeout(done, FILES_KEPT_MILLISECONDS))
-})
 test.beforeEach(() => resetSessions(fixtureRoot))
-test.afterAll(() => {
-  rmSync(ORDER_SPEC, { force: true })
-  resetSessions(fixtureRoot)
-})
-
-test.describe('List Ticket Files', () => {
-  test.describe("Filter the tabs to the files the ticket's branch changed", () => {
-    test.beforeEach(async ({ page }) => {
-      await openStoryMapFiles(page)
-      await files(page).getByRole('checkbox', { name: 'only changed files' }).check()
-    })
-
-    test('Then the tabs show only the changed files, here none', async ({ page }) => {
-      await expect(files(page).getByRole('tab')).toHaveCount(0)
-    })
-  })
-
-  test.describe('Clear the changed-files filter', () => {
-    test.beforeEach(async ({ page }) => {
-      await openStoryMapFiles(page)
-      await files(page).getByRole('checkbox', { name: 'only changed files' }).check()
-      await files(page).getByRole('checkbox', { name: 'only changed files' }).uncheck()
-    })
-
-    test('Then the tabs show every file again', async ({ page }) => {
-      await expect(files(page).getByRole('tab')).toHaveText(STORY_MAP_TABS)
-    })
-  })
-})
-
-test.describe('Browse Ticket Files By Practice', () => {
-  test.describe('Show the practice filters and every file as a tab along the top', () => {
-    test.beforeEach(async ({ page }) => {
-      await openStoryMapFiles(page)
-    })
-
-    test('Then the top of the files panel shows a Stories filter and a BDD filter, each by its short form', async ({ page }) => {
-      const filters = files(page).getByRole('group', { name: 'File filters' })
-      await expect(filters.getByRole('button', { name: 'Stories', exact: true })).toBeVisible()
-      await expect(filters.getByRole('button', { name: 'BDD', exact: true })).toBeVisible()
-    })
-
-    test("And the tabs below them show the story map's files in Stories' color", async ({ page }) => {
-      const tabs = files(page).locator('.file-tab')
-      await expect(tabs).toHaveCount(STORY_MAP_TABS.length)
-      for (const tab of await tabs.all()) await expect(tab).toHaveAttribute('data-practice', 'stories')
-    })
-  })
-
-  test.describe("Preset the practice filters from the Files button", () => {
-    test.beforeEach(async ({ page }) => {
-      await openStoryMapFiles(page)
-    })
-
-    test('Then the Stories filter is on', async ({ page }) => {
-      await expect(files(page).getByRole('button', { name: 'Stories', exact: true })).toHaveAttribute('aria-pressed', 'true')
-    })
-
-    test('But the BDD filter is off, and no BDD tab shows', async ({ page }) => {
-      await expect(files(page).getByRole('button', { name: 'BDD', exact: true })).toHaveAttribute('aria-pressed', 'false')
-      await expect(files(page).locator('.file-tab[data-practice="bdd"]')).toHaveCount(0)
-    })
-  })
-
-  test.describe('Turn a practice filter on', () => {
-    test.beforeEach(async ({ page }) => {
-      await openStoryMapFiles(page)
-      await files(page).getByRole('button', { name: 'BDD', exact: true }).click()
-      await expect(files(page).locator('.file-tab[data-practice="bdd"]').first()).toBeVisible()
-    })
-
-    test("Then BDD's tabs show in BDD's color, after the Stories tabs", async ({ page }) => {
-      const practices = await files(page).locator('.file-tab').evaluateAll(tabs => tabs.map(tab => tab.getAttribute('data-practice')))
-      expect(practices.slice(0, STORY_MAP_TABS.length)).toEqual(STORY_MAP_TABS.map(() => 'stories'))
-      expect([...new Set(practices.slice(STORY_MAP_TABS.length))]).toEqual(['bdd'])
-    })
-  })
-
-  test.describe('Select a tab to view its file', () => {
-    test.beforeEach(async ({ page }) => {
-      await openStoryMapFiles(page)
-      await files(page).getByRole('tab', { name: 'story-map.drawio' }).click()
-      await files(page).getByRole('tab', { name: 'story-map.md' }).click()
-    })
-
-    test('Then the viewer shows .context/story-map.md', async ({ page }) => {
-      await expect(files(page).locator('.active-file')).toHaveText('.context/story-map.md')
-      await expect(files(page).locator('.markdown-page').getByRole('heading', { name: 'Check Out Order' })).toBeVisible()
-    })
-  })
-})
+test.afterAll(() => resetSessions(fixtureRoot))
 
 test.describe('View Fidelity Files', () => {
-  test.describe('Open one tab per format, colored by its practice, generated or not', () => {
-    test.beforeEach(async ({ page }) => {
-      await openStoryMapFiles(page)
-    })
-
-    test("Then the tabs along the top show the story map's and the thin slice's files", async ({ page }) => {
-      await expect(files(page).getByRole('tab')).toHaveText(STORY_MAP_TABS)
-    })
-
-    test('And the drawio tab says it is not generated yet', async ({ page }) => {
-      await files(page).getByRole('tab', { name: 'story-map.drawio' }).click()
-      await expect(files(page).getByText('Not generated yet.')).toBeVisible()
+  test.describe("Open the Files app on a fidelity's files", () => {
+    test("Then the Files app opens on checkout-flow's story_map files, read through its session", async ({ page }) => {
+      const links = await openedBoard(page)
+      await (await openStoryMapBar(page, 'checkout-flow', 'Checkout flow')).getByRole('button', { name: 'files', exact: true }).click()
+      await expect.poll(async () => (await links()).map(link => [link.files, link.fidelity, link.session])).toEqual([['checkout-flow', 'stories-story-map', '.sessions/checkout-flow/session.json']])
     })
   })
 })
 
 test.describe('Open Session Files From Details', () => {
   test.describe('Open the session folder from the session button', () => {
-    test.beforeEach(async ({ page }) => {
-      await openBoard(page)
+    test('Then the Files app opens on .sessions/checkout-flow', async ({ page }) => {
+      const links = await openedBoard(page)
       await page.locator('.details-bar').getByRole('button', { name: 'checkout-flow', exact: true }).click()
-    })
-
-    test('Then the file view shows .sessions/checkout-flow', async ({ page }) => {
-      await expect(files(page).locator('.files-subject')).toHaveText('checkout-flow session folder')
-      await expect(files(page).getByRole('tab', { name: 'session.log', exact: true })).toBeVisible()
+      await expect.poll(async () => (await links()).map(link => link['session-folder'])).toEqual(['checkout-flow'])
     })
   })
 
   test.describe('Open the workpath folder from the details', () => {
     const NOTE = join(fixtureRoot, 'workpath-note.md')
 
-    test.beforeEach(async ({ page }) => {
-      writeInto(NOTE, '# A note in the workpath\n')
-      await openBoard(page)
-      await page.locator('.details-bar').getByTitle('Browse the folder the session works in').click()
-    })
-
+    test.beforeEach(() => writeInto(NOTE, '# A note in the workpath\n'))
     test.afterEach(() => rmSync(NOTE, { force: true }))
 
-    test("Then the files panel lists the entries of the session's workpath", async ({ page }) => {
-      await expect(files(page).getByRole('tab', { name: 'workpath-note.md', exact: true })).toBeVisible()
+    test("Then the Files app opens on the folder checkout-flow's session works in", async ({ page }) => {
+      const links = await openedBoard(page)
+      await page.locator('.details-bar').getByTitle('Browse the folder the session works in').click()
+      await expect.poll(async () => (await links()).map(link => link['workpath-folder'])).toEqual(['checkout-flow'])
     })
 
     test('But the root chooser does not open', async ({ page }) => {
-      await expect(files(page)).toBeVisible()
+      const links = await openedBoard(page)
+      await page.locator('.details-bar').getByTitle('Browse the folder the session works in').click()
+      await expect.poll(async () => (await links()).length).toBe(1)
       await expect(page.getByRole('dialog')).toHaveCount(0)
     })
   })

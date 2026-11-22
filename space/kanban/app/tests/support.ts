@@ -80,6 +80,19 @@ export class ClaudeLinks {
   }
 }
 
+// The Files app as running, and every page the board opens in a window of its own kept on the page, so a spec reads the
+// Files app's link a press opens instead of opening it: the board shows no file itself.
+const FILES_APP_RUNNING = { label: 'Files', status: 'running', port: 9783, url: 'http://127.0.0.1:9783/', server: { folder: 'harness/files_app/app', command: ['node', 'serve.ts'] } }
+
+export async function catchFilesAppLinks(page: Page): Promise<() => Promise<URL[]>> {
+  await page.route('**/api/app/Files/open', route => route.fulfill({ json: FILES_APP_RUNNING }))
+  await page.addInitScript(() => {
+    const opened: string[] = []
+    Object.assign(window, { openedWindows: opened, open: (url: string) => void opened.push(String(url)) })
+  })
+  return async () => (await page.evaluate(() => (window as unknown as { openedWindows: string[] }).openedWindows)).map(url => new URL(url))
+}
+
 export function catchClaudeLinks(): ClaudeLinks {
   const file = process.env.CDD_OPENED_CHATS
   if (!file) throw new Error('CDD_OPENED_CHATS is not set: playwright.config.ts names the file the cdd server keeps new chat links in')

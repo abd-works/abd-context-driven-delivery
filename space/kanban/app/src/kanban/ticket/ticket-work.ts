@@ -1,5 +1,5 @@
 import type { RequiredFidelity } from '../board/column-client'
-import type { FidelityProgressClientGenerated, FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
+import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { StageWorkData } from '@cdd/space/kanban/ticket'
 
 import type { BoardPage } from '../board/board-page'
@@ -8,12 +8,8 @@ import { FidelityProgressClient } from './fidelity-progress-client'
 import { ReportClient } from './report-client'
 import type { TicketClient } from './ticket-client'
 
-// Each fidelity's files by format, as its own files tool answers, by the fidelity's slug: a tile or panel over several
-// fidelities reads them side by side.
-export type FilesByFidelity = Record<string, NonNullable<Awaited<ReturnType<FidelityProgressClientGenerated['files']>>>>
-
 // A ticket's progress on each fidelity the board requires, as the page knows it: each fidelity's progress answers its own
-// tools, and the files and reports a tile or panel over several of them reads side by side.
+// tools, and the reports a tile or panel over several of them reads side by side.
 export class TicketWork {
   constructor(
     private readonly ticket: TicketClient,
@@ -39,12 +35,6 @@ export class TicketWork {
     return this.fidelityProgress.filter(progress => progress.stage.name === stage.name && progress.isEnabled)
   }
 
-  // Its progress on every fidelity of the stage it stands in, which the files panel offers as its practice filters.
-  get stageProgress(): FidelityProgressClient[] {
-    const stage = this.page.board.stageOf(this.ticket)
-    return stage ? this.progressIn(stage) : []
-  }
-
   // Its progress on the fidelities a tile or a panel was opened over, read from this ticket as it is now.
   progressOn(fidelities: RequiredFidelity[]): FidelityProgressClient[] {
     return fidelities.flatMap(fidelity => this.progressNamed(fidelity.slug) ?? [])
@@ -64,14 +54,6 @@ export class TicketWork {
   // Its work in a stage taken together, as Python sends it (StageWork), which a stage head's action bar shows and acts on.
   workIn(stage: ColumnClient): StageWorkData | undefined {
     return this.ticket.stageWork.find(entry => entry.stage.name === stage.name)
-  }
-
-  // Each fidelity answers for its own files, so a tile or panel over several fidelities reads them side by side; none
-  // when any read failed, because the page has already shown that failure.
-  async filesOf(progress: FidelityProgressClient[]): Promise<FilesByFidelity | null> {
-    const read = await Promise.all(progress.map(entry => entry.files()))
-    if (read.some(files => !files)) return null
-    return Object.fromEntries(progress.map((entry, index) => [entry.fidelity.slug, read[index]!]))
   }
 
   // One fidelity's latest report, or with none the violations of every fidelity of the ticket's stage.

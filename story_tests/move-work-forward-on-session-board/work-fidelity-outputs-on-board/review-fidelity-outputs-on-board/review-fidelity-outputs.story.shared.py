@@ -60,7 +60,7 @@ def _(s):
     def _(world):
         world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).files())
 
-    @s.then("the files panel shows a .context/story-map.md tab, as there")
+    @s.then("the Files app shows a .context/story-map.md tab, as there")
     def _(world):
         expect(world.files["markdown"]).to(equal([{"path": STORY_MAP_FILE, "exists": True, "is_changed": False, "link": "", "format": "markdown", "fidelities": []}]))
 
@@ -153,7 +153,7 @@ def _(s):
     def _(world):
         world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.workpath_files())
 
-    @s.then("the files panel lists the entries of harness/.context")
+    @s.then("the Files app lists the entries of harness/.context")
     def _(world):
         expect(world.files).to(equal([{"path": "harness/.context/module-context.md", "exists": True, "is_changed": False, "link": "", "format": "markdown", "fidelities": []}]))
 

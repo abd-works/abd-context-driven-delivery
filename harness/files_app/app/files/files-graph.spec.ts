@@ -471,7 +471,7 @@ describe('Open Several Files From Graph Nodes', () => {
     it('should open ticket.py at lines 460 to 465 when the Person selects Ticket.activate', async () => {
       const { page, stop } = await selectedActivate()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
+      expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
     })
 
     it('should read ticket.py with its folds', async () => {
@@ -504,7 +504,7 @@ describe('Fold Open Files To Selected Nodes', () => {
       await page.graph.select(entryNamed(page, 'close'), true)
       await settled()
       stop()
-      expect(page.selectedLinesIn(TICKET_CODE)).toEqual([
+      expect(page.linesShownIn(TICKET_CODE)).toEqual([
         { start: 460, end: 465 },
         { start: 538, end: 555 },
       ])
@@ -519,7 +519,7 @@ describe('Open Every File Of A Folder Node', () => {
       await page.graph.select(entryNamed(page, 'Clean Engineering'))
       await settled()
       stop()
-      expect([page.state.openPath, page.state.moreFiles.map(file => file.path), page.selectedLinesIn(BOARD_CODE)]).toEqual([TICKET_CODE, [BOARD_CODE], [{ start: 104, end: 397 }]])
+      expect([page.state.openPath, page.state.moreFiles.map(file => file.path), page.linesShownIn(BOARD_CODE)]).toEqual([TICKET_CODE, [BOARD_CODE], [{ start: 104, end: 397 }]])
     })
   })
 })
@@ -657,13 +657,13 @@ describe("Open A Relationship's Member In Its Own File", () => {
     it('should open ticket.py at the lines close covers when the Person selects close there', async () => {
       const { page, stop } = await selectedInvokedClose()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
+      expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
     })
 
     it("should mark no line of the step's own file", async () => {
       const { page, stop } = await selectedInvokedClose()
       stop()
-      expect(page.selectedLinesIn(STORY_MAP)).toEqual([])
+      expect(page.linesShownIn(STORY_MAP)).toEqual([])
     })
   })
 })
@@ -691,7 +691,7 @@ describe('Go To A Fold-out File', () => {
       await page.graph.goToFile(CLOSE_FOLD_OUT)
       await settled()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
+      expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 538, end: 555 }]])
     })
   })
 
@@ -703,7 +703,7 @@ describe('Go To A Fold-out File', () => {
       await page.graph.goToFile(SECTION_FOLD_OUT)
       await settled()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 315, end: 319 }]])
+      expect([page.state.openPath, page.linesShownIn(STORY_MAP)]).toEqual([STORY_MAP, [{ start: 315, end: 319 }]])
     })
   })
 })
@@ -764,7 +764,7 @@ describe('Open Violation In Files App Source', () => {
       await page.graph.selectRule(entryNamed(page, 'activate'), ACTIVATE_RULES[0]!)
       await settled()
       stop()
-      expect([page.state.openPath, page.selectedLinesIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
+      expect([page.state.openPath, page.linesShownIn(TICKET_CODE)]).toEqual([TICKET_CODE, [{ start: 460, end: 465 }]])
     })
   })
 })

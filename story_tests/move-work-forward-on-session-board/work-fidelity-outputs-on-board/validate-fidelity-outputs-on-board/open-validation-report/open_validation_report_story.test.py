@@ -68,13 +68,13 @@ with story("Open Validation Report"):
         with then("the story_map bar links that report"):
             pass
     with scenario("Open a violation's file at its line"):
-        # Evidence: observed: story-actions.spec 'should open a violation's file at its line in the Files panel'; side-panel-client.spec 'with a violation in a file its fidelity does not declare'.
+        # Evidence: observed: story-actions.spec 'should open a violation's file at its line in the Files app'; side-panel-client.spec 'with a violation in a file its fidelity does not declare'.
         with given("checkout-flow's story_map report is open"):
             pass
         with when("the Person opens the verb-noun-format violation"):
             # Person -> Ticket.read_file('.context/story-map.md')
             pass
-        with then("the files panel shows .context/story-map.md with line 6 marked"):
+        with then("the Files app opens .context/story-map.md at line 6"):
             pass
     with scenario("Say there is no report"):
         # Evidence: observed: kanban_tools_spec 'should show no report for a fidelity that has none'.

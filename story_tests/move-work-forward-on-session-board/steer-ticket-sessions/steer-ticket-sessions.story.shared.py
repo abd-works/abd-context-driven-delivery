@@ -953,7 +953,7 @@ def _(s):
     def _(world):
         world.opened = world.data_of(world.ticket.session.read_file(path=world.selected["session"]["handoff"]))
 
-    @s.then("the files panel shows the handoff in a tab with its text # Handoff")
+    @s.then("the Files app opens on the handoff, its text # Handoff")
     def _(world):
         expect(world.opened["text"]).to(equal(HANDOFF_TEXT))
 

@@ -7,13 +7,15 @@ section: body
 
 # Sub-epic: Review Fidelity Outputs On Board
 
+Changed (2026-11-21, design proposal 24, approved by the person): the board's own files panel is gone. Every press here opens the Files app (`harness/files_app`) on what it names: a fidelity's files, the session folder, the folder the session works in, or a file at a line. The tabs, the practice filters, the changed-files filter and the viewer the scenarios below describe are the Files app's now, and its own specs prove them (`story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/`); the board's browser tier proves only the Files app's link each press opens (`review-fidelity-outputs.story.ui.spec.ts`), and the Python tiers what the cdd server lists.
+
 ## Story: List Ticket Files
 
 #### Scenario: List a fidelity's files with whether each exists
 
 *Given* checkout-flow's story map .context/story-map.md is there and .context/story-map.drawio is not
 *When* the Person lists checkout-flow's story_map files
-*Then* the files panel shows a .context/story-map.md tab, as there
+*Then* the Files app shows a .context/story-map.md tab, as there
 *But* no file of another fidelity shows
 
 #### Scenario: List every file of the fidelity, changed or not
@@ -46,7 +48,7 @@ Intended (the person, 2026-11-12: "this is a filter eg a checkbox on the file vi
 *Given* the [ticket](../../../.context/kanban-model.md#ticket--card) pet-visits works on the whole [repository](../../../.context/kanban-model.md#repo) on its own branch pet-visits  
   *And* the repository holds src/theirs_spec.py and its branch added src/mine_spec.py  
 *When* the Person lists pet-visits' bdd behavior files  
-*Then* the files panel lists src/mine_spec.py  
+*Then* the Files app lists src/mine_spec.py  
   *But* src/theirs_spec.py is not listed
 
 #### Scenario: Say in a toast when the list cannot be read
@@ -61,7 +63,7 @@ Intended (the person, 2026-11-12: "this is a filter eg a checkbox on the file vi
 ## Story: Browse Ticket Files By Practice
 
 Evidence:
-- Observed (`file-views-view.tsx`): the folder mode of the files panel groups files under their folders. That grouping is replaced.
+- Observed (`file-views-view.tsx`): the folder mode of the Files app groups files under their folders. That grouping is replaced.
 - Intended (the person, 2026-11-11, `.sessions/review-work-in-board-files/review-work-in-board-files.md`): files are grouped by the roots of the knowledge graph, such as each practice. A click selects a file.
 - Requested (the person, 2026-11-12): "these are just filters on left; all files are shown in tabs above grouped by practice colored by practice color", then "just put the filter toggles on the top, it will waste less space". So the filters sit along the top with the tabs, and nothing is on the left.
 - Requested (the person, 2026-11-12): "list a shortened form/image of each practice top to bottom on left side, filters preset when clicking files button in chat ui, user can toggle them; top has file tabs like now but colored to practice".
@@ -73,7 +75,7 @@ None of this is built. Confirmed (the person, 2026-11-12): the chat bar's Files 
 *Given* the [session](../../../../space/kanban/.context/kanban-model.md#session) of [ticket](../../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow works on Stories and BDD
 *And* its Stories files are stories/story-map.md and stories/checkout_story.test.md, and its BDD file is src/order_spec.py
 *When* the Person browses checkout-flow's files
-*Then* the top of the files panel shows a Stories filter and a BDD filter, each by its short form
+*Then* the top of the Files app shows a Stories filter and a BDD filter, each by its short form
 *And* the tabs below them show story-map.md and checkout_story.test.md together in Stories' color, then order_spec.py in BDD's color
 
 #### Scenario: Preset the practice filters from the chat bar's Files button
@@ -97,7 +99,7 @@ None of this is built. Confirmed (the person, 2026-11-12): the chat bar's Files 
 
 ## Story: View Fidelity Files
 
-The files panel shows the practice filters and then every file as a tab, both along the top, each tab in its practice's color (the person, 2026-11-12; see Browse Ticket Files By Practice). The tabs never go away, so closing one needs no scenario.
+The Files app shows the practice filters and then every file, both along the top, each tab in its practice's color (the person, 2026-11-12; see Browse Ticket Files By Practice). The tabs never go away, so closing one needs no scenario.
 
 #### Scenario: Open one tab per format, colored by its practice, generated or not
 
@@ -113,7 +115,7 @@ The files panel shows the practice filters and then every file as a tab, both al
 
 *Given* checkout-flow's story map is .context/story-map.md and .context/story-map.drawio is not there  
 *When* the Person views checkout-flow's story_map files  
-*Then* the files panel shows the tabs .context/story-map.md and .context/story-map.drawio  
+*Then* the Files app shows the tabs .context/story-map.md and .context/story-map.drawio  
   *And* the .context/story-map.md tab shows # Check Out Order  
   *And* the drawio tab says it is not generated yet
 
@@ -123,7 +125,7 @@ The files panel shows the practice filters and then every file as a tab, both al
 
 *Given* the tabs .context/story-map.md and .context/story-map.drawio are open  
 *When* the Person closes both tabs  
-*Then* the files panel shows the list
+*Then* the Files app shows the list
 
 #### Scenario: Refuse a file outside the repository
 
@@ -152,7 +154,7 @@ Requested (the person, 2026-11-12: "make this super simple - clicking on a sessi
 
 *Given* the session of ticket checkout-flow works in the workpath harness/.context
 *When* the Person opens checkout-flow's workpath from its details
-*Then* the files panel lists the entries of harness/.context
+*Then* the Files app lists the entries of harness/.context
 *But* the root chooser does not open
 
 ## Story: Browse Ticket Folder
@@ -163,7 +165,7 @@ Requested (the person, 2026-11-12: "make this super simple - clicking on a sessi
 
 *Given* checkout-flow's Discovery files are tests/a.md, tests/deep/b.md, and src/c.ts  
 *When* the Person browses checkout-flow's Discovery files  
-*Then* the files panel groups a.md and deep/b.md under tests/ and c.ts under src/
+*Then* the Files app groups a.md and deep/b.md under tests/ and c.ts under src/
 
 #### Scenario: Browse the ticket's session folder
 
@@ -171,4 +173,4 @@ Requested (the person, 2026-11-12: "make this super simple - clicking on a sessi
 
 *Given* checkout-flow's [session](../../../.context/kanban-model.md#session) folder holds its log and validation-reports/stories-story-map-20261101T100000.md  
 *When* the Person browses checkout-flow's session folder  
-*Then* the files panel lists .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md under its folder
+*Then* the Files app lists .sessions/checkout-flow/validation-reports/stories-story-map-20261101T100000.md under its folder

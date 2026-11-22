@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 
-import { FilesPanelBodyView, FilesPanelHeadView } from '../ticket/files-panel-view'
 import { ReportPanelBodyView, ReportPanelHeadView, ReportStatsView } from '../ticket/report-panel-view'
 import { useBoard } from '../shared/board-context'
 import type { SidePanel } from '../shared/board-store'
@@ -8,8 +7,8 @@ import { useDragGrip } from './drag-grip'
 import { HelpPanelBodyView, HelpPanelHeadView } from './help-panel-view'
 import { ExpandIcon } from '../shared/icons'
 
-const KIND_ORDER = ['report', 'files', 'help']
-const KIND_WORDS: Record<string, string> = { report: 'report', files: 'files', help: 'help' }
+const KIND_ORDER = ['report', 'help']
+const KIND_WORDS: Record<string, string> = { report: 'report', help: 'help' }
 
 function PanelGripView({ kind }: { kind: string }) {
   const { page } = useBoard()
@@ -44,12 +43,12 @@ function PanelControlsView({ panel }: { panel: SidePanel }) {
 
 function panelHeadOf(panel: SidePanel): ReactNode {
   if (panel.kind === 'report') return <ReportPanelHeadView panel={panel} />
-  return panel.kind === 'files' ? <FilesPanelHeadView panel={panel} /> : <HelpPanelHeadView panel={panel} />
+  return <HelpPanelHeadView panel={panel} />
 }
 
 function panelBodyOf(panel: SidePanel): ReactNode {
   if (panel.kind === 'report') return <ReportPanelBodyView panel={panel} />
-  return panel.kind === 'files' ? <FilesPanelBodyView panel={panel} /> : <HelpPanelBodyView panel={panel} />
+  return <HelpPanelBodyView panel={panel} />
 }
 
 function SidePanelView({ panel }: { panel: SidePanel }) {
@@ -58,7 +57,7 @@ function SidePanelView({ panel }: { panel: SidePanel }) {
   return (
     <aside className="report-root" data-panel={panel.kind} aria-label={`${panel.kind} panel`} style={size}>
       {panel.isExpanded ? null : <PanelGripView kind={panel.kind} />}
-      <header className={panel.kind === 'files' ? 'panel-head is-compact' : 'panel-head'}>
+      <header className="panel-head">
         {panelHeadOf(panel)}
         <div className="panel-head-side">
           {panel.kind === 'report' ? <ReportStatsView panel={panel} /> : null}

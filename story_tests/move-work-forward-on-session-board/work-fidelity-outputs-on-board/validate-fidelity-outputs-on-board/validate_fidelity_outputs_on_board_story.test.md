@@ -89,7 +89,7 @@ section: body
 
 *Given* checkout-flow's story_map report is open
 *When* the Person opens the verb-noun-format violation
-*Then* the files panel shows .context/story-map.md with line 6 marked
+*Then* the Files app opens .context/story-map.md at line 6
 
 #### Scenario: Say there is no report
 

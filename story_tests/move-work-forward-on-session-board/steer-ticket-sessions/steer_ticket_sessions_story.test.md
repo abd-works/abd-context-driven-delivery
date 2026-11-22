@@ -433,7 +433,7 @@ section: body
 *When* the Person selects checkout-flow
 *Then* the details read Latest handoff: .sessions/checkout-flow/handoff-20261101T120000.md
 *When* the Person opens the handoff
-*Then* the files panel shows the handoff in a tab with its text # Handoff
+*Then* the Files app opens on the handoff, its text # Handoff
 
 #### Scenario: Say a ticket has no handoff
 
@@ -457,7 +457,7 @@ section: body
 *Given* Active session only is on
 *And* billing-report is not the active [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card)
 *When* the Person opens billing-report's files
-*Then* the files panel lists billing-report's files
+*Then* the Files app opens on billing-report's files
 *When* the Person moves billing-report to Specification
 *Then* billing-report moves to Specification
 *And* Activate stays on for billing-report

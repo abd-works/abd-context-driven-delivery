@@ -673,7 +673,7 @@ Requested (the person, 2026-11-15): Rules and Cross-file toggles at the top, off
 
 #### Scenario: Save the edited text to the file on disk
 
-Intended in the Files app: the board's files panel does it, the Files app is read-only today.
+Intended in the Files app: the board's files panel did it until 2026-11-21, when that panel was removed (design proposal 24); the Files app is read-only today, so no page saves an edited file.
 
 *Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow
 *And* the Person has edited line 14 to read *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*
@@ -811,7 +811,7 @@ session=.sessions/checkout-flow/session.json
 
 ## Story: Show AI Changes As Diff
 
-Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "change viewer from ai change like vscode / cursor"); the session answers the changes (`SessionFile.changes`, `space/session/session_file.py`) and the board's files panel draws them. What counts as the chat's change is the difference between the file as it read when the comment was sent and the file once the comment is processed.
+Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "change viewer from ai change like vscode / cursor"); the session answers the changes (`SessionFile.changes`, `space/session/session_file.py`) and the board's files panel drew them until it was removed on 2026-11-21 (design proposal 24). What counts as the chat's change is the difference between the file as it read when the comment was sent and the file once the comment is processed.
 
 #### Scenario: Mark the line the chat changed, with the line it replaced
 

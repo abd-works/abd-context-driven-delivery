@@ -12,7 +12,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { card, expect, FakeChat, fixtureRoot, generatedLine, openBoard, receivedBy, resetSessions, seedActive, step, test, validatedLine, waitForChat, writeInto, writeSession } from '../../../../space/kanban/app/tests/story-ui'
+import { catchFilesAppLinks, card, expect, FakeChat, fixtureRoot, generatedLine, openBoard, receivedBy, resetSessions, seedActive, step, test, validatedLine, waitForChat, writeInto, writeSession } from '../../../../space/kanban/app/tests/story-ui'
 import type { Locator, Page } from '../../../../space/kanban/app/tests/story-ui'
 
 const REPORTS = join(fixtureRoot, '.sessions', 'checkout-flow', 'validation-reports')
@@ -95,15 +95,11 @@ test.describe('with no chat connected', () => {
 
   test.describe('Open Validation Report', () => {
     test.describe("Open a violation's file at its line", () => {
-      test.beforeEach(async ({ page }) => {
+      test('Then the Files app opens .context/story-map.md at line 6', async ({ page }) => {
+        const opened = await catchFilesAppLinks(page)
         await openBoard(page)
         await (await openStoryMapReport(page)).getByRole('button', { name: '.context/story-map.md:6', exact: true }).click()
-      })
-
-      test('Then the files panel shows .context/story-map.md with line 6 marked', async ({ page }) => {
-        const files = page.locator('[data-panel="files"]')
-        await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
-        await expect(files.locator('.code-line.is-failing .line-number')).toHaveText('6')
+        await expect.poll(async () => (await opened()).map(url => [url.searchParams.get('file'), url.searchParams.get('line')])).toEqual([['.context/story-map.md', '6']])
       })
     })
   })

@@ -1,12 +1,11 @@
-import { appendFileSync, rmSync, writeFileSync } from 'node:fs'
-import { EOL } from 'node:os'
+import { rmSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
 import { fixtureRoot, resetSessions } from '../test-utils/fixture-repo'
-import { BOARD_POST_HEADERS, card, catchClaudeLinks, FakeChat, openBoard, openCardOf, openTileBarOf, startBoard, toast, turnOffActiveSessionOnly } from './support'
+import { BOARD_POST_HEADERS, card, catchClaudeLinks, catchFilesAppLinks, FakeChat, openBoard, openCardOf, openTileBarOf, startBoard, toast, turnOffActiveSessionOnly } from './support'
 
 const BROKEN_BOARD_PORT = 8781
 
@@ -54,11 +53,13 @@ test.beforeEach(async ({ page }) => {
 test.describe('Restrict Actions To Active Session', () => {
   // A move runs nothing in a chat, so only what runs in the session's chat waits for the ticket to be active.
   test('should let a ticket that is not active be dragged, activated, and its files opened', async ({ page }) => {
+    const opened = await catchFilesAppLinks(page)
+    await openBoard(page)
     const billing = card(page, 'billing-report')
     await expect(billing).toHaveAttribute('draggable', 'true')
     await expect(billing.getByRole('button', { name: 'Activate' })).toBeEnabled()
     await billing.getByRole('button', { name: 'files', exact: true }).click()
-    await expect(page.locator('[data-panel="files"]')).toBeVisible()
+    await expect.poll(async () => (await opened()).map(url => url.searchParams.get('files'))).toEqual(['billing-report'])
   })
 
   test('should keep its practice switches off until Active session only is turned off', async ({ page }) => {
@@ -302,12 +303,12 @@ test.describe('Open Validation Report', () => {
     await expect(report.locator('.code-line.is-failing')).toContainText('Handle Payment')
   })
 
-  test('should open a violation\'s file at its line in the Files panel', async ({ page }) => {
+  test("should open a violation's file at its line in the Files app", async ({ page }) => {
+    const opened = await catchFilesAppLinks(page)
+    await openBoard(page)
     await card(page, 'checkout-flow').getByRole('button', { name: 'Run next: validate' }).first().click()
     await page.locator('[data-panel="report"]').getByRole('button', { name: '.context/story-map.md:6', exact: true }).click()
-    const files = page.locator('[data-panel="files"]')
-    await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
-    await expect(files.locator('.code-line.is-failing')).toContainText('Handle Payment')
+    await expect.poll(async () => (await opened()).map(url => [url.searchParams.get('files'), url.searchParams.get('file'), url.searchParams.get('line')])).toEqual([['checkout-flow', '.context/story-map.md', '6']])
   })
 })
 
@@ -336,21 +337,22 @@ test.describe('Display Violations Band', () => {
   })
 })
 
-test.describe('List, browse, and view files', () => {
-  test("should show the files panel's practice filters and its tabs", async ({ page }) => {
+// The board shows no file itself: every files button and folder link opens the Files app on what it names.
+test.describe('Open Files App On Ticket Files', () => {
+  test("should open the Files app on the card's stage fidelities, in the ticket's session", async ({ page }) => {
+    const opened = await catchFilesAppLinks(page)
+    await openBoard(page)
     await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
-    const files = page.locator('[data-panel="files"]')
-    await expect(files.getByRole('button', { name: 'Stories', pressed: true })).toBeVisible()
-    await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
-    await expect(files.locator('.file-viewer')).toContainText('Check Out Order')
+    await expect.poll(async () => (await opened()).map(url => [url.searchParams.get('files'), url.searchParams.get('session')])).toEqual([['checkout-flow', '.sessions/checkout-flow/session.json']])
+    expect((await opened())[0]!.searchParams.get('fidelity')).toContain('stories-story-map')
   })
 
-  test('should offer a tab for a format not generated yet and say so', async ({ page }) => {
+  test("should open the Files app on one fidelity's files from its tile", async ({ page }) => {
+    const opened = await catchFilesAppLinks(page)
+    await openBoard(page)
     await page.locator('.details-body [data-tile="stories-story-map"]').getByRole('button', { name: 'story-map', exact: true }).click()
     await page.locator('.details-body [data-tile="stories-story-map"] .expansion').getByRole('button', { name: 'files', exact: true }).click()
-    const files = page.locator('[data-panel="files"]')
-    await files.getByRole('tab', { name: 'story-map.drawio' }).click()
-    await expect(files.locator('.file-lines')).toContainText('Not generated yet.')
+    await expect.poll(async () => (await opened()).map(url => url.searchParams.get('fidelity'))).toEqual(['stories-story-map'])
   })
 })
 
@@ -361,14 +363,6 @@ test.describe('Refresh Board After Tool Calls', () => {
     await expect(column(page, 'Specification').locator('.card-list').nth(1).locator('[data-ticket="pricing-rules"]')).toBeVisible()
   })
 
-  test('should read an open files list again when the board changes', async ({ page }) => {
-    await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
-    const files = page.locator('[data-panel="files"]')
-    await expect(files.getByRole('tab', { name: 'story-map.md', exact: true })).toBeVisible()
-    writeFileSync(join(fixtureRoot, '.context', 'story-map.drawio'), `<mxfile />${EOL}`, 'utf-8')
-    appendFileSync(join(fixtureRoot, '.sessions', 'checkout-flow', 'session.log'), `2026-11-01T11:00:00Z generate /work stories story_map drawio stories no-chat${EOL}`, 'utf-8')
-    await expect(files.locator('[role="tab"][title=".context/story-map.drawio"]:not(.is-missing)')).toBeVisible({ timeout: 8_000 })
-  })
 })
 
 test.describe('Display Connected Status', () => {

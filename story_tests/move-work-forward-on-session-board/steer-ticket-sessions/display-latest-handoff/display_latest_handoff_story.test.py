@@ -24,7 +24,7 @@ with story("Display Latest Handoff"):
         with when("the Person opens the handoff"):
             # Person -> Ticket.read_file('.sessions/checkout-flow/handoff-20261101T120000.md')
             pass
-        with then("the files panel shows the handoff in a tab with its text # Handoff"):
+        with then("the Files app opens on the handoff, its text # Handoff"):
             pass
     with scenario("Say a ticket has no handoff"):
         # Evidence: observed: kanban_tools_spec 'should show no handoff for a ticket that has none'; details-view.tsx.

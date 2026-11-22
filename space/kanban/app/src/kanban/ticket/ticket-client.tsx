@@ -1,6 +1,5 @@
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import { TicketClientGenerated, type TicketData } from '@cdd/space/kanban/ticket'
-import { FileCommentsClientGenerated } from '@cdd/space/session/file-comments'
 import { SessionClientGenerated } from '@cdd/space/session/session'
 
 import type { BoardPage } from '../board/board-page'
@@ -81,11 +80,6 @@ export class TicketClient extends TicketClientGenerated {
   // the ticket already holds.
   get sessionClient(): SessionClientGenerated {
     return new SessionClientGenerated(this.api, this.session)
-  }
-
-  // The comments a person wrote on the files of its session, kept in the session's folder.
-  get fileComments(): FileCommentsClientGenerated {
-    return FileCommentsClientGenerated.named(this.api, this.session.session_file)
   }
 
   // The chat working on this ticket, which Python names, and every command the board sends for it goes to.
