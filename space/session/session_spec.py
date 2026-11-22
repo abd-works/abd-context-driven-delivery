@@ -1317,7 +1317,7 @@ with description("a session working in a folder of its own, holding an aggregate
         expect([entry.path for entry in self.model.session_output.written.files()["typescript"]]).to(equal(["work/sales/client/client.ts"]))
 
     with it("should find the declared file there"):
-        expect(self.model.session_output.written.has_output()).to(equal(True))
+        expect(self.model.session_output.written.has_found_output()).to(equal(True))
 
 
 # Main works on the whole repository, so a practice nobody gave a folder lists its documents from every .context folder,
@@ -1415,7 +1415,7 @@ with description("a session whose branch changed code in the folder it works in"
 
         with it("should not count the unchanged module file as output the fidelity already has"):
             (self.work / "orders" / "orders.py").unlink()
-            expect(self.code.session_output.written.has_output()).to(equal(False))
+            expect(self.code.session_output.written.has_found_output()).to(equal(False))
 
 
 # UX's front-end code is reviewed against the screens it was built from: its view code is Clean Engineering's code to

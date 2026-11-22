@@ -193,11 +193,6 @@ class Board:
         return self.reads.worktrees
 
     @property
-    def branches(self) -> list[Branch]:
-        """Every local branch, listed once per board read rather than once per ticket, so each ticket finds its own."""
-        return self.reads.branches
-
-    @property
     @data_field
     def practices(self) -> list[PracticeGuidance]:
         """The practices every ticket works through, in the order the board shows them, each with its name and colour."""
@@ -237,11 +232,6 @@ class Board:
     def tickets(self) -> list[Ticket]:
         """Every session's ticket, made once per board read: each column, and each ticket's own reads, ask for them."""
         return self.reads.tickets
-
-    @property
-    def ticket_names(self) -> set[str]:
-        """Every ticket's name, listed once per board read."""
-        return self.reads.ticket_names
 
     @property
     def backlog_items(self) -> list[BacklogItem]:
@@ -479,11 +469,6 @@ class BoardReads:
         return [board.placement.make_ticket(session) for session in self.sessions]
 
     @cached_property
-    def ticket_names(self) -> set[str]:
-        """Every ticket's name, read from the sessions without making the tickets, so a ticket being made can ask."""
-        return {session.name for session in self.sessions}
-
-    @cached_property
     def children(self) -> dict[str, list[Ticket]]:
         """Every ticket that has a parent, under its parent's name."""
         held: dict[str, list[Ticket]] = {}
@@ -525,10 +510,6 @@ class BoardReads:
     def children_of(self, ticket: Ticket) -> list[Ticket]:
         """The tickets whose session names ticket's as its parent, found once per board read."""
         return self.children.get(ticket.name, [])
-
-    @cached_property
-    def branches(self) -> list[Branch]:
-        return self._board.repo.branches
 
     @cached_property
     def worktrees(self) -> dict[Branch, Repo]:

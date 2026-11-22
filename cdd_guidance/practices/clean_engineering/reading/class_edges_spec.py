@@ -28,6 +28,43 @@ _GARAGE = {
         "class SmallTrunk(Trunk):\n    size = 2\n\n\n"
         "class Dashboard:\n    def __init__(self, boxes: list[Glovebox]) -> None:\n        self.boxes = boxes\n\n    def read_all(self) -> list:\n        return [box.manual.read() for box in self.boxes]\n\n    def trunk_manual(self, trunk: SmallTrunk) -> str:\n        return trunk.manual.read()\n"
     ),
+    "garage/shelving.py": (
+        "from typing import Generic, Iterator, TypeVar\n\n"
+        "Item = TypeVar('Item')\n\n\n"
+        "class Shelving(Generic[Item]):\n    def __init__(self, items: list[Item]) -> None:\n        self._items = items\n\n"
+        "    def __iter__(self) -> Iterator[Item]:\n        return iter(self._items)\n\n"
+        "    def first(self) -> Item:\n        return self._items[0]\n\n"
+        "    @property\n    def stock(self) -> tuple[Item, ...]:\n        return tuple(self._items)\n\n\n"
+        "class Spanner:\n    def turn(self) -> int:\n        return 1\n\n\n"
+        "class Wrench:\n    def turn(self) -> int:\n        return 2\n\n\n"
+        "class ToolShelf(Shelving[\"Spanner\"]):\n    def count(self) -> int:\n        return 1\n\n\n"
+        "class Workshop:\n    def __init__(self, shelf: ToolShelf) -> None:\n        self.shelf = shelf\n\n"
+        "    def turn_all(self) -> list:\n        return [tool.turn() for tool in self.shelf]\n\n"
+        "    def turn_first(self) -> int:\n        return self.shelf.first().turn()\n\n\n"
+        "class WrenchRack:\n    def __init__(self, rack: Shelving[Wrench]) -> None:\n        self.rack = rack\n\n"
+        "    def turn_one(self) -> int:\n        return self.rack.first().turn()\n\n"
+        "    def turn_stock(self) -> list:\n        return [tool.turn() for tool in self.rack.stock]\n"
+    ),
+    "garage/parts/__init__.py": "from .bolts import *  # noqa: F403\n",
+    "garage/parts/bolts.py": "class Bolt:\n    def tighten(self) -> int:\n        return 1\n",
+    "garage/crane.py": (
+        "class Polisher:\n    def buff(self) -> str:\n        return 'plain'\n\n\n"
+        "class WaxPolisher(Polisher):\n    def buff(self) -> str:\n        return 'wax'\n\n\n"
+        "class Named:\n    def title(self) -> str:\n        return 'crane'\n\n\n"
+        "class Mover:\n    def move(self) -> int:\n        return 1\n\n\n"
+        "class Ordered:\n    def move(self) -> int:\n        return super().move() + 1\n\n\n"
+        "class Hoist(Ordered, Mover):\n    size = 1\n\n\n"
+        "class Buffing:\n    def buff_all(self) -> str:\n        return self.pad.buff()\n\n\n"
+        "class Buffer(Buffing):\n    pad_type: type[Polisher] = Polisher\n\n    def __init__(self) -> None:\n        self.pad = WaxPolisher()\n\n"
+        "    def fresh(self) -> str:\n        return self.pad_type().buff()\n\n"
+        "    def pad_kind(self) -> type[Polisher]:\n        return Polisher\n\n"
+        "    def made(self) -> str:\n        return self.pad_kind()().buff()\n\n"
+        "    def fresh_all(self, kinds: list[type[Polisher]]) -> list:\n        return [kind().buff() for kind in kinds]\n\n\n"
+        "class Crane(Named, Mover):\n    def move(self) -> int:\n        return super().move()\n\n"
+        "    def polisher(self) -> Polisher:\n        return WaxPolisher()\n\n"
+        "    def shine_up(self) -> str:\n        return self.polisher().buff()\n\n"
+        "    def buffing(self) -> object:\n        return self.polisher().buff if self else None\n"
+    ),
     "garage/wiper.py": "class Wiper:\n    def record(self) -> None:\n        self.done = True\n",
     "garage/wash.py": (
         "from typing import Protocol\n\n\n"
@@ -108,6 +145,7 @@ _GARAGE = {
         "from garage.no_plate import NoPlate\n"
         "from garage.opener import Opener\n"
         "from garage import polish\n"
+        "from garage.parts import Bolt\n"
         "from garage.wash import Washer\n"
         "from garage.passenger import Passenger\n"
         "from garage.pump import Pump\n"
@@ -129,6 +167,8 @@ _GARAGE = {
         "    def tidy(self, part: Brakes | Lights) -> None:\n        part.record()\n\n"
         "    @property\n    def _badge(self) -> str:\n        return 'b'\n\n"
         "    def describe(self) -> str:\n        return f\"\"\"<b>{self._badge}</b>\"\"\"\n\n"
+        "    def fix(self, bolt: Bolt) -> int:\n        return bolt.tighten()\n\n"
+        "    def wiped(self, checks: list[Inspection]) -> list:\n        made = [Wiper() for check in checks]\n        return [check for check in made if check.record()]\n\n"
         "    def kind(self) -> str:\n        return 'car'\n\n"
         "    def drive(self) -> int:\n        return self.engine.start()\n\n"
         "    def plan(self) -> str:\n        return Map().route()\n\n"
@@ -155,6 +195,10 @@ _GARAGE = {
         "    @staticmethod\n    def first_check(name: str) -> str:\n        kind = next((kind for kind in (Brakes, Lights) if kind.__name__ == name), None)\n        return kind.label(name)\n\n"
         "    def wash(self, washer: Washer) -> str:\n        return washer.soap()\n\n"
         "    def record_all(self, checks: dict[str, Inspection]) -> None:\n        for name, check in checks.items():\n            check.record()\n\n"
+        "    def recheck_all(self, checks: dict[str, Inspection]) -> None:\n        for name, check in list(checks.items()):\n            check.record()\n\n"
+        "    def check_any(self, found: object) -> None:\n        if not isinstance(found, Brakes):\n            return\n        found.record()\n\n"
+        "    def check_one(self, checks: dict[str, Inspection]) -> None:\n        found = checks.get('brakes')\n        if found is None:\n            return\n        found.record()\n\n"
+        "    def check_typed(self, found: Inspection) -> None:\n        if not isinstance(found, Brakes):\n            return\n        found.record()\n\n"
         "    def plates(self, drivers: list[Driver]) -> list:\n        licences = [driver.licence for driver in drivers]\n        return [licence.check() for licence in licences]\n\n"
         "    def all_records(self, checks: list[Inspection]) -> list:\n        return [done for check in checks for done in check.record()]\n\n"
         "    def kept_records(self, checks: list[Inspection]) -> None:\n        for check in [check for check in checks if check] or checks:\n            check.record()\n\n"
@@ -311,7 +355,7 @@ with description("the edges Clean Engineering reads between classes of the code"
         with context("that reach other classes from their operations"):
             with it("should depend on each class it creates, calls, or reads"):
                 expect(_classes_related(self.fixture, "dependsOn", "Car")).to(
-                    equal(["Brakes", "Depot", "Driver", "Engine", "Inspection", "Licence", "Lights", "Map", "Mirror", "NoPlate", "Opener", "Passenger", "Pump", "Registry", "Remote", "Seat", "Washer", "Wheel", "Wiper"])
+                    equal(["Bolt", "Brakes", "Depot", "Driver", "Engine", "Inspection", "Licence", "Lights", "Map", "Mirror", "NoPlate", "Opener", "Passenger", "Pump", "Registry", "Remote", "Seat", "Washer", "Wheel", "Wiper"])
                 )
 
             with it("should keep that it creates the part in its constructor and then calls it through the field that holds it"):
@@ -395,6 +439,14 @@ with description("the edges Clean Engineering reads between classes of the code"
 
             with it("should join a call through a protocol to the operation of every class that satisfies it"):
                 expect(_invoked(self.fixture, "wash", "Car")).to(equal(["Bucket.soap", "Hose.soap", "Washer.soap"]))
+            with it("should join a call on the value a loop takes from a copy of a mapping's items"):
+                expect(_invoked(self.fixture, "recheck_all", "Car")).to(equal(["Brakes.record", "Inspection.record", "Lights.record", "Tyres.record"]))
+            with it("should join a call on a value an isinstance check has narrowed to one class"):
+                expect(_invoked(self.fixture, "check_any", "Car")).to(equal(["Brakes.record"]))
+            with it("should join a call on a value a mapping's get looks up"):
+                expect(_invoked(self.fixture, "check_one", "Car")).to(equal(["Brakes.record", "Inspection.record", "Lights.record", "Tyres.record"]))
+            with it("should join a call on a typed value an isinstance check has narrowed to a class extending its type"):
+                expect(_invoked(self.fixture, "check_typed", "Car")).to(equal(["Brakes.record"]))
             with it("should join a call on the value a loop takes in two names from a mapping's items"):
                 expect(_invoked(self.fixture, "record_all", "Car")).to(equal(["Brakes.record", "Inspection.record", "Lights.record", "Tyres.record"]))
 
@@ -418,6 +470,48 @@ with description("the edges Clean Engineering reads between classes of the code"
 
             with it("should join a call through a field a class two levels up assigns"):
                 expect(_invoked(self.fixture, "trunk_manual", "Dashboard")).to(equal(["Manual.read"]))
+
+            with it("should take each item of a class that specialises a generic base as the class it names"):
+                expect(_invoked(self.fixture, "turn_all", "Workshop")).to(equal(["Spanner.turn", "Workshop.shelf"]))
+
+            with it("should take what a generic base's operation answers as the class the specialising class names"):
+                expect(_invoked(self.fixture, "turn_first", "Workshop")).to(equal(["Shelving.first", "Spanner.turn", "Workshop.shelf"]))
+
+            with it("should find a class a package passes on through a star import"):
+                expect(_invoked(self.fixture, "fix", "Car")).to(equal(["Bolt.tighten"]))
+
+            with it("should join a call on a value a class types to the operation each class extending it overrides"):
+                expect(_invoked(self.fixture, "shine_up", "Crane")).to(equal(["Crane.polisher", "Polisher.buff", "WaxPolisher.buff"]))
+
+            with it("should join super() to the operation of whichever base declares it"):
+                expect(_invoked(self.fixture, "move", "Crane")).to(equal(["Mover.move"]))
+
+            with it("should join a call on a field a mixin reads that the class mixing it in holds"):
+                expect(_invoked(self.fixture, "buff_all", "Buffing")).to(equal(["Buffer.pad", "WaxPolisher.buff"]))
+
+            with it("should join an operation another object's class declares that the code reads to hand on, and each override of it"):
+                expect(_invoked(self.fixture, "buffing", "Crane")).to(equal(["Crane.polisher", "Polisher.buff", "WaxPolisher.buff"]))
+
+            with it("should join a call on the object a field that holds a class builds"):
+                expect(_invoked(self.fixture, "fresh", "Buffer")).to(equal(["Buffer.pad_type", "Polisher.buff", "WaxPolisher.buff"]))
+
+            with it("should join a call on the object built by calling the class a call answers"):
+                expect(_invoked(self.fixture, "made", "Buffer")).to(equal(["Buffer.pad_kind", "Polisher.buff", "WaxPolisher.buff"]))
+
+            with it("should join a call on the object built by calling a local that holds a class"):
+                expect(_invoked(self.fixture, "fresh_all", "Buffer")).to(equal(["Polisher.buff", "WaxPolisher.buff"]))
+
+            with it("should join a call on what an operation answers in the type a field's hint passes the generic class"):
+                expect(_invoked(self.fixture, "turn_one", "WrenchRack")).to(equal(["Shelving.first", "Wrench.turn", "WrenchRack.rack"]))
+
+            with it("should join a call on each item a property answers in the type a field's hint passes the generic class"):
+                expect(_invoked(self.fixture, "turn_stock", "WrenchRack")).to(equal(["Shelving.stock", "Wrench.turn", "WrenchRack.rack"]))
+
+            with it("should join a mixin's super() to the next class that declares it in the order of each class mixing it in"):
+                expect(_invoked(self.fixture, "move", "Ordered")).to(equal(["Mover.move"]))
+
+            with it("should read a comprehension's local as what that comprehension walks, not an earlier one of the same name"):
+                expect(_invoked(self.fixture, "wiped", "Car")).to(contain("Wiper.record"))
 
             with it("should join a call a comprehension makes on each item it takes"):
                 expect(_invoked(self.fixture, "all_records", "Car")).to(equal(["Brakes.record", "Inspection.record", "Lights.record", "Tyres.record"]))

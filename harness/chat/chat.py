@@ -164,7 +164,7 @@ class ChatOpener:
 
 class RecordedChatOpener(ChatOpener):
     """Keeps each link in a file, one a line, instead of opening the Claude app: a test run's chats open through it, so
-    no spec opens a chat on this machine, and the spec reads the links back."""
+    no spec opens a chat on this machine, and the spec reads the links back from that file."""
 
     def __init__(self, file: Path) -> None:
         self._file = file
@@ -173,10 +173,6 @@ class RecordedChatOpener(ChatOpener):
         self._file.parent.mkdir(parents=True, exist_ok=True)
         with self._file.open("a", encoding="utf-8") as kept:
             kept.write(f"{link}\n")
-
-    @property
-    def links(self) -> list[str]:
-        return self._file.read_text(encoding="utf-8").splitlines() if self._file.is_file() else []
 
 
 class NewChat:

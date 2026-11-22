@@ -33,10 +33,6 @@ class ReportFiles:
         self._session = session
         self._reports: list[ValidationReport] = [fidelity.report for fidelity in checked]
 
-    @property
-    def reports(self) -> list[ValidationReport]:
-        return list(self._reports)
-
     def graph_file(self) -> Path:
         """Where the whole graph the call builds is written, for its judge to read: a file of its first report's own in
         the session's checked graphs, else a file of its own in the session, for a validate that saves no report."""

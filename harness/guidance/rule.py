@@ -124,7 +124,7 @@ class Rule:
 
 @hosted_only
 @agent_toolset
-class RulesCollection(MarkdownCollection[Owner]):
+class RulesCollection(MarkdownCollection[Owner, "Rule | RulesCollection"]):
     def __init__(
         self,
         entries: dict[str, Rule | RulesCollection] | None = None,

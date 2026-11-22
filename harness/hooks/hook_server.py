@@ -422,14 +422,11 @@ class HookToasts:
     def __init__(self) -> None:
         self._show: Callable[[str, list[Path]], Any] | None = None
 
-    def show_with(self, show: Callable[[str, list[Path]], Any] | None) -> None:
-        """Have show(toast, workspace_roots) show each toast a dispatched event's hooks give; none shows no toast."""
-        self._show = show
-
-    @property
-    def shown_by(self) -> Callable[[str, list[Path]], Any] | None:
-        """The notifier that shows toasts now; none when no notifier registered."""
-        return self._show
+    def show_with(self, show: Callable[[str, list[Path]], Any] | None) -> Callable[[str, list[Path]], Any] | None:
+        """Have show(toast, workspace_roots) show each toast a dispatched event's hooks give; none shows no toast.
+        Answers the notifier it replaces, so a caller that registers its own for a while can put that one back."""
+        replaced, self._show = self._show, show
+        return replaced
 
     def show(self, toast: str, workspace_roots: list[Path]) -> None:
         """Show toast in the chat's workspace folders, when there is a toast and a notifier to show it."""

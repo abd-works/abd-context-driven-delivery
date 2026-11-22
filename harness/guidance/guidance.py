@@ -231,7 +231,7 @@ class Guidance:
 
 @hosted_only
 @toolset_collection
-class GuidanceCollection(MarkdownCollection, Guidance):
+class GuidanceCollection(MarkdownCollection["Guidance", "FidelityGuidance"], Guidance):
     def __init__(self, entries: dict[str, Guidance] | None = None, parent: Guidance | None = None) -> None:
         MarkdownCollection.__init__(self, entries, parent=parent)
         Guidance.__init__(self)

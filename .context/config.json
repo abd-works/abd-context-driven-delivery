@@ -80,14 +80,15 @@
     "publishing_decorators": [
       "mcp",
       "agent_tool",
-      "agent_toolset: for_call, session_for, instructions_type, is_served_on_mcp",
+      "agent_toolset: for_call, session_for, instructions_type, is_served_on_mcp, domain_slug, module_dir",
       "agent_instructions",
       "skill",
       "command",
       "rules",
       "hook",
       "data_field",
-      "tool_subject"
+      "tool_subject",
+      "markdown"
     ],
     "registries": [
       "PRACTICE_CATALOGUE.register",
@@ -110,7 +111,16 @@
       "*/extension.js:deactivate"
     ],
     "naming_conventions": [],
-    "generated_adapters": []
+    "generated_adapters": [],
+    "instruction_files": [
+      "cdd_guidance/practices/*/*.md",
+      "cdd_guidance/practices/*/model/*/*.md",
+      "cdd_guidance/actions/*/*.md",
+      "cdd_guidance/patterns/*/*.md",
+      "cdd_guidance/agents/*.md",
+      "cdd_guidance/rules/*.md",
+      "harness/*/*.md"
+    ]
   },
   "test_code": {
     "files": [

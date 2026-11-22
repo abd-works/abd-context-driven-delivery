@@ -382,7 +382,7 @@ work_in(session_output: FidelitySessionOutput): None
 
 ## DeclaredOutputs
 
-The files one fidelity declares, made from its outputs: declarations only. The fidelity holds it (`fidelity.declared`). What the fidelity has written in a session (`output_paths`, `files`, `has_output`, `saved_beside`, `files_to_review`) is asked of `fidelity.session_output.written`, a *WrittenOutput*; a fidelity whose practice works in no session holds *NoSessionOutput*, which answers empty.
+The files one fidelity declares, made from its outputs: declarations only. The fidelity holds it (`fidelity.declared`). What the fidelity has written in a session (`output_paths`, `files`, `saved_beside`, `files_to_review`, `every_file`) is asked of `fidelity.session_output.written`, a *WrittenOutput*; a fidelity whose practice works in no session holds *NoSessionOutput*, which answers empty.
 
 DeclaredOutputs(outputs: dict[str, str | list[str]])
 ------

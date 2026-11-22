@@ -56,10 +56,6 @@ class SegmentEntry:
         return self._name
 
     @property
-    def body(self) -> str | None:
-        return self._body
-
-    @property
     def body_chars(self) -> int:
         return 0 if self._body is None else len(self._body)
 
@@ -138,10 +134,6 @@ class Segment(PartitionFile):
         return segment
 
     @property
-    def expected_names(self) -> list[str]:
-        return list(self._expected_names)
-
-    @property
     def has_expected_names(self) -> bool:
         return bool(self._expected_names)
 
@@ -149,10 +141,6 @@ class Segment(PartitionFile):
     def entries(self) -> list[SegmentEntry]:
         """Each expected entry as the segment holds it, read once."""
         return [self._entry_for(name) for name in self._expected_names]
-
-    @property
-    def is_complete(self) -> bool:
-        return self._passes()
 
     def completeness_report(self) -> str:
         if not self.has_expected_names:

@@ -181,6 +181,7 @@ class TicketCheckout:
             self.branch.open_in_worktree()
         except WorktreeFolderTakenError as taken:
             raise TicketWorktreeBlockedError(self._ticket.name, taken.folder) from taken
+        self._ticket.board.sessions.worktrees.forget()
 
     def _refuse_unclear_branch(self) -> None:
         candidates = [] if self.branch.exists else self._ticket.session.checkout.candidate_branches
@@ -258,6 +259,7 @@ class TicketCheckout:
         if worktree is None:
             return
         worktree.close(self._leave_message)
+        self._ticket.board.sessions.worktrees.forget()
         self._ticket.board.placement.reread()
 
     def _delete_branch(self, leaving: Leaving) -> None:
@@ -270,6 +272,7 @@ class TicketCheckout:
         if branch.is_checked_out_here and not self._repo.is_linked_worktree:
             self._repo.default_branch.check_out()
         branch.delete(unmerged=not leaving.merges)
+        self._ticket.board.sessions.worktrees.forget()
 
     def return_to_default_branch(self) -> None:
         """Closing a ticket opens main, the default branch in the repository's own folder, so the closed ticket's own

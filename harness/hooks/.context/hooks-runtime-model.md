@@ -249,10 +249,9 @@ The toolsets whose hooks the server runs.
 How the process shows the toast a hook gives in its result: the one notifier registers itself when it is loaded, so a hook names its toast and never the notifier. The process keeps one, `HOOK_TOASTS`.
 
 + HookToasts()
-------
-+ shown_by: Callable[[str, list[Path]], Any] | None
 ----
-+ show_with(show: Callable[[str, list[Path]], Any] | None): None
++ show_with(show: Callable[[str, list[Path]], Any] | None): Callable[[str, list[Path]], Any] | None
+	// answers the notifier it replaces, so a caller that registers its own for a while can put that one back
 + show(toast: str, workspace_roots: list[Path]): None
 	// shows nothing when the toast is empty or no notifier is registered
 

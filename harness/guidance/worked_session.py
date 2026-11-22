@@ -172,9 +172,6 @@ class WrittenOutput(Protocol):
     def files(self) -> dict[str, list[SessionFile]]:
         """The files the fidelity declares in the session, by format."""
 
-    def has_output(self) -> bool:
-        """Whether a file the fidelity declares is already in the session."""
-
     def saved_beside(self, source: Path, format: str) -> Path | None:
         """Where a render of the file at source into format is saved in the session."""
 
@@ -216,9 +213,6 @@ class _NoWrittenFiles:
 
     def every_file(self) -> list[Path]:
         return []
-
-    def has_output(self) -> bool:
-        return False
 
     def saved_beside(self, source: Path, format: str) -> Path | None:
         return None

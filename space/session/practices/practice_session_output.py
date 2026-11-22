@@ -546,11 +546,6 @@ class WrittenFiles:
                 reviewed.setdefault(label, []).extend(entry for entry in entries if entry.path not in known)
         return reviewed
 
-    def has_output(self) -> bool:
-        """Whether a file this fidelity declares is already in the session, such as one a person wrote. Unlike
-        ``files`` it never asks git, and the board asks this of every fidelity."""
-        return self.has_named_output() or self.has_found_output()
-
     def has_named_output(self) -> bool:
         """Whether a file this fidelity names by its whole path is there: one look each, quick enough for every read."""
         return any(self._exists(file) for _label, file in self._declared_outputs() if file.names_one_path)

@@ -29,10 +29,6 @@ export class RepoClient {
   get state(): ToMainJson['state'] {
     return this.json.state
   }
-
-  get error(): string | null {
-    return this.json.error
-  }
 }
 
 // Atom toMain, declared in pane/types/index.d.ts and kept in this file. The session the pushes carry is named as the

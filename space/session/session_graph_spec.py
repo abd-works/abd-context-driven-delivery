@@ -69,6 +69,13 @@ def _flattened(opened: list) -> list[str]:
 
 
 with description("a session's graph"):
+    # The first graph a process reads imports every practice's graph reading, which later reads use as it is; read
+    # once here, so the first example does not pay for that import.
+    with before.all:
+        warmed_home = ExampleHome()
+        _session_with_code().graph_trees([TICKET_FILE, BOARD_FILE])
+        warmed_home.close()
+
     with before.each:
         self.home = ExampleHome()
         self.session = _session_with_code()

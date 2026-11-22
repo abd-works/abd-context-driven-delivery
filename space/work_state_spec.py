@@ -12,7 +12,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from space.work_state import WorkState
+from space.work_state import OPEN_SESSIONS_NAME, WorkState
 
 
 with description("a chat's work state"):
@@ -42,7 +42,7 @@ with description("a chat's work state"):
             expect(list(self.root.iterdir())).to(equal([]))
 
         with it("should keep the state in the cdd home"):
-            expect(self.state("chat-a").path.parent).to(equal(self.home.resolve()))
+            expect([kept.name for kept in self.home.iterdir()]).to(equal([OPEN_SESSIONS_NAME]))
 
     with context("with a session opened by a call naming no chat"):
         with before.each:

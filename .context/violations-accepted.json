@@ -35,6 +35,24 @@
       "subject": "Operation `invoke`",
       "accepted_at": "2026-11-22T12:58:52Z",
       "reason": "The story tiers call tools in process through it; no other seam does that."
+    },
+    {
+      "rule": "delete-unused-operations",
+      "file": "space/session/sessions.py",
+      "message": "Operation 'forget_under': no use \u2014 delete it with its specs. Nothing calls it, on its class or on a class of its family, and none of the `code_reach` ways its `.context/config.json` names reaches it.",
+      "node_id": "clean_engineering:Operation:space/session/sessions.py:forget_under:CallSessions",
+      "subject": "Operation `forget_under`",
+      "accepted_at": "2026-11-22T13:55:21Z",
+      "reason": "Spec teardown forgets the sessions a throwaway project made; nothing else can."
+    },
+    {
+      "rule": "delete-unused-operations",
+      "file": "harness/guidance/practice_catalogue.py",
+      "message": "Operation 'create': no use \u2014 delete it with its specs. Nothing calls it, on its class or on a class of its family, and none of the `code_reach` ways its `.context/config.json` names reaches it.",
+      "node_id": "clean_engineering:Operation:harness/guidance/practice_catalogue.py:create:PracticeCatalogue",
+      "subject": "Operation `create`",
+      "accepted_at": "2026-11-22T14:45:40Z",
+      "reason": "Specs make one practice at a chosen fidelity with the practices it works with; a session makes them all with create_all."
     }
   ]
 }

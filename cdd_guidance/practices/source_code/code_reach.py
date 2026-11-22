@@ -21,6 +21,9 @@ _NAME = re.compile(r"\b[A-Za-z_]\w*\b")
 _CODE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".mjs"}
 # An entry point names an operation as ``file:operation``, the file a pattern such as ``*.py``.
 _ENTRY_POINT_SEPARATOR = ":"
+# A call an instruction file names: ``receiver.operation(``, or ``Class.operation`` written without its arguments.
+_INSTRUCTED_CALL = re.compile(r"\b([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*\(|\b([A-Z]\w*)\.([A-Za-z_]\w*)\b")
+_WORD_START = re.compile(r"(?<!^)(?=[A-Z])")
 
 
 def _base_and_members(entry: str) -> tuple[str, frozenset[str]]:
@@ -43,7 +46,10 @@ class WaysCodeIsReached:
       the read holds no members of its own for it;
     - entry_points: an operation the project's configuration or runtime starts, as ``file:operation``;
     - naming_conventions: a pattern of names a framework finds operations and classes by;
-    - generated_adapters: the files whose public classes and operations generated code calls, as patterns."""
+    - generated_adapters: the files whose public classes and operations generated code calls, as patterns;
+    - instruction_files: the files, as patterns, that tell an agent which operations to call, such as a practice's
+      recipes; an operation one of them names as a call (``version.publish_at(url)``, ``CanvasVersion.release``),
+      on its class, an instance named after the class, or its module, is reached."""
 
     def __init__(self, section: dict[str, Any] | None = None) -> None:
         section = section or {}
@@ -54,6 +60,7 @@ class WaysCodeIsReached:
         self.entry_points = [str(entry).rsplit(_ENTRY_POINT_SEPARATOR, 1) for entry in section.get("entry_points") or [] if _ENTRY_POINT_SEPARATOR in str(entry)]
         self.naming_conventions = [re.compile(pattern) for pattern in section.get("naming_conventions") or []]
         self.generated_adapters = list(section.get("generated_adapters") or [])
+        self.instruction_files = list(section.get("instruction_files") or [])
 
     @classmethod
     def from_project(cls, root: Path | str) -> WaysCodeIsReached:
@@ -81,6 +88,7 @@ class CodeReach:
         self._root = Path(graph.folder or ".")
         self._texts: dict[str, list[str]] = {}
         self._registered: set[str] | None = None
+        self._instructed: set[tuple[str, str]] | None = None
         # The class of each property, by property, for each practice whose properties are asked about.
         self._property_owners: dict[int, dict[int, Node]] = {}
         # The classes that extend each class, by the class, for each practice whose classes are asked about.
@@ -99,11 +107,23 @@ class CodeReach:
     def operations(self, operations: list[Node]) -> list[Node]:
         """The operations and properties among operations that one of the project's ways reaches."""
         names_by_class: dict[int, set[str]] = {}
+        published_by_class: dict[int, set[str]] = {}
         for operation in operations:
             owner = self._owner(operation)
             if owner is not None:
                 names_by_class.setdefault(id(owner), set()).add(operation.name)
-        return [operation for operation in operations if self._reaches_operation(operation, names_by_class)]
+                if self._is_published(operation):
+                    published_by_class.setdefault(id(owner), set()).add(operation.name)
+        return [
+            operation for operation in operations
+            if self._reaches_operation(operation, names_by_class) or self._overrides_a_published_member(operation, published_by_class)
+        ]
+
+    def _overrides_a_published_member(self, operation: Node, published_by_class: dict[int, set[str]]) -> bool:
+        """Whether operation overrides a member a base publishes, such as a property a base marks as data, which
+        whatever reads that base's published members reads on every subclass."""
+        owner = self._owner(operation)
+        return owner is not None and any(operation.name in published_by_class.get(id(base), set()) for base in self._base_chain(owner))
 
     def classes(self, classes: list[Node]) -> list[Node]:
         """The classes among classes that one of the project's ways reaches."""
@@ -118,7 +138,34 @@ class CodeReach:
             return True
         if self._is_published(operation) or self._overrides_for_a_framework(operation, names_by_class):
             return True
+        if self._is_instructed(operation):
+            return True
         return operation.name in self._members_decorators_call_on(self._owner(operation))
+
+    def _is_instructed(self, operation: Node) -> bool:
+        """Whether an instruction file names operation as a call on its class, an instance named after its class, or
+        its module."""
+        calls = self._instructed_calls()
+        if not calls:
+            return False
+        receivers = {Path(self._file_of(operation)).stem.lower()}
+        owner = self._owner(operation)
+        if owner is not None and owner.type != "Module":
+            words = _WORD_START.split(owner.name)
+            receivers |= {owner.name.lower(), "_".join(words).lower(), words[-1].lower()}
+        return any((receiver, operation.name) in calls for receiver in receivers)
+
+    def _instructed_calls(self) -> set[tuple[str, str]]:
+        """Each call the project's instruction files name, as its receiver in lower case and its operation; read once,
+        and only when the project names instruction files."""
+        if self._instructed is None:
+            files = {path for pattern in self._ways.instruction_files for path in self._root.glob(pattern) if path.is_file()}
+            texts = [path.read_text(encoding="utf-8", errors="replace") for path in files]
+            self._instructed = {
+                ((match.group(1) or match.group(3)).lower(), match.group(2) or match.group(4))
+                for text in texts for match in _INSTRUCTED_CALL.finditer(text)
+            }
+        return self._instructed
 
     def _members_decorators_call_on(self, declared: Node | None) -> set[str]:
         """The members the frameworks of the decorators on the class, or on a class that extends it, call on it."""

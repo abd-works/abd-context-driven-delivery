@@ -50,6 +50,8 @@ _HEAD = re.compile(r"(?:(?<![\w.$)\]])|(?<=\.\.\.))[A-Za-z_$][\w$]*")
 _IDENTIFIER = re.compile(r"[A-Za-z_$][\w$]*")
 # What may open an expression without being part of its value: `await order.paid()`, `new Order()`.
 _PREFIX = re.compile(r"(?:await|new|yield)\s+")
+# Python's built-ins that answer a new collection of the same elements as the one they are handed.
+_COPIES = re.compile(r"\b(?:list|tuple|sorted|reversed|set|frozenset|iter)\(")
 # A function called by its name alone, and a brace language's call of its base constructor.
 _BARE_CALL = re.compile(r"(?:(?<![\w.$])|(?<=\.\.\.))([A-Za-z_$][\w$]*)\s*\(")
 # A script's element that renders a component, `<Boundary>` or `<Banner />`: a capitalised name after an opening angle
@@ -71,8 +73,14 @@ _LOOP = re.compile(r"\bfor\s*\(?\s*(?:const\s+|let\s+|var\s+)?(\(?[A-Za-z_$][\w$
 _COMPREHENSION = re.compile(r"\s*(?:async\s+)?for\s+([A-Za-z_]\w*)\s+in\s+")
 # What a mapping answers that a loop walks: its values, or its items, each a key and a value.
 _MAPPING_VIEWS = frozenset({"items", "values"})
+# A mapping's calls that answer one of its values by its key.
+_MAPPING_LOOKUPS = frozenset({"get", "pop", "setdefault"})
 # A Python block's object and its local: `with Order() as order`, and each further `, Cart() as cart` of one with.
 _WITH = re.compile(r"(?<![\w$.])with\s+")
+# A check that a local is an object of one class, `isinstance(found, Brakes)` or `found instanceof Brakes`.
+_CHECKED = re.compile(
+    r"\bisinstance\(\s*([A-Za-z_]\w*)\s*,\s*([A-Za-z_][\w.]*)\s*\)|([A-Za-z_$][\w$]*)\s+instanceof\s+([A-Za-z_$][\w$.]*)"
+)
 _AS_LOCAL = re.compile(r"\s+as\s+([A-Za-z_$][\w$]*)")
 # A script's cast of an expression to one class: `foo() as Order`.
 _CAST = re.compile(r"\s+as\s+([A-Z][\w$]*)\b")
@@ -102,6 +110,11 @@ _MAPPINGS = frozenset({"dict", "Dict", "Mapping", "MutableMapping", "defaultdict
 _WRAPPERS = frozenset({"Optional", "Promise", "Awaitable", "Final", "ClassVar", "Readonly", "type", "Type"})
 _TUPLES = frozenset({"tuple", "Tuple"})
 _SELF_TYPES = frozenset({"Self", "this"})
+# A base a class names with type arguments, `Shelving["Spanner"]`; the bases that list a generic class's parameters;
+# and a name a hint writes as a whole word.
+_SPECIALISED = re.compile(r"^\s*([\w.]+)\s*\[(.*)\]\s*$")
+_GENERIC_BASES = frozenset({"Generic", "Protocol"})
+_WORD_OF = r"(?<![\w.]){name}(?![\w])"
 # An expression an f-string interpolates: what its braces hold, a doubled brace aside.
 _INTERPOLATED = re.compile(r"(?<!\{)\{([^{}]+)\}(?!\})")
 # The parts of a union that say a value may be missing, which say nothing of its class.
@@ -200,6 +213,13 @@ class Typed(NamedTuple):
     # item may be any class that extends ``of`` (``family``), so a call on it reaches the operation each overrides.
     kinds: tuple = ()
     family: bool = False
+    # For `super()`: the classes after the calling class in the method resolution order of each class that is or
+    # extends it; a call reaches the first class in each order that declares the member, and no override of it.
+    orders: tuple = ()
+    # For an object of a generic class a hint specialises, `Shelving[Wrench]`: the type arguments the hint passes, as
+    # written, and the file that writes them, which names their classes.
+    arguments: tuple = ()
+    written_in: str = ""
 
     @property
     def class_held(self) -> "Node | None":
@@ -333,23 +353,33 @@ class _HintTypes:
         return Typed(fields=tuple(fields)) if any(value is not None for _name, value in fields) else None
 
     def _typed_generic(self, generic: str, parts: list[str], owner: "Node | None") -> "Typed | None":
+        """What a generic hint says: the one value a wrapper holds, a tuple's values, or a collection's or a mapping's."""
         if not parts:
             return None
         if generic in _WRAPPERS:
             return self.typed(parts[0], owner)
         if generic in _TUPLES:
-            if len(parts) == 2 and parts[1].strip() == "...":
-                each = self.typed(parts[0], owner)
-                return Typed(each=each) if each is not None else None
-            items = tuple(self.typed(part, owner) for part in parts)
-            return Typed(items=items) if any(item is not None for item in items) else None
-        if generic in _SEQUENCES:
+            return self._typed_tuple(parts, owner)
+        if generic not in _SEQUENCES and generic not in _MAPPINGS:
+            return self._specialised(generic, parts)
+        held = self.typed(parts[0] if generic in _SEQUENCES else parts[-1], owner)
+        if held is None:
+            return None
+        return Typed(each=held) if generic in _SEQUENCES else Typed(by_key=held)
+
+    def _specialised(self, generic: str, parts: list[str]) -> "Typed | None":
+        """An object of a generic class of the code a hint passes type arguments, `Shelving[Wrench]`, carrying them."""
+        named = self._file.class_named(generic)
+        arguments = tuple(part.strip().strip("\"'").strip() for part in parts)
+        return Typed(named, arguments=arguments, written_in=self._file.relative) if named is not None else None
+
+    def _typed_tuple(self, parts: list[str], owner: "Node | None") -> "Typed | None":
+        """What a tuple hint says: many of one value (`tuple[Line, ...]`), else each value by its position."""
+        if len(parts) == 2 and parts[1].strip() == "...":
             each = self.typed(parts[0], owner)
             return Typed(each=each) if each is not None else None
-        if generic in _MAPPINGS:
-            value = self.typed(parts[-1], owner)
-            return Typed(by_key=value) if value is not None else None
-        return None
+        items = tuple(self.typed(part, owner) for part in parts)
+        return Typed(items=items) if any(item is not None for item in items) else None
 
 
 class CodeFile:
@@ -444,13 +474,22 @@ class CodeFile:
             member for member in self._index.members_named(name)
             if member.get_fact("owner") != MODULE_FUNCTION_HOLDER and (member.type == "Operation") == called
         ]
-        if any(member.source.file == self.relative for member in members):
-            return self._read_as(self._only([member for member in members if member.source.file == self.relative]))
-        imported = self.imported_files_of()
-        found = self._only([member for member in members if member.source.file in imported])
-        if found is not None or not self._whole or any(member.source.file in imported for member in members):
-            return self._read_as(found)
-        return self._read_as(self._only([member for member in members if self._beside(member.source.file)]))
+        return self._read_as(self._only_in_reach(members))
+
+    def _only_in_reach(self, members: "list[Node]") -> "Node | None":
+        """The one of members a class of this file declares, else a class of the files its imports name, else, in a
+        graph of the whole working copy, a class of its own folder in its language; none where two classes do."""
+        own = self._in_files(members, {self.relative})
+        if own:
+            return self._only(own)
+        imported = self._in_files(members, self.imported_files_of())
+        if imported or not self._whole:
+            return self._only(imported)
+        return self._only([member for member in members if self._beside(member.source.file)])
+
+    def _in_files(self, members: "list[Node]", files: set[str]) -> "list[Node]":
+        """The members of members declared in one of files."""
+        return [member for member in members if member.source.file in files]
 
     def getter_of(self, prop: "Node") -> "Node | None":
         """The operation that reads prop, when its class declares it as a getter: the member that runs."""
@@ -486,11 +525,12 @@ class CodeFile:
         """The one of candidates a file this file imports name from declares, or passes on in turn: a package's
         `__init__.py` or a script's `index.ts` that re-exports it, by its name or with a star. Each file is followed
         once, so a cycle of re-exports ends."""
-        imported = self.imported_files_of(name)
+        # A star import brings every name its module declares, so a class declared there is passed on too.
+        imported = self.imported_files_of(name) | self.imported_files_of(STAR)
         found = next((node for node in candidates if node.source.file in imported), None)
         if found is not None:
             return found
-        for path in sorted(imported | self.imported_files_of(STAR)):
+        for path in sorted(imported):
             if path not in seen and self._index.has_imports(path):
                 found = self._index.file(path)._passed_on(candidates, name, seen | {path})
                 if found is not None:
@@ -591,10 +631,11 @@ class MemberAnswers:
         written = str(operation.get_fact("return_type") or "").strip()
         if written or not operation.source.file:
             return file.hints.typed(written, owner)
-        if owner is None and file.is_script:
-            declared = self.declared_function(operation.source.file, operation.name)
-            if declared is not None:
-                return declared
+        declared = self.declared_function(operation.source.file, operation.name) if owner is None and file.is_script else None
+        return declared if declared is not None else self._returned(file, operation)
+
+    def _returned(self, file: CodeFile, operation: "Node") -> "Typed | None":
+        """What every `return` operation writes that the code types answers, when they agree."""
         span = self._index.span_of(operation)
         calls = _SpanCalls(file, self._index, span).expressions
         answers = [calls.typed_at(match.end())[0] for match in _RETURN.finditer(span.text)]
@@ -602,7 +643,12 @@ class MemberAnswers:
         return typed[0] if typed and all(answer == typed[0] for answer in typed) else None
 
     def _field_of(self, holder: "Node", name: str) -> "Typed | None":
-        assigned = re.compile(rf"(?<![\w$.])(?:self|this)\.{re.escape(name)}[ \t]*(?::[ \t]*([^=\n]+?))?[ \t]*=(?![=>])[ \t]*")
+        """What the field's initializer assigns it, else what an operation of holder assigns it."""
+        initialized = self._initialized(holder, name)
+        return initialized if initialized is not None else self._assigned_in_operations(holder, name)
+
+    def _initialized(self, holder: "Node", name: str) -> "Typed | None":
+        """What the field holder declares with an initial value starts as: `readonly fileBar = new FileBar(this)`."""
         file = self._index.file(holder.source.file)
         for declared in self._index.members_named(name):
             if declared.type != "Property" or declared.get_fact("is_property") or declared.get_fact("owner") != holder.name or declared.source.file != holder.source.file:
@@ -614,6 +660,11 @@ class MemberAnswers:
                 self._field_causes.setdefault((holder.node_id, name), read.cause)
                 if read.value is not None:
                     return read.value
+        return None
+
+    def _assigned_in_operations(self, holder: "Node", name: str) -> "Typed | None":
+        """What an operation of holder assigns the field: the type the assignment writes, else what it assigns."""
+        assigned = re.compile(rf"(?<![\w$.])(?:self|this)\.{re.escape(name)}[ \t]*(?::[ \t]*([^=\n]+?))?[ \t]*=(?![=>])[ \t]*")
         for assigning in self._assigning_operations(holder):
             span = self._index.span_of(assigning)
             file = self._index.file(assigning.source.file)
@@ -678,11 +729,62 @@ class _Step(NamedTuple):
 
 
 class _Chain(NamedTuple):
-    """An expression that starts with a name and follows it through members, calls, and items, and where it ends."""
+    """An expression that starts with a name and follows it through members, calls, and items, where it ends, and
+    where it starts."""
 
     head: str
     steps: list
     end: int
+    start: int = 0
+
+
+class _TypeArguments:
+    """What each type parameter of a generic base stands for in a class that specialises it: `Item` is `Spanner` in
+    `class ToolShelf(Shelving["Spanner"])`, so an operation `Shelving` declares answering `Iterator[Item]` answers
+    spanners on a tool shelf. The class members of a span make one and keep it."""
+
+    def __init__(self, members: "_ClassMembers", index: "CodeIndex") -> None:
+        self._members = members
+        self._index = index
+
+    def answer_on(self, value: Typed, operation: "Node") -> "Typed | None":
+        """What operation answers called on value: its return type with each type parameter value binds put in; else
+        what it answers wherever it is declared."""
+        bound = self.typed_in(value, str(operation.get_fact("return_type") or ""))
+        return bound if bound is not None else self._index.answers.answer_of(operation)
+
+    def typed_in(self, value: Typed, written: str) -> "Typed | None":
+        """What a hint a member of value's class writes says, with each type parameter value binds put in, typed in the
+        file that writes the binding; none when the hint names no parameter value binds."""
+        bound = self._bound(value) if written else {}
+        used = [parameter for parameter in bound if _names_word(written, parameter)]
+        for parameter in used:
+            written = re.sub(_WORD_OF.format(name=re.escape(parameter)), bound[parameter][0], written)
+        return self._index.file(bound[used[0]][1]).hints.typed(written, value.of) if used else None
+
+    def _bound(self, value: Typed) -> "dict[str, tuple[str, str]]":
+        """Each type parameter value binds, with the hint it stands for and the file that writes that hint: those the
+        hint that typed value passes its class, then those its class's lineage passes, nearest class first; a parameter
+        bound to a parameter a nearer class binds takes that binding."""
+        own = zip(self._parameters(value.of), value.arguments) if value.arguments else []
+        bound: dict[str, tuple[str, str]] = {parameter: (argument, value.written_in) for parameter, argument in own}
+        for declared in self._members.lineage_of(value.of):
+            file = self._index.file(declared.source.file)
+            for base, arguments in _specialised_bases(declared):
+                generic = file.class_named(base)
+                for parameter, argument in zip(self._parameters(generic) if generic is not None else [], arguments):
+                    bound.setdefault(parameter, bound.get(argument, (argument, declared.source.file)))
+        return bound
+
+    def _parameters(self, generic: "Node") -> "list[str]":
+        """The type parameters a generic class declares: those its `Generic[...]` or `Protocol[...]` base lists, else
+        each name its specialised bases pass that names no class."""
+        specialised = _specialised_bases(generic)
+        listed = next((arguments for base, arguments in specialised if base in _GENERIC_BASES), None)
+        if listed is not None:
+            return listed
+        file = self._index.file(generic.source.file)
+        return [argument for _base, arguments in specialised for argument in arguments if file.class_named(argument) is None]
 
 
 class _ClassMembers:
@@ -694,6 +796,8 @@ class _ClassMembers:
         self._file = file
         self._index = index
         self._answers = index.answers
+        # What the type parameters of a generic base stand for in the class that specialises it.
+        self._arguments = _TypeArguments(self, index)
 
     def member_of(self, holder: "Node", name: str, seen: frozenset = frozenset()) -> "Node | None":
         """The member called name that holder declares, an operation before a property, else the one a class it
@@ -721,23 +825,63 @@ class _ClassMembers:
             line.extend(base for base in self.bases_of(current) if base not in line)
         return line
 
+    def following(self, declared: "Node") -> "tuple[tuple[Node, ...], ...]":
+        """The classes after declared in the method resolution order of declared and of each class extending it, as
+        Python's C3 linearisation orders them; the classes `super()` in declared may reach."""
+        found: list[tuple] = []
+        for extending in [declared, *self._index.subclasses_of(declared)]:
+            order = self._resolution_order(extending)
+            after = tuple(order[order.index(declared) + 1:]) if declared in order else ()
+            if after and after not in found:
+                found.append(after)
+        return tuple(found)
+
+    def _resolution_order(self, declared: "Node", seen: frozenset = frozenset()) -> "list[Node]":
+        """declared, then the classes it extends, in C3 order: each base's own order merged, keeping every class
+        before the classes it extends and the bases in the order the class names them."""
+        bases = [base for base in self.bases_of(declared) if base.node_id not in seen]
+        orders = [self._resolution_order(base, seen | {declared.node_id}) for base in bases] + [bases]
+        return [declared, *_merged(orders)]
+
     def base_of(self, owner: "Node | None") -> "Node | None":
         """The first class owner extends, which `super` names; none outside a class."""
         return next(iter(self.bases_of(owner)), None) if owner is not None else None
 
-    def answer_of(self, holder: "Node", name: str, member: "Node | None", called: bool) -> "Typed | None":
-        """What holder's member called name answers: a call's return, else the member's or field's value."""
-        if called:
-            return self._answers.answer_of(member) if member is not None and member.type == "Operation" else None
-        declaring = self._declaring(holder, member)
+    def answer_of(self, value: Typed, name: str, member: "Node | None", called: bool) -> "Typed | None":
+        """What the member called name of value's class answers: a call's return, else the member's or field's value,
+        each with the type parameters value binds put in. A call of a field answers what the field holds, as a field
+        holding a class, `formats_type: type[PracticeFormats]`, builds an object of it."""
+        if called and member is not None and member.type == "Operation":
+            return self._arguments.answer_on(value, member)
+        return self._value_of(value, name, member)
+
+    def _value_of(self, value: Typed, name: str, member: "Node | None") -> "Typed | None":
+        """What the member or field called name of value's class holds, read without a call: its type, what its getter
+        answers, or what the field holds in that class or a class it extends."""
         if member is not None and member.get_fact("value_type"):
-            return self._index.file(declaring.source.file).hints.typed(str(member.get_fact("value_type")), declaring)
+            return self._hinted(value, member)
         getter = self._file.getter_of(member) if member is not None else None
         if getter is not None:
-            return self._answers.answer_of(getter)
+            return self._arguments.answer_on(value, getter)
         if member is not None and member.type == "Operation":
             return None
-        held = (self._answers.held_in(owner, name) for owner in self.lineage_of(holder))
+        held = (self._answers.held_in(owner, name) for owner in self.lineage_of(value.of))
+        return next((found for found in held if found is not None), None)
+
+    def _hinted(self, value: Typed, member: "Node") -> "Typed | None":
+        """What member's type hint says it holds, with each type parameter value binds put in, else as the class that
+        declares it writes the hint."""
+        written = str(member.get_fact("value_type"))
+        bound = self._arguments.typed_in(value, written)
+        if bound is not None:
+            return bound
+        declaring = self._declaring(value.of, member)
+        return self._index.file(declaring.source.file).hints.typed(written, declaring)
+
+    def held_by_extending(self, holder: "Node", name: str) -> "Typed | None":
+        """What the field called name holds in the first class extending holder that holds it: a mixin reads a field
+        the class mixing it in keeps."""
+        held = (self._answers.held_in(extending, name) for extending in self._index.subclasses_of(holder))
         return next((found for found in held if found is not None), None)
 
     def as_receiver(self, answer: "Typed | None", holder: "Node", member: "Node | None") -> "Typed | None":
@@ -764,7 +908,7 @@ class _ClassMembers:
             return _one_of_many(value.each or value.by_key)
         if value.of is not None:
             getitem = self.member_of(value.of, "__getitem__")
-            return self._answers.answer_of(getitem) if getitem is not None else None
+            return self._arguments.answer_on(value, getitem) if getitem is not None else None
         return None
 
     def element_of(self, value: "Typed | None") -> "Typed | None":
@@ -775,17 +919,31 @@ class _ClassMembers:
             return _one_of_many(value.each)
         if value.of is not None:
             iterate = self.member_of(value.of, "__iter__")
-            walked = self._answers.answer_of(iterate) if iterate is not None else None
+            walked = self._arguments.answer_on(value, iterate) if iterate is not None else None
             return walked.each if walked is not None else None
         return None
 
     def overrides(self, value: Typed, name: str) -> "list[Node]":
         """The operation called name each class value may be declares: each class the code wrote a collection's items
         as, else each class extending the one a collection's type names, or each class satisfying a protocol."""
-        if not (value.kinds or value.family or (value.of is not None and self._index.is_protocol(value.of))):
+        if value.orders:
+            return self._first_declared(value.orders, name)
+        if not value.kinds and value.of is None:
             return []
         classes = value.kinds or tuple(self._index.subclasses_of(value.of))
         return [override for override in (self.member_of(each, name) for each in classes) if override is not None]
+
+
+    def _first_declared(self, orders: tuple, name: str) -> "list[Node]":
+        """The operation called name that the first class declaring it in each order declares."""
+        found: list[Node] = []
+        for order in orders:
+            # A holder already seen answers only the member it declares itself.
+            declared = (self.member_of(each, name, frozenset({each.node_id})) for each in order)
+            member = next((each for each in declared if each is not None), None)
+            if member is not None and member not in found:
+                found.append(member)
+        return found
 
 
 class _Locals:
@@ -796,9 +954,23 @@ class _Locals:
         self._unjoined = unjoined
         self._types: dict[str, Typed] = {}
         self._reaches: dict[str, str] = {}
+        # What a comprehension's own local is within its brackets, by where they open and close in the span's code.
+        self._scoped: list[tuple[int, int, str, _Read]] = []
 
     def __contains__(self, name: str) -> bool:
         return name in self._types
+
+    def scope(self, name: str, read: _Read, start: int, end: int) -> None:
+        """Keep what read says the local name is between start and end of the span's code, as a comprehension's own
+        local is within its brackets."""
+        if read.value is not None:
+            self._scoped.append((start, end, name, read))
+
+    def at(self, name: str, position: int) -> "_Read | None":
+        """What the local name is at position of the span's code, when a comprehension there has its own; the
+        innermost one."""
+        found = [read for start, end, scoped, read in self._scoped if scoped == name and start <= position <= end]
+        return found[-1] if found else None
 
     def keep(self, name: str, read: _Read) -> None:
         """Keep what read says the local name is, the first time the code types it."""
@@ -809,6 +981,12 @@ class _Locals:
             return
         self._types[name] = read.value
         self._reaches[name] = read.reach
+
+    def narrow(self, name: str, read: _Read) -> None:
+        """Keep what read says the local name is in place of what it was, as a check that it is of a class narrows it."""
+        if name not in _THE_OBJECT:
+            self._types[name] = read.value
+            self._reaches[name] = read.reach
 
     def typed(self, name: str) -> "Typed | None":
         return self._types.get(name)
@@ -858,6 +1036,7 @@ class _Expressions:
             (_DESTRUCTURED, lambda match: self._destructured(code, match)),
             (_LOOP, lambda match: self._looped(code, match)),
             (_WITH, lambda match: self._opened(code, match.end())),
+            (_CHECKED, self._checked),
         )
         # Each is typed after the ones written before it, which its expression may use.
         found = sorted(((match.start(), read, match) for pattern, read in readers for match in pattern.finditer(code)), key=lambda item: item[0])
@@ -878,10 +1057,9 @@ class _Expressions:
         """What the chain at start is, after an `await` or `new`, and cast `as` a class in a script, and where it ends."""
         prefix = _PREFIX.match(code, start)
         position = prefix.end() if prefix else start
-        if code[position:position + 1] == "{" and self._file.is_script:
-            return self._object_at(code, position)
-        if code[position:position + 1] in ("(", "["):
-            return self._collection_at(code, position)
+        built = self._built_at(code, position)
+        if built is not None:
+            return built
         chain = _chain_at(code, position)
         if chain is None:
             return _Read(None, start, cause=ON_OUTSIDE_OBJECTS if ReceiverCauses.is_literal(code, position) else OTHERWISE)
@@ -890,6 +1068,25 @@ class _Expressions:
         if cast is not None:
             return _Read(self._file.hints.typed(cast.group(1), self._owner), cast.end(), reach, self._file.receiver_causes.of_hint(cast.group(1)))
         return _Read(found, chain.end, reach, cause)
+
+    def _built_at(self, code: str, position: int) -> "_Read | None":
+        """What a value the code builds at position is: a script's object, a list or a tuple, or a copy of a collection
+        `list(...)` makes; none for any other expression."""
+        if code[position:position + 1] == "{" and self._file.is_script:
+            return self._object_at(code, position)
+        if code[position:position + 1] in ("(", "["):
+            return self._collection_at(code, position)
+        copies = _COPIES.match(code, position) if not self._file.is_script else None
+        return self._copied_at(code, copies.end()) if copies is not None else None
+
+    def _copied_at(self, code: str, start: int) -> _Read:
+        """What `list(...)`, `sorted(...)` and the other built-ins that copy a collection answer: a collection of the
+        elements of the one they are handed, `list(self._parts.items())`."""
+        closing = _closing(code, start - 1)
+        copied = self._typed_chain_at(code, _SPACE.match(code, start).end())
+        element = self._members.element_of(copied.value)
+        end = closing + 1 if closing is not None else copied.end
+        return _Read(Typed(each=element) if element is not None else None, end, copied.reach, copied.cause)
 
     def _collection_at(self, code: str, opening: int) -> _Read:
         """What a list or a tuple the code writes at opening holds, `(Brakes(), Lights())`: each item one of the classes
@@ -930,8 +1127,12 @@ class _Expressions:
 
     def _comprehended(self, code: str, start: int, comprehension: re.Match, closing: int) -> _Read:
         """What a comprehension builds, `[driver.licence for driver in drivers]`: each item is what the expression
-        before its `for` is, once the loop's local is typed by what the loop walks."""
-        self._locals.keep(comprehension.group(1), self._element_read(self._typed_chain_at(code, comprehension.end())))
+        before its `for` is, once the loop's local is typed by what the loop walks; within the comprehension's brackets
+        its local is that, whatever an earlier one of the same name was."""
+        walked = self._element_read(self._typed_chain_at(code, comprehension.end()))
+        self._locals.keep(comprehension.group(1), walked)
+        if code is self._span.code:
+            self._locals.scope(comprehension.group(1), walked, start, closing)
         item = self._typed_chain_at(code, start)
         if item.value is None:
             return _Read(None, closing + 1, item.reach, item.cause)
@@ -986,6 +1187,18 @@ class _Expressions:
                 found.append((local, _Read(fields.get(field.strip()), read.end, read.reach, read.cause)))
         return found
 
+    def _checked(self, match: re.Match) -> "list[tuple[str, _Read]]":
+        """Narrow a local a check names to the one class the check names, as the code that runs once the check holds
+        sees it: a local the code typed no other way, or typed as a class the named one extends. It keeps no new local."""
+        name, written = (match.group(1), match.group(2)) if match.group(1) else (match.group(3), match.group(4))
+        named = self._file.class_named(written.split(".")[-1])
+        if named is None:
+            return []
+        held = self._locals.typed(name)
+        if held is None or (held.of is not None and held.of in self._members.lineage_of(named)):
+            self._locals.narrow(name, _Read(Typed(named), match.end(), self._locals.reach(name) if held else REACHED_THROUGH_ANOTHER_OBJECT))
+        return []
+
     def _opened(self, code: str, start: int) -> "list[tuple[str, _Read]]":
         """Each local a Python `with` opens, as the object it opens is."""
         opened = []
@@ -1007,9 +1220,18 @@ class _Expressions:
         read = self._element_read(self._typed_chain_at(code, match.end()))
         names = [name.strip() for name in match.group(1).strip("()").split(",")]
         if len(names) == 1:
+            self._scope_comprehension(code, match.start(), names[0], read)
             return [(names[0], read)]
         items = read.value.items if read.value is not None else ()
         return [(name, _Read(items[position] if position < len(items) else None, read.end, read.reach, read.cause)) for position, name in enumerate(names)]
+
+    def _scope_comprehension(self, code: str, start: int, name: str, read: _Read) -> None:
+        """Keep what a comprehension's loop takes as its local within the comprehension's brackets, when the loop at
+        start is a comprehension's, inside a bracket of the span's own code."""
+        opening = _opening_at(code, start) if code is self._span.code else None
+        closing = _closing(code, opening) if opening is not None and code[opening] in "([{" else None
+        if closing is not None:
+            self._locals.scope(name, read, opening, closing)
 
     def _element_read(self, read: _Read) -> _Read:
         """Each element a loop over what read is takes, reached as the collection is."""
@@ -1028,9 +1250,12 @@ class _Heads:
         self._members = span.members
         self._locals = span.locals
 
-    def typed(self, head: str, steps: list, found: SpanReach | None) -> "tuple[Typed | None, int, str]":
+    def typed(self, head: str, steps: list, found: SpanReach | None, position: int = -1) -> "tuple[Typed | None, int, str]":
         """What head is, the step the walk goes on from, and how the code reaches it; a class or a function a module the
         file imports declares, `prompt_log.LoggedFile(path)` or `name_facts.opening_of(text)`, when head is that module."""
+        scoped = self._locals.at(head, position)
+        if scoped is not None:
+            return scoped.value, 0, scoped.reach
         value, at, reach = self._typed(head, steps)
         if value is None and at == 0 and steps and steps[0].kind == "member" and head not in self._locals and head not in _OWN_OBJECT:
             return self._function_reached(head, steps, found) or self._through_module(head, steps, found)
@@ -1049,15 +1274,26 @@ class _Heads:
     def _typed(self, head: str, steps: list) -> "tuple[Typed | None, int, str]":
         called = bool(steps) and steps[0].kind == "call"
         if head in _BASE_OBJECT:
-            base = self._members.base_of(self._owner)
-            return (Typed(base) if base is not None else None), (1 if called else 0), _ITSELF
+            return self._based(), (1 if called else 0), _ITSELF
         if called:
             return self._called(head, steps[0].text)
-        if head in _OWN_OBJECT and head not in self._locals:
-            # The object itself may be of any class that extends its own, whose override a call or a read on it reaches.
-            return (Typed(self._owner, family=True) if self._owner is not None else None), 0, _ITSELF
         if head in self._locals:
             return self._locals.typed(head), 0, self._locals.reach(head)
+        if head in _OWN_OBJECT:
+            # The object itself may be of any class that extends its own, whose override a call or a read on it reaches.
+            return (Typed(self._owner, family=True) if self._owner is not None else None), 0, _ITSELF
+        return self._named(head)
+
+    def _based(self) -> "Typed | None":
+        """What `super()` is in a class: the class that follows it in the method resolution order of each class that
+        is or extends it, so a mixin's `super()` reaches the class each class mixing it in puts after it."""
+        if self._owner is None:
+            return None
+        orders = self._members.following(self._owner)
+        return Typed(orders[0][0], orders=orders) if orders else None
+
+    def _named(self, head: str) -> "tuple[Typed | None, int, str]":
+        """What a name that is no local is: a class named outright, else a module's object."""
         named = self._file.class_named(head) if _is_class_name(head) else None
         if named is not None:
             return Typed(named), 0, _THE_CLASS
@@ -1066,7 +1302,8 @@ class _Heads:
     def _called(self, head: str, arguments: str) -> "tuple[Typed | None, int, str]":
         """What a chain that opens with a call is: an object of the class it builds, or what the function answers."""
         if head in self._locals:
-            return None, 1, _ITSELF
+            # A local that holds a class builds an object of it when called.
+            return self._locals.typed(head), 1, self._locals.reach(head)
         if head == "cls":
             return (Typed(self._owner) if self._owner is not None else None), 1, _ITSELF
         built = self._file.class_named(head) if _is_class_name(head) else None
@@ -1114,7 +1351,7 @@ class _ChainWalk:
         self._head = chain.head
         self._steps = chain.steps
         self._found = found
-        self._value, self._at, self._reach = span.heads.typed(chain.head, chain.steps, found)
+        self._value, self._at, self._reach = span.heads.typed(chain.head, chain.steps, found, chain.start)
         called = bool(self._steps) and self._steps[0].kind == "call"
         self._cause = self._unjoined.of_head(chain.head, called) if self._value is None else OTHERWISE
 
@@ -1155,10 +1392,27 @@ class _ChainWalk:
             return False
         if self._took_part(value, step, calls):
             return True
+        if step.kind == "call" and value.of is not None and not value.is_many:
+            # A call of a value of one class builds it, as calling the class a call answers, `practice_class(name)()`.
+            self._value = Typed(value.of)
+            self._at += 1
+            return True
         if step.kind == "call" or value.of is None:
             self._end_on(value, step, calls)
             return False
         self._member_step(value, step.text, calls)
+        return True
+
+    def _took_from_mapping(self, held: Typed, name: str, calls: bool) -> bool:
+        """Go on with what a mapping's member name gives, when it gives its values: its values or items, or one value
+        `get` looks up by its key; whether it did."""
+        if name in _MAPPING_VIEWS:
+            self._take_view(held, name, calls)
+            return True
+        if name not in _MAPPING_LOOKUPS or not calls:
+            return False
+        self._reach, self._value = LOOKED_UP_BY_NAME, held
+        self._at += 2
         return True
 
     def _take_view(self, held: Typed, view: str, calls: bool) -> None:
@@ -1175,8 +1429,7 @@ class _ChainWalk:
     def _took_part(self, value: Typed, step: _Step, calls: bool) -> bool:
         """Go on with a part of value, when step takes one: an item value takes, a mapping's looked up by its key, a
         field of a script's object, or a mapping's values or items; whether it did."""
-        if step.kind == "member" and value.by_key is not None and step.text in _MAPPING_VIEWS:
-            self._take_view(value.by_key, step.text, calls)
+        if step.kind == "member" and value.by_key is not None and self._took_from_mapping(value.by_key, step.text, calls):
             return True
         if step.kind == "item":
             self._reach = LOOKED_UP_BY_NAME if value.by_key is not None else self._reach
@@ -1200,7 +1453,9 @@ class _ChainWalk:
         member = self._members.member_of(value.of, name)
         if self._found is not None:
             self._span.reach_member(self._found, value, name, member, self._reach, calls)
-        answer = self._members.answer_of(value.of, name, member, calls)
+        answer = self._members.answer_of(value, name, member, calls)
+        if answer is None and value.family and member is None and not calls:
+            answer = self._members.held_by_extending(value.of, name)
         if answer is None:
             self._cause = self._unjoined.of_member([value.of, *self._members.bases_of(value.of)], name, member, calls)
         self._value = self._members.as_receiver(answer, value.of, member)
@@ -1354,7 +1609,7 @@ def _chain_at(code: str, start: int) -> "_Chain | None":
             position = closing + 1
         else:
             break
-    return _Chain(head.group(0), steps, position)
+    return _Chain(head.group(0), steps, position, start)
 
 
 def _closing(code: str, opening: int) -> "int | None":
@@ -1425,6 +1680,35 @@ def _blanked(written: re.Match) -> str:
     return "".join(kept)
 
 
+def _merged(orders: "list[list[Node]]") -> "list[Node]":
+    """C3's merge: take, again and again, the first head of an order that is in no other order's tail; when none is,
+    as for bases the code orders inconsistently, take the first head left."""
+    orders = [list(order) for order in orders if order]
+    merged: list[Node] = []
+    while orders:
+        head = next((order[0] for order in orders if not any(order[0] in other[1:] for other in orders)), orders[0][0])
+        merged.append(head)
+        orders = [[node for node in order if node is not head] for order in orders]
+        orders = [order for order in orders if order]
+    return merged
+
+
+def _specialised_bases(declared: "Node") -> "list[tuple[str, list[str]]]":
+    """Each base declared names with type arguments, `Shelving["Spanner"]`, as the base's name and each argument."""
+    found = []
+    for base in declared.get_fact("bases") or []:
+        written = _SPECIALISED.match(str(base))
+        if written is not None:
+            arguments = [part.strip().strip("\"'").strip() for part in _top_level_parts(written.group(2))]
+            found.append((written.group(1).rsplit(".", 1)[-1], arguments))
+    return found
+
+
+def _names_word(written: str, name: str) -> bool:
+    """Whether a hint names name as a whole word."""
+    return re.search(_WORD_OF.format(name=re.escape(name)), written) is not None
+
+
 def _one_of_many(held: Typed) -> Typed:
     """An item a collection holds: one of the classes the code wrote its items as, else any class extending the class
     its type names."""
@@ -1449,6 +1733,12 @@ def _names_a_type(code: str, start: int) -> bool:
 
 def _opening_before(code: str, start: int) -> "str | None":
     """The bracket open around start: the nearest one before it that no bracket between them closes."""
+    opening = _opening_at(code, start)
+    return code[opening] if opening is not None else None
+
+
+def _opening_at(code: str, start: int) -> "int | None":
+    """Where the bracket open around start opens: the nearest one before it that no bracket between them closes."""
     depth = 0
     for position in range(start - 1, -1, -1):
         character = code[position]
@@ -1456,7 +1746,7 @@ def _opening_before(code: str, start: int) -> "str | None":
             depth += 1
         elif character in "([{<":
             if depth == 0:
-                return character
+                return position
             if character != "<":
                 depth -= 1
     return None

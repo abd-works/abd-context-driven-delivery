@@ -68,11 +68,11 @@ with description("a chat") as self:
     # The board opens a ticket's new chat in the Claude app; the spec's chats keep each link instead of opening the app.
     with context("that a new chat is opened on a folder"):
         with before.each:
-            self.opened = RecordedChatOpener(self.chats / "opened-chats.txt")
-            self.link = Chats(self.chats, self.opened).open(WORKTREE, NEW_CHAT_PROMPT)
+            self.opened = self.chats / "opened-chats.txt"
+            self.link = Chats(self.chats, RecordedChatOpener(self.opened)).open(WORKTREE, NEW_CHAT_PROMPT)
 
         with it("should hand the Claude app one new-chat link"):
-            expect(self.opened.links).to(equal([self.link]))
+            expect(self.opened.read_text(encoding="utf-8").splitlines()).to(equal([self.link]))
 
         with it("should open it on the folder"):
             expect(parse_qs(urlsplit(self.link).query)["folder"]).to(equal([WORKTREE]))

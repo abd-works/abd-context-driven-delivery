@@ -16,12 +16,13 @@ from harness.graph.rule_fixture import RuleFixture
 
 # The project's ways of reaching code, one of each kind, as its config names them.
 _WAYS = {
-    "publishing_decorators": ["agent_tool", "agent_toolset: for_call"],
+    "publishing_decorators": ["agent_tool", "agent_toolset: for_call", "data_field"],
     "registries": ["CATALOGUE.register"],
     "scanned_bases": ["GraphOverlay", "Component: render, componentDidCatch"],
     "entry_points": ["*.py:main"],
     "naming_conventions": ["^on_"],
     "generated_adapters": ["adapters/*.py"],
+    "instruction_files": ["recipes/*.md"],
 }
 # Code reached each way, beside a helper of each class that nothing reaches.
 _SHOP = """
@@ -134,7 +135,47 @@ class OrdersProbe(Probe):
     def orders_probed(self):
         return 0
 """
-_FILES = {"probes.py": _PROBES, "shop.py": _SHOP, "practices.py": _PRACTICES, "overlays.py": _OVERLAYS, "adapters/orders_client.py": _ADAPTER, "cart_view.py": _VIEW}
+# A card whose base publishes a property as data, which a generated adapter reads through the base on every card.
+_CARDS = """
+from tools import data_field
+
+
+class Card:
+    @property
+    @data_field
+    def last_activity(self) -> str:
+        ...
+
+
+class Ticket(Card):
+    @property
+    def last_activity(self) -> str:
+        return "today"
+
+    @property
+    def age(self) -> int:
+        return 0
+"""
+# Canvas versions whose operations a recipe tells the agent to call, beside one the recipe only mentions in prose.
+_VERSIONS = """
+def stamp(name):
+    return name
+
+
+class CanvasVersion:
+    def publish_at(self, url):
+        return url
+
+    def release(self, name):
+        return name
+
+    def retire(self):
+        return 0
+"""
+_RECIPE = """Publish the version under `versions.stamp(name)` and keep its link with `version.publish_at(url)`.
+Keep a version as a release with `CanvasVersion.release`. Never retire a published version by hand.
+"""
+_FILES = {"versions.py": _VERSIONS, "recipes/canvas.md": _RECIPE, "cards.py": _CARDS, "probes.py": _PROBES, "shop.py": _SHOP, "practices.py": _PRACTICES, "overlays.py": _OVERLAYS, "adapters/orders_client.py": _ADAPTER, "cart_view.py": _VIEW}
 
 
 def _reached(files: dict[str, str]) -> tuple[list[str], list[str]]:
@@ -153,7 +194,7 @@ with description("the ways a project reaches code") as self:
             self.operations, self.classes = _reached({**_FILES, ".context/config.json": json.dumps({"code_reach": _WAYS})})
 
         with it("should reach the operation or property each way names, and none of the helpers beside them"):
-            expect(self.operations).to(equal(["componentDidCatch", "for_call", "instructions", "label", "main", "on_close", "open_shop", "orders", "read", "render", "render"]))
+            expect(self.operations).to(equal(["componentDidCatch", "for_call", "instructions", "label", "last_activity", "last_activity", "main", "on_close", "open_shop", "orders", "publish_at", "read", "release", "render", "render", "stamp"]))
 
         with it("should reach the class each way names, and not the class nothing reaches"):
             expect(self.classes).to(equal(["Bookshop", "CartView", "OrdersClient", "OrdersOverlay", "OrdersProbe", "Shop", "TrackedView"]))

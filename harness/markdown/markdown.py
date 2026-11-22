@@ -12,7 +12,7 @@ import stat
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Generic, Literal, TypeAlias, TypeVar, get_args, get_origin, get_type_hints
+from typing import Any, Callable, ClassVar, Generic, Iterator, Literal, TypeAlias, TypeVar, get_args, get_origin, get_type_hints
 
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
@@ -40,6 +40,8 @@ _F = TypeVar("_F", bound=Callable[..., Any])
 # the markdown, and it may hand over the scope it reads it in (``markdown_scope``). Any class can own markdown, so the
 # markdown parts are generic in their owner's class.
 Owner = TypeVar("Owner")
+# What one entry of a markdown collection is: a fidelity of a practice's fidelities, a rule of its rules.
+Entry = TypeVar("Entry")
 # What a markdown property's operation says it returns: a class, a generic such as ``list[Rule]``, or nothing written.
 ReturnAnnotation: TypeAlias = Any
 
@@ -713,21 +715,22 @@ class YamlFields:
 
 
 @hosted_only
-class MarkdownCollection(Generic[Owner]):
-    """Listed or keyed extracts that keep the original markdown."""
+class MarkdownCollection(Generic[Owner, Entry]):
+    """Listed or keyed extracts that keep the original markdown, each an entry of the kind a subclass names
+    (``MarkdownCollection[Guidance, FidelityGuidance]``)."""
 
     def __init__(
         self,
-        entries: dict[str, Any] | list[Any] | None = None,
+        entries: dict[str, Entry] | list[Entry] | None = None,
         parent: Owner | None = None,
     ) -> None:
         self.parent = parent
         self._markdown = ""
         self._adopt(entries if entries is not None else {})
 
-    def _adopt(self, entries: dict[str, Any] | list[Any]) -> None:
+    def _adopt(self, entries: dict[str, Entry] | list[Entry]) -> None:
         """Hold entries, each with this collection as its parent."""
-        self.entries: dict[str, Any] | list[Any] = entries
+        self.entries: dict[str, Entry] | list[Entry] = entries
         for child in self:
             child.parent = self
 
@@ -739,14 +742,14 @@ class MarkdownCollection(Generic[Owner]):
     def markdown(self, text: str) -> None:
         self._markdown = text
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Entry]:
         values = self.entries.values() if isinstance(self.entries, dict) else self.entries
         return iter(values)
 
-    def __getitem__(self, name: str) -> Any:
+    def __getitem__(self, name: str) -> Entry:
         return self.entries[name]
 
-    def child(self, name: str, body: str = "") -> Any:
+    def child(self, name: str, body: str = "") -> Entry | None:
         """The entry a ``### name`` block of this collection's markdown declares; none for a collection whose blocks
         make no entries."""
         return None

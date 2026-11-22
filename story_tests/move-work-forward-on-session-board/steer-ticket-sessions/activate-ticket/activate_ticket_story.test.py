@@ -88,7 +88,9 @@ with story("Activate Ticket"):
         with given("checkout-flow-retry is a ticket whose work is on the branch checkout-flow-retry"):
             pass
         with when("the Person activates checkout-flow"):
-            # TicketCheckout -> Board.ticket_names
+            # Person -> Ticket.activate()
+            # SessionCheckout -> SessionCheckout.candidate_branches
+            # SessionListing -> SessionListing.open_names()
             pass
         with then("checkout-flow's session records its own branch checkout-flow"):
             pass

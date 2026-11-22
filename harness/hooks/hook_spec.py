@@ -822,7 +822,6 @@ with description("a hook that gives a toast"):
     with before.each:
         self.shown: list[tuple[str, list[Path]]] = []
         self.root = Path(tempfile.mkdtemp())
-        self.registered = HOOK_TOASTS.shown_by
         self.payload = HookPayload({"hook_event_name": "postToolUse", "tool_name": "Write", "workspace_roots": [str(self.root)]})
 
     with after.each:
@@ -831,7 +830,7 @@ with description("a hook that gives a toast"):
 
     with context("with a notifier registered to show toasts"):
         with before.each:
-            HOOK_TOASTS.show_with(lambda toast, roots: self.shown.append((toast, roots)))
+            self.registered = HOOK_TOASTS.show_with(lambda toast, roots: self.shown.append((toast, roots)))
             self.result = HookServer(self.root, HandlerCatalog([ToolsetReference.of(_ToastingInject)], self.root)).dispatch(self.payload)
 
         with it("should have the notifier show the toast in the chat's workspace folders"):
@@ -842,7 +841,7 @@ with description("a hook that gives a toast"):
 
     with context("with no notifier registered"):
         with before.each:
-            HOOK_TOASTS.show_with(None)
+            self.registered = HOOK_TOASTS.show_with(None)
 
         with it("should still give the IDE the hook's context"):
             result = HookServer(self.root, HandlerCatalog([ToolsetReference.of(_ToastingInject)], self.root)).dispatch(self.payload)

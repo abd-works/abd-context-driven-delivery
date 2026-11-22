@@ -1129,7 +1129,7 @@ The classes below belong to other modules and are modelled in those modules' own
 
 ## FidelityGuidance
 
-`harness/guidance/guidance.py`. `slug`, `name`, `outputs`, and `default_format` are data fields, which a stage's `work_required`, a progress's `fidelity`, and help send; the board reads `stage`, `practice_guidance`, `rules`, and `declared` (its `files()` and `has_output()`). Each fidelity's stage is one `ApproachStage` of `STAGES` (`harness/guidance/stages.py`), with its `name`, `title`, `scope` (a `StageScope`), `steps`, `actions`, and `producing_actions`.
+`harness/guidance/guidance.py`. `slug`, `name`, `outputs`, and `default_format` are data fields, which a stage's `work_required`, a progress's `fidelity`, and help send; the board reads `stage`, `practice_guidance`, `rules`, and `session_output.written` (its `files()`, `has_named_output()` and `has_found_output()`). Each fidelity's stage is one `ApproachStage` of `STAGES` (`harness/guidance/stages.py`), with its `name`, `title`, `scope` (a `StageScope`), `steps`, `actions`, and `producing_actions`.
 
 ## Rule
 

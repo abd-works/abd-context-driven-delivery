@@ -62,14 +62,6 @@ export class CddVersionClient {
   get isAsking(): boolean {
     return this.json.isAsking
   }
-
-  get update(): CddVersionJson['update'] {
-    return this.json.update
-  }
-
-  get error(): string | null {
-    return this.json.error
-  }
 }
 
 export async function currentCddVersion($: EngineInterface): Promise<CddVersionClient> {
