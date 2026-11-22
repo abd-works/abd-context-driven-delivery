@@ -31,6 +31,53 @@ with description("a cart"):
     with it("should add an item"):
         Cart().add("book")
 """
+# Operations the framework calls by name, never through a call the graph can follow: a graph rule's check, which the rule
+# registry runs; an operation published as a tool or a hook; and an operation a class registered with a catalogue
+# overrides, which the framework calls through the base. A helper beside each is called by nothing and stays listed.
+_RULE = """
+class PracticeGraphRule:
+    def check(self, node):
+        ...
+
+
+class NamedRule(PracticeGraphRule):
+    def check(self, node):
+        return [node] if not node.name else []
+
+    def label(self):
+        return "named"
+"""
+_PUBLISHED = """
+from harness.agent_tools.agent_tools import agent_tool, agent_toolset
+from harness.hooks.hooks import hook
+
+
+@agent_toolset
+class Shop:
+    @agent_tool
+    def open_shop(self):
+        return "open"
+
+    @hook
+    def on_prompt(self, prompt):
+        return prompt
+"""
+_REGISTERED = """
+class Practice:
+    def instructions(self):
+        ...
+
+
+class Bookshop(Practice):
+    def instructions(self):
+        return "sell books"
+
+    def price(self):
+        return 1
+
+
+CATALOGUE.register(Bookshop)
+"""
 _UNIT_SPEC_WITH_NO_STUB = """
 from mamba import description, it
 
@@ -74,6 +121,12 @@ with description("a public operation TDD checks for a test in the graph") as sel
     with context("in a graph that read no test"):
         with it("should not be judged"):
             expect(self.with_no_test_read).to(equal([]))
+
+    with context("that the framework calls by name, as a graph rule's check, a published tool or hook, or a registered class's override"):
+        with it("should pass, leaving listed only the helpers nothing calls"):
+            files = {**EXAMPLES[_OPERATION][1], "rules.py": _RULE, "shop.py": _PUBLISHED, "bookshop.py": _REGISTERED}
+            listed = tested_code_fixture(files).hits(BY_SLUG[_OPERATION])
+            expect(sorted(message.split("'")[1] for message in listed)).to(equal(["check_out", "label", "price"]))
 
     with it("should require a judge, since the links a load finds miss a call made by a name or through a tool"):
         expect(BY_SLUG[_OPERATION].requires_judge).to(equal(True))
