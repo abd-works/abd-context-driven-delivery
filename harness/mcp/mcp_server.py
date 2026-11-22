@@ -40,9 +40,9 @@ from harness.installation.repository_toolsets import RUNNING_CHECKOUT, Repositor
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
-from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
+from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER, LaneReply
 from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
-from harness.mcp.server_lanes import LaneCall, ServerLane, ServerLanes
+from harness.mcp.server_lanes import ServerLane, ServerLanes
 from harness.mcp.server_hooks import CddServerHooks
 from harness.mcp.restart_gate import _RestartGate
 from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
@@ -947,23 +947,21 @@ class McpHost:
         from starlette.responses import JSONResponse
 
         if request.headers.get("origin"):
-            return JSONResponse({"failure": {"kind": "LaneCallRefused", "message": "a browser page may not hand over tool calls"}}, status_code=403)
-        lane_call = LaneCall.from_sent(await request.json())
-        return JSONResponse(await self._lane_reply(self._call_from_lane(lane_call)))
+            refused = LaneReply(failure={"kind": "LaneCallRefused", "message": "a browser page may not hand over tool calls"})
+            return JSONResponse(refused.as_data, status_code=403)
+        # Made from ``tool_call`` as it is now, for the same reason as ``_call_sent``.
+        call = importlib.import_module("harness.agent_tools.tool_call").ToolCall.from_sent(await request.json(), self)
+        return JSONResponse((await self._lane_reply(call)).as_data)
 
-    def _call_from_lane(self, lane_call: LaneCall) -> ToolCall:
-        chat = importlib.import_module("harness.agent_tools.chat_pointer").ChatPointer.from_request(lane_call.chat)
-        return self._call_sent(lane_call.arguments, lane_call.project or None, self._tool_request(lane_call.tool, chat, answers_a_chat=True))
-
-    async def _lane_reply(self, call: ToolCall) -> dict[str, Any]:
+    async def _lane_reply(self, call: ToolCall) -> LaneReply:
         """The reply the other lane reads: the answer, or the failure named by its kind and message, so the chat sees
         the same failure it would have seen here."""
         import anyio.to_thread
 
         try:
-            return {"answer": await anyio.to_thread.run_sync(self._answer_reporting, call, None)}
+            return LaneReply(await anyio.to_thread.run_sync(self._answer_reporting, call, None))
         except Exception as failure:  # noqa: BLE001 - handed back by name to the lane that raises it for the chat
-            return {"failure": {"kind": type(failure).__name__, "message": str(failure)}}
+            return LaneReply.failed(failure)
 
     async def _answer_ping(self, _request: Request) -> JSONResponse:
         """The ``/ping`` answer: which process and checkout serve, and the projects its chats work on."""

@@ -178,6 +178,19 @@ class ToolCall:
         chat_folder = str(remaining.pop(CHAT_FOLDER_ARGUMENT, "") or "").strip()
         return cls(remaining, chat_folder or project, request.sent_by(chat))
 
+    @classmethod
+    def from_sent(cls, sent: dict[str, Any], mcp_host: AnsweringMcpHost) -> ToolCall:
+        """The call one lane's server handed this one, which mcp_host answers for the chat that sent it: the tool, its
+        arguments, its project, and its chat, as the sending lane wrote them (``as_sent``)."""
+        chat = ChatPointer.from_request(str(sent.get("chat") or ""))
+        request = ToolRequest(chat, str(sent.get("tool") or ""), mcp_host, answers_a_chat=True)
+        return cls.sent(dict(sent.get("arguments") or {}), str(sent.get("project") or "") or None, request)
+
+    def as_sent(self) -> dict[str, Any]:
+        """This call as one lane's server hands it to the other's, as JSON: the tool, its arguments, its project, and
+        its chat (``from_sent`` reads it back)."""
+        return {"tool": self.request.tool, "arguments": dict(self.arguments), "project": str(self.project or ""), "chat": self.chat_id}
+
     @property
     def chat_id(self) -> str:
         """The id of the chat the call came from; empty when it names none."""

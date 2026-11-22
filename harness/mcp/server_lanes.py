@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.git.checkout import Checkout
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, DEV_LANE_FOLDER, DEV_PORT_AFTER_STABLE, McpAddress
@@ -24,30 +24,6 @@ class LaneCallFailed(Exception):
         self.lane = lane
         self.tool = tool
         self.kind = failure.get("kind", "")
-
-
-class LaneCall:
-    """A chat's tool call as one lane hands it to another: the tool, its arguments, the project it works on, and the
-    chat that sent it. The receiving lane builds its own *ToolCall* from it."""
-
-    def __init__(self, tool: str, arguments: dict[str, Any], project: str, chat: str) -> None:
-        self.tool = tool
-        self.arguments = arguments
-        self.project = project
-        self.chat = chat
-
-    @classmethod
-    def from_call(cls, call: ToolCall) -> LaneCall:
-        return cls(call.request.tool, dict(call.arguments), str(call.project or ""), call.chat_id)
-
-    @classmethod
-    def from_sent(cls, sent: dict[str, Any]) -> LaneCall:
-        """The call another lane sent as JSON, the ``as_data`` of the call it was handed."""
-        return cls(str(sent.get("tool") or ""), dict(sent.get("arguments") or {}), str(sent.get("project") or ""), str(sent.get("chat") or ""))
-
-    @property
-    def as_data(self) -> dict[str, Any]:
-        return {"tool": self.tool, "arguments": self.arguments, "project": self.project, "chat": self.chat}
 
 
 class ServerLane:
@@ -87,18 +63,19 @@ class ServerLane:
         """The tools this lane's server serves, as data, listed for a chat working on project, starting the server first
         when none answers."""
         self.daemon.ensure()
-        reply = self.daemon.address.send_lane_call(LaneCall(BUILTIN_LIST_TOOLS, {}, str(project), "").as_data, LANE_CALL_SECONDS)
-        if reply.get("failure"):
-            raise LaneCallFailed(self.name, BUILTIN_LIST_TOOLS, reply["failure"])
-        return list(reply.get("answer") or [])
+        listing = ToolCall(project=project, request=ToolRequest(tool=BUILTIN_LIST_TOOLS))
+        reply = self.daemon.address.send_lane_call(listing, LANE_CALL_SECONDS)
+        if reply.failure:
+            raise LaneCallFailed(self.name, BUILTIN_LIST_TOOLS, reply.failure)
+        return list(reply.answer or [])
 
     def answer(self, call: ToolCall) -> object:
         """Have this lane's server answer call, starting it first when none answers."""
         self.daemon.ensure()
-        reply = self.daemon.address.send_lane_call(LaneCall.from_call(call).as_data, LANE_CALL_SECONDS)
-        if reply.get("failure"):
-            raise LaneCallFailed(self.name, call.request.tool, reply["failure"])
-        return reply.get("answer")
+        reply = self.daemon.address.send_lane_call(call, LANE_CALL_SECONDS)
+        if reply.failure:
+            raise LaneCallFailed(self.name, call.request.tool, reply.failure)
+        return reply.answer
 
 
 class ServerLanes:

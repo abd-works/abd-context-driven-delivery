@@ -164,6 +164,10 @@ sent(arguments: dict | None, project: Path | None): ToolCall
 session_named(session_file: str): Session
 	// the session a board command names by its session.json
 	-> SessionOpening.named_in(session_file, self)
+as_sent(): dict
+	// the call as one lane's server hands it to the other's: tool, arguments, project, chat
+from_sent(sent: dict, mcp_host: AnsweringMcpHost): ToolCall
+	// the call another lane handed this one, which mcp_host answers for the chat that sent it
 
 ## SessionOpening                                                <!-- Md -->
 
