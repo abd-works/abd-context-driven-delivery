@@ -8,9 +8,11 @@ saved violation is the same Violation data a returned node's rule lists, so a re
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, Callable, TypeAlias, TypedDict
 
+from harness.annotations.name import Name
 from harness.graph.edge import Edge, EdgeRecord
 from harness.graph.location import Location
 from harness.graph.violation import Violation, ViolationData
@@ -19,6 +21,7 @@ from harness.installation.json_file import JsonFile, JsonFileUnreadable
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph, Node
+    from harness.guidance.declared_outputs import RenderPlacement
     from harness.guidance.guidance import PracticeGuidance
 
 GRAPH_FILE_NAME = "graph.json"
@@ -354,6 +357,20 @@ class SavedGraph:
             if saved is None or Path(saved.source_root).resolve() != Path(root).resolve():
                 return False
         return self.overlays == list(overlays)
+
+    def scope_name(self, practice_key: str, placement: RenderPlacement, root: Path) -> str:
+        """What the practice's nodes were read from, as a name a declared path's one named part takes: the one file's
+        own name as placement reads it off the fidelity's declared paths (``cart`` for ``cart_spec.py``), else its stem;
+        for several files, the folder holding them all, or, when that is the folder the graph was read from, that
+        folder (root when the graph names none). Empty when the graph holds no file of the practice."""
+        practice = self.practices.get(practice_key)
+        files = sorted({node.file for node in practice.nodes if node.file and PurePosixPath(node.file).suffix}) if practice is not None else []
+        if not files:
+            return ""
+        if len(files) == 1:
+            return Name(placement.own_name_of(Path(files[0])) or PurePosixPath(files[0]).stem).kebab
+        shared = PurePosixPath(os.path.commonpath([PurePosixPath(file).parent.as_posix() or "." for file in files]))
+        return Name(shared.name or Path(practice.source_root or root).name).kebab
 
     def violations(self, practices: list[str] | None = None) -> list[Violation]:
         """Every violation the saved practices hold; with practices, only those the named practices found."""

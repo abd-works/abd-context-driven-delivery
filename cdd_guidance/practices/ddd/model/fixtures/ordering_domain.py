@@ -156,9 +156,8 @@ class OrderingDomain:
         folder = self._fixture.root / "ordering"
         request = RenderRequest(Format(format), self._text, Format(self.language), folder=str(folder), fidelity=self._fidelity)
         rendered = request.render()
-        declared = self._fidelity.declared.outputs[format]
         root = Path(self._saved.name) / format
-        saved = RenderedCode(root, [declared] if isinstance(declared, str) else list(declared), Format(format)).save(rendered)
+        saved = RenderedCode(root, self._fidelity.declared.placement, Format(format)).save(rendered)
         return sorted(Path(path).relative_to(root).as_posix() for path in saved.paths)
 
     def declares(self, path: str, format: str) -> bool:

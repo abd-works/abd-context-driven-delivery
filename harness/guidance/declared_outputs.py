@@ -4,12 +4,22 @@ from __future__ import annotations
 
 import functools
 import re
-from pathlib import Path
+from dataclasses import dataclass
+from pathlib import Path, PurePosixPath
 
+from harness.annotations.name import Name
 from harness.markdown.format import Format
 
 
 _DECLARED_PART = re.compile(r"(\{[^{}/]+\}/?|\*\*/|\*)")
+# A named part of a declared path, such as ``{scope}`` in ``.context/{scope}-bdd-realization.md``.
+_NAMED_PART = re.compile(r"\{([^{}/]+)\}")
+# What a name or a pattern fills in a declared path's part.
+_FILLED_IN = re.compile(r"[{*?]")
+# The one wildcard a declared file name can hold the name of its source in, as ``**/*View.tsx`` does.
+_ONE_NAME = "*"
+# The folder a document about the folder holding it sits in, such as ``src/ordering/.context/ordering-model.md``.
+_CONTEXT_FOLDER = ".context"
 
 
 class DeclaredFile:
@@ -27,6 +37,11 @@ class DeclaredFile:
         folder is ``**/`` and a named part of a file name is ``*``. A path with no named parts stays the plain path."""
         folders = re.sub(r"\{[^{}/]+\}/", "**/", self._declared)
         return re.sub(r"\{[^{}/]+\}", "*", folders)
+
+    @property
+    def is_named(self) -> bool:
+        """Whether the declared path has a named part, such as ``{module}``, which a path matching it fills."""
+        return bool(_NAMED_PART.search(self._declared))
 
     @property
     def names_one_path(self) -> bool:
@@ -56,6 +71,52 @@ class DeclaredFile:
         if missing:
             return ""
         return re.sub(r"\{([^{}/]+)\}", lambda token: parts[self._group(token.group(1))], self._declared)
+
+    @property
+    def fixed_folder(self) -> str:
+        """The folders the declared path names outright before its first part a name or a pattern fills in, such as
+        ``story_tests`` for ``story_tests/{epic}/{sub-epic}/...``: a file's own folder when nothing is filled in, a
+        declared folder itself, and ``.`` for a file the root holds."""
+        parts = PurePosixPath(self._declared).parts
+        filled = next((index for index, part in enumerate(parts) if _FILLED_IN.search(part)), None)
+        if filled is not None:
+            return PurePosixPath(*parts[:filled]).as_posix() if filled else "."
+        return PurePosixPath(self._declared).as_posix() if self._declared.endswith("/") else PurePosixPath(self._declared).parent.as_posix()
+
+    def own_name_of(self, source: Path) -> str | None:
+        """The source's own name, read off this declared path: ``Cart`` for ``CartView.tsx`` against
+        ``**/*View.tsx``, ``cart`` for ``cart_spec.py`` against ``**/*_spec.py``, and ``bookshop`` for
+        ``.context/bookshop-bdd-realization.md`` against ``.context/{scope}-bdd-realization.md``. None when it does not
+        name source, or leaves where the name ends unsaid."""
+        before, found, after = PurePosixPath(self._declared).name.partition(_ONE_NAME)
+        if found and _ONE_NAME not in after and self._says_where_name_ends(before, after):
+            named = re.fullmatch(re.escape(before) + "(.+)" + re.escape(after), source.name)
+            if named is not None:
+                return named.group(1)
+        parts = set(self.parts_of(source.as_posix()).values()) if _NAMED_PART.search(self._declared) and not self._declared.endswith("/") else set()
+        return parts.pop() if len(parts) == 1 else None
+
+    def file_name_with(self, name: str) -> str:
+        """The declared file name with name where its one wildcard is, such as ``CartView.jsx`` for ``**/*View.jsx``;
+        empty when the declared name does not say how a name joins it, as ``*spec.ts`` does not."""
+        before, found, after = PurePosixPath(self._declared).name.partition(_ONE_NAME)
+        return f"{before}{name}{after}" if found and _ONE_NAME not in after and self._says_where_name_ends(before, after) else ""
+
+    def filled_with(self, names: list[str]) -> str:
+        """The declared path with its named parts filled with names in the order they come, so
+        ``{bounded_context}/{aggregate}/{aggregate}.py`` with ``ordering`` and ``cart`` is ``ordering/cart/cart.py``;
+        empty when names fill too few or too many parts, or the path is a glob, which names no one file."""
+        parts = list(dict.fromkeys(_NAMED_PART.findall(self._declared)))
+        if not parts or len(parts) != len(names) or _ONE_NAME in self._declared:
+            return ""
+        filled = dict(zip(parts, names))
+        return _NAMED_PART.sub(lambda part: filled[part.group(1)], self._declared)
+
+    def _says_where_name_ends(self, before: str, after: str) -> bool:
+        """Whether a declared file name says where the name in it ends: what follows the name starts with a mark or a
+        capital, as ``_spec.py``, ``.spec.ts`` and ``View.jsx`` do. ``*spec.ts`` does not: ``cartspec.ts`` and
+        ``cart.spec.ts`` both fit it."""
+        return bool(before) or (bool(after) and not (after[0].islower() or after[0].isdigit()))
 
     def _is_written_in(self, format: Format) -> bool:
         """Whether the declared path ends with format's extension, such as ``.drawio``: an output named for what it
@@ -167,3 +228,124 @@ class DeclaredOutputs:
             candidates += self._files.get(format, [])
         named = (declared.named_with(parts) for declared in candidates)
         return next((path for path in named if path), "")
+
+    @functools.cached_property
+    def placement(self) -> RenderPlacement:
+        """Where a render of the fidelity's files, or of others, is saved, as its declared paths place it."""
+        return RenderPlacement(self)
+
+
+@dataclass(frozen=True)
+class RenderPlace:
+    """Where one piece of a render is saved: the path, named from the fidelity's root when ``from_root``, else as it
+    is, beside the render's source or where the source's own declared path starts."""
+
+    path: str
+    from_root: bool = True
+
+    def under(self, root: Path) -> Path:
+        """The file at this place, for a fidelity whose root is root."""
+        return root / self.path if self.from_root else Path(self.path)
+
+
+class RenderPlacement:
+    """Where a render is saved, as one fidelity's declared paths answer it from the patterns alone: the name a drawing
+    or a document of a source gets, and the file each piece of rendered code goes to. Where the fidelity has written a
+    file in the session is the session's own output to answer (``WrittenOutput.saved_beside``)."""
+
+    # The format a sketch is written in: a sketch is no file its fidelity declares, yet it renders to the fidelity's
+    # own file.
+    SKETCH = "sketch"
+
+    def __init__(self, declared: DeclaredOutputs) -> None:
+        self._declared = declared
+
+    def owns(self, first: Path, source: Format) -> bool:
+        """Whether a render of first, written in source, writes one of the fidelity's own files: first is a folder, a
+        sketch, or a file the fidelity declares."""
+        return first.is_dir() or source.name == self.SKETCH or self._declared.includes(first.as_posix())
+
+    def name_beside(self, first: Path, source: Format, format: Format) -> str:
+        """The name of the file a render of first into format is saved under beside it: the name the fidelity writes
+        format to for one of its own files, a sketch, or a folder; else first's own name in format, so a render of
+        another file never writes over the fidelity's file. Empty when neither names it: a folder lends no name, and a
+        source that is data, such as a saved graph, lends none."""
+        declared = self._declared.file_name_beside(first.as_posix(), format.name) if self.owns(first, source) else ""
+        own = f"{source.stem_of(first)}{format.extension}" if first.is_file() and (not source or source.is_offered) else ""
+        return declared or own
+
+    def beside_itself(self, first: Path, source: Format, format: Format) -> Path:
+        """The file a render of a source no fidelity's file is named for saves: beside the source, under the source's
+        own name in format, without what its own format's files end with, so ``design/cart-sketch.md`` saves
+        ``design/cart.md``; for a folder, in the folder under the folder's name."""
+        if first.is_dir():
+            return first / f"{first.name}{format.extension}"
+        return first.parent / f"{source.stem_of(first)}{format.extension}"
+
+    def own_name_of(self, source: Path) -> str | None:
+        """The source's own name, read off the first declared file that names it (``DeclaredFile.own_name_of``)."""
+        files = (declared for label in self._declared.outputs for declared in self._declared.declared_files(label))
+        return next((name for name in (declared.own_name_of(source) for declared in files) if name), None)
+
+    def declares(self, path: str, format: Format) -> bool:
+        """Whether path, under the fidelity's root, is a file the fidelity declares in format."""
+        return self._declared.includes(path, format.name)
+
+    def paths_in(self, format: Format) -> list[str]:
+        """The paths the fidelity declares in format, as it writes them, which a refusal names."""
+        return self._declared.paths_in(format.name)
+
+    def section_place(self, names: list[str], format: Format) -> RenderPlace | None:
+        """The file a section of rendered code named by names goes to: the first file declared in format whose named
+        parts names fill, in order; none when no declared file has a part for each name."""
+        filled = (declared.filled_with(names) for declared in self._declared.declared_files(format.name))
+        found = next((path for path in filled if path), "")
+        return RenderPlace(found) if found else None
+
+    def counterpart_of(self, source: Path, format: Format) -> RenderPlace | None:
+        """The file declared in format for the named parts the source's declared path reads off it, where the source's
+        declared path starts: ``catalogue/book/book.py`` for ``catalogue/book/book.ts`` against
+        ``{bounded_context}/{aggregate}/{aggregate}.ts``. None when no declared path with named parts names the source,
+        or format declares none those parts fill."""
+        written = source.as_posix()
+        for declared in (declared for label in self._declared.outputs for declared in self._declared.declared_files(label) if declared.is_named):
+            parts = declared.parts_of(written)
+            filled = (other.named_with(parts) for other in self._declared.declared_files(format.name)) if parts else iter(())
+            found = next((path for path in filled if path), "")
+            if found:
+                start = declared.start_of(written)
+                return RenderPlace(f"{start}{found}", from_root=not start)
+        return None
+
+    def named_for(self, source: Path, name: str, format: Format) -> RenderPlace | None:
+        """The file one piece rendered from source goes to when source names it: beside source, at the first file
+        declared in format with one named part, filled with name. None for no name, or when format declares no such
+        file."""
+        if not name:
+            return None
+        filled = (declared.filled_with([Name(name).snake]) for declared in self._declared.declared_files(format.name))
+        found = next((path for path in filled if path), "")
+        return RenderPlace((source.parent / found).as_posix(), from_root=False) if found else None
+
+    def beside_source(self, source: Path, format: Format) -> RenderPlace | None:
+        """The file one text rendered from source goes to: beside source, or beside the ``.context`` folder a document
+        sits in, under the first name declared in format that says how the source's own name joins it, such as
+        ``CartView.jsx`` for ``**/*View.jsx``. None when no declared file names the source, or none says how its name
+        joins."""
+        name = self.own_name_of(source)
+        if name is None:
+            return None
+        folder = source.parent.parent if source.parent.name == _CONTEXT_FOLDER else source.parent
+        named = (declared.file_name_with(name) for declared in self._declared.declared_files(format.name))
+        found = next((file_name for file_name in named if file_name), "")
+        return RenderPlace((folder / found).as_posix(), from_root=False) if found else None
+
+    def scoped_paths(self, format: Format) -> list[str]:
+        """The paths declared in format with one named part, which a scope names: ``.context/{scope}-bdd-realization.md``."""
+        return [path for path in self.paths_in(format) if len(set(_NAMED_PART.findall(path))) == 1]
+
+    def place_for_scope(self, scope: str, format: Format) -> RenderPlace | None:
+        """The file a document of scope, such as what a saved graph was read from, is saved at: the first path
+        declared in format with one named part, filled with scope; none when format declares no such path."""
+        declared = self.scoped_paths(format)
+        return RenderPlace(_NAMED_PART.sub(scope, declared[0])) if declared else None

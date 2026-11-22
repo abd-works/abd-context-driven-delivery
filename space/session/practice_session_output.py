@@ -171,7 +171,7 @@ class PracticeSessionOutput:
         pattern fills in, such as ``story_tests`` for ``story_tests/{epic}/{sub-epic}/...``: a viewer of the session's
         files reads each of them."""
         paths = (path for fidelity in self.fidelities.entries.values() for paths in fidelity.session_output.written.output_paths().values() for path in paths)
-        return {self._fixed_folder(path) for path in paths}
+        return {Path(DeclaredFile(path).fixed_folder) for path in paths}
 
     @property
     @data_field
@@ -234,14 +234,6 @@ class PracticeSessionOutput:
         """Write this practice's files under its default root again: the workpath plus the practice's own folder."""
         self.change(lambda fields: setattr(fields, "root", ""), "root default")
         return self
-
-    def _fixed_folder(self, path: str) -> Path:
-        """The folder of path up to its first part a name or pattern fills in; a file's own folder when none does."""
-        parts = Path(path).parts
-        filled = next((index for index, part in enumerate(parts) if set(part) & set("{*?")), None)
-        if filled is not None:
-            return Path(*parts[:filled])
-        return Path(path) if path.endswith("/") else Path(path).parent
 
 
 class OutputRootRefused(ValueError):

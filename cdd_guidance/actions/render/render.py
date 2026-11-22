@@ -7,6 +7,7 @@ from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS, WHITEBOARD, 
 from cdd_guidance.actions.render.render_order import WorkerRender
 from cdd_guidance.actions.render.render_result import AnsweredContent, RenderResult, SavedFile
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
+from harness.guidance.declared_outputs import DeclaredOutputs, RenderPlacement
 from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.practice_formats import Rendered, RenderRequest
 from harness.guidance.stages import TAKES_FORMATS, on_stage
@@ -21,6 +22,8 @@ from harness.whiteboard import BoardLinks, Whiteboard
 
 # The file a saved graph is kept in, which a render reads as data.
 _SAVED_GRAPH_SUFFIX = ".json"
+# The declarations of guidance that is no fidelity: none.
+_DECLARES_NOTHING = DeclaredOutputs({})
 
 
 class BoardNotKept(LookupError):
@@ -74,9 +77,8 @@ class Render(GuidanceAction):
         declared path places is refused."""
         sources = self.files.paths_to_read(paths)
         source = source or self._format_named_by(sources)
-        declared = worked.declared if isinstance(worked, FidelityGuidance) else None
         written = worked.session_output.written if isinstance(worked, FidelityGuidance) else None
-        saved = RenderedFile.from_sources(sources, Format(source), Format(format), declared, written)
+        saved = RenderedFile.from_sources(sources, Format(source), Format(format), self._placement_of(worked), written)
         if saved is None and (Format(format).is_code or Format(format).group in SAVED_GROUPS):
             return self._saved_by_declared_paths(worked, Format(format), sources, paths, source)
         if saved is None:
@@ -97,7 +99,7 @@ class Render(GuidanceAction):
         if first.suffix == _SAVED_GRAPH_SUFFIX and isinstance(worked, FidelityGuidance):
             saved = RenderedFile.from_graph(first, worked, format)
             return saved.save(worked.render_files(format.name, paths, source, saved.previous))
-        own = RenderedFile.beside_itself(first, Format(source), format)
+        own = RenderedFile(self._placement_of(worked).beside_itself(first, Format(source), format), format, Format(source))
         is_itself = own.path in sources
         rendered = worked.render_files(format.name, paths, source, "" if is_itself else own.previous)
         if isinstance(rendered.content, dict):
@@ -110,13 +112,16 @@ class Render(GuidanceAction):
         under any root, so its code has no place and is refused."""
         if not isinstance(worked, FidelityGuidance) or not worked.session_output.roots:
             raise RenderHasNoDeclaredPlace("code", format, [], "name a fidelity in a session, which declares where its code is written")
-        outputs = {label: [names] if isinstance(names, str) else list(names) for label, names in worked.declared.outputs.items()}
         source = sources[0] if len(sources) == 1 and sources[0].is_file() else None
-        every = [name for names in outputs.values() for name in names]
         own_name = written_in.stem_of(source) if source is not None else ""
         formats = worked.practice_guidance.formats
         reshape = formats.adapter(format).reshape if format in formats else None
-        return RenderedCode(worked.session_output.root, outputs.get(format.name, []), format, source, every, own_name, reshape)
+        return RenderedCode(worked.session_output.root, worked.declared.placement, format, source, own_name, reshape)
+
+    def _placement_of(self, worked: WorkedGuidance) -> RenderPlacement:
+        """Where a render at worked is saved, as its declared paths place it; guidance that is no fidelity declares
+        none, so a render of it is saved beside its source under the source's own name."""
+        return worked.declared.placement if isinstance(worked, FidelityGuidance) else _DECLARES_NOTHING.placement
 
     def _format_named_by(self, sources: list[Path]) -> str | None:
         """The format the first source's name says it is in, for a call that names no source: a drawing, a whiteboard,

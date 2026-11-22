@@ -113,13 +113,8 @@ class OrderingProject:
         request = RenderRequest(Format(format), self._text, Format(self.language), folder=str(source.parent), fidelity=self._fidelity)
         rendered = request.render()
         root = Path(self._saved.name) / format
-        saved = RenderedCode(root, self.declared_for(format), Format(format)).save(rendered)
+        saved = RenderedCode(root, self._fidelity.declared.placement, Format(format)).save(rendered)
         return sorted(Path(path).relative_to(root).as_posix() for path in saved.paths)
-
-    def declared_for(self, format: str) -> list[str]:
-        """The paths the model fidelity declares for format."""
-        declared = self._fidelity.declared.outputs[format]
-        return [declared] if isinstance(declared, str) else list(declared)
 
     def declares(self, path: str, format: str) -> bool:
         """Whether path is a file the model fidelity declares for format."""

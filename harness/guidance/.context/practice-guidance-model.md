@@ -362,6 +362,48 @@ paths_in(format: str): list[str]
 declared_files(format: str): list[DeclaredFile]
 file_name_beside(source: str, format: str): str
 file_beside(source: str, format: str): str
+placement: RenderPlacement
+	// made once; where a render is saved, from the patterns alone
+
+## DeclaredFile
+
+DeclaredFile(declared: str)
+----
+pattern, glob, names_one_path, is_named, parts_of(path), named_with(parts), start_of(path)
+fixed_folder: str
+	// the folders it names outright before its first named or wildcard part
+own_name_of(source: Path): str | None
+	// `Cart` for `CartView.tsx` against `**/*View.tsx`; `bookshop` off `{scope}`
+file_name_with(name: str): str
+filled_with(names: list[str]): str
+	// its named parts filled in order; empty when the count differs
+
+## RenderPlacement
+
+Where a render is saved, as one fidelity's declared paths answer it from the patterns alone; where the fidelity has
+written a file in the session stays the session's (`WrittenOutput.saved_beside`). Cutting rendered code into sections
+at its banners stays in the Render action.
+
+RenderPlacement(declared: DeclaredOutputs)
+----
+owns(first, source): bool
+name_beside(first, source, format): str
+beside_itself(first, source, format): Path
+own_name_of(source): str | None
+declares(path, format): bool
+paths_in(format): list[str]
+section_place(names, format): RenderPlace | None
+counterpart_of(source, format): RenderPlace | None
+named_for(source, name, format): RenderPlace | None
+beside_source(source, format): RenderPlace | None
+scoped_paths(format): list[str]
+place_for_scope(scope, format): RenderPlace | None
+
+## RenderPlace (frozen)
+
+path: str, from_root: bool
+----
+under(root: Path): Path
 
 ## Rule
 

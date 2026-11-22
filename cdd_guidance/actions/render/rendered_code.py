@@ -36,14 +36,13 @@ its body there. A file that already holds exactly the rendered text is left as i
 from __future__ import annotations
 
 import re
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 from harness.annotations.name import Name
 from cdd_guidance.actions.render.reshaped_code import Reshape, ReshapedCode
-from harness.guidance.declared_outputs import DeclaredFile
+from harness.guidance.declared_outputs import RenderPlacement
 from cdd_guidance.actions.render.render_result import KeptCodeMember, Migration, SavedCode, SignatureDiffers
 from harness.guidance.practice_formats import Rendered, Reshaped
-from harness.installation.context_config import CONTEXT_FOLDER
 from harness.markdown.format import Format
 
 # A banner comment between the sections of one rendered text: ``# === Ordering | custom · Cart ===`` in Python,
@@ -53,32 +52,6 @@ _BANNER = re.compile(r"^\s*(?:#|//)\s*===\s*(.+?)\s*===\s*$")
 _NAME_SEPARATOR = " · "
 # What a heading writes after a name, such as a bounded context's kind (``Ordering | custom``), which is no part of it.
 _NAME_NOTE = " | "
-_NAMED_PART = re.compile(r"\{([^{}/]+)\}")
-_ONE_NAME = "*"
-
-
-def own_name(source: Path, declared: list[str]) -> str | None:
-    """The source's own name, read off the first of the declared paths that names it: ``Cart`` for ``CartView.tsx``
-    against ``**/*View.tsx``, ``cart`` for ``cart_spec.py`` against ``**/*_spec.py``, and ``bookshop`` for
-    ``.context/bookshop-bdd-realization.md`` against ``.context/{scope}-bdd-realization.md``. None when no declared
-    path names it, or the one that does leaves where the name ends unsaid."""
-    for path in declared:
-        before, found, after = PurePosixPath(path).name.partition(_ONE_NAME)
-        if found and _ONE_NAME not in after and _says_where_name_ends(before, after):
-            named = re.fullmatch(re.escape(before) + "(.+)" + re.escape(after), source.name)
-            if named is not None:
-                return named.group(1)
-        parts = set(DeclaredFile(path).parts_of(source.as_posix()).values()) if _NAMED_PART.search(path) and not path.endswith("/") else set()
-        if len(parts) == 1:
-            return parts.pop()
-    return None
-
-
-def _says_where_name_ends(before: str, after: str) -> bool:
-    """Whether a declared file name says where the name in it ends: what follows the name starts with a mark or a
-    capital, as ``_spec.py``, ``.spec.ts`` and ``View.jsx`` do. ``*spec.ts`` does not: ``cartspec.ts`` and
-    ``cart.spec.ts`` both fit it."""
-    return bool(before) or (bool(after) and not (after[0].islower() or after[0].isdigit()))
 
 
 class RenderHasNoDeclaredPlace(ValueError):
@@ -97,21 +70,23 @@ class RenderedCode:
     """The files one render to code saves under a fidelity's root: where each piece of the rendered code goes by the
     paths the fidelity declares for the format, and the write that keeps a code file already there."""
 
-    def __init__(
-        self, root: Path, declared: list[str], format: Format, source: Path | None = None, source_declared: list[str] | None = None,
-        source_name: str = "", reshape: Reshape | None = None,
-    ) -> None:
+    def __init__(self, root: Path, placement: RenderPlacement, format: Format, source: Path | None = None, source_name: str = "", reshape: Reshape | None = None) -> None:
         self._root = root
-        # The paths the fidelity declares for the format, as it writes them, such as ``{module}/{class}.py``.
-        self._declared = list(declared)
+        # Where the fidelity's declared paths place each piece of the code.
+        self._placement = placement
         self._format = format
-        # The one source file the code was rendered from, and every path the fidelity declares, which name it.
+        # The one source file the code was rendered from.
         self._source = source
-        self._source_declared = list(source_declared or [])
         # The source's name without what its format's files end with: ``cart`` for the sketch ``cart-sketch.md``.
         self._source_name = source_name
         # The format's own way to write a rendered shape onto a file already there, when its adapter has one.
         self._reshape = reshape
+
+    @property
+    def _declared(self) -> list[str]:
+        """The paths the fidelity declares for the format, as it writes them, such as ``{module}/{class}.py``, which a
+        refusal names."""
+        return self._placement.paths_in(self._format)
 
     def save(self, rendered: Rendered) -> SavedCode:
         """Write each piece of the rendered code at its declared path and answer the files: ``paths`` the files that
@@ -149,9 +124,9 @@ class RenderedCode:
         sections = self._sections(str(content))
         # One text of one piece, rendered from one of the fidelity's own files, is that file in the other format: the
         # source's own path says which folder it is, which a banner's name alone does not (``src/ordering``).
-        counterpart = self._counterpart_of(self._source) if self._source is not None and len(sections) <= 1 else None
+        counterpart = self._placement.counterpart_of(self._source, self._format) if self._source is not None and len(sections) <= 1 else None
         if counterpart is not None:
-            return {counterpart: str(content)}
+            return {counterpart.under(self._root): str(content)}
         named_for_source = self._named_for_source() if len(sections) == 1 else None
         if named_for_source is not None:
             return {named_for_source: str(content)}
@@ -161,7 +136,7 @@ class RenderedCode:
 
     def _declared_file(self, path: str) -> Path:
         """The file at path under the root, a path one of the declared paths matches."""
-        if not any(DeclaredFile(declared).pattern.search(path) for declared in self._declared if not declared.endswith("/")):
+        if not self._placement.declares(path, self._format):
             raise RenderHasNoDeclaredPlace(path, self._format, self._declared, "none of them matches that file")
         return self._root / path
 
@@ -179,40 +154,20 @@ class RenderedCode:
     def _section_file(self, banner: str) -> Path:
         """The file a section goes to: the first declared path whose named parts the banner's names fill, in order."""
         names = [Name(name.split(_NAME_NOTE)[0]).snake for name in banner.split(_NAME_SEPARATOR)]
-        for declared in self._declared:
-            parts = list(dict.fromkeys(_NAMED_PART.findall(declared)))
-            if parts and len(parts) == len(names) and not declared.endswith("/") and _ONE_NAME not in declared:
-                filled = dict(zip(parts, names))
-                return self._root / _NAMED_PART.sub(lambda part: filled[part.group(1)], declared)
-        raise RenderHasNoDeclaredPlace(f"the section {banner}", self._format, self._declared, "none of them names a file with a part for each of the section's names")
+        place = self._placement.section_place(names, self._format)
+        if place is None:
+            raise RenderHasNoDeclaredPlace(f"the section {banner}", self._format, self._declared, "none of them names a file with a part for each of the section's names")
+        return place.under(self._root)
 
     def _named_for_source(self) -> Path | None:
         """The file one piece rendered from one source goes to when the source names it: beside the source, at the
         first declared path with one named part, filled with the source's own name. None when there is no one source,
         it has no name of its own, or the format declares no such path."""
-        name = (own_name(self._source, self._source_declared) or self._source_name) if self._source is not None else ""
-        if not name:
+        if self._source is None:
             return None
-        for declared in self._declared:
-            parts = set(_NAMED_PART.findall(declared))
-            if len(parts) == 1 and not declared.endswith("/") and _ONE_NAME not in declared:
-                return self._source.parent / _NAMED_PART.sub(Name(name).snake, declared)
-        return None
-
-    def _counterpart_of(self, source: Path) -> Path | None:
-        """The file the format declares for the same named parts the source's declared path reads off it, where the
-        source's declared path starts: ``catalogue/book/book.py`` for ``catalogue/book/book.ts`` against
-        ``{bounded_context}/{aggregate}/{aggregate}.ts``. None when no declared path with named parts names the source,
-        or the format declares none those parts fill."""
-        written = source.as_posix()
-        for named_by in (DeclaredFile(path) for path in self._source_declared if _NAMED_PART.search(path) and not path.endswith("/")):
-            parts = named_by.parts_of(written)
-            placed = (DeclaredFile(path).named_with(parts) for path in self._declared if parts and not path.endswith("/"))
-            found = next((path for path in placed if path), "")
-            if found:
-                start = named_by.start_of(written)
-                return Path(start) / found if start else self._root / found
-        return None
+        name = self._placement.own_name_of(self._source) or self._source_name
+        place = self._placement.named_for(self._source, name, self._format)
+        return place.under(self._root) if place is not None else None
 
     def _beside_source(self) -> Path:
         """The file one text rendered from one source goes to: beside the source, or beside the ``.context`` folder a
@@ -220,12 +175,9 @@ class RenderedCode:
         source = self._source
         if source is None:
             raise RenderHasNoDeclaredPlace("one text from no single source file", self._format, self._declared, "nothing names its file")
-        name = own_name(source, self._source_declared)
-        if name is None:
+        if self._placement.own_name_of(source) is None:
             raise RenderHasNoDeclaredPlace(f"code from {source.name}", self._format, self._declared, f"no path the fidelity declares names {source.name}, so its own name cannot be read")
-        folder = source.parent.parent if source.parent.name == CONTEXT_FOLDER else source.parent
-        for declared in self._declared:
-            before, found, after = PurePosixPath(declared).name.partition(_ONE_NAME)
-            if found and _ONE_NAME not in after and _says_where_name_ends(before, after):
-                return folder / f"{before}{name}{after}"
-        raise RenderHasNoDeclaredPlace(f"code from {source.name}", self._format, self._declared, "none of them says how the source's name joins the file's name, as `*.spec.ts` or `*View.jsx` does")
+        place = self._placement.beside_source(source, self._format)
+        if place is None:
+            raise RenderHasNoDeclaredPlace(f"code from {source.name}", self._format, self._declared, "none of them says how the source's name joins the file's name, as `*.spec.ts` or `*View.jsx` does")
+        return place.under(self._root)
