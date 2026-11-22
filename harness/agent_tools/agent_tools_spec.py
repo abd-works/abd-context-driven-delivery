@@ -1148,11 +1148,9 @@ with description("AgentToolSet destination catalog"):
 
 @agent_toolset
 class _BundleTools:
+    @hook("stop")
     def ping(self) -> str:
         return "pong"
-
-    ping._hook = True
-    ping._hook_name = "stop"
 
 
 @agent_toolset

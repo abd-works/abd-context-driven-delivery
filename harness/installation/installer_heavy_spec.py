@@ -198,10 +198,10 @@ def _last_logged_install(path: Path) -> dict:
 
 
 def _skill_tool(name: str):
+    @Skill
     def _fn(self):
         return None
 
-    _fn._skill = True
     return type("Tool", (), {"name": name, "deploy_name": name, "is_published_to": lambda self, destination: destination is Skill, "callable": _fn})()
 
 
@@ -1331,8 +1331,8 @@ with description("an operation annotated as a Cursor hook"):
                 def handler(self, payload: dict) -> dict:
                     return {}
 
-                expect(handler._hook).to(equal(True))
-                expect(handler._hook_name).to(equal(event))
+                expect(Hook.annotates(handler)).to(equal(True))
+                expect(Hook.recorded_on(handler).name).to(equal(event))
 
     with context("that names an unknown event"):
         with it("should raise ValueError"):

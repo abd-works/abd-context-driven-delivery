@@ -1315,7 +1315,7 @@ class _ClassJoiningAnnotation(Annotation):
         joined.__doc__ = target.__doc__
         joined.__module__ = target.__module__
         joined.__qualname__ = target.__qualname__
-        setattr(joined, self.flag, True)
+        setattr(joined, self.flag, self)
         return joined
 
 
@@ -1346,7 +1346,7 @@ class ToolSetCollectionAnnotation(_ClassJoiningAnnotation):
     def annotate(self, target: JoinedTarget) -> JoinedTarget:
         if inspect.isclass(target):
             return self._joined(target, ToolSetCollection)
-        setattr(getattr(target, "fget", target), self.flag, True)
+        setattr(getattr(target, "fget", target), self.flag, self)
         return target
 
 

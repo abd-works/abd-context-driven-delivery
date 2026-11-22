@@ -31,8 +31,8 @@ The `@Hook` decorator on an operation. Event is required and must be an IDE even
 	// install publishes operation as a hook: it carries @Hook, turned on, and no omission keeps it out
 + Hook.name_given(operation): str
 	// the event the operation runs on; empty when it carries no @Hook
-	// Destination records the hook on the operation, and disabled as _hook_disabled, which DestinationKind's
-	// disabled_on reads (harness/annotations); Hook adds no kind of its own
+	// the Hook annotation records itself on the operation, holding its event and disabled, which DestinationKind's
+	// name_given and disabled_on read (harness/annotations); Hook adds no kind of its own
 	// sessionStart → session_start
 
 ## Toast : Destination

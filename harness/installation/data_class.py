@@ -30,7 +30,6 @@ class LanguageAdapter(Annotation):
     """
 
     flag = "_language_adapters"
-    file_views_flag = "_language_adapter_file_views"
     copied = False
 
     def __new__(cls: type[LanguageAdapter], *, language: str, shares_file_views: bool = False) -> LanguageAdapter:
@@ -38,13 +37,15 @@ class LanguageAdapter(Annotation):
 
     def __init__(self, *, language: str, shares_file_views: bool = False) -> None:
         self.language = language
+        self.languages: tuple[str, ...] = (language,)
         self.shares_file_views = shares_file_views
 
     def annotate(self, toolset: type) -> type:
-        setattr(toolset, self.flag, (*getattr(toolset, self.flag, ()), self.language))
-        if self.shares_file_views:
-            setattr(toolset, self.file_views_flag, True)
-        return toolset
+        """Record itself on toolset, after the languages of any adapter the class already carries."""
+        earlier = LanguageAdapter.recorded_on(toolset)
+        if earlier is not None:
+            self.languages = (*earlier.languages, self.language)
+        return super().annotate(toolset)
 
 
 language_adapter = LanguageAdapter
@@ -95,7 +96,6 @@ class DataField(Annotation):
     """
 
     flag = "_data_field"
-    reference_flag = "_data_field_reference"
     copied = False
 
     def __new__(
@@ -109,9 +109,9 @@ class DataField(Annotation):
         return annotation
 
     def annotate(self, getter: Annotatable) -> Annotatable:
-        setattr(getter, self.flag, self.key or getter.__name__)
-        setattr(getter, self.reference_flag, self.reference)
-        return getter
+        """Record itself on getter, sent by the key it names, else by the getter's own name."""
+        self.key = self.key or getter.__name__
+        return super().annotate(getter)
 
 
 data_field = DataField
@@ -150,7 +150,7 @@ class DataClass(Generic[Described]):
         for klass in reversed(self.data_class.__mro__):
             for attribute, member in vars(klass).items():
                 if isinstance(member, property) and DataField.annotates(member.fget):
-                    attributes[getattr(member.fget, DataField.flag)] = attribute
+                    attributes[DataField.recorded_on(member.fget).key] = attribute
         return {key: inspect.getattr_static(self.data_class, attribute) for key, attribute in attributes.items()}
 
     @property
@@ -161,12 +161,14 @@ class DataClass(Generic[Described]):
     @property
     def languages(self) -> tuple[str, ...]:
         """The languages the class's language adapters are written in."""
-        return tuple(getattr(self.data_class, LanguageAdapter.flag, ()))
+        adapter = LanguageAdapter.recorded_on(self.data_class)
+        return adapter.languages if adapter is not None else ()
 
     @property
     def shares_file_views(self) -> bool:
         """Whether the shared file views read files through this class's generated client."""
-        return bool(vars(self.data_class).get(LanguageAdapter.file_views_flag, False))
+        adapter = vars(self.data_class).get(LanguageAdapter.flag)
+        return adapter is not None and adapter.shares_file_views
 
     def edited_by(self, operation: Annotatable) -> tuple[str, ...]:
         """The fields of this class's data that operation's `@edits` annotation names, or none."""
@@ -174,7 +176,8 @@ class DataClass(Generic[Described]):
 
     def sends_by_identity(self, field: property) -> bool:
         """Whether field sends the object it holds by that object's identity alone."""
-        return bool(getattr(field.fget, DataField.reference_flag, False))
+        recorded = DataField.recorded_on(field.fget)
+        return recorded is not None and recorded.reference
 
     @functools.cached_property
     def _sent(self) -> tuple[tuple[str, Any, bool], ...]:

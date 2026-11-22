@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator, Protocol
 
 from harness.installation.files import Skill
-from harness.annotations.annotation import Annotatable, Annotation, annotation_kinds
+from harness.annotations.annotation import Annotation, annotation_kinds
 from harness.annotations.class_folder import class_folder
 from harness.annotations.class_registry import ClassRegistry
 
@@ -56,10 +56,6 @@ class OnStage(Annotation):
     def needs_output(self) -> bool:
         """Whether the action works on output a fidelity already has: one that checks it or converts it."""
         return CHECKS in self._traits or CONVERTS in self._traits
-
-    def annotate(self, target: Annotatable) -> Annotatable:
-        setattr(target, self.flag, self)
-        return target
 
 
 on_stage = OnStage

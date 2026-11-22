@@ -63,3 +63,36 @@ with description("a class"):
 
         with it("should still be installed"):
             expect(NoDeploy.annotates(_HiddenClass)).to(be_false)
+
+
+with description("an annotation on an operation"):
+    with before.each:
+        from harness.hooks.hooks import Hook
+        from harness.installation.data_class import DataField, Identity
+
+        self.Hook, self.DataField, self.Identity = Hook, DataField, Identity
+
+        def stop(payload: dict) -> dict:
+            return {}
+
+        def title(self) -> str:
+            return "a title"
+
+        self.stop = Hook("stop", disabled=True)(stop)
+        self.title = DataField(title)
+        self.named = Identity("name", "slug")(type("Named", (), {}))
+
+    with it("should record itself, holding the name it gave the operation"):
+        expect(self.Hook.recorded_on(self.stop).name == "stop").to(be_true)
+
+    with it("should record that it is turned off on the operation"):
+        expect(self.Hook.recorded_on(self.stop).disabled).to(be_true)
+
+    with it("should record the key a data field is sent by, its getter's name when it names none"):
+        expect(self.DataField.recorded_on(self.title).key == "title").to(be_true)
+
+    with it("should record the names it was given"):
+        expect(self.Identity.recorded_on(self.named).names == ("name", "slug")).to(be_true)
+
+    with it("should leave nothing on the operation beside its one flag"):
+        expect([name for name in vars(self.stop) if name.startswith("_hook")] == ["_hook"]).to(be_true)

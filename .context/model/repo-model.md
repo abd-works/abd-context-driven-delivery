@@ -14,16 +14,16 @@ An *Annotation* is what an author types on a class or operation to say how CDD t
 
 ## Annotation
 
-The base of every annotation an author types: it sets its `flag` on what it annotates, and `annotates(target)` reads it back. Each kind joins `annotation_kinds` as it is defined.
+The base of every annotation an author types: it records itself, with what it holds, under its `flag` on what it annotates; `annotates(target)` and `recorded_on(target)` read it back, so a destination's `.name` and `.disabled`, a names annotation's `.names`, and a data field's `.key` and `.reference` are read from the annotation, never from attributes beside it. Each kind joins `annotation_kinds` as it is defined.
 
 ------
 + flag: str
 + copied: bool
 ----
 + annotates(target: Any): bool
++ recorded_on(target: Any): Annotation | None
 + written_as(): str
 + installs_member(): bool
-+ companion_flags(): tuple[str, ...]
 + annotate(target: Any): Any
 
 ## NamesAnnotation : Annotation
@@ -32,8 +32,8 @@ An annotation that records a tuple of names on what it annotates and reads them 
 
 + NamesAnnotation(*names: str)
 ------
++ names: tuple[str, ...]
 ----
-+ annotate(target: Any): Any
 + names_on(target: Any): tuple[str, ...]
 
 ## OmissionAnnotation : Annotation
@@ -79,13 +79,17 @@ The base of an annotation that says where install publishes a member: a skill, a
 	// true for Rules: the member it decorates holds a collection of its toolset's tools
 + answers_calls: bool
 	// true for Mcp: its server answers an agent's calls to the member, so a skill or command tells the agent to call the tool
++ name: str | None
+	// the name it gives the member there; none for the member's own name
++ disabled: bool
+	// true when it is turned off on the member, as `@Hook(..., disabled=True)` is
 ----
 + publishes(operation: Any): bool
 	// it carries this annotation, turned on, and no omission keeps it out of install
 + name_given(operation: Any): str
 	// the name the annotation gave the operation, such as a command's name or the event a hook runs on
 + disabled_on(operation: Any): bool
-	// reads `{flag}_disabled`, which a destination that holds `disabled` sets, as `@Hook(..., disabled=True)` does
+	// the recorded annotation's `disabled`, as `@Hook(..., disabled=True)` holds it
 
 ## AnnotationKinds
 
