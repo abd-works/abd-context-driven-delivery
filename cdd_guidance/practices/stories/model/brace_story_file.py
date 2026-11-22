@@ -11,7 +11,7 @@ from typing import List, Sequence, Tuple
 
 from cdd_guidance.practices.source_code import BraceCall, CodeBody, InsideLines, WrittenBlock
 from cdd_guidance.practices.stories.model.code_story_model import unescaped
-from cdd_guidance.practices.stories.model.story_file import CodeBlock, StoryFile
+from cdd_guidance.practices.stories.model.story_file import BlockStoryFile, StoryBlock
 
 _QUOTED = r"(['\"`])((?:\\.|(?!\1).)*)\1"
 _STORY = re.compile(r"(?m)^[ \t]*(?:shareStory|story)\s*\(\s*" + _QUOTED)
@@ -21,10 +21,10 @@ _STEP = re.compile(r"(?<![.\w])(given|when|then|and|but)\s*\(\s*(['\"`])((?:\\.|
 _CHAINED = re.compile(r"\s*\.(and|but)\s*\(\s*(['\"`])((?:\\.|(?!\2).)*)\2")
 
 
-class BraceStoryFile(StoryFile):
+class BraceStoryFile(BlockStoryFile):
     """One brace-language story file: its story calls, and the calls inside each."""
 
-    def story_blocks(self) -> List[CodeBlock]:
+    def story_blocks(self) -> List[StoryBlock]:
         return self.calls(_STORY, range(0, len(self.text)), group=2)
 
     def calls(self, pattern: re.Pattern, span: range, group: int = 0) -> List["BraceBlock"]:
@@ -67,7 +67,7 @@ class BraceStoryFile(StoryFile):
         return BraceCall(self.text, start, unescaped(name))
 
 
-class BraceBlock:
+class BraceBlock(StoryBlock):
     """One call in a brace-language story file whose callback holds code."""
 
     def __init__(self, file: BraceStoryFile, call: BraceCall) -> None:
@@ -120,20 +120,20 @@ class BraceBlock:
         written.close = self.file.lines[inner_end : end + 1]
         return written
 
-    def split_inside(self, children: Sequence[CodeBlock]) -> Tuple[List[str], List[List[str]], List[str]]:
+    def split_inside(self, children: Sequence[StoryBlock]) -> Tuple[List[str], List[List[str]], List[str]]:
         return InsideLines(self.file.lines, self._inside).split([child.line_span for child in children])
 
-    def scenarios(self) -> List[CodeBlock]:
+    def scenarios(self) -> List[StoryBlock]:
         return self.file.calls(_SCENARIO, range(self.call.brace + 1, self.call.inner_end), group=2)
 
-    def backgrounds(self, scenarios: Sequence[CodeBlock]) -> List[CodeBlock]:
+    def backgrounds(self, scenarios: Sequence[StoryBlock]) -> List[StoryBlock]:
         first = scenarios[0].call.start if scenarios else self.call.inner_end
         return self.file.calls(_BACKGROUND, range(self.call.brace + 1, first))
 
-    def steps(self, skip: Sequence[CodeBlock]) -> List[CodeBlock]:
+    def steps(self, skip: Sequence[StoryBlock]) -> List[StoryBlock]:
         return self.file.step_calls(self.call.brace + 1, self.call.inner_end, skip)
 
-    def setup(self, children: Sequence[CodeBlock]) -> CodeBody:
+    def setup(self, children: Sequence[StoryBlock]) -> CodeBody:
         first, last = self._inside
         covered = {line for child in children for line in range(child.line_span[0], child.line_span[1] + 1)}
         kept = [self.file.lines[index] for index in range(first, last) if index not in covered]

@@ -5754,9 +5754,8 @@ An epic; a nested epic is an epic whose parent is an epic.
 + depth: int
 + << composition >> descendants: Descendants
 	// every epic and story under it, and place_in(file)
-+ << composition >> columns: EpicColumns
-	// leaf_epics(), estimate_label(), has_estimate(), span(), diagram_span(), tree_depth(): how a drawn map lays it out
 ----
++ leaf_epics(): list[Epic]
 + record(recording: StoryRecording, parent): None
 + clone(): Epic
 + load_map_facts(): None

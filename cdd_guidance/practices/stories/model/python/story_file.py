@@ -7,30 +7,27 @@ import re
 from typing import List, Optional, Sequence, Tuple
 
 from cdd_guidance.practices.source_code import CodeBody, CodeLanguage, InsideLines, WrittenBlock
-from cdd_guidance.practices.stories.model.story_file import CodeBlock, StoryFile
+from cdd_guidance.practices.stories.model.story_file import BlockStoryFile, StoryBlock
 
 _STEP_CALLS = frozenset({"given", "when", "then", "and_", "but_"})
 # Comments the scenario writes for itself; they are not code the scenario holds.
 _OWN_COMMENT = re.compile(r"^\s*#\s*(?:background|background-step|examples):")
 
 
-class PythonStoryFile(StoryFile):
+class PythonStoryFile(BlockStoryFile):
     """One Python story file, parsed once: its `with story(...)` blocks and the blocks inside each."""
 
-    def __init__(self, language: CodeLanguage, content: str) -> None:
-        super().__init__(language, content)
+    def story_blocks(self) -> Optional[List[StoryBlock]]:
+        """Each `with story(...)` block of the file; None for a file Python cannot parse, whose stories are read from its
+        text."""
         try:
-            self._tree: Optional[ast.Module] = ast.parse(content)
+            tree = ast.parse(self.text)
         except SyntaxError:
-            self._tree = None
-
-    def story_blocks(self) -> Optional[List[CodeBlock]]:
-        if self._tree is None:
             return None
-        return [block for block in (PythonBlock(self, item) for item in self._tree.body) if block.call == "story"]
+        return [block for block in (PythonBlock(self, item) for item in tree.body) if block.call == "story"]
 
 
-class PythonBlock:
+class PythonBlock(StoryBlock):
     """One `with` block in a Python story file."""
 
     def __init__(self, file: PythonStoryFile, node: ast.With) -> None:
@@ -91,20 +88,20 @@ class PythonBlock:
         written.lead = lead
         return written
 
-    def split_inside(self, children: Sequence[CodeBlock]) -> Tuple[List[str], List[List[str]], List[str]]:
+    def split_inside(self, children: Sequence[StoryBlock]) -> Tuple[List[str], List[List[str]], List[str]]:
         return InsideLines(self.file.lines, self._inside).split([child.line_span for child in children])
 
-    def scenarios(self) -> List[CodeBlock]:
+    def scenarios(self) -> List[StoryBlock]:
         return self._within("scenario")
 
-    def backgrounds(self, scenarios: Sequence[CodeBlock]) -> List[CodeBlock]:
+    def backgrounds(self, scenarios: Sequence[StoryBlock]) -> List[StoryBlock]:
         return [item for item in self._within("background") if not item._is_inside(scenarios)]
 
-    def steps(self, skip: Sequence[CodeBlock]) -> List[CodeBlock]:
+    def steps(self, skip: Sequence[StoryBlock]) -> List[StoryBlock]:
         found = [block for block in self._walked() if block.call in _STEP_CALLS]
         return [item for item in found if not item._is_inside(skip)]
 
-    def setup(self, children: Sequence[CodeBlock]) -> CodeBody:
+    def setup(self, children: Sequence[StoryBlock]) -> CodeBody:
         """The lines in the block that are no child and none of the comments a scenario writes for itself."""
         first, last = self._inside
         covered = {line for child in children for line in range(child.line_span[0], child.line_span[1] + 1)}
@@ -122,7 +119,7 @@ class PythonBlock:
         found.sort(key=lambda item: item.node.lineno)
         return [item for item in found if not item._is_inside([other for other in found if other is not item])]
 
-    def _is_inside(self, blocks: Sequence[CodeBlock]) -> bool:
+    def _is_inside(self, blocks: Sequence[StoryBlock]) -> bool:
         return any(block.node.lineno < self.node.lineno <= block.node.end_lineno for block in blocks)
 
     @property

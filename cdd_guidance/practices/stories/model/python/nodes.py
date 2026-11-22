@@ -2,12 +2,9 @@
 from __future__ import annotations
 
 import re
-import sys
-from pathlib import Path
 from typing import List
 
 from cdd_guidance.practices.stories.model.code_story_model import CodeEpic, CodeScenario, CodeStory, StorySyntax, unescaped
-from cdd_guidance.practices.stories.model.python.shared_story_file import SharedStoryFile, is_shared_story_file
 from cdd_guidance.practices.stories.model.story_model import Background
 
 
@@ -49,21 +46,6 @@ class PythonScenario(CodeScenario):
 class PythonStory(CodeStory):
     scenario_type = PythonScenario
     syntax = PythonScenario.syntax
-
-    @classmethod
-    def load_all(cls, content: str) -> List["CodeStory"]:
-        """Every story in one story file: a shared story file's, read from its scenario and step functions; any other
-        story file's, from its `with story` blocks."""
-        return cls.load_file(content, None)
-
-    @classmethod
-    def load_file(cls, content: str, project: Path | None) -> List["CodeStory"]:
-        """Every story in one story file of project: a shared story file's examples module is looked for there first,
-        then in the folders Python imports from."""
-        if is_shared_story_file(content):
-            search = [*([project] if project is not None else []), Path.cwd(), *map(Path, sys.path)]
-            return SharedStoryFile(content, search).stories(cls)
-        return super().load_all(content)
 
 
 class PythonEpic(CodeEpic):

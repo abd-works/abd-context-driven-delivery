@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from harness.graph.graph import Node, Source
 
-    from .story_file import CodeBlock
+    from .story_file import StoryBlock
     from harness.guidance.guidance import PracticeGuidance
 
     from space.session.practice_session_output import FidelitySessionOutput
@@ -46,14 +46,6 @@ _STEP_NAME_LENGTH = 80
 # A step's graph id ends in a 24-bit checksum of its name: short enough to read in an id, long enough that two steps
 # on one line of one file do not share it.
 _STEP_CHECKSUM_MASK = 0xFFFFFF
-# A leaf epic with an estimate widens by a column for about this many characters of the estimate: wider for an epic
-# that has stories beside it, as its estimate shares their columns.
-_ESTIMATE_CHARACTERS_PER_COLUMN = 18
-_ESTIMATE_CHARACTERS_PER_EXTRA_COLUMN = 22
-_ESTIMATE_LEAD_CHARACTERS = 12
-_ESTIMATE_EXTRA_LEAD_CHARACTERS = 15
-_EMPTY_EPIC_COLUMNS = (2, 8)
-_EXTRA_EPIC_COLUMNS = (1, 5)
 
 # What an example stands for: a field map, a class, an object whose fields are its cells, or its own name.
 ExampleValue = Any
@@ -120,11 +112,6 @@ class StoryNode(ModelNode, ABC):
         # writes it back unchanged.
         self.description_text: str = ""
         self.evidence: List[str] = []
-        self.written: Optional[WrittenBlock] = None
-        # The story file a story was read with, in code: its path and its own code around its stories, which the
-        # stories read from one file share.
-        self.file_written: Optional[WrittenBlock] = None
-        self.setup = CodeBody()
         self._start_map_facts()
 
     def _start_map_facts(self) -> None:
@@ -163,14 +150,6 @@ class StoryNode(ModelNode, ABC):
         self.child_label = label
         self.child_target = f"{fewest}-{most}"
         self.child_band = "" if count == 0 or fewest <= count <= most else "error"
-
-    def take_code_from(self, source: "StoryNode") -> None:
-        """Keep the code the source was read with, so a copy in another channel can still write it back."""
-        self.written = getattr(source, "written", None)
-        self.file_written = getattr(source, "file_written", None)
-        self.setup = getattr(source, "setup", CodeBody())
-        if hasattr(self, "body"):
-            self.body = getattr(source, "body", CodeBody())
 
     @property
     def recorded_name(self) -> str:
@@ -289,6 +268,27 @@ class StoryNode(ModelNode, ABC):
         siblings = parent.holding(self)
         siblings.pop(siblings.index(self))
         _renumber(siblings)
+
+
+class CodeHeld(StoryNode):
+    """The code a node of the story map was read with in a language: the block it was written as (``written``), the
+    story file a story was read with (``file_written``, its path and its own code around its stories, which the stories
+    read from one file share), and the code its scenarios or steps share (``setup``). An epic, a story, a background, a
+    scenario, and a step hold it; an example and an increment are written with no code of their own."""
+
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None):
+        super().__init__(name, sequential_order, graph)
+        self.written: Optional[WrittenBlock] = None
+        self.file_written: Optional[WrittenBlock] = None
+        self.setup = CodeBody()
+
+    def take_code_from(self, source: "CodeHeld") -> None:
+        """Keep the code the source was read with, so a copy in another channel can still write it back."""
+        self.written = source.written
+        self.file_written = source.file_written
+        self.setup = source.setup
+        if hasattr(self, "body"):
+            self.body = getattr(source, "body", CodeBody())
 
 
 @language_adapter(language="typescript")
@@ -532,7 +532,7 @@ class Increment(StoryNode):
 
 @language_adapter(language="typescript")
 @agent_toolset
-class Step(StoryNode):
+class Step(CodeHeld):
     _semantic_type_name = "Step"
     graph_facts = ("keyword", "text", "phase", "concepts", "values", "linked_terms", "actor", "continuation", "callees", "body_text")
 
@@ -607,7 +607,7 @@ class Step(StoryNode):
         """What this step says in code: while it still says it, the lines it was read with stand."""
         return (self.keyword, self.text, self.body.text)
 
-    def read_code(self, block: "CodeBlock") -> None:
+    def read_code(self, block: "StoryBlock") -> None:
         """The body of the step block found where this step sits in its file, when that block is this step's call; a
         step whose text differs keeps no body."""
         if self.text == block.name:
@@ -706,7 +706,7 @@ def _steps_key(steps: List["Step"]) -> tuple:
     return tuple(line.code_key for step in steps for line in (step, *step.ands))
 
 
-class Background(StoryNode):
+class Background(CodeHeld):
     _semantic_type_name = "Background"
     step_type = Step
     """The step type this format's backgrounds are made of; a copy of a background makes its steps through it."""
@@ -768,7 +768,7 @@ class StepType(str, Enum):
 
 @language_adapter(language="typescript")
 @agent_toolset
-class Scenario(StoryNode):
+class Scenario(CodeHeld):
     """Behaviour walk-through under a story.
 
     Tree children: Background, Step, Example.
@@ -930,7 +930,7 @@ class StoryType(str, Enum):
 
 @language_adapter(language="typescript")
 @agent_toolset
-class Epic(StoryNode):
+class Epic(CodeHeld):
     """An epic. A nested epic is an epic whose parent is an epic."""
 
     _semantic_type_name = "Epic"
@@ -944,7 +944,6 @@ class Epic(StoryNode):
         self._epics = ModelChildren(self, "decomposedInto")
         self._stories = ModelChildren(self, "decomposedInto")
         self.examples = source.examples.clone(self) if source is not None else Examples(self)
-        self.columns = EpicColumns(self)
         self.descendants = Descendants(self)
         if source is None:
             return
@@ -1102,6 +1101,12 @@ class Epic(StoryNode):
             return 0
         return parent.depth + 1
 
+    def leaf_epics(self) -> List["Epic"]:
+        """The epics whose stories sit in columns under this epic: its innermost sub-epics, or itself when it has none."""
+        if not self.epics:
+            return [self]
+        return [leaf for child in self.epics for leaf in child.leaf_epics()]
+
 
 
 # The fact a story's graph node carries when a scenarios file specifies it and the story map does not hold it.
@@ -1110,7 +1115,7 @@ NOT_ON_STORY_MAP = "not_on_story_map"
 
 @language_adapter(language="typescript")
 @agent_toolset
-class Story(StoryNode):
+class Story(CodeHeld):
     _semantic_type_name = "Story"
     scenario_type = Scenario
     background_type = Background
@@ -1508,63 +1513,6 @@ class Descendants:
         """The epics whose own stories are its stories: an epic holder itself, then every epic under it."""
         own = [self._holder] if isinstance(self._holder, Epic) else []
         return [*own, *self.epics()]
-
-
-class EpicColumns:
-    """How many story columns an epic spans on a drawn map, and how deep its sub-epics nest: what a diagram format
-    lays its bars out by."""
-
-    def __init__(self, epic: Epic) -> None:
-        self._epic = epic
-
-    def leaf_epics(self) -> List[Epic]:
-        """The epics whose stories sit in columns under the epic: its innermost sub-epics, or itself when it has none."""
-        if not self._epic.epics:
-            return [self._epic]
-        return [leaf for child in self._epic.epics for leaf in child.columns.leaf_epics()]
-
-    def estimate_label(self) -> str:
-        """The epic's estimate as a bar writes it, `* {estimate}`; empty for an epic with none."""
-        estimate = (self._epic.estimate or "").strip()
-        if not estimate:
-            return ""
-        if estimate.startswith("*"):
-            return estimate
-        return f"* {estimate}"
-
-    def has_estimate(self) -> bool:
-        """The epic or a sub-epic under it gives an estimate."""
-        if (self._epic.estimate or "").strip():
-            return True
-        return any(child.columns.has_estimate() for child in self._epic.epics)
-
-    def span(self) -> int:
-        """Story-grid columns a top-level epic occupies: its own stories, then each nested epic. An empty epic is one
-        column."""
-        nested = sum(max(child.columns.diagram_span(), 1) for child in self._epic.epics)
-        return max(len(self._epic.stories) + nested, 1)
-
-    def diagram_span(self) -> int:
-        """Bar width in story-pitch columns. Stories and nested epics both take columns; an estimate widens a leaf
-        epic."""
-        nested = sum(child.columns.diagram_span() for child in self._epic.epics)
-        story_columns = len(self._epic.stories)
-        if self._epic.epics:
-            return max(nested + story_columns, 1)
-        estimate = self._epic.estimate.strip()
-        if not estimate:
-            return max(story_columns, 1)
-        if story_columns == 0:
-            fewest, most = _EMPTY_EPIC_COLUMNS
-            return max(fewest, min(most, (len(estimate) + _ESTIMATE_LEAD_CHARACTERS) // _ESTIMATE_CHARACTERS_PER_COLUMN))
-        fewest, most = _EXTRA_EPIC_COLUMNS
-        return story_columns + max(fewest, min(most, (len(estimate) + _ESTIMATE_EXTRA_LEAD_CHARACTERS) // _ESTIMATE_CHARACTERS_PER_EXTRA_COLUMN))
-
-    def tree_depth(self) -> int:
-        """The depth of the deepest sub-epic under the epic; its own depth when it has none."""
-        if not self._epic.epics:
-            return self._epic.depth
-        return max(child.columns.tree_depth() for child in self._epic.epics)
 
 
 class StoryTestScenarios:

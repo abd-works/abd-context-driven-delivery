@@ -200,8 +200,6 @@ with description("a code Story Map") as self:
 
 with description("a story read from a TypeScript story file") as self:
     with before.each:
-        from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
-        from cdd_guidance.practices.source_code import TYPESCRIPT
 
         text = (
             "story('Pay by card', () => {\n"
@@ -213,7 +211,7 @@ with description("a story read from a TypeScript story file") as self:
             "  });\n"
             "});\n"
         )
-        self.story = BraceStoryFile(TYPESCRIPT, text).stories(TypeScriptStoryModel.story_type, "pay.ts")[0][0]
+        self.story = TypeScriptStoryModel().story_file("pay.ts", text).stories[0]
 
     with it("should keep the line that opens its block"):
         expect(self.story.written.heading).to(equal(["story('Pay by card', () => {"]))

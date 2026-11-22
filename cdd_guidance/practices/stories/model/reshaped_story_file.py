@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, List, Optional, Sequence
 
 from harness.guidance.practice_formats import KeptMark, Reshaped
 
-from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps
+from cdd_guidance.practices.stories.model.story_file import StoryBlock, flat_steps
 from cdd_guidance.practices.stories.model.story_writing import StepClause
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ class ReshapedStoryFile:
         self._language = model.language
         self._existing = existing
         self._lines = existing.split("\n")
-        self._rendered_stories: List["Story"] = model.stories_of(rendered, "")[0]
+        self._rendered_stories: List["Story"] = model.story_file("", rendered).stories
         # Lines to write above a line of the file, by that line's index: the new members, and under them the line
         # that marks the member on that line, so a marking line stays directly above what it marks.
         self._above: dict[int, List[str]] = {}
@@ -68,12 +68,11 @@ class ReshapedStoryFile:
                 self._write_above(len(self._lines), ["", *self._writing.story_lines(story)])
         return Reshaped(self._text(), self._kept, self._added)
 
-    def _story_blocks(self) -> List[CodeBlock]:
+    def _story_blocks(self) -> List[StoryBlock]:
         """The story blocks the language finds in the file; none for a file it reads no block of."""
-        file = self._model.story_file(self._existing)
-        return (file.story_blocks() or []) if file is not None else []
+        return self._model.story_file("", self._existing).story_blocks() or []
 
-    def _reshape_story(self, block: CodeBlock, story: "Story") -> None:
+    def _reshape_story(self, block: StoryBlock, story: "Story") -> None:
         scenarios = block.scenarios()
         by_name = {scenario.name: scenario for scenario in scenarios}
         rendered = {scenario.name: scenario for scenario in story.scenarios}
@@ -89,7 +88,7 @@ class ReshapedStoryFile:
                 self._added.append(f"{story.name}.{scenario.name}")
                 self._write_above(self._end_of(block), [*self._writing.scenario_gap, *self._writing._scenario_lines(scenario, indent)])
 
-    def _reshape_scenario(self, block: CodeBlock, scenario: "Scenario", name: str) -> None:
+    def _reshape_scenario(self, block: StoryBlock, scenario: "Scenario", name: str) -> None:
         steps = sorted(block.steps(block.backgrounds([])), key=lambda step: step.line_span)
         rendered = flat_steps(scenario.steps)
         wanted = Counter(step.text for step in rendered)
@@ -107,7 +106,7 @@ class ReshapedStoryFile:
             self._added.append(f"{name}.{step.text}")
             self._write_above(self._line_after(steps, rendered[:place], block), self._empty_step(step, indent))
 
-    def _line_after(self, steps: Sequence[CodeBlock], before: Sequence["Step"], scenario: CodeBlock) -> int:
+    def _line_after(self, steps: Sequence[StoryBlock], before: Sequence["Step"], scenario: StoryBlock) -> int:
         """The line a new step is written above: the one after the statement of the nearest step before it that the
         file holds, else the end of the scenario. A step chained onto another ends with the last step of its chain."""
         texts = {step.text for step in before}
@@ -125,7 +124,7 @@ class ReshapedStoryFile:
         alone.keyword = step.keyword
         return self._writing._step_lines(StepClause(alone, self._writing.verb_alone(alone)), indent)
 
-    def _mark(self, block: CodeBlock, member: str, name: str) -> None:
+    def _mark(self, block: StoryBlock, member: str, name: str) -> None:
         """Say above block that its member is no longer in the model, once: a member an earlier render marked keeps
         its line."""
         self._kept.append(name)
@@ -136,11 +135,11 @@ class ReshapedStoryFile:
         marking = KeptMark.line_for(member, "Move its code into the member that replaced it, then delete it.")
         self._markings.setdefault(line, []).append(f"{indent}{self._language.comment(marking)}")
 
-    def _indent_of(self, block: CodeBlock) -> str:
+    def _indent_of(self, block: StoryBlock) -> str:
         line = self._lines[block.opening_line]
         return line[: len(line) - len(line.lstrip())]
 
-    def _end_of(self, block: CodeBlock) -> int:
+    def _end_of(self, block: StoryBlock) -> int:
         """The line new members of block are written above: its closing line when the language closes a block with
         one, else the line after its last."""
         last = block.line_span[1]

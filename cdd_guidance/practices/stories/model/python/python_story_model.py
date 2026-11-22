@@ -4,14 +4,15 @@
 from __future__ import annotations
 
 import re
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 
 from cdd_guidance.practices.source_code import PYTHON
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
 from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory
-from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED_SUFFIX, is_shared_story_file
+from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED_SUFFIX, SharedStoryFile, is_shared_story_file
 from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
-from cdd_guidance.practices.stories.model.story_file import flat_steps
+from cdd_guidance.practices.stories.model.story_file import StoryFile, flat_steps
 from cdd_guidance.practices.stories.model.story_model import Background, Story
 from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description
 
@@ -68,7 +69,8 @@ class PythonStoryModel(CodeStoryModel):
     language = PYTHON
     writing_type = PythonStoryWriting
 
-    def story_file(self, content: str) -> PythonStoryFile | None:
-        """The story file content is, read block by block; none for a shared story file, whose stories its story type
-        reads from its scenario and step functions."""
-        return None if is_shared_story_file(content) else PythonStoryFile(self.language, content)
+    def story_file(self, path: str, content: str, project: Optional[Path] = None) -> StoryFile:
+        """The story file at path: a shared story file, read from its scenario and step functions, or a story test,
+        read block by block."""
+        kind = SharedStoryFile if is_shared_story_file(content) else PythonStoryFile
+        return kind(self, path, content, project if project is not None else self.project)

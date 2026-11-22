@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from cdd_guidance.practices.source_code import PYTHON, CodeBody
+from cdd_guidance.practices.stories.model.story_file import StoryFile
 from cdd_guidance.practices.stories.model.story_model import Example, ExampleValue, Scenario, StepType, Story
 
 if TYPE_CHECKING:
@@ -120,17 +121,30 @@ class FixtureModule:
         return ast.get_source_segment(self._text, expression) or ""
 
 
-class SharedStoryFile:
-    """One shared story file's text, parsed once, with the folders its examples module is looked for in."""
+class SharedStoryFile(StoryFile):
+    """One shared story file, read once: its stories, each with its scenarios in the order the file writes them. Its
+    examples module is looked for in the project first, then in the folders Python imports from. Its own code is not
+    kept."""
 
-    def __init__(self, text: str, search: list[Path] | None = None) -> None:
-        self.text = text
-        self._tree = ast.parse(text)
-        self._lines = text.splitlines()
-        self._search = [Path(folder) for folder in (search if search is not None else [Path.cwd(), *map(Path, sys.path)])]
+    @cached_property
+    def _read(self) -> tuple[list, None]:
+        return self._stories(), None
 
-    def stories(self, story_type: type) -> list:
+    @cached_property
+    def _tree(self) -> ast.Module:
+        return ast.parse(self.text)
+
+    @cached_property
+    def _lines(self) -> list[str]:
+        return self.text.splitlines()
+
+    @cached_property
+    def _search(self) -> list[Path]:
+        return [*([Path(self.project)] if self.project is not None else []), Path.cwd(), *map(Path, sys.path)]
+
+    def _stories(self) -> list:
         """The stories of the file, each with its scenarios in the order the file writes them."""
+        story_type = self.model.story_type
         stories: dict[str, Any] = {}
         for function in self._tree.body:
             named = self._decorated_with(function, frozenset({_SCENARIO}))

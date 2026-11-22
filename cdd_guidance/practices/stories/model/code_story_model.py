@@ -46,11 +46,8 @@ from cdd_guidance.practices.stories.model.story_map_files import source_at
 from cdd_guidance.practices.stories.model.reshaped_story_file import ReshapedStoryFile
 from harness.guidance.practice_formats import Reshaped
 from cdd_guidance.practices.stories.model.story_recording import StorySources
-from cdd_guidance.practices.stories.model.story_file import CodeBlock, flat_steps, read_step_code
+from cdd_guidance.practices.stories.model.story_file import StoryBlock, StoryFile, flat_steps, read_step_code
 from cdd_guidance.practices.stories.model.story_writing import OUTLINE_EXAMPLES, SCENARIO_EXAMPLES, StoryFilePlace, StoryWriting, as_read
-
-if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.story_file import StoryFile
 
 
 class CodeStoryModelError(Exception):
@@ -243,7 +240,7 @@ class CodeScenario(Scenario, CodeStoryNode):
         background.steps = self.syntax.steps_from(calls)
         self.backgrounds = [background]
 
-    def read_code(self, block: CodeBlock, lead: List[str]) -> None:
+    def read_code(self, block: StoryBlock, lead: List[str]) -> None:
         """This scenario's code from the block it was written as: each background's and step's body, the code that is
         no step (`setup`), and the block's own lines (`written`)."""
         backgrounds = block.backgrounds([])
@@ -288,13 +285,7 @@ class CodeStory(Story, CodeStoryNode):
         return stories or [cls.load(content)]
 
     @classmethod
-    def load_file(cls, content: str, project: Optional[Path]) -> List["CodeStory"]:
-        """Every story in one story file of project, the folder its paths are named from; a language whose story files
-        read other files of the project, such as an examples module, finds them there."""
-        return cls.load_all(content)
-
-    @classmethod
-    def load(cls, content: str, scenario_blocks: Optional[List[CodeBlock]] = None) -> "CodeStory":
+    def load(cls, content: str, scenario_blocks: Optional[List[StoryBlock]] = None) -> "CodeStory":
         """The story the text of one story holds: its name, its description, then its backgrounds and scenarios, one
         for each of scenario_blocks when its story file found them, else as the text writes them."""
         story = cls(cls.syntax.story_name(content), 1)
@@ -303,7 +294,7 @@ class CodeStory(Story, CodeStoryNode):
         return story
 
     @classmethod
-    def from_block(cls, block: CodeBlock, lead: List[str], text: str) -> "CodeStory":
+    def from_block(cls, block: StoryBlock, lead: List[str], text: str) -> "CodeStory":
         """The story one block of a story file holds, read from its text (the file's example imports, the comment above
         the block, and the block) with one scenario for each scenario block in it, and its code read from the block."""
         scenarios = block.scenarios()
@@ -311,7 +302,7 @@ class CodeStory(Story, CodeStoryNode):
         story.read_code(block, lead, scenarios)
         return story
 
-    def read_code(self, block: CodeBlock, lead: List[str], scenarios: List[CodeBlock]) -> None:
+    def read_code(self, block: StoryBlock, lead: List[str], scenarios: List[StoryBlock]) -> None:
         """This story's code from the block it was written as: each background's step bodies, the code that is no
         background or scenario (`setup`), the block's own lines (`written`), and each scenario's code from its block."""
         backgrounds = block.backgrounds(scenarios)
@@ -340,13 +331,13 @@ class CodeStory(Story, CodeStoryNode):
         for name, cells in payload.items():
             self.backgrounds[0].examples[name] = cells if isinstance(cells, dict) else name
 
-    def _scenario_texts(self, content: str, scenario_blocks: Optional[List[CodeBlock]]) -> List[tuple]:
+    def _scenario_texts(self, content: str, scenario_blocks: Optional[List[StoryBlock]]) -> List[tuple]:
         """(name, body) of each scenario: of each scenario block its story file found, else as the text writes them."""
         if scenario_blocks is None:
             return self.syntax.scenario_blocks(content)
         return [(item.name, item.body_text) for item in scenario_blocks]
 
-    def _fill(self, content: str, scenario_blocks: Optional[List[CodeBlock]] = None) -> None:
+    def _fill(self, content: str, scenario_blocks: Optional[List[StoryBlock]] = None) -> None:
         examples = self.syntax.example_names(content)
         backgrounds = self.syntax.backgrounds_in(content)
         for background in backgrounds:
@@ -415,7 +406,8 @@ class CodeStoryModel(StoryModel):
         if isinstance(source, str):
             tests_root = source
             source = None
-        self._project: Optional[Path] = None
+        # The folder the story files' own reads, such as an examples module, are found in; set by each load.
+        self.project: Optional[Path] = None
         super().__init__(source)
         self._tests_root = ("tests" if tests_root is None else tests_root).strip("/")
 
@@ -484,10 +476,11 @@ class CodeStoryModel(StoryModel):
         read = [written for story in stories for written in (story.written, story.file_written) if written is not None]
         return any(written.language is self.language for written in read)
 
-    def story_file(self, content: str) -> Optional["StoryFile"]:
-        """The story file content is, as this language finds its blocks; None for a language that does not read its
-        blocks, whose stories are written generically."""
-        return None
+    def story_file(self, path: str, content: str, project: Optional[Path] = None) -> StoryFile:
+        """The story file at path, of content, as this language reads it, the kind picked once: this kind reads its
+        stories from the text alone, as a language that reads no blocks does. project is the folder the files it reads,
+        such as an examples module, are found in; the one this model was loaded with when none is given."""
+        return StoryFile(self, path, content, project if project is not None else self.project)
 
     def _write_epic(self, epic: Epic, parent: str, examples_folder: str, files: Dict[str, str]) -> None:
         """An epic is a folder under parent, which its sub-epics and its own stories write into; examples_folder is
@@ -571,7 +564,7 @@ class CodeStoryModel(StoryModel):
             raise CodeStoryModelError(f"{type(self).__name__} reads a path-to-content dict of story files")
         self.epics.clear()
         self.sources = StorySources()
-        self._project = project
+        self.project = project
         for path, text in external.items():
             self.sources.add(path, text)
         paths = [path for path in self._ordered_paths(external) if self.is_story_file(path)]
@@ -617,7 +610,8 @@ class CodeStoryModel(StoryModel):
         if not stem_slug:
             return
         source_file = path.replace("\\", "/")
-        stories, written = self.stories_of(content, source_file, self._project)
+        story_file = self.story_file(source_file, content)
+        stories, written = story_file.stories, story_file.own_code
         epic_name = self._epic_name_in(content)
         folders = parts[:-1]
         epic_slug = (Name(epic_name).title_slug or "unnamed") if epic_name else ""
@@ -679,14 +673,6 @@ class CodeStoryModel(StoryModel):
     def _name_from_slug(self, slug: str) -> str:
         """An epic's name from the folder it is read from, for a file whose header names none."""
         return slug.replace("-", " ").title()
-
-    def stories_of(self, content: str, source_file: str, project: Optional[Path] = None) -> tuple:
-        """The stories of one story file at source_file, each with the code its scenarios and steps are written with,
-        and the file's own code around them; none of that code when this language does not read a file's blocks. A
-        story file that reads other files of project, such as an examples module, finds them there."""
-        code = self.story_file(content)
-        read = code.stories(self.story_type, source_file, project) if code is not None else None
-        return read if read is not None else (self.story_type.load_file(content, project), None)
 
     def _sub_epic_for(self, epic: Epic, slugs: List[str]) -> Epic:
         parent = epic

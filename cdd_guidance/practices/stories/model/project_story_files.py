@@ -52,7 +52,7 @@ class ProjectStoryFiles:
         for path in sorted({file.resolve() for file in written}):
             reader = self.reader_of(path)
             if reader is not None:
-                held[path_from(self.project, path)] = [story.name for story in reader.story_type.load_file(path.read_text(encoding="utf-8"), self.project)]
+                held[path_from(self.project, path)] = [story.name for story in reader.story_file(path_from(self.project, path), path.read_text(encoding="utf-8"), self.project).stories]
         return held
 
     def take_code_scenarios(self, model: StoryModel, paths: list[Path], code_project: Path) -> None:
@@ -66,7 +66,7 @@ class ProjectStoryFiles:
             text = path.read_text(encoding="utf-8")
             file = os.path.relpath(path, self.project).replace("\\", "/")
             model.sources.take(self.sources_of(StorySource(file, text)))
-            model.test_scenarios.take(reader.stories_of(text, file, code_project)[0], file)
+            model.test_scenarios.take(reader.story_file(file, text, code_project).stories, file)
 
     def story_map_in(self, root: Path) -> StoryModel:
         """The story map in the folder root: the nearest story map at or above it, else its story-graph.json, else the
@@ -165,7 +165,7 @@ class ProjectStoryFiles:
         gives it, as a story test read with no map has it; and the story test's text and its examples modules'."""
         merged.sources.take(self.sources_of(test))
         reader = self.reader_of(self.project / test.file)
-        merged.test_scenarios.take(reader.stories_of(test.text, test.file, self.project)[0], test.file)
+        merged.test_scenarios.take(reader.story_file(test.file, test.text, self.project).stories, test.file)
 
     def opened(self, path: Path):
         """The story map an edit to the Stories file at path writes back: a markdown story map or scenarios file read

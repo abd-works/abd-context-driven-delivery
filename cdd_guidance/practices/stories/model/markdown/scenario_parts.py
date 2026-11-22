@@ -10,14 +10,8 @@ from harness.graph.graph import Source
 
 from cdd_guidance.practices.source_code import CallGraph
 from cdd_guidance.practices.stories.model.markdown.markup import TABLE_LINE, strip_markup
+from cdd_guidance.practices.stories.model.markdown.read_lines import HeadingLine, ReadLine
 from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, Story
-
-# Where a read scenarios document had a heading or a step line. Every other line is kept as written.
-HEADING_LINE = "heading"
-STEP_LINE = "step"
-# One part of a read scenarios document, in the order the document gives them: the heading marker, a line kept as
-# written, a (STEP_LINE, owner) pair where a step line was, an example row, a story section, or a scenario.
-type DocumentPart = object
 
 
 class StorySection:
@@ -31,7 +25,11 @@ class StorySection:
         # The scenarios file the section was read from, named as its reading names it.
         self.file = file
         # The line of the file the heading is on (line, where the section opens); 0 for a section with no heading.
-        self.line, self.parts = (line, [HEADING_LINE]) if heading is not None else (0, [])
+        self.line = line if heading is not None else 0
+        # The heading as read, which names the story the section becomes once that story is made.
+        self.heading_line = HeadingLine(None, name, heading) if heading is not None else None
+        # The section's lines as read, its heading first.
+        self.lines: List[ReadLine] = [self.heading_line] if self.heading_line is not None else []
         self.background = Background("background", 1)
         self.scenarios: list = []
         # The story's own background (`### Story Background`), which the story that takes this section takes too.

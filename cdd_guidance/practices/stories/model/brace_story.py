@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import posixpath
 import re
+from pathlib import Path
 from typing import List, Optional
 
 from cdd_guidance.practices.source_code import CodeLanguage
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
 from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, StorySyntax, unescaped
+from cdd_guidance.practices.stories.model.story_file import StoryFile
 from cdd_guidance.practices.stories.model.story_model import Background, Story
 from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description
 
@@ -172,5 +174,6 @@ class BraceStoryModel(CodeStoryModel):
 
     writing_type = BraceStoryWriting
 
-    def story_file(self, content: str) -> BraceStoryFile:
-        return BraceStoryFile(self.language, content)
+    def story_file(self, path: str, content: str, project: Optional[Path] = None) -> StoryFile:
+        """The story file at path, read block by block."""
+        return BraceStoryFile(self, path, content, project if project is not None else self.project)
