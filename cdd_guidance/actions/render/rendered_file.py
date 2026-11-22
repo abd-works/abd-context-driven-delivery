@@ -106,7 +106,7 @@ class RenderedFile:
         kept = KeptDocument(self.format).onto(self._before, str(rendered.content))
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(kept.text, encoding="utf-8")
-        migrate: list[Migration] = [KeptMember(self.path, each) for each in kept.left_to_move]
+        migrate: list[Migration] = [KeptMember(self.path, each, kept.added) for each in kept.kept]
         if self.format.name != WHITEBOARD:
             return SavedFile(rendered, self.path, migrate)
         board = Whiteboard.links_beside(self.path).of(self.path.name) or ""

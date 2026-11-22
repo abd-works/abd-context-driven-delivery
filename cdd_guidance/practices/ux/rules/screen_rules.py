@@ -29,6 +29,7 @@ class ScreenStoryBudget(PracticeGraphRule):
 
 class ScreenNamesUseDomainTerms(PracticeGraphRule):
     slug = "screen-names-use-domain-terms"
+    requires_judge = True
     node_types = ("Screen",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:

@@ -84,6 +84,10 @@ class BddGraphReading(PracticeReading):
         """Whether each description and observation sits in a finished spec (``in_developed_spec``), one whose every
         signature has its test body, which the behavior fidelity's rules then leave alone."""
         finished = {spec.source.file for spec in self.in_graph.nodes("Spec") if spec.get_fact("developed", False)}
+        # The fidelity each spec was read at, by what it holds: finished test bodies are development, signatures are
+        # behavior. A realization's call graphs are not told apart from behavior here. Its blocks answer the spec's.
+        for spec in self.in_graph.nodes("Spec"):
+            spec.read_at("development" if spec.source.file in finished else "behavior")
         for kind in ("Observation", "Context"):
             for node in self.in_graph.nodes(kind):
                 node.set_fact("in_developed_spec", node.source.file in finished)

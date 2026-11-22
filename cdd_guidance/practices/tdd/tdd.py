@@ -25,6 +25,15 @@ class Tdd(PracticeSupplement):
 
     SHORT_NAME = "TDD"
 
+    @property
+    def markdown_values(self) -> dict[str, str]:
+        """Whether each of its graph rules is checked or judged, for the marker the rule's text carries in its document
+        (``{{decided.<rule>}}``): the rule's own ``requires_judge`` says which, so it is typed in no document."""
+        from cdd_guidance.practices.tdd.rules import RULES
+        from harness.graph.practice_rule import decided_values
+
+        return decided_values(RULES)
+
     def records_for(self, fidelity: FidelityGuidance, files: list[Path] | None = None) -> str:
         """Record, in the session fidelity works in, the test tiers its tests show the module they are for uses, and
         answer what the record holds and what is left for the agent to decide. Only a fidelity whose section holds the

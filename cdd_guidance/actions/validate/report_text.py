@@ -18,12 +18,16 @@ if TYPE_CHECKING:
 
 # A Windows path's separator, which a location may carry; the report names files with forward slashes.
 _BACKSLASH = "\\"
-_RULES_FOR_JUDGE = ["## Rules", "", "Each rule shows its guidance text, any graph scanner hits (`**[graph rule]**`), then the AI judgment prompt.", ""]
+_CANDIDATES_NOTE = (
+    "A hit marked `**CANDIDATE**` comes from a rule that requires a judge: its check only lists places to read, so read each "
+    "and fail the rule only where the reading finds it broken."
+)
+_RULES_FOR_JUDGE = ["## Rules", "", f"Each rule shows its guidance text, any graph scanner hits (`**[graph rule]**`), then the AI judgment prompt. {_CANDIDATES_NOTE}", ""]
 _RULES_SAVED = [
     "## Rules",
     "",
     "Each rule names where its text is kept, then any graph scanner hits (`**[graph rule]**`). The judgment is appended "
-    "after the rules, in the shape the Validate action gives (`cdd_guidance/actions/validate/validate.md`, step 6).",
+    f"after the rules, in the shape the Validate action gives (`cdd_guidance/actions/validate/validate.md`, step 6). {_CANDIDATES_NOTE}",
     "",
 ]
 # A rule as a practice document lists it: a bullet opening with its slug, in backticks or bold.
@@ -100,10 +104,13 @@ class ReportText:
         return lines
 
     def _summary_lines(self) -> list[str]:
-        """How many graph violations the report holds, across how many rules, how many it leaves out because a person
+        """How many graph violations the report holds, across how many rules, how many candidates the rules that require
+        a judge listed, which are counted apart since nothing has decided they are wrong, how many it leaves out because a person
         accepted them, and how many rules the AI judges; with no graph checked, that the judgment covers the files
         alone; and each named path the graph read no node from."""
-        violations = self._checked.violations()
+        found = self._checked.violations()
+        violations = [violation for violation in found if not violation.is_candidate]
+        candidates = [violation for violation in found if violation.is_candidate]
         accepted = self._checked.accepted()
         unread = self._checked.unread
         lines = ["## Summary", ""]
@@ -114,6 +121,8 @@ class ReportText:
             lines.append(f"**Rules with graph hits:** {len(Violation.by_rule(violations))}")
         elif len(unread) < len(self._checked.edited) or not unread:
             lines.append("**No graph rule violations.** All scanned graph rules passed.")
+        if candidates:
+            lines.append(f"**Candidates for the judge to read:** {len(candidates)}. A rule that requires a judge listed each; none is a violation until the judge reads it and fails it.")
         if accepted:
             lines.append(self._accepted_line(accepted))
         if unread:
@@ -140,17 +149,23 @@ class ReportText:
         return [rule for item in self._guidance for rule in item.checked_rules()]
 
     def _hit_lines(self, hits: list[Violation]) -> list[str]:
+        """A rule's hits: its violations under their count, then its candidates under theirs."""
+        violations = [hit for hit in hits if not hit.is_candidate]
+        candidates = [hit for hit in hits if hit.is_candidate]
+        return [*self._listed("Graph violations", violations), *self._listed("Candidates for the judge to read", candidates)]
+
+    def _listed(self, heading: str, hits: list[Violation]) -> list[str]:
         if not hits:
             return []
-        lines = [f"**Graph violations:** {len(hits)}", ""]
+        lines = [f"**{heading}:** {len(hits)}", ""]
         for violation in sorted(hits, key=lambda violation: (violation.location, violation.line or 0)):
             lines.extend(self._violation_lines(violation))
         return [*lines, ""]
 
     def _violation_lines(self, violation: Violation) -> list[str]:
-        """One graph rule's violation as report lines, linked to its file and line."""
+        """One graph rule's violation as report lines, linked to its file and line; a candidate is marked ``[?]``."""
         severity = violation.severity
-        icon = "[X]" if severity == "error" else "[!]" if severity == "warning" else "[i]"
+        icon = "[?]" if violation.is_candidate else "[X]"
         parts = str(violation.described or "No message").split("\n")
         lines = [f"- {icon} **{severity.upper()}** **[graph rule]** - {self._file_link(violation)}: {parts[0]}"]
         for part in parts[1:]:

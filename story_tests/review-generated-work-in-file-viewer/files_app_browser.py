@@ -164,6 +164,12 @@ def _seed_project(root: Path) -> None:
     _write(root, f".sessions/{STORY_REVIEW}/session.log", "")
 
 
+def _seed_measured_project(root: Path) -> None:
+    """The seeded project, whose config chooses to measure its code with the shipped tools and limits."""
+    _seed_project(root)
+    _write(root, ".context/config.json", json.dumps({"code_measures": {}}))
+
+
 # Seed: plain-work, a session in a project that is a plain folder, no git repository, with Discovery and Stories alone
 # on and its story map in markdown, as the Nov 18 demo's session had them: its story map and its sketch written under
 # .context, and a note of no fidelity beside it.
@@ -221,6 +227,12 @@ class FilesStack:
         stack = cls(started_for=_REPO_ROOT)
         _write(stack.project, DIAGRAM, DIAGRAM_TEXT)
         return stack
+
+    @classmethod
+    def on_a_project_that_measures_its_code(cls) -> "FilesStack":
+        """The Files app opened on the seeded project once its config holds a code measures section, so its code is
+        held to Clean Engineering's shipped limits and a node's metrics group shows."""
+        return cls(seed=_seed_measured_project)
 
     @classmethod
     def in_a_plain_folder(cls) -> "FilesStack":

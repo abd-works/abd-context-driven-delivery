@@ -420,13 +420,9 @@ Observed (`session_record_spec.py`).
 *Then* the tag waits for the first change
   *And* `session.json` holds the new title and the tag urgent
 
-### Edge conditions
-
-Walked for `edge-conditions-walked`.
-
 #### Scenario: Take the next change at once after the holder is killed
 
-An action interrupted partway. Observed (`session_record_processes_heavy_spec.py`).
+Observed (`session_record_processes_heavy_spec.py`).
 
 *Given* a process holding pet-visits' `session.json` for a change is killed before it writes
 *When* another chat tags pet-visits with urgent
@@ -435,7 +431,7 @@ An action interrupted partway. Observed (`session_record_processes_heavy_spec.py
 
 #### Scenario: Refuse to change a session.json left half written
 
-Malformed input, and the thing acted on changed since it was last seen. Observed (`session_record_processes_heavy_spec.py`, `session_record_spec.py`).
+Observed (`session_record_processes_heavy_spec.py`, `session_record_spec.py`).
 
 *Given* pet-visits' `session.json` ends partway through its title
 *When* a chat tags pet-visits with urgent
@@ -444,13 +440,11 @@ Malformed input, and the thing acted on changed since it was last seen. Observed
 
 #### Scenario: Change the record itself when a killed writer left its staged text beside it
 
-An action interrupted partway. Observed (`session_record_spec.py`).
+Observed (`session_record_spec.py`).
 
 *Given* a killed writer left `session.json.4242.1.tmp`, half written, beside pet-visits' `session.json`
 *When* a chat tags pet-visits with urgent
 *Then* `session.json` holds its title and the tag urgent
 
 - **A holder that never lets go:** a change that waits 30 seconds for a live holder is refused, naming the file as held by another caller (`JsonFile.held`, *JsonFileBusy*, covered for the mechanism in `harness/installation/json_file_spec.py`); the record is not changed.
-- **Missing input, a duplicate, the same action repeated, an actor not allowed:** do not apply to the hold itself, because each is the changed field's own behaviour, such as a tag added twice being kept once (Tag Ticket Session).
-- **A dependency absent:** a session with no folder yet has its folder made by the first change, which holds the lock file made beside the new `session.json`.
-- **A list a caller replaces whole:** question for the person: `GuidanceSelection.select` replaces the selected stages and each fidelity's formats with lists it worked out before the hold, so of two selections made at once the later one stands. That is what "select exactly these" asks for; should the formats it turns on and off be merged with a format another chat chose at the same moment?
+- **A session with no folder yet:** a session with no folder yet has its folder made by the first change, which holds the lock file made beside the new `session.json`.

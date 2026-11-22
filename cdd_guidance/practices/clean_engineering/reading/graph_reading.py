@@ -24,7 +24,7 @@ from harness.graph.schema_conformance import EXEMPT_FACT
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER, CleanEngineeringModel, OoadClass
 from cdd_guidance.practices.clean_engineering.measures.checked_measures import CheckedCodeMeasures
-from cdd_guidance.practices.clean_engineering.measures.code_measures import MEASURES, NODE_TYPES, ChosenTools
+from cdd_guidance.practices.clean_engineering.measures.code_measures import MEASURES, NODE_TYPES, SHOWN_WITHOUT_LIMIT, ChosenTools
 from cdd_guidance.practices.clean_engineering.measures.measuring_tools import TOOLS, MeasuringTool
 from cdd_guidance.practices.clean_engineering.reading.call_links import CallLinks, ClassLinks
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
@@ -89,13 +89,14 @@ class GraphReading(PracticeReading):
 
     def metrics_of(self, node: Node) -> list[NodeMetric]:
         """The measures of production code a limit rule reads on node, each with its value and the project's limit:
-        the one list the limit rules and the explorer tree's metrics group both read. A project that holds its code to
-        no limit has none, and neither does test code, which no production rule judges."""
+        the one list the limit rules and the explorer tree's metrics group both read. After them come the measures
+        shown for information (``SHOWN_WITHOUT_LIMIT``), each with its value and no limit. A project that holds its
+        code to no limit has none, and neither does test code, which no production rule judges."""
         chosen = self.chosen_tools
         if node.type not in self.metric_node_types or not chosen.measures_code or is_test_code(node.source.file):
             return []
         limited = [(measure, chosen.limit(measure)) for measure in MEASURES if node.type in NODE_TYPES[measure.of]]
-        held = [(measure, limit, measure.value_on(node)) for measure, limit in limited if limit is not None]
+        held = [(measure, limit, measure.value_on(node)) for measure, limit in limited if limit is not None or measure in SHOWN_WITHOUT_LIMIT]
         return [NodeMetric(measure.name, measure.label, value, limit) for measure, limit, value in held if value is not None]
 
     def keep_code_measures(self, files: list[Path]) -> None:

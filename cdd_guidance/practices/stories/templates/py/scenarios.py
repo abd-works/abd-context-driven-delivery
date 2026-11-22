@@ -32,12 +32,6 @@
 # First outcome: `then(...)`. Every later outcome on the same interaction: `.and_(...)`.
 # Do not repeat `then()` for the same When. Markdown *And* stays *And*.
 #
-# ## Edge conditions (`edge-conditions-walked`)
-#
-# Every story answers the nine edge conditions of the scenarios Guidance: a scenario such as the validation
-# branches below, one line "does not apply, because ...", or a question for the person. The lines live under
-# `### Edge conditions` in the story's markdown scenarios file, or in a comment above the story when it has none.
-#
 # ## Lifecycle hooks (`infrastructure-in-lifecycle-hooks`)
 #
 # Browser boot, app wiring, and `initialize` live in `before.all` / `after.all` — not in `given()`.
@@ -59,6 +53,16 @@
 # The stories model round-trips that block into spec `realization` data and `# ->` comments here.
 #
 # Pattern: GWT structure only — replace pass with real code under each with.
+#
+# ## The sample below (`edge-and-error-cases-have-scenarios`)
+#
+# A sample story placing an order, written out so you can see a filled-in file: replace each part with your own.
+#   {Story Verb–Noun}                     → the story's name, as the story map names it
+#   the background's given                → the domain state every scenario starts from
+#   "customer places an order ..."        → the main flow: one scenario, its outcome, `and_` for each further outcome
+#   "customer places an order ... empty"  → one scenario for each edge or error case that applies, written like any
+#                                           other scenario; keep no table or list of cases beside them
+# Add as many edge and error scenarios as the story has cases; write none for a case that does not apply.
 
 from __future__ import annotations
 
@@ -67,7 +71,7 @@ from mamba import after, before
 from story_test import and_, background, given, scenario, story, then, when
 
 
-with story("{Story Verb-Noun}"):
+with story("{Story Verb–Noun}"):
     with before.all:
         pass  # infrastructure — boot / wiring (not domain Given)
 
@@ -75,48 +79,31 @@ with story("{Story Verb-Noun}"):
         pass  # infrastructure — teardown
 
     with background.each:
-        with given("{background given step}"):
+        with given("a customer has a cart"):
             pass  # domain state only
 
-        with scenario("{surface check — e.g. rules visible}"):
-            with when("{primary when step}"):
+        with scenario("customer places an order for the books in the cart"):
+            with given("the cart holds one book"):
                 pass  # test code goes here
 
-            with then("{observable surface outcome}"):
+            with when("the customer places the order"):
                 pass  # test code goes here
 
-            with and_("{further outcome on same interaction}"):
+            with then("an order holds the book"):
+                pass  # test code goes here
+
+            with and_("the cart is empty"):
                 pass  # chain with and_, not a second then()
 
-        with scenario("{validation branch while typing}"):
-            with when("{primary when step}"):
+        with scenario("customer places an order for an empty cart"):
+            with given("the cart holds no book"):
                 pass  # test code goes here
 
-            with and_("{follow-on when step}"):
+            with when("the customer places the order"):
                 pass  # test code goes here
 
-            with then("{validation message on domain object}"):
+            with then("the order is refused because the cart is empty"):
                 pass  # test code goes here
 
-        with scenario("{validation clears when input conforms}"):
-            with when("{primary when step}"):
-                pass  # test code goes here
-
-            with and_("{prior invalid state}"):
-                pass  # test code goes here
-
-            with when("{corrective action}"):
-                pass  # test code goes here
-
-            with then("{error cleared on domain object}"):
-                pass  # test code goes here
-
-        with scenario("{main-flow outcome}"):
-            with when("{primary when step}"):
-                pass  # test code goes here
-
-            with when("{submit operation on domain object}"):
-                pass  # test code goes here
-
-            with then("{post-condition on loaded aggregate}"):
+            with and_("no order is created"):
                 pass  # test code goes here

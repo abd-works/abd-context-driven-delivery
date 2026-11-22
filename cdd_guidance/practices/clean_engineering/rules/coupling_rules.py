@@ -20,6 +20,8 @@ class HideInnerDetails(ProductionCodeRule):
     logic belongs instead (``put-logic-on-the-owning-resource``) is judged from the rule's prose."""
 
     slug = "hide-inner-details"
+    # Requires a judge: whether a caller reads how a class stores its data is read from what the member is for; the check matches the access.
+    requires_judge = True
     node_types = ("Operation",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
@@ -33,6 +35,8 @@ class ShapeClassesAroundResources(PracticeGraphRule):
     build keeps on each service the data bags it takes (``data_bags_taken``)."""
 
     slug = "shape-classes-around-resources"
+    # Requires a judge: whether a class is a doer acting on a data bag is read from what the two classes mean; the check matches their shapes.
+    requires_judge = True
     node_types = ("OoadClass",)
 
     def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
@@ -54,6 +58,8 @@ class DoNotInventParallelObjectModels(PracticeGraphRule):
     (``copied_fields``, ``copied_references``)."""
 
     slug = "do-not-invent-parallel-object-models"
+    # Requires a judge: whether a class is a second model of a concept is read from what both classes mean; the check matches their fields.
+    requires_judge = True
     node_types = ("OoadClass",)
 
     def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
@@ -85,6 +91,8 @@ class LayerSeparation(PracticeGraphRule):
     build keeps the class or folder each forwards to (``forwards_to``, ``forwards_to_module``)."""
 
     slug = "layer-separation"
+    # Requires a judge: whether a module only passes calls through is read from what it adds; the check compares signatures.
+    requires_judge = True
     node_types = ("OoadClass", "Module", "Package")
 
     def check_practice(self, context: "RuleCheckContext") -> list[Finding]:

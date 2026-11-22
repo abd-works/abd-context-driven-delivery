@@ -192,6 +192,12 @@ class PythonFunctionBody(MeasuredBody):
         """True when any ``except`` clause of the function drops the failure it caught."""
         return any(clause.swallows() for clause in self._catch_clauses())
 
+    def unreadable_read_as_empty(self) -> str:
+        """The failure to parse or decode that an ``except`` clause of the function answers with an empty value."""
+        tries = [child for child in ast.walk(self._node) if isinstance(child, ast.Try)]
+        found = (CatchClause(handler).unreadable_read_as_empty(tried) for tried in tries for handler in tried.handlers)
+        return next((caught for caught in found if caught), "")
+
     def _catch_clauses(self) -> list["CatchClause"]:
         return [CatchClause(child) for child in ast.walk(self._node) if isinstance(child, ast.ExceptHandler)]
 
@@ -293,6 +299,20 @@ class FunctionCollaborators:
                 return True
         return False
 
+# The failures that say by their name that something read could not be parsed or decoded.
+_UNREADABLE_FAILURES = frozenset({"JSONDecodeError", "UnicodeDecodeError", "UnicodeError", "YAMLError", "TOMLDecodeError", "ParseError", "ExpatError", "SyntaxError", "ParserError", "ScannerError"})
+# The failures that catch a parse failure among much else.
+_WIDE_FAILURES = frozenset({"ValueError", "Exception", "BaseException"})
+# The calls that parse stored text, each as the module and the function it is called by.
+_PARSERS = frozenset({
+    ("json", "load"), ("json", "loads"), ("yaml", "load"), ("yaml", "safe_load"), ("tomllib", "load"), ("tomllib", "loads"),
+    ("toml", "load"), ("toml", "loads"), ("ast", "parse"), ("ast", "literal_eval"), ("ET", "parse"), ("ET", "fromstring"),
+    ("ElementTree", "parse"), ("ElementTree", "fromstring"), ("pickle", "load"), ("pickle", "loads"),
+})
+# The calls that build an empty value.
+_EMPTY_BUILDERS = frozenset({"dict", "list", "tuple", "set", "frozenset", "str"})
+
+
 class CatchClause:
     """One ``except`` clause of a Python function: what it catches, and whether it hands the failure on, by raising it
     again or by keeping it on its own object for a later call or another thread to raise or report, or drops it."""
@@ -309,6 +329,49 @@ class CatchClause:
     def swallows(self) -> bool:
         """An empty handler, or one that catches everything and hands nothing on."""
         return self._ignores() or (self.catches_everything() and not self._hands_on())
+
+    def unreadable_read_as_empty(self, tried: ast.Try) -> str:
+        """The failure to parse or decode this clause catches and answers with an empty value, by name; empty when it
+        catches none, raises, or answers something else. A failure that says so by its name (``JSONDecodeError``) is
+        one wherever it is caught; ``ValueError`` and the catch-all types are one only when the ``try`` they guard
+        parses stored text (``json.loads``), since they also catch a number that does not parse, which reads nothing."""
+        if any(isinstance(inner, ast.Raise) for inner in ast.walk(self._handler)) or not self._answers_empty():
+            return ""
+        caught = self._caught_names()
+        named = next((name for name in caught if name in _UNREADABLE_FAILURES), "")
+        if named:
+            return named
+        wide = next((name for name in caught if name in _WIDE_FAILURES), "")
+        return wide if wide and self._parses(tried) else ""
+
+    def _caught_names(self) -> list[str]:
+        """Each failure type the clause names, by the last part of its name; ``BaseException`` for a bare ``except``."""
+        caught = self._handler.type
+        if caught is None:
+            return ["BaseException"]
+        named = caught.elts if isinstance(caught, ast.Tuple) else [caught]
+        return [part.attr if isinstance(part, ast.Attribute) else part.id for part in named if isinstance(part, (ast.Attribute, ast.Name))]
+
+    def _answers_empty(self) -> bool:
+        """True when the clause returns an empty value, or sets a name to one for the code after it to carry on with."""
+        for inner in ast.walk(self._handler):
+            if isinstance(inner, ast.Return) and (inner.value is None or self._is_empty(inner.value)):
+                return True
+            if isinstance(inner, (ast.Assign, ast.AnnAssign)) and inner.value is not None and self._is_empty(inner.value):
+                return True
+        return False
+
+    def _is_empty(self, value: ast.expr) -> bool:
+        if isinstance(value, ast.Constant):
+            return value.value is None or value.value == "" or value.value == b""
+        if isinstance(value, (ast.Dict, ast.List, ast.Tuple, ast.Set)):
+            return not (value.keys if isinstance(value, ast.Dict) else value.elts)
+        return isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id in _EMPTY_BUILDERS and not value.args and not value.keywords
+
+    def _parses(self, tried: ast.Try) -> bool:
+        """True when the guarded block calls a parser of stored text: ``json.loads``, ``yaml.safe_load``, ``ast.parse``."""
+        calls = (inner.func for block in tried.body for inner in ast.walk(block) if isinstance(inner, ast.Call))
+        return any(isinstance(called, ast.Attribute) and isinstance(called.value, ast.Name) and (called.value.id, called.attr) in _PARSERS for called in calls)
 
     def _hands_on(self) -> bool:
         return any(isinstance(inner, ast.Raise) for inner in ast.walk(self._handler)) or self._keeps_on_object()

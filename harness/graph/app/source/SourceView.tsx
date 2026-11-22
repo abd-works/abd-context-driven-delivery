@@ -5,7 +5,7 @@ import { CallCatalog } from './call-expansion';
 import { LINE_HEIGHT, useCallouts, type CalloutsWithin, type GoToFile, type SourceCallout } from './source-callouts';
 import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
-import type { CorrectionOutcome, CorrectViolation, ViolationCorrection } from './violation-prompt';
+import type { CorrectionAsked, CorrectionOutcome, CorrectViolation } from './violation-prompt';
 import type { ViolationFocus } from '../graph/graph-selection';
 import './source.css';
 
@@ -200,23 +200,19 @@ function ViolationBannerView({ violation, source, onCorrect }: { violation: Viol
   async function correct(send: CorrectViolation) {
     setSending(true);
     setOutcome(null);
-    const correction: ViolationCorrection = {
-      rule: violation.rule,
-      message: violation.message,
-      nodeName: source.name,
-      nodeType: source.type,
-      file: source.file ?? '',
+    const asked: CorrectionAsked = {
+      violation,
+      nodeId: source.node_id,
       startLine: violation.startLine ?? source.start_line,
       endLine: violation.endLine ?? source.end_line,
-      excerpt: source.text ?? '',
     };
-    setOutcome(await send(correction));
+    setOutcome(await send(asked));
     setSending(false);
   }
   return (
-    <div className="violation-banner" data-testid="violation-banner">
+    <div className={violation.isCandidate ? 'violation-banner is-candidate' : 'violation-banner'} data-testid="violation-banner">
       <div className="violation-banner-copy">
-        <p className="violation-rule">{violation.rule}</p>
+        <p className="violation-rule">{violation.isCandidate ? `${violation.rule} · candidate for a judge to read, not an error` : violation.rule}</p>
         <p className="violation-message">{violation.message}</p>
       </div>
       {onCorrect ? (

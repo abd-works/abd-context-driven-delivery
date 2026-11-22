@@ -6,6 +6,9 @@ import type { TicketClient } from './ticket-client'
 
 export const locationOf = (violation: ViolationData): string => (violation.line ? `${violation.location}:${violation.line}` : violation.location)
 
+// Whether a rule that requires a judge listed violation for a reading: a candidate, which nothing has decided is wrong.
+export const isCandidate = (violation: ViolationData): boolean => violation.severity === 'candidate'
+
 // What a violation's Fix and False send, which Python writes beside each violation of a rule, in the same order.
 const promptsOf = (rule: ReportRuleData, violation: ViolationData) => rule.violation_prompts[rule.violations.indexOf(violation)]
 
@@ -16,6 +19,7 @@ export const fixTitleOn = (board: BoardClient): string => (board.sendsFixesDirec
 export const falseTitleOn = (board: BoardClient): string =>
   board.sendsFixesDirectly ? 'Say this violation is false: the chat investigates the rule' : "Say this violation is false: put the request to investigate the rule in the chat's prompt"
 
+export const CANDIDATE_TITLE = 'A rule that requires a judge listed this for a reading. It is not an error until a judge or a person reads it and says so'
 export const ACCEPT_TITLE = 'Accept this violation as it is: no later validation reports it while it stays the same'
 export const TAKE_BACK_TITLE = 'Take this acceptance back: the violation is reported again'
 
@@ -93,6 +97,11 @@ export class ReportClient {
   // Graph hits and judged findings together, as Python counts them, without the ones a person accepted.
   get violationCount(): number {
     return this.report.violation_count
+  }
+
+  // The candidates the rules that require a judge listed for a reading, as Python counts them apart from violations.
+  get candidateCount(): number {
+    return this.report.candidate_count
   }
 
   // The violations a person accepted, under the rule each breaks, which Python leaves out of the rules and the count.

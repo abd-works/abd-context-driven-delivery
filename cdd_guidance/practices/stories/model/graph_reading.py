@@ -53,6 +53,10 @@ CALLS_REACH_UNREAD = "unread"
 _MAP_LESS_TESTS_FOLDER = "tests"
 
 
+# A step body that does nothing: none, a pass, or an ellipsis. A story whose steps all have such bodies is not tested yet.
+_NO_BODY = re.compile(r"^(?:pass|\.\.\.)?$")
+
+
 class StoriesReading(PracticeReading):
     """How Stories takes part in the graph: it reads the story tests under its root, through the TypeScript or
     JavaScript format Stories holds, or the story maps there when there are none, with edited files only what they
@@ -155,6 +159,21 @@ class StoriesReading(PracticeReading):
         if domain is not None:
             TermLinks(self.story_tree, domain).link()
         ModelledAreas(self.story_tree).record()
+        self._record_read_fidelities()
+
+    def _record_read_fidelities(self) -> None:
+        """Record the fidelity each story was read at (``Node.read_at``), by what it holds and never by its format: a
+        story with no scenarios is at the story map, one whose steps have no bodies is at scenarios, and one with a
+        step that has a body is at acceptance tests. Its scenarios and steps answer the story's fidelity; an epic or
+        sub-epic is at the story map, the one fidelity that writes it."""
+        for kind in ("Epic", "SubEpic"):
+            for node in self.in_graph.nodes(kind):
+                node.read_at("story_map")
+        tree = self.story_tree
+        with_a_body = {id(tree.story_of(step)) for step in tree.every_step() if not _NO_BODY.match(str(step.get_fact("body_text") or "").strip())}
+        for story in self.in_graph.nodes("Story"):
+            has_scenarios = bool(self.graph.edges.from_parent("scenarios", story))
+            story.read_at("acceptance_tests" if id(story) in with_a_body else "scenarios" if has_scenarios else "story_map")
 
     def _link_background_givens(self) -> None:
         """Record the ``given`` edge from each background to the Given steps it holds: the step its schema says it is

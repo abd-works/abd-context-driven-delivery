@@ -638,15 +638,14 @@ describe('Open Whiteboard In Claude Desktop', () => {
 // Correct on a broken rule's banner reaches the chat the way a comment does: a comment on the rule's lines, saying what
 // to fix, sent to the chat that opened the page; requested 2026-11-20: Correct must work "the same as comments".
 describe('Correct Broken Rule As A Comment', () => {
+  // The words Python writes beside the file's violation; Python's spec pins them.
+  const COMMENT = "Fix this violation using the Clean Engineering practice guidelines and a test-driven approach.\n…\nRule: limit-operation-parameters\nViolation: Operation 'place' takes 4 parameters (maximum 2)."
+  const ORDER = 'class Order:\n    def place(self, cart, user, store, day):\n        return self'
   const CORRECTION = {
-    rule: 'limit-operation-parameters',
-    message: "Operation 'place' takes 4 parameters (maximum 2).",
-    nodeName: 'order.py',
-    nodeType: 'File',
-    file: 'src/order.py',
+    violation: { rule: 'limit-operation-parameters', message: "Operation 'place' takes 4 parameters (maximum 2).", startLine: 2, endLine: 3, correctionComment: COMMENT },
+    nodeId: '',
     startLine: 2,
     endLine: 3,
-    excerpt: 'class Order:\n    def place(self, cart, user, store, day):\n        return self',
   }
 
   // A session with src/order.py open, which keeps each comment added and answers it sent once sent, as file-comments does.
@@ -655,7 +654,7 @@ describe('Correct Broken Rule As A Comment', () => {
     isChatDown = false
 
     override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
-      if (path.endsWith('/file')) return { path: 'src/order.py', text: CORRECTION.excerpt, language: 'python', comments: this.comments, changes: [], folds: [] } as Result
+      if (path.endsWith('/file')) return { path: 'src/order.py', text: ORDER, language: 'python', comments: this.comments, changes: [], folds: [] } as Result
       if (!path.includes('/file-comments/')) return super.post<Result>(path, body)
       this.posts.push({ path, body })
       if (path.endsWith('/add')) this.comments.push({ anchor: `${body.path}:L${body.start_line}-L${body.end_line}`, range: {}, text: String(body.text), state: 'not_sent' })
@@ -680,15 +679,8 @@ describe('Correct Broken Rule As A Comment', () => {
       expect(commentPosts(server, '/add')).toEqual([expect.objectContaining({ path: 'src/order.py', start_line: 2, end_line: 3 })])
     })
 
-    it('should say in the comment which rule is broken, what is wrong, and to fix it test first', async () => {
-      const text = String(commentPosts((await corrected()).server, '/add')[0]?.text)
-      expect(text).toContain('Rule: limit-operation-parameters')
-      expect(text).toContain("Violation: Operation 'place' takes 4 parameters (maximum 2).")
-      expect(text).toContain('test-driven')
-    })
-
-    it('should leave the lines out of the comment, since a sent comment quotes them', async () => {
-      expect(String(commentPosts((await corrected()).server, '/add')[0]?.text)).not.toContain('def place')
+    it('should comment in the words Python wrote beside the violation', async () => {
+      expect(commentPosts((await corrected()).server, '/add')[0]?.text).toEqual(COMMENT)
     })
 
     it('should send the comment to the chat that opened the page', async () => {

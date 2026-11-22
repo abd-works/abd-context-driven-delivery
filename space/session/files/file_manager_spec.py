@@ -51,6 +51,18 @@ with description("a session's file manager"):
         with it("should be the same file manager each time the session is asked"):
             expect(self.session.session_files.file_manager).to(be(self.session.session_files.file_manager))
 
+        # A practice root can hold a session folder, where each change to session.json leaves its lock file beside it.
+        with context("that lists a session folder under one of its roots"):
+
+            with before.each:
+                folder = self.workpath / ".sessions" / "orders"
+                for name in ("session.json.lock", "session.json.7f3a.tmp", "notes.lock"):
+                    (folder / name).write_text("", encoding="utf-8")
+                self.files = FileManager(self.workpath, (self.workpath,), self.session.record)
+
+            with it("should leave out what a change to session.json leaves beside it, and list a person's own lock file"):
+                expect([entry.name for entry in self.files.list(".sessions/orders").entries]).to(equal(["notes.lock", "session.json"]))
+
     with context("that a tool call on a project loads"):
 
         with before.each:

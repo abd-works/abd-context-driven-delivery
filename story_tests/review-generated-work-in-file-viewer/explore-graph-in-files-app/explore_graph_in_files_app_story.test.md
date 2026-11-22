@@ -91,6 +91,15 @@ section: body
 *When* the Person opens Ticket.delete  
 *Then* Ticket.delete shows an invokes group holding Board.reread
 
+#### Scenario: An operation lists its metrics, each with its value and its limit
+
+Decided by the person on 2026-11-22: under a function, a class or a module the tree shows one group named metrics, beside the relationship groups, holding each fact a limit rule of Clean Engineering reads there, with its plain-English name, its value and its limit. The group shows in a project whose `.context/config.json` has a `code_measures` section. Browser test: `explore-graph-in-files-app.story.ui_e2e_spec.py`; what the group holds for each node type: `cdd_guidance/practices/clean_engineering/measures/metrics_group_spec.py`.
+
+*Given* the Files app shows checkout-flow's graph with Ticket opened, in a project whose config has a `code_measures` section  
+*When* the Person opens Ticket.delete and its metrics group  
+*Then* the metrics group holds the lines of Ticket.delete, 5, with the limit 50  
+  *And* the parameters Ticket.delete takes, 1, with the limit 3
+
 #### Scenario: Selecting a related node opens the related node alone, in its own file
 
 Decided by the person on 2026-11-20 (round 3 of exploratory testing, r3-lens-08): selecting a parent shows the parent in its file, where its children can be opened in place; selecting a child, including a member under a relationship group such as invokes, shows only the child, in the child's own file. The page had opened the node that holds the group instead, so a relationship could not be followed. Browser test: `explore-graph-in-files-app.story.ui_e2e_spec.py`; the page: `harness/files_app/app/files/files-graph.spec.ts`.

@@ -106,7 +106,7 @@ export function rulesOf(file: SessionFileData): SourceRule[] {
 export function violationFocusOf(file: SessionFileData, rule: string): ViolationFocus | null {
   const found: FileViolationData | undefined = file.violations.find(each => each.violation.rule === rule)
   if (!found) return null
-  return { rule: found.violation.rule, message: found.violation.message, startLine: found.range.start_line, endLine: found.range.end_line }
+  return { rule: found.violation.rule, message: found.violation.message, startLine: found.range.start_line, endLine: found.range.end_line, correctionComment: found.correction_comment }
 }
 
 // The language Monaco colours the file as, from the session's answer.

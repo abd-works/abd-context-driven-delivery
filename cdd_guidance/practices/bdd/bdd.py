@@ -21,6 +21,15 @@ class Bdd(PracticeGuidance):
     SHORT_NAME = "BDD"
     COLOUR = "#00B894"
 
+    @property
+    def markdown_values(self) -> dict[str, str]:
+        """Whether each of its graph rules is checked or judged, for the marker the rule's text carries in its document
+        (``{{decided.<rule>}}``): the rule's own ``requires_judge`` says which, so it is typed in no document."""
+        from cdd_guidance.practices.bdd.rules import RULES
+        from harness.graph.practice_rule import decided_values
+
+        return decided_values(RULES)
+
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
         "name": "Behavior-Driven Development",

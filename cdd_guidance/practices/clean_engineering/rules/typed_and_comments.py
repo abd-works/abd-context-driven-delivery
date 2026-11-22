@@ -55,6 +55,8 @@ class UseTypedSignatures(ProductionCodeRule):
 
 class LimitComments(ProductionCodeRule):
     slug = "limit-comments"
+    # Requires a judge: whether a comment says what the signature cannot is read from the comment; the check sees only that prose is there.
+    requires_judge = True
     node_types = ("Operation", "OoadClass")
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:

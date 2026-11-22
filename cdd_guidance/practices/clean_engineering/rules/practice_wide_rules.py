@@ -8,6 +8,7 @@ from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
 
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
+from cdd_guidance.practices.clean_engineering.rules import rule_numbers
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -15,8 +16,6 @@ if TYPE_CHECKING:
     from harness.graph.rule_context import RuleCheckContext
 
 _MAX_SIBLING_IMPORTS = 8
-# The share of a module's methods its seam may hold: the public methods of the classes that leave it.
-_MAX_SEAM_SHARE = 0.35
 # A module of fewer methods than this cannot hide much behind any interface, so it is not measured.
 _MIN_MEASURED_METHODS = 10
 
@@ -102,7 +101,7 @@ class DeepModule(PracticeGraphRule):
         for module in context.nodes("Module"):
             methods = module.get_fact("operations_total") or 0
             seam = module.get_fact("seam_operations") or 0
-            if methods >= _MIN_MEASURED_METHODS and seam > self._allowed_seam(methods):
+            if methods >= _MIN_MEASURED_METHODS and seam > self.allowed_seam(methods):
                 hits.append(Finding(module, self._exposure_message(module, seam, methods)))
         return hits
 
@@ -110,7 +109,7 @@ class DeepModule(PracticeGraphRule):
         public = list(module.get_fact("public_classes") or {})
         return (
             f"Module '{module.name}' exposes {seam} of its {methods} methods to other modules, more than the "
-            f"{self._allowed_seam(methods)} that {round(100 * _MAX_SEAM_SHARE)}% allows; they are the public methods of "
+            f"{self.allowed_seam(methods)} that {round(100 * rule_numbers.MOST_SEAM_SHARE)}% allows; they are the public methods of "
             f"its {len(public)} public classes of {module.get_fact('subtree_class_count') or 0}: "
             f"{', '.join(self._named(public))}. Hide more behind fewer public methods."
         )
@@ -120,9 +119,10 @@ class DeepModule(PracticeGraphRule):
         names = [key.rsplit(":", 1)[-1] for key in public]
         return [name if names.count(name) == 1 else key for name, key in zip(names, public)]
 
-    def _allowed_seam(self, methods: int) -> int:
-        """How many of a module's methods its seam may hold: 35% of them, rounded down, since a count over it fails."""
-        return int(round(_MAX_SEAM_SHARE * methods, 9))
+    def allowed_seam(self, methods: int) -> int:
+        """How many of a module's methods its seam may hold: the share the rule allows (``MOST_SEAM_SHARE``), rounded
+        down, since a count over it fails."""
+        return int(round(rule_numbers.MOST_SEAM_SHARE * methods, 9))
 
 
 class ExtensionsLiveWithTheDomain(ProductionCodeRule):
@@ -133,6 +133,8 @@ class ExtensionsLiveWithTheDomain(ProductionCodeRule):
     `ddd/model`), it is where it belongs. The build keeps what a class extends on it (``extends_domain``)."""
 
     slug = "extensions-live-with-the-domain"
+    # Requires a judge: whether a class extends another package's domain is read from what it is for; the check matches its name and its fields.
+    requires_judge = True
     node_types = ("OoadClass",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:

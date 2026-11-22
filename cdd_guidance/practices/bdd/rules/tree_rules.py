@@ -22,6 +22,7 @@ _WHEN_PREFIX = re.compile(r"^\s*when\b", re.I)
 
 class DescribeSubjectNotInternal(PracticeGraphRule):
     slug = "describe-is-subject-not-internal"
+    requires_judge = True
     node_types = ("Description", "Context")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:

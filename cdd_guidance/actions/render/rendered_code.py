@@ -41,7 +41,7 @@ from pathlib import Path
 from harness.annotations.name import Name
 from cdd_guidance.actions.render.reshaped_code import Reshape, ReshapedCode
 from harness.guidance.declared_outputs import RenderPlacement
-from cdd_guidance.actions.render.render_result import KeptCodeMember, Migration, SavedCode, SignatureDiffers
+from cdd_guidance.actions.render.render_result import KeptMember, Migration, SavedCode, SignatureDiffers
 from harness.guidance.practice_formats import Rendered, Reshaped
 from harness.markdown.format import Format
 
@@ -111,11 +111,11 @@ class RenderedCode:
             return Reshaped(text, [], [])
         return ReshapedCode(self._format, self._reshape).onto(file.read_text(encoding="utf-8"), text)
 
-    def _migration(self, file: Path, kept: str, reshaped: Reshaped) -> KeptCodeMember:
+    def _migration(self, file: Path, kept: str, reshaped: Reshaped) -> KeptMember:
         """One member to migrate: the file, the member kept, and the members added to the same class, else to the file."""
         owner = kept.rpartition(".")[0]
         beside = [added for added in reshaped.added if owner and added.rpartition(".")[0] == owner]
-        return KeptCodeMember(file, kept, beside or ([] if owner else list(reshaped.added)))
+        return KeptMember(file, kept, beside or ([] if owner else list(reshaped.added)))
 
     def _placed(self, content: object) -> dict[Path, str]:
         """Each piece of content with the file it goes to."""

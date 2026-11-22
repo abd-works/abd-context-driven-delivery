@@ -35,6 +35,11 @@ if TYPE_CHECKING:
 
 # The fact a folder's module or package keeps: whether any of its source is production code.
 PRODUCTION_FACT = "holds_production_code"
+# The module card a Module is read from, by its path from the source root: the node sits at its folder, and the card
+# is the file whose text its facts and its rules come from.
+CARD_FACT = "described_in"
+# The fidelities a class is read at, by name: model while none of its operations has a body, code once one has.
+MODEL_FIDELITY, CODE_FIDELITY = "model", "code"
 # The fact a class keeps when a model document describes it: the design, read from the
 # document, standing in for code not written yet.
 DESCRIBED_FACT = "described_by_model_document"
@@ -241,6 +246,9 @@ class ClassNodes:
         for member in [*cls.public_properties, *cls.operations]:
             member.keep_owner()
         node = self._in_graph.add(cls, f"clean_engineering:OoadClass:{relative}:{cls.name}", Location(relative, cls.line, cls.end_line))
+        # The fidelity the class is read at goes by what it holds, in any format: code once an operation has a body,
+        # else model. Its operations, properties and parameters answer the class's.
+        node.read_at(CODE_FIDELITY if any(operation.has_body for operation in cls.operations) else MODEL_FIDELITY)
         self._graph.edges.link("owns", folder, node)
         self._graph.edges.relate("belongsTo", node, folder)
         self._written.extend((node, prop.relationship.kind, prop.relationship.target) for prop in cls.properties if prop.stereotype and prop.relationship)
@@ -461,6 +469,7 @@ class CodeFolders:
         module.set_fact(PRODUCTION_FACT, any(not is_test_code(f"{relative}/{name}".lstrip("/")) for name in sources))
         if module.has_module_context:
             module.type = "Module"
+            module.set_fact(CARD_FACT, f"{relative}/.context/module-context.md".lstrip("/"))
         elif has_code:
             module.type = "Package"
         else:

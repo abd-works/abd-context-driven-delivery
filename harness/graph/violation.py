@@ -75,14 +75,18 @@ class FoundBy:
     """What found a violation: the rule, the practice that checks it, and the node it was found on, when it names
     one."""
 
-    def __init__(self, rule: str, practice: str = "", found_on: FoundOn = NO_NODE) -> None:
+    def __init__(self, rule: str, practice: str = "", found_on: FoundOn = NO_NODE, requires_judge: bool = False) -> None:
         self.rule = rule
         self.practice = practice
         self.found_on = found_on
+        # Whether the rule requires a judge, so what it found is a candidate for a reading, not an error.
+        self.requires_judge = requires_judge
 
 
-# A violation is an error: no rule reports a lesser severity.
+# What a checked rule finds is an error: a program decided it.
 SEVERITY = "error"
+# What a rule that requires a judge finds is a candidate: a place for a judge or a person to read, which may be fine.
+CANDIDATE = "candidate"
 # How many lines before and after a violation's own a reader is shown with it.
 QUOTED_LINES_BEFORE = 2
 QUOTED_LINES_AFTER = 4
@@ -90,7 +94,8 @@ NOWHERE = Location()
 
 
 class Violation:
-    """A rule broken at one place: what found it (the rule, the practice that checks it, and the node it was found on),
+    """A rule broken at one place, or, for a rule that requires a judge, a candidate for a judge to read (``severity``):
+    what found it (the rule, the practice that checks it, and the node it was found on),
     the message, and the file and lines (``location``). A finding that names no node, such as a draw.io scanner's or a judged
     rule's, leaves the node out; one that names no file is at ``unknown``."""
 
@@ -104,7 +109,7 @@ class Violation:
     def from_data(cls, sent: ViolationData) -> Violation:
         """A violation sent as data, the way ``data_of`` writes it for ``graph.return_nodes`` and the saved graph."""
         found_on = FoundOn(str(sent.get("node_id") or ""), str(sent.get("subject") or ""))
-        found_by = FoundBy(str(sent.get("rule") or ""), str(sent.get("practice") or ""), found_on)
+        found_by = FoundBy(str(sent.get("rule") or ""), str(sent.get("practice") or ""), found_on, sent.get("severity") == CANDIDATE)
         location = Location(str(sent.get("location") or ""), sent.get("line"), sent.get("end_line"))
         return cls(found_by, str(sent.get("message") or ""), location)
 
@@ -152,7 +157,13 @@ class Violation:
     @property
     @data_field
     def severity(self) -> str:
-        return SEVERITY
+        """``candidate`` when the rule that found it requires a judge, else ``error``."""
+        return CANDIDATE if self.is_candidate else SEVERITY
+
+    @property
+    def is_candidate(self) -> bool:
+        """Whether a rule that requires a judge listed this for a reading, so nothing has decided it is wrong."""
+        return self._found_by.requires_judge
 
     @property
     @data_field
@@ -260,3 +271,7 @@ class NodeViolation(Violation):
     def subject(self) -> str:
         node = self.found_by.node
         return f"{node.type} `{node.name}`"
+
+    @property
+    def is_candidate(self) -> bool:
+        return self.found_by.requires_judge

@@ -17,7 +17,6 @@ from harness.graph.violation import Finding
 from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     CODE_LINES,
     METHOD_COUNT,
-    PARAMETERS_TAKEN,
     PATHS_THROUGH,
     READABILITY_SCORE,
     TOTAL_COMPLEXITY,
@@ -43,6 +42,7 @@ class CodeMeasureLimit(ProductionCodeRule):
     is passed; a node holding the reason no tool could take it is reported with that reason."""
 
     measure: CodeMeasure
+    code_fidelity_only = True
     # What to do about a node past the limit, said after the numbers.
     advice = ""
 
@@ -85,13 +85,6 @@ class LimitFunctionLines(CodeMeasureLimit):
     advice = "Split it at the steps it takes, each a function named for what it does."
 
 
-class LimitFunctionParameters(CodeMeasureLimit):
-    slug = "limit-function-parameters"
-    node_types = _FUNCTION_NODES
-    measure = PARAMETERS_TAKEN
-    advice = "Keep what the object already knows on the object, or pass one value that holds the ones that travel together."
-
-
 class LimitClassComplexity(CodeMeasureLimit):
     slug = "limit-class-complexity"
     node_types = _CLASS_NODES
@@ -117,7 +110,6 @@ MEASURE_LIMIT_RULES: tuple[CodeMeasureLimit, ...] = (
     LimitPathsThroughAFunction(),
     KeepFunctionsReadable(),
     LimitFunctionLines(),
-    LimitFunctionParameters(),
     LimitClassComplexity(),
     LimitClassMethods(),
     KeepClassMethodsSharingData(),

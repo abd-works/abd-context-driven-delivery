@@ -216,6 +216,29 @@ with description("a session's story map with its markdown, drawing and whiteboar
             with it("should report the drawing and the whiteboard as lacking it"):
                 expect(_kinds(self.alignment.diagnose().gaps)).to(equal([("format_lacks", DRAWING), ("format_lacks", BOARD)]))
 
+        # The person's ruling, 2026-11-22: what the source no longer holds goes to an agent who decides by reading it;
+        # Align does not put a story removed from the markdown back into it with no decision made.
+        with context("that a story was removed from in the markdown alone"):
+            with before.each:
+                self.story_map = self.project / STORY_MAP
+                self.removed = STORY_MAP_TEXT.replace(CHANGE_QUANTITY, "")
+                self.story_map.write_text(self.removed, encoding="utf-8")
+
+            with it("should name no file to align the markdown from"):
+                gaps = [gap for gap in self.alignment.diagnose().gaps if gap.file == STORY_MAP]
+                expect([(gap.kind, gap.is_alignable) for gap in gaps]).to(equal([("format_lacks", False), ("format_lacks", False)]))
+
+            with it("should hand the story the drawing still holds to the agent to decide by reading it"):
+                gap = next(gap for gap in self.alignment.diagnose().gaps if gap.file == STORY_MAP)
+                expect(gap.message).to(contain("Story 'Change Cart Line Quantity'", "Decide each by reading it against what the source now holds"))
+
+            with context("that is aligned"):
+                with before.each:
+                    self.alignment.align()
+
+                with it("should not put the story back into the markdown"):
+                    expect(self.story_map.read_text(encoding="utf-8")).to(equal(self.removed))
+
         with context("that a story was dropped from in the drawing alone, and another in the markdown alone"):
             with before.each:
                 self.drawing.write_text(_without_card(self.drawing.read_text(encoding="utf-8"), "Remove Cart Line"), encoding="utf-8")

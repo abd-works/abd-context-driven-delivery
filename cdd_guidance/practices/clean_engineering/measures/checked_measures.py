@@ -12,7 +12,7 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import CLAS
 from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.measures.measuring_tools import MeasuredNode, MeasuringTool, ToolDoesNotTakeMeasure
 from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES, parent_folder
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import is_under
 from cdd_guidance.practices.source_code import CODE_LANGUAGES, is_test_code
 
 if TYPE_CHECKING:
@@ -22,8 +22,6 @@ if TYPE_CHECKING:
 
 # The language each file extension is written in, as the practice's readers name it.
 _LANGUAGE_OF = {suffix: language.name for language in CODE_LANGUAGES for suffix in language.suffixes}
-# The folder a file at the source root sits in, as a folder node names it.
-_ROOT_FOLDERS = ("", ".")
 
 
 class CheckedCodeMeasures:
@@ -56,21 +54,25 @@ class CheckedCodeMeasures:
                 file = self._files.get(node.source.file or "")
                 if file is not None:
                     self._measure(node, of, {_LANGUAGE_OF[file.suffix]: (file,)})
-        for folder in (node for kind in FOLDER_TYPES for node in in_graph.nodes(kind)):
-            by_language = self._files_in(folder)
+        modules = in_graph.nodes("Module")
+        for module in modules:
+            by_language = self._files_in(module, [other.source.file for other in modules if other is not module])
             if by_language:
-                self._measure(folder, MODULE, by_language)
+                self._measure(module, MODULE, by_language)
 
     def _is_function(self, node: "Node") -> bool:
         """An operation, or a property a getter backs, whose node holds the getter's code."""
         return node.type == "Operation" or bool(node.get_fact("is_property"))
 
-    def _files_in(self, folder: "Node") -> dict[str, tuple[Path, ...]]:
-        """The checked files that sit in the folder itself, by the language each is written in."""
-        held = "" if (folder.source.file or "") in _ROOT_FOLDERS else folder.source.file
+    def _files_in(self, module: "Node", others: list[str]) -> dict[str, tuple[Path, ...]]:
+        """The checked files the module holds, by the language each is written in: those in its folder and in the
+        packages inside it, whose folders own no module card, and not those of a module nested in it, which is
+        measured on its own."""
+        held = module.source.file or ""
+        nested = [other for other in others if other and other != held and is_under(other, held)]
         found: dict[str, tuple[Path, ...]] = {}
         for relative, file in self._files.items():
-            if parent_folder(relative) == held:
+            if is_under(relative, held) and not any(is_under(relative, inner) for inner in nested):
                 language = _LANGUAGE_OF[file.suffix]
                 found[language] = (*found.get(language, ()), file)
         return found

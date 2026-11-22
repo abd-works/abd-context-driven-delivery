@@ -42,20 +42,6 @@ example-of: scenario-template-inline
 *Then* the **Payment Product Agreement** is *rejected*  
   *And* **Customer** *Jane Doe* is notified that the **DDA Account** is *not eligible*  
 
-### Edge conditions
-
-| Edge condition | Scenario, "does not apply, because ...", or question for the person |
-| --- | --- |
-| Missing or empty input | Question for the person: the requirements name the **Owner** as required and do not say what the **Customer** sees when none is given. |
-| Malformed input, or input at or past a limit | Scenario 2 covers a **DDA Account** that is not valid. Question for the person: is an **Owner**'s **Contact Details** checked for its form before the agreement is submitted? |
-| Duplicate | Question for the person: may a **Customer** apply again with a **DDA Account** that already has a **Payment Product Agreement** under review? |
-| Repeated action | Question for the person: the same question as Duplicate, for a **Customer** who submits the same application twice. |
-| Two actors at once | Does not apply, because only the **Customer** who holds the **DDA Account** can apply with it (*Payment Product Requirements*, §"Application flow", p. 12). |
-| Interrupted action | Question for the person: when the application stops before the **Owner** is notified, is the agreement still submitted for review? |
-| Dependency absent, unavailable, slow, or wrong | Question for the person: what does the **Customer** see when the **DDA Account** cannot be checked? |
-| Changed or gone since last seen | Scenario 2 covers a **DDA Account** whose status is *Invalid* when the application arrives, whatever it was when the **Customer** last saw it. |
-| Actor not allowed | Does not apply, because the story opens with a signed-in **Customer** and the requirements give no other actor this action (§"Application flow", p. 12). |
-
 ### Evidence
 
 | Scenario | Source (document / system) | Location |

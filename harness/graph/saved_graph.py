@@ -291,7 +291,7 @@ class SavedGraph:
     @classmethod
     def from_text(cls, text: str, source: str = "") -> SavedGraph:
         """The graph a checked graph's text holds: a saved graph document, or the node list ``graph.return_nodes``
-        answers with, whose violating rules' violations it keeps, each under the practice of its node (a node list keeps
+        answers with, whose rules' violations and candidates it keeps, each under the practice of its node (a node list keeps
         no pattern overlays, so only each practice's own scanners count); empty text holds no practices.
         ``SavedGraphOutdated`` for a saved graph in another shape."""
         document = json.loads(text) if text.strip() else {"version": SAVED_SHAPE_VERSION}
@@ -300,7 +300,7 @@ class SavedGraph:
                 Violation.from_data({"practice": node.get("practice", ""), **hit})
                 for node in document
                 for rule in node.get("rules") or []
-                if rule.get("status") == "violating"
+                if rule.get("status") in ("violating", "candidate")
                 for hit in rule.get("violations") or []
             ])
         if not isinstance(document, dict):

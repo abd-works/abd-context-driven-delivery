@@ -100,6 +100,10 @@ with description("a file an alignment rendered") as self:
             aligned = AlignedFile("src/ordering/ordering.py", "python", STORY_MAP, ["Cart.total"])
             expect(aligned.follow_up).to(contain("Migrate in src/ordering/ordering.py: Cart.total", "then delete it"))
 
+        with it("should hand the member to the agent to decide by reading, whoever added or removed it"):
+            aligned = AlignedFile("src/ordering/ordering.py", "python", STORY_MAP, ["Cart.total"])
+            expect(aligned.follow_up).to(contain("Decide each by reading it against what the source now holds", "who added or removed it plays no part"))
+
     with context("that is a drawing"):
         with it("should leave nothing to do"):
             expect(AlignedFile(DRAWING, "drawio", STORY_MAP).follow_up).to(equal(""))

@@ -9,7 +9,7 @@ supplements:
 
 ## Overview
 
-Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for. The graph checks `unit-tier-fakes-every-boundary` on BDD specs and on Stories acceptance tests (its overlay records each test file's tier and the real resources a unit test imports); validate judges the rest. The tiers each module uses are recorded in the session's `session.json` as generate and render write its tests (Set up the tiers of a module, below).
+Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for. The graph checks `unit-tier-fakes-every-boundary` on BDD specs and on Stories acceptance tests, and `declared-exception-raised-by-a-test` on the classes of the code, and it lists candidates for `stubbed-boundary-has-heavy-coverage` on BDD specs and for `operation-has-a-proving-test` on the code's operations. Its overlay records what those rules read: each test file's tier, the real resources a unit test imports and the boundaries it stubs, whether a heavy or e2e spec has one of a unit spec's examples, and whether a test reaches each public operation and names each declared exception. Validate judges the rest. The tiers each module uses are recorded in the session's `session.json` as generate and render write its tests (Set up the tiers of a module, below).
 
 ## Guidance
 
@@ -24,7 +24,7 @@ The order of work depends on whether the story crosses an architectural boundary
 3. **Capture it in an e2e or heavy test.** Write the test that runs the same path end to end, and see it pass against the real stack, so the success cannot be hallucinated later. An e2e test records the same step screenshots; compare each with the accepted walk. Where they differ, fix the test or the code; when it is unclear which is right, walk that step again. When they all match, this run is the first baseline.
 4. **Then write the stubbed and mocked unit tests,** only where a stub or mock was actually used, each checked against the real seam you just ran. An AI tends to stub critical functionality, or to put the stub at the wrong seam and fake what should be real.
 
-The real run includes the error conditions, not only the main path. Walk the edge conditions of `edge-conditions-walked` (Stories scenarios) against the new boundary and run each one that applies for real: input that is missing, malformed or past a limit; the same action twice; a second actor at the same moment; the action stopped partway; a dependency absent, slow or wrong; the thing changed or gone since it was last seen; an actor not allowed. The heavy or e2e test that captures the run holds those cases, because a stubbed test written afterwards can only fake the failures somebody has seen happen.
+The real run includes the error conditions, not only the main path. Run for real each edge and error case that applies to the new boundary, the ones `edge-and-error-cases-have-scenarios` (Stories scenarios) asks a story's scenarios to cover: input that is missing, malformed or past a limit; the same action twice; a second actor at the same moment; the action stopped partway; a dependency absent, slow or wrong; the thing changed or gone since it was last seen; an actor not allowed. The heavy or e2e test that captures the run holds those cases, because a stubbed test written afterwards can only fake the failures somebody has seen happen.
 
 **Flow B — another story or feature on a known area.** The seams are proven, so the order reverses:
 
@@ -127,7 +127,7 @@ alwaysApply: true
 
 Whenever you are about to write production code or a test for it. Follow these rules.
 
-- **`flow-chosen-before-code`** — Before writing production code or a test, say which flow each boundary the change touches is in, and work in that flow's order. **Flow A** is a boundary crossed for the first time, such as a new module seam, a new external system, a new process, or a new tier; a feature built for the first time; or a change the person has already corrected and you are making again: run it for real end to end, the error conditions of `edge-conditions-walked` that apply as well as the main path, have the person verify it, capture it in a heavy or e2e test that holds those cases, and only then write the stubbed unit tests. On a screen, the person verifies it by the walk report's screen for each step, and the e2e test is compared with that walk. **Flow B** is a known area, where a heavy or e2e test already runs every boundary the change touches: write the unit test, see it fail for the right reason, then write the code. Tests written after the code, which pass on their first run, prove nothing they were not shaped to pass, and stubs written before a real run fake the very boundary nobody has seen work.
+- **`flow-chosen-before-code`** — Before writing production code or a test, say which flow each boundary the change touches is in, and work in that flow's order. **Flow A** is a boundary crossed for the first time, such as a new module seam, a new external system, a new process, or a new tier; a feature built for the first time; or a change the person has already corrected and you are making again: run it for real end to end, the error conditions of `edge-and-error-cases-have-scenarios` that apply as well as the main path, have the person verify it, capture it in a heavy or e2e test that holds those cases, and only then write the stubbed unit tests. On a screen, the person verifies it by the walk report's screen for each step, and the e2e test is compared with that walk. **Flow B** is a known area, where a heavy or e2e test already runs every boundary the change touches: write the unit test, see it fail for the right reason, then write the code. Tests written after the code, which pass on their first run, prove nothing they were not shaped to pass, and stubs written before a real run fake the very boundary nobody has seen work.
 
 ## stories-acceptance-tests, bdd-development
 
@@ -144,7 +144,7 @@ Whenever you create, alter, or delete acceptance tests or BDD specs. Follow thes
 
 **Tiers**
 - **`suffix-names-the-tier`** — `*_spec` is unit, `*_heavy_spec` is heavy, and `*_e2e_spec` / `*_agent_spec` / `*.story.ui.spec.ts` is e2e; a story test's tier file follows the same suffixes. A suffix that names the wrong tier puts a slow test in the run that must stay fast.
-- **`unit-tier-fakes-every-boundary`** — A unit spec reaches no real resource: a fake sits at every architecture boundary.
+- **`unit-tier-fakes-every-boundary`** — A unit spec reaches no real resource: a fake sits at every architecture boundary. {{decided.unit_tier_fakes_every_boundary}}
 - **`heavy-tier-holds-a-real-resource`** — A heavy spec uses a real resource (git, a server, a daemon, an installer, a worker, a big load); without one it belongs in the unit tier.
 - **`e2e-tier-drives-browser-or-agent`** — An e2e spec drives a real browser or a real agent, and no other tier does.
 - **`slow-example-moves-not-the-file`** — An example over budget moves out alone, never the whole file: its stub stays in the unit spec and its real run goes to the heavy spec beside it, under the same described subject.
@@ -164,7 +164,7 @@ Whenever you create, alter, or delete acceptance tests or BDD specs. Follow thes
 - **`budget-never-raised`** — The 100 ms, 2 s, and 25 s budgets are never raised to make a slow test pass; the test gets fast or moves tier.
 
 **Stubs and heavy coverage**
-- **`stubbed-boundary-has-heavy-coverage`** — Every boundary a unit spec stubs is run for real by a heavy or e2e example with the same `should` sentence under the same subject. A stub with none is unchecked and drifts from the real thing.
+- **`stubbed-boundary-has-heavy-coverage`** — Every boundary a unit spec stubs is run for real by a heavy or e2e example with the same `should` sentence under the same subject. A stub with none is unchecked and drifts from the real thing. The graph lists a unit spec that puts a stand-in somewhere (a mock, a patch, a spy, or a class named as a fake, a stub or a mock) while no heavy or e2e spec has any of its `should` sentences under its subject. Read each: the graph cannot tell whether the stand-in sits at an architecture boundary, and a heavy example worded another way covers it unseen. {{decided.stubbed_boundary_has_heavy_coverage}}
 - **`heavy-example-has-a-stubbed-twin`** — Every heavy example has a stubbed twin in the unit spec beside it, so a break is caught after every pass and not only on the heavy cadence.
 
 **Cadence**
@@ -181,9 +181,10 @@ Follow the flow. Crossing a boundary for the first time (Flow A), write the code
 
 ### Rules
 
-- **`operation-has-a-proving-test`** — Every public operation is invoked by at least one observation or step.
+- **`operation-has-a-proving-test`** — Every public operation is invoked by at least one observation or step. The graph lists each public operation with a body that no test it read reaches: no observation or step invokes it, no test code calls it, and no operation a test reaches goes on to invoke it. A listed operation may still be tested through a call the graph cannot follow, such as a tool called by its name or a call from another language, so read each before adding a test. {{decided.operation_has_a_proving_test}}
 - **`class-demonstrated-by-a-test`** — Every public class is demonstrated through an example or observation.
 - **`invariant-has-a-failing-case`** — Every invariant has a test that tries to break it and sees the named failure.
+- **`declared-exception-raised-by-a-test`** — Every exception class the code declares is named by a test, the one that breaks its invariant and expects it. An exception no test names is a failure nobody has seen happen, so its message and what it carries are unchecked. {{decided.declared_exception_raised_by_a_test}}
 - **`every-branch-taken-by-a-test`** — Every branch in a public operation's body is taken by some test.
 
 ## stories-acceptance-tests

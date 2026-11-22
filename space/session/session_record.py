@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import fnmatch
+import os
 from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Generic, Iterator, TypeVar
@@ -28,8 +30,9 @@ TEST_TIERS = ("unit", "server", "web")
 
 # What a change to session.json leaves beside it, which no save commits: the lock file a change holds it by, and the
 # text a writer staged and was killed before it swapped it in.
-SessionSaves.leave_out(f"**/{SESSION_FILE}.lock")
-SessionSaves.leave_out(f"**/{SESSION_FILE}.*.tmp")
+_LEFT_BESIDE = (f"{SESSION_FILE}.lock", f"{SESSION_FILE}.*.tmp")
+for _pattern in _LEFT_BESIDE:
+    SessionSaves.leave_out(f"**/{_pattern}")
 
 Value = TypeVar("Value")
 
@@ -360,6 +363,17 @@ class SessionRecord:
         a killed holder blocks nobody; a holder that keeps it past the wait refuses the waiting change (*JsonFileBusy*)."""
         with self._file.held():
             yield
+
+    def is_its_file(self, path: Path) -> bool:
+        """Whether path is this record's session.json, however it is spelt: compared once both are resolved, and
+        without regard to case where the file system has none, so no spelling of the path reaches the file past the
+        held change."""
+        return os.path.normcase(str(Path(path).resolve())) == os.path.normcase(str(self._file.path.resolve()))
+
+    def is_left_beside(self, path: Path) -> bool:
+        """Whether path is a file a change to a session.json leaves beside it: the lock file a change holds it by, or
+        the text a writer staged and was killed before it swapped it in. Neither is a file of the session's work."""
+        return any(fnmatch.fnmatchcase(Path(path).name, pattern) for pattern in _LEFT_BESIDE)
 
     @property
     def _file(self) -> JsonFile:

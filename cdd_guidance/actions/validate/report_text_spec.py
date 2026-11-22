@@ -80,3 +80,27 @@ with description("a validation report"):
             session.work_folder = self.session_dir
             report_md = ReportText([], _CheckedGraph(session, [], self.violations)).for_saving()
             expect(report_md).to(contain("**Accepted violations left out:** 1. A person accepted them as they are, in `.context/violations-accepted.json`"))
+
+        with context("with a candidate a rule that requires a judge listed beside a violation"):
+            with before.each:
+                session = Sessions(self.root).named("main")
+                session.workpath = self.root
+                session.work_folder = self.session_dir
+                candidate = Violation(
+                    FoundBy("when-names-intent-not-interface-gesture", found_on=FoundOn(subject="When `presses the mark`"), requires_judge=True),
+                    "names a gesture.",
+                    Location("src/customer/account/account.ts", 12),
+                )
+                self.report = ReportText([], _CheckedGraph(session, [*self.violations, candidate])).for_saving()
+
+            with it("should count the violation alone as a graph violation"):
+                expect(self.report).to(contain("**Total graph violations:** 1\n"))
+
+            with it("should count the candidate apart, as one for the judge to read"):
+                expect(self.report).to(contain("**Candidates for the judge to read:** 1. A rule that requires a judge listed each; none is a violation until the judge reads it and fails it."))
+
+            with it("should list the candidate as a candidate, not as an error"):
+                expect(self.report).to(contain("- [?] **CANDIDATE** **[graph rule]** - "))
+
+            with it("should head the candidate's rule with its candidates, not with graph violations"):
+                expect(self.report).to(contain("**Candidates for the judge to read:** 1\n"))

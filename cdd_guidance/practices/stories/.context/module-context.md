@@ -11,7 +11,7 @@ A number a Stories rule holds is written once, on the story map model (`model/st
 
 ## Constraint
 
-Run lifecycle steps through the actions with this practice as guidance — `generate.generate(guidance=["stories-story-map"])` — not as methods on *Stories*. Write only stories the source describes or the user asks for. At the scenarios fidelity every story also answers nine edge conditions (`edge-conditions-walked`, the table in the scenarios Guidance of `stories.md`): each gets a scenario, a line saying why it does not apply, or a question for the person. That rule is judged, with no graph check, because whether a scenario is a refusal is read from its meaning. Convert between formats with `render`, never by rewriting a format by hand, so every format keeps the same hierarchy.
+Run lifecycle steps through the actions with this practice as guidance — `generate.generate(guidance=["stories-story-map"])` — not as methods on *Stories*. Write only stories the source describes or the user asks for. A story's scenarios cover its edge and error cases, and a sub-epic holds a story for each case big enough to be one (`edge-and-error-cases-have-scenarios`); the nine conditions in the scenarios Guidance of `stories.md` prompt which to write, and nothing about them is kept beside the scenarios. That rule is judged, with no graph check, because whether a scenario is a refusal is read from its meaning. Convert between formats with `render`, never by rewriting a format by hand, so every format keeps the same hierarchy.
 
 ## Packages
 

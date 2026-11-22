@@ -256,3 +256,30 @@ Observed (`reshaped_story_file_spec.py`). Before, a render onto a project's own 
 *Given* a project's `story-test.ts` holds helpers the seeded step library does not
 *When* Claude Code renders scenarios to typescript in that project
 *Then* `story-test.ts` is as it was
+
+#### Scenario Outline: Hand what the source no longer holds to the agent to decide
+
+Observed (`render_result_spec.py`, `kept_document_spec.py`, `render_spec.py`; Align in `format_alignment_heavy_spec.py`). The person's ruling of 2026-11-22: no rule tells what a render drew from what a person added, in any format; what the source no longer holds goes to an AI pass that decides by reading both. Their example: an operation removed from a class in the class model's markdown, rendered onto code that already implements it, may have been merged into another operation or may be no longer needed, and only an agent reading both can tell.
+
+*Given* <file> holds <leftover>, which <source> no longer holds
+*When* Claude Code renders <source> onto <file>
+*Then* <file> still holds <leftover> where it was
+  *And* the result lists <leftover> as migrate, with <file> and what the render added that may have replaced it
+  *And* the result tells the agent to decide each entry by reading it against what <source> now holds: moved somewhere, so move it there and take the leftover out; merged into something else, so fold it in and take the leftover out; no longer needed, so remove it; or still wanted with the source behind, so put it back in the source
+  *But* who added or removed <leftover> plays no part, the agent asks the person where reading does not tell, and <leftover> stays where it is until it is decided
+
+| source | file | leftover |
+| --- | --- | --- |
+| the class model's markdown, without `Cart.total` | `ordering.py` | `Cart.total` and the code that implements it |
+| ++.context/story-map.md++ | ++.context/story-map.drawio++ | a note on the drawing |
+| ++.context/story-map.md++ | ++.context/story-map.whiteboard++ | a note on the board |
+| the domain model drawn as a drawing | its markdown | a section the drawing does not hold |
+
+#### Scenario: Leave a story the drawing still holds out of the markdown it was removed from, for the agent to decide
+
+Observed (`format_alignment_heavy_spec.py`). Before, Align rendered the markdown from the drawing and the removed story was back in the markdown with no decision made.
+
+*Given* Change Cart Line Quantity was removed from ++.context/story-map.md++ alone, and ++.context/story-map.drawio++ still draws it
+*When* the person aligns the session's formats
+*Then* ++.context/story-map.md++ is as it was
+  *And* the diagnosis names the story the drawing still holds and tells the agent to decide it by reading it against the story map

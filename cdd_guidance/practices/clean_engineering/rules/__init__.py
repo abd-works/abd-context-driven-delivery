@@ -1,6 +1,7 @@
 """Clean Engineering graph rules — schema slugs with executable checks."""
 
 from cdd_guidance.practices.clean_engineering.rules.class_rules import KeepClassesSingleResponsibility
+from cdd_guidance.practices.clean_engineering.rules.depend_toward_stability import DependTowardStability
 from cdd_guidance.practices.clean_engineering.rules.coupling_rules import (
     DoNotInventParallelObjectModels,
     HideInnerDetails,
@@ -21,6 +22,7 @@ from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import (
 )
 from cdd_guidance.practices.clean_engineering.rules.module_naming_rules import DomainNounsOnly, NoModulePerClass
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
+from cdd_guidance.practices.clean_engineering.rules.refuse_unreadable_input import RefuseUnreadableInput
 from cdd_guidance.practices.clean_engineering.rules.write_interactions import WriteInteractions
 from cdd_guidance.practices.clean_engineering.rules.practice_wide_rules import (
     DeepModule,
@@ -54,6 +56,8 @@ RULES: tuple = (
     NoModulePerClass(),
     WriteInteractions(),
     NoPrototypeSwapping(),
+    RefuseUnreadableInput(),
+    DependTowardStability(),
 ) + CODE_RULES + MEASURE_LIMIT_RULES
 
 BY_SLUG = {rule.slug: rule for rule in RULES}

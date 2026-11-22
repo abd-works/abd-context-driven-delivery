@@ -61,6 +61,9 @@ _NARRATIVE_COMMENT = re.compile(
 )
 _THROW = re.compile(r"\bthrow\b")
 # The catch ends by handing back a stand-in value, so the caller never learns the call failed.
+# A catch that answers an empty value, and the call that parses stored text in a brace language.
+_EMPTY_RETURN = re.compile(r"\breturn\s*(?:null|undefined|\[\s*\]|\{\s*\}|''|\"\"|new (?:Map|Set)\(\))?\s*;?\s*$")
+_PARSE_CALL = re.compile(r"\bJSON\.parse\s*\(")
 _FALLBACK_RETURN = re.compile(r"\breturn\s*(?:null|undefined|false|true|\[\s*\]|\{\s*\}|''|\"\"|-?\d+)?\s*;?\s*$")
 OWN_RECEIVERS = frozenset({"this", "self", "super"})
 # The names an operation reads its own class by: `cls` in a Python classmethod.
@@ -153,6 +156,11 @@ class MeasuredBody(Protocol):
         """True when a catch drops what it caught: an empty one, or one that hands back a fallback value instead."""
         ...
 
+    def unreadable_read_as_empty(self) -> str:
+        """The failure to parse or decode that a catch answers with an empty value, by name; empty when no catch does.
+        Such a read hands its caller an empty value for something it could not read."""
+        ...
+
 
 class SourceText(MeasuredBody):
     """A span of source in any language, an operation body or a class, and what the rules measure in its code.
@@ -208,6 +216,22 @@ class SourceText(MeasuredBody):
             if not stripped or stripped in _IGNORED_CATCH_BODIES or self._returns_fallback(stripped):
                 return True
         return any(_PASS_LINE.match(self._text[match.end() :]) for match in _PY_EXCEPT.finditer(self._text))
+
+    def unreadable_read_as_empty(self) -> str:
+        """In a brace language: a ``try`` that parses (``JSON.parse``) whose ``catch`` returns an empty value and
+        throws nothing. The failure is named for what was being parsed, since a brace-language catch names no type."""
+        for match in _CATCH.finditer(self._text):
+            catch_body = self._brackets.braced(match.end() - 1)
+            if catch_body is None or _THROW.search(catch_body) or not _EMPTY_RETURN.search(catch_body.strip()):
+                continue
+            if _PARSE_CALL.search(self._tried_before(match.start())):
+                return "a JSON.parse failure"
+        return ""
+
+    def _tried_before(self, catch_start: int) -> str:
+        """The text of the ``try`` block that ends where the catch at catch_start begins."""
+        opened = self._text.rfind("try", 0, catch_start)
+        return self._text[opened:catch_start] if opened >= 0 else ""
 
     def _returns_fallback(self, catch_body: str) -> bool:
         return _THROW.search(catch_body) is None and _FALLBACK_RETURN.search(catch_body) is not None

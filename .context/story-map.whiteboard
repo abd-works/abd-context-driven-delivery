@@ -59,6 +59,7 @@
   "story.user.0ade6d3b26",
   "story.user.9809e8a4e8",
   "story.user.fa8c5d3a9c",
+  "story.user.46ab250470",
   "story.user.0961b6449c",
   "story.user.ba276fc733",
   "subepic.0.ed09294285",
@@ -115,6 +116,7 @@
   "story.user.5b61359bcb",
   "story.user.295980e339",
   "story.user.b1697a363c",
+  "story.system.2ff16263b9",
   "subepic.0.a8f4198925",
   "story.user.25b79c8528",
   "story.user.f3af68dffa",
@@ -165,6 +167,7 @@
   "story.user.fb9b1703c2",
   "story.user.bc36338a4e",
   "story.user.bc7d183677",
+  "story.user.d34228ea64",
   "story.user.e945b01518",
   "story.user.483eebec4b",
   "story.user.42c9b524f6",
@@ -557,6 +560,7 @@
   "story.user.069bac25f8",
   "subepic.1.874e229005",
   "story.system.cbc1da6c7c",
+  "story.system.dd52a17ef2",
   "story.system.64fe56dfdd",
   "story.system.2f4f66021b",
   "story.system.ef9a414707",
@@ -1281,6 +1285,17 @@
    "w": 152.0,
    "h": 152.0
   },
+  "story.user.46ab250470": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Agent*\nRecord Test Tiers Of Module",
+   "kind": "rounded",
+   "size": "small",
+   "x": 8138,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
   "story.user.0961b6449c": {
    "type": "shape",
    "color": "yellow",
@@ -1896,6 +1911,17 @@
    "w": 152.0,
    "h": 152.0
   },
+  "story.system.2ff16263b9": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Session*\nKeep Every Change To Session Record",
+   "kind": "rounded",
+   "size": "small",
+   "x": 16596,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
   "subepic.0.a8f4198925": {
    "type": "shape",
    "color": "green",
@@ -2188,10 +2214,10 @@
    "text": "*Board App*\nDisplay Work Type Flows On Board",
    "kind": "rounded",
    "size": "small",
-   "x": 20116,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 20116.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.860eb2797d": {
    "type": "shape",
@@ -2445,6 +2471,17 @@
    "y": 339.0,
    "w": 152.0,
    "h": 152.0
+  },
+  "story.user.d34228ea64": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nAccept Report Violation",
+   "kind": "rounded",
+   "size": "small",
+   "x": 23988,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
   "story.user.e945b01518": {
    "type": "shape",
@@ -3243,10 +3280,10 @@
    "text": "*Person*\nApply Chosen Overlays To Fidelity Action",
    "kind": "rounded",
    "size": "small",
-   "x": 34558,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 34558.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "subepic.1.20c8f70760": {
    "type": "shape",
@@ -4364,10 +4401,10 @@
    "text": "*Person*\nSend Failure To Be Fixed",
    "kind": "rounded",
    "size": "small",
-   "x": 49714,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 49714.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "subepic.0.6df390b88d": {
    "type": "shape",
@@ -4463,10 +4500,10 @@
    "text": "*Files App*\nFilter Callouts Like The Graph",
    "kind": "rounded",
    "size": "small",
-   "x": 51122,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 51122.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "subepic.0.73fd39b03d": {
    "type": "shape",
@@ -4639,10 +4676,10 @@
    "text": "Align Formats In Files App",
    "kind": "rounded",
    "size": "body",
-   "x": 53574,
-   "y": 195,
-   "w": 168,
-   "h": 60
+   "x": 53574.0,
+   "y": 195.0,
+   "w": 168.0,
+   "h": 60.0
   },
   "story.user.611941f6e7": {
    "type": "shape",
@@ -4650,10 +4687,10 @@
    "text": "*Person*\nDiagnose And Align Session Formats",
    "kind": "rounded",
    "size": "small",
-   "x": 53586,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 53586.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "epic.ae0fb74ed4": {
    "type": "shape",
@@ -4749,10 +4786,10 @@
    "text": "*Story Designer*\nAdd, Rename, Reorder And Remove Increments",
    "kind": "rounded",
    "size": "small",
-   "x": 54652,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 54652.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.317c722861": {
    "type": "shape",
@@ -4760,10 +4797,10 @@
    "text": "*Story Designer*\nAssign Stories To Increments",
    "kind": "rounded",
    "size": "small",
-   "x": 54828,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 54828.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "subepic.0.caa57dedfa": {
    "type": "shape",
@@ -4782,10 +4819,10 @@
    "text": "*Story Designer*\nAdd Scenario To Story",
    "kind": "rounded",
    "size": "small",
-   "x": 55004,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 55004.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.48b654f573": {
    "type": "shape",
@@ -4793,10 +4830,10 @@
    "text": "*Story Designer*\nRename Scenario Inline",
    "kind": "rounded",
    "size": "small",
-   "x": 55180,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 55180.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.31c035dd35": {
    "type": "shape",
@@ -4804,10 +4841,10 @@
    "text": "*Story Designer*\nRemove Scenario From Story",
    "kind": "rounded",
    "size": "small",
-   "x": 55356,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 55356.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.acda6e2f1b": {
    "type": "shape",
@@ -4815,10 +4852,10 @@
    "text": "*Story Designer*\nReorder Scenarios By Dragging",
    "kind": "rounded",
    "size": "small",
-   "x": 55532,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 55532.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.7df9df4737": {
    "type": "shape",
@@ -4826,10 +4863,10 @@
    "text": "*Story Designer*\nAdd Step To Scenario",
    "kind": "rounded",
    "size": "small",
-   "x": 55708,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 55708.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.8088b20db4": {
    "type": "shape",
@@ -4837,10 +4874,10 @@
    "text": "*Story Designer*\nEdit Step Keyword And Text",
    "kind": "rounded",
    "size": "small",
-   "x": 55884,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 55884.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.9c65bbd558": {
    "type": "shape",
@@ -4848,10 +4885,10 @@
    "text": "*Story Designer*\nRemove Step From Scenario",
    "kind": "rounded",
    "size": "small",
-   "x": 56060,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 56060.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.3b05ef9669": {
    "type": "shape",
@@ -4859,10 +4896,10 @@
    "text": "*Story Designer*\nReorder Steps By Dragging",
    "kind": "rounded",
    "size": "small",
-   "x": 56236,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 56236.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "subepic.0.57a98af1ae": {
    "type": "shape",
@@ -5958,10 +5995,10 @@
    "text": "*Person*\nTest A Scenario's Thens On The Canvas",
    "kind": "rounded",
    "size": "small",
-   "x": 70160,
-   "y": 339,
-   "w": 152,
-   "h": 152
+   "x": 70160.0,
+   "y": 339.0,
+   "w": 152.0,
+   "h": 152.0
   },
   "story.user.0971e1ff78": {
    "type": "shape",
@@ -6753,6 +6790,17 @@
    "y": 339.0,
    "w": 152.0,
    "h": 152.0
+  },
+  "story.system.dd52a17ef2": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Knowledge Graph*\nRecord Module Measures As Node Facts",
+   "kind": "rounded",
+   "size": "small",
+   "x": 81610,
+   "y": 339,
+   "w": 152,
+   "h": 152
   },
   "story.system.64fe56dfdd": {
    "type": "shape",

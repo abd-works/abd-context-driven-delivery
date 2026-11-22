@@ -75,6 +75,29 @@ A chat working in a repository other than the CDD checkout opens the Files app o
 *When* the Person opens the session's folder from *checkout-chat*'s chat bar
 *Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens on *.sessions/checkout-flow*, listing *session.log* and the handoff
 
+#### Scenario: Leave out what a change to session.json leaves beside it
+
+Requested 2026-11-22. Observed (`space/session/files/session_files_spec.py`). The list is built by `SessionFiles.in_folder`, which asks the session's record which files a change leaves beside it (`SessionRecord.is_left_beside`).
+
+*Given* a change to checkout-flow's *session.json* left its lock file *session.json.lock* in *.sessions/checkout-flow*
+*And* a killed writer left its staged text *session.json.4242.1.tmp* there
+*When* the Person opens the session's folder from *checkout-chat*'s chat bar
+*Then* the Files app lists *session.json* and *session.log*
+*But* neither *session.json.lock* nor *session.json.4242.1.tmp* is listed
+*And* a person's own file *notes.lock* in the folder is listed
+
+#### Scenario: Leave out what a change to session.json leaves beside it from the folder tree
+
+Requested 2026-11-22. Observed (`space/session/files/file_manager_spec.py`). The folder tree is listed by `file-manager.list`, which asks the same `SessionRecord.is_left_beside`, so the folder's file list and its tree leave out the same files.
+
+*Given* checkout-flow's practice root holds its session folder *.sessions/checkout-flow*
+*And* a change to *session.json* left its lock file *session.json.lock* there
+*And* a killed writer left its staged text *session.json.4242.1.tmp* there
+*When* the Person opens *.sessions/checkout-flow* in the Files app's folder tree
+*Then* the tree lists *session.json*
+*But* neither *session.json.lock* nor *session.json.4242.1.tmp* is listed
+*And* a person's own file *notes.lock* in the folder is listed
+
 ## Story: Open File From Another Page
 
 #### Scenario: Open the file a page sent the chat
@@ -689,6 +712,18 @@ Requested 2026-11-16: a chat in checkout-flow's worktree ran the debug skill, wh
 *When* an agent saves *debug/debug-20261116T225500.md* in checkout-flow's folder with session.write_file, naming the session *checkout-flow*
 *Then* the report is on disk in *.sessions/checkout-flow/debug*
 *But* a file named outside the session's folder and its roots is still refused
+
+#### Scenario: Refuse to save over the session's own session.json
+
+Requested 2026-11-22 (the person: the session's record has one writer). Observed (`space/session/files/session_files_spec.py`). Every change to *session.json* holds the file from its read to its write (Keep Every Change To Session Record), and a whole-file save would drop a change another chat made.
+
+*Given* checkout-flow's session folder *.sessions/checkout-flow* holds its *session.json*
+*When* an agent saves *.sessions/checkout-flow/session.json* with session.write_file
+*Then* the save is refused, naming *session.json* as the session's record and saying to change it with the session's tools
+*And* *session.json* is as it was
+*And* the same save is refused when the path is absolute, opens with *./*, goes through a folder and back (*debug/../session.json*), is written with backslashes, or is in another case where the file system reads that as the same file
+*But* session.read_file still reads *session.json*
+*And* a file named *session.json* in another folder, such as *.sessions/checkout-flow/debug/session.json*, is saved
 
 ---
 

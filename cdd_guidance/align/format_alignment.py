@@ -12,7 +12,10 @@ Which format is the source when two differ:
   is written as a document (markdown), else the first chosen, when that file is there; else from the first chosen
   format whose file is there.
 - Two files that differ, where one holds every node and edge the other holds and more, are aligned from the one that
-  holds more to the one that lacks.
+  holds more to the one that lacks, unless the one that lacks is the leading format: what another format holds and the
+  source no longer holds is never written back into the source by a render. It is handed to the agent, which decides by
+  reading whether it moved, was merged, is no longer needed, or is still wanted with the source behind, the same pass a
+  render's migrate list gets; who added or removed it plays no part.
 - Two files that each hold something the other lacks are a person's decision: the gap is reported, naming what each
   holds alone, and both files are left as they are. So is every other format of that document: while two of its files
   conflict, none of its files is aligned, since the file a render would read from may be the one that is wrong.
@@ -58,6 +61,13 @@ UNREADABLE_FORMAT = "unreadable_format"
 RENDER_FAILED = "render_failed"
 # The format group written as a document, which the graph reads and so leads a comparison.
 _DOCUMENT_GROUP = "markdown"
+# What an agent does with what one file holds and the source no longer holds, the same pass a render's migrate gets.
+_DECIDE_LEFTOVER = (
+    "Decide each by reading it against what the source now holds: moved or merged into something else, so place it "
+    "there, then delete it; no longer needed, so remove it; still wanted with the source behind, so put it back in the "
+    "source; who added or removed it plays no part. Where reading does not tell you, ask the person. Until it is "
+    "decided, it stays where it is."
+)
 # How many names a gap's message spells out before it counts the rest.
 _NAMED_IN_MESSAGE = 5
 
@@ -199,7 +209,7 @@ class AlignedFile:
         """What the render leaves to an agent: a whiteboard file is put on its board in Claude by render.publish_board,
         and a code file's members no longer in the model are migrated."""
         if self._migrate:
-            return f"Migrate in {self._file}: {', '.join(self._migrate)} is no longer in the model and is kept there, marked; move its body into the member that replaced it, then delete it."
+            return f"Migrate in {self._file}: {', '.join(self._migrate)} is kept there, though the source no longer holds it. {_DECIDE_LEFTOVER}"
         return f"Publish {self._file} to its board in Claude (render.publish_board)." if self._format == "whiteboard" else ""
 
 
@@ -400,11 +410,17 @@ class _FidelityAlignment:
             return [AlignmentGap(FORMATS_CONFLICT, slug, other_name, message, formats[1], lacks=other_lacks)]
         if other_lacks:
             return [self._lacks(other_name, formats[1], lead_name, other_lacks)]
-        return [self._lacks(lead_name, formats[0], other_name, lead_lacks)] if lead_lacks else []
+        return [self._source_lacks(lead_name, formats[0], other_name, lead_lacks)] if lead_lacks else []
 
     def _lacks(self, file: str, format: str, source: str, lacks: GraphDifference) -> AlignmentGap:
         message = f"{file} lacks {lacks.described}, which {source} holds. Align renders {file} from {source}."
         return AlignmentGap(FORMAT_LACKS, self._fidelity.slug, file, message, format, source, lacks)
+
+    def _source_lacks(self, file: str, format: str, holder: str, lacks: GraphDifference) -> AlignmentGap:
+        """The leading format, which the others are rendered from, lacking what another holds: no render closes it,
+        since whether the source is behind or the other file holds a leftover is for the agent to decide by reading."""
+        message = f"{file} lacks {lacks.described}, which {holder} holds. Align does not write it into {file}. {_DECIDE_LEFTOVER}"
+        return AlignmentGap(FORMAT_LACKS, self._fidelity.slug, file, message, format, lacks=lacks)
 
     def _code_formats_missing(self) -> list[AlignmentGap]:
         """A chosen code format with no file, in a fidelity another chosen format already has a file of: aligned from
@@ -520,5 +536,5 @@ class FormatAlignment:
     @mcp
     @agent_tool
     def align_formats(self, call: ToolCall | None = None) -> AlignmentResult:
-        """Bring this session's formats in step and return what was done: render each chosen format whose file is missing, and each file that lacks nodes or edges another format of the same document holds, from the format that holds more, through the Render action, so a drawing keeps its layout and a document its own words. Two files that each hold something the other lacks are a person's decision and are left as they are. Each failure a render meets is answered as kind, file and message, and the rest are still rendered; the diagnosis as it stands afterwards comes back too. A whiteboard file rendered here still has to be put on its board in Claude (render.publish_board)."""
+        """Bring this session's formats in step and return what was done: render each chosen format whose file is missing, and each file that lacks nodes or edges another format of the same document holds, from the format that holds more, through the Render action, so a drawing keeps its layout and a document its own words. What another format holds and the leading format, the source, lacks is not written into the source: its gap hands it to you to decide by reading it against what the source now holds. Two files that each hold something the other lacks are a person's decision and are left as they are. Each failure a render meets is answered as kind, file and message, and the rest are still rendered; the diagnosis as it stands afterwards comes back too. A whiteboard file rendered here still has to be put on its board in Claude (render.publish_board)."""
         return SessionAlignment(self._session, call).align()

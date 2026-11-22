@@ -1,8 +1,8 @@
-"""The code measures taken with the real tools, lizard and radon, on real files: each limit rule against its failing
+"""The code measures taken with the real tool, lizard, on real files: each limit rule against its failing
 and its repaired example, code in each language, and a validate in a session whose project chose the tools.
 
-Heavy: every example runs an outside measuring tool, which needs the ``measures`` dependency group installed
-(``pip install -e ".[measures]"``). The rules one object decides, with the tools stood in for, are in
+Heavy: every example runs the outside measuring tool, which needs the ``measures`` dependency group installed
+(``pip install -e ".[measures]"``). The rules one object decides, with the tool stood in for, are in
 code_measures_spec.py."""
 import json
 import shutil
@@ -14,7 +14,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_above, contain, equal, expect  # noqa: E402
+from expects import contain, equal, expect  # noqa: E402
 from mamba import after, before, context, description, it  # noqa: E402
 
 import cdd_guidance.actions  # noqa: E402, F401 - registers the actions with the action catalogue
@@ -75,9 +75,6 @@ with description("the code measures the real tools take") as self:
         with it("should report a function with more lines of code than the limit, and pass the repaired one"):
             measured_example_pair("limit-function-lines").check()
 
-        with it("should report a function that takes more parameters than the limit, and pass the repaired one"):
-            measured_example_pair("limit-function-parameters").check()
-
         with it("should report a class whose total complexity is over the limit, and pass the repaired one"):
             measured_example_pair("limit-class-complexity").check()
 
@@ -99,10 +96,6 @@ with description("the code measures the real tools take") as self:
         with it("should keep a class's total complexity, the paths through its methods added up, on its node"):
             expect(_measures_of(self.fixture, "OoadClass", "Catalogue", ["total_complexity"])).to(equal({"total_complexity": 12}))
 
-        with it("should keep the maintainability score of a module's file, as radon scores it, on the module's node"):
-            score = next(node.get_fact("maintainability_score") for node in self.fixture.practice.reading.in_graph.nodes("Package") if node.name == "catalogue")
-            expect(score).to(be_above(0))
-
     with context("of TypeScript code"):
         with before.all:
             self.fixture = measured(practice_from_files({**MEASURES_CHOSEN, "catalogue/catalogue.ts": _TYPESCRIPT}))
@@ -116,17 +109,22 @@ with description("the code measures the real tools take") as self:
         with it("should keep the class's total complexity, the paths through its methods added up"):
             expect(_measures_of(self.fixture, "OoadClass", "Catalogue", ["total_complexity"])).to(equal({"total_complexity": 12}))
 
-    with context("of code in a language the project chose no tool for"):
-        with it("should have the measure's rule report which measure has no tool in which language"):
-            fixture = measured(practice_from_files({**MEASURES_CHOSEN, "catalogue/catalogue.js": _JAVASCRIPT}))
-            expect(fixture.hits(BY_SLUG[_PATHS])).to(contain(contain("No tool is chosen to measure 'paths_through'", "in javascript", "config.json")))
+    with context("of JavaScript code"):
+        with before.all:
+            self.fixture = measured(practice_from_files({**MEASURES_CHOSEN, "catalogue/catalogue.js": _JAVASCRIPT}))
+
+        with it("should keep the paths through a function, as lizard counts them"):
+            expect(_measures_of(self.fixture, "Operation", "priceOf", ["paths_through"])).to(equal({"paths_through": 12}))
+
+        with it("should report the function past the limit"):
+            expect(self.fixture.hits(BY_SLUG[_PATHS])).to(contain(contain("Function 'priceOf' has 12 paths through it (cyclomatic complexity), over the limit of 10.")))
 
     with context("by a validate at the code fidelity, in a session"):
         with before.all:
             self.report = _validated(chosen=True)
 
         with it("should report the function past its limit in the validation report, beside the other rules"):
-            expect(self.report).to(contain("limit-function-parameters", "has 6 parameters, over the limit of 5"))
+            expect(self.report).to(contain("limit-operation-parameters", "takes 6 parameters (maximum 3, excluding self)"))
 
         with it("should name the file the function is in"):
             expect(self.report).to(contain("[src/parcels/parcel.py]("))

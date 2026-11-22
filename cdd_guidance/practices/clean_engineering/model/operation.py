@@ -18,6 +18,11 @@ from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_t
 _SIGNATURE = re.compile(r"^(_?\w+)\s*\((.*)\)\s*(?::\s*(.+))?$")
 
 
+# A doc comment that opens a body, and a line that stands for a body nobody has written yet.
+_DOC_COMMENT = re.compile(r"""^\s*(?:\"{3}[\s\S]*?\"{3}|'{3}[\s\S]*?'{3}|/\*[\s\S]*?\*/)""")
+_NOT_WRITTEN_YET = re.compile(r"""^(?:pass|\.\.\.|raise NotImplementedError(?:\(.*\))?|throw new Error\(['"]not implemented['"]\);?)$""")
+
+
 class Parameter(OoadNode):
     _semantic_type_name = "Parameter"
     graph_facts = ("type_hint", "operation_name", "property_setter", "in_typed_language")
@@ -79,6 +84,15 @@ class Operation(InvariantHolder, OoadNode):
         return self.name in CONSTRUCTOR_NAMES
 
     @property
+    def has_body(self) -> bool:
+        """Whether its body holds a statement that does something. A body that is empty, only ``pass`` or an
+        ellipsis, only a doc comment, or only the line that fails until it is written (``raise NotImplementedError``,
+        ``throw new Error('not implemented')``) is no body: an operation declared so far and not yet written."""
+        written = _DOC_COMMENT.sub("", self.body.text)
+        statements = [line.strip() for line in written.splitlines() if line.strip() and not line.strip().startswith(("#", "//"))]
+        return any(not _NOT_WRITTEN_YET.match(statement) for statement in statements)
+
+    @property
     def body_text(self) -> str:
         """The statements of its body. They save with the graph, so a rule that compares bodies reads the same text from
         an operation read now and from one read back from a saved graph."""
@@ -88,6 +102,7 @@ class Operation(InvariantHolder, OoadNode):
         "max_control_flow_depth",
         "has_bare_catch",
         "swallows_exceptions",
+        "unreadable_read_as_empty",
         "unnamed_literal_numbers",
         "is_static",
         "is_private",
@@ -162,6 +177,8 @@ class Operation(InvariantHolder, OoadNode):
         self.max_control_flow_depth: int = 0
         self.has_bare_catch: bool = False
         self.swallows_exceptions: bool = False
+        # The failure to parse or decode a catch of its body answers with an empty value, by name; empty when none does.
+        self.unreadable_read_as_empty: str = ""
         self.unnamed_literal_numbers: list[str] = []
         self.peer_private_access: bool = False
         # Each parameter that packs several values, with how many; only Python's parse measures it.
@@ -280,6 +297,7 @@ class Operation(InvariantHolder, OoadNode):
         self.max_control_flow_depth = source.max_control_flow_depth
         self.has_bare_catch = source.has_bare_catch
         self.swallows_exceptions = source.swallows_exceptions
+        self.unreadable_read_as_empty = source.unreadable_read_as_empty
         self.unnamed_literal_numbers = list(source.unnamed_literal_numbers)
         self.peer_private_access = source.peer_private_access
 

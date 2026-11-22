@@ -763,19 +763,33 @@ with description("Render asked for a path, in a session") as self:
         with it("should name the note as kept, for whoever decides where it belongs"):
             expect([(Path(each.file).name, each.kept) for each in self.results[0].migrate]).to(equal([("story-map.drawio", "person-note 'Ask Dana before changing this'")]))
 
+        # The person's ruling, 2026-11-22: what the source no longer holds goes to an agent who decides by reading.
+        with it("should tell the agent to decide what becomes of the note by reading it against the story map"):
+            expect(data_of(self.results[0])["decide"]).to(contain("decide by reading the leftover against what the source now holds"))
+
     # The coordinator, 2026-11-21: a drawing that held only a person's note, and no card of the map, was saved as
     # rendered and the note was gone.
+    # The render happens once, in a project of the context's own, and both examples read what it left: a render in
+    # each example's setup ran a few milliseconds over the unit tier's budget for one example.
     with context("that is a story map whose drawing holds only a note a person wrote, rendered to drawio"):
-        with before.each:
-            self.drawing = self.folder / "story-map.drawio"
-            self.drawing.write_text(_NOTE_ONLY_DRAWING, encoding="utf-8")
-            self.results = self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+        with before.all:
+            self.noted = ThrowawayProject()
+            noted_folder = self.noted.root / ".context"
+            noted_folder.mkdir()
+            (noted_folder / "story-map.md").write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+            self.noted_drawing = noted_folder / "story-map.drawio"
+            self.noted_drawing.write_text(_NOTE_ONLY_DRAWING, encoding="utf-8")
+            rendering = Render().for_call(ToolCall({}, self.noted.root))
+            self.noted_results = rendering.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+
+        with after.all:
+            self.noted.close()
 
         with it("should keep the note beside the cards the render drew"):
-            expect(self.drawing.read_text(encoding="utf-8")).to(contain('id="person-note"', "Browse Product Catalog"))
+            expect(self.noted_drawing.read_text(encoding="utf-8")).to(contain('id="person-note"', "Browse Product Catalog"))
 
         with it("should name the note as kept"):
-            expect([each.kept for each in self.results[0].migrate]).to(equal(["person-note 'Ask Dana before changing this'"]))
+            expect([each.kept for each in self.noted_results[0].migrate]).to(equal(["person-note 'Ask Dana before changing this'"]))
 
     with context("that tells the agent what to do with what it rendered"):
         with it("should not tell the agent to write rendered content itself"):

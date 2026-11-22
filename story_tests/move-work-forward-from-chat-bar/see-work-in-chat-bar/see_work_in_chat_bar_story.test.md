@@ -17,7 +17,7 @@ section: body
 
 | Source | Note |
 |--------|------|
-| `.sessions/chat-ui-defects/chat-ui-defects.md` | Observed 2026-11-07: the card's folder list for Discovery showed harness five times instead of each folder once |
+| `harness/chat-ui/pane/hooks/chat-bar/session-card-view.tsx` `FidelityCellView` | observed: one button holds the fidelity's coloured square and its name, and its press calls `toggleGuidance` for the fidelity's practice (`session.toggle_guidance`, part practice); the state after the name is plain text, and a button of its own only while the fidelity has violations, when its press opens the report. Settled 2026-11-22: the bar is right, and the scenario, which said the whole line picked the fidelity for the action button, was changed to match it |
 | `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/see-work-in-chat-bar/display-session-card/display_session_card_story.test.ts` | the story test that plays these scenarios |
 
 #### Scenario: List each folder once
@@ -63,18 +63,3 @@ checkout-flow.agent_context
 ```
 
 *Then* the system prompt names .sessions/checkout-flow/checkout-flow.md as the ticket's text
-
-## Story: Select Fidelity
-
-### Evidence
-
-| Source | Note |
-|--------|------|
-| `.sessions/chat-ui-defects/chat-ui-defects.md` | Observed 2026-11-07: in the card's FIDELITY list only the fidelity's name could be pressed; the coloured square and the whole line, status text included, pick that fidelity too |
-
-#### Scenario: Pick a fidelity from anywhere on its line
-
-*Given* the session card for checkout-flow is open  
-*When* the Person presses the line of clean-engineering-model  
-*Then* the press covers the square, the name and the state, the whole line  
-  *And* clean-engineering-model is the fidelity the action button acts on

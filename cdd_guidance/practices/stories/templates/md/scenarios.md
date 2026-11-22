@@ -34,24 +34,6 @@ section: body
 |--------|------|
 | `<pointer>` | `<why it matters>` |
 
-### Edge conditions
-
-<!-- `edge-conditions-walked`: every condition gets one line. Name the Scenario that covers it, or write
-     "does not apply, because ...", or write the question for the person where the source and the running
-     product are silent. A condition with no line is the failure. -->
-
-| Edge condition | Scenario, "does not apply, because ...", or question for the person |
-|----------------|-------------------------------------------------------------------|
-| Missing or empty input | `<answer>` |
-| Malformed input, or input at or past a limit | `<answer>` |
-| Duplicate | `<answer>` |
-| Repeated action | `<answer>` |
-| Two actors at once | `<answer>` |
-| Interrupted action | `<answer>` |
-| Dependency absent, unavailable, slow, or wrong | `<answer>` |
-| Changed or gone since last seen | `<answer>` |
-| Actor not allowed | `<answer>` |
-
 ### Background
 
 *Given* a ++`<ConceptX>`++ from `helper.given<ConceptX…>({ mode: "fake" })`  
@@ -94,9 +76,9 @@ section: body
 *When* the **`<Actor>`** `<action>`  
 *Then* the ++`<result concept>`++ `<outcome that differs>`
 
-#### Scenario: `<refusal — the action is refused at an edge condition>`
+#### Scenario: `<refusal — the action is refused in an edge or error case>`
 
-*Given* a ++`<ConceptA>`++ `<in the state the edge condition names — a blank value, a duplicate, a second actor, a missing dependency>`  
+*Given* a ++`<ConceptA>`++ `<in the state of the edge or error case — a blank value, a duplicate, a second actor, a missing dependency>`  
 *When* the **`<Actor>`** `<action>`  
 *Then* the ++`<result concept>`++ is `<refused, with the reason the actor is shown>`  
   *But* no ++`<concept>`++ is `<what the refused action must leave unchanged>`

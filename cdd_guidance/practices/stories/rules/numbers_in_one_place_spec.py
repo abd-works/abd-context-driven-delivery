@@ -44,7 +44,7 @@ with description("the band of children a story map's layer holds") as self:
     with context("as the story map model holds it"):
         with it("should name a band for a node holding sub-epics, for a sub-epic and for a flat epic"):
             bands = story_map.LAYER_BANDS
-            expect((bands.holding_sub_epics.written, bands.sub_epic.written, bands.flat_epic.written)).to(equal(("3-9", "2-9", "4-9")))
+            expect((bands.holding_sub_epics.written, bands.sub_epic.written, bands.flat_epic.written)).to(equal(("2-9", "2-9", "4-9")))
 
         with it("should give a sub-epic its target from the band, for the check to report"):
             expect(_sub_epic_of(10).child_target).to(equal(story_map.LAYER_BANDS.sub_epic.written))
@@ -64,13 +64,13 @@ with description("the band of children a story map's layer holds") as self:
 
     with context("as the guidance is read"):
         with it("should be written into the rule's text"):
-            expect(_rule_text("child-count-fits-layer")).to(contain("groups 3-9 children", "holds 2-9", "holds 4-9"))
+            expect(_rule_text("child-count-fits-layer")).to(contain("groups 2-9 children", "holds 2-9", "holds 4-9"))
 
         with it("should be written into the practice's own guidance"):
-            expect(Stories().section_text("guidance")).to(contain("groups 3-9 of them", "holds 2-9 stories", "holds 4-9"))
+            expect(Stories().section_text("guidance")).to(contain("groups 2-9 of them", "holds 2-9 stories", "holds 4-9"))
 
         with it("should be written into the story map template"):
-            expect(str(Stories(fidelity="story_map").fidelities.current.templates)).to(contain("groups 3-9", "holds 2-9 stories", "holds 4-9"))
+            expect(str(Stories(fidelity="story_map").fidelities.current.templates)).to(contain("groups 2-9", "holds 2-9 stories", "holds 4-9"))
 
         with it("should leave no marker unfilled in the rule's text"):
             expect("{{" in _rule_text("child-count-fits-layer")).to(equal(False))

@@ -2,3 +2,4 @@
 spec:
   rules:
     - unit-tier-fakes-every-boundary
+    - stubbed-boundary-has-heavy-coverage

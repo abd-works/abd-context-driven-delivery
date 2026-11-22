@@ -18,6 +18,8 @@ _CLASS_BUDGET = 9
 
 class KeepClassesSingleResponsibility(ProductionCodeRule):
     slug = "keep-classes-single-responsibility"
+    # Requires a judge: whether a class has one reason to change is read from what its members are for; the check counts them.
+    requires_judge = True
     node_types = ("OoadClass",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:

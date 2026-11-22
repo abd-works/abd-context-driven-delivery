@@ -35,6 +35,7 @@ from cdd_guidance.practices.clean_engineering.model.code_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import PythonFunctionBody
+from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type
 
 _FUTURE_IMPORT = "from __future__ import annotations"
 _ABC_IMPORT = "from abc import ABC, abstractmethod"
@@ -49,13 +50,20 @@ Function = ast.FunctionDef | ast.AsyncFunctionDef
 
 def python_type(hint: str) -> str:
     """A type, or a `name: Type` parameter, written the way Python writes it: `Collection<Root>` from another language
-    is `Collection[Root]`, `Root[]` is `list[Root]`, and `boolean` is `bool`, so the file reads back as Python."""
-    name, colon, written = (hint or "").partition(":") if _PARAMETER.match(hint or "") else ("", "", hint or "")
-    return f"{name}{colon}{' ' if colon else ''}{PYTHON.type_name(written)}" if written.strip() else (hint or "")
+    is `Collection[Root]`, `Root[]` is `list[Root]`, and `boolean` is `bool`, so the file reads back as Python. A
+    parameter a caller may leave out, which a model line marks `name?: Type`, is `name: Type | None = None`, since
+    Python has no `?` and does not parse one."""
+    parameter = _PARAMETER.match(hint or "")
+    if parameter is None or not (parameter["left_out"] or parameter["type"] is not None):
+        return PYTHON.type_name(hint) if (hint or "").strip() else (hint or "")
+    name, written = parameter["name"], (parameter["type"] or "").strip()
+    if not parameter["left_out"]:
+        return f"{name}: {PYTHON.type_name(written)}" if written else hint
+    return f"{name}: {PYTHON.type_name(written)} | None = None" if written else f"{name}=None"
 
 
-# A parameter as a model line writes one: its name, a colon, then its type.
-_PARAMETER = re.compile(r"^\w+\s*:")
+# A parameter as a model line writes one: its name, a `?` when a caller may leave it out, then a colon and its type.
+_PARAMETER = re.compile(r"^(?P<name>\w+)\s*(?P<left_out>\?)?\s*(?::(?P<type>.*))?$", re.S)
 
 
 class PythonProperty(CodeProperty):
@@ -193,7 +201,7 @@ class PythonClass(CodeClass):
         return []
 
     def constructor_lines(self, constructor: Optional[Operation], body: List[str]) -> List[str]:
-        parameters = ", ".join(f"{name}: {python_type(hint)}" if hint else name for name, hint in self.constructor_parameters(constructor))
+        parameters = ", ".join(python_type(name_with_type(name, hint)) for name, hint in self.constructor_parameters(constructor))
         receiver = f"self, {parameters}" if parameters else "self"
         return [f"    def __init__({receiver}) -> None:"] + (body or ["        pass"])
 

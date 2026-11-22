@@ -227,6 +227,10 @@ main is not affected. Fixed in commit 7273c61ee.
 
 ## The chat bar and three of its scenarios disagree
 
+Settled 2026-11-22: the person said the bar is right, so the scenarios were changed to match the bar
+(`check_cdd_server_health_in_chat_bar_story.test.md`, `see_work_in_chat_bar_story.test.md`, and the two stories' lines
+on the story map), each read against the bar's code. Nothing below is open.
+
 Found 2026-11-21 on a browser test page that stood in for the Claude app, since removed, so the two positions
 (the mark's side, the button's width) are not proven against the real app. Open until the person says which side is right:
 

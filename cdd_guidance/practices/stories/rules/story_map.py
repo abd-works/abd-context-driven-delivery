@@ -13,7 +13,8 @@ if TYPE_CHECKING:
     from harness.graph.rule_context import RuleCheckContext
 
 _VERB_OPENINGS = {"verb", "unlisted"}
-# A generic verb is listed for the judgment to decide from its context, not failed on its own (stories.md).
+# A generic verb opens the name with a verb, so this rule passes it; whether it hides the mechanic needs a reading,
+# which story-name-captures-system-mechanic lists it for (stories.md).
 _GENERIC_VERB = "generic-verb"
 
 
@@ -25,10 +26,8 @@ class VerbNounFormat(PracticeGraphRule):
         if not node.has_fact("opening_class"):
             return []
         kind = node.get_fact("opening_class") or ""
-        if kind in _VERB_OPENINGS:
+        if kind in _VERB_OPENINGS or kind == _GENERIC_VERB:
             return []
-        if kind == _GENERIC_VERB:
-            return [Finding(node, f"{node.type} {node.name!r}: opens with a generic verb; judge from its context whether the action is plain.")]
         return [Finding(node, f"{node.type} {node.name!r}: name should start with a verb (got {kind}).")]
 
 
@@ -85,18 +84,20 @@ class KebabCasePaths(PracticeGraphRule):
 
 class StoryNameCapturesSystemMechanic(PracticeGraphRule):
     slug = "story-name-captures-system-mechanic"
+    requires_judge = True
     node_types = ("Story",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.get_fact("generic_handler"):
             return []
-        return [Finding(node, f"Story {node.name!r} names a generic handler; use the system mechanic (e.g. 'Submit Order').")]
+        return [Finding(node, f"Story {node.name!r} opens with a generic verb; judge from its context whether it hides the system mechanic (e.g. 'Submit Order').")]
 
 
 class RightSizeStoryNodes(PracticeGraphRule):
     """Sibling stories should be distinct intents, not typos or duplicates."""
 
     slug = "right-size-story-nodes"
+    requires_judge = True
     node_types = ("Story",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
@@ -109,6 +110,7 @@ class BranchOnMechanicalUniqueness(PracticeGraphRule):
     """An epic or sub-epic judges the stories under it, which share a verb when one mechanic was split into many."""
 
     slug = "branch-on-mechanical-uniqueness"
+    requires_judge = True
     node_types = ("Epic", "SubEpic")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:

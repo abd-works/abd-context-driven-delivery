@@ -1,5 +1,5 @@
 import { FileCommentsClientGenerated, type FileCommentData } from '@cdd/space/session/files/file-comments'
-import { buildViolationCorrectComment, NOT_SENT, SENT_TO_CHAT, type CorrectViolation } from '@source-view/violation-prompt'
+import { NOT_SENT, SENT_TO_CHAT, type CorrectViolation } from '@source-view/violation-prompt'
 
 import type { FilesPage } from './files-page'
 
@@ -34,10 +34,10 @@ export class FileCommentsActions {
     return kept && added ? this.send(added.anchor) : false
   }
 
-  // Correct on a broken rule's banner: a comment on the rule's lines saying what to fix, sent to the chat as any comment
-  // is, so it shows on the file as a sent comment does.
-  readonly correct: CorrectViolation = async correction => {
-    const isSent = await this.addAndSend({ start: correction.startLine, end: correction.endLine }, buildViolationCorrectComment(correction))
+  // Correct on a broken rule's banner: a comment on the rule's lines saying what to fix, in the words Python wrote beside
+  // the file's violation, sent to the chat as any comment is, so it shows on the file as a sent comment does.
+  readonly correct: CorrectViolation = async asked => {
+    const isSent = await this.addAndSend({ start: asked.startLine, end: asked.endLine }, asked.violation.correctionComment ?? '')
     return isSent ? SENT_TO_CHAT : NOT_SENT
   }
 

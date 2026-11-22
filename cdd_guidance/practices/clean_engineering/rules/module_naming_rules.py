@@ -27,6 +27,8 @@ _INDEPENDENT_SUBSYSTEMS = frozenset({"Agent Toolset"})
 
 class DomainNounsOnly(ProductionCodeRule):
     slug = "domain-nouns-only"
+    # Requires a judge: whether a module's name is a domain noun is read from the domain; the check matches verbs and suffixes.
+    requires_judge = True
     node_types = ("Module",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
@@ -46,6 +48,8 @@ class NoModulePerClass(ProductionCodeRule):
     toolset, which is installed and published as a unit of its own, with its own guidance beside it."""
 
     slug = "no-module-per-class"
+    # Requires a judge: whether a class is an independent subsystem of its own is read from what it does; the check counts the classes of a module.
+    requires_judge = True
     node_types = ("Module",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:

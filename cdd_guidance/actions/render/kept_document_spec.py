@@ -55,9 +55,17 @@ with description("a document rendered onto one that is already there") as self:
         with it("should name how many lines wait to be placed"):
             expect(self.kept.set_apart).to(equal(3))
 
+        with it("should name each line kept, for the agent to read against what the source now holds"):
+            expect(self.kept.kept).to(equal([f"{NOTE}.", "## Open questions", "- Who owns returns?"]))
+
         with context("rendered a second time"):
             with it("should change nothing"):
                 expect(KeptDocument(Format("markdown")).onto(self.kept.text, MODEL).text).to(equal(self.kept.text))
+
+    with context("in markdown, whose section the source now names otherwise"):
+        with it("should name the lines the render wrote that the file did not hold, as what may have replaced the kept ones"):
+            kept = KeptDocument(Format("markdown")).onto("# Domain Model\n\n## Basket\n\nA basket holds lines.\n", MODEL)
+            expect((kept.kept, kept.added)).to(equal((["## Basket", "A basket holds lines."], ["## Cart", "A cart holds lines."])))
 
     with context("in markdown, whose file holds nothing the render does not write"):
         with it("should write the rendered document as rendered, with nothing kept"):
@@ -80,6 +88,9 @@ with description("a document rendered onto one that is already there") as self:
         with it("should name the note as kept, by its id and what it says"):
             expect(self.kept.kept).to(equal([f"person-note '{NOTE}'"]))
 
+        with it("should name the card the render drew that the file did not hold, as what may have replaced the note"):
+            expect(self.kept.added).to(equal(["order 'Order'"]))
+
         with context("rendered a second time"):
             with it("should change nothing"):
                 twice = KeptDocument(Format("drawio")).onto(self.kept.text, _drawing("20", ORDER_CELL))
@@ -94,7 +105,7 @@ with description("a document rendered onto one that is already there") as self:
         with before.each:
             self.kept = KeptDocument(Format("drawio")).onto(_drawing_of(NOTE_CELL), _drawing("20", ORDER_CELL))
 
-        with it("should keep the note, since a cell the render does not draw is the person's"):
+        with it("should keep the note, since the render does not draw it"):
             expect(self.kept.text).to(contain('id="person-note"', 'id="cart"', 'id="order"'))
 
         with it("should name the note as kept"):
@@ -138,6 +149,9 @@ with description("a document rendered onto one that is already there") as self:
 
         with it("should name the note as kept, by its id and what it says"):
             expect(self.kept.kept).to(equal([f"note '{NOTE}'"]))
+
+        with it("should name the card the render drew that the file did not hold, as what may have replaced the note"):
+            expect(self.kept.added).to(equal(["order 'Order'"]))
 
     with context("as a whiteboard, whose file holds nothing the render does not draw, where the render drew it"):
         with it("should write the board exactly as rendered"):

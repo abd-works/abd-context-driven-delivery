@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from expects import be_true, contain, equal, expect
+from expects import be_true, contain, equal, expect, have_key
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -69,6 +69,19 @@ items: list
 ----
 total(): Decimal
 empty(): None
+"""
+
+_ACCOUNT_MARKDOWN = """# Accounts
+
+*Accounts* opens accounts.
+
+## Accounts
+
+*Accounts* opens an account.
+
+------
+----
+new_account(credentials?: AccountCredentials): AccountCredentials
 """
 
 _PYTHON_TOTAL = 'return sum((item.price for item in self.items), Decimal("0"))'
@@ -205,6 +218,16 @@ with description("a class model rendered to code"):
 
             with it("should make an operation new to the model fail until it is written"):
                 expect(self.rendered).to(contain("    def empty(self) -> None:\n        raise NotImplementedError"))
+
+        with context("with a parameter the model marks as one a caller may leave out"):
+            with before.each:
+                self.rendered = _render("python", _ACCOUNT_MARKDOWN, "markdown")
+
+            with it("should write the parameter the way Python does, with no value when left out"):
+                expect(self.rendered).to(contain("def new_account(self, credentials: AccountCredentials | None = None) -> AccountCredentials:"))
+
+            with it("should write a file Python parses"):
+                expect(_bodies("python", self.rendered)).to(have_key("Accounts.new_account"))
 
         with context("that is rendered to each code language"):
             with it("should make every operation fail until it is written, in each language"):

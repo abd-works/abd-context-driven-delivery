@@ -55,8 +55,8 @@ globs: "**/*-sketch.md"
 Whenever you name screens, attach stories, or import domain terms on the UX surface, or change later UI work that forces that vocabulary to move. Follow these rules.
 
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
-- **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.
-- **`screen-names-use-domain-terms`** — Screen labels trace to domain language when it exists.
+- **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition. {{decided.screen_story_budget}}
+- **`screen-names-use-domain-terms`** — Screen labels trace to domain language when it exists. {{decided.screen_names_use_domain_terms}}
 - **`ia-named-regions-only`** — At IA, regions are named areas; no control detail yet.
 - **`story-domain-js-imported`** — At mockup+, when practices/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface; import the real modules rather than inventing a UX-only adapter shape.
 

@@ -22,15 +22,13 @@ import cdd_guidance.practices  # noqa: F401 - registers the practices with the p
 from cdd_guidance.practices.template_checks import RuleExamples, TemplateCheck
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
-# Templates the practice reads no node from, so no graph rule runs on them: the scenario templates in code are
-# guidance written as comments around one sample the reader takes no story from, the mockup's page is read by no
-# graph reading of its own file, and a module card names no class.
+# Templates the practice reads no node from, so no graph rule runs on them.
 UNREAD = {
-    "stories": ["stories-scenarios python", "stories-scenarios typescript", "stories-scenarios javascript"],
+    "stories": [],
     "ddd": [],
-    "ux": ["ux-mockup html"],
+    "ux": [],
     "bdd": [],
-    "clean_engineering": ["clean-engineering-modules markdown"],
+    "clean_engineering": [],
 }
 # What Clean Engineering's own rules report on its templates today: nothing, since its model template types every parameter.
 CLEAN_ENGINEERING_TEMPLATE_FINDINGS: dict[str, list[str]] = {}
@@ -53,6 +51,7 @@ WITHOUT_A_PAIR = {
     "ddd": [],
     "ux": [],
     "bdd": [],
+    "tdd": [],
 }
 # Example pairs that do not hold today. Both Stories folders hold an examples file and no story test that imports it,
 # so the read finds no Example for the rule to judge: the rules were moved onto Example nodes and the folders were not.
@@ -64,6 +63,7 @@ PAIRS_THAT_DO_NOT_HOLD = {
     "ddd": [],
     "ux": [],
     "bdd": [],
+    "tdd": [],
 }
 
 
@@ -130,6 +130,14 @@ with description("every practice's templates and rules") as self:
 
         with included_context("a practice's templates and rules"):
             pass
+
+        with included_context("a practice's checked rules"):
+            pass
+
+    # TDD is a supplement with no template of its own; its graph rules have their pairs like any practice's.
+    with context("for the TDD supplement"):
+        with before.all:
+            self.key = "tdd"
 
         with included_context("a practice's checked rules"):
             pass

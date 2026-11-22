@@ -108,7 +108,7 @@ class LayerBands:
 
 # The one place the numbers of the story map's rules are written. The checks read them here, and the practice's
 # document and templates carry a marker for each (``{{child_band.sub_epic}}``), filled when the guidance is read.
-LAYER_BANDS = LayerBands(ChildBand("children", 3, 9), ChildBand("stories", 2, 9), ChildBand("stories", 4, 9))
+LAYER_BANDS = LayerBands(ChildBand("children", 2, 9), ChildBand("stories", 2, 9), ChildBand("stories", 4, 9))
 # The most code scenarios a story holds before it is too big to be one interaction (`story-scenarios-at-most-seven`).
 MOST_SCENARIOS = 7
 

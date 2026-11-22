@@ -55,6 +55,14 @@ it should hold no lines
 """
 # "Boarding Stuff" opens with a gerund, which verb-noun-format rejects. A word missing from the verb list passes, so the fixture needs an opening the rule flags.
 _STORY_MAP = "# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n\n### (S) Person --> Boarding Stuff\n"
+# A story map no checked rule fails, whose story Handle Ticket opens with a generic verb: a rule that requires a judge
+# lists it as a candidate.
+_MAP_WITH_A_CANDIDATE = (
+    "# (E) Move Work On Board\n\n"
+    "## (E) Display Board\n\n### (S) Person --> Open Board\n\n### (S) Person --> Close Board\n\n"
+    "## (E) Change Ticket\n\n### (S) Person --> Handle Ticket\n\n### (S) Person --> Archive Ticket\n\n"
+    "## (E) Review Report\n\n### (S) Person --> Read Report\n\n### (S) Person --> Accept Violation\n"
+)
 # The scenarios of the story map's Open Board story, in the file a story's heading links to.
 _EMPTY_DRAWIO = '<mxfile><diagram name="Story Map"><mxGraphModel><root><mxCell id="0" /></root></mxGraphModel></diagram></mxfile>\n'
 _OPEN_BOARD_SCENARIOS ="""from story_test import given, scenario, story, then, when
@@ -97,10 +105,10 @@ class _StoryMapFolder:
 
     _MAP = "board/.context/story-map.md"
 
-    def __init__(self, root: str = "", declared: bool = False, drawio: bool = False) -> None:
+    def __init__(self, root: str = "", declared: bool = False, drawio: bool = False, story_map: str = _STORY_MAP) -> None:
         self.project = ThrowawayProject()
         self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
-        _write(self.folder, self._MAP, _STORY_MAP)
+        _write(self.folder, self._MAP, story_map)
         if drawio:
             _write(self.folder, "board/.context/story-map.drawio", _EMPTY_DRAWIO)
         self.action = Validate(session=working_in(self.project, self.folder, self.folder / root))
@@ -374,6 +382,22 @@ with description("a validate action on practice guidance") as self:
 
             with it("should name its violations on that line"):
                 expect(self.validate_lines[-1]).to(contain(" graph-rule "))
+
+        # A candidate is a place for the judge to read, so it does not mark the fidelity's validate as failed.
+        with context("that has been validated with only a candidate of a rule that requires a judge"):
+            with before.all:
+                self.listed = _StoryMapFolder(story_map=_MAP_WITH_A_CANDIDATE)
+                self.listed_report = self.listed.validate()
+                self.listed_lines = self.listed.validate_lines()
+
+            with after.all:
+                self.listed.close()
+
+            with it("should list the candidate in its report"):
+                expect(self.listed_report).to(contain("**CANDIDATE** **[graph rule]**"))
+
+            with it("should name no violation on its validate line"):
+                expect(self.listed_lines[-1]).not_to(contain(" graph-rule "))
 
         # Windows can mark a folder read-only, and the whole graph an earlier report was checked against is dropped
         # when the next report is saved; reported 2026-11-18: validate failed with "PermissionError: [WinError 5]
@@ -706,9 +730,10 @@ with description("a validate action on practice guidance") as self:
             expect(self.entity_root_report).to(contain("private-method-naming"))
             expect(self.entity_root_report).to(contain(f"[{ENTITY_ROOT_FILE}]("))
 
-        with it("should report the verb-noun-format violation on the edited story"):
-            expect(self.story_report).to(contain("verb-noun-format"))
-            expect(self.story_report).to(contain(f"[{STORY_FILE}]("))
+        # Handle Request opens with a generic verb, which the judged rule lists for a reading.
+        with it("should list the story-name-captures-system-mechanic candidate on the edited story"):
+            expect(self.story_report).to(contain("story-name-captures-system-mechanic"))
+            expect(self.story_report).to(contain(f"**CANDIDATE** **[graph rule]** - [{STORY_FILE}]("))
 
         with it("should report the observable-behavior violation on the edited spec"):
             expect(self.spec_report).to(contain("observable-behavior"))

@@ -34,7 +34,17 @@ export class ExplorerTrees {
 
   // Whether a rule the entry runs is broken: its rules collection holds a rule that is violating.
   isViolating(entry: TreeItem): boolean {
-    return entry.children.some((child) => child.name === 'rules' && child.children.some((hit) => ExplorerTrees.isRule(hit) && hit.status === 'violating'));
+    return this.holdsRuleWith(entry, 'violating');
+  }
+
+  // Whether a rule that requires a judge listed the entry as a candidate: a place for a judge or a person to read,
+  // which nothing has decided is wrong, so the tree marks it apart from an entry that breaks a rule.
+  hasCandidate(entry: TreeItem): boolean {
+    return this.holdsRuleWith(entry, 'candidate');
+  }
+
+  private holdsRuleWith(entry: TreeItem, status: string): boolean {
+    return entry.children.some((child) => child.name === 'rules' && child.children.some((hit) => ExplorerTrees.isRule(hit) && hit.status === status));
   }
 }
 

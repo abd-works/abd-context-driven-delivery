@@ -26,6 +26,23 @@ describe('the explorer trees', () => {
     expect([trees.isViolating(trees.entries[0]!.children[0]!), trees.isViolating(trees.entries[0]!)]).toEqual([true, false]);
   });
 
+  // A rule that requires a judge lists candidates: places to read, which nothing has decided are wrong.
+  describe('with an entry whose rule that requires a judge listed it as a candidate', () => {
+    const listed = new ExplorerTrees([entry('Press The Mark', [rules(rule('when-names-intent-not-interface-gesture', 'candidate'))])]);
+
+    it('should say the entry holds a candidate', () => {
+      expect(listed.hasCandidate(listed.entries[0]!)).toBe(true);
+    });
+
+    it('should not say the entry is violating', () => {
+      expect(listed.isViolating(listed.entries[0]!)).toBe(false);
+    });
+
+    it('should say an entry whose rule is broken holds no candidate', () => {
+      expect(trees.hasCandidate(trees.entries[0]!.children[0]!)).toBe(false);
+    });
+  });
+
   describe('with a branch read for an entry that left its children out', () => {
     const opened = trees.withBranch(entry('Cart.add', [entry('Cart.add.line')]));
 

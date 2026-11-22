@@ -97,9 +97,14 @@ class Stories(PracticeGuidance):
     @property
     def markdown_values(self) -> dict[str, str]:
         """The numbers its rules hold, read from the story map model, for the markers its document and templates carry
-        in their place: the band of children each layer holds, and the most scenarios a story holds."""
+        in their place: the band of children each layer holds, and the most scenarios a story holds; and whether each
+        of its graph rules is checked or judged (``{{decided.<rule>}}``), which the rule's own ``requires_judge`` says."""
+        from cdd_guidance.practices.stories.rules import RULES
+        from harness.graph.practice_rule import decided_values
+
         bands = story_map.LAYER_BANDS
         return {
+            **decided_values(RULES),
             "child_band.holding_sub_epics": bands.holding_sub_epics.written,
             "child_band.sub_epic": bands.sub_epic.written,
             "child_band.flat_epic": bands.flat_epic.written,

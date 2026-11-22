@@ -32,7 +32,7 @@ Take the persona of a **neutral observer** — describe what exists, do not pres
 
 When documenting an existing system, tactical wraps live under the DDD working area (`domain/` by default) as `{bounded-context}/{aggregate}/`. Leave production `src/` alone unless the user directs otherwise. Generate / greenfield work may still use `src/`.
 
-- **`load-with-identity-in-hand`** — same rule as **tactics**.
+- **`load-with-identity-in-hand`** — same rule as **tactics**. {{decided.load_with_identity_in_hand}}
 - **`user-facing-system-first`** — same rule as **bounded_context**.
 
 ### Generate
@@ -147,7 +147,7 @@ globs: "**/*bounded-context*,**/*-sketch.md"
 Whenever you create, alter, or delete bounded contexts, aggregates, or the language between them, or change a model or code that forces a language-boundary change. Follow these rules.
 
 - **`experts-words-preferred`** — Use the words domain experts use. An invented synonym becomes a second term every reader must translate.
-- **`domain-concepts-not-technical-names`** — Name contexts, aggregates, and concepts — not `Manager`, `Helper`, `Processor`, `*Result`, `*Response`, `*Dto`, or `*Request`. Do not invent a type for fields that already belong on a concept. A technical name carries no meaning the business would recognize, so rules parked on it cannot be found where the concept lives and get re-implemented elsewhere.
+- **`domain-concepts-not-technical-names`** — Name contexts, aggregates, and concepts — not `Manager`, `Helper`, `Processor`, `*Result`, `*Response`, `*Dto`, or `*Request`. Do not invent a type for fields that already belong on a concept. A technical name carries no meaning the business would recognize, so rules parked on it cannot be found where the concept lives and get re-implemented elsewhere. {{decided.domain_concepts_not_technical_names}}
 - **`bc-by-lifecycle-not-ui-themes`** — Partition by ubiquitous language and how fast the model changes, not by UI themes or journey stages. Do not mint journey-themed contexts that duplicate core domain contexts. Screens and journeys are redrawn while language boundaries hold; a boundary cut along the UI has to move with every redesign and drags the model with it.
 - **`one-meaning-per-context`** — Inside a context, one definition per term; name and translate false cognates across contexts. Several aggregates per context is normal. Do not wrap each aggregate in its own bounded context. Two meanings under one word become contradictory code that both looks consistent; a context per aggregate walls one language off from itself and charges integration cost for nothing.
 - **`bc-above-aggregate`** — A bounded context names a business area, department, or system collection with its own ubiquitous language — not a single aggregate. If the only candidate context is one aggregate, nest it under a broader context or record it as an **Integrations:** arc; omit the `###` heading. No real language boundary is better than a heading that merely duplicates an aggregate name.
@@ -246,10 +246,10 @@ Whenever you add, change, or remove an aggregate's root, members, repository, do
 If this change will not stay here, follow `practices/ddd/ddd-bounded-context.mdc`.
 
 - **`aggregate-view-only`** — The model shows aggregate roots, member entities, value objects, repositories, domain operations, and dependencies between aggregates. No constructors, private helpers, ports, publishers, DTOs, framework types, factories, specifications, domain services, or event classes — unless the code being described already has them. Anything else in the view buries the domain under detail that is not decided yet.
-- **`every-class-carries-ddd-stereotype`** — Every class carries its stereotype: `<<Aggregate Root>> <<Entity>>`, `<<Entity>>`, `<<Value Object>>`, or `<<Repository>>`. A bare name leaves the reader guessing whether it has identity or a lifecycle.
+- **`every-class-carries-ddd-stereotype`** — Every class carries its stereotype: `<<Aggregate Root>> <<Entity>>`, `<<Entity>>`, `<<Value Object>>`, or `<<Repository>>`. A bare name leaves the reader guessing whether it has identity or a lifecycle. {{decided.every_class_carries_ddd_stereotype}}
 - **`root-card-carries-repository`** — Draw the root's repository inside the root's card, below the domain operations: stereotypes, properties, operations, then `<<Repository>> {Root}Repository` and its operations. One card per aggregate entry point keeps lifecycle and behaviour readable together without a second box per aggregate.
 - **`repository-is-crud`** — Repository operations create, load, update, and — only when the business does it — search and retire the root. Every rule and state change is a domain operation on the root or a member. A rule on the repository cannot be found where the aggregate lives and runs only when the aggregate is saved.
-- **`repository-is-collection-lifecycle`** — Add a Repository only when the business finds, stores, and retires an Aggregate Root independently. Reach an owned aggregate through its owner when it has no independent lookup, because a Repository without an independent collection invents a lifecycle the business does not have.
+- **`repository-is-collection-lifecycle`** — Add a Repository only when the business finds, stores, and retires an Aggregate Root independently. Reach an owned aggregate through its owner when it has no independent lookup, because a Repository without an independent collection invents a lifecycle the business does not have. {{decided.repository_is_collection_lifecycle}}
 - **`core-operations-on-the-model`** — Each verb the stories and scenarios perform on an aggregate appears as a public operation on the class that owns the state, named with the scenario's verb. A missing operation becomes logic in a route, a view, or a manager.
 - **`members-composed-by-root`** — Owned entities and values are composed by the root (or by the member that owns them) and reached through it. A member drawn loose or reached directly lets callers change part of the aggregate without the root's rules.
 - **`identity-test-entity-vs-vo`** — Entity when identity transcends attributes; otherwise prefer Value Object. A type that is the access boundary for a cluster is **Aggregate Root + Entity**.
@@ -259,9 +259,9 @@ If this change will not stay here, follow `practices/ddd/ddd-bounded-context.mdc
 - **`simplest-model-that-holds-the-rules`** — Merge operations, members, and aggregates until removing one more would lose a business rule. Each class or operation kept here becomes code, tests, and screens.
 - **`model-mirrors-code`** — Aggregate, class, and operation names in the model match the code; the code adds no aggregate pieces the model does not show. When the two disagree, one of them is wrong and readers cannot tell which.
 - **`shared-identity-is-generalisation`** — Shared identity over time → base type + generalisation arrows. Do not flatten as unrelated entities.
-- **`flaccid-data-object-no-behavior`** — A type is not a field bag. Give it the operations that are **its** work.
-- **`screen-interface-not-a-domain-object`** — `open()` / `isShowing()` screen drivers are not domain types. The user action is an operation on the aggregate that owns it.
-- **`no-orphaned-objects`** — Every domain object has at least one relationship. Value objects that are attributes sit on their owner — not as unconnected cards.
+- **`flaccid-data-object-no-behavior`** — A type is not a field bag. Give it the operations that are **its** work. {{decided.flaccid_data_object_no_behavior}}
+- **`screen-interface-not-a-domain-object`** — `open()` / `isShowing()` screen drivers are not domain types. The user action is an operation on the aggregate that owns it. {{decided.screen_interface_not_a_domain_object}}
+- **`no-orphaned-objects`** — Every domain object has at least one relationship. Value objects that are attributes sit on their owner — not as unconnected cards. {{decided.no_orphaned_objects}}
 - **`hang-deps-on-owning-bc`** — Keep `→` links on the concept or aggregate from **bounded_context**. No global `## Dependencies` parking lot.
 - **`no-premature-infrastructure`** — Design intent only: no tables, brokers, framework annotations, or endpoints.
 
@@ -335,9 +335,9 @@ Whenever you add factories, specifications, domain services, or domain events; p
 
 If this change will not stay here, follow `practices/ddd/ddd-model.mdc`.
 
-- **`every-class-carries-ddd-stereotype`** — Every domain class carries its stereotype (`<<Factory>>`, `<<Specification>>`, `<<Domain Service>>`, `<<Domain Event>>`, plus the model's). In code a decorator carries it, or, in a folder a bounded context covers, a naming convention. A bare class leaves the reader guessing which pattern applies.
+- **`every-class-carries-ddd-stereotype`** — Every domain class carries its stereotype (`<<Factory>>`, `<<Specification>>`, `<<Domain Service>>`, `<<Domain Event>>`, plus the model's). In code a decorator carries it, or, in a folder a bounded context covers, a naming convention. A bare class leaves the reader guessing which pattern applies. {{decided.every_class_carries_ddd_stereotype}}
 - **`factory-is-complex-creation`** — Factory only when valid creation needs subtype choice, several rules, or outside collaborators. Ordinary creation stays on the repository's `create` so callers have one obvious way to create it.
-- **`service-is-homeless`** — Domain Service is a rare doer only when the operation cannot sit on one domain object. Not SOA: do not invent `FooService` to park verbs.
+- **`service-is-homeless`** — Domain Service is a rare doer only when the operation cannot sit on one domain object. Not SOA: do not invent `FooService` to park verbs. {{decided.service_is_homeless}}
 - **`domain-events-past-tense`** — Past-tense domain name; name the publishing root, trigger, consumers, and required payload. Events are facts needed outside the aggregate, not a notification for every mutation.
 - **`specification-is-reusable-rule`** — Use a Specification when one named predicate must serve more than one query, validation, or creation path. One definition prevents each path from developing a different meaning for the same rule.
 - **`external-system-access-is-service-interface`** — Represent another system with a named Service or Gateway interface that exposes that system's operations. Do not model the external system as a collection of domain roots, because it owns a different model and lifecycle.
@@ -345,9 +345,9 @@ If this change will not stay here, follow `practices/ddd/ddd-model.mdc`.
 - **`one-pattern-per-building-block`** — Each building block in play gets one named implementation pattern — technology, extension mechanism, test approach — used by every instance of that block. Divergent implementations of the same block make the solution unreadable and untestable as a whole.
 - **`architectural-granularity-decided`** — State what a bounded context, an aggregate, and a repository are at runtime (in-process module, container, service with its own store). Left undecided, the first adapter written silently sets it for everything after.
 - **`preserve-upstream-names`** — Public API names match the **model**. Renaming here breaks traceability back to the map and the stories.
-- **`load-with-identity-in-hand`** — A live `load` takes the identity already in hand. Do not find it in ambient state (session, request, cookie, signed-in user). A repository that holds one record may load it with no identity. Reach owned aggregates through their owner.
+- **`load-with-identity-in-hand`** — A live `load` takes the identity already in hand. Do not find it in ambient state (session, request, cookie, signed-in user). A repository that holds one record may load it with no identity. Reach owned aggregates through their owner. {{decided.load_with_identity_in_hand}}
 - **`ports-behind-adapters`** — Persistence, messaging, and external systems integrate through ports — not direct imports from the domain core.
-- **`private-method-naming`** — Public `+name`; private `- _name`. `derive*` helpers are private.
+- **`private-method-naming`** — Public `+name`; private `- _name`. `derive*` helpers are private. {{decided.private_method_naming}}
 
 ---
 

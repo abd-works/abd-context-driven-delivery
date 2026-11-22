@@ -21,50 +21,55 @@
     "tools": {
       "paths_through": {
         "python": "lizard",
-        "typescript": "lizard"
+        "typescript": "lizard",
+        "javascript": "lizard"
       },
       "readability_score": {
         "python": "lizard",
-        "typescript": "lizard"
+        "typescript": "lizard",
+        "javascript": "lizard"
       },
       "total_complexity": {
         "python": "lizard",
-        "typescript": "lizard"
+        "typescript": "lizard",
+        "javascript": "lizard"
       },
       "classes_depended_on": {
         "python": "reader",
-        "typescript": "reader"
+        "typescript": "reader",
+        "javascript": "reader"
       },
       "unshared_method_groups": {
         "python": "reader",
-        "typescript": "not measured"
+        "typescript": "not measured",
+        "javascript": "not measured"
       },
       "modules_importing": {
         "python": "reader",
-        "typescript": "reader"
-      },
-      "maintainability_score": {
-        "python": "radon",
-        "typescript": "not measured"
+        "typescript": "reader",
+        "javascript": "reader"
       },
       "copied_code_blocks": {
         "python": "not measured",
-        "typescript": "not measured"
+        "typescript": "not measured",
+        "javascript": "not measured"
       },
       "abstractness": {
         "python": "reader",
-        "typescript": "reader"
+        "typescript": "reader",
+        "javascript": "reader"
       },
       "instability": {
         "python": "reader",
-        "typescript": "reader"
+        "typescript": "reader",
+        "javascript": "reader"
       }
     },
     "limits": {
       "paths_through": 10,
       "readability_score": 15,
       "code_lines": 50,
-      "parameters_taken": 5,
+      "parameters_taken": 3,
       "total_complexity": 100,
       "method_count": 30,
       "unshared_method_groups": 1,

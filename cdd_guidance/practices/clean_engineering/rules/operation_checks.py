@@ -11,6 +11,7 @@ from harness.graph.violation import Finding
 from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import StatementCount
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
+from cdd_guidance.practices.clean_engineering.rules import rule_numbers
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -93,6 +94,8 @@ class UseExplicitDependencies(ProductionCodeRule):
     (``constructs_collaborator``)."""
 
     slug = "use-explicit-dependencies"
+    # Requires a judge: whether a part the class builds is an outside collaborator is read from what the part is; the check goes by its name and where it is declared.
+    requires_judge = True
     node_types = ("OoadClass",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
@@ -127,7 +130,11 @@ class KeepOperationsSmall(OperationMeasureRule):
     model document declares, is measured by its lines."""
 
     slug = "keep-operations-small-focused"
-    limit = 20
+    code_fidelity_only = True
+
+    @property
+    def limit(self) -> int:
+        return rule_numbers.MOST_STATEMENTS
 
     def measure(self, operation: "Node") -> list[str]:
         python = str(operation.source.file or "").endswith(".py")
@@ -153,7 +160,11 @@ class KeepOperationsSmall(OperationMeasureRule):
 
 class SimplifyControlFlow(OperationMeasureRule):
     slug = "simplify-control-flow"
-    limit = 3
+    code_fidelity_only = True
+
+    @property
+    def limit(self) -> int:
+        return rule_numbers.MOST_NESTED_LEVELS
 
     def measure(self, operation: "Node") -> list[str]:
         if operation.name.startswith("register") and operation.name.endswith("Route"):
@@ -170,6 +181,7 @@ class UseExceptionsProperly(ProductionCodeRule):
     """A spec catches every exception on purpose, to prove what a call raises, so only production code is judged."""
 
     slug = "use-exceptions-properly"
+    code_fidelity_only = True
     node_types = OperationMeasureRule.node_types
 
     def check_production(self, operation: "Node", context: "RuleCheckContext") -> list[Finding]:
@@ -180,6 +192,7 @@ class UseExceptionsProperly(ProductionCodeRule):
 
 class NeverSwallowExceptions(ProductionCodeRule):
     slug = "never-swallow-exceptions"
+    code_fidelity_only = True
     node_types = OperationMeasureRule.node_types
 
     def check_production(self, operation: "Node", context: "RuleCheckContext") -> list[Finding]:
@@ -190,6 +203,7 @@ class NeverSwallowExceptions(ProductionCodeRule):
 
 class ProvideMeaningfulContext(ProductionCodeRule):
     slug = "provide-meaningful-context"
+    code_fidelity_only = True
     node_types = ("Operation",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
@@ -203,6 +217,8 @@ class AvoidVagueParameterNames(ProductionCodeRule):
     payload the caller supplies, so the name hides nothing."""
 
     slug = "avoid-vague-parameter-names"
+    # Requires a judge: whether a parameter's name is vague is read from what it carries; the check matches a word list.
+    requires_judge = True
     node_types = ("Parameter", "Operation")
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
@@ -233,6 +249,8 @@ class UseIntentionRevealingNames(ProductionCodeRule):
     where it is written."""
 
     slug = "use-intention-revealing-names"
+    # Requires a judge: whether a name says why the thing exists is read from the name in its place; the check goes by its length.
+    requires_judge = True
     node_types = ("Parameter",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
@@ -257,6 +275,8 @@ class UseIntentionRevealingNames(ProductionCodeRule):
 
 class UseConsistentNaming(ProductionCodeRule):
     slug = "use-consistent-naming"
+    # Requires a judge: whether two words name one concept is read from what they mean; the check matches word lists.
+    requires_judge = True
     node_types = ("OoadClass",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
@@ -280,6 +300,7 @@ class UseConsistentNaming(ProductionCodeRule):
 
 class PreferInstanceOperations(ProductionCodeRule):
     slug = "prefer-instance-operations"
+    code_fidelity_only = True
     node_types = ("Operation",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:

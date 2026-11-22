@@ -1,8 +1,9 @@
 import { ChatToldFailures, reasonOf } from '@cdd/cdd-page-failures';
 import type { CddApi } from '@cdd/cdd-shared';
 import { ChatClientGenerated } from '@cdd/harness/chat/chat';
+import { GraphClientGenerated } from '@cdd/harness/graph/graph';
 
-import { buildViolationCorrectPrompt, NOT_SENT, SENT_TO_CHAT, type CorrectionOutcome, type ViolationCorrection } from '../source/violation-prompt';
+import { NOT_SENT, SENT_TO_CHAT, type CorrectionAsked, type CorrectionOutcome } from '../source/violation-prompt';
 
 // How long a failure stays on the page as a toast.
 export const TOAST_MILLISECONDS = 8_000;
@@ -41,17 +42,24 @@ export class GraphFailures extends ChatToldFailures {
   // Correct in the Graph app: the whole correction fills the prompt of the chat that opened the page, as a file comment
   // sent from the Files app does, for the person to review and send. The Graph app keeps no session's comments, so the
   // correction goes to the chat directly; a page no chat opened, or a chat that does not take it, says why in a toast.
-  readonly correct = async (correction: ViolationCorrection): Promise<CorrectionOutcome> => {
-    const context = `Correct ${correction.rule} in the Graph app`;
+  // Python writes the correction, from the node and the rule it breaks there; a node that no longer breaks it has none.
+  readonly correct = async (asked: CorrectionAsked): Promise<CorrectionOutcome> => {
+    const rule = asked.violation.rule;
+    const context = `Correct ${rule} in the Graph app`;
     if (!this.chat) {
       this.fail(NO_CHAT, context);
       return NOT_SENT;
     }
     try {
-      await ChatClientGenerated.named(this.api, this.chat).send('fill', buildViolationCorrectPrompt(correction));
+      const prompt = await new GraphClientGenerated(this.api).correctionPrompt(asked.nodeId, rule);
+      if (!prompt) {
+        this.fail(`The graph holds no correction for ${rule} on this node: load the folder again if it should.`, context);
+        return NOT_SENT;
+      }
+      await ChatClientGenerated.named(this.api, this.chat).send('fill', prompt);
       return SENT_TO_CHAT;
     } catch (cause) {
-      this.fail(`The correction for ${correction.rule} was not sent: ${reasonOf(cause)}`, context);
+      this.fail(`The correction for ${rule} was not sent: ${reasonOf(cause)}`, context);
       return NOT_SENT;
     }
   };

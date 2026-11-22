@@ -4,11 +4,11 @@ A measure is one number about a function, a class, or a module, read from a fact
 wherever a person reads it. Most are facts the reader already keeps on every node it reads: an operation's lines and
 parameters, a class's methods, a module's import loops and the modules it imports. A measure no such fact gives is
 supplied by a tool, kept as a fact when the reader reads a file a read names: the paths through a function, its
-readability score, a class's total complexity, and a module's maintainability score. Which tool supplies one depends on
+readability score, and a class's total complexity. Which tool supplies one depends on
 the language the code is written in, so the choice is a table of measure by language, kept with the limits in the
 project's ``.context/config.json`` under ``code_measures``. A project holds its code to the limits once its config has
-that section; the section starts from the shipped table, which fills in Python and TypeScript, and lays its own entries
-over it. Code in any other language has no tool chosen: the reader keeps why on the node
+that section; the section starts from the shipped table, which fills in Python, TypeScript and JavaScript, and lays
+its own entries over it. Code in any other language has no tool chosen: the reader keeps why on the node
 (``CodeMeasure.not_taken_fact``) and the measure's limit rule reports it by name until someone chooses one. A project
 whose config has no such section has not chosen to measure its code: no tool is asked, and no limit is held."""
 
@@ -36,7 +36,9 @@ NOT_MEASURED = "not measured"
 READER = "reader"
 FUNCTION, CLASS, MODULE = "function", "class", "module"
 # The node types each kind of measure is read on.
-NODE_TYPES = {FUNCTION: ("Operation", "Property"), CLASS: ("OoadClass",), MODULE: ("Module", "Package")}
+# A module is a folder that owns a module card; a folder with no card is a package, a part of its module, and is
+# measured with it, never on its own.
+NODE_TYPES = {FUNCTION: ("Operation", "Property"), CLASS: ("OoadClass",), MODULE: ("Module",)}
 
 
 @dataclass(frozen=True)
@@ -87,11 +89,6 @@ def _parameters_taken(node: "Node") -> int | None:
     return counted_parameters([parameter.name for parameter in parameters_of(node)], node.get_fact("packed_parameters", None) or {})
 
 
-def _modules_imported(node: "Node") -> int:
-    """The modules a module imports, counted from the dependsOn edges every read records from it."""
-    return len(node.graph.edges.from_parent("dependsOn", node))
-
-
 PATHS_THROUGH = CodeMeasure("paths_through", "paths through a function (cyclomatic complexity)", "{value} paths through it (cyclomatic complexity)", FUNCTION)
 READABILITY_SCORE = CodeMeasure(
     "readability_score",
@@ -115,15 +112,11 @@ UNSHARED_METHOD_GROUPS = CodeMeasure(
     "{value} groups of methods that share no data with one another (lack of cohesion)",
     CLASS,
 )
-IMPORT_LOOPS = CodeMeasure("import_loops", "loops of modules importing one another that a module is part of", "{value} import loops", MODULE, existing="import_cycles", counted=True)
-MODULES_IMPORTED = CodeMeasure("modules_imported", "modules a module imports (outgoing coupling)", "{value} modules it imports", MODULE, read=_modules_imported)
+# A module's imports are those of its whole folder, the packages inside it included, to other modules
+# (``reading/folder_facts.py``, ``ModuleImports``), which every read keeps.
+IMPORT_LOOPS = CodeMeasure("import_loops", "loops of modules importing one another that a module is part of", "{value} import loops", MODULE, existing="module_import_loops", counted=True)
+MODULES_IMPORTED = CodeMeasure("modules_imported", "modules a module imports (outgoing coupling)", "{value} modules it imports", MODULE, existing="imported_modules", counted=True)
 MODULES_IMPORTING = CodeMeasure("modules_importing", "modules that import a module (incoming coupling)", "{value} modules that import it", MODULE)
-MAINTAINABILITY_SCORE = CodeMeasure(
-    "maintainability_score",
-    "maintainability score of a module's hardest file (maintainability index, 0 to 100; higher is easier to maintain)",
-    "a maintainability score of {value} on its hardest file (maintainability index, 0 to 100; higher is easier to maintain)",
-    MODULE,
-)
 COPIED_CODE_BLOCKS = CodeMeasure("copied_code_blocks", "blocks of code a module repeats from another file", "{value} blocks of code repeated from another file", MODULE)
 ABSTRACTNESS = CodeMeasure("abstractness", "share of a module's classes that are abstract (abstractness, 0 to 1)", "{value} of its classes abstract", MODULE)
 INSTABILITY = CodeMeasure("instability", "share of a module's imports that go outward (instability, 0 to 1)", "{value} of its imports going outward", MODULE)
@@ -131,7 +124,7 @@ INSTABILITY = CodeMeasure("instability", "share of a module's imports that go ou
 MEASURES: tuple[CodeMeasure, ...] = (
     PATHS_THROUGH, READABILITY_SCORE, CODE_LINES, PARAMETERS_TAKEN,
     TOTAL_COMPLEXITY, METHOD_COUNT, CLASSES_DEPENDED_ON, UNSHARED_METHOD_GROUPS,
-    IMPORT_LOOPS, MODULES_IMPORTED, MODULES_IMPORTING, MAINTAINABILITY_SCORE, COPIED_CODE_BLOCKS, ABSTRACTNESS, INSTABILITY,
+    IMPORT_LOOPS, MODULES_IMPORTED, MODULES_IMPORTING, COPIED_CODE_BLOCKS, ABSTRACTNESS, INSTABILITY,
 )
 MEASURE_NAMED = {measure.name: measure for measure in MEASURES}
 
@@ -139,16 +132,15 @@ MEASURE_NAMED = {measure.name: measure for measure in MEASURES}
 # its code starts with. Its own ``code_measures`` is laid over it, entry by entry. A measure that is not here is read
 # from a fact the reader keeps on every node, and no tool is ever asked for it.
 SHIPPED_TOOLS: dict[str, dict[str, str]] = {
-    PATHS_THROUGH.name: {"python": "lizard", "typescript": "lizard"},
-    READABILITY_SCORE.name: {"python": "lizard", "typescript": "lizard"},
-    TOTAL_COMPLEXITY.name: {"python": "lizard", "typescript": "lizard"},
-    CLASSES_DEPENDED_ON.name: {"python": READER, "typescript": READER},
-    UNSHARED_METHOD_GROUPS.name: {"python": READER, "typescript": NOT_MEASURED},
-    MODULES_IMPORTING.name: {"python": READER, "typescript": READER},
-    MAINTAINABILITY_SCORE.name: {"python": "radon", "typescript": NOT_MEASURED},
-    COPIED_CODE_BLOCKS.name: {"python": NOT_MEASURED, "typescript": NOT_MEASURED},
-    ABSTRACTNESS.name: {"python": READER, "typescript": READER},
-    INSTABILITY.name: {"python": READER, "typescript": READER},
+    PATHS_THROUGH.name: {"python": "lizard", "typescript": "lizard", "javascript": "lizard"},
+    READABILITY_SCORE.name: {"python": "lizard", "typescript": "lizard", "javascript": "lizard"},
+    TOTAL_COMPLEXITY.name: {"python": "lizard", "typescript": "lizard", "javascript": "lizard"},
+    CLASSES_DEPENDED_ON.name: {"python": READER, "typescript": READER, "javascript": READER},
+    UNSHARED_METHOD_GROUPS.name: {"python": READER, "typescript": NOT_MEASURED, "javascript": NOT_MEASURED},
+    MODULES_IMPORTING.name: {"python": READER, "typescript": READER, "javascript": READER},
+    COPIED_CODE_BLOCKS.name: {"python": NOT_MEASURED, "typescript": NOT_MEASURED, "javascript": NOT_MEASURED},
+    ABSTRACTNESS.name: {"python": READER, "typescript": READER, "javascript": READER},
+    INSTABILITY.name: {"python": READER, "typescript": READER, "javascript": READER},
 }
 # The most each measure may be before its rule reports the node. A measure with no limit is kept for information.
 # ``one-way-deps`` holds a module to no import loop at all.
@@ -156,12 +148,15 @@ SHIPPED_LIMITS: dict[str, float] = {
     PATHS_THROUGH.name: 10,
     READABILITY_SCORE.name: 15,
     CODE_LINES.name: 50,
-    PARAMETERS_TAKEN.name: 5,
+    PARAMETERS_TAKEN.name: 3,
     TOTAL_COMPLEXITY.name: 100,
     METHOD_COUNT.name: 30,
     UNSHARED_METHOD_GROUPS.name: 1,
     IMPORT_LOOPS.name: 0,
 }
+# The measures the explorer tree shows under a node for information, with their value and no limit: no rule reads
+# them, so none reports them.
+SHOWN_WITHOUT_LIMIT: tuple[CodeMeasure, ...] = (MODULES_IMPORTED, MODULES_IMPORTING)
 
 
 class MeasureNotTaken(Exception):
@@ -173,9 +168,11 @@ class NoToolChosen(MeasureNotTaken):
     """Code was read in a language the project has chosen no tool for, for one measure."""
 
     def __init__(self, measure: CodeMeasure, language: str, config: Path) -> None:
+        chosen_under = f'"{CONFIG_SECTION}": "tools": "{measure.name}": "{language}"'
         super().__init__(
-            f"No tool is chosen to measure '{measure.name}' ({measure.label}) in {language}. Choose one in {config} under "
-            f'"{CONFIG_SECTION}": "tools": "{measure.name}": "{language}", or write "{NOT_MEASURED}" there to leave it out.'
+            f"No tool is chosen to measure '{measure.name}' ({measure.label}) in {language}. "
+            f"Fix: choose a tool that takes '{measure.name}' in {language}, record it in {config} under {chosen_under}, "
+            f'and install it; or write "{NOT_MEASURED}" there to leave the measure out.'
         )
         self.measure = measure
         self.language = language

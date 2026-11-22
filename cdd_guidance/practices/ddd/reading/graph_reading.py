@@ -25,7 +25,7 @@ from harness.markdown.markdown import MarkdownText
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
-from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
+from cdd_guidance.practices.clean_engineering.reading.code_read import CODE_FIDELITY, DESCRIBED_FACT, MODEL_FIDELITY
 from cdd_guidance.practices.clean_engineering.model import Relationship
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
 from cdd_guidance.practices.source_code import is_test_code
@@ -39,6 +39,8 @@ if TYPE_CHECKING:
 
     from cdd_guidance.practices.clean_engineering.model import OoadClass
 
+# DDD's code fidelity, which a building block whose class has a body is read at.
+TACTICS_FIDELITY = "tactics"
 _FOREIGN_KEY = re.compile(r"//\s*foreign\s+(\w+)")
 _DERIVE_PREFIX = re.compile(r"^derive\w*", re.IGNORECASE)
 _ONLY_DELEGATES = re.compile(r"return\s+\w+\.\w+\s*\(")
@@ -554,6 +556,9 @@ class _AggregateBlocks:
         """The building block a class is, at location, in the aggregate: its root, or one of its parts."""
         block = BuildingBlock(self._reading.practice, tactical, kind)
         added = self._reading.in_graph.add(block, f"ddd:{kind}:{location.file}:{tactical.oclass.name}", location)
+        # The fidelity goes by what the class holds, in any format: tactics once one of its operations has a body, as
+        # Clean Engineering read it at code, else the model, so a rule only tactics holds leaves a class with no bodies out.
+        added.read_at(TACTICS_FIDELITY if tactical.oclass.is_read_at(CODE_FIDELITY) else MODEL_FIDELITY)
         self._reading.graph.edges.link("root" if kind == "EntityRoot" else "owns", aggregate, added)
         self._reading.graph.edges.relate("belongsTo", added, aggregate)
         return added

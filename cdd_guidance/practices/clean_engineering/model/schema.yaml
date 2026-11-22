@@ -33,6 +33,7 @@ module:
     - general-purpose-surface
     - temporal-independence
     - one-way-deps
+    - depend-toward-stability
     - extensions-live-with-the-domain
     - low-coupling
     - layer-separation
@@ -52,6 +53,7 @@ package:
     - a package groups classes inside a module
   rules:
     - one-way-deps
+    - depend-toward-stability
     - layer-separation
     - source-parses
 
@@ -136,6 +138,7 @@ operation:
     - limit-operation-parameters
     - avoid-vague-parameter-names
     - errors-out-of-existence
+    - refuse-unreadable-input
     - state-change-returns-record-or-named-failure
     - domain-exception-carries-context
     - write-invariants
@@ -155,7 +158,6 @@ operation:
     - limit-paths-through-a-function
     - keep-functions-readable
     - limit-function-lines
-    - limit-function-parameters
 
 property:
   fidelity: model
@@ -178,12 +180,12 @@ property:
     - simplify-control-flow
     - use-exceptions-properly
     - never-swallow-exceptions
+    - refuse-unreadable-input
     - limit-operation-parameters
     - write-interactions
     - limit-paths-through-a-function
     - keep-functions-readable
     - limit-function-lines
-    - limit-function-parameters
 
 parameter:
   fidelity: model

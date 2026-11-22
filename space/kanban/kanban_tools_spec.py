@@ -396,6 +396,40 @@ with description("the board tools") as self:
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")
                 expect(report["rules"]).to(equal([]))
 
+        # A rule that requires a judge lists candidates: places to read, which nothing has decided are wrong.
+        with context("with a validation report whose graph holds a candidate of a rule that requires a judge"):
+            with before.each:
+                listed = saved_graph(saved_practice("stories", "node-1", "docs/map.md", 12, ("verb-noun-format", "`Press The Mark` may name a gesture"), requires_judge=True))
+                self.project.report("pet-visits", "stories-story-map-20261031T041200", listed)
+                self.candidates = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")
+
+            with it("should show the candidate under its rule as a candidate"):
+                expect(self.candidates["rules"][0]["violations"][0]["severity"]).to(equal("candidate"))
+
+            with it("should count the rule's candidates"):
+                expect(self.candidates["rules"][0]["candidate_count"]).to(equal(1))
+
+            with it("should count no violation"):
+                expect(self.candidates["violation_count"]).to(equal(0))
+
+            with it("should count the candidate apart from the violations"):
+                expect(self.candidates["candidate_count"]).to(equal(1))
+
+            # The judge has then read the candidates, so its findings are the rule's violations.
+            with context("that the judgment fails on the same rule"):
+                with before.each:
+                    (self.project.root / "docs").mkdir()
+                    (self.project.root / "docs" / "map.md").write_text("".join(f"line {number}\n" for number in range(1, 21)), encoding="utf-8")
+                    report = self.project.sessions / "pet-visits" / "validation-reports" / "stories-story-map-20261031T041200.md"
+                    report.write_text("# Graph rule validation\n\n## Judgment — `docs/map.md`\n\n### `verb-noun-format` — Fail\n- map.md:12 `Press The Mark`: names the gesture, not what the person means to do.\n", encoding="utf-8")
+                    self.judged = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")
+
+                with it("should show the judge's finding in place of the candidate"):
+                    expect([violation["severity"] for violation in self.judged["rules"][0]["violations"]]).to(equal(["error"]))
+
+                with it("should count the finding as a violation"):
+                    expect(self.judged["violation_count"]).to(equal(1))
+
         # (S) Board App --> Display Board
         with context("with another ticket whose session.json is cut off half way"):
             with before.each:

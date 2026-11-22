@@ -11,7 +11,6 @@ import type { Monaco } from '@monaco-editor/react';
 import { CallCatalog } from './source/call-expansion';
 import type { SourceCallout } from './source/source-callouts';
 import { FoldKeys, VS_CODE_FOLD_KEYS } from './source/source-folding';
-import { buildViolationCorrectPrompt } from './source/violation-prompt';
 import filterChoices from './filter-choices.json';
 
 const foldMarks = vi.hoisted(() => ({
@@ -1103,23 +1102,15 @@ it('should show the violation banner, highlight the source, and say Correct was 
   expect((await screen.findByTestId('violation-correct-outcome')).textContent).toBe('Not sent');
 });
 
-// Correct hands the page the broken rule to correct, and shows on the banner what the page answered.
-it('should hand Correct the rule, its lines, and their text, and show that it was sent', async () => {
+// Correct hands the page the broken rule to correct, which Python writes the words of, and shows on the banner what the
+// page answered.
+it('should hand Correct the violation, its node, and its lines, and show that it was sent', async () => {
   const onCorrect = vi.fn().mockResolvedValue({ isSent: true, words: 'Sent to chat' });
   const user = userEvent.setup();
   const violation = { rule: 'limit-operation-parameters', message: "Operation 'failure' takes 4 parameters (maximum 2).", startLine: 2, endLine: 3 };
   render(<SourceView source={longLine} violation={violation} rules={[]} activeRule="" onCorrect={onCorrect} />);
   await user.click(screen.getByTestId('violation-correct'));
-  expect(onCorrect).toHaveBeenCalledWith({
-    rule: violation.rule,
-    message: violation.message,
-    nodeName: longLine.name,
-    nodeType: longLine.type,
-    file: longLine.file,
-    startLine: 2,
-    endLine: 3,
-    excerpt: longLine.text,
-  });
+  expect(onCorrect).toHaveBeenCalledWith({ violation, nodeId: longLine.node_id, startLine: 2, endLine: 3 });
   const outcome = await screen.findByTestId('violation-correct-outcome');
   expect(outcome.textContent).toBe('Sent to chat');
   expect(outcome.className).toContain('is-sent');
@@ -1133,23 +1124,6 @@ it('should show that Correct was not sent when the page answers so', async () =>
   const outcome = await screen.findByTestId('violation-correct-outcome');
   expect(outcome.textContent).toBe('Not sent');
   expect(outcome.className).toContain('is-failed');
-});
-
-it('should build a Correct prompt with the rule, excerpt, and violation message', () => {
-  const prompt = buildViolationCorrectPrompt({
-    rule: 'use-explicit-dependencies',
-    message: 'Constructs a collaborator inside the constructor.',
-    nodeName: 'register',
-    nodeType: 'Operation',
-    file: 'account.ts',
-    startLine: 10,
-    endLine: 18,
-    excerpt: 'register() { }',
-  });
-  expect(prompt).toContain('use-explicit-dependencies');
-  expect(prompt).toContain('account.ts:10-18');
-  expect(prompt).toContain('register() { }');
-  expect(prompt).toContain('Constructs a collaborator inside the constructor.');
 });
 
 it('should show invokes, observes, and demonstrates on a step', async () => {

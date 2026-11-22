@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 _TECHNICAL_SUFFIXES = frozenset({"result", "response", "dto", "request"})
 _AGENT_NOUNS = frozenset({"manager", "helper", "processor", "handler", "controller"})
 _CAMEL = re.compile(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])")
+# DDD's code fidelity: a rule only it holds judges a building block whose class has a body, never one at the model.
+_TACTICS = "tactics"
 
 
 class PrivateMethodNaming(PracticeGraphRule):
@@ -25,6 +27,8 @@ class PrivateMethodNaming(PracticeGraphRule):
     node_types = BUILDING_BLOCK_KINDS
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        if not node.is_read_at(_TACTICS):
+            return []
         if node.name.startswith("_"):
             return [Finding(node, f"Domain type name {node.name!r} should not start with '_'.")]
         return [Finding(node, message) for message in [
@@ -70,6 +74,7 @@ class DomainConceptsNotTechnicalNames(PracticeGraphRule):
     """An aggregate is named for its folder, so a folder named for a manager or a helper names a technical concept."""
 
     slug = "domain-concepts-not-technical-names"
+    requires_judge = True
     node_types = BUILDING_BLOCK_KINDS + ("Aggregate",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
@@ -86,7 +91,7 @@ class ServiceIsHomeless(PracticeGraphRule):
     node_types = ("DomainService",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
-        if not node.get_fact("named_for_its_kind", False):
+        if not node.is_read_at(_TACTICS) or not node.get_fact("named_for_its_kind", False):
             return []
         for name in node.get_fact("delegating_operations", []):
             return [Finding(node, f"Domain service '{node.name}' only delegates '{name}' to another type; move it onto that aggregate.")]
@@ -95,6 +100,7 @@ class ServiceIsHomeless(PracticeGraphRule):
 
 class RepositoryIsCollectionLifecycle(PracticeGraphRule):
     slug = "repository-is-collection-lifecycle"
+    requires_judge = True
     node_types = ("Repository",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
@@ -140,6 +146,7 @@ class NoOrphanedObjects(PracticeGraphRule):
 
 class ScreenInterfaceNotADomainObject(PracticeGraphRule):
     slug = "screen-interface-not-a-domain-object"
+    requires_judge = True
     node_types = ("EntityRoot", "Entity", "ValueObject", "DomainService")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:

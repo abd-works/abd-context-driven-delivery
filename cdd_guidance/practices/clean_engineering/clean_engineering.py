@@ -15,6 +15,8 @@ from cdd_guidance.practices.clean_engineering.model.sketch.sketch_class_model im
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import TypeScriptCleanEngineeringModel
 from harness.agent_tools.agent_tools import agent_instructions, agent_toolset, tools
 from cdd_guidance.practices.source_code import is_test_code
+from cdd_guidance.practices.clean_engineering.rules import RULES, rule_numbers
+from harness.graph.practice_rule import decided_values
 from harness.guidance.guidance import PracticeGuidance
 
 
@@ -48,6 +50,13 @@ class CleanEngineering(PracticeGuidance):
     model_document_format = MarkdownCleanEngineeringModel
 
     default_workspace_folder = "src"
+
+    @property
+    def markdown_values(self) -> dict[str, str]:
+        """The numbers its rules hold, for the markers its document carries in their place (``rules/rule_numbers.py``),
+        so the limit a check reads is the one its rule's text states; and how each graph rule is decided, checked by
+        the graph or judged from the candidates it lists, from the rule's own ``requires_judge``."""
+        return {**rule_numbers.markdown_values(), **decided_values(RULES)}
 
     def is_production_code(self, file: str) -> bool:
         """Code its fidelities write, not a spec, a test, or test support (``is_test_code``)."""

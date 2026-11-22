@@ -40,6 +40,11 @@ def node_titles(page, kind: str) -> list[str]:
     return sorted(page.locator(f'button.graph-node[title^="{kind} "]').evaluate_all("nodes => nodes.map(node => node.title)"))
 
 
+def metric_titles(entry) -> list[str]:
+    """The metrics shown under one entry of the graph tree, each as its title reads."""
+    return entry.locator('button.graph-node[title^="Metric "]').evaluate_all("nodes => nodes.map(node => node.title)")
+
+
 def filter_to_operations(page) -> None:
     """Filters the graph to operations and waits until the trees are read again for it, when the practice roots show
     without the classes the filter leaves out."""
@@ -150,6 +155,37 @@ with description("Story: Follow Relationships Under Node In Files App") as self:
 
                 with it("But ticket.py, which holds Ticket.delete, is no longer open"):
                     expect(open_files(self.page)).to(equal([BOARD_CODE]))
+
+
+with description("Story: Follow Relationships Under Node In Files App, on a project that measures its code") as self:
+    with before.all:
+        self.stack = FilesStack.on_a_project_that_measures_its_code()
+
+    with after.all:
+        self.stack.close()
+
+    with context("Scenario: An operation lists its metrics, each with its value and its limit"):
+        with context("Given the Files app shows checkout-flow's graph with Ticket opened"):
+            with before.all:
+                self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
+                graph_view(self.page)
+                open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+
+            with after.all:
+                self.page.close()
+
+            with context("When the Person opens Ticket.delete and its metrics group"):
+                with before.all:
+                    open_branches(self.page, "delete")
+                    self.delete = self.page.locator("li.graph-entry").filter(has=self.page.locator('button.graph-node[title="Operation delete"]')).last
+                    self.delete.get_by_role("button", name="Open metrics", exact=True).first.click()
+                    self.delete.locator('button.graph-node[title^="Metric "]').first.wait_for(timeout=GRAPH_READ_MILLISECONDS)
+
+                with it("Then the metrics group holds the lines of Ticket.delete, 5, with the limit 50"):
+                    expect(metric_titles(self.delete)).to(contain("Metric lines in a function: 5, limit 50"))
+
+                with it("And the parameters Ticket.delete takes, 1, with the limit 3"):
+                    expect(metric_titles(self.delete)).to(contain("Metric parameters a function takes: 1, limit 3"))
 
 
 with description("Story: Filter Graph By Node Type And Connector In Files App") as self:

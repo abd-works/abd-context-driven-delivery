@@ -4,7 +4,7 @@ import { countOf } from '../shared/board-brand'
 import { useBoard } from '../shared/board-context'
 import type { ReportPanel } from '../shared/board-store'
 import { ChevronIcon } from '../shared/icons'
-import { ACCEPT_TITLE, falseTitleOn, fixTitleOn, locationOf, TAKE_BACK_TITLE, type ReportClient } from './report-client'
+import { ACCEPT_TITLE, CANDIDATE_TITLE, falseTitleOn, fixTitleOn, isCandidate, locationOf, TAKE_BACK_TITLE, type ReportClient } from './report-client'
 
 function SourceLineView({ violation, entry }: { violation: ViolationData; entry: SourceLineData }) {
   return (
@@ -46,10 +46,15 @@ function ViolationView({ panel, rule, violation, isOff }: { panel: ReportPanel; 
   const { page } = useBoard()
   const hasSource = violation.source.length > 0
   return (
-    <article className="violation">
+    <article className={isCandidate(violation) ? 'violation is-candidate' : 'violation'}>
       <div className="violation-head">
         <div className="violation-words">
           {hasSource ? null : <ViolationLocationView panel={panel} rule={rule} violation={violation} />}
+          {isCandidate(violation) ? (
+            <span className="candidate-tag" title={CANDIDATE_TITLE}>
+              Candidate
+            </span>
+          ) : null}
           <div className="violation-message">{violation.message}</div>
         </div>
         <div className="violation-actions">
@@ -78,7 +83,8 @@ function RuleHeadView({ report, rule, place, isOpen, isOff }: { report: ReportCl
           <button className="rule-toggle" aria-expanded={isOpen} onClick={() => page.panels.toggleRule(place)}>
             <ChevronIcon isTurned={!isOpen} />
             <span>{rule.rule.slug}</span>
-            <span className="rule-count">{countOf(rule.count, 'violation')}</span>
+            {rule.count > rule.candidate_count ? <span className="rule-count">{countOf(rule.count - rule.candidate_count, 'violation')}</span> : null}
+            {rule.candidate_count ? <span className="rule-count is-candidate">{countOf(rule.candidate_count, 'candidate')}</span> : null}
           </button>
         </h2>
         <p>{rule.rule.body}</p>

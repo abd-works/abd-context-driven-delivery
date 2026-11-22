@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 class PreferClassOperations(ProductionCodeRule):
     slug = "prefer-class-operations"
+    # Requires a judge: whether a free function belongs on a class is read from who calls it and why; the check counts its callers.
+    requires_judge = True
     node_types = ("OoadClass",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:

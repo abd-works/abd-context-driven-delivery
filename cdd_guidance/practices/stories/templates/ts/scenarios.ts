@@ -31,12 +31,6 @@
  *
  * First outcome: `then(...)`. Further outcomes on the same interaction: `.and(...)`.
  *
- * ## Edge conditions (`edge-conditions-walked`)
- *
- * Every story answers the nine edge conditions of the scenarios Guidance: a scenario such as the validation
- * branches below, one line "does not apply, because ...", or a question for the person. The lines live under
- * `### Edge conditions` in the story's markdown scenarios file, or in a comment above the story when it has none.
- *
  * ## Lifecycle hooks (`infrastructure-in-lifecycle-hooks`)
  *
  * Browser boot, app wiring, and initialize in `beforeAll` / `afterAll` — not in `given()`.
@@ -54,12 +48,22 @@
  * import { validAccountCredentials } from "./examples/account-credentials.examples";
  *
  * Pattern: GWT structure only — // test code goes here in each step callback.
+ *
+ * ## The sample below (`edge-and-error-cases-have-scenarios`)
+ *
+ * A sample story placing an order, written out so you can see a filled-in file: replace each part with your own.
+ *   {Story Verb–Noun}                     → the story's name, as the story map names it
+ *   the background's given                → the domain state every scenario starts from
+ *   "customer places an order ..."        → the main flow: one scenario, its outcome, `.and()` for each further outcome
+ *   "customer places an order ... empty"  → one scenario for each edge or error case that applies, written like any
+ *                                           other scenario; keep no table or list of cases beside them
+ * Add as many edge and error scenarios as the story has cases; write none for a case that does not apply.
  */
 
 import { afterAll, beforeAll } from "vitest";
 import { background, scenario, story } from "../../story-test";
 
-story("{Story Verb-Noun}", () => {
+story("{Story Verb–Noun}", () => {
   beforeAll(async () => {
     // infrastructure — boot / wiring (not domain Given)
   });
@@ -69,56 +73,34 @@ story("{Story Verb-Noun}", () => {
   });
 
   background(({ given }) => {
-    given("{background given step}", async () => {
+    given("a customer has a cart", async () => {
       // domain state only
-    }).and("{additional condition on the same background state}", async () => {
-      // chained domain state — not a second sibling given
     });
 
-    scenario("{surface check — e.g. rules visible}", ({ when, then }) => {
-      when("{primary when step}", async () => {
+    scenario("customer places an order for the books in the cart", ({ given, when, then }) => {
+      given("the cart holds one book", async () => {
         // test code goes here
       });
-      then("{observable surface outcome}", async () => {
+      when("the customer places the order", async () => {
         // test code goes here
-      }).and("{further outcome on same interaction}", async () => {
+      });
+      then("an order holds the book", async () => {
+        // test code goes here
+      }).and("the cart is empty", async () => {
         // chain with .and(), not a second then()
       });
     });
 
-    scenario("{validation branch while typing}", ({ when, then }) => {
-      when("{primary when step}", async () => {
-        // test code goes here
-      }).and("{follow-on when step}", async () => {
+    scenario("customer places an order for an empty cart", ({ given, when, then }) => {
+      given("the cart holds no book", async () => {
         // test code goes here
       });
-      then("{validation message on domain object}", () => {
+      when("the customer places the order", async () => {
         // test code goes here
       });
-    });
-
-    scenario("{validation clears when input conforms}", ({ when, then }) => {
-      when("{primary when step}", async () => {
+      then("the order is refused because the cart is empty", async () => {
         // test code goes here
-      }).and("{prior invalid state}", async () => {
-        // test code goes here
-      });
-      when("{corrective action}", async () => {
-        // test code goes here
-      });
-      then("{error cleared on domain object}", () => {
-        // test code goes here
-      });
-    });
-
-    scenario("{main-flow outcome}", ({ when, then }) => {
-      when("{primary when step}", async () => {
-        // test code goes here
-      });
-      when("{submit operation on domain object}", async () => {
-        // test code goes here
-      });
-      then("{post-condition on loaded aggregate}", async () => {
+      }).and("no order is created", async () => {
         // test code goes here
       });
     });

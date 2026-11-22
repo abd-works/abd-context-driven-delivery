@@ -71,7 +71,9 @@ function TreeNode({
   const selected = rule ? ownerId === selectedId && node.name === activeRule : node.node_id === selectedId;
   const violating = trees.isViolating(node);
   const hits = ExplorerTrees.isRule(node) ? ruleHits(node) : [];
-  const violationHint = ExplorerTrees.isRule(node) && node.status === 'violating' && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
+  const isCandidate = ExplorerTrees.isRule(node) && node.status === 'candidate';
+  const hitHint = ExplorerTrees.isRule(node) && (node.status === 'violating' || isCandidate) && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
+  const violationHint = hitHint && isCandidate ? `Candidate for a judge to read, not an error:\n${hitHint}` : hitHint;
   return (
     <li
       data-node-id={node.node_id}
@@ -96,11 +98,11 @@ function TreeNode({
         )}
         <button
           type="button"
-          className={[selected ? 'selected' : '', ExplorerTrees.isRule(node) ? `rule-status ${node.status}` : '', violating ? 'tree-violating' : '']
+          className={[selected ? 'selected' : '', ExplorerTrees.isRule(node) ? `rule-status ${node.status}` : '', violating ? 'tree-violating' : trees.hasCandidate(node) ? 'tree-candidate' : '']
             .filter(Boolean)
             .join(' ')}
           title={violationHint}
-          data-testid={rule ? (violationHint ? 'tree-violation-rule' : 'tree-rule') : undefined}
+          data-testid={rule ? (isCandidate ? 'tree-candidate-rule' : violationHint ? 'tree-violation-rule' : 'tree-rule') : undefined}
           onClick={() => onSelect(rule && ExplorerTrees.isRule(node) ? selectionForRule(ownerId || node.node_id, node) : { nodeId: node.node_id })}
         >
           <KindMark kind={rule ? 'Rule' : rulesHolder ? 'Rules' : node.type} isFile={false} />

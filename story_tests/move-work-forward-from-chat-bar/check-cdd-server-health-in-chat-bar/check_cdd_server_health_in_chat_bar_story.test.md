@@ -19,7 +19,7 @@ section: body
 | Source | Note |
 |--------|------|
 | `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/display-server-health-mark/display_server_health_mark_story.test.ts` (removed) | the story test these scenarios were recovered from |
-| Show the connected mark | observed: pane/hooks/health/server-health-view.tsx draws ✓ for connected; register.test.ts |
+| Show the connected mark | observed: pane/hooks/health/server-health-view.tsx draws ✓ for connected; pane/hooks/chat-bar/chat-bar-view.tsx `LineView` draws the session's name, its buttons, the health mark, then the version badge. Settled 2026-11-22: the bar is right, and the three marks' scenarios were changed from left of the name to match it |
 | Show the disconnected mark | observed: server-health-view.tsx draws ✕ in the error colour for disconnected |
 | Show the tools missing mark | observed: server-health-view.tsx draws ! in the warning colour for tools-missing |
 
@@ -27,20 +27,20 @@ section: body
 
 *Given* cdd answers server-health.report with 116 tools loaded  
 *When* the Chat Bar draws the active session checkout-flow  
-*Then* a green ✓ sits left of checkout-flow
+*Then* a green ✓ sits right of checkout-flow and its buttons, before the version
 
 #### Scenario: Show the disconnected mark
 
 *Given* checkout-flow is the active session  
 *When* plugin:cdd:cdd stops answering and the Chat Bar draws again  
-*Then* a red ✕ sits left of checkout-flow
+*Then* a red ✕ sits right of checkout-flow and its buttons, before the version
 
 #### Scenario: Show the tools missing mark
 
 *Given* cdd is connected with 40 tools loaded  
   *But* server-health.report is not one of them  
 *When* the Chat Bar draws  
-*Then* an amber ! sits left of checkout-flow
+*Then* an amber ! sits right of checkout-flow and its buttons, before the version
 
 ## Story: Open Server Health Panel
 
@@ -49,18 +49,19 @@ section: body
 | Source | Note |
 |--------|------|
 | `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-server-health-panel/open_server_health_panel_story.test.ts` (removed) | the story test these scenarios were recovered from |
-| Show every part running on one line | observed: server-health-view.tsx lists MCP host, Tools, Kanban app, Graph app; register.test.ts. The Hook server part was removed: the hook command starts that server itself |
+| Show every part running on one line | observed: server-health-view.tsx `ServerHealthIconsView` draws one icon for each part server-health-wording.ts `partsOf` answers: the MCP host, then each app the health report names, then a scheduled test run or screen review when the report holds one. An icon's tip reads the part's name and state (`tooltipOf`): the MCP host's holds the tool count, an app's the port it runs on. Settled 2026-11-22: the bar is right, and the scenario was changed to match it; there is no Tools part and no Hook server part |
 | Pin the panel open | requested: the health mark opens only with the session card |
 | Say what is wrong when cdd is down | observed: server-health-view.tsx headlineOf and the Details, Run install, Reconnect buttons |
 
 #### Scenario: Show every part running on one line
 
-*Given* cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173  
+*Given* cdd is connected with 116 tools loaded, and its health report names the apps Graph, Files, Kanban and Story UI, each running  
 *When* the Person opens the server health panel  
-*Then* the session card opens with the panel on top, MCP host, Tools, Kanban app and Graph app green  
-  *And* Tools reads 116 loaded, Kanban app 8778 and Graph app 5173  
-  *And* no Hook server part shows  
-  *And* each part's name shows on hover
+*Then* the session card opens with one line of icons at its top right: the MCP host, Graph, Files, Kanban and Story UI, each green  
+  *And* the line writes no name, tool count or port beside an icon  
+  *And* hovering the MCP host's icon shows MCP host: running with 116 tools  
+  *And* hovering Kanban's icon shows its name and the port it runs on, Kanban: running :8778  
+  *And* no Tools part and no Hook server part shows  
 
 #### Scenario: Pin the panel open
 

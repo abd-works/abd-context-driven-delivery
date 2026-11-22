@@ -17,6 +17,7 @@ class NoPrototypeSwapping(ProductionCodeRule):
     """Checked on the whole class: private helpers that do the swap are not graph operations."""
 
     slug = "no-prototype-swapping"
+    code_fidelity_only = True
     node_types = ("OoadClass",)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:

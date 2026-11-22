@@ -55,3 +55,20 @@ with description("the module card of a code folder"):
 
         with it("should find no inheritance written in prose"):
             expect(self.card.says_is_a_type_of()).to(be_false)
+
+    with context("copied from the template, with its guidance comment kept"):
+        with before.each:
+            self.folder = tempfile.TemporaryDirectory()
+            card = Path(self.folder.name) / ".context" / "module-context.md"
+            card.parent.mkdir()
+            card.write_text("<!--\n  Do not write `*is a type of*`, and no `------` dumps.\n-->\n\n# Cart\n*Cart* holds lines.\n", encoding="utf-8")
+            self.card = ModuleContext(Path(self.folder.name))
+
+        with after.each:
+            self.folder.cleanup()
+
+        with it("should not read the inheritance the comment names as the card's own"):
+            expect(self.card.says_is_a_type_of()).to(be_false)
+
+        with it("should not read the model detail the comment names as the card's own"):
+            expect(self.card.model_blocks()).to(equal([]))

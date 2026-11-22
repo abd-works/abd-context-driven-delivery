@@ -10,15 +10,16 @@ before it writes the file, whatever the adapter did:
   cell both draw keeps the place the file gave it, since people lay a drawing out by hand.
 - **A whiteboard**: the same, for its elements.
 
-A cell or element the render does not draw under the name the file gives it is the person's, with one exception: a
-format that names its cells anew on every render draws the same cards again under other names, and adding the file's
-cells back would draw them twice. So a file's cell is left out when the render drew a cell saying the same words under
+A cell or element the render does not draw under the name the file gives it is kept, with one exception: a format
+that names its cells anew on every render draws the same cards again under other names, and adding the file's cells
+back would draw them twice. So a file's cell is left out when the render drew a cell saying the same words under
 another name. A cell with no words on it, such as an arrow, cannot be told apart that way: it is kept when the render
 drew at least half of the file's other cells under the names the file gives them, which is a format that keeps its
-names, and left out otherwise.
+names, and left out otherwise. Nothing here asks who made a cell or a line: whether a person added it or an earlier
+render drew it plays no part.
 
-What is kept this way is named in the result, for whoever decides where it belongs: a note a person added stays, and
-a card whose thing the model no longer holds is deleted from the drawing by hand.
+What is kept this way is named in the result, each line, cell or element by itself, with what the render wrote that the
+file did not hold, which may have replaced it: an agent decides each by reading it against what the source now holds.
 """
 
 from __future__ import annotations
@@ -64,7 +65,8 @@ class KeptDocument:
             return Reshaped(rendered, [], [])
         below = "\n\n".join(apart)
         text = f"{rendered.rstrip(chr(10))}\n\n{_HEADING}\n\n{_HEADING_NOTE}\n\n{below}\n"
-        return Reshaped(text, [], [], set_apart=len(apart))
+        written = ExistingText(rendered).lines_not_in("\n".join(lines[:marked]))
+        return Reshaped(text, [line.strip() for line in apart], [line.strip() for line in written], set_apart=len(apart))
 
     def _drawio(self, existing: str, rendered: str) -> Reshaped:
         before, after = ET.fromstring(existing), ET.fromstring(rendered)
@@ -73,22 +75,28 @@ class KeptDocument:
         held = {cell.get("id"): cell for cell in old_root if cell.get("id") and cell.get("id") not in _PAGE_CELLS}
         said = {self._words_of(cell) for cell in drawn.values()}
         keeps_names = self._are_mostly_drawn(held, drawn)
-        only_in_file = [cell for name, cell in held.items() if name not in drawn and self._is_the_persons(self._words_of(cell), said, keeps_names)]
+        only_in_file = [cell for name, cell in held.items() if name not in drawn and self._is_kept(self._words_of(cell), said, keeps_names)]
         moved = [self._placed_as(cell, drawn[name]) for name, cell in held.items() if name in drawn]
         if not only_in_file and not any(moved):
             return Reshaped(rendered, [], [])
         new_root.extend(copy.deepcopy(cell) for cell in only_in_file)
         kept = [f"{cell.get('id')} '{self._words_of(cell)}'" for cell in only_in_file]
-        return Reshaped(ET.tostring(after, encoding="unicode"), kept, [])
+        return Reshaped(ET.tostring(after, encoding="unicode"), kept, self._drawn_new(held, drawn) if kept else [])
 
     def _are_mostly_drawn(self, held: dict, drawn: dict) -> bool:
         """Whether the render drew at least half of what the file holds under the names the file gives it: a format that
         keeps its names. One that names its cells anew draws few or none of them."""
         return bool(held) and 2 * sum(1 for name in held if name in drawn) >= len(held)
 
-    def _is_the_persons(self, words: str, said: set[str], keeps_names: bool) -> bool:
-        """Whether a cell only the file holds is a person's and goes back into the drawing: one whose words no drawn
-        cell says; one with no words only when the format keeps its names."""
+    def _drawn_new(self, held: dict, drawn: dict) -> list[str]:
+        """Each cell the render drew whose words no cell of the file says, by its id and words: what may have replaced
+        a cell kept."""
+        before = {self._words_of(cell) for cell in held.values()}
+        return [f"{name} '{self._words_of(cell)}'" for name, cell in drawn.items() if self._words_of(cell) and self._words_of(cell) not in before]
+
+    def _is_kept(self, words: str, said: set[str], keeps_names: bool) -> bool:
+        """Whether a cell only the file holds goes back into the drawing: one whose words no drawn cell says; one with
+        no words only when the format keeps its names."""
         return words not in said if words else keeps_names
 
     def _words_of(self, cell: ET.Element) -> str:
@@ -110,7 +118,7 @@ class KeptDocument:
         keeps_names = self._are_mostly_drawn(held, drawn)
         only_in_file = [
             name for name in before.get("order", list(held))
-            if name in held and name not in drawn and self._is_the_persons(str(held[name].get("text") or ""), said, keeps_names)
+            if name in held and name not in drawn and self._is_kept(str(held[name].get("text") or ""), said, keeps_names)
         ]
         moved = [name for name in held if name in drawn and any(held[name].get(side) != drawn[name].get(side) for side in _PLACE if side in held[name])]
         if not only_in_file and not moved:
@@ -120,4 +128,10 @@ class KeptDocument:
         drawn.update({name: held[name] for name in only_in_file})
         after["order"] = [*after.get("order", []), *only_in_file]
         kept = [f"{name} '{held[name].get('text', '')}'" for name in only_in_file]
-        return Reshaped(json.dumps(after), kept, [])
+        return Reshaped(json.dumps(after), kept, self._placed_new(held, drawn) if kept else [])
+
+    def _placed_new(self, held: dict, drawn: dict) -> list[str]:
+        """Each element the render drew whose words no element of the file says, by its id and words: what may have
+        replaced an element kept."""
+        before = {str(element.get("text") or "") for element in held.values()}
+        return [f"{name} '{element.get('text')}'" for name, element in drawn.items() if element.get("text") and str(element.get("text")) not in before]

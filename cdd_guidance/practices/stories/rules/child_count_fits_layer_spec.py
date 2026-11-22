@@ -1,4 +1,4 @@
-"""An epic or sub-epic is sized by its layer: 3-9 children under a node that holds sub-epics, 2-9 stories under a
+"""An epic or sub-epic is sized by its layer: 2-9 children under a node that holds sub-epics, 2-9 stories under a
 sub-epic, 4-9 stories under a top epic. A two-layer map, whose epics each hold a few sub-epics of a few stories, passes."""
 
 import sys
@@ -49,31 +49,31 @@ with description("child count fits layer") as self:
             self.subs = (_epic("Place New Order", stories=3), _epic("Track Order Status", stories=2), _epic("Cancel Order", stories=2))
             self.epic = _epic("Manage Customer Orders", sub_epics=self.subs)
 
-        with it("should pass the epic, since a node holding sub-epics groups 3-9 outcomes"):
+        with it("should pass the epic, since a node holding sub-epics groups 2-9 outcomes"):
             expect(_hits(self.epic)).to(equal([]))
 
         with it("should pass a sub-epic of two stories, since its sibling sub-epics carry the breadth"):
             expect(_hits(self.subs[1])).to(equal([]))
 
     with context("with a top epic that holds seven sub-epics"):
-        with it("should pass the epic, since seven is inside 3-9 children"):
+        with it("should pass the epic, since seven is inside 2-9 children"):
             epic = _epic("Onboard A Customer", sub_epics=tuple(_epic(f"Get Sim {n}", stories=2) for n in range(7)))
             expect(_hits(epic)).to(equal([]))
 
     with context("with a top epic that holds ten sub-epics"):
-        with it("should flag the epic outside 3-9 children"):
+        with it("should flag the epic outside 2-9 children"):
             epic = _epic("Onboard A Customer", sub_epics=tuple(_epic(f"Get Sim {n}", stories=2) for n in range(10)))
-            expect(_hits(epic)).to(equal(["epic 'Onboard A Customer': 10 children (target 3-9)"]))
+            expect(_hits(epic)).to(equal(["epic 'Onboard A Customer': 10 children (target 2-9)"]))
 
     with context("with a top epic that holds two sub-epics"):
-        with it("should flag the epic, since two sub-epics are too few to group"):
+        with it("should pass the epic, since two sub-epics are enough to group"):
             epic = _epic("Onboard A Customer", sub_epics=(_epic("Authenticate User", stories=4), _epic("Get Sim", stories=2)))
-            expect(_hits(epic)).to(equal(["epic 'Onboard A Customer': 2 children (target 3-9)"]))
+            expect(_hits(epic)).to(equal([]))
 
     with context("with a top epic that holds one sub-epic"):
         with it("should flag the epic, since one sub-epic is no grouping"):
             epic = _epic("Onboard A Customer", sub_epics=(_epic("Authenticate User", stories=4),))
-            expect(_hits(epic)).to(equal(["epic 'Onboard A Customer': 1 children (target 3-9)"]))
+            expect(_hits(epic)).to(equal(["epic 'Onboard A Customer': 1 children (target 2-9)"]))
 
     with context("with a sub-epic that holds one story"):
         with it("should flag the sub-epic outside 2-9 stories"):

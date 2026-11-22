@@ -50,7 +50,7 @@ class SessionFiles:
         practices = self._session.own_practices.values()
         roots = tuple(sorted({practice.folder for practice in practices} | {practice.output_root for practice in practices} | {folder.resolve() for practice in practices for folder in practice.output_folders}))
         if self._file_manager is None or self._file_manager.roots != roots:
-            self._file_manager = FileManager(self._session.work_root, roots)
+            self._file_manager = FileManager(self._session.work_root, roots, self._session.record)
         return self._file_manager
 
     @property
@@ -63,7 +63,7 @@ class SessionFiles:
         repo_root = self._session.repo.root
         roots = (repo_root, Path(self._session.checkout.root), *self.file_manager.roots, *self._own_folders)
         if self._project_files is None or self._project_files.roots != tuple(Path(root).resolve() for root in roots):
-            self._project_files = FileManager(repo_root, roots)
+            self._project_files = FileManager(repo_root, roots, self._session.record)
         return self._project_files
 
     def find(self, pattern: str) -> list[Path]:
@@ -85,9 +85,12 @@ class SessionFiles:
         return tuple(dict.fromkeys(folder for folder in folders if folder is not None))
 
     def in_folder(self) -> list[FileEntry]:
-        """Every file in the session's record folder and its work folder, each with its path from the project."""
+        """Every file in the session's record folder and its work folder, each with its path from the project. What a
+        change to session.json leaves beside it, its lock file and a killed writer's staged text, is no file of the
+        session's work, so it is left out."""
         repo = self._session.repo
-        files = sorted(path for folder in self._own_folders if folder.is_dir() for path in folder.rglob("*") if path.is_file())
+        record = self._session.record
+        files = sorted(path for folder in self._own_folders if folder.is_dir() for path in folder.rglob("*") if path.is_file() and not record.is_left_beside(path))
         return [FileEntry(repo.path_from_top(path), True) for path in files]
 
     def in_workpath(self) -> list[FileEntry]:
@@ -122,7 +125,8 @@ class SessionFiles:
 
     def write(self, path: str, text: str) -> FileText:
         """Save text as path, a file in the session's repository or under a folder its practices write to, named from
-        the project's top as ``read`` names it."""
+        the project's top as ``read`` names it. The session's own session.json is refused (*SessionRecordWriteRefused*):
+        only its record writes it."""
         return self._from_project.write(path, text)
 
     def existing(self, named: str | Path) -> Path:

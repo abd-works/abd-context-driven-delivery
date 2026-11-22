@@ -85,6 +85,7 @@ class CodeOperation(Operation):
         self.max_control_flow_depth = body.control_flow_depth()
         self.has_bare_catch = body.catches_everything()
         self.swallows_exceptions = body.swallows()
+        self.unreadable_read_as_empty = body.unreadable_read_as_empty()
         self.unnamed_literal_numbers = body.unnamed_numbers()
 
     def _own_objects(self) -> frozenset[str]:

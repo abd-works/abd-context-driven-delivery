@@ -39,11 +39,12 @@ STORY_MAP_TEXT = "# Check Out Order\n\n## Payment\n\n- Enter Card Details\n- Han
 STORY_MAP_REPORT = "stories-story-map-20261101T100000"
 
 
-def saved_practice(practice: str, node_id: str, file: str, line: int, *hits: tuple[str, str]) -> SavedPractice:
+def saved_practice(practice: str, node_id: str, file: str, line: int, *hits: tuple[str, str], requires_judge: bool = False) -> SavedPractice:
     """Seed: one practice of a graph validate saved, as the saved graph keeps it: one story node at file and line, and
-    each hit, a rule and its message, on that node."""
+    each hit, a rule and its message, on that node; with requires_judge, each hit is a candidate a rule that requires a
+    judge listed."""
     node = SavedNode({"node_id": node_id, "name": "", "type": "Story", "practice": practice, "file": file, "line": line, "end_line": line, "stage": "", "facts": {}})
-    found = [Violation(FoundBy(rule, practice, FoundOn(node_id)), message, Location(file, line)) for rule, message in hits]
+    found = [Violation(FoundBy(rule, practice, FoundOn(node_id), requires_judge), message, Location(file, line)) for rule, message in hits]
     return SavedPractice.from_fields(practice, "", {}, [node], [], found)
 
 

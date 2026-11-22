@@ -145,6 +145,13 @@ class ReportRule:
 
     @property
     @data_field
+    def candidate_count(self) -> int:
+        """How many of its violations are candidates: places a rule that requires a judge listed for a reading, which
+        nothing has decided are wrong, so they are shown as candidates and left out of the count of violations."""
+        return sum(1 for violation in self._violations if violation.is_candidate)
+
+    @property
+    @data_field
     def violations(self) -> list[Violation]:
         return list(self._violations)
 
@@ -248,8 +255,15 @@ class Report:
     @property
     @data_field
     def violation_count(self) -> int:
-        """Graph hits and judged findings together, without the ones a person accepted."""
-        return sum(rule.count for rule in self._rules)
+        """Graph hits and judged findings together, without the ones a person accepted and without the candidates a
+        rule that requires a judge listed, which are no violations until a judge fails them."""
+        return sum(rule.count - rule.candidate_count for rule in self._rules)
+
+    @property
+    @data_field
+    def candidate_count(self) -> int:
+        """How many candidates the rules that require a judge listed for a reading, which nobody accepted."""
+        return sum(rule.candidate_count for rule in self._rules)
 
     @property
     @data_field
@@ -323,8 +337,9 @@ class ReportFile:
 
     def report(self) -> Report:
         """The rules broken on the nodes of the saved graph, then each rule the agent's judgment fails that the graph did
-        not hit, each without the violations a person accepted, which the report lists apart. A saved graph in a shape
-        the graph no longer writes gives no rules, and the report says it is out of date."""
+        not hit, each without the violations a person accepted, which the report lists apart. The candidates of a rule
+        that requires a judge give way to the judgment's findings on that rule, since the judge has then read them. A
+        saved graph in a shape the graph no longer writes gives no rules, and the report says it is out of date."""
         text = self.text
         has_graph = self._graph.is_file()
         try:
@@ -332,9 +347,11 @@ class ReportFile:
             is_out_of_date = False
         except SavedGraphOutdated:
             graph_hits, is_out_of_date = {}, True
+        findings = self._judged(text)
+        graph_hits = {rule: hits for rule, hits in graph_hits.items() if rule not in findings or not all(hit.found.is_candidate for hit in hits)}
         graph_rules, accepted_hits = self._open_and_accepted(graph_hits)
         hit = {rule.rule.slug for rule in graph_rules}
-        judged, accepted_findings = self._open_and_accepted({rule: findings for rule, findings in self._judged(text).items() if rule not in hit})
+        judged, accepted_findings = self._open_and_accepted({rule: listed for rule, listed in findings.items() if rule not in hit})
         return Report(self._source, graph_rules + judged, SavedGraphStanding(has_graph, is_out_of_date)).leaving_out(accepted_hits + accepted_findings)
 
     @property

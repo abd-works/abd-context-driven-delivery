@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.location import Location
 from harness.graph.violation import Finding, NodeViolation, Violation
+from harness.graph.violation_correction import CorrectedPlace, ViolationCorrection
 from harness.installation.data_class import data_field
 
 if TYPE_CHECKING:
@@ -28,6 +29,7 @@ class GraphRule:
         self.node = node
         self._check = check
         self.executable = check is not None
+        self._requires_judge = check is not None and check.requires_judge
         self.runs = check is not None and any(check.applies_to(type_name) for type_name in self._applying_types())
         """Whether its check runs on this node: the check applies to the node's type, or to the type it is anchored to."""
         self._violations: list[Violation] = []
@@ -57,6 +59,13 @@ class GraphRule:
 
     @property
     @data_field
+    def requires_judge(self) -> bool:
+        """Whether its check only lists candidates for a judge or a person to read, as its *PracticeGraphRule* declares;
+        false for a rule a program decides and for a rule no check runs."""
+        return self._requires_judge
+
+    @property
+    @data_field
     def type(self) -> str:
         return "Rule"
 
@@ -79,9 +88,10 @@ class GraphRule:
     @property
     @data_field
     def status(self) -> str:
-        """``violating`` when it found a violation here, ``prompt`` when no check runs it, else ``passing``."""
+        """``violating`` when it found a violation here, ``candidate`` when it requires a judge and listed this node for
+        a reading, ``prompt`` when no check runs it, else ``passing``."""
         if self._violations:
-            return "violating"
+            return "candidate" if self._requires_judge else "violating"
         return "passing" if self.executable else "prompt"
 
     @property
@@ -103,7 +113,19 @@ class GraphRule:
             self._violations.append(restored)
 
     @property
+    def correction(self) -> ViolationCorrection:
+        """What Correct sends the chat about this rule broken on its node: every message it gives there, one to a line,
+        at the lines of its first violation, else at its node's lines, with the node's text."""
+        source = self.node.source
+        first = self._violations[0] if self._violations else None
+        start = first.line if first is not None and first.line is not None else source.start_line
+        end = first.end_line if first is not None and first.end_line is not None else source.end_line
+        place = CorrectedPlace(self.node.name, self.node.type, source.file or "", (start, end), source.text or "")
+        return ViolationCorrection(self._slug, "\n".join(violation.message for violation in self._violations if violation.message), place)
+
+    @property
     def is_failing(self) -> bool:
+        """Whether it found anything here, a violation or a candidate: what a filter for violations keeps."""
         return bool(self._violations)
 
 

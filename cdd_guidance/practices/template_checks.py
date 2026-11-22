@@ -26,13 +26,16 @@ _EXAMPLE_NAME = "example-cart"
 # The format groups whose templates are text a practice's graph reading reads.
 _READ_GROUPS = ("markdown", "code")
 _MARKDOWN = "markdown"
+# The fact a node read at a folder keeps for the file in that folder its text comes from, such as Clean Engineering's
+# Module and its module card: the node is read from that file though it sits at the folder.
+_DESCRIBED_IN = "described_in"
 # A marker for a value the practice's code holds, named with a dot: ``{{child_band.sub_epic}}``.
 _VALUE_MARKER = re.compile(r"\{\{\w+\.[\w.]+\}\}")
 # How templates write a placeholder: ``{{Name}}``, `` `<name>` `` and ``{Name}``, each holding words on one line.
 _PLACEHOLDERS = (
     re.compile(r"\{\{([^{}\n]+)\}\}"),
     re.compile(r"`<([^<>`\n]+)>`"),
-    re.compile(r"\{([A-Za-z][\w .-]*)\}"),
+    re.compile(r"\{([A-Za-z][^{}\n:;=\"'()]*)\}"),
 )
 
 
@@ -84,8 +87,9 @@ class TemplateCheck:
         }
         fixture = RuleFixture(type(self._practice), {**beside, own: self._text(fidelity, format)})
         saved = SavedGraph.from_graph(fixture.practice.reading.graph).practices[self._practice.key]
-        nodes = [node for node in saved.nodes if node.file == own]
-        found = [f"{violation.rule}: {violation.message}" for violation in saved.violations if violation.location == own]
+        nodes = [node for node in saved.nodes if own in (node.file, node.facts.get(_DESCRIBED_IN))]
+        at = {own, *(node.file for node in nodes)}
+        found = [f"{violation.rule}: {violation.message}" for violation in saved.violations if violation.location in at]
         return len(nodes), sorted(found)
 
     def _text(self, fidelity: FidelityGuidance, format: Format) -> str:

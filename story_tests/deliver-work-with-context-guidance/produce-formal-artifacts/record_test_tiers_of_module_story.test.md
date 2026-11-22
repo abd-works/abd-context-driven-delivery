@@ -86,13 +86,9 @@ Observed (`space/session/test_tiers_spec.py`).
 *Then* the session answers ++shop/orders++ with unit mamba and web playwright
   *And* another reader of `session.json` reads the same tiers
 
-### Edge conditions
-
-Walked for `edge-conditions-walked`.
-
 #### Scenario: Ask the agent for the module of a story test under no module's folder
 
-Missing input: the module. Observed (`module_tiers_spec.py`).
+Observed (`module_tiers_spec.py`).
 
 *Given* ++story_tests/buy/pay.story.server.spec.py++, just rendered under `story_tests`, where no folder holds a module card
 *When* the render records what the saved file shows
@@ -101,7 +97,7 @@ Missing input: the module. Observed (`module_tiers_spec.py`).
 
 #### Scenario: Ask the agent for the test tool a file's name does not say
 
-Missing input: the test tool. Observed (`module_tiers_spec.py`).
+Observed (`module_tiers_spec.py`).
 
 *Given* ++shop/orders/orders.spec.ts++, just rendered, a unit test in TypeScript
 *When* the render records what the saved file shows
@@ -110,7 +106,7 @@ Missing input: the test tool. Observed (`module_tiers_spec.py`).
 
 #### Scenario: Refuse a tier that is none of unit, server and web
 
-Malformed input. Observed (`test_tiers_spec.py`).
+Observed (`test_tiers_spec.py`).
 
 *Given* the bookshop session with no ++test tier++ recorded
 *When* the agent records the heavy tier of ++shop/orders++ with mamba
@@ -119,7 +115,7 @@ Malformed input. Observed (`test_tiers_spec.py`).
 
 #### Scenario: Refuse a tier recorded with no test tool
 
-Empty input. Observed (the story test).
+Observed (the story test).
 
 *Given* the bookshop session with no ++test tier++ recorded
 *When* the agent records the server tier of ++shop/orders++ with an empty test tool
@@ -128,7 +124,7 @@ Empty input. Observed (the story test).
 
 #### Scenario: Keep the test tool an agent recorded
 
-The same action repeated, and a duplicate of something that exists. Observed (`module_tiers_spec.py`, `test_tiers_spec.py`).
+Observed (`module_tiers_spec.py`, `test_tiers_spec.py`).
 
 *Given* the agent recorded the unit tier of ++shop/orders++ with pytest
 *When* a render saves ++shop/orders/orders_spec.py++ and records what it shows
@@ -136,7 +132,7 @@ The same action repeated, and a duplicate of something that exists. Observed (`m
 
 #### Scenario: Refuse a record that is wrongly shaped
 
-The thing acted on changed since it was last seen: a person or another program edited `session.json`. Observed (`test_tiers_spec.py`, `module_tiers_spec.py`).
+Observed (`test_tiers_spec.py`, `module_tiers_spec.py`).
 
 *Given* the bookshop's `session.json` holds its test tiers as a list of tiers
 *When* the agent generates bdd-development
@@ -144,14 +140,12 @@ The thing acted on changed since it was last seen: a person or another program e
 
 #### Scenario: Report a recorded module whose folder is no longer there
 
-The thing acted on gone since it was last seen. Observed (`module_tiers_spec.py`). The person's answer, 2026-11-22: generate reports it and leaves the removal to the person.
+Observed (`module_tiers_spec.py`). The person's answer, 2026-11-22: generate reports it and leaves the removal to the person.
 
 *Given* `session.json` records unit and server with mamba for shop/returns, whose folder was deleted
 *When* the agent generates bdd-development
 *Then* the reply names shop/returns as a module whose folder is no longer there, with the tiers recorded for it
   *And* the ++record++ of shop/returns is left as it is, for the person to remove or record again under the module's new folder
 
-- **Two actors at once:** two chats recording a tier of one session at the same moment each keep their tier, because every change to `session.json` holds the file from its read to its write (Keep Every Change To Session Record, `space/session/session_record_processes_heavy_spec.py`).
-- **An action interrupted partway:** does not apply, because a record is one write of `session.json`, and a generate stopped after it leaves a record that is true.
-- **A dependency absent or wrong:** a fidelity working in no session records nothing and says nothing (`generate_spec.py`, "with no named session on the project").
-- **An actor not allowed to act:** does not apply, because any chat working in a session may change its `session.json`.
+- **Two chats at once:** two chats recording a tier of one session at the same moment each keep their tier, because every change to `session.json` holds the file from its read to its write (Keep Every Change To Session Record, `space/session/session_record_processes_heavy_spec.py`).
+- **No session:** a fidelity working in no session records nothing and says nothing (`generate_spec.py`, "with no named session on the project").

@@ -26,6 +26,8 @@ _IS_A = re.compile(r"\*is a type of\*", re.I)
 _CHILD_PARENT = re.compile(r"^\s*#{1,6}\s+\S.+\s+:\s+\S", re.MULTILINE)
 # A section heading a public source file's documentation gives its internal design.
 _INTERNAL_MARKDOWN = re.compile(r"^##\s+Internal\b", re.MULTILINE | re.IGNORECASE)
+# An HTML comment, such as the guidance a card copied from the template keeps: it is no part of what the card says.
+_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 
 
 class ModuleContext:
@@ -42,9 +44,10 @@ class ModuleContext:
         return self.path.is_file()
 
     def read(self) -> str:
-        """The card's text; empty when the folder has no card."""
+        """The card's text, without the comments it carries, which say how to write a card and are not what this one
+        says; empty when the folder has no card."""
         if self._text is None:
-            self._text = self.path.read_text(encoding="utf-8") if self.exists() else ""
+            self._text = _COMMENT.sub("", self.path.read_text(encoding="utf-8")) if self.exists() else ""
         return self._text
 
     def has_modules_heading(self) -> bool:

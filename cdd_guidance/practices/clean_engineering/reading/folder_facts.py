@@ -72,6 +72,46 @@ class FolderImportCycles:
         return [[importer, imported, size] for importer, imported, size in ImportCycles(imports).imports_in_cycles()]
 
 
+class ModuleImports:
+    """The imports between modules, which every module measure reads. A module is a folder that owns a module card; a
+    folder with source and no card is a package, a part of the nearest module above it, so a module imports what it
+    and every package inside it import, counted as the modules that hold the folders imported, never as packages and
+    never as itself. Each module keeps the paths of the modules it imports (``imported_modules``), of the modules that
+    import it (``importing_modules``), and the modules it imports that close a loop of modules (``module_import_loops``:
+    the module imported and the loop's size). A package keeps none of them."""
+
+    IMPORTED, IMPORTING, LOOPS = "imported_modules", "importing_modules", "module_import_loops"
+
+    def __init__(self, in_graph: "PracticeNodes") -> None:
+        self._modules = {module.source.file: module for module in in_graph.nodes("Module") if module.source.file}
+        self._folders = folders_of(in_graph)
+
+    def record(self) -> None:
+        imports: dict[str, set[str]] = {path: set() for path in self._modules}
+        for folder in self._folders:
+            importer = self._owner(folder.source.file)
+            for imported in imported_folders(folder):
+                owner = self._owner(imported.source.file)
+                if importer and owner and owner != importer:
+                    imports[importer].add(owner)
+        importing: dict[str, set[str]] = {path: set() for path in self._modules}
+        for importer, imported in imports.items():
+            for path in imported:
+                importing[path].add(importer)
+        loops: dict[str, list[list]] = {path: [] for path in self._modules}
+        for importer, imported, size in ImportCycles(imports).imports_in_cycles():
+            loops[importer].append([self._modules[imported].name, size])
+        for path, module in self._modules.items():
+            module.set_fact(self.IMPORTED, sorted(imports[path]))
+            module.set_fact(self.IMPORTING, sorted(importing[path]))
+            module.set_fact(self.LOOPS, loops[path])
+
+    def _owner(self, path: str | None) -> str:
+        """The path of the module that holds the folder at path: the nearest module at or above it; empty for none."""
+        held = [module for module in self._modules if is_under(path, module)]
+        return max(held, key=len, default="")
+
+
 class SiblingFanOut:
     """The sibling modules each module imports from (``sibling_modules_imported``): the other modules in the folder that
     holds it, which it or any folder beneath it depends on, by their paths."""

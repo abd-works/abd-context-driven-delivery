@@ -54,6 +54,8 @@ class Call:
 
 # The files a slice reads as markdown sections rather than code: a story map's and a scenario file's text.
 MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
+# The fact a node keeps the fidelity it was read at under (``Node.read_at``).
+READ_AT_FIDELITY = "read_at_fidelity"
 
 
 class _BracketDepth:
@@ -427,6 +429,27 @@ class Node:
             return "graph" if self.type in {"Module", "Package"} else None
         return self.practice.formats.reading_with(Path(file), self.graph.practices.held.values()) or "graph"
 
+    def read_at(self, fidelity: str) -> None:
+        """Record the fidelity this node was read at, by the fidelity's name (``model``, ``code``), as a fact, so a
+        saved graph keeps it. Its practice's reading calls this as it reads, deciding by what the content holds and
+        never by the format it is written in: a class whose operations have no bodies is at the model fidelity in code,
+        in a model document, or in a drawing. Record it on the node the test applies to, such as a class; its parts
+        answer it too."""
+        self.set_fact(READ_AT_FIDELITY, fidelity)
+
+    @property
+    def fidelity_read_at(self) -> str:
+        """The name of the fidelity this node was read at, as its reading recorded it on the node or on the nearest
+        node above it, so an operation, a property and a parameter take their class's; empty when no reading recorded
+        one. ``node.fidelity`` answers another question: the fidelity that creates the node's type."""
+        return str(self.get_fact(READ_AT_FIDELITY, "") or "")
+
+    def is_read_at(self, fidelity: str) -> bool:
+        """Whether this node was read at fidelity. A rule of one fidelity opens with it and leaves every other node
+        out (``if not node.is_read_at("code"): return []``), since a rule of the code fidelity has nothing to judge on
+        a class with no bodies. A node no reading recorded a fidelity for is read at none."""
+        return self.fidelity_read_at == fidelity
+
     @property
     def failed_rules(self) -> list[str]:
         return self.rules.failed_slugs
@@ -683,6 +706,14 @@ class GraphExplorer:
         if node is None:
             return None
         return NodeSource(node, members=self.source_members())
+
+    @mcp
+    @agent_tool
+    def correction_prompt(self, node_id: str, rule: str) -> str:
+        """Return what Correct on the Graph app's banner sends the chat about rule broken on the node node_id: how to fix it test first, the node, its file and lines, the rule, the code, and what is wrong. Empty when the node does not break rule, or the graph holds no such node."""
+        node = self.node(node_id)
+        broken = node.rules.entries.get(rule) if node is not None else None
+        return broken.correction.prompt if broken is not None and broken.is_failing else ""
 
     def source_members(self) -> list[NodeSource]:
         """Every class, operation, and property the open practices hold, each with the class it belongs to."""

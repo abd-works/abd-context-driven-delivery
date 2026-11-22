@@ -2,8 +2,8 @@
 
 A project names a tool for each measure no fact on the node already gives, in each language (``ChosenTools``): a
 function's lines and parameters, a class's methods, and a module's import loops and imported modules are facts the
-reader keeps on every read, and no tool repeats them. Lizard and radon are outside programs,
-imported when first asked, so a project that never checks code needs neither; a tool that is chosen and not installed
+reader keeps on every read, and no tool repeats them. Lizard is an outside program,
+imported when first asked, so a project that never checks code does not need it; a tool that is chosen and not installed
 is reported by name, with how to install it, because a measure silently left out reads as code within its limits. The
 reader is the practice's own reading of the code: a measure the graph's nodes and edges give is counted from them."""
 
@@ -21,7 +21,6 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     ABSTRACTNESS,
     CLASSES_DEPENDED_ON,
     INSTABILITY,
-    MAINTAINABILITY_SCORE,
     MODULES_IMPORTING,
     MeasureNotTaken,
     PATHS_THROUGH,
@@ -31,7 +30,7 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     UNSHARED_METHOD_GROUPS,
     CodeMeasure,
 )
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import is_under
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import ModuleImports, is_under
 from cdd_guidance.practices.source_code import is_test_code
 
 if TYPE_CHECKING:
@@ -39,8 +38,8 @@ if TYPE_CHECKING:
 
     from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
 
-# How the optional dependency group that holds the outside tools is installed.
-_INSTALL = 'pip install "lizard>=1.26" "radon>=6"   (or, from a CDD checkout: pip install -e ".[measures]")'
+# How the optional dependency group that holds the outside tool is installed.
+_INSTALL = 'pip install "lizard>=1.26"   (or, from a CDD checkout: pip install -e ".[measures]")'
 # What marks a class as abstract in the code of either language family.
 _ABSTRACT = re.compile(r"\bABC\b|\bProtocol\b|@abstractmethod|\babstract\s+class\b|^\s*(?:export\s+)?interface\s", re.MULTILINE)
 _DECIMALS = 2
@@ -51,7 +50,10 @@ class MeasuringToolNotInstalled(MeasureNotTaken):
     taken. Nothing is skipped: the measure's rule reports the tool and how to install it."""
 
     def __init__(self, tool: str, measure: CodeMeasure) -> None:
-        super().__init__(f"The tool '{tool}', chosen to measure '{measure.name}' ({measure.label}), is not installed. Install it with: {_INSTALL}")
+        super().__init__(
+            f"The tool '{tool}', chosen to measure '{measure.name}' ({measure.label}), is not installed. "
+            f"Fix: install {tool}, the tool .context/config.json names for this measure, with: {_INSTALL}"
+        )
         self.tool = tool
         self.measure = measure
 
@@ -147,22 +149,6 @@ class LizardTool(MeasuringTool):
         return sum(within) if within else None
 
 
-class RadonTool(MeasuringTool):
-    """Radon, which reads Python: a file's maintainability score, the one measure here nothing else gives."""
-
-    name = "radon"
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._takes = {MAINTAINABILITY_SCORE.name: self._maintainability}
-
-    def _maintainability(self, measured: MeasuredNode) -> float | None:
-        """The lowest score among the module's checked files, since its hardest file is the one a change meets."""
-        metrics = self._imported("radon.metrics", MAINTAINABILITY_SCORE)
-        scores = [metrics.mi_visit(file.read_text(encoding="utf-8"), multi=True) for file in measured.files]
-        return round(min(scores), _DECIMALS) if scores else None
-
-
 class ReaderTool(MeasuringTool):
     """The practice's own reading of the code: the measures counted from the graph's nodes and edges that no fact
     keeps yet, and the groups of a Python class's methods that share no data, read from the class's own text."""
@@ -197,15 +183,23 @@ class ReaderTool(MeasuringTool):
         declared = next((found for found in ast.walk(tree) if isinstance(found, ast.ClassDef)), None)
         return MethodGroups(declared).count() if declared is not None else None
 
-    def _imported_by(self, measured: MeasuredNode) -> list["Node"]:
-        return [edge.child for edge in measured.reading.graph.edges.from_parent("dependsOn", measured.node)]
+    def _imported_by(self, measured: MeasuredNode) -> list[str]:
+        """The modules the module imports, the packages inside it included, as every read keeps them."""
+        return list(measured.node.get_fact(ModuleImports.IMPORTED) or []) if measured.node.has_fact(ModuleImports.IMPORTED) else []
 
-    def _importing(self, measured: MeasuredNode) -> list["Node"]:
-        return [edge.parent for edge in measured.reading.in_graph.edge_index.of("dependsOn") if edge.child is measured.node]
+    def _importing(self, measured: MeasuredNode) -> list[str]:
+        """The modules that import the module or a package inside it, as every read keeps them."""
+        return list(measured.node.get_fact(ModuleImports.IMPORTING) or []) if measured.node.has_fact(ModuleImports.IMPORTING) else []
 
     def _abstractness(self, measured: MeasuredNode) -> float | None:
+        """The share of the module's classes that are abstract: those of its own files and of the packages inside it,
+        not those of a module nested in it, which is measured on its own."""
         folder = measured.node.source.file
-        classes = [node for node in measured.reading.in_graph.nodes("OoadClass") if self._directly_in(node, folder) and not is_test_code(node.source.file)]
+        nested = [module.source.file for module in measured.reading.in_graph.nodes("Module") if module is not measured.node and is_under(module.source.file, folder)]
+        classes = [
+            node for node in measured.reading.in_graph.nodes("OoadClass")
+            if is_under(node.source.file, folder) and not any(is_under(node.source.file, inner) for inner in nested) and not is_test_code(node.source.file)
+        ]
         abstract = [node for node in classes if _ABSTRACT.search(node.source.text or "")]
         return round(len(abstract) / len(classes), _DECIMALS) if classes else None
 
@@ -213,16 +207,14 @@ class ReaderTool(MeasuringTool):
         outward, inward = len(self._imported_by(measured)), len(self._importing(measured))
         return round(outward / (outward + inward), _DECIMALS) if outward + inward else None
 
-    def _directly_in(self, node: "Node", folder: str | None) -> bool:
-        """Whether node was read from a file that sits in folder itself, not in a folder beneath it."""
-        file = node.source.file or ""
-        return is_under(file, folder) and "/" not in file[len(folder or "") :].lstrip("/")
 
 
 class MethodGroups:
     """The methods of one Python class, grouped: two methods are in one group when both use the same field of the
     object, or one calls the other. Constructors and the other double-underscore methods are left out, since a
-    constructor assigns every field and would join every method whatever the class does."""
+    constructor assigns every field and would join every method whatever the class does. A method that uses no field
+    of the object and calls no method of it is left out too: it shares no data because it holds none, so it is no
+    second job the class does."""
 
     def __init__(self, declared: ast.ClassDef) -> None:
         written = [item for item in declared.body if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))]
@@ -230,19 +222,24 @@ class MethodGroups:
         self._group = {method.name: method.name for method in self._methods}
 
     def count(self) -> int | None:
-        if len(self._methods) < 2:
-            return None
+        """How many groups the methods that use the object fall into; none with fewer than two such methods, which
+        leave nothing to compare."""
         users: dict[str, list[str]] = {}
+        using_the_object: set[str] = set()
         for method in self._methods:
             for used in self._used_by(method):
+                using_the_object.add(method.name)
                 if used in self._group:
+                    using_the_object.add(used)
                     self._join(method.name, used)
                 else:
                     users.setdefault(used, []).append(method.name)
         for sharing in users.values():
             for other in sharing[1:]:
                 self._join(sharing[0], other)
-        return len({self._found(name) for name in self._group})
+        if len(using_the_object) < 2:
+            return None
+        return len({self._found(name) for name in using_the_object})
 
     def _used_by(self, method: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
         """Each name the method reads on its own object: a field, or a method it calls."""
@@ -261,4 +258,4 @@ class MethodGroups:
 
 
 # Each tool a project can choose, by the name its config writes; one of each is made for one taking of measures.
-TOOLS: dict[str, type[MeasuringTool]] = {tool.name: tool for tool in (LizardTool, RadonTool, ReaderTool)}
+TOOLS: dict[str, type[MeasuringTool]] = {tool.name: tool for tool in (LizardTool, ReaderTool)}

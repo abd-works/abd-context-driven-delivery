@@ -19,7 +19,7 @@ from cdd_guidance.practices.clean_engineering.reading.class_facts import (
     ServicesTakingDataBags,
 )
 from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClasses
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import FolderImportCycles, SiblingFanOut
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FolderImportCycles, ModuleImports, SiblingFanOut
 from cdd_guidance.practices.clean_engineering.reading.module_exposure import ModuleExposure
 from cdd_guidance.practices.clean_engineering.reading.public_routes import PublicRoutes, registered_in_this_process
 from cdd_guidance.practices.clean_engineering.reading.operation_facts import BodyCopies, FailureMessages
@@ -41,6 +41,7 @@ class ComparedFacts:
         classes = ProductionClasses(self._reading)
         for part in (
             FolderImportCycles(in_graph),
+            ModuleImports(in_graph),
             SiblingFanOut(in_graph),
             ModuleExposure(in_graph, classes, PublicRoutes(registered_in_this_process())),
             ServicesTakingDataBags(classes),

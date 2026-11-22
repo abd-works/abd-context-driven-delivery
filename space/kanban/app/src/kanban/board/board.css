@@ -212,7 +212,7 @@ a:hover { color: #C64514; }
 .practice-label.is-off { background: var(--bg); border-left-color: var(--border) !important; }
 .practice-label.is-off .readme-link { opacity: .12; }
 
-.report-root { --error: #EF4444; position: relative; flex: 0 1 640px; min-width: 0; box-sizing: border-box; z-index: 70; display: flex; flex-direction: column; background: var(--bg); color: var(--text); border-left: 1px solid var(--border); }
+.report-root { --error: #EF4444; --warning: #F59E0B; position: relative; flex: 0 1 640px; min-width: 0; box-sizing: border-box; z-index: 70; display: flex; flex-direction: column; background: var(--bg); color: var(--text); border-left: 1px solid var(--border); }
 .pane-grip { position: absolute; top: 0; bottom: 0; left: -4px; z-index: 75; width: 8px; padding: 0; background: transparent; border: 0; touch-action: none; }
 .board-root .pane-grip { cursor: col-resize; }
 .pane-grip:hover { background: var(--accent); opacity: .6; }
@@ -227,6 +227,7 @@ a:hover { color: #C64514; }
 .report-stat .panel-subtitle { font-size: 11px; }
 .report-number { font-size: 26px; line-height: 1.25; font-weight: 700; font-variant-numeric: tabular-nums; }
 .report-number.is-error { color: var(--error); }
+.report-number.is-candidate { color: var(--warning); }
 
 .panel-body { flex: 1; min-height: 0; overflow: auto; }
 .report-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 32px; }
@@ -238,6 +239,9 @@ a:hover { color: #C64514; }
 .board-root .rule-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 0; background: transparent; color: var(--text); border: 0; font: 600 16px var(--mono); text-align: left; }
 .board-root .rule-toggle:hover { color: var(--accent-text); }
 .rule-count { color: var(--error); font-size: 12px; font-weight: 500; }
+.rule-count.is-candidate { color: var(--warning); }
+.violation.is-candidate .violation-message { color: var(--warning); }
+.candidate-tag { color: var(--warning); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 .board-root .ghost-button { flex-shrink: 0; padding: 6px 12px; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 4px; font: 500 12px var(--mono); }
 .ghost-button:hover:not(:disabled) { background: var(--raised); }
 .board-root .fix-button { flex-shrink: 0; padding: 6px 12px; background: var(--accent); color: var(--bg); border: 1px solid var(--accent); border-radius: 4px; font: 600 12px var(--mono); }

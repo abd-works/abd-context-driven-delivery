@@ -1264,7 +1264,7 @@ The tool a project chose for each measure in each language, and the limit of eac
 
 ## MeasuringTool
 
-One tool behind one question (`measures/measuring_tools.py`): this measure, of this node. *LizardTool* takes a function's paths and readability score, and a class's total complexity; *RadonTool* takes a Python file's maintainability score; *ReaderTool* counts from the graph's nodes and edges what no fact keeps yet, and the groups of a Python class's methods that share no data (*MethodGroups*). No tool repeats a fact the reader already keeps.
+One tool behind one question (`measures/measuring_tools.py`): this measure, of this node. *LizardTool* takes a function's paths and readability score, and a class's total complexity; *ReaderTool* counts from the graph's nodes and edges what no fact keeps yet, and the groups of a Python class's methods that share no data (*MethodGroups*). No tool repeats a fact the reader already keeps.
 
 ------
 + name: str
@@ -1297,7 +1297,7 @@ The code measures the reader keeps of the files a read names, such as the files 
 
 ## CodeMeasureLimit : ProductionCodeRule
 
-One measure held to its limit on the nodes that carry it (`rules/code_measure_limits.py`): `limit-paths-through-a-function`, `keep-functions-readable`, `limit-function-lines`, `limit-function-parameters`, `limit-class-complexity`, `limit-class-methods`, `keep-class-methods-sharing-data`.
+One measure held to its limit on the nodes that carry it (`rules/code_measure_limits.py`): `limit-paths-through-a-function`, `keep-functions-readable`, `limit-function-lines`, `limit-class-complexity`, `limit-class-methods`, `keep-class-methods-sharing-data`.
 
 ------
 + measure: CodeMeasure

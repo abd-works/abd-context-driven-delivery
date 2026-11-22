@@ -185,7 +185,11 @@ class Validate(GuidanceAction):
         self._log_graph_validation(self._graph.violations())
         return self._report_of.for_judge()
 
-    def _log_graph_validation(self, violations: list) -> None:
+    def _log_graph_validation(self, found: list) -> None:
+        """Name each graph violation on the call's validate line, which the session board reads as the fidelity's
+        validate having failed. A candidate of a rule that requires a judge is no violation, so it is left out: the
+        judgment fails the rule when the reading finds it broken."""
+        violations = [violation for violation in found if not violation.is_candidate]
         if self.work.text is not None or not violations:
             return
         synopsis = [

@@ -4,12 +4,13 @@ import json
 import tempfile
 from pathlib import Path
 
-from expects import equal, expect, raise_error
+from expects import contain, equal, expect, raise_error
 
+import cdd_guidance.practices  # noqa: F401 - registers the practices a session's file manager reads its roots from
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from space.session import Session, Sessions
 from space.session.session import SessionNotFoundError
-from space.session.files.file_manager import PathOutsideRootsError
+from space.session.files.file_manager import PathOutsideRootsError, SessionRecordWriteRefused
 from space.session.files.session_files import NamedPathNotFoundError
 from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
@@ -130,3 +131,86 @@ with description("session.write_file") as self:
         with it("should refuse rather than write into another session"):
             write = lambda: self.tool.invoke({"session": "no-such-ticket", "path": DEBUG_REPORT, "text": DEBUG_TEXT}, project=self.project.root)
             expect(write).to(raise_error(SessionNotFoundError))
+
+    # The person's answer (2026-11-22): the session's record has one writer, the held update, so a write aimed at the
+    # session's own session.json is refused whatever way its path is spelt.
+    with context("that is aimed at the session's own session.json"):
+        with before.each:
+            self.record = self.folder / "session.json"
+            self.before = self.record.read_text(encoding="utf-8")
+            self.write = lambda path: self.tool.invoke({"session": "checkout-flow", "path": path, "text": "{}"}, project=self.project.root)
+
+        with it("should refuse its path from the project, saying to change the record with the session's tools"):
+            expect(lambda: self.write(".sessions/checkout-flow/session.json")).to(
+                raise_error(SessionRecordWriteRefused, contain("session.json", "the session's tools"))
+            )
+
+        with it("should refuse its absolute path"):
+            expect(lambda: self.write(str(self.record))).to(raise_error(SessionRecordWriteRefused))
+
+        with it("should refuse its path in another case, where the file system reads that as the same file"):
+            # On a file system that tells case apart, such as a cloud session's, that path is another file and is saved.
+            same_file = (self.folder.parent / "Checkout-Flow" / "SESSION.JSON").is_file()
+            write = lambda: self.write(".sessions/Checkout-Flow/SESSION.JSON")
+            expect(write).to(raise_error(SessionRecordWriteRefused)) if same_file else write()
+            expect(self.record.read_text(encoding="utf-8")).to(equal(self.before))
+
+        with it("should refuse its path opened with ./"):
+            expect(lambda: self.write("./.sessions/checkout-flow/session.json")).to(raise_error(SessionRecordWriteRefused))
+
+        with it("should refuse its path through a parent folder and back"):
+            expect(lambda: self.write(".sessions/checkout-flow/debug/../session.json")).to(raise_error(SessionRecordWriteRefused))
+
+        with it("should refuse its path written with backslashes"):
+            expect(lambda: self.write(chr(92).join((".sessions", "checkout-flow", "session.json")))).to(raise_error(SessionRecordWriteRefused))
+
+        with it("should leave the record as it was"):
+            try:
+                self.write(".sessions/checkout-flow/session.json")
+            except SessionRecordWriteRefused:
+                pass
+            expect(self.record.read_text(encoding="utf-8")).to(equal(self.before))
+
+        with it("should still read the record"):
+            read = ToolsetReference.of(Session).made().tools["read_file"]
+            answered = read.invoke({"session": "checkout-flow", "path": ".sessions/checkout-flow/session.json"}, project=self.project.root)
+            expect(answered.text).to(equal(self.before))
+
+    with context("that is aimed at another file named session.json, which is not the session's record"):
+        with it("should save it"):
+            self.tool.invoke({"session": "checkout-flow", "path": ".sessions/checkout-flow/debug/session.json", "text": "{}"}, project=self.project.root)
+            expect((self.folder / "debug" / "session.json").read_text(encoding="utf-8")).to(equal("{}"))
+
+
+with description("the files of a session's folder, as the Files app lists them") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        self.folder = self.project.root / ".sessions" / "checkout-flow"
+        self.folder.mkdir(parents=True)
+        (self.folder / "session.json").write_text(json.dumps({"name": "checkout-flow"}), encoding="utf-8")
+        (self.folder / "session.log").write_text("", encoding="utf-8")
+        self.session = Sessions(self.project.root).named("checkout-flow")
+        self.listed = lambda: [Path(entry.path).name for entry in self.session.folder_files()]
+
+    with after.each:
+        OPEN_PROJECTS.close_all()
+
+    with context("after a change held its session.json"):
+        with before.each:
+            self.session.add_tag("urgent")
+
+        with it("should leave a lock file beside the record"):
+            expect((self.folder / "session.json.lock").is_file()).to(equal(True))
+
+        with it("should list the record and the log, and not the lock file"):
+            expect(self.listed()).to(equal(["session.json", "session.log"]))
+
+    with context("with the text a killed writer staged beside its session.json"):
+        with it("should not list the staged text"):
+            (self.folder / "session.json.4242.1.tmp").write_text("{", encoding="utf-8")
+            expect(self.listed()).to(equal(["session.json", "session.log"]))
+
+    with context("with a person's own file whose name ends as a lock file's does"):
+        with it("should list it"):
+            (self.folder / "notes.lock").write_text("", encoding="utf-8")
+            expect(self.listed()).to(equal(["notes.lock", "session.json", "session.log"]))

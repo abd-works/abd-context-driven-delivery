@@ -511,28 +511,24 @@ with description("a graph"):
                         <= set(_rule_names(self.handle_request))
                     ).to(equal(True))
 
-                with it("should list Handle Request's generic verb for the judgment to decide from its context"):
-                    hit = rule_on(self.handle_request, "verb-noun-format")
-                    expect(hit["status"]).to(equal("violating"))
-                    expect(hit["violations"][0]["message"]).to(
-                        equal("Story 'Handle Request': opens with a generic verb; judge from its context whether the action is plain.")
-                    )
+                # Handle opens the name with a verb, which is all verb-noun-format checks; whether a generic verb
+                # hides the mechanic needs a reading, so the judged rule lists it as a candidate.
+                with it("should pass verb-noun format on Handle Request, which opens with a verb"):
+                    expect(rule_on(self.handle_request, "verb-noun-format")["status"]).to(equal("passing"))
 
-                with it("should store the verb-noun span on Handle Request"):
-                    hit = rule_on(self.handle_request, "verb-noun-format")["violations"][0]
-                    expect(hit["location"]).to(
-                        equal("tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts")
-                    )
-                    expect(hit["line"]).to(equal(444))
-                    expect(hit["end_line"]).to(equal(_HANDLE_REQUEST_END))
-
-                with it("should violate the system mechanic on Handle Request"):
+                with it("should list Handle Request's generic verb as a candidate for the judgment to decide from its context"):
                     hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")
-                    expect(hit["status"]).to(equal("violating"))
+                    expect(hit["status"]).to(equal("candidate"))
                     expect(hit["violations"][0]["message"]).to(
                         equal(
-                            "Story 'Handle Request' names a generic handler; use the system mechanic (e.g. 'Submit Order')."
+                            "Story 'Handle Request' opens with a generic verb; judge from its context whether it hides the system mechanic (e.g. 'Submit Order')."
                         )
+                    )
+
+                with it("should name the file Handle Request's candidate is in"):
+                    hit = rule_on(self.handle_request, "story-name-captures-system-mechanic")["violations"][0]
+                    expect(hit["location"]).to(
+                        equal("tests/onboard-a-customer/authenticate-user/authenticate_user.story.shared.ts")
                     )
 
                 with it("should store the system-mechanic span on Handle Request"):
@@ -1520,7 +1516,7 @@ with description("the graph's toolset") as self:
     with it("should publish its own loads and the explorer's queries under the one toolset name graph"):
         expect(sorted(Graph().tools)).to(equal(sorted([
             "load_working_copy", "load_practice_roots", "load_files", "refresh", "save_json", "set_overlays",
-            "overlay_of", "practice_names", "inventory", "filter_choices", "source", "return_nodes", "explorer_trees", "explorer_branch",
+            "overlay_of", "practice_names", "inventory", "filter_choices", "source", "correction_prompt", "return_nodes", "explorer_trees", "explorer_branch",
         ])))
 
     with it("should publish a filter as an object whose keys a caller may leave out"):

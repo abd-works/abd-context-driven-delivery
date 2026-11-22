@@ -1,6 +1,6 @@
 import { useBoard } from '../shared/board-context'
 import type { ReportPanel } from '../shared/board-store'
-import { fixTitleOn } from './report-client'
+import { CANDIDATE_TITLE, fixTitleOn } from './report-client'
 import { AcceptedViolationsView, RuleView } from './report-rule-view'
 
 export function ReportPanelHeadView({ panel }: { panel: ReportPanel }) {
@@ -24,6 +24,12 @@ export function ReportStatsView({ panel }: { panel: ReportPanel }) {
         <span className="report-number is-error">{panel.report.violationCount}</span>
         <span className="panel-subtitle">violations</span>
       </div>
+      {panel.report.candidateCount ? (
+        <div className="report-stat" title={CANDIDATE_TITLE}>
+          <span className="report-number is-candidate">{panel.report.candidateCount}</span>
+          <span className="panel-subtitle">candidates</span>
+        </div>
+      ) : null}
       <div className="report-stat">
         <span className="report-number">{panel.report.rules.length}</span>
         <span className="panel-subtitle">rules hit</span>

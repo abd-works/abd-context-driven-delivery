@@ -15,6 +15,7 @@ from pathlib import Path
 
 from harness.graph.rule_fixture import RuleFixture, RulePair
 
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.stories.rules import BY_SLUG
 from cdd_guidance.practices.stories.stories import Stories
@@ -70,12 +71,29 @@ def _outline(rows: int) -> str:
     )
 
 
+_STORY_TEST_FILE = "story_tests/sell-books/take-orders/place_order_story.test.py"
+# Clean Engineering read beside Stories, as every live graph reads it, so a step's calls are linked to code.
+_CODE_READ = (CleanEngineering,)
+
+
+def _story_test(given: str, when: str, then: str) -> dict[str, str]:
+    """The Take Orders map with a Python story test of Place Order whose steps run the given lines."""
+    test = (
+        "from story_test import given, scenario, story, then, when\n\n# Epic: Sell Books\n# Sub-epic: Take Orders\n\n"
+        '# Story: Place Order\n# Actor: Customer\nwith story("Place Order"):\n    with scenario("Order one book"):\n'
+        f'        with given("a Customer with an empty basket"):\n            {given}\n'
+        f'        with when("the Customer places an order for one book"):\n            {when}\n'
+        f'        with then("the order holds one line"):\n            {then}\n'
+    )
+    return {"story-map.md": _TAKE_ORDERS_MAP, _STORY_TEST_FILE: test}
+
+
 # A rule's failing files and its repaired files, written here where an example folder of story tests would say no more:
-# each side is a small story map, with a scenarios file where the rule reads one.
-MARKDOWN_PAIRS: dict[str, tuple[dict[str, str], dict[str, str]]] = {
+# each side is a small story map, with a scenarios file or a story test where the rule reads one.
+FILE_PAIRS: dict[str, tuple[dict[str, str], dict[str, str]]] = {
     "child-count-fits-layer": (
+        {"story-map.md": _map(("Take Orders", 2))},
         {"story-map.md": _map(("Take Orders", 2), ("Ship Orders", 2))},
-        {"story-map.md": _map(("Take Orders", 2), ("Ship Orders", 2), ("Refund Orders", 2))},
     ),
     "outline-requires-many-permutations": (_scenarios("Place Order", _outline(2)), _scenarios("Place Order", _outline(3))),
     "scenarios-name-a-story-on-the-map": (_scenarios("Refund Order", _scenario("Order one book")), _scenarios("Place Order", _scenario("Order one book"))),
@@ -84,18 +102,24 @@ MARKDOWN_PAIRS: dict[str, tuple[dict[str, str], dict[str, str]]] = {
         _scenarios("Place Order", *(_scenario(f"Order book {number}") for number in range(1, 9))),
         _scenarios("Place Order", *(_scenario(f"Order book {number}") for number in range(1, 3))),
     ),
+    # A story at acceptance tests, since its Given has a body, whose When calls nothing; repaired, the When calls the
+    # operation it tests.
+    "code-steps-invoke-code": (
+        _story_test("basket = Basket()", "pass", "expect(order.lines).to(have_len(1))"),
+        _story_test("basket = Basket()", "order = basket.place()", "expect(order.lines).to(have_len(1))"),
+    ),
 }
 
 
-def assert_stories_markdown_pair(slug: str) -> None:
-    """The rule flags the files of its failing side and passes those of its repaired side (``MARKDOWN_PAIRS``)."""
-    faulty, repaired = MARKDOWN_PAIRS[slug]
-    RulePair(BY_SLUG[slug], RuleFixture(Stories, faulty), RuleFixture(Stories, repaired)).check()
+def assert_stories_files_pair(slug: str) -> None:
+    """The rule flags the files of its failing side and passes those of its repaired side (``FILE_PAIRS``)."""
+    faulty, repaired = FILE_PAIRS[slug]
+    RulePair(BY_SLUG[slug], RuleFixture(Stories, faulty, beside=_CODE_READ), RuleFixture(Stories, repaired, beside=_CODE_READ)).check()
 
 
 # What proves each rule flags its failing example and passes its repaired one, for the spec every practice shares: a
 # rule has a pair once its example folder holds a faulty and a repaired side, or it is written above.
 EXAMPLE_PAIRS = {
     **{slug: partial(assert_stories_example_pair, slug) for slug in BY_SLUG if _has_both_sides(slug)},
-    **{slug: partial(assert_stories_markdown_pair, slug) for slug in MARKDOWN_PAIRS},
+    **{slug: partial(assert_stories_files_pair, slug) for slug in FILE_PAIRS},
 }

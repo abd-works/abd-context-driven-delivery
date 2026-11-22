@@ -15,6 +15,7 @@ from harness.graph.explorer import NodeSource
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import GRAPH_FILE_NAME, SavedGraph, SavedGraphOutdated
 from harness.graph.violation import Violation
+from harness.graph.violation_correction import ViolationCorrection
 from harness.installation.data_class import SourceFile, data_field
 from harness.markdown.markdown import MarkdownText
 
@@ -194,6 +195,13 @@ class FileViolation:
     @data_field
     def range(self) -> Range:
         return self._range
+
+    @property
+    @data_field
+    def correction_comment(self) -> str:
+        """What Correct on the Files app's banner comments on the range: how to fix it test first, the rule, and what is
+        wrong; a sent comment already names and quotes the lines."""
+        return ViolationCorrection(self._violation.rule, self._violation.message).comment
 
 
 # The most lines the viewer shows of one file. The Files app's editor is as tall as its file, so the page scrolls rather

@@ -30,6 +30,13 @@ _REAL_RESOURCE = re.compile(
     r"|^\s*import\b[^;\n]*?from\s+[\"'](?:node:)?(child_process|net|http|https|@playwright/test|playwright)[\"']",
     re.MULTILINE,
 )
+# What a test calls to put a stand-in at a boundary: Python's mock and monkeypatch, the script test tools' mocks and
+# spies, and a class named as a fake, a stub or a mock, such as MockGit.
+_STUB = re.compile(
+    r"\b(mock\.patch(?:\.object|\.dict)?|patch\.object|patch|MagicMock|Mock|monkeypatch\.setattr"
+    r"|jest\.mock|jest\.spyOn|vi\.mock|vi\.spyOn|sinon\.stub)\s*\("
+    r"|(?<!class )\b((?:Fake|Stub|Mock)[A-Z]\w*)\s*\("
+)
 
 
 def tier_of(file: str) -> str | None:
@@ -69,3 +76,8 @@ def real_resources_in(text: str) -> list[tuple[int, str]]:
     return [
         (text.count("\n", 0, found.start()) + 1, found.group(1) or found.group(2)) for found in _REAL_RESOURCE.finditer(text)
     ]
+
+
+def stubs_in(text: str) -> list[tuple[int, str]]:
+    """Each line that puts a stand-in at a boundary, with the line's number and what it stubs with."""
+    return [(text.count("\n", 0, found.start()) + 1, found.group(1) or found.group(2)) for found in _STUB.finditer(text)]

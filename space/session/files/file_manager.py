@@ -10,7 +10,7 @@ import os
 import time
 import re
 from pathlib import Path
-from typing import Annotated, NamedTuple
+from typing import Annotated, NamedTuple, Protocol
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
@@ -30,6 +30,30 @@ def holds_work(folder_name: str) -> bool:
     """Whether a folder of this name can hold someone's work: not installed packages or a cache, and not hidden unless
     it is one of the hidden folders that do, such as .context."""
     return folder_name not in UNWORKED_FOLDERS and (not folder_name.startswith(".") or folder_name in WORKED_HIDDEN_FOLDERS)
+
+
+class SessionRecordWriteRefused(PermissionError):
+    """A write was aimed at a session's own session.json, which only the session's record writes: each of its changes
+    holds the file from its read to its write, and a whole-file write would drop a change another chat made."""
+
+    def __init__(self, path: str) -> None:
+        super().__init__(
+            f"{path} is the session's record, session.json, which is not written as a file: change it with the "
+            "session's tools, such as session.choose_workpath, session.record_test_tier and the practice and fidelity "
+            "tools, which each hold it for their change; read_file still reads it"
+        )
+        self.path = path
+
+
+class OwnRecord(Protocol):
+    """The record of the session a file manager reads for, which says whether a path is the record's own file, and
+    whether it is a file a change to a session.json leaves beside it."""
+
+    def is_its_file(self, path: Path) -> bool:
+        """Whether path is the record's session.json, however the path is spelt."""
+
+    def is_left_beside(self, path: Path) -> bool:
+        """Whether path is the lock file or the staged text a change to a session.json leaves beside it."""
 
 
 class PathOutsideRootsError(ValueError):
@@ -261,9 +285,11 @@ class FileManager:
 
     # The session owns its file manager in memory; it keeps nothing but the roots it reads.
 
-    def __init__(self, workpath: Path | str, roots: tuple[Path, ...]) -> None:
+    def __init__(self, workpath: Path | str, roots: tuple[Path, ...], record: OwnRecord | None = None) -> None:
         self._workpath = Path(workpath).resolve()
         self._roots = tuple(Path(root).resolve() for root in roots)
+        # The record of the session it reads for, whose session.json it reads and never saves; none for a project's files.
+        self._record = record
 
     @classmethod
     @tool_subject
@@ -286,12 +312,17 @@ class FileManager:
     @agent_tool
     @noSessionLog
     def list(self, folder: str = "") -> Folder:
-        """List the entries of folder, a path from the session's workpath (the workpath when empty) inside one of its roots: folders first, then files, each with its path and size; no entries when the folder is not there, such as one deleted since a page listed it."""
+        """List the entries of folder, a path from the session's workpath (the workpath when empty) inside one of its roots: folders first, then files, each with its path and size; no entries when the folder is not there, such as one deleted since a page listed it. What a change to a session.json leaves beside it, its lock file and a killed writer's staged text, is no one's work and is left out."""
         target = self._inside(folder)
         if not target.is_dir():
             return Folder(self._relative(target), [])
-        entries = sorted(target.iterdir(), key=lambda entry: (not entry.is_dir(), entry.name.lower()))
+        entries = sorted((entry for entry in target.iterdir() if not self._is_left_beside_a_record(entry)), key=lambda entry: (not entry.is_dir(), entry.name.lower()))
         return Folder(self._relative(target), [self._entry(entry) for entry in entries])
+
+    def _is_left_beside_a_record(self, entry: Path) -> bool:
+        """Whether entry is a file a change to a session.json left beside it, as the session's record tells; a file
+        manager reading for no session leaves nothing out."""
+        return self._record is not None and entry.is_file() and self._record.is_left_beside(entry)
 
     @mcp
     @agent_tool
@@ -307,8 +338,10 @@ class FileManager:
     @agent_tool
     @noSessionLog
     def write(self, path: str, text: str) -> FileText:
-        """Save text as the whole of path, a file inside one of the session's roots, named from its workpath, making its folder when it has none; the file as saved."""
+        """Save text as the whole of path, a file inside one of the session's roots, named from its workpath, making its folder when it has none; the file as saved. The session's own session.json is refused, since only the session's tools change it."""
         target = self._inside(path)
+        if self._record is not None and self._record.is_its_file(target):
+            raise SessionRecordWriteRefused(path)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(text, encoding="utf-8", newline="")
         return FileText(self._relative(target), text)

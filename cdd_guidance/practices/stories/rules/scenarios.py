@@ -82,6 +82,7 @@ class AndChaining(StepRule):
 
 class ButMarksMissingState(StepRule):
     slug = "but-marks-missing-state"
+    requires_judge = True
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
@@ -204,6 +205,7 @@ class DomainTermsLinkToModel(StepRule):
 
 class WhenNamesIntentNotInterfaceGesture(StepRule):
     slug = "when-names-intent-not-interface-gesture"
+    requires_judge = True
     node_types = ("When", "Step")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
@@ -325,6 +327,7 @@ class GivenNamesComplexStateRootFirst(StepRule):
 
 class ScenarioNamesContinuation(StepRule):
     slug = "scenario-names-continuation"
+    requires_judge = True
     node_types = ("Then", "Step")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
@@ -400,6 +403,7 @@ class PlainEnglishGwtSteps(StepRule):
 
 class GwtStepsTraceToDomainOperations(StepRule):
     slug = "gwt-steps-trace-to-domain-operations"
+    requires_judge = True
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:

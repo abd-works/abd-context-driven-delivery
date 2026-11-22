@@ -24,6 +24,8 @@ _EXAMPLES_FILE_ENDINGS = {
     "javascript": ".examples.js",
     "python": _PYTHON_EXAMPLES_ENDING,
 }
+# The fidelity a story is read at once one of its steps has a body, which code-steps-invoke-code alone judges.
+ACCEPTANCE_TESTS_FIDELITY = "acceptance_tests"
 
 
 class DomainFixtureExampleFiles(PracticeGraphRule):
@@ -61,6 +63,7 @@ class DomainFixtureExampleFiles(PracticeGraphRule):
 
 class ExampleRoleNames(PracticeGraphRule):
     slug = "example-role-names"
+    requires_judge = True
     node_types = ("Example",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
@@ -75,6 +78,7 @@ class ExampleRoleNames(PracticeGraphRule):
 
 class ExamplesExportDataNotRepository(PracticeGraphRule):
     slug = "examples-export-data-not-repository"
+    requires_judge = True
     node_types = ("Example",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
@@ -85,16 +89,17 @@ class ExamplesExportDataNotRepository(PracticeGraphRule):
 
 
 class CodeStepsInvokeCode(PracticeGraphRule):
-    """A When read from a story test in code invokes code it tests. A When in markdown names no code until a realization
-    links it, so only a step backed by code is asked. The read records what the step's calls reach (its calls_reach
-    fact, cdd_guidance/practices/stories/model/graph_reading.py): a When that calls nothing, or only the story test's
-    own helpers and seeds, fails; one whose calls name code the graph has not read is left unjudged."""
+    """A When of a story read at the acceptance tests fidelity invokes code it tests. The fidelity goes by what the
+    story holds, never by its format: a story whose steps have no bodies yet is at scenarios, in markdown or in code,
+    and is left out, since it calls nothing until its tests are written. The read records what the step's calls reach
+    (its calls_reach fact, cdd_guidance/practices/stories/model/graph_reading.py): a When that calls nothing, or only
+    the story test's own helpers and seeds, fails; one whose calls name code the graph has not read is left unjudged."""
 
     slug = "code-steps-invoke-code"
     node_types = ("When",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
-        if not Format.from_extension(PurePosixPath(node.source.file or "").suffix).is_code:
+        if not node.is_read_at(ACCEPTANCE_TESTS_FIDELITY):
             return []
         reach = node.get_fact("calls_reach")
         if reach == CALLS_REACH_NONE:
