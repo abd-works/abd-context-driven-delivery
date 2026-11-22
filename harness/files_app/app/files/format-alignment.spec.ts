@@ -10,7 +10,7 @@ import { FormatAlignment, type AlignmentSession, type FailureBand } from './form
 const DRAWING = '.context/story-map.drawio'
 const STORY_MAP = '.context/story-map.md'
 const LACKS = `${DRAWING} lacks Story 'Remove Cart Line', which ${STORY_MAP} holds. Align renders ${DRAWING} from ${STORY_MAP}.`
-const CONFLICT = `${STORY_MAP} and ${DRAWING} each hold what the other lacks. A person decides which is right; both files are left as they are.`
+const CONFLICT = `${STORY_MAP} and ${DRAWING} each hold what the other lacks; both files are left as they are, and each item only ${DRAWING} holds goes to you to decide, with ${STORY_MAP} as the source.`
 const RENDER_FAILED = `Rendering ${STORY_MAP} to whiteboard failed: NothingToRender: ${STORY_MAP} is empty`
 
 const gap = (kind: string, message: string, isAlignable: boolean): AlignmentGapData => ({ kind, fidelity: 'stories-story-map', file: DRAWING, format: 'drawio', source: isAlignable ? STORY_MAP : '', is_alignable: isAlignable, missing_nodes: [], missing_edges: [], message })
