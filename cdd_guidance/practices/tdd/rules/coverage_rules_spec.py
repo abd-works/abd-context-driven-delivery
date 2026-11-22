@@ -78,6 +78,21 @@ class Bookshop(Practice):
 
 CATALOGUE.register(Bookshop)
 """
+# A catalogue that scans folders registers its classes by no name the code writes: each is a class whose base chain
+# reaches a base the catalogue holds, such as a pattern's graph overlay. Its override is called through that base.
+_SCANNED = """
+class GraphOverlay:
+    def read(self, graph):
+        ...
+
+
+class OrdersOverlay(GraphOverlay):
+    def read(self, graph):
+        return graph
+
+    def tally(self):
+        return 0
+"""
 _UNIT_SPEC_WITH_NO_STUB = """
 from mamba import description, it
 
@@ -127,6 +142,11 @@ with description("a public operation TDD checks for a test in the graph") as sel
             files = {**EXAMPLES[_OPERATION][1], "rules.py": _RULE, "shop.py": _PUBLISHED, "bookshop.py": _REGISTERED}
             listed = tested_code_fixture(files).hits(BY_SLUG[_OPERATION])
             expect(sorted(message.split("'")[1] for message in listed)).to(equal(["check_out", "label", "price"]))
+
+    with context("that overrides a base a catalogue scanning folders holds, as a pattern's graph overlay overrides read"):
+        with it("should pass, leaving listed only the helper nothing calls"):
+            listed = tested_code_fixture({**EXAMPLES[_OPERATION][1], "overlay.py": _SCANNED}).hits(BY_SLUG[_OPERATION])
+            expect(sorted(message.split("'")[1] for message in listed)).to(equal(["check_out", "tally"]))
 
     with it("should require a judge, since the links a load finds miss a call made by a name or through a tool"):
         expect(BY_SLUG[_OPERATION].requires_judge).to(equal(True))

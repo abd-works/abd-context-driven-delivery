@@ -125,7 +125,19 @@ _CART_MODEL = """# Ordering
 _EMPTY_TOTAL = "    def total(self) -> int:\n        raise NotImplementedError"
 _TOTAL_WITH_CODE = "    def total(self) -> int:\n        # tax is added at checkout\n        return sum(line.subtotal for line in self.lines)"
 _NOTE_CELL = '<mxCell id="person-note" value="Ask Dana before changing this" style="text;html=1;" vertex="1" parent="1"><mxGeometry x="900" y="900" width="200" height="40" as="geometry" /></mxCell>'
-_DRAWN_STORY_MAP: list[str] = []
+
+
+def _story_map_project() -> ThrowawayProject:
+    """A project of its own whose .context holds the markdown story map."""
+    project = ThrowawayProject()
+    (project.root / ".context").mkdir()
+    (project.root / ".context" / "story-map.md").write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+    return project
+
+
+def _render_story_map(project: ThrowawayProject) -> list:
+    """The project's story map rendered to drawio, as a session in it asks."""
+    return Render().for_call(ToolCall({}, project.root)).render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
 _NOTE_ONLY_DRAWING = f'<mxfile><diagram name="Story Map" id="story-map"><mxGraphModel><root><mxCell id="0" /><mxCell id="1" parent="0" />{_NOTE_CELL}</root></mxGraphModel></diagram></mxfile>'
 _WORKER_TRACEBACK = """Traceback (most recent call last):
   File "<frozen runpy>", line 198, in _run_module_as_main
@@ -743,19 +755,29 @@ with description("Render asked for a path, in a session") as self:
 
     # The person's answer (2026-11-21): a render must not ever remove what is already there. On the Bookshop a note a
     # person added to a story map's drawing was gone after the next render.
+    # Each render below happens once, in a project of its context's own, and the examples read what it left: a render
+    # in an example or its setup ran a few milliseconds over the unit tier's budget for one example.
     with context("that is a story map rendered to drawio"):
+        with before.all:
+            self.drawn_project = _story_map_project()
+            _render_story_map(self.drawn_project)
+
+        with after.all:
+            self.drawn_project.close()
+
         with it("should save the drawing beside the story map"):
-            self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
-            _DRAWN_STORY_MAP.append((self.folder / "story-map.drawio").read_text(encoding="utf-8"))
-            expect(_DRAWN_STORY_MAP[0]).to(contain("<mxfile"))
+            expect((self.drawn_project.root / ".context" / "story-map.drawio").read_text(encoding="utf-8")).to(contain("<mxfile"))
 
     with context("that is a story map whose drawing a person added a note to, rendered to drawio again"):
-        with before.each:
-            # The drawing a person then adds a note to is the same for every example: it is drawn once, by the context
-            # before this one, so each example here renders once and stays inside the unit budget.
-            self.drawing = self.folder / "story-map.drawio"
-            self.drawing.write_text(_DRAWN_STORY_MAP[0].replace("</root>", _NOTE_CELL + "</root>", 1), encoding="utf-8")
-            self.results = self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+        with before.all:
+            self.noted_again = _story_map_project()
+            _render_story_map(self.noted_again)
+            self.drawing = self.noted_again.root / ".context" / "story-map.drawio"
+            self.drawing.write_text(self.drawing.read_text(encoding="utf-8").replace("</root>", _NOTE_CELL + "</root>", 1), encoding="utf-8")
+            self.results = _render_story_map(self.noted_again)
+
+        with after.all:
+            self.noted_again.close()
 
         with it("should keep the note in the drawing"):
             expect(self.drawing.read_text(encoding="utf-8")).to(contain('id="person-note"', "Ask Dana before changing this"))

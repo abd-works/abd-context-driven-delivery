@@ -49,6 +49,13 @@ def pet_visits(project: ProjectTools) -> None:
     project.backlog_item("returns.md", "Returns and refunds")
 
 
+def cut_off_loyalty_points(project: ProjectTools) -> Path:
+    """A ticket loyalty-points whose session.json is cut off half way; answers that file."""
+    cut_off = project.ticket("loyalty-points", title="Loyalty points") / "session.json"
+    cut_off.write_text('{"name": "loyalty-points", "title": "Loyal', encoding="utf-8")
+    return cut_off
+
+
 def pet_visits_reports(project: ProjectTools) -> None:
     """pet-visits with an earlier and a latest clean engineering modules report, the latest with its graph."""
     pet_visits(project)
@@ -431,11 +438,14 @@ with description("the board tools") as self:
                     expect(self.judged["violation_count"]).to(equal(1))
 
         # (S) Board App --> Display Board
+        # The board is read once, on a project of the context's own, and the examples that look at it read what came
+        # back: a read in each example's setup ran over the unit tier's budget for one example.
         with context("with another ticket whose session.json is cut off half way"):
+            with before.all:
+                self.shown = ProjectTools.answer_of(lambda project: (pet_visits(project), cut_off_loyalty_points(project), project.call("board.show"))[2])
+
             with before.each:
-                self.cut_off = self.project.ticket("loyalty-points", title="Loyalty points") / "session.json"
-                self.cut_off.write_text('{"name": "loyalty-points", "title": "Loyal', encoding="utf-8")
-                self.shown = self.project.call("board.show")
+                self.cut_off = cut_off_loyalty_points(self.project)
 
             with it("should still show the tickets whose files read"):
                 expect(ticket_names_in(self.shown, "Discovery")).to(contain("pet-visits"))

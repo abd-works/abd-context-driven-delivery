@@ -1,5 +1,7 @@
 # Code measures before and after the judge-led fixes
 
+**Corrected 2026-11-22.** An earlier version of this report counted every folder of code as a module, packages included. A module is a folder that owns `.context/module-context.md`; a folder without one is a package, a part of the nearest module above it. The module figures below ("Modules measured", "Loops of modules", "Modules a module imports", "Modules that import a module" and "The ten worst modules") replace those figures: each module is measured over its own files and its packages', and its imports are those of all of them to other modules, a child module with a card of its own among them; an import between a module's own files and packages is not counted. They were taken with `measure_checkout.py` and this branch's measuring code, lizard 1.26.1 installed into a folder outside the repository and put on PYTHONPATH, on each commit extracted with `git archive` into `C:/dev/cdd-measure-<commit>`. The other figures are those of the earlier run. The two maintainability rows were taken on folders, packages included, and are not taken again: radon and its maintainability score are dropped.
+
 What Clean Engineering's seven limit rules report on the production Python and TypeScript under `harness/`, `space/`, `tools/`, `cdd_guidance/` and `scripts/`, before and after the judge-led reshape. Each number is a count of the rule's violations in the validation of that checkout: `measure_checkout.py`, beside this file, runs the Validate action at the code fidelity on those five folders and counts what the graph rules found, with the shipped limits. The paths through a function, its readability score and a class's total complexity are supplied by lizard 1.26.1 and a module's maintainability score by radon 6.0.1; a function's lines and parameters and a class's methods are facts the reader keeps on every read, with no tool. Specs, fixtures, examples, templates and the `oss_portal_domain_driven` pattern are left out. Written on 2026-11-22.
 
 - **Before:** commit `33b3839e3` (2026-11-21 16:54), which holds the seven judges' findings and changes no code. It is the commit just before the first judge-led fix, `631e9b19d` (17:03).
@@ -10,7 +12,7 @@ What Clean Engineering's seven limit rules report on the production Python and T
 | Production files with a measured function or class | 648 | 676 |
 | Functions measured | 10498 | 10893 |
 | Classes measured | 1671 | 1776 |
-| Modules measured (folders of code) | 159 | 172 |
+| Modules measured (folders that own a module card) | 43 | 56 |
 
 ## Past its limit, for each measure
 
@@ -30,12 +32,12 @@ A lower count is better. The share is of the functions or classes that hold the 
 
 | Measure | Before | After | Change |
 | --- | --- | --- | --- |
-| Loops of modules importing one another, added up over every module (reported by `one-way-deps`) | 10 | 4 | <span style="color:#1a7f37">**better**</span> (-6) |
+| Loops of modules importing one another, added up over every module | 2 | 4 | <span style="color:#cf222e">**worse**</span> (+2) |
 | Classes a class depends on (coupling between objects), on average | 1 | 1 | no change |
 | Maintainability score of a module's hardest file (maintainability index, 0 to 100; higher is easier to maintain), on average | 47.9 | 47.2 | <span style="color:#cf222e">**worse**</span> (-0.7) |
 | Modules whose hardest file scores under 20 on maintainability | 28 | 27 | <span style="color:#1a7f37">**better**</span> (-1) |
-| Modules a module imports (outgoing coupling), on average | 3.1 | 3.5 | <span style="color:#cf222e">**worse**</span> (+0.4) |
-| Modules that import a module (incoming coupling), on average | 3.5 | 3.9 | <span style="color:#cf222e">**worse**</span> (+0.4) |
+| Modules a module imports (outgoing coupling), on average | 5.0 | 5.3 | <span style="color:#cf222e">**worse**</span> (+0.3) |
+| Modules that import a module (incoming coupling), on average | 5.0 | 5.3 | <span style="color:#cf222e">**worse**</span> (+0.3) |
 
 ## The ten worst functions after
 
@@ -73,20 +75,20 @@ By total complexity (the paths through all a class's methods, added up).
 
 ## The ten worst modules after
 
-By the maintainability score of each module's hardest file (maintainability index, 0 to 100; lower is harder to maintain), then by the modules it imports. Only Python is scored.
+By the modules each imports (outgoing coupling), then by the modules that import it. A module's imports are those of its own files and of the packages inside it.
 
-| Module | Maintainability score of its hardest file | Modules that import it | Modules it imports | Import loops it is part of |
-| --- | --- | --- | --- | --- |
-| `space/kanban` | 0 | 1 | 17 | 0 |
-| `cdd_guidance/practices/stories/model` | 0 | 14 | 13 | 1 |
-| `harness/graph` | 0 | 37 | 7 | 0 |
-| `cdd_guidance/practices/clean_engineering/reading` | 0 | 5 | 6 | 0 |
-| `harness/agent_tools` | 0 | 61 | 4 | 0 |
-| `harness/installation` | 0 | 49 | 4 | 0 |
-| `cdd_guidance/practices/clean_engineering/model/diagram` | 0 | 3 | 4 | 0 |
-| `cdd_guidance/practices/ddd/model` | 0 | 8 | 4 | 0 |
-| `harness/markdown` | 0 | 21 | 1 | 0 |
-| `cdd_guidance/practices/ux/model/view` | 0 | 0 | 1 | 0 |
+| Module | Modules it imports | Modules that import it | Import loops it is part of |
+| --- | --- | --- | --- |
+| `space/kanban` | 17 | 1 | 0 |
+| `scripts` | 16 | 0 | 0 |
+| `space/session` | 15 | 6 | 0 |
+| `cdd_guidance/practices/stories` | 14 | 6 | 0 |
+| `cdd_guidance/actions` | 12 | 3 | 0 |
+| `cdd_guidance/practices/ux` | 12 | 1 | 0 |
+| `cdd_guidance/practices/clean_engineering` | 11 | 8 | 1 |
+| `space/session/practices` | 10 | 2 | 0 |
+| `cdd_guidance/practices/ddd` | 9 | 5 | 1 |
+| `cdd_guidance/align` | 9 | 0 | 0 |
 
 ## How to read this
 

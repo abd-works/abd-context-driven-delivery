@@ -25,11 +25,11 @@ section: body
 
 | violation | practice | rule | file | lines |
 | --- | --- | --- | --- | --- |
-| ++Process Ticket Archive name++ | Stories | verb-noun-format | .context/story-map.md | 311 to 313 |
-| ++Handle Ticket Deletion name++ | Stories | verb-noun-format | .context/story-map.md | 315 to 317 |
+| ++Process Ticket Archive name++ | Stories | story-name-captures-system-mechanic | .context/story-map.md | 311 to 313 |
+| ++Handle Ticket Deletion name++ | Stories | story-name-captures-system-mechanic | .context/story-map.md | 315 to 317 |
 | ++Activate Ticket name++ | Clean Engineering | use-intention-revealing-names | space/kanban/ticket.py | 460 to 460 |
 
-*Move Ticket size*, a right-size-story-nodes example, and *Ticket details budget*, a screen-story-budget example drawn in the information architecture's diagram, whose reader records no stories per screen, left the examples on 2026-11-17 (decided by the person): the switch is shown with the three above. *Handle Ticket Deletion name* and *Process Ticket Archive name* are the verb-noun-format examples since 2026-11-16 (decided by the person): the real check passes *Delete Ticket*, a verb and a noun, and also an opening word it does not list, such as *Ticket*, so the examples open with a generic verb (handle, process), which the graph lists for the judgment.
+*Move Ticket size*, a right-size-story-nodes example, and *Ticket details budget*, a screen-story-budget example drawn in the information architecture's diagram, whose reader records no stories per screen, left the examples on 2026-11-17 (decided by the person): the switch is shown with the three above. *Handle Ticket Deletion name* and *Process Ticket Archive name* are the verb-noun-format examples since 2026-11-16 (decided by the person): the real check passes *Delete Ticket*, a verb and a noun, and also an opening word it does not list, such as *Ticket*, so the examples open with a generic verb (handle, process), which the graph lists for the judgment. Since 2026-11-22 verb-noun-format passes a generic verb and the judged rule story-name-captures-system-mechanic lists the story as a candidate, so these two are its examples: the graph view shows each as a candidate, not as an error.
 
 ### checkout-flow violation counts
 
@@ -53,12 +53,12 @@ section: body
 *Given* the Files app shows checkout-flow's graph with Stories and Clean Engineering on  
 *When* the Person turns on Violations  
 *Then* the graph view holds only the nodes of Process Ticket Archive name, Handle Ticket Deletion name and Activate Ticket name  
-  *And* each of them lists only the rules it breaks
+  *And* each of them lists only the rules it breaks or is a candidate for
 
 #### Scenario: Choosing a rule keeps only the nodes that break it
 
 *Given* the Files app shows checkout-flow's violating nodes  
-*When* the Person chooses the rule verb-noun-format  
+*When* the Person chooses the rule story-name-captures-system-mechanic  
 *Then* the graph view holds only Process Ticket Archive name and Handle Ticket Deletion name
 
 ## Story: See Rules Under Node In Files App
@@ -74,14 +74,14 @@ section: body
 
 *Given* the Files app shows checkout-flow's graph  
 *When* the Person opens the rules of the Handle Ticket Deletion story  
-*Then* verb-noun-format shows broken  
+*Then* story-name-captures-system-mechanic shows a candidate  
   *And* its other rules show passing, or as prompts where they have no check  
   *And* Handle Ticket Deletion is marked in the tree as breaking a rule
 
 #### Scenario: Hovering a broken rule shows its message
 
 *Given* the rules of the Handle Ticket Deletion story are open  
-*When* the Person hovers over verb-noun-format  
+*When* the Person hovers over story-name-captures-system-mechanic  
 *Then* the graph view shows Handle Ticket Deletion name's message
 
 ## Story: Open Violation In Files App Source
@@ -119,9 +119,9 @@ section: body
 
 #### Scenario: Fixing a rule sends every violation of it
 
-*Given* verb-noun-format holds Process Ticket Archive name and Handle Ticket Deletion name  
-*When* the Person fixes the rule verb-noun-format  
-*Then* the chat receives one fix for both verb-noun-format violations
+*Given* story-name-captures-system-mechanic holds Process Ticket Archive name and Handle Ticket Deletion name  
+*When* the Person fixes the rule story-name-captures-system-mechanic  
+*Then* the chat receives one fix for both story-name-captures-system-mechanic candidates
 
 #### Scenario: Fixing all sends every violation the graph view shows
 

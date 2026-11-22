@@ -52,7 +52,7 @@ with description("Review Graph Violations In Files App, in a real browser") as s
                 open_branches(self.page, "Process Ticket Archive")
                 story = self.page.locator('li.graph-entry:has(> .tree-row button.graph-node[title="Story Process Ticket Archive"])')
                 story.get_by_role("button", name="Open rules", exact=True).first.click()
-                story.locator('button.graph-node[title^="Rule verb-noun-format:"]').click()
+                story.locator('button.graph-node[title^="Rule story-name-captures-system-mechanic:"]').click()
                 line(self.page, "(S) Person --> Process Ticket Archive").wait_for(timeout=SHOWN_MILLISECONDS)
 
             with it("Then the story map opens at Process Ticket Archive's line"):

@@ -79,6 +79,12 @@ with description("a module that imports another module") as self:
             listed = practice_from_files(_ORDERS_PACKAGE_IMPORTING_PROMO).hits(BY_SLUG[_SLUG])
             expect([said.split(",")[0] for said in listed]).to(equal(["Module 'orders'"]))
 
-    with context("that is a part of itself, a folder beneath it"):
+    with context("that is its child module, a folder beneath it with a module card of its own"):
+        with it("should be listed, since a child module is another module the parent relies on"):
+            child = {**_ORDERS_IMPORTING_ITS_OWN_PART, "orders/lines/.context/module-context.md": _CARDS["orders/.context/module-context.md"].replace("orders", "lines")}
+            listed = practice_from_files(child).hits(BY_SLUG[_SLUG])
+            expect([said.split(":")[0] for said in listed]).to(equal(["Module 'orders', which 3 modules import, imports 'lines', which 1 module imports"]))
+
+    with context("that is a package inside itself, a folder beneath it with no module card"):
         with it("should not be listed, since a module's own part is not another module it relies on"):
             expect(practice_from_files(_ORDERS_IMPORTING_ITS_OWN_PART).hits(BY_SLUG[_SLUG])).to(equal([]))

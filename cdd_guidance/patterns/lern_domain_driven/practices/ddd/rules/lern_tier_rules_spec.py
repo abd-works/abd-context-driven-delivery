@@ -222,9 +222,12 @@ with description("the lern_domain_driven pattern rules"):
             )
             expect(DomainOperationsInlineInSteps().check(story_file(gesture, "PlaywrightSpec"), None)).to(equal([]))
 
+    # A rule of the code fidelity, so each class is one Clean Engineering's reading put at code: its operations have bodies.
     with description("no-prototype-swapping (Clean Engineering)"):
         with it("should flag a prototype swap and pass a factory"):
-            swapped = {"prototype_swap": SourceText("Object.setPrototypeOf(loaded, XNode.prototype);").prototype_swap(1)}
-            factory = {"prototype_swap": SourceText("return this.blank(id);").prototype_swap(1)}
-            expect(NoPrototypeSwapping().check(tier_node("XRepositoryNode", "OoadClass", swapped), None)).to(have_len(1))
-            expect(NoPrototypeSwapping().check(tier_node("XRepositoryNode", "OoadClass", factory), None)).to(equal([]))
+            swapped = tier_node("XRepositoryNode", "OoadClass", {"prototype_swap": SourceText("Object.setPrototypeOf(loaded, XNode.prototype);").prototype_swap(1)})
+            factory = tier_node("XRepositoryNode", "OoadClass", {"prototype_swap": SourceText("return this.blank(id);").prototype_swap(1)})
+            for read in (swapped, factory):
+                read.read_at("code")
+            expect(NoPrototypeSwapping().check(swapped, None)).to(have_len(1))
+            expect(NoPrototypeSwapping().check(factory, None)).to(equal([]))

@@ -16,12 +16,16 @@ _REGISTRATION = re.compile(r"\.register\(([^()]*)\)")
 _NAME = re.compile(r"\b[A-Za-z_]\w*\b")
 # The ending of the base every graph rule reaches, whose check the rule registry runs.
 _GRAPH_RULE_ENDING = "GraphRule"
+# The bases of the classes a catalogue registers by scanning folders, so the code names none of them: a practice, a
+# supplement or a pattern (PracticeGuidance), an action (GuidanceAction), and a pattern's graph overlay (GraphOverlay).
+_SCANNED_BASES = frozenset({"PracticeGuidance", "GuidanceAction", "GraphOverlay"})
 
 
 class CalledByName:
     """Among a graph's operations, those the framework calls by name: one published by an annotation (``@mcp``,
     ``@agent_tool``, ``@hook``, and the like), and one that overrides an operation of a base, on a class the framework
-    calls through that base: a graph rule, whose check the rule registry runs, and a class registered with a catalogue."""
+    calls through that base: a graph rule, whose check the rule registry runs, a class registered with a catalogue by
+    name, and a class a catalogue registers by scanning folders, whose base chain reaches one of ``_SCANNED_BASES``."""
 
     def __init__(self, graph: Graph, operations: list[Node]) -> None:
         self._graph = graph
@@ -64,9 +68,14 @@ class CalledByName:
         if owner is None:
             return False
         bases = self._base_chain(owner)
-        if not (owner.name in self._registered or any(base.name.endswith(_GRAPH_RULE_ENDING) for base in bases)):
+        if not (owner.name in self._registered or any(self._is_called_through(base) for base in bases)):
             return False
         return any(operation.name in self._names_by_class.get(id(base), set()) for base in bases)
+
+    def _is_called_through(self, base: Node) -> bool:
+        """Whether the framework calls a class's overrides through base: a graph rule's base, or a base a catalogue
+        that scans folders holds."""
+        return base.name.endswith(_GRAPH_RULE_ENDING) or base.name in _SCANNED_BASES
 
     def _base_chain(self, declared: Node) -> list[Node]:
         """Every base class of declared the graph holds, nearest first."""

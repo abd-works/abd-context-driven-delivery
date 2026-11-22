@@ -47,9 +47,10 @@ OPERATIONS = {"types": ["Operation"]}
 OPERATIONS_ON_INVOKES = {"types": ["Operation"], "relationships": ["invokes"]}
 NO_NODE_FILTER: dict = {}
 VIOLATIONS = {"violations": True}
-VERB_NOUN_FORMAT = "verb-noun-format"
-# Seed: checkout-flow's story map holding two stories whose names open with a generic verb, which verb-noun-format
-# breaks, beside Delete Ticket, a verb and a noun, which it passes; its epics open with verbs.
+STORY_NAME_CAPTURES_SYSTEM_MECHANIC = "story-name-captures-system-mechanic"
+# Seed: checkout-flow's story map holding two stories whose names open with a generic verb, which the judged rule
+# story-name-captures-system-mechanic lists as candidates, beside Delete Ticket, a verb and a noun, which it passes; its
+# epics open with verbs.
 VIOLATING_MAP_TEXT = (
     "# Story Map\n\n(E) Remove Tickets\n    (E) Retire Tickets\n"
     "        (S) Person --> Process Ticket Archive\n"
@@ -75,7 +76,7 @@ LISTED_WITH_TICKET = [STORY_MAP, TICKET_CODE]
 
 
 def seed_checkout_flow_with_violations_in_two_practices(world) -> None:
-    """checkout-flow with its two verb-noun-format stories and Ticket.activate's vague parameter x."""
+    """checkout-flow with its two stories that open with a generic verb and Ticket.activate's vague parameter x."""
     seed_checkout_flow_with_violating_stories(world)
     world.project.seed_file(TICKET_CODE, VAGUE_PARAMETER_TICKET_TEXT)
 

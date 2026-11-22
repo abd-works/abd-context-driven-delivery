@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
 
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import ModuleImports, is_under
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import ModuleImports
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -17,8 +17,9 @@ if TYPE_CHECKING:
 class DependTowardStability(PracticeGraphRule):
     """Lists each import of a module by a module that more modules import. How much others rely on a module is counted
     as the modules that import it (``ModuleImports``): a module is a folder that owns a module card, and what a package
-    inside it imports is the module's import, so the rule compares two modules with each other and needs no fixed
-    number. A module nested beneath the importing module, or above it, is its own part and is not compared.
+    inside it imports is the module's import. An import of anything outside the module, a child module with a card of
+    its own among them, is an import of the module that holds it; an import between its own files and packages is none.
+    So the rule compares two modules with each other and needs no fixed number.
 
     The rule requires a judge: some such dependencies are deliberate, such as a module many rely on using a small
     helper that seldom changes, and only a reading tells those from one that should be turned round."""
@@ -34,24 +35,20 @@ class DependTowardStability(PracticeGraphRule):
             Finding(module, self._said(module, modules[imported], importers))
             for path, module in modules.items()
             for imported in self._imported(module)
-            if imported in modules and self._another_module(path, imported) and importers.get(imported, 0) < importers.get(path, 0)
+            if imported in modules and imported != path and importers.get(imported, 0) < importers.get(path, 0)
         ]
 
     def _imported(self, module: "Node") -> list[str]:
         return list(module.get_fact(ModuleImports.IMPORTED) or []) if module.has_fact(ModuleImports.IMPORTED) else []
 
     def _importers(self, modules: dict[str, "Node"]) -> dict[str, int]:
-        """How many modules import each module, itself and the modules nested in it or holding it aside."""
+        """How many modules import each module."""
         counted: dict[str, set[str]] = {}
         for path, module in modules.items():
             for imported in self._imported(module):
-                if self._another_module(path, imported):
+                if imported != path:
                     counted.setdefault(imported, set()).add(path)
         return {imported: len(by) for imported, by in counted.items()}
-
-    def _another_module(self, own: str, other: str) -> bool:
-        """True when other is neither own itself nor a module beneath or above it."""
-        return other != own and not is_under(other, own) and not is_under(own, other)
 
     def _said(self, module: "Node", imported: "Node", importers: dict[str, int]) -> str:
         relied_on, fewer = importers.get(module.source.file, 0), importers.get(imported.source.file, 0)

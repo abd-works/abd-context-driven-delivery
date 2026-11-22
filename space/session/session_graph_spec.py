@@ -97,11 +97,18 @@ with description("a session's graph"):
         with it("should answer none"):
             expect(self.session.graph_node_ranges("no-such-node", [TICKET_FILE])).to(equal([]))
 
+    # The graph is read once, in a session and a cdd home of the context's own, and the example reads what it answered:
+    # a read in the example's setup ran over the unit tier's budget for one example.
     with context("asked for the lines of the folder both code files sit in"):
-        with before.each:
-            self.session.graph_trees([TICKET_FILE, BOARD_FILE])
-            ranges = self.session.graph_node_ranges(KANBAN_PACKAGE, [TICKET_FILE, BOARD_FILE])
+        with before.all:
+            self.folder_home = ExampleHome()
+            folder_session = _session_with_code()
+            folder_session.graph_trees([TICKET_FILE, BOARD_FILE])
+            ranges = folder_session.graph_node_ranges(KANBAN_PACKAGE, [TICKET_FILE, BOARD_FILE])
             self.lines = {each.path: (each.start_line, each.end_line) for each in ranges}
+
+        with after.all:
+            self.folder_home.close()
 
         with it("should answer each listed file below the folder, at the lines of the classes it holds"):
             expect(self.lines).to(equal({TICKET_FILE: (1, 6), BOARD_FILE: (1, 3)}))
@@ -115,15 +122,21 @@ with description("a session's graph"):
             ranges = lambda: self.session.graph_node_ranges(KANBAN_PACKAGE, [TICKET_FILE, BOARD_FILE])
             expect(ranges).to(raise_error(NamedPathNotFoundError, contain("work/kanban")))
 
+    # Read once, in a session and a cdd home of the context's own, for the same reason as the folder's lines above.
     with context("asked for the lines of an operation whose file gained two lines above it since the graph read it"):
-        with before.each:
-            self.session.graph_trees([TICKET_FILE, BOARD_FILE])
-            self.close = next(member.node_id for member in self.session.graph_members() if member.name == "close")
-            ticket = Path(self.session.checkout.root) / TICKET_FILE
+        with before.all:
+            self.moved_home = ExampleHome()
+            moved_session = _session_with_code()
+            moved_session.graph_trees([TICKET_FILE, BOARD_FILE])
+            close = next(member.node_id for member in moved_session.graph_members() if member.name == "close")
+            ticket = Path(moved_session.checkout.root) / TICKET_FILE
             ticket.write_text("# one\n# two\n" + TICKET_TEXT, encoding="utf-8")
             os.utime(ticket, (time.time() + A_MOMENT_LATER, time.time() + A_MOMENT_LATER))
-            ranges = self.session.graph_node_ranges(self.close, [TICKET_FILE, BOARD_FILE])
+            ranges = moved_session.graph_node_ranges(close, [TICKET_FILE, BOARD_FILE])
             self.lines = [(each.path, each.start_line, each.end_line) for each in ranges]
+
+        with after.all:
+            self.moved_home.close()
 
         with it("should answer the operation's lines as the file is now, two lines lower"):
             expect(self.lines).to(equal([(TICKET_FILE, 7, 8)]))
