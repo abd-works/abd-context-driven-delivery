@@ -95,7 +95,7 @@ describe('the formats of a session in the Files app', () => {
 
   describe('that a person aligns after a diagnosis', () => {
     const aligned: AlignmentResultData = {
-      aligned: [{ file: DRAWING, format: 'drawio', source: STORY_MAP, follow_up: '' }],
+      aligned: [{ file: DRAWING, format: 'drawio', source: STORY_MAP, migrate: [], follow_up: '' }],
       failures: [{ kind: 'render_failed', file: '.context/story-map.whiteboard', message: RENDER_FAILED }],
       diagnosis: diagnosis(gap('formats_conflict', CONFLICT, false)),
     }

@@ -382,6 +382,18 @@ with description("a language adapter"):
                     repo = (install_path / _ADAPTERS / "space/repo/repo.ts").read_text(encoding="utf-8")
                     expect(repo).to(contain("export type CommitData = {"))
 
+            with context("with a field holding records whose dataclass fields are their data"):
+                with before.all:
+                    install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
+                    _install(install_path, ("harness.whiteboard.whiteboard_file:WhiteboardFile",))
+                    self.whiteboard = (install_path / _ADAPTERS / "harness/whiteboard/whiteboard-file.ts").read_text(encoding="utf-8")
+
+                with it("should type each record by its fields, a record it holds as that record's data"):
+                    expect(self.whiteboard).to(contain("export type ShapeData = {\n  id: string\n  box: BoxData\n"))
+
+                with it("should type a string of a kind of its own as a string"):
+                    expect(self.whiteboard).to(contain("export type ArrowData = {\n  id: string\n  from_id: string\n"))
+
         with description("its shared base"):
             with before.all:
                 self.base = _between(self.ticket, "export class Ticket {", "export class TicketClientGenerated")

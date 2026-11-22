@@ -15,6 +15,7 @@ from pathlib import Path
 from dataclasses import dataclass, field, fields, replace
 from typing import ClassVar, Collection, Dict, Iterable, List, Optional
 
+from harness.installation.data_class import data_field, data_fields
 from harness.installation.json_file import JsonFile
 from harness.installation.published_links import PublishedLinks
 
@@ -76,6 +77,7 @@ class ElementId(str):
         return self.rsplit(self.SEPARATOR, 1)[-1]
 
 
+@data_fields
 @dataclass(frozen=True)
 class Box:
     """Where a drawn thing sits: its top-left corner, width and height, in board units or a drawing's pixels. The one
@@ -123,9 +125,11 @@ class Box:
         return (self.x + self.w / 2, self.y + self.h / 2)
 
 
+@data_fields
 @dataclass
 class BoardElement:
-    """One record on a board, under its element id; each kind writes the fields the Whiteboard type reads."""
+    """One record on a board, under its element id; each kind writes the fields the Whiteboard type reads. Its fields
+    are its data, which a page draws the board from (`WhiteboardFile`)."""
 
     id: ElementId
     TYPE: ClassVar[str] = ""
@@ -210,6 +214,12 @@ class Label(BoardElement):
     def placed_at(self, place: Box) -> "Label":
         return replace(self, x=place.x, y=place.y)
 
+    @property
+    @data_field
+    def is_title(self) -> bool:
+        """Whether the words are set at a board title's size."""
+        return self.size == "title"
+
 
 @dataclass
 class Block(BoardElement):
@@ -235,6 +245,12 @@ class Block(BoardElement):
     def holds(self, other: "Block") -> bool:
         """Whether other sits inside this block, as a card inside the section drawn round it does."""
         return self.box.holds(other.box)
+
+    @property
+    @data_field
+    def lines(self) -> List[str]:
+        """The block's words as a page draws them, one line each, without the asterisks the board sets emphasis with."""
+        return [line for line in self.text.replace("*", "").split("\n") if line.strip()]
 
     def pieces(self) -> List[BoardElement]:
         """This block as the board draws it: a board draws no block wider than MAX_SIDE, so a wider one, such as the bar
@@ -271,6 +287,12 @@ class Shape(Block):
     stroke: str = ""
     size: str = ""
     text_align: str = ""
+
+    @property
+    @data_field
+    def is_rounded(self) -> bool:
+        """Whether the block is drawn with rounded corners, as a story card is."""
+        return self.kind == "rounded"
 
 
 @dataclass
@@ -360,7 +382,8 @@ class WhiteboardNode:
 
 
 class Whiteboard:
-    """A board: its title and its elements in back-to-front order."""
+    """A board: its title and its elements in back-to-front order. Its title and its whole elements, by kind, are its
+    data, which a page draws the board from (`WhiteboardFile`)."""
 
     SUFFIX = ".whiteboard"
     # The record beside a folder's whiteboard files of the board in Claude each was published to, by the file's name.
@@ -374,12 +397,17 @@ class Whiteboard:
         return PublishedLinks(JsonFile(file.parent / cls.LINKS))
 
     def __init__(self, title: str = "", elements: Iterable[BoardElement] = ()) -> None:
-        self.title = title
+        self._title = title
         # The store version each record was read at, by element id and ``meta``; a board drawn by a practice has none.
         self._versions: Dict[str, int] = {}
         self._elements: Dict[str, BoardElement] = {}
         for element in elements:
             self.add(element)
+
+    @property
+    @data_field
+    def title(self) -> str:
+        return self._title
 
     @property
     def elements(self) -> List[BoardElement]:
@@ -400,20 +428,24 @@ class Whiteboard:
         return list(wholes.values())
 
     @property
+    @data_field
     def sections(self) -> List[Section]:
         """The whole containers on the board, back to front."""
         return [element for element in self.whole_elements if isinstance(element, Section)]
 
     @property
+    @data_field
     def shapes(self) -> List[Shape]:
         """The whole blocks on the board that are no container, back to front."""
         return [element for element in self.whole_elements if isinstance(element, Shape)]
 
     @property
+    @data_field
     def labels(self) -> List[Label]:
         return [element for element in self.whole_elements if isinstance(element, Label)]
 
     @property
+    @data_field
     def arrows(self) -> List[Arrow]:
         return [element for element in self.whole_elements if isinstance(element, Arrow)]
 

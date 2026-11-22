@@ -564,6 +564,53 @@ describe('Add File Or Selection To Chat Context', () => {
   })
 })
 
+// Open Whiteboard In Files App: a whiteboard file opens as the board Python reads from it (whiteboard-file.show), which the
+// canvas draws; the page never reads the file's text to draw it.
+describe('Open Whiteboard In Files App', () => {
+  const WHITEBOARD = '.context/story-map.whiteboard'
+  const BOARD = { title: 'Story Map', sections: [], shapes: [], labels: [], arrows: [] }
+
+  // A session whose whiteboard file holds BOARD, or holds no board at all.
+  class BoardServer extends FakeFilesServer {
+    isUnreadable = false
+
+    override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+      if (!path.startsWith('/whiteboard-file/')) return super.post<Result>(path, body)
+      this.posts.push({ path, body })
+      if (this.isUnreadable) throw new Error('cdd whiteboard-file.show failed: UnreadableBoard: Not a whiteboard file')
+      return { path: decodeURIComponent(path.split('/')[2] ?? ''), board: BOARD } as Result
+    }
+  }
+
+  const opened = async (server: BoardServer): Promise<FilesPage> => {
+    const page = new FilesPage(server, new FilesLink(`${STAGE_LINK}&file=${encodeURIComponent(WHITEBOARD)}`))
+    await started(page)
+    return page
+  }
+
+  it('should read the board through whiteboard-file.show', async () => {
+    const server = new BoardServer()
+    await opened(server)
+    expect(server.posts.filter(post => post.path.startsWith('/whiteboard-file/')).map(post => post.path)).toEqual([`/whiteboard-file/${encodeURIComponent(WHITEBOARD)}/show`])
+  })
+
+  it('should hold the board it answered, for the canvas to draw', async () => {
+    expect((await opened(new BoardServer())).state.board).toEqual(BOARD)
+  })
+
+  it('should not read the file\'s text through session.file', async () => {
+    const server = new BoardServer()
+    await opened(server)
+    expect(server.posted('/file')).toHaveLength(0)
+  })
+
+  it('should say the file did not open when it holds no board', async () => {
+    const server = new BoardServer()
+    server.isUnreadable = true
+    expect((await opened(server)).state.problem).toContain('Not a whiteboard file')
+  })
+})
+
 // A whiteboard opens in Claude Desktop's artifact panel, beside the chat, not in a browser: the page asks the chat that
 // opened it to open the board; requested 2026-11-18: "im in claude desktop i want it open in desktop".
 describe('Open Whiteboard In Claude Desktop', () => {
