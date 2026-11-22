@@ -4750,12 +4750,12 @@ The rules a validation found broken. With no report it is empty, and it says whe
 
 ## ReportFile
 
-A validation report of one fidelity, saved in a session folder, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for.
+A validation report of one fidelity as the board reads it, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for.
 
-+ ReportFile(file: Path, fidelity: FidelityGuidance)
++ ReportFile(report: ValidationReport)
 ------
 + file: Path
-+ stamp: str
++ << association >> report: ValidationReport
 + text: str
 + has_result: bool
 + is_judged_failing: bool

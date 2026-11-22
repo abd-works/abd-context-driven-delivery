@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
 from functools import cache
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Callable, Iterable
@@ -23,7 +22,7 @@ from harness.markdown.format import Format
 from space.session.answer_reads import HeldForAnswer
 from space.session.file_manager import FileEntry
 from space.session.proposed_roots import ProposedRoots, code_extensions
-from space.session.session_log import REPORT_DATE_FORMAT
+from space.session.validation_report import ValidationReports
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, GuidanceCollection, PracticeGuidance
@@ -734,21 +733,3 @@ class FidelityFormats:
         offered = [name for name in dict.fromkeys(named) if name in self._output.offered_formats]
         return offered or own
 
-
-class ValidationReports:
-    """One fidelity's validation reports in a session, each named with the fidelity's slug and the moment it was made."""
-
-    def __init__(self, output: FidelitySessionOutput) -> None:
-        self._output = output
-
-    def listed(self) -> list[Path]:
-        """This fidelity's validation reports in the session, oldest first: report names end with their date, which
-        sorts by time."""
-        folder = self._output.reports_folder
-        return sorted(folder.glob(f"{self._output.fidelity.slug}-*.md")) if folder.is_dir() else []
-
-    def new_path(self) -> Path:
-        """Where a validation report of this fidelity made now is saved in the session."""
-        folder = self._output.reports_folder
-        folder.mkdir(parents=True, exist_ok=True)
-        return folder / f"{self._output.fidelity.slug}-{datetime.now(timezone.utc).strftime(REPORT_DATE_FORMAT)}.md"

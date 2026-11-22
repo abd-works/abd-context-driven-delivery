@@ -30,8 +30,8 @@ _RULES_SAVED = [
 _RULE_BULLET = re.compile(r"^\s*[-*]\s+(?:\*\*`?|`)(?P<slug>[^`*]+)`?(?:\*\*)?\s*[—:-]")
 
 
-class ValidationReport:
-    """The validation report of one session on the guidance a validate call lists, each at the fidelity it is validated
+class ReportText:
+    """The text of the validation report of one session on the guidance a validate call lists, each at the fidelity it is validated
     at, and the graph the call checked (its *CheckedGraph*). It shows each rule that guidance checks, and for a graph hit
     of a rule it does not check, that rule as the guidance has it; for a call that names one rule, that rule alone. It names files by their path from the session's root
     and links each hit to its file by absolute path and line, so a link opens the file from wherever the report is read.

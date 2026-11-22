@@ -289,7 +289,7 @@ render_files(format: str, paths: list[str] | str, source: str | None): dict
 	-> practice_guidance.formats.read
 	-> practice_guidance.formats.render RenderRequest(fidelity=self)
 work_in(session_output: FidelitySessionOutput): None
-	// its reports and where a new one goes are its session output's: session_output.validation_reports.listed(), validation_reports.new_path()
+	// its reports and where a new one goes are its session output's: session_output.validation_reports.listed(), validation_reports.new(), each a ValidationReport
 
 ## DeclaredOutputs
 

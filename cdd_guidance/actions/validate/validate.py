@@ -15,9 +15,9 @@ from harness.installation.files import skill
 from harness.mcp.mcp_annotations import mcp
 from harness.guidance.rule import Rule
 
+from cdd_guidance.actions.validate.checked_fidelity import CheckedFidelity
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph, NamedToCheck
-from cdd_guidance.actions.validate.report_files import ReportFiles
-from cdd_guidance.actions.validate.validation_report import ValidationReport
+from cdd_guidance.actions.validate.report_text import ReportText
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -45,8 +45,7 @@ class Validate(GuidanceAction):
         super().__init__(session, call)
         # What this call checks, made by each validate; the cdd server makes a new action for each call.
         self._graph: CheckedGraph | None = None
-        self._reports: ReportFiles | None = None
-        self._report_of: ValidationReport | None = None
+        self._report_of: ReportText | None = None
         # The one rule this call names, read once from the listed guidance; none when it walks every rule.
         self._rule: Rule | None = None
 
@@ -92,17 +91,15 @@ class Validate(GuidanceAction):
         """Save the report into this call's report files, with the violations of the graph it checked beside them, and
         answer the call with report, the report as the judge reads it, and where it was saved. The saved report points
         at each rule's text instead of copying it, and leaves out how to judge, which the judge has here."""
-        self._reports.save(self._report_of.for_saving(), self._graph)
-        return f"{report}\n\nValidation report for these artifacts: {self._reports.where()}"
+        self._graph.save(self._report_of.for_saving())
+        return f"{report}\n\nValidation report for these artifacts: {self._graph.reports.where()}"
 
     def _check(self, to_check: NamedToCheck) -> None:
         """Claim this call's report files and build, or read, the graph it checks beside them."""
-        fidelities = self._fidelities()
-        self._graph = CheckedGraph(self.session, fidelities, to_check)
-        self._reports = ReportFiles(self.session, fidelities)
-        self._graph.check_beside(self._reports)
+        checked = [CheckedFidelity(self.session, fidelity) for fidelity in self._fidelities()]
+        self._graph = CheckedGraph(self.session, checked, to_check)
         guidance = [self.work.at_fidelity(item) for item in self.listed() if not isinstance(item, str)]
-        self._report_of = ValidationReport(guidance, self._graph, self._rule)
+        self._report_of = ReportText(guidance, self._graph, self._rule)
 
     def _report(self, graph_named: bool) -> str:
         """The report: how to validate, what the judge judges, the graph's violations, each listed guidance's rules
@@ -140,7 +137,7 @@ class Validate(GuidanceAction):
 
     def _overlay_section(self) -> str:
         """The rules of the patterns the checked content was generated with; none when it names none."""
-        overlay_rules = self.brief.overlay_rules(self._graph.edited or self._graph.prefixes)
+        overlay_rules = self.brief.overlay_rules(self._graph.edited or self._graph.files_built_from)
         if not overlay_rules:
             return ""
         return f"Judge the work against these overlaid patterns' rules too, as you judge the practices' rules.\n\n{overlay_rules}"

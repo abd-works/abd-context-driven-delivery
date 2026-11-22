@@ -1038,15 +1038,27 @@ with description("a practice"):
 
             with context("whose validation reports its session output keeps"):
                 with it("should save a new report in the session's reports folder"):
-                    expect(self.fidelity.session_output.validation_reports.new_path().parent).to(equal(self.session.reports_folder))
+                    expect(self.fidelity.session_output.validation_reports.new().file.parent).to(equal(self.session.reports_folder))
 
                 with it("should name a new report by the fidelity's slug"):
-                    expect(self.fidelity.session_output.validation_reports.new_path().name).to(contain("stories-story-map-"))
+                    expect(self.fidelity.session_output.validation_reports.new().name).to(contain("stories-story-map-"))
+
+                with it("should hold the fidelity a new report validates, rather than read it from the name"):
+                    expect(self.fidelity.session_output.validation_reports.new().fidelity).to(equal(self.fidelity))
 
                 with it("should list the reports saved there"):
-                    saved = self.fidelity.session_output.validation_reports.new_path()
-                    saved.write_text("# report\n", encoding="utf-8")
-                    expect(self.fidelity.session_output.validation_reports.listed()).to(equal([saved]))
+                    saved = self.fidelity.session_output.validation_reports.new()
+                    expect([report.file for report in self.fidelity.session_output.validation_reports.listed()]).to(equal([saved.file]))
+
+                # Two validates of one fidelity can start in the same second; each claims a file of its own.
+                with it("should give a second report made in the same second the next number"):
+                    reports = self.fidelity.session_output.validation_reports
+                    first, second = reports.new(), reports.new()
+                    expect(second.is_newer_than(first) or first.made_at.moment != second.made_at.moment).to(equal(True))
+
+                with it("should read when a report was made from its name"):
+                    saved = self.fidelity.session_output.validation_reports.new()
+                    expect(saved.name).to(contain(saved.made_at.moment.strftime("%Y%m%dT%H%M%S")))
 
             with context("whose file is written"):
                 with it("should be read by the session's file manager, though the practice's own folder is elsewhere"):

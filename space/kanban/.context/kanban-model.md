@@ -935,14 +935,14 @@ Whether the graph a validation checked is saved beside its report, and whether i
 
 ## ReportFile
 
-A validation report of one fidelity saved in a session folder, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for, and describes each from its practice: the saved report points at each rule's text instead of copying it.
+A validation report of one fidelity as the board reads it: the rules it finds broken, with the violations of the graph the validation checked, and the nodes they were found on, saved beside it. It knows which of its practice's rules it answers for, and describes each from its practice: the saved report points at each rule's text instead of copying it.
 
-+ ReportFile(file: Path, fidelity: FidelityGuidance)
-	// fidelity is the one its session holds: its practice's session names the folder the saved graph names files from, and that session's repository names the report's files from its top
++ ReportFile(report: ValidationReport)
+	// the report's fidelity is the one its session holds: its practice's session names the folder the saved graph names files from, and that session's repository names the report's files from its top
 ------
 + file: Path
-+ stamp: str
-	// the date the report's name ends with, in a form that sorts by time
++ << association >> report: ValidationReport
+	// its name, when it was made, its saved graph, and its result are the session's ValidationReport's; an earlier fidelity's report is newer when ValidationReport.is_newer_than says so
 + text: str
 + has_result: bool
 	// it has a saved graph or a judgment; validate saves a report before the agent judges it
@@ -951,7 +951,7 @@ A validation report of one fidelity saved in a session folder, with the violatio
 ----
 + from_fidelity(fidelity: FidelityGuidance): ReportFile
 	// the fidelity's latest report in the session that has its result, else its latest; none when it has none
-	-> FidelityGuidance.reports
+	-> ValidationReports.listed
 + report(): Report
 	// the rules broken on the nodes of the saved graph, then each rule the judgment fails that the graph did not hit; each violation is named from the project, with the lines around it
 	// the rules it answers for: its practice's shared rules, its fidelity's own, and every earlier fidelity's but those an earlier fidelity's newer report answers for; each rule is the one its fidelity describes
