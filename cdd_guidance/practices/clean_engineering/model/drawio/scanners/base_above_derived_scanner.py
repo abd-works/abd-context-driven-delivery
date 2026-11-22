@@ -21,7 +21,7 @@ class BaseAboveDerivedScanner(DrawioScanner):
             child_id, parent_id = edge.get("source", ""), edge.get("target", "")
             if child_id not in page.boxes or parent_id not in page.boxes:
                 continue
-            child_y, parent_y = page.boxes[child_id][1], page.boxes[parent_id][1]
+            child_y, parent_y = page.boxes[child_id].y, page.boxes[parent_id].y
             if child_y <= parent_y:
                 violations.append(self.violation(
                     page,

@@ -51,8 +51,8 @@ class DrawioVertex:
         geo = ET.SubElement(cell, 'mxGeometry')
         geo.set('x', str(int(self.geometry.x)))
         geo.set('y', str(int(self.geometry.y)))
-        geo.set('width', str(int(self.geometry.width)))
-        geo.set('height', str(int(self.geometry.height)))
+        geo.set('width', str(int(self.geometry.w)))
+        geo.set('height', str(int(self.geometry.h)))
         geo.set('as', 'geometry')
         return cell
 

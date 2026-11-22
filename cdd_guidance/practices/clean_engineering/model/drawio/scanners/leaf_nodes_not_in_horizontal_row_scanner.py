@@ -5,7 +5,7 @@ import re
 
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
     DrawioPage,
 )
@@ -37,30 +37,30 @@ class LeafNodesNotInHorizontalRowScanner(DrawioScanner):
                     violations.append(self.violation(page, message))
         return violations
 
-    def _sized_vertex_boxes(self, page: DrawioPage) -> dict[str, Geometry]:
-        boxes: dict[str, Geometry] = {}
+    def _sized_vertex_boxes(self, page: DrawioPage) -> dict[str, Box]:
+        boxes: dict[str, Box] = {}
         for cell in page.cells:
             geometry = cell.find("mxGeometry")
             if cell.get("vertex") != "1" or geometry is None or geometry.get("width") is None or geometry.get("height") is None:
                 continue
-            boxes[cell.get("id", "")] = Geometry(
+            boxes[cell.get("id", "")] = Box(
                 float(geometry.get("x", 0)), float(geometry.get("y", 0)), float(geometry.get("width")), float(geometry.get("height"))
             )
         return boxes
 
-    def _lines_of(self, leaf_ids: set[str], boxes: dict[str, Geometry]) -> list[list[str]]:
+    def _lines_of(self, leaf_ids: set[str], boxes: dict[str, Box]) -> list[list[str]]:
         """The leaves grouped by roughly equal height on the page."""
         lines: dict[int, list[str]] = {}
         for leaf_id in leaf_ids:
             if leaf_id in boxes:
-                lines.setdefault(round(boxes[leaf_id][1] / Y_TOLERANCE), []).append(leaf_id)
+                lines.setdefault(round(boxes[leaf_id].y / Y_TOLERANCE), []).append(leaf_id)
         return list(lines.values())
 
-    def _wide_line_message(self, hub_name: str, members: list[str], boxes: dict[str, Geometry]) -> str | None:
+    def _wide_line_message(self, hub_name: str, members: list[str], boxes: dict[str, Box]) -> str | None:
         if len(members) < MIN_ROW_SIZE:
             return None
-        y_values = [boxes[member][1] for member in members]
-        x_values = [boxes[member][0] for member in members]
+        y_values = [boxes[member].y for member in members]
+        x_values = [boxes[member].x for member in members]
         x_spread = max(x_values) - min(x_values)
         if max(y_values) - min(y_values) > Y_TOLERANCE or x_spread <= WIDE_ROW_SPAN:
             return None

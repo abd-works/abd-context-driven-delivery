@@ -16,7 +16,8 @@ from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramNode
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, segments_cross
+from harness.whiteboard import Box
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import segments_cross
 
 Point = Tuple[int, int]
 Heading = Tuple[int, int]
@@ -91,17 +92,17 @@ class DiagramArrow:
     def path(self) -> List[Point]:
         return [self.exit_point] + self.corners + [self.entry_point]
 
-    def anchors_on(self, source: Geometry, target: Geometry) -> Tuple[float, float, float, float]:
+    def anchors_on(self, source: Box, target: Box) -> Tuple[float, float, float, float]:
         """Where it leaves the card it starts on and reaches the card it ends on, each as fractions of that card's
         width and height: (exit x, exit y, entry x, entry y)."""
         return (
-            round((self.exit_point[0] - source.x) / source.width, _ANCHOR_DIGITS),
-            round((self.exit_point[1] - source.y) / source.height, _ANCHOR_DIGITS),
-            round((self.entry_point[0] - target.x) / target.width, _ANCHOR_DIGITS),
-            round((self.entry_point[1] - target.y) / target.height, _ANCHOR_DIGITS),
+            round((self.exit_point[0] - source.x) / source.w, _ANCHOR_DIGITS),
+            round((self.exit_point[1] - source.y) / source.h, _ANCHOR_DIGITS),
+            round((self.entry_point[0] - target.x) / target.w, _ANCHOR_DIGITS),
+            round((self.entry_point[1] - target.y) / target.h, _ANCHOR_DIGITS),
         )
 
-    def bends_from_middles(self, source: Geometry, target: Geometry) -> Optional[List[object]]:
+    def bends_from_middles(self, source: Box, target: Box) -> Optional[List[object]]:
         """Its route as offsets from its cards' middles: the way it leaves (`h` or `v`), then where each middle leg
         runs, the first half from the middle of the card it leaves, the rest from the middle of the card it reaches.
         Moving both cards together keeps the offsets; none for a route with no middle leg."""
@@ -249,7 +250,7 @@ class CardPlacement:
         rows: List[List[str]] = [[]]
         width = 0.0
         for cell_id in layer:
-            card_width = self._by_id[cell_id].geometry.width
+            card_width = self._by_id[cell_id].geometry.w
             if rows[-1] and width + card_width > self._page_width():
                 rows.append([])
                 width = 0.0
@@ -259,8 +260,8 @@ class CardPlacement:
 
     def _page_width(self) -> float:
         """Wide enough for the cards to fill a page somewhat wider than it is tall."""
-        area = sum(card.geometry.width * card.geometry.height * 4 for card in self._cards)
-        widest = max(card.geometry.width for card in self._cards)
+        area = sum(card.geometry.w * card.geometry.h * 4 for card in self._cards)
+        widest = max(card.geometry.w for card in self._cards)
         return max(widest, math.sqrt(area * PAGE_WIDTH_BIAS))
 
     def _set_positions(self, rows: List[List[str]]) -> None:
@@ -273,15 +274,15 @@ class CardPlacement:
             for index, cell_id in enumerate(row):
                 card = self._by_id[cell_id]
                 card.geometry = card.geometry.moved_to(left // GRID_STEP * GRID_STEP, top)
-                left += card.geometry.width
+                left += card.geometry.w
                 if index + 1 < len(row):
                     left += self._spacing.gap_between(cell_id, row[index + 1], across=True)
-            top += max(self._by_id[cell_id].geometry.height for cell_id in row) + ROW_GAP
+            top += max(self._by_id[cell_id].geometry.h for cell_id in row) + ROW_GAP
             top = math.ceil(top / GRID_STEP) * GRID_STEP
 
     def _row_width(self, row: List[str]) -> float:
         gaps = sum(self._spacing.gap_between(first, second, across=True) for first, second in zip(row, row[1:]))
-        return sum(self._by_id[cell_id].geometry.width for cell_id in row) + gaps
+        return sum(self._by_id[cell_id].geometry.w for cell_id in row) + gaps
 
 
 class CardSpacing:
@@ -331,39 +332,40 @@ class _GapAxis:
     def __init__(self, spacing: CardSpacing, across: bool) -> None:
         self._spacing = spacing
         self._across = across
-        self._start, self._size = (0, 2) if across else (1, 3)
-        self._side_start, self._side_size = (1, 3) if across else (0, 2)
+        # The sides of a box this axis reads: its start and size along the axis, then across it.
+        self._start, self._size = ("x", "w") if across else ("y", "h")
+        self._side_start, self._side_size = ("y", "h") if across else ("x", "w")
 
-    def closed_up(self, boxes: Dict[str, Geometry], order: Dict[str, Geometry]) -> Dict[str, float]:
+    def closed_up(self, boxes: Dict[str, Box], order: Dict[str, Box]) -> Dict[str, float]:
         """Each card's new start along this axis: as near the page's start as the cards before it on this axis allow.
         ``order`` is where the cards were before any moved, which decides what comes before what."""
         start, size = self._start, self._size
-        page_start = min(box[start] for box in order.values())
+        page_start = min(getattr(box, start) for box in order.values())
         placed: Dict[str, float] = {}
-        for cell_id in sorted(boxes, key=lambda name: order[name][start]):
+        for cell_id in sorted(boxes, key=lambda name: getattr(order[name], start)):
             was = order[cell_id]
             new_start = page_start
             for other_id, other_start in placed.items():
                 other_was = order[other_id]
-                if other_was[start] + other_was[size] > was[start] or not self._side_by_side(boxes, cell_id, other_id):
+                if getattr(other_was, start) + getattr(other_was, size) > getattr(was, start) or not self._side_by_side(boxes, cell_id, other_id):
                     continue
-                kept_gap = min(self._spacing.gap_between(cell_id, other_id, self._across), was[start] - other_was[start] - other_was[size])
-                new_start = max(new_start, other_start + boxes[other_id][size] + kept_gap)
+                kept_gap = min(self._spacing.gap_between(cell_id, other_id, self._across), getattr(was, start) - getattr(other_was, start) - getattr(other_was, size))
+                new_start = max(new_start, other_start + getattr(boxes[other_id], size) + kept_gap)
             placed[cell_id] = math.ceil(new_start / GRID_STEP) * GRID_STEP
         return placed
 
-    def _side_by_side(self, boxes: Dict[str, Geometry], cell_id: str, other_id: str) -> bool:
+    def _side_by_side(self, boxes: Dict[str, Box], cell_id: str, other_id: str) -> bool:
         """Two cards close enough on the other axis that closing the gap on this one would bring them too close."""
         box, other = boxes[cell_id], boxes[other_id]
         side_start, side_size = self._side_start, self._side_size
-        apart = max(other[side_start] - box[side_start] - box[side_size], box[side_start] - other[side_start] - other[side_size])
+        apart = max(getattr(other, side_start) - getattr(box, side_start) - getattr(box, side_size), getattr(box, side_start) - getattr(other, side_start) - getattr(other, side_size))
         return apart < self._spacing.gap_between(cell_id, other_id, not self._across)
 
 
 class _RouteGrid:
     """The page as grid cells: which are inside a card's clearance, and which already carry an arrow."""
 
-    def __init__(self, obstacles: Iterable[Geometry], width: float, height: float) -> None:
+    def __init__(self, obstacles: Iterable[Box], width: float, height: float) -> None:
         self.columns = int(width) // GRID_STEP
         self.lines = int(height) // GRID_STEP
         # Cells inside a card or its clearance, and the cells of the cards themselves, which no arrow ever enters.
@@ -401,9 +403,9 @@ class _RouteGrid:
         horizontal = ports | {cell for cell, holders in self._approach_horizontal.items() if owner not in holders}
         return vertical, horizontal
 
-    def cells_around(self, box: Geometry, clearance: int = CARD_CLEARANCE) -> Set[Point]:
-        left, right = int(box.x - clearance) // GRID_STEP, int(box.x + box.width + clearance) // GRID_STEP
-        top, bottom = int(box.y - clearance) // GRID_STEP, int(box.y + box.height + clearance) // GRID_STEP
+    def cells_around(self, box: Box, clearance: int = CARD_CLEARANCE) -> Set[Point]:
+        left, right = int(box.x - clearance) // GRID_STEP, int(box.x + box.w + clearance) // GRID_STEP
+        top, bottom = int(box.y - clearance) // GRID_STEP, int(box.y + box.h + clearance) // GRID_STEP
         return {(x, y) for x in range(left, right + 1) for y in range(top, bottom + 1)}
 
     def claim(self, cells: List[Point]) -> None:
@@ -575,8 +577,8 @@ class _InheritanceFan:
     def entry_point(self) -> Point:
         """The middle of the base's side, where the one arrowhead sits."""
         base = self._cards[self.arrows[0].target].geometry
-        middle = round((base.x + base.width / 2) / GRID_STEP) * GRID_STEP
-        return (int(middle), int(base.y + (base.height if self.arrows[0].entry_side == "bottom" else 0)))
+        middle = round((base.x + base.w / 2) / GRID_STEP) * GRID_STEP
+        return (int(middle), int(base.y + (base.h if self.arrows[0].entry_side == "bottom" else 0)))
 
     @property
     def joint(self) -> Point:
@@ -592,7 +594,7 @@ class _InheritanceFan:
             card = self._cards[arrow.source].geometry
             if card.y >= joint_y:
                 arrow.exit_side = "top"
-            elif card.y + card.height <= joint_y:
+            elif card.y + card.h <= joint_y:
                 arrow.exit_side = "bottom"
             else:
                 arrow.exit_side = "left" if card.center[0] > joint_x else "right"
@@ -733,9 +735,9 @@ class ArrowRouter:
 
     def _facing_sides(self, arrow: DiagramArrow) -> Tuple[str, str]:
         source, target = self._cards[arrow.source].geometry, self._cards[arrow.target].geometry
-        if arrow.kind == INHERITANCE or target.y + target.height <= source.y:
+        if arrow.kind == INHERITANCE or target.y + target.h <= source.y:
             return ("top", "bottom") if target.y < source.y else ("bottom", "top")
-        if target.y >= source.y + source.height:
+        if target.y >= source.y + source.h:
             return ("bottom", "top")
         if self._card_between(source, target):
             return ("bottom", "bottom")
@@ -755,24 +757,24 @@ class ArrowRouter:
             for arrow in arrows:
                 source = self._cards[arrow.source].geometry
                 if side == "bottom":
-                    arrow.exit_side = "top" if source.y >= base.y + base.height else "bottom"
+                    arrow.exit_side = "top" if source.y >= base.y + base.h else "bottom"
                 else:
-                    arrow.exit_side = "bottom" if source.y + source.height <= base.y else "top"
+                    arrow.exit_side = "bottom" if source.y + source.h <= base.y else "top"
                 arrow.entry_side = side
 
-    def _card_between(self, source: Geometry, target: Geometry) -> bool:
+    def _card_between(self, source: Box, target: Box) -> bool:
         """True when two cards in one row have a third between them, so the arrow has to go under it."""
         left, right = sorted((source, target), key=lambda card: card.x)
-        top, bottom = max(left.y, right.y), min(left.y + left.height, right.y + right.height)
+        top, bottom = max(left.y, right.y), min(left.y + left.h, right.y + right.h)
         return any(
-            card.x >= left.x + left.width and card.x + card.width <= right.x and card.y < bottom and card.y + card.height > top
+            card.x >= left.x + left.w and card.x + card.w <= right.x and card.y < bottom and card.y + card.h > top
             for card in (node.geometry for node in self._cards.values())
         )
 
     def _grid_without(self, lifted: Optional[DiagramArrow]) -> _RouteGrid:
         boxes = [card.geometry for card in self._cards.values()]
-        width = max(box.x + box.width for box in boxes) + ROUTING_MARGIN
-        height = max(box.y + box.height for box in boxes) + ROUTING_MARGIN
+        width = max(box.x + box.w for box in boxes) + ROUTING_MARGIN
+        height = max(box.y + box.h for box in boxes) + ROUTING_MARGIN
         grid = _RouteGrid(boxes, width, height)
         for path in self._kept_paths:
             grid.claim([(x // GRID_STEP, y // GRID_STEP) for x, y in path])
@@ -818,11 +820,11 @@ class ArrowRouter:
             arrow.exit_point = (arrow.exit_point[0], shared)
             arrow.entry_point = (arrow.entry_point[0], shared)
 
-    def _shared_middle(self, source: Geometry, target: Geometry, across: bool) -> Optional[int]:
+    def _shared_middle(self, source: Box, target: Box, across: bool) -> Optional[int]:
         """The grid line in the middle of where two cards overlap, across the page or down it; None when they overlap
         too little for a straight line between them."""
         start, length, other_start, other_length = (
-            (source.x, source.width, target.x, target.width) if across else (source.y, source.height, target.y, target.height)
+            (source.x, source.w, target.x, target.w) if across else (source.y, source.h, target.y, target.h)
         )
         low, high = max(start, other_start), min(start + length, other_start + other_length)
         if high - low < 2 * GRID_STEP:
@@ -835,13 +837,13 @@ class ArrowRouter:
         far_end = self._cards[arrow.target if leaving else arrow.source].geometry.center
         return far_end[0 if side in _VERTICAL_SIDES else 1]
 
-    def _port(self, card: Geometry, side: str, fraction: float) -> Point:
+    def _port(self, card: Box, side: str, fraction: float) -> Point:
         """On the grid along the side, so the arrow's first run stays straight wherever a person left the card."""
         if side in _VERTICAL_SIDES:
-            along = round((card.x + card.width * fraction) / GRID_STEP) * GRID_STEP
-            return (int(along), int(card.y + (card.height if side == "bottom" else 0)))
-        along = round((card.y + card.height * fraction) / GRID_STEP) * GRID_STEP
-        return (int(card.x + (card.width if side == "right" else 0)), int(along))
+            along = round((card.x + card.w * fraction) / GRID_STEP) * GRID_STEP
+            return (int(along), int(card.y + (card.h if side == "bottom" else 0)))
+        along = round((card.y + card.h * fraction) / GRID_STEP) * GRID_STEP
+        return (int(card.x + (card.w if side == "right" else 0)), int(along))
 
     def _route_one(self, arrow: DiagramArrow, grid: _RouteGrid) -> None:
         cells = self._search_cells(arrow, grid, id(arrow))

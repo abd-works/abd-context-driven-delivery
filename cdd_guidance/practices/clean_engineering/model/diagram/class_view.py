@@ -25,7 +25,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     DiagramCleanEngineeringModel,
     module_tab_label,
 )
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH, Relationship
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
@@ -278,7 +278,7 @@ class ClassViewPage:
             width = max(node.width(), SMALLEST_PORT_SPACING * (arrow_count + 1))
             node.cell_id = cell_id
             node.group = self._writer.module_labels.get(cell_id, '')
-            node.geometry = Geometry(0, 0, width, node.height())
+            node.geometry = Box(0, 0, width, node.height())
             cards[cell_id] = node
         return cards
 
@@ -304,7 +304,7 @@ class ClassViewPage:
         kept = [card for card in cards.values() if card.cell_id not in new_ids]
         if not kept:
             return
-        bottom = max(card.geometry.y + card.geometry.height for card in kept)
+        bottom = max(card.geometry.y + card.geometry.h for card in kept)
         for card in new_cards:
             card.geometry = card.geometry.shifted(0, bottom)
 

@@ -3,7 +3,7 @@
 - A caller never lays out HTML, waypoints, or mxCell attributes. They ask `Drawio` to create or scan a path.
 - *DrawIOModule* always draws from the `Module` it is. It never copies purpose or seam terms into a second record.
 - *DrawIOClass* always draws from the `OoadClass` it is. Properties, operations, and stereotypes come from that class.
-- The page layout — *Geometry*, *DiagramNode*, *DiagramClass*, *DiagramModule*, the shared *ImportedClass*, *DiagramArrow*, *CardPlacement*, *ArrowRouter*, and *ContainmentForest* — belongs to the class model and is modelled in [ooad-model.md](../../.context/ooad-model.md). This module uses it; the DDD aggregate view uses it too.
+- The page layout — the framework's *Box* (harness/whiteboard), *DiagramNode*, *DiagramClass*, *DiagramModule*, the shared *ImportedClass*, *DiagramArrow*, *CardPlacement*, *ArrowRouter*, and *ContainmentForest* — belongs to the class model and is modelled in [ooad-model.md](../../.context/ooad-model.md). This module uses it; the DDD aggregate view uses it too.
 - **Invariant:** No second `*Model` / `*Entry` family restates `Module`, `OoadClass`, or `Relationship`.
 
 ---

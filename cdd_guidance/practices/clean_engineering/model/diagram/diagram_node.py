@@ -14,6 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     path_parent,
 )
 from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
+from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     CELL_MIN_HEIGHT,
     CELL_WIDTH,
@@ -25,7 +26,6 @@ from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     MODULE_MAX_SEAM_BULLETS,
     MODULE_PURPOSE_MAX_CHARS,
     SECTION_PAD,
-    Geometry,
 )
 
 # The class name band at the top of a card, above its members.
@@ -45,7 +45,7 @@ class DiagramNode(ABC):
 
     def __init__(self, width: float = CELL_WIDTH) -> None:
         # The box starts as wide as its kind of card and as tall as what it holds; placement moves it.
-        self.geometry = Geometry(0, 0, width, float(self.height()))
+        self.geometry = Box(0, 0, width, float(self.height()))
         self.cell_id = ''
         self.parent_id = '1'
         self.group = ''

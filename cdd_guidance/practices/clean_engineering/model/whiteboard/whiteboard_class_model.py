@@ -147,8 +147,7 @@ class _PlacedOnBoard(WhiteboardNode):
     KEY_LENGTH = 12
 
     def board_box(self) -> Box:
-        geometry = self.geometry
-        return Box(geometry.x, geometry.y, geometry.width, geometry.height)
+        return self.geometry
 
 
 class WhiteboardClass(DiagramClass, _PlacedOnBoard):
@@ -461,8 +460,8 @@ class _ClassBoardPage(ClassViewPage):
         cards = self._laid[0].values()
         if not cards:
             return (0.0, 0.0)
-        width = max(card.geometry.x + card.geometry.width for card in cards) - min(card.geometry.x for card in cards)
-        height = max(card.geometry.y + card.geometry.height for card in cards) - min(card.geometry.y for card in cards)
+        width = max(card.geometry.x + card.geometry.w for card in cards) - min(card.geometry.x for card in cards)
+        height = max(card.geometry.y + card.geometry.h for card in cards) - min(card.geometry.y for card in cards)
         return (width + 2 * self._inset, height + 2 * self._inset)
 
     def draw_on(self, board: Whiteboard, corner: Box) -> Box:
@@ -488,8 +487,8 @@ class _ClassBoardPage(ClassViewPage):
         shift_y = corner.y - min(card.geometry.y for card in cards.values()) + inset
         for card in cards.values():
             card.geometry = card.geometry.shifted(shift_x, shift_y)
-        right = max(card.geometry.x + card.geometry.width for card in cards.values()) + inset
-        bottom = max(card.geometry.y + card.geometry.height for card in cards.values()) + inset
+        right = max(card.geometry.x + card.geometry.w for card in cards.values()) + inset
+        bottom = max(card.geometry.y + card.geometry.h for card in cards.values()) + inset
         return Box(corner.x, corner.y, right - corner.x, bottom - corner.y)
 
     def _element_id(self, cell_id: str, page_name: str) -> ElementId:

@@ -44,7 +44,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.class_view import (
     plain_class_name as _plain_class_name,
 )
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramCleanEngineeringModel, ModulesView
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.diagram.module_layout import MODULE_START_X, MODULE_START_Y, ModuleLayout
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import DrawioPage, class_name_in, style_value
 from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
@@ -326,7 +326,7 @@ class _ModulesDiagramWriter(ModulesView):
         super().__init__(channel)
         # The drawing this one replaces, whose module boxes stay where they stood.
         self._kept = kept
-        self._bounds: Dict[str, Geometry] = {}
+        self._bounds: Dict[str, Box] = {}
         self._parent_ids: Dict[str, str] = {}
         self._cell_ids: Dict[str, str] = {
             name: f'nest-{_cell_slug(name)}' if name in self._forest.synthetic else _cell_slug(name) or name
@@ -343,8 +343,8 @@ class _ModulesDiagramWriter(ModulesView):
         diagram.set('name', 'Modules Context')
         diagram.set('id', 'modules-context')
         model_el = ET.SubElement(diagram, 'mxGraphModel')
-        page_width = int(max(MODULES_PAGE_WIDTH, max((b[0] + b[2] for b in self._bounds.values()), default=MODULE_START_X) + MODULES_PAGE_MARGIN))
-        page_height = int(max(MODULES_PAGE_HEIGHT, max((b[1] + b[3] for b in self._bounds.values()), default=MODULE_START_Y) + MODULES_PAGE_MARGIN))
+        page_width = int(max(MODULES_PAGE_WIDTH, max((b.x + b.w for b in self._bounds.values()), default=MODULE_START_X) + MODULES_PAGE_MARGIN))
+        page_height = int(max(MODULES_PAGE_HEIGHT, max((b.y + b.h for b in self._bounds.values()), default=MODULE_START_Y) + MODULES_PAGE_MARGIN))
         _set_graph_attrs(model_el, page_width, page_height)
         root_el = _add_graph_root(model_el)
         self._write_titles(root_el, page_width)
@@ -372,14 +372,15 @@ class _ModulesDiagramWriter(ModulesView):
     def _write_module(self, root_el: ET.Element, name: str, previous_positions: Dict[str, Tuple[float, float]]) -> None:
         cell_id = self._cell_ids[name]
         parent_id = self._parent_ids.get(name, '1')
-        x, y, width, height = self._bounds[name]
+        bounds = self._bounds[name]
+        x, y, width, height = bounds.x, bounds.y, bounds.w, bounds.h
         if cell_id in previous_positions and parent_id == '1':
             x, y = previous_positions[cell_id]
         node = self._cells[name]
         node.cell_id = cell_id
         node.parent_id = parent_id
         node.nested = parent_id != '1'
-        node.geometry = Geometry(float(x), float(y), float(width), float(height))
+        node.geometry = Box(float(x), float(y), float(width), float(height))
         node.append_to(root_el)
 
     def _write_dependencies(self, root_el: ET.Element) -> None:
@@ -480,8 +481,8 @@ class _ClassDiagramPage(ClassViewPage):
         new_arrows = [arrow for arrow in arrows if (arrow.source, arrow.target) not in kept_pairs]
         kept_paths = [self._edge_waypoints(previous_edges[pair]) for pair in kept_pairs]
         self._append_edges(root_el, cards, ArrowRouter(list(cards.values()), new_arrows, kept_paths=kept_paths).route())
-        graph.set('pageWidth', str(int(max((card.geometry.x + card.geometry.width for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
-        graph.set('pageHeight', str(int(max((card.geometry.y + card.geometry.height for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
+        graph.set('pageWidth', str(int(max((card.geometry.x + card.geometry.w for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
+        graph.set('pageHeight', str(int(max((card.geometry.y + card.geometry.h for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
 
     def _copy_kept_edges(self, root_el: ET.Element, previous_edges: Dict[Tuple[str, str], ET.Element]) -> set:
         kept_pairs: set[Tuple[str, str]] = set()

@@ -1018,7 +1018,7 @@ The `java` format.
 One placed cell. Draw.io writes it as HTML; the box, its placement, and its arrows are shared.
 
 ------
-+ geometry: Geometry
++ geometry: Box
 + cell_id: str
 + parent_id: str
 + group: str
@@ -1076,19 +1076,20 @@ Path nesting and dependency depth for ordering modules on a page.
 
 The diagram format draw.io extends. A modules view (`is_modules_view`: modules with no class members to show) stops at modules; a class view continues through properties and operations.
 
-## Geometry
+## Box (harness/whiteboard)
 
-+ Geometry(x: float, y: float, width: float, height: float)
+The one rectangle a laid-out card, a draw.io cell, and a whiteboard element are placed in; the layout uses the
+framework's own.
+
++ Box(x: float, y: float, w: float, h: float)
 ------
-+ x: float
-+ y: float
-+ width: float
-+ height: float
 + center: tuple[float, float]
 ----
-+ overlaps(other: Geometry): bool
-+ shifted(dx: float, dy: float): Geometry
-+ moved_to(x: float, y: float): Geometry
++ holds(other: Box): bool
++ overlaps(other: Box): bool
++ shifted(rightward: float, downward: float): Box
++ moved_to(left: float, top: float): Box
++ clear_gap_to(other: Box): float
 
 ## DiagramArrow
 
@@ -1126,7 +1127,7 @@ Finds the grid position for every card that leaves the fewest crossings and the 
 
 Routes every arrow between the placed cards.
 
-+ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Geometry] = (), kept_paths: list[list] = ())
++ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Box] = (), kept_paths: list[list] = ())
 	Invariant: an arrow never passes through a card or runs along another arrow, and each has its own end points
 	Invariant: the inheritance arrows of two or more subclasses that reach one base from the same side join into one trunk — a drop from each subclass to a shared bar, and one line from the bar to one point on the base; a single subclass keeps a direct arrow
 ------

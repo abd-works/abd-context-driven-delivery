@@ -8,7 +8,8 @@ import re
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry, Point, Segment, segments_cross
+from harness.whiteboard import Box
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Point, Segment, segments_cross
 
 # A segment counts as horizontal or vertical when it moves less than this many pixels across.
 STRAIGHT_TOLERANCE = 1
@@ -28,7 +29,7 @@ class DrawioPage:
         self.cells = list(root.iter('mxCell'))
         self.vertices = [cell for cell in self.cells if cell.get('vertex') == '1']
         self.edges = [cell for cell in self.cells if cell.get('edge') == '1']
-        self.boxes: dict[str, Geometry] = {}
+        self.boxes: dict[str, Box] = {}
         self.class_names: dict[str, str] = {}
         for cell in self.vertices:
             name_in_cell = class_name_in(cell.get('value', ''))
@@ -161,12 +162,12 @@ def class_name_in(cell_label: str) -> str | None:
     return name.split(' : ')[0].strip() or None
 
 
-def cell_box(cell: ET.Element) -> Geometry | None:
+def cell_box(cell: ET.Element) -> Box | None:
     """The box a cell's mxGeometry places it in, or None when the cell has none."""
     geometry = cell.find('mxGeometry')
     if geometry is None:
         return None
-    return Geometry(float(geometry.get('x', '0')), float(geometry.get('y', '0')), float(geometry.get('width', '0')), float(geometry.get('height', '0')))
+    return Box(float(geometry.get('x', '0')), float(geometry.get('y', '0')), float(geometry.get('width', '0')), float(geometry.get('height', '0')))
 
 
 def edge_kind(style: str) -> str:
@@ -216,20 +217,20 @@ def style_number(style: str, key: str) -> float | None:
     return float(match.group(0)) if match else None
 
 
-def anchor_point(style: str, box: Geometry, end: str) -> Point:
+def anchor_point(style: str, box: Box, end: str) -> Point:
     """Where one end of an edge meets its box: the exit or entry anchor in the style, else the box centre."""
     fraction_x = style_number(style, f'{end}X')
     fraction_y = style_number(style, f'{end}Y')
     if fraction_x is not None and fraction_y is not None:
-        return (box.x + box.width * fraction_x, box.y + box.height * fraction_y)
+        return (box.x + box.w * fraction_x, box.y + box.h * fraction_y)
     return box.center
 
 
-def segment_hits_box(segment: Segment, box: Geometry, margin: float) -> bool:
+def segment_hits_box(segment: Segment, box: Box, margin: float) -> bool:
     """True when the segment cuts the box grown by margin on every side, or starts inside it."""
     start = segment[0]
-    left, top = box[0] - margin, box[1] - margin
-    right, bottom = box[0] + box[2] + margin, box[1] + box[3] + margin
+    left, top = box.x - margin, box.y - margin
+    right, bottom = box.x + box.w + margin, box.y + box.h + margin
     corners = [(left, top), (right, top), (right, bottom), (left, bottom)]
     if any(segments_cross(segment, (corners[index], corners[(index + 1) % 4])) for index in range(4)):
         return True

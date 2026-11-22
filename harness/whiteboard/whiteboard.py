@@ -78,7 +78,8 @@ class ElementId(str):
 
 @dataclass(frozen=True)
 class Box:
-    """Where an element is drawn: its top-left corner, width and height in board units."""
+    """Where a drawn thing sits: its top-left corner, width and height, in board units or a drawing's pixels. The one
+    rectangle a whiteboard element, a draw.io cell, and a laid-out diagram card are each placed in."""
 
     x: float
     y: float
@@ -87,8 +88,39 @@ class Box:
 
     def holds(self, other: "Box") -> bool:
         """Whether other's middle lies inside this box, as a card inside the section drawn round it does."""
-        middle_x, middle_y = other.x + other.w / 2, other.y + other.h / 2
+        middle_x, middle_y = other.center
         return self.x <= middle_x <= self.x + self.w and self.y <= middle_y <= self.y + self.h
+
+    def overlaps(self, other: "Box") -> bool:
+        """Whether this box and other share any area; boxes that only touch do not."""
+        return not (
+            self.x + self.w <= other.x
+            or other.x + other.w <= self.x
+            or self.y + self.h <= other.y
+            or other.y + other.h <= self.y
+        )
+
+    def shifted(self, rightward: float, downward: float) -> "Box":
+        """This box moved rightward and downward."""
+        return Box(self.x + rightward, self.y + downward, self.w, self.h)
+
+    def moved_to(self, left: float, top: float) -> "Box":
+        """This box with its top-left corner at left and top."""
+        return Box(left, top, self.w, self.h)
+
+    def clear_gap_to(self, other: "Box") -> float:
+        """The empty space between this box and other, corner to corner when they are apart both ways; 0 when they
+        touch or overlap."""
+        across = max(0.0, self.x - (other.x + other.w), other.x - (self.x + self.w))
+        down = max(0.0, self.y - (other.y + other.h), other.y - (self.y + self.h))
+        if across == 0.0 or down == 0.0:
+            return across + down
+        return (across ** 2 + down ** 2) ** 0.5
+
+    @property
+    def center(self) -> tuple[float, float]:
+        """The middle of the box."""
+        return (self.x + self.w / 2, self.y + self.h / 2)
 
 
 @dataclass
