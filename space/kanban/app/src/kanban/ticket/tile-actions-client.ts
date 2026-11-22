@@ -67,15 +67,15 @@ export class TileActionsClient {
   }
 
   // A press chooses the chip's formats in the ticket's session, or leaves them out, and the bar shows the chips Python
-  // answers.
+  // answers once the board is read again: the commands the bar runs name the formats chosen, so a chip shows pressed only
+  // when a Run pressed then sends its formats.
   async toggleFormat(tile: Tile, chip: string): Promise<void> {
     const choice = tile.choices.find(each => each.label === chip)
     if (!choice) return
     const choices = await tile.ticket.chooseFormats(slugsOf(tile.fidelities), chip, !choice.is_chosen)
     if (!choices) return
-    this.save(tile, { choices })
-    // The commands the bar runs name the formats chosen, so the board is read again for them.
     await this.page.reader.refresh()
+    this.save(tile, { choices })
   }
 
   // A stage head's bar acts on the ticket's work in that stage, which Python answers taken together; a tile's bar acts

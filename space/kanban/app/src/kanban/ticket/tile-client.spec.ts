@@ -191,6 +191,22 @@ describe('Render Fidelity Format', () => {
   })
 })
 
+// A chip shows pressed only once the board read again names the formats it chose, so Run pressed the moment the chip
+// shows pressed sends those formats, not the ones chosen before the press.
+describe('a chip pressed on an action bar', () => {
+  it('should send the formats it chose with a Run pressed as soon as it shows pressed', async () => {
+    const { page, chat } = await activeTicketPage({ isMarkdownMade: true })
+    await page.tiles.open(spot(page), true)
+    page.tileActions.chooseAction(barAt(page)!, 'render')
+    await page.tileActions.toggleFormat(barAt(page)!, 'markdown')
+    const pressed = page.tileActions.toggleFormat(barAt(page)!, 'diagram')
+    await vi.waitFor(() => expect(barAt(page)?.choices.find(choice => choice.label === 'diagram')?.is_chosen).toBe(true), { timeout: 8_000, interval: 5 })
+    await page.tileActions.run(barAt(page)!)
+    await pressed
+    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio,whiteboard' }])
+  })
+})
+
 describe('Send Tile Action To Chat', () => {
   it.each(['sketch', 'iterate', 'document'])('should send %s as its own command', async action => {
     const { page, chat } = await activeTicketPage()

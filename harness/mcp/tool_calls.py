@@ -2,7 +2,8 @@
 
 A worker thread cannot be stopped. A call that outlives its time limit therefore keeps running: its caller hears that
 it is still running, an identical call made meanwhile waits for the same run instead of starting a second one, and the
-result waits for the next identical call to collect it."""
+result waits for the next identical call to collect it. An identical call made while the first is still within its time
+limit runs again, so it answers from anything that changed after the first began."""
 from __future__ import annotations
 
 import asyncio
@@ -154,12 +155,19 @@ class _ToolCalls:
 
     async def run(self, call: ToolCall, seconds: float, reporter: Reporter | None) -> SentValue | _StillRunning:
         """The work's value for call, run on a worker thread with reporter for its progress, waiting up to seconds. An
-        identical call already running is joined, and a kept result is collected, instead of starting the work again."""
+        identical call whose caller was told it is still running is joined, and a kept result is collected, instead of
+        starting the work again; an identical call still within its time limit is not, because it began before whatever
+        changed since, so a read made after a change answers from that change."""
         self._forget_stale_results()
-        running = self._uncollected.pop(call.identity, None) or self._running.get(call.identity)
+        running = self._uncollected.pop(call.identity, None) or self._still_running(call.identity)
         if running is None:
             running = self._start(call, reporter)
         return await running.answer(seconds)
+
+    def _still_running(self, identity: str) -> _RunningCall | None:
+        """The run of identity a caller was told is still running, which that caller will ask for again."""
+        running = self._running.get(identity)
+        return running if running is not None and running.told_still_running else None
 
     def _start(self, call: ToolCall, reporter: Reporter | None) -> _RunningCall:
         running = _RunningCall(call, reporter)
@@ -169,7 +177,9 @@ class _ToolCalls:
 
     def _end(self, running: _RunningCall) -> None:
         identity = running.call.identity
-        self._running.pop(identity, None)
+        # A later identical call may have started a run of its own under the same identity, which stays.
+        if self._running.get(identity) is running:
+            del self._running[identity]
         running.end()
         if running.callers_waiting:
             return

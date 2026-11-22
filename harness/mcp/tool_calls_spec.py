@@ -118,6 +118,21 @@ with description("tool calls on worker threads") as self:
         with it("should not start the work a second time"):
             expect(self.work.starts).to(equal(1))
 
+    # A read made after a change, such as the board read again once a format chip is pressed, answers from the change,
+    # not from an identical read still running that began before it.
+    with context("with an identical call made while the first is still within its time limit"):
+        with it("should start the work again for it"):
+            async def call_twice_at_once():
+                async with anyio.create_task_group() as group:
+                    group.start_soon(self.calls.run, _call(), LONG_SECONDS, None)
+                    await anyio.sleep(SHORT_SECONDS)
+                    group.start_soon(self.calls.run, _call(), LONG_SECONDS, None)
+                    await anyio.sleep(SHORT_SECONDS)
+                    self.work.released.set()
+
+            anyio.run(call_twice_at_once)
+            expect(self.work.starts).to(equal(2))
+
     with context("with a different call made while the first is still running"):
         with it("should start the work for it"):
             async def call_two_paths():
