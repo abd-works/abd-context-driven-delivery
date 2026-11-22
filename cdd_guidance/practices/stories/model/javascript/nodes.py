@@ -12,9 +12,11 @@ class JavaScriptScenario(BraceScenario):
 
 
 class JavaScriptStory(ScriptStory):
-    scenario_type = JavaScriptScenario
+    scenario_class = JavaScriptScenario
     language = JAVASCRIPT
 
 
 class JavaScriptEpic(CodeEpic):
     """An epic or sub-epic whose stories a JavaScript story file holds."""
+
+    story_class = JavaScriptStory

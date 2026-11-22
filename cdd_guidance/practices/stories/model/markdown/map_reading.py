@@ -81,7 +81,7 @@ class MapReading:
 
     def _open_epic(self, name: str) -> None:
         """A top-level epic, read on this line."""
-        self.epic = self.adapter.epic_type(name, len(self.story_map.epics) + 1)
+        self.epic = self.adapter.epic_class(name, len(self.story_map.epics) + 1)
         read_at(self.epic, self.file, self.number)
         self.story_map.epics.append(self.epic)
         self.sub_epics = []
@@ -91,14 +91,14 @@ class MapReading:
         while len(self.sub_epics) >= depth:
             self.sub_epics.pop()
         siblings = self.sub_epics[-1].epics if self.sub_epics else self.epic.epics
-        sub = self.adapter.epic_type(name, len(siblings) + 1)
+        sub = self.adapter.epic_class(name, len(siblings) + 1)
         read_at(sub, self.file, self.number)
         siblings.append(sub)
         self.sub_epics.append(sub)
 
     def _story(self, name: str, parent: "Epic", story_type: StoryType = StoryType.USER) -> "Story":
         """A story under parent, read on this line."""
-        story = self.adapter.story_type(name, len(parent.stories) + 1, story_type)
+        story = self.adapter.story_class(name, len(parent.stories) + 1, story_type)
         read_at(story, self.file, self.number)
         parent.stories.append(story)
         return story
@@ -174,7 +174,7 @@ class HeadingMapReading(MapReading):
 
     def _listed_scenario(self, text: str) -> None:
         """A scenario listed under the story being read."""
-        scenario = self.adapter.story_type.scenario_type(text, len(self.story.scenarios) + 1)
+        scenario = self.adapter.story_class.scenario_class(text, len(self.story.scenarios) + 1)
         read_at(scenario, self.file, self.number)
         self.story.scenarios.append(scenario)
 
@@ -202,9 +202,9 @@ class HeadingMapReading(MapReading):
         if self.sub_epics:
             return self.sub_epics[-1]
         if self.epic is None:
-            self.epic = self.adapter.epic_type("Imported", len(self.story_map.epics) + 1)
+            self.epic = self.adapter.epic_class("Imported", len(self.story_map.epics) + 1)
             self.story_map.epics.append(self.epic)
-        sub = self.adapter.epic_type(self.epic.name, len(self.epic.epics) + 1)
+        sub = self.adapter.epic_class(self.epic.name, len(self.epic.epics) + 1)
         self.epic.epics.append(sub)
         self.sub_epics.append(sub)
         return sub

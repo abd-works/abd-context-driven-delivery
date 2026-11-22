@@ -110,7 +110,7 @@ class BraceScenario(CodeScenario):
 class BraceStory(CodeStory):
     """A story read from a brace-language story file: TypeScript and JavaScript read it the same way."""
 
-    scenario_type = BraceScenario
+    scenario_class = BraceScenario
     syntax = BraceScenario.syntax
 
 
@@ -172,7 +172,7 @@ class BraceStoryWriting(StoryWriting):
 class BraceStoryModel(CodeStoryModel):
     """A story tree in a brace language, whose story files BraceStoryFile reads."""
 
-    writing_type = BraceStoryWriting
+    writing_class = BraceStoryWriting
 
     def story_file(self, path: str, content: str, project: Optional[Path] = None) -> StoryFile:
         """The story file at path, read block by block."""

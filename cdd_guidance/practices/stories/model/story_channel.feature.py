@@ -192,7 +192,7 @@ def _read_tree(folder: Path) -> dict:
 
 
 def _write_markdown(source: StoryModel, folder: Path) -> None:
-    markdown = MarkdownStoryModel(source)
+    markdown = MarkdownStoryModel().copy_of(source)
     _write(folder / "story-map.md", markdown.save())
 
     def visit(epic, parts: list) -> None:
@@ -251,13 +251,13 @@ def _write_channel(folder: Path, target: str, source: StoryModel) -> None:
     if target == "markdown":
         _write_markdown(source, folder)
     elif target == "json":
-        _write(folder / "story-graph.json", JsonStoryModel().render(JsonStoryModel(source)))
+        _write(folder / "story-graph.json", JsonStoryModel().render(JsonStoryModel().copy_of(source)))
     elif target == "drawio":
-        _write(folder / "story-map.drawio", DrawIOStoryModel(source).save())
+        _write(folder / "story-map.drawio", DrawIOStoryModel().copy_of(source).save())
     elif target == "miro":
-        _write(folder / "story-map.svg", MiroStoryModel(source).save())
+        _write(folder / "story-map.svg", MiroStoryModel().copy_of(source).save())
     elif target == "whiteboard":
-        _write(folder / "story-map.whiteboard", WhiteboardStoryModel(source).save())
+        _write(folder / "story-map.whiteboard", WhiteboardStoryModel().copy_of(source).save())
     else:
         _write_tree(folder, _CODE_MAPS[target](source).save())
 

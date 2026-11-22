@@ -126,6 +126,8 @@ class MiroEpic(LaidOutEpic):
     """A nested epic is inset from its parent's left edge and sits flush with its
     right edge, so the nesting reads as a bar under the epic that owns it."""
 
+    story_class = MiroStory
+
     tighten = 10
     # A Miro epic starts at the map's margin, its sub-epics after the stories it holds itself.
     first_x = DiagramEpic.left_margin
@@ -199,9 +201,8 @@ class _MiroCell(DiagramStoryCell):
 
 
 class MiroStoryModel(DiagramStoryModel):
-    epic_type = MiroEpic
-    story_type = MiroStory
-    increment_type = MiroIncrement
+    epic_class = MiroEpic
+    increment_class = MiroIncrement
     """Miro story-map I/O. IS the format-typed tree root.
 
     parse reads a file into these nodes. save writes the nodes you edited.

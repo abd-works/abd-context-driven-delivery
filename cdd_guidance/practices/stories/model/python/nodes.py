@@ -44,9 +44,9 @@ class PythonScenario(CodeScenario):
 
 
 class PythonStory(CodeStory):
-    scenario_type = PythonScenario
+    scenario_class = PythonScenario
     syntax = PythonScenario.syntax
 
 
 class PythonEpic(CodeEpic):
-    pass
+    story_class = PythonStory

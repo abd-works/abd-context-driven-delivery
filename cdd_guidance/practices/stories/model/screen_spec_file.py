@@ -55,19 +55,19 @@ class ScreenSpecFile(StoryFile):
 
     def _stories(self) -> list:
         """The stories the file describes, each with a scenario for each of its tests."""
-        story_type = self.model.story_type
+        story_class = self.model.story_class
         stories: dict[str, object] = {}
         for describe in _DESCRIBE.finditer(self.text):
-            story = stories.setdefault(describe.group("name"), story_type(describe.group("name"), len(stories) + 1))
+            story = stories.setdefault(describe.group("name"), story_class(describe.group("name"), len(stories) + 1))
             for test in _TEST.finditer(self._brackets.braced(describe.end() - 1) or ""):
                 story.scenarios.append(self._scenario(story, test))
         return list(stories.values())
 
     def _scenario(self, story: "Story", test: re.Match) -> "Scenario":
-        scenario = story.scenario_type(name=test.group("name"), sequential_order=len(story.scenarios) + 1)
+        scenario = story.scenario_class(name=test.group("name"), sequential_order=len(story.scenarios) + 1)
         body = BracketStructure(test.string).braced(test.end() - 1) or ""
         for order, step in enumerate(self._steps_in(body), start=1):
-            made = scenario.step_type(step.lines[0].strip(), step.phase, order)
+            made = scenario.step_class(step.lines[0].strip(), step.phase, order)
             made.keyword = _KEYWORDS[step.phase]
             made.body = CodeBody("\n".join(step.lines), self.model.language)
             scenario.steps.append(made)

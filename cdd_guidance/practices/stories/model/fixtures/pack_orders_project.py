@@ -556,8 +556,8 @@ def _read(practice: Stories, format_name: str, files: dict[str, str]):
 def _written(practice: Stories, format_name: str, model) -> dict[str, str]:
     """The files the format called format_name writes the story model as, under the project's story tests."""
     if format_name == "markdown":
-        return MarkdownStoryModel(model).scenarios_files(TESTS_ROOT)
-    return practice.formats.adapter_class(format_name)(model, tests_root=TESTS_ROOT).save()
+        return MarkdownStoryModel().copy_of(model).scenarios_files(TESTS_ROOT)
+    return practice.formats.adapter_class(format_name)(tests_root=TESTS_ROOT).copy_of(model).save()
 
 
 @functools.cache

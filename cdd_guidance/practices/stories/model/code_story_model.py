@@ -256,7 +256,7 @@ class CodeScenario(Scenario, CodeStoryNode):
 
 
 class CodeStory(Story, CodeStoryNode):
-    scenario_type = CodeScenario
+    scenario_class = CodeScenario
     syntax = CodeScenario.syntax
     """How this language writes its story files: the syntax its scenarios read their text through."""
 
@@ -317,7 +317,7 @@ class CodeStory(Story, CodeStoryNode):
         self.written = written
 
     def _add_scenario(self, name: str, body: str, example_names: List[str]) -> None:
-        scenario = self.scenario_type(name=name, sequential_order=len(self.scenarios) + 1)
+        scenario = self.scenario_class(name=name, sequential_order=len(self.scenarios) + 1)
         scenario.read(body, example_names)
         self.scenarios.append(scenario)
 
@@ -364,6 +364,8 @@ class CodeIncrement(Increment, CodeStoryNode):
 
 
 class CodeEpic(Epic, CodeStoryNode):
+    story_class = CodeStory
+
     def order_path(self) -> str:
         orders = []
         node = self
@@ -385,10 +387,9 @@ class CodeStoryModel(StoryModel):
     under the tests root (load, save), and the code a render adopts from the tree already on disk. How its language
     writes each story file is the writing it holds (`writing`), beside the reader of its story files (`story_file`)."""
 
-    epic_type = CodeEpic
-    story_type = CodeStory
-    increment_type = CodeIncrement
-    writing_type: type = StoryWriting
+    epic_class = CodeEpic
+    increment_class = CodeIncrement
+    writing_class: type = StoryWriting
     """How this language writes its story files; the model makes one, with its language, the first time it writes."""
     story_file_suffixes: Tuple[str, ...] = ()
     """How a story file in this language ends, such as ``_story.test.py``; the first is the one this language writes.
@@ -402,13 +403,10 @@ class CodeStoryModel(StoryModel):
         posix = str(path).replace("\\", "/")
         return posix.endswith(self.story_file_suffixes) and self.not_story_paths.search(posix) is None
 
-    def __init__(self, source: "StoryModel | str | None" = None, tests_root: str | None = None):
-        if isinstance(source, str):
-            tests_root = source
-            source = None
+    def __init__(self, tests_root: str | None = None):
         # The folder the story files' own reads, such as an examples module, are found in; set by each load.
         self.project: Optional[Path] = None
-        super().__init__(source)
+        super().__init__()
         self._tests_root = ("tests" if tests_root is None else tests_root).strip("/")
 
     def _under_tests_root(self, parts: List[str]) -> Optional[List[str]]:
@@ -442,9 +440,9 @@ class CodeStoryModel(StoryModel):
             model._adopt_code(self.parse(previous))
         return model.save()
 
-    def copy_of(self, source: Optional[StoryModel]) -> "CodeStoryModel":
-        """source in this language, with this model's settings; an empty map when source is None."""
-        return type(self)(source, tests_root=self._tests_root)
+    def blank(self) -> "CodeStoryModel":
+        """A map in this language holding nothing, under this map's tests root."""
+        return type(self)(tests_root=self._tests_root)
 
     def reshape(self, rendered: str, existing: str) -> Reshaped:
         """rendered, the text a render made for one story file, written onto existing, the text that file holds now:
@@ -458,7 +456,7 @@ class CodeStoryModel(StoryModel):
     @cached_property
     def writing(self) -> StoryWriting:
         """How this model's language writes its story files, made once."""
-        return self.writing_type(self.language)
+        return self.writing_class(self.language)
 
     def _write_epics(self, files: Dict[str, str]) -> Dict[str, str]:
         """Every epic's folder and story files, added to files, laid out as the acceptance tests fidelity declares
@@ -575,7 +573,7 @@ class CodeStoryModel(StoryModel):
 
     def parse(self, text: Dict[str, str], file: str = "") -> "CodeStoryModel":
         """A new map read from the story files in text, each file's text by its path, with this model's settings."""
-        return self.copy_of(None).load(text)
+        return self.blank().load(text)
 
 
     def _ordered_paths(self, external: Dict[str, str]) -> List[str]:
@@ -590,7 +588,7 @@ class CodeStoryModel(StoryModel):
         for epic in self.epics:
             if epic.slug == slug:
                 return epic
-        epic = self.epic_type(self._name_from_slug(slug), len(self.epics) + 1)
+        epic = self.epic_class(self._name_from_slug(slug), len(self.epics) + 1)
         self.epics.append(epic)
         return epic
 
@@ -678,7 +676,7 @@ class CodeStoryModel(StoryModel):
         for slug in slugs:
             found = next((item for item in parent.epics if item.slug == slug), None)
             if found is None:
-                found = self.epic_type(self._name_from_slug(slug), len(parent.epics) + 1)
+                found = self.epic_class(self._name_from_slug(slug), len(parent.epics) + 1)
                 parent.epics.append(found)
             current = found
             parent = found

@@ -63,7 +63,7 @@ def _imported_examples(text: str) -> list:
 def _markdown_back_from(format: type) -> str:
     """The story's section of a scenarios file, written from the story read back from format's code."""
     story = format(tests_root="tests").parse(_rendered(format)).descendants.stories()[0]
-    return MarkdownStory(story).document_text()
+    return MarkdownStory.copy_of(story).document_text()
 
 
 def _outline_back_from(format: type):

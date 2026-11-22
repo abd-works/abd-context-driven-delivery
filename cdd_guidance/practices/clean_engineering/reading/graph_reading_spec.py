@@ -176,7 +176,7 @@ with description("Clean Engineering reading code into its graph"):
 
     with context("with a Stories story-map board among the edited files"):
         with before.all:
-            board = WhiteboardStoryModel(round_trip_story_map()).save()
+            board = WhiteboardStoryModel().copy_of(round_trip_story_map()).save()
             self.fixture = practice_from_files(
                 {
                     ".context/story-map.whiteboard": board,

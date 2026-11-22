@@ -16,7 +16,6 @@ from typing import Dict, Optional
 from cdd_guidance.practices.stories.model.brace_story import BraceStory, BraceStoryModel, BraceStoryWriting
 from cdd_guidance.practices.stories.model.screen_spec_file import SCREEN_SPEC_STEM, ScreenSpecFile, is_screen_spec
 from cdd_guidance.practices.stories.model.story_file import StoryFile
-from cdd_guidance.practices.stories.model.story_model import StoryModel
 
 # How a story file's name ends before its language's extension; the first is the one a language writes.
 _STORY_FILE_STEMS = ("_story.test", "_story.spec", ".story.shared", SCREEN_SPEC_STEM)
@@ -46,11 +45,10 @@ class ScriptStoryModel(BraceStoryModel):
 
     def __init__(
         self,
-        source: "StoryModel | str | None" = None,
         tests_root: str | None = None,
         story_test_folder: str | None = None,
     ):
-        super().__init__(source, tests_root)
+        super().__init__(tests_root)
         folder = self._default_story_test_folder() if story_test_folder is None else story_test_folder
         self._story_test_folder = folder.strip("/")
 
@@ -88,10 +86,11 @@ class ScriptStoryModel(BraceStoryModel):
         seed = {} if self.read_from_code else {self._story_test_file_path: self.seed_file.read_text(encoding="utf-8")}
         return self._write_epics(seed)
 
-    def copy_of(self, source: Optional[StoryModel]) -> "ScriptStoryModel":
-        return type(self)(source, tests_root=self.tests_root, story_test_folder=self._story_test_folder)
+    def blank(self) -> "ScriptStoryModel":
+        """A map in this language holding nothing, under this map's tests root and step library folder."""
+        return type(self)(tests_root=self.tests_root, story_test_folder=self._story_test_folder)
 
     @cached_property
     def writing(self) -> BraceStoryWriting:
         """How this model's language writes its story files, importing the step library from its folder."""
-        return self.writing_type(self.language, self.story_test_import_path)
+        return self.writing_class(self.language, self.story_test_import_path)

@@ -107,6 +107,7 @@ class DrawIOStory(LaidOutStory):
 
 
 class DrawIOEpic(LaidOutEpic):
+    story_class = DrawIOStory
     # A draw.io epic starts at the map's margin, its sub-epics after the stories it holds itself.
     first_x = DiagramEpic.left_margin
     epic_spacing = DiagramEpic.gap
@@ -273,9 +274,8 @@ class _KeptPlaces:
 
 class DrawIOStoryModel(DiagramStoryModel):
     suffixes = (".drawio",)
-    epic_type = DrawIOEpic
-    story_type = DrawIOStory
-    increment_type = DrawIOIncrement
+    epic_class = DrawIOEpic
+    increment_class = DrawIOIncrement
     """DrawIO story-map I/O. IS the format-typed tree root.
 
     parse reads a file into these nodes. save writes the nodes you edited.

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from cdd_guidance.practices.source_code import JAVASCRIPT
 from cdd_guidance.practices.stories.model.brace_story import BraceStoryWriting
-from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic, JavaScriptStory
+from cdd_guidance.practices.stories.model.javascript.nodes import JavaScriptEpic
 from cdd_guidance.practices.stories.model.script_story_model import ScriptStoryModel, script_story_file_suffixes
 
 
@@ -27,7 +27,6 @@ class JavaScriptStoryModel(ScriptStoryModel):
     LEAF_EXTENSION = ".js"
     story_file_suffixes = script_story_file_suffixes(LEAF_EXTENSION)
     seed_file = Path(__file__).resolve().parents[2] / "templates" / "js" / "story-test.js"
-    epic_type = JavaScriptEpic
-    story_type = JavaScriptStory
+    epic_class = JavaScriptEpic
     language = JAVASCRIPT
-    writing_type = JavaScriptStoryWriting
+    writing_class = JavaScriptStoryWriting

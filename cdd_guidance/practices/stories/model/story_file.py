@@ -131,7 +131,7 @@ class StoryFile:
     def read_text(self) -> List["Story"]:
         """The stories the text writes, read without its blocks: the named fallback for a file whose blocks cannot be
         read, such as a Python story test with a syntax error."""
-        return self.model.story_type.load_all(self.text)
+        return self.model.story_class.load_all(self.text)
 
 
 class BlockStoryFile(StoryFile, ABC):
@@ -154,11 +154,11 @@ class BlockStoryFile(StoryFile, ABC):
         written, leads = self._written_around(blocks)
         if not blocks:
             return self.read_text(), written
-        story_type = self.model.story_type
-        imports = story_type.syntax.example_imports(self.text)
+        story_class = self.model.story_class
+        imports = story_class.syntax.example_imports(self.text)
         stories = []
         for block, lead in zip(blocks, leads):
-            story = story_type.from_block(block, lead, "\n".join([imports, self.comment_above(block), block.text]))
+            story = story_class.from_block(block, lead, "\n".join([imports, self.comment_above(block), block.text]))
             story.source = source_at(self.path, block.line_span[0] + 1, block.line_span[1] + 1)
             stories.append(story)
         return stories, written

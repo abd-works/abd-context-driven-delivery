@@ -12,9 +12,11 @@ class TypeScriptScenario(BraceScenario):
 
 
 class TypeScriptStory(ScriptStory):
-    scenario_type = TypeScriptScenario
+    scenario_class = TypeScriptScenario
     language = TYPESCRIPT
 
 
 class TypeScriptEpic(CodeEpic):
     """An epic or sub-epic whose stories a TypeScript story file holds."""
+
+    story_class = TypeScriptStory

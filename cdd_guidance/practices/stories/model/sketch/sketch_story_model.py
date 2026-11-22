@@ -133,7 +133,7 @@ def _read_steps(lines: SketchLines, take: Callable[["SketchStep"], None]) -> Non
 class SketchBackground(Background):
     """A story's background in the sketch: each of its steps as a `given` line."""
 
-    step_type = SketchStep
+    step_class = SketchStep
 
     def sketch_lines(self, pad: str) -> List[str]:
         return [line for step in self.steps for line in step.sketch_lines(pad, "given")]
@@ -142,8 +142,8 @@ class SketchBackground(Background):
 class SketchScenario(Scenario):
     """A scenario in the sketch: its name, then its steps one level in, each under its own keyword."""
 
-    step_type = SketchStep
-    background_type = SketchBackground
+    step_class = SketchStep
+    background_class = SketchBackground
 
     def read_lines(self, lines: SketchLines) -> None:
         """Its steps: the lines under its name."""
@@ -161,8 +161,8 @@ class SketchScenario(Scenario):
 class SketchStory(Story):
     """A story in the sketch: `{actor} --> {story}`, its background steps, then each scenario with its steps."""
 
-    scenario_type = SketchScenario
-    background_type = SketchBackground
+    scenario_class = SketchScenario
+    background_class = SketchBackground
 
     @classmethod
     def from_match(cls, match: "re.Match", order: int) -> "SketchStory":
@@ -212,6 +212,8 @@ class SketchStory(Story):
 class SketchEpic(Epic):
     """An epic in the sketch: its name, its estimate, its stories, then its nested epics, one level deeper each."""
 
+    story_class = SketchStory
+
     def read_lines(self, lines: SketchLines) -> None:
         """The lines under the epic: its estimate, each story with its scenarios, and each nested epic with its own."""
         for entry in lines.under():
@@ -242,8 +244,7 @@ class SketchEpic(Epic):
 
 
 class SketchStoryModel(StoryModel):
-    epic_type = SketchEpic
-    story_type = SketchStory
+    epic_class = SketchEpic
     lens = _LENS
     """The section of a sketch Stories writes, opened by its `stories:` heading."""
 

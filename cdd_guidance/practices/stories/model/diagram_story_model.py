@@ -154,7 +154,21 @@ class DiagramStoryCell:
         return self.beneath(bars)
 
 
+class DiagramStory(Story, DiagramStoryNode):
+    pitch = 60
+    size = 50
+    row_y = 345
+    actor_height = size
+    actor_gap = 4
+    pad_below_sub_epic = 16
+    fill = "#fff2cc"
+    stroke = "#d6b656"
+    actor_fill = "#dae8fc"
+    actor_stroke = "#6c8ebf"
+
+
 class DiagramEpic(Epic, DiagramStoryNode):
+    story_class = DiagramStory
     row_y = 120
     nested_row_y = 195
     bar_height = 60
@@ -172,20 +186,6 @@ class DiagramEpic(Epic, DiagramStoryNode):
     def columns(self) -> EpicColumns:
         """How many story columns the epic spans on the drawn map, and how deep its sub-epics nest."""
         return EpicColumns(self)
-
-
-class DiagramStory(Story, DiagramStoryNode):
-    pitch = 60
-    size = 50
-    row_y = 345
-    actor_height = size
-    actor_gap = 4
-    pad_below_sub_epic = 16
-    fill = "#fff2cc"
-    stroke = "#d6b656"
-    actor_fill = "#dae8fc"
-    actor_stroke = "#6c8ebf"
-
 
 
 class LaidOutStory(DiagramStory):
@@ -239,8 +239,7 @@ class DiagramStoryModel(StoryModel):
 
     base_width = 200
     row_height = 100
-    epic_type = DiagramEpic
-    story_type = DiagramStory
+    epic_class = DiagramEpic
 
     def place_cells(self, cells: List[DiagramStoryCell]) -> List[DiagramStoryCell]:
         """Read the epics and stories cells draw into this map by where they sit: epics left to right, each sub-epic
@@ -248,13 +247,13 @@ class DiagramStoryModel(StoryModel):
         the actor just above it as its actor. Answers the cells that became epics and sub-epics, which a format places what else it draws under."""
         owners: List[DiagramStoryCell] = []
         for cell in sorted((c for c in cells if c.role == "epic"), key=lambda c: c.x):
-            cell.node = self.epic_type(cell.text.strip(), len(self.epics) + 1)
+            cell.node = self.epic_class(cell.text.strip(), len(self.epics) + 1)
             self.epics.append(cell.node)
             owners.append(cell)
         for cell in sorted((c for c in cells if c.role == "subepic"), key=lambda c: (c.depth, c.x)):
             owner = cell.beneath([o for o in owners if o.depth < cell.depth])
             if owner is not None:
-                cell.node = self.epic_type(cell.text, len(owner.node.epics) + 1)
+                cell.node = self.epic_class(cell.text, len(owner.node.epics) + 1)
                 owner.node.epics.append(cell.node)
                 owners.append(cell)
         self._place_stories(cells, owners)
@@ -268,7 +267,7 @@ class DiagramStoryModel(StoryModel):
             owner = cell.owner_among(owners)
             if owner is None:
                 continue
-            story = self.story_type(cell.text, len(owner.node.stories) + 1, cell.story_type)
+            story = self.story_class(cell.text, len(owner.node.stories) + 1, cell.story_type)
             actor = actors[id(cell)].text.strip() if id(cell) in actors else cell.actor
             if actor:
                 story.actors = [actor]
@@ -298,7 +297,7 @@ class DiagramStoryModel(StoryModel):
     @property
     def story_floor(self) -> int:
         """The highest a story may sit, however shallow the map."""
-        return self.story_type.row_y
+        return self.story_class.row_y
 
     def sub_epic_y(self, depth: int) -> int:
         """Top of a sub-epic bar at *depth*: each nested level stacks one bar lower."""
@@ -308,7 +307,7 @@ class DiagramStoryModel(StoryModel):
     def story_y(self) -> int:
         """Top of the story line: below the deepest sub-epic bar, leaving room for the actor drawn above each story,
         so a story at any depth keeps its actor and never sits on a bar."""
-        story = self.story_type
+        story = self.story_class
         deepest_bottom = self.sub_epic_y(self.max_sub_epic_depth) + DiagramEpic.bar_height
         return max(self.story_floor, deepest_bottom + story.actor_height + story.actor_gap + story.pad_below_sub_epic)
 

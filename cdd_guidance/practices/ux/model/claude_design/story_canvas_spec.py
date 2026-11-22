@@ -149,7 +149,7 @@ with description("a Claude Design story map") as self:
 
     with context("rendered from a canvas the caller already holds"):
         with before.each:
-            self.held = ClaudeDesignStoryModel(_story_map())
+            self.held = ClaudeDesignStoryModel().copy_of(_story_map())
             canvas = ClaudeDesignStoryModel(setup=StoryCanvasSetup(ux_map=_ux_map(_catalog_screen()), sources={"Choose Plan": "tests/select_plan.story.shared.ts:69"}))
             canvas.render(self.held)
 

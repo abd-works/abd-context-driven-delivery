@@ -31,7 +31,7 @@ class ThinSlicedMap:
 
     def drawn_by(self, diagram: type[DiagramStoryModel]) -> str:
         """Its increments drawn in the format of diagram, a story model that draws thin slices."""
-        return diagram(self.story_map).save_thin_slice()
+        return diagram().copy_of(self.story_map).save_thin_slice()
 
 
 class SpecifiedStories:

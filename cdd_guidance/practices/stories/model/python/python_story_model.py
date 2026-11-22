@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from cdd_guidance.practices.source_code import PYTHON
 from cdd_guidance.practices.stories.model.code_story_model import CodeStoryModel
-from cdd_guidance.practices.stories.model.python.nodes import PythonEpic, PythonStory
+from cdd_guidance.practices.stories.model.python.nodes import PythonEpic
 from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED_SUFFIX, SharedStoryFile, is_shared_story_file
 from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
 from cdd_guidance.practices.stories.model.story_file import StoryFile, flat_steps
@@ -64,10 +64,9 @@ class PythonStoryWriting(StoryWriting):
 class PythonStoryModel(CodeStoryModel):
     LEAF_EXTENSION = "_story.test.py"
     story_file_suffixes = (LEAF_EXTENSION, SHARED_SUFFIX)
-    epic_type = PythonEpic
-    story_type = PythonStory
+    epic_class = PythonEpic
     language = PYTHON
-    writing_type = PythonStoryWriting
+    writing_class = PythonStoryWriting
 
     def story_file(self, path: str, content: str, project: Optional[Path] = None) -> StoryFile:
         """The story file at path: a shared story file, read from its scenario and step functions, or a story test,

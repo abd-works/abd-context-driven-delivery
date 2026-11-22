@@ -117,7 +117,7 @@ class JsonStep(Step):
 class JsonBackground(Background):
     """A background as ``{"name": "background", "steps": [...], "examples": [...]}``."""
 
-    step_type = JsonStep
+    step_class = JsonStep
 
     def as_record(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {"name": self.name, "steps": [step.as_record() for step in self.steps]}
@@ -165,8 +165,8 @@ class JsonIncrement(Increment):
 
 
 class JsonScenario(Scenario):
-    step_type = JsonStep
-    background_type = JsonBackground
+    step_class = JsonStep
+    background_class = JsonBackground
 
     def as_record(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
@@ -195,8 +195,8 @@ class JsonScenario(Scenario):
 
 
 class JsonStory(Story):
-    scenario_type = JsonScenario
-    background_type = JsonBackground
+    scenario_class = JsonScenario
+    background_class = JsonBackground
 
     def as_record(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
@@ -239,6 +239,8 @@ class JsonStory(Story):
 
 
 class JsonEpic(Epic):
+    story_class = JsonStory
+
     def as_record(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
             "name": self.name,
@@ -275,9 +277,8 @@ class JsonStoryModel(StoryModel):
     """The story map as story-graph.json. render copies a story map into this format and writes it; parse reads the
     text into this map."""
 
-    epic_type = JsonEpic
-    story_type = JsonStory
-    increment_type = JsonIncrement
+    epic_class = JsonEpic
+    increment_class = JsonIncrement
 
     def render(self, canonical: StoryModel, written: Written = Written()) -> str:
         """canonical as story-graph.json text: copied into a JSON map, which writes itself."""

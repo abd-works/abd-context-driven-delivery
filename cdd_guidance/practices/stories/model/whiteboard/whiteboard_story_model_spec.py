@@ -14,7 +14,7 @@ from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStor
 
 with description("a story map drawn on a Claude whiteboard") as self:
     with before.each:
-        self.story_map = WhiteboardStoryModel(round_trip_story_map())
+        self.story_map = WhiteboardStoryModel().copy_of(round_trip_story_map())
         self.read = WhiteboardStoryModel().parse(self.story_map.save())
 
     with it("should read back every epic, story held by any epic, kind, and actor"):
@@ -53,7 +53,7 @@ with description("a story map drawn on a Claude whiteboard") as self:
 
     with context("that is drawn twice"):
         with it("should give each epic and story the same element id both times"):
-            again = WhiteboardStoryModel(round_trip_story_map())
+            again = WhiteboardStoryModel().copy_of(round_trip_story_map())
             expect(again.board().order).to(equal(self.story_map.board().order))
 
     with context("that is read from a board with no story-map elements"):
@@ -63,7 +63,7 @@ with description("a story map drawn on a Claude whiteboard") as self:
 
 with description("a story map's thin slice drawn on a Claude whiteboard") as self:
     with before.each:
-        self.story_map = WhiteboardStoryModel(round_trip_story_map())
+        self.story_map = WhiteboardStoryModel().copy_of(round_trip_story_map())
         stories = self.story_map.descendants.stories()
         self.story_map.increments.append(DiagramIncrement("Walking Skeleton", 1, [stories[0], stories[-1]]))
         self.story_map.increments.append(DiagramIncrement("Next Slice", 2, stories[1:3]))
@@ -81,7 +81,7 @@ with description("a story map's thin slice drawn on a Claude whiteboard") as sel
         expect(sorted(sum(1 for card in cards if lane.holds(card)) for lane in self.lanes)).to(equal([2, 2]))
 
     with it("should read back each increment with the stories its lane holds"):
-        read = WhiteboardStoryModel(round_trip_story_map()).load_thin_slice(self.board.save())
+        read = WhiteboardStoryModel().copy_of(round_trip_story_map()).load_thin_slice(self.board.save())
         expect([(increment.name, [story.name for story in increment.stories]) for increment in read.increments]).to(equal(
             [(increment.name, [story.name for story in increment.stories]) for increment in self.story_map.increments]
         ))

@@ -11,7 +11,7 @@ from cdd_guidance.practices.stories.model.miro.nodes import MiroIncrement, MiroS
 
 with description("a story map drawn for a Miro board") as self:
     with before.each:
-        self.story_map = MiroStoryModel(round_trip_story_map())
+        self.story_map = MiroStoryModel().copy_of(round_trip_story_map())
         self.read = MiroStoryModel().parse(self.story_map.save())
 
     with it("should read back every epic, story held by any epic, kind, and actor"):

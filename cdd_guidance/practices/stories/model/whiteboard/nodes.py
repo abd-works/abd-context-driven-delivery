@@ -84,6 +84,8 @@ class WhiteboardStory(LaidOutStory, _BoardStoryNode):
 class WhiteboardEpic(LaidOutEpic, _BoardStoryNode):
     """An epic bar; a sub-epic's bar sits one row lower for each level it is nested, under the epic that holds it."""
 
+    story_class = WhiteboardStory
+
     tighten = 0
     bar_gap = 8
     """The space left between two bars side by side, so each sub-epic reads as its own."""
@@ -113,9 +115,8 @@ class WhiteboardStoryModel(DiagramStoryModel):
     """Whiteboard story-map I/O. IS the format-typed tree root: render draws it on a board, parse reads one back."""
 
     suffixes = (Whiteboard.SUFFIX,)
-    epic_type = WhiteboardEpic
-    story_type = WhiteboardStory
-    increment_type = DiagramIncrement
+    epic_class = WhiteboardEpic
+    increment_class = DiagramIncrement
 
     def render(self, canonical: StoryModel, written: Written = Written()) -> str:
         """Draw canonical as a board; the elements a previous board held stay where people put them."""
@@ -160,7 +161,7 @@ class WhiteboardStoryModel(DiagramStoryModel):
             names = [_BoardCell(card).text for card in held]
             label = next((found for found in labels if lane.holds(found)), None)
             name = label.text.strip() if label is not None else lane.text.strip()
-            increments.append(self.increment_type(name, len(increments) + 1, self.descendants.stories_named(names)))
+            increments.append(self.increment_class(name, len(increments) + 1, self.descendants.stories_named(names)))
         self.increments.refill(increments)
         return self
 

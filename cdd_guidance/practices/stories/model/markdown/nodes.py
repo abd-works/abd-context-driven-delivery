@@ -53,7 +53,7 @@ _SCENARIOS_FILE_SUFFIX = STORY_FILE_SUFFIXES[0]
 class MarkdownScenario(Scenario):
     """Scenario leaf node for the Markdown format; a scenarios file is read into these by ScenarioFileReading."""
 
-    def __init__(self, name: "str | Scenario" = "", sequential_order: int = 0) -> None:
+    def __init__(self, name: str = "", sequential_order: int = 0) -> None:
         super().__init__(name, sequential_order)
         # The lines the scenario was read with, its heading first, so an unchanged scenario is written back as read;
         # None for a scenario not read from a scenarios document.
@@ -129,9 +129,9 @@ def example_table_lines(examples: "Examples") -> List[str]:
 # -- Leaf node types -----------------------------------------------------------
 
 class MarkdownStory(Story):
-    scenario_type = MarkdownScenario
+    scenario_class = MarkdownScenario
 
-    def __init__(self, name: "str | Story", sequential_order: int = 0, story_type: StoryType = StoryType.USER) -> None:
+    def __init__(self, name: str, sequential_order: int = 0, story_type: StoryType = StoryType.USER) -> None:
         super().__init__(name, sequential_order, story_type)
         # The lines the story was read with in a scenarios document, its heading first when it has one, so an
         # unchanged story is written back as read; None for a story read from anywhere else.
@@ -156,7 +156,7 @@ class MarkdownStory(Story):
 
     def _as_markdown(self, scenario: Scenario) -> MarkdownScenario:
         """The scenario as markdown writes it: itself when it is one, else a markdown copy of it."""
-        return scenario if isinstance(scenario, MarkdownScenario) else MarkdownScenario(scenario)
+        return scenario if isinstance(scenario, MarkdownScenario) else MarkdownScenario.copy_of(scenario)
 
     def scenarios_text(self) -> str:
         """This story's own scenarios file: its heading, the examples its scenarios share, its backgrounds, then its
@@ -262,8 +262,10 @@ def _outlined(node: "StoryNode", heading: Optional[str]) -> List[str]:
 
 
 class MarkdownEpic(Epic):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    story_class = MarkdownStory
+
+    def __init__(self, name: str, sequential_order: int = 0) -> None:
+        super().__init__(name, sequential_order)
         # The lines it was read with in an outline story map; None for an epic read from anywhere else.
         self.outline: Optional[OutlineLines] = None
 
@@ -308,12 +310,11 @@ class MarkdownStoryModel(StoryModel):
     each node naming the line it was read on when the text came from a file."""
 
     suffixes = (".md",)
-    epic_type = MarkdownEpic
-    story_type = MarkdownStory
-    increment_type = MarkdownIncrement
+    epic_class = MarkdownEpic
+    increment_class = MarkdownIncrement
 
-    def __init__(self, source: Optional[StoryModel] = None) -> None:
-        super().__init__(source)
+    def __init__(self) -> None:
+        super().__init__()
         # The scenarios document this map was read from, kept so rendering it writes each unchanged line back;
         # None for a map read from a story map.
         self.scenario_document: Optional[ReadScenarioDocument] = None
@@ -396,7 +397,7 @@ class MarkdownStoryModel(StoryModel):
         for section in sections:
             if not section.scenarios or any(section.names(story) for story in self.unplaced_stories):
                 continue
-            story = self.story_type(section.name.strip(), len(self.unplaced_stories) + 1)
+            story = self.story_class(section.name.strip(), len(self.unplaced_stories) + 1)
             story.source = source_at(section.file, section.line)
             story.load_scenarios(sections)
             self.unplaced_stories.append(story)

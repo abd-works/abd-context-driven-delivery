@@ -2,7 +2,7 @@
 
 *StoryModel* is one story map: epics, the sub-epics nested under them, the stories in each, and the increments that slice them, then each story's backgrounds and scenarios down to steps and examples. A nested epic is an epic whose parent is an epic. An increment is a thin slice: a name, an outcome, slicing notes, a decision, and the stories in that slice. Every node is a graph node (*ModelNode*), so a loaded model is also the stories practice's part of the knowledge graph.
 
-Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, javascript. `StoryModel(source)` copies any model into the subclass's node types, and a format's `copy_of(source)` makes that copy with the format's own settings (it is asked of a model, not its class, because a code format copies with its own `tests_root`; a UX map's `copy_of` is asked the same way); each story, scenario, and background makes its parts through its format's `scenario_type`, `background_type`, and `step_type`. Every format meets the one format contract (*FormatAdapter*, harness/guidance), which *StoryModel* extends: `parse(text, file)` reads text in that format, `read_file(path, project, on_file)` opens a file of it, each node naming the file (`placed_in`), `opened_from(path, project)` is the map an edit to the file writes back, and `render(canonical, written)` writes a model out onto the file as it is now (*Written*). *StoryMapFiles* (`story_map_files.py`) is the one place that knows a story map's file name and a story's own file name, and finds the story map in or above a folder (`nearest`), the story map saved as JSON in it (`story_graph`, read by `JsonStoryModel.read_file`), the markdown maps below it (`markdown_below`), each story's own file below it (`story_files_below`), and the files scenarios are written in (`scenario_files_below`), entering each folder's `.context` and no folder a working-copy scan never enters (`skips_folder`). The Stories practice names itself on *StoryNode* (`StoryNode.practice_class = Stories`), so the model never imports its practice. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
+Each format is a *StoryModel* subclass with its own node subclasses, listed by `Stories` under `formats`: sketch, markdown, json, drawio, miro, python, typescript, javascript. A format's `copy_of(source)` copies any model into the format's node classes, starting from the format's `blank()` map, so the copy keeps the format's own settings (it is asked of a map, not its class, because a code format copies with its own `tests_root`; a UX map's `copy_of` is asked the same way); each epic, story, scenario, and background copied makes its parts as its class's `story_class`, `scenario_class`, `background_class`, and `step_class`. A `clone()` keeps each part's own class instead. Both read the node's one field list, `_copy_fields`. Every format meets the one format contract (*FormatAdapter*, harness/guidance), which *StoryModel* extends: `parse(text, file)` reads text in that format, `read_file(path, project, on_file)` opens a file of it, each node naming the file (`placed_in`), `opened_from(path, project)` is the map an edit to the file writes back, and `render(canonical, written)` writes a model out onto the file as it is now (*Written*). *StoryMapFiles* (`story_map_files.py`) is the one place that knows a story map's file name and a story's own file name, and finds the story map in or above a folder (`nearest`), the story map saved as JSON in it (`story_graph`, read by `JsonStoryModel.read_file`), the markdown maps below it (`markdown_below`), each story's own file below it (`story_files_below`), and the files scenarios are written in (`scenario_files_below`), entering each folder's `.context` and no folder a working-copy scan never enters (`skips_folder`). The Stories practice names itself on *StoryNode* (`StoryNode.practice_class = Stories`), so the model never imports its practice. Markdown, JSON, and the code formats carry scenarios, steps, and examples; the diagram formats (drawio, miro) stop at stories and still read increments. The Claude Design story canvas, which shows the stories on their screens, is a *DiagramStoryModel* the UX practice draws (`practices/ux/model/claude_design/story_canvas.py`).
 
 ```
 story_map = Stories().story_files(folder).story_map_in(folder)     # story-map.md (or .json), increments, scenarios
@@ -38,13 +38,16 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 	// child_band is "error" unless the count is 0 or 4 to 9
 + take_code_from(source: StoryNode): None
 	// keeps written and setup when the node is copied into another format or cloned
++ copy_of(source: StoryNode): StoryNode
+	// class operation: source made as this class, each of its parts made as the class this class holds that part as; how a map is copied into another format
 + clone(): StoryNode
-	// a copy of this node, including its children
+	// a copy of this node as its own class, each of its parts a clone keeping its own class, so a markdown story under a plain epic stays a markdown story
+- _copy_fields(original: StoryNode, copy_part: CopyPart): None
+	// the one list of a node's fields that copy_of and clone share; copy_part makes each part
 
 ## StoryModel : StoryNode
 
-+ StoryModel(source: StoryModel | Graph | None = None, graph: Graph | None = None)
-	// source set: each epic and increment becomes this format's epic_type and increment_type, each story its story_type
++ StoryModel(graph: Graph | None = None)
 ------
 + epics: list[Epic]
 	// composition — an epic has no model outside this story model; numbered in the order they stand (*NumberedChildren*), so one appended takes the next number
@@ -52,9 +55,10 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 	// composition — an increment has no model outside this story model; numbered the same way
 + examples: Examples
 	// examples shared by the whole map
-+ epic_type: type
-+ story_type: type
-+ increment_type: type
++ epic_class: type
++ increment_class: type
++ story_class: type
+	// its epic class's story_class
 ----
 + sources: StorySources
 	// each file the map was read from (a StorySource: its path and text, and the imports, exports, examples and evidence it declares)
@@ -68,7 +72,12 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 	// where it was opened in a session, which saves it after every edit (`save`); nowhere for a map read any other way
 + record(practice, on_node: Callable | None = None): None
 	// each epic, story, background, scenario, step, and example adds itself to the stories practice
++ blank(): StoryModel
+	// a map of this format holding nothing, with this map's settings; a code map keeps its tests root, a Claude Design canvas its setup
++ copy_of(source: StoryModel): StoryModel
+	// asked of a map: source copied into this format's node classes, each epic as epic_class and each increment as increment_class, delivering the copies of its stories
 + clone(): StoryModel
+	// from blank(), each epic and increment a clone keeping its own class
 
 ## Descendants
 
@@ -106,12 +115,13 @@ Where a story map was opened in a session: its file, the session's stories, its 
 
 ## Epic : StoryNode
 
-+ Epic(name: str | Epic, sequential_order: int = 0, story_class: type | None = None)
-	// given an epic: copies name, order, estimate, child epics, and stories, each story in story_class
++ Epic(name: str, sequential_order: int = 0)
 ------
 + epics: list[Epic]
 + stories: list[Story]
 + examples: Examples
++ story_class: type
+	// the story class this format's epics hold; an epic copied into this format makes its stories of it
 + depth: int
 + is_sub_epic: bool
 	// its parent is an epic; it records as a SubEpic
@@ -150,7 +160,7 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 
 ## Increment : StoryNode
 
-+ Increment(name: str | Increment, sequential_order: int = 0, stories: list[Story] | None = None)
++ Increment(name: str, sequential_order: int = 0, stories: list[Story] | None = None)
 ------
 + outcome: str
 + slicing_notes: str
@@ -163,8 +173,7 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 
 ## Story : StoryNode
 
-+ Story(name: str | Story, sequential_order: int = 0, story_type: StoryType = StoryType.USER)
-	// given a story: copies name, order, type, actors, domain terms, evidence, backgrounds, and scenarios
++ Story(name: str, sequential_order: int = 0, story_type: StoryType = StoryType.USER)
 ------
 + story_type: StoryType
 + increment: Increment | None
@@ -173,8 +182,9 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 + evidence: list[str]
 + backgrounds: list[Background]
 + scenarios: list[Scenario]
-+ scenario_type: type
-	// the scenario class this story's format copies scenarios into
++ scenario_class: type
++ background_class: type
+	// the scenario and background classes a story copied into this format makes its parts of
 + top_epic: Epic | None
 	// the epic of the map it sits under
 + code_key: tuple
@@ -197,9 +207,10 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 
 ## Background : StoryNode
 
-+ Background(name: str | Background = "background", sequential_order: int = 1)
++ Background(name: str = "background", sequential_order: int = 1)
 ------
 + steps: list[Step]
++ step_class: type
 + examples: Examples
 + code_key: tuple
 ----
@@ -207,7 +218,7 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 
 ## Scenario : StoryNode
 
-+ Scenario(name: str | Scenario = "", sequential_order: int = 0)
++ Scenario(name: str = "", sequential_order: int = 0)
 	// its story is its parent; a scenarios file links a scenario to its story only by the name its section is headed with
 ------
 + backgrounds: list[Background]
@@ -217,6 +228,9 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 + evidence: list[str]
 + source: Source | None
 + code_key: tuple
++ step_class: type
++ background_class: type
+	// the step and background classes a scenario copied into this format makes its parts of
 ----
 + steps_in(step_type: StepType): list[Step]
 + when_then_runs(): list[tuple]
@@ -225,7 +239,7 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 
 ## Step : StoryNode
 
-+ Step(text: str | Step, step_type: StepType | None = None, sequential_order: int = 0)
++ Step(text: str, step_type: StepType | None = None, sequential_order: int = 0)
 	// what a format reads beyond that — its keyword, concepts, values, actor, and source — is set on the step afterwards
 ------
 + text: str
@@ -289,15 +303,14 @@ Where a node sits is the graph's *Source* (`harness/graph/graph.py`): its `file`
 
 ## Formats
 
-Each format class below is a *StoryModel* subclass. Its node subclasses (`MarkdownEpic`, `DrawIOStory`, …) set the node types `StoryModel(source)` copies into; a format overrides only what it reads or writes differently.
+Each format class below is a *StoryModel* subclass. Its node subclasses (`MarkdownEpic`, `DrawIOStory`, …) set the node classes `copy_of(source)` copies into; a format overrides only what it reads or writes differently.
 
 ## SketchStoryModel : StoryModel
 
 The `sketch` format: the stories section of an integrated sketch. Nodes: SketchEpic, SketchStory, SketchScenario, SketchBackground, and SketchStep, which write their own sketch lines (`sketch_lines`) and read the lines nested under their own (`read_lines`, from the *SketchLines* that `SketchLines.from_raw(raws)` reads: each entry `under()` gives is the line naming a node, `text`, then the lines `nested` under it).
 
 ------
-+ epic_type: SketchEpic
-+ story_type: SketchStory
++ epic_class: SketchEpic
 ----
 + parse(text: str): SketchStoryModel
 	// fills this map and returns it
@@ -314,8 +327,7 @@ The `sketch` format: the stories section of an integrated sketch. Nodes: SketchE
 The `markdown` format: `story-map.md`, the scenario files beside it, and the increments file. Nodes: MarkdownEpic, MarkdownStory, MarkdownIncrement, MarkdownScenario, MarkdownStep. The text is read by a reading made for each read, which keeps where the read is so no node or format holds it: *HeadingMapReading* or *OutlineMapReading* (`map_reading.py`, chosen by `read_map`, sharing *MapReading*'s epic and sub-epic placement) for a story map, and *ScenarioFileReading* (`scenario_file.py`, holding the parts in `scenario_parts.py`: a *BackgroundReading*, an *ExamplesTable*, and a *RealizationFence*, taking each step line onto its scenario or background) for a scenarios file; a scenarios document becomes a map through *MarkdownStoryModel*'s parse, and writes itself back through its *ReadScenarioDocument* (`read_lines.py`): each line it was read with is a *ReadLine* that writes itself as the model now stands, a *KeptLine* as written, a *HeadingLine* (the node, what it said, the line) its node writes back as read or anew, the *StepLines* of one owner, an *ExampleLine*, and the *HeldLines* of a scenario or story held in place; a section's step lines are written by one *SectionSteps*, whose owner's last line writes every step still pending. `markup.py` holds MarkdownStep (whose `read_from(line)` keeps its line and the concepts, values and actor its markup names), `step_prose`, and how a name loses its links and emphasis.
 
 ------
-+ epic_type: MarkdownEpic
-+ story_type: MarkdownStory
++ epic_class: MarkdownEpic
 ----
 + read_file(path: Path, project: Path, on_file: OnFile = None): MarkdownStoryModel
 + read_folder(folder: Path, project: Path, on_file: OnFile = None): MarkdownStoryModel | None
@@ -410,7 +422,7 @@ A story map written as test code: a folder for each epic and sub-epic, and one f
 ------
 + language: CodeLanguage | None
 	// each language model sets its instance
-+ writing_type: type[StoryWriting]
++ writing_class: type[StoryWriting]
 + writing: StoryWriting
 	// made once, with the model's language; TypeScript's also holds the import of its step library
 + tests_root: str

@@ -91,7 +91,7 @@ with description("a TypeScript runnable-story Story Map") as self:
             story.scenarios.append(sc)
             from cdd_guidance.practices.stories.model.typescript.nodes import TypeScriptStory
 
-            src = "\n".join(TypeScriptStoryModel().writing.story_lines(TypeScriptStory(story)) + [""])
+            src = "\n".join(TypeScriptStoryModel().writing.story_lines(TypeScriptStory.copy_of(story)) + [""])
             expect(".and(" in src).to(be_true)
             expect(src.count("then(")).to(equal(1))
 

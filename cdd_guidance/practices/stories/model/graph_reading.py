@@ -209,7 +209,7 @@ class StoriesReading(PracticeReading):
             reader = type(language)(tests_root=_MAP_LESS_TESTS_FOLDER)
             files = self._script_texts(reader)
             report_progress("stories · parse")
-            model = reader.copy_of(None).load(files, on_file=lambda detail: report_progress(f"stories · parse · {detail}"))
+            model = reader.blank().load(files, on_file=lambda detail: report_progress(f"stories · parse · {detail}"))
             if model.epics:
                 return model
             read = read or model
