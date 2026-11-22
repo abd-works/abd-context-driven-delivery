@@ -39,7 +39,6 @@ WITHOUT_A_PAIR = {
         "behavioral-and-system-observable-outcomes",
         "branch-on-mechanical-uniqueness",
         "but-marks-missing-state",
-        "code-steps-invoke-code",
         "domain-terms-link-to-model",
         "examples-trace-domain-model",
         "flagged-writes-intended-gwt",

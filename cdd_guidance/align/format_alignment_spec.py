@@ -66,14 +66,15 @@ with description("a gap between a session's formats") as self:
         with it("should be closed by a render when its format is code, which a render saves at the declared paths"):
             expect(AlignmentGap(MISSING_FILE, "ddd-model", "{bounded_context}/{aggregate}/{aggregate}.py", "", "python", ".context/domain-model.md").is_alignable).to(be_true)
 
-        with context("that is left to a person because another format of its document conflicts"):
+        with context("that is held because another format of its document conflicts"):
             with it("should name no file to align from"):
-                left = AlignmentGap(FORMAT_LACKS, "stories-story-map", DRAWING, "It lacks a story.", "drawio", STORY_MAP).left_to_a_person()
+                left = AlignmentGap(FORMAT_LACKS, "stories-story-map", DRAWING, "It lacks a story.", "drawio", STORY_MAP).held_while_formats_conflict()
                 expect((left.source, left.is_alignable)).to(equal(("", False)))
 
-            with it("should say it waits for the person"):
-                left = AlignmentGap(FORMAT_LACKS, "stories-story-map", DRAWING, "It lacks a story.", "drawio", STORY_MAP).left_to_a_person()
-                expect(left.message).to(contain("It lacks a story.", "until a person settles"))
+            # The lead's answer, 2026-11-22: conflicting formats go to the agent's decide pass, not to the person.
+            with it("should say it waits until the agent has decided each item the conflicting formats hold alone"):
+                left = AlignmentGap(FORMAT_LACKS, "stories-story-map", DRAWING, "It lacks a story.", "drawio", STORY_MAP).held_while_formats_conflict()
+                expect(left.message).to(contain("It lacks a story.", "until each item the conflicting formats of this document hold alone is decided"))
 
     with context("that names no file to align from"):
         with it("should not be closed by a render"):

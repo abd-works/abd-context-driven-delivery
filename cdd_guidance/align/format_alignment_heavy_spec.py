@@ -246,11 +246,17 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 self.files = [self.project / path for path in (STORY_MAP, DRAWING, BOARD)]
                 self.before = [file.read_text(encoding="utf-8") for file in self.files]
 
-            with it("should report the two as a person's decision, with no file to align from"):
+            with it("should report the two as a decision to make, with no file to align from"):
                 conflict = next(gap for gap in self.alignment.diagnose().gaps if gap.file == DRAWING)
                 expect((conflict.kind, conflict.source, conflict.is_alignable)).to(equal(("formats_conflict", "", False)))
 
-            with it("should leave the whiteboard, which holds more than the markdown, to the person too"):
+            # The lead's answer, 2026-11-22: each item one file holds alone goes to the same decide pass a render's
+            # migrate gets, since only an agent reading both can say where it goes.
+            with it("should hand each item one file holds alone to the agent to decide by reading it"):
+                conflict = next(gap for gap in self.alignment.diagnose().gaps if gap.file == DRAWING)
+                expect(conflict.message).to(contain("Decide each by reading it against what the source now holds"))
+
+            with it("should leave the whiteboard, which holds more than the markdown, until those are decided too"):
                 gaps = self.alignment.diagnose().gaps
                 expect([(gap.kind, gap.file, gap.is_alignable) for gap in gaps]).to(equal([("formats_conflict", DRAWING, False), ("format_lacks", STORY_MAP, False)]))
 

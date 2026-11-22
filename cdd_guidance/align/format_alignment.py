@@ -16,9 +16,10 @@ Which format is the source when two differ:
   source no longer holds is never written back into the source by a render. It is handed to the agent, which decides by
   reading whether it moved, was merged, is no longer needed, or is still wanted with the source behind, the same pass a
   render's migrate list gets; who added or removed it plays no part.
-- Two files that each hold something the other lacks are a person's decision: the gap is reported, naming what each
-  holds alone, and both files are left as they are. So is every other format of that document: while two of its files
-  conflict, none of its files is aligned, since the file a render would read from may be the one that is wrong.
+- Two files that each hold something the other lacks are reported, naming what each holds alone, and each item one
+  file holds alone goes to the agent's decide pass, with the leading format as the source; both files are left as they
+  are. So is every other format of that document: while two of its files conflict, none of its files is aligned, since
+  the file a render would read from may be the one that is wrong.
 
 Align saves through the Render action alone, so a drawing keeps the layout people gave it and a document the words its
 source does not hold, as every render does. A chosen code format with no file is rendered too, from the first chosen
@@ -51,7 +52,7 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
     from space.session.session import Session
 
-# The kinds of gap a diagnosis reports. The first two are aligned by a render; the rest wait for a person or a fix.
+# The kinds of gap a diagnosis reports. The first two are aligned by a render; the rest wait for the agent's decide pass or a fix.
 MISSING_FILE = "missing_file"
 FORMAT_LACKS = "format_lacks"
 FORMATS_CONFLICT = "formats_conflict"
@@ -113,7 +114,7 @@ class AlignmentGap:
     @property
     @data_field
     def source(self) -> str:
-        """The file an alignment renders from, named from the project; empty when a person decides or nothing renders it."""
+        """The file an alignment renders from, named from the project; empty when the agent decides or nothing renders it."""
         return self._source
 
     @property
@@ -139,9 +140,10 @@ class AlignmentGap:
     def message(self) -> str:
         return self._message
 
-    def left_to_a_person(self) -> AlignmentGap:
-        """This gap with no source to align from, because another format of its document conflicts with one of them."""
-        message = f"{self._message} It is left as it is until a person settles the formats of this document that conflict."
+    def held_while_formats_conflict(self) -> AlignmentGap:
+        """This gap with no source to align from, because another format of its document conflicts with one of them:
+        it waits until the agent has decided each item the conflicting formats hold alone."""
+        message = f"{self._message} It is left as it is until each item the conflicting formats of this document hold alone is decided."
         return AlignmentGap(self._kind, self._fidelity, self._file, message, self._format, lacks=self._lacks)
 
 
@@ -258,7 +260,7 @@ class AlignmentResult:
     @property
     @data_field
     def diagnosis(self) -> AlignmentDiagnosis:
-        """The gaps still there after the renders: those a person decides, and those a failure left open."""
+        """The gaps still there after the renders: those the agent decides, and those a failure left open."""
         return self._diagnosis
 
 
@@ -360,7 +362,7 @@ class _FidelityAlignment:
         missing = [self._missing(name, file, source) for name, file in files.items() if name not in there]
         gaps = missing + self._differences(there, placed_at=self._named(next(iter(files.values()))))
         if any(gap.kind == FORMATS_CONFLICT for gap in gaps):
-            return [gap.left_to_a_person() if gap.is_alignable else gap for gap in gaps]
+            return [gap.held_while_formats_conflict() if gap.is_alignable else gap for gap in gaps]
         return gaps
 
     def _missing(self, format: str, file: Path, source: Path) -> AlignmentGap:
@@ -405,7 +407,9 @@ class _FidelityAlignment:
         if other_lacks and lead_lacks:
             message = (
                 f"{lead_name} and {other_name} each hold what the other lacks: only {lead_name} holds {other_lacks.described}; "
-                f"only {other_name} holds {lead_lacks.described}. A person decides which is right; both files are left as they are."
+                f"only {other_name} holds {lead_lacks.described}. Both files are left as they are, and each item only {other_name} "
+                f"holds goes to you, with {lead_name} as the source. {_DECIDE_LEFTOVER} Once each is decided, Align renders "
+                f"{other_name} from {lead_name}."
             )
             return [AlignmentGap(FORMATS_CONFLICT, slug, other_name, message, formats[1], lacks=other_lacks)]
         if other_lacks:
@@ -536,5 +540,5 @@ class FormatAlignment:
     @mcp
     @agent_tool
     def align_formats(self, call: ToolCall | None = None) -> AlignmentResult:
-        """Bring this session's formats in step and return what was done: render each chosen format whose file is missing, and each file that lacks nodes or edges another format of the same document holds, from the format that holds more, through the Render action, so a drawing keeps its layout and a document its own words. What another format holds and the leading format, the source, lacks is not written into the source: its gap hands it to you to decide by reading it against what the source now holds. Two files that each hold something the other lacks are a person's decision and are left as they are. Each failure a render meets is answered as kind, file and message, and the rest are still rendered; the diagnosis as it stands afterwards comes back too. A whiteboard file rendered here still has to be put on its board in Claude (render.publish_board)."""
+        """Bring this session's formats in step and return what was done: render each chosen format whose file is missing, and each file that lacks nodes or edges another format of the same document holds, from the format that holds more, through the Render action, so a drawing keeps its layout and a document its own words. What another format holds and the leading format, the source, lacks is not written into the source: its gap hands it to you to decide by reading it against what the source now holds. Two files that each hold something the other lacks are left as they are, and each item one of them holds alone is handed to you the same way. Each failure a render meets is answered as kind, file and message, and the rest are still rendered; the diagnosis as it stands afterwards comes back too. A whiteboard file rendered here still has to be put on its board in Claude (render.publish_board)."""
         return SessionAlignment(self._session, call).align()
