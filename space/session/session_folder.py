@@ -64,9 +64,9 @@ class SessionFolder:
     def remove(self) -> None:
         """Delete this session's record folder and its work folder, log, files, and all; its sessions no longer hold it."""
         session = self._session
-        shutil.rmtree(session.record_folder)
+        _remove_files_of(session.record_folder)
         if session.work_folder != session.record_folder and session.work_folder.is_dir():
-            shutil.rmtree(session.work_folder)
+            _remove_files_of(session.work_folder)
         session.sessions.held.removed(session)
         session.record.saved("removed")
 
@@ -86,3 +86,14 @@ class SessionFolder:
         session.sessions.held.moved(session, moved_from)
         session.record.saved(f"moves to {parent.name}")
         return session
+
+
+def _remove_files_of(folder: Path) -> None:
+    """Remove folder and everything in it. Windows refuses to remove a folder another process has open, as a file watcher
+    does for a moment; once every file inside is gone the session is removed all the same, and the empty folders left
+    behind hold nothing a session reads. A file still there is refused, naming it."""
+    try:
+        shutil.rmtree(folder)
+    except PermissionError:
+        if any(inner.is_file() for inner in folder.rglob("*")):
+            raise
