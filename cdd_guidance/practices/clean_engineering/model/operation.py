@@ -99,11 +99,6 @@ class Operation(InvariantHolder, OoadNode):
         return self.body.text
     graph_facts = (
         "line_count",
-        "max_control_flow_depth",
-        "has_bare_catch",
-        "swallows_exceptions",
-        "unreadable_read_as_empty",
-        "unnamed_literal_numbers",
         "is_static",
         "is_private",
         "is_classmethod",
@@ -173,13 +168,8 @@ class Operation(InvariantHolder, OoadNode):
         self.constructed_types: list[tuple[str, int]] = []
 
     def _start_measures(self) -> None:
-        """The measures the rules read from its body, each at its clean value until the body is measured."""
-        self.max_control_flow_depth: int = 0
-        self.has_bare_catch: bool = False
-        self.swallows_exceptions: bool = False
-        # The failure to parse or decode a catch of its body answers with an empty value, by name; empty when none does.
-        self.unreadable_read_as_empty: str = ""
-        self.unnamed_literal_numbers: list[str] = []
+        """The measures the rules read from what it says about its body, each at its clean value until it is read. The
+        measures taken of a written body belong to an operation read from code (CodeOperation)."""
         self.peer_private_access: bool = False
         # Each parameter that packs several values, with how many; only Python's parse measures it.
         self.packed_parameters: dict[str, int] = {}
@@ -293,12 +283,7 @@ class Operation(InvariantHolder, OoadNode):
         self.is_constructor_function = source.is_constructor_function
 
     def _copy_measures_from(self, source: "Operation") -> None:
-        """Copy the measures the parser took of source's body."""
-        self.max_control_flow_depth = source.max_control_flow_depth
-        self.has_bare_catch = source.has_bare_catch
-        self.swallows_exceptions = source.swallows_exceptions
-        self.unreadable_read_as_empty = source.unreadable_read_as_empty
-        self.unnamed_literal_numbers = list(source.unnamed_literal_numbers)
+        """Copy the measures the parser took of source."""
         self.peer_private_access = source.peer_private_access
 
     @property

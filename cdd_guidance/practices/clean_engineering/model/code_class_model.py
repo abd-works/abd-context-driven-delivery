@@ -56,10 +56,26 @@ class CodeOperation(Operation):
     # through it and its readability score. Its lines and its parameters are facts every read already keeps.
     paths_through: int
     readability_score: int
-    graph_facts = (*Operation.graph_facts, "paths_through", "readability_score")
+    graph_facts = (
+        *Operation.graph_facts,
+        "max_control_flow_depth",
+        "has_bare_catch",
+        "swallows_exceptions",
+        "unreadable_read_as_empty",
+        "unnamed_literal_numbers",
+        "paths_through",
+        "readability_score",
+    )
 
     def __init__(self, name: str, sequential_order: int = 0, return_type: str = "") -> None:
         super().__init__(name, sequential_order, return_type)
+        # The measures the rules read from its written body, each at its clean value until the body is measured.
+        self.max_control_flow_depth: int = 0
+        self.has_bare_catch: bool = False
+        self.swallows_exceptions: bool = False
+        # The failure to parse or decode a catch of its body answers with an empty value, by name; empty when none does.
+        self.unreadable_read_as_empty: str = ""
+        self.unnamed_literal_numbers: list[str] = []
         # The statements inside its braces as written, which the brace-language measures read.
         self._brace_text = SourceText("")
 
@@ -87,6 +103,17 @@ class CodeOperation(Operation):
         self.swallows_exceptions = body.swallows()
         self.unreadable_read_as_empty = body.unreadable_read_as_empty()
         self.unnamed_literal_numbers = body.unnamed_numbers()
+
+    def _copy_measures_from(self, source: "Operation") -> None:
+        """Copy the measures the parser took of source's body as well, when source was read from code too."""
+        super()._copy_measures_from(source)
+        if not isinstance(source, CodeOperation):
+            return
+        self.max_control_flow_depth = source.max_control_flow_depth
+        self.has_bare_catch = source.has_bare_catch
+        self.swallows_exceptions = source.swallows_exceptions
+        self.unreadable_read_as_empty = source.unreadable_read_as_empty
+        self.unnamed_literal_numbers = list(source.unnamed_literal_numbers)
 
     def _own_objects(self) -> frozenset[str]:
         """The names its body holds an object of its own class by, since privacy is per class: the class itself, each

@@ -14,7 +14,7 @@ _CART = (
     "        self.lines = Lines()\n"
     "\n"
     "    def total(self) -> int:\n"
-    "        return 1\n"
+    "        return 42\n"
 )
 
 _ORDER_MODEL = (
@@ -33,6 +33,9 @@ _ORDER_MODEL = (
 
 # The measures a class read from code keeps, which a class read from a markdown model document has none of.
 _CODE_MEASURES = {"method_count", "operation_shapes", "property_names", "constructs", "prose_comment", "prototype_swap"}
+
+# The measures an operation read from code takes of its body, which an operation read from a markdown model has none of.
+_BODY_MEASURES = {"max_control_flow_depth", "has_bare_catch", "swallows_exceptions", "unreadable_read_as_empty", "unnamed_literal_numbers"}
 
 
 def _loaded_code_class():
@@ -66,6 +69,15 @@ with description("a class's source facts"):
             with it("should save its measures with the graph"):
                 expect(_CODE_MEASURES - set(type(self.cart).graph_facts)).to(equal(set()))
 
+            with it("should measure the body of each of its operations"):
+                expect(self.cart.operations[1].max_control_flow_depth).to(equal(0))
+
+            with it("should keep the body measures of an operation it copies"):
+                expect(self.cart.operations[1].clone().unnamed_literal_numbers).to(equal(["42"]))
+
+            with it("should save the body measures of its operations with the graph"):
+                expect(_BODY_MEASURES - set(type(self.cart.operations[1]).graph_facts)).to(equal(set()))
+
     with context("with a class read from a markdown model document"):
         with before.all:
             self.order = _loaded_model_class()
@@ -75,6 +87,12 @@ with description("a class's source facts"):
 
         with it("should have none of the measures of a class read from code"):
             expect(sorted(name for name in _CODE_MEASURES if hasattr(self.order, name))).to(equal([]))
+
+        with it("should have no body measures on its operations"):
+            expect(sorted(name for name in _BODY_MEASURES if hasattr(self.order.operations[0], name))).to(equal([]))
+
+        with it("should save no body measures of its operations with the graph"):
+            expect(sorted(_BODY_MEASURES & set(type(self.order.operations[0]).graph_facts))).to(equal([]))
 
         with it("should keep the line, counted in its card, of each bold Interaction bullet the card writes"):
             expect(self.order.bold_interaction_lines).to(equal([3]))
