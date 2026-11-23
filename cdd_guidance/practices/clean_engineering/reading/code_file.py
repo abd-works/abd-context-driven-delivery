@@ -1358,25 +1358,63 @@ class _ChainWalk:
     def run(self) -> "tuple[Typed | None, str, str]":
         """What the chain is, how the code reaches it, and, when the read cannot tell its class, why."""
         if self._guessed():
-            self._span.guess(self._steps, self._value, self._found, self._cause)
-            return None, self._reach, self._cause
+            guessed = self._span.guess(self._steps, self._value, self._found, self._cause)
+            if not self._go_on_from(guessed):
+                return None, self._reach, self._cause
+            return self._walk_guessed()
         value = self._value
         if self._found is not None and value is not None and value.of is not None and self._reach in _CREATED:
             self._found.reach_class(value.of, self._reach)
+        return self._walk()
+
+    def _walk(self) -> "tuple[Typed | None, str, str]":
+        """Take each step left; what the chain is at its end, how the code reaches it, and why its class is unknown."""
         while self._at < len(self._steps):
             if not self._take(self._steps[self._at]):
                 return None, self._reach, self._cause
         return self._value, self._reach, self._cause
 
+    def _walk_guessed(self) -> "tuple[Typed | None, str, str]":
+        """Take each step left after a guessed first member: each member reached is joined by that guess too, and no
+        class is kept as reached, since the code never says which class the chain runs through."""
+        found = self._found
+        if found is None:
+            return self._walk()
+        members, classes = len(found.members), len(found.classes)
+        walked = self._walk()
+        found.guessed.extend(found.members[members:])
+        del found.classes[classes:]
+        return walked
+
     def _guessed(self) -> bool:
         """Whether the chain opens with a local of no known class, or of a class that neither declares nor inherits the
         member it names, such as one a decorator gives its members: it reaches the one member of that name the file's
-        reach declares."""
+        reach declares. A chain of three or more parts on a local of a known class goes on through that class."""
         steps, value = self._steps, self._value
         opens = self._at == 0 and _is_local_name(self._head) and bool(steps) and steps[0].kind == "member"
-        if not opens or (len(steps) > 1 and steps[1].kind == "member"):
+        if not opens:
             return False
-        return value is None or self._lacks_member(value, steps[0].text)
+        if value is None:
+            return True
+        return not (len(steps) > 1 and steps[1].kind == "member") and self._lacks_member(value, steps[0].text)
+
+    def _go_on_from(self, guessed: "Node | None") -> bool:
+        """Go on along a chain of three or more parts from the member its first name was guessed to reach, as what
+        that member answers or holds, `fixture.board.column("Backlog").cards`; whether any step is left to take."""
+        steps = self._steps
+        holder = self._span.index.class_declaring(guessed) if guessed is not None else None
+        if holder is None:
+            return False
+        name, calls = steps[0].text, len(steps) > 1 and steps[1].kind == "call"
+        self._at = 2 if calls else 1
+        if self._at >= len(steps):
+            return False
+        answer = self._members.answer_of(Typed(holder), name, guessed, calls)
+        if answer is None:
+            self._cause = self._unjoined.of_member([holder, *self._members.bases_of(holder)], name, guessed, calls)
+        self._value = self._members.as_receiver(answer, holder, guessed)
+        self._reach = _reach_after(self._reach, steps[1].text if calls else None)
+        return True
 
     def _lacks_member(self, value: Typed, name: str) -> bool:
         """Whether value is of one class that neither declares nor inherits the member called name; a value that may
@@ -1512,19 +1550,20 @@ class _SpanCalls:
         """Whether a step reaches member: a call reaches an operation, and a read a property or the getter that reads it."""
         return called or member.type == "Property" or self.file.getter_of(member) is member
 
-    def guess(self, steps: list, value: "Typed | None", found: SpanReach | None, cause: str) -> None:
+    def guess(self, steps: list, value: "Typed | None", found: SpanReach | None, cause: str) -> "Node | None":
         """The one member of the step's name the file's reach declares, for a receiver of no known class, joined by a
-        guess; a call of a name more than one class declares, on a receiver of no known class, is counted under cause
-        as a call the read cannot join."""
-        if found is None:
-            return
+        guess, and answered so a longer chain goes on from it; a call of a name more than one class declares, on a
+        receiver of no known class, is counted under cause as a call the read cannot join."""
         called = len(steps) > 1 and steps[1].kind == "call"
         only = self.file.only_member_named(steps[0].text, called)
+        if found is None:
+            return only
         if only is not None:
             found.members.append(only)
             found.guessed.append(only)
         elif value is None and called:
             self.unjoined.count(found.unresolved_calls, steps[0].text, cause)
+        return only
 
     def _reach_through_receivers(self, found: SpanReach) -> None:
         """Each member a chain reaches: every member it names after its first name is a member of what the part before

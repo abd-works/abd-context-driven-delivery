@@ -1,0 +1,33 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-23T20:47:29.468147+00:00",
+  "prompts": [
+    {
+      "id": "5bd8d755b7c7",
+      "text": "[interruption] explaikn",
+      "steps": [
+        {
+          "text": "Render the model diagrams again from their markdown",
+          "state": "in_progress"
+        },
+        {
+          "text": "Validate clean-engineering-model and code again",
+          "state": "pending"
+        },
+        {
+          "text": "Compare with the 388 hits and report",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] ys",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] Yes, go on",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    }
+  ]
+}

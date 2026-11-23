@@ -255,6 +255,16 @@ with description("a file of the code read"):
         with it("should reach the one member of that name its reach declares"):
             expect(self.called("basket = _Basket()\nbasket.wrap()")).to(equal(["GiftCart.wrap"]))
 
+    with context("whose span follows a chain of three or more parts from a local of no known class"):
+        with it("should reach the member one class declares, then follow the chain through what it holds"):
+            expect(self.called("cart.till.open()")).to(equal(["Cart.till", "Till.open"]))
+
+        with it("should follow the chain through what that member answers when called"):
+            expect(self.called("cart.emptied().till.open()")).to(equal(["Cart.emptied", "Cart.till", "Till.open"]))
+
+        with it("should reach nothing when two classes declare the member the chain opens with"):
+            expect(self.called("cart.add('a').quantity")).to(equal([]))
+
     with context("whose span builds a class through the module it imports"):
         with it("should invoke the constructor and reach the class's member"):
             module_file = self.index.file("shop/cart_spec.py", [ClassReference("shop/cart", "Cart")])
