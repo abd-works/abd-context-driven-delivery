@@ -1,3 +1,5 @@
 **/progress-cache.json
 **/session.json.lock
 **/session.json.*.tmp
+**/*.tmp
+**/*.lock
