@@ -10,7 +10,7 @@ from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUC
 from cdd_guidance.practices.clean_engineering.reading.call_arguments import CallArguments
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import record_fact
 from cdd_guidance.practices.clean_engineering.reading.operation_facts import code_operations, qualified_name
-from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
+from cdd_guidance.practices.clean_engineering.measures.read_facts import parameters_of
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes

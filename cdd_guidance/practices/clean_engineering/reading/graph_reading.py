@@ -30,7 +30,8 @@ from cdd_guidance.practices.clean_engineering.reading.call_links import CallLink
 from cdd_guidance.practices.clean_engineering.reading.statement_links import StatementLinks
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.reading.code_file import CREATED_IN_THE_CONSTRUCTOR, CREATED_ON_EACH_CALL, CodeFile, CodeSpan, MemberAnswers
-from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT, PRODUCTION_FACT, CodeRead
+from cdd_guidance.practices.clean_engineering.reading.code_read import PRODUCTION_FACT, CodeRead
+from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.reading.compared_facts import ComparedFacts
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines

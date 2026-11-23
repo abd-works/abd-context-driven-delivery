@@ -20,7 +20,7 @@ import ast
 from typing import TYPE_CHECKING, Callable, Iterator
 
 from cdd_guidance.practices.source_code import CodeLanguage
-from harness.guidance.practice_formats import KeptMark, OutlinedMember, Reshaped
+from harness.guidance.practice_formats import KEPT_MARK, OutlinedMember, Reshaped, lead_of
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.bdd.model.code_spec_model import DescribeCall, DescribeCalls
@@ -65,7 +65,7 @@ class SpecOutline:
         return {block.path: block for root in self.roots for block in root.every()}
 
     def _lead_of(self, first: int, indent: str) -> int:
-        return OutlinedMember.lead_of(self.lines, first, indent, (self._comment,))
+        return lead_of(self.lines, first, indent, (self._comment,))
 
     def _indent_of(self, line: int) -> str:
         written = self.lines[line]
@@ -161,8 +161,8 @@ class SpecReshape:
         return ["", *(f"{indent}{line[len(block.indent):]}" if line.strip() else line for line in written)]
 
     def _is_marked(self, file: SpecOutline, block: SpecBlock) -> bool:
-        return KeptMark.marks(file.lines[block.lead:block.start])
+        return KEPT_MARK.marks(file.lines[block.lead:block.start])
 
     def _marking(self, block: SpecBlock) -> str:
-        said = KeptMark.line_for(block.name, "Move what it proves into the block that replaced it, then delete it.")
+        said = KEPT_MARK.line_for(block.name, "Move what it proves into the block that replaced it, then delete it.")
         return f"{block.indent}{self._language.comment(said)}"

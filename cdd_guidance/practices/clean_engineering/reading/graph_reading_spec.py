@@ -11,7 +11,7 @@ from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import r
 from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryMap
 from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import WhiteboardCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module
-from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
+from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT
 
 _CART = (
     "class Cart:\n"

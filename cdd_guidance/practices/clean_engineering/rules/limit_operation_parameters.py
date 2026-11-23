@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.reading.production_classes import counted_parameters, parameters_of
+from cdd_guidance.practices.clean_engineering.measures.read_facts import counted_parameters, parameters_of
 from cdd_guidance.practices.clean_engineering.measures import code_measures
 from cdd_guidance.practices.clean_engineering.rules.operation_checks import (
     OperationMeasureRule,

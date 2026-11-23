@@ -8,7 +8,7 @@ from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
 
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
-from cdd_guidance.practices.clean_engineering.rules import rule_numbers
+import cdd_guidance.practices.clean_engineering.rules.rule_numbers as rule_numbers
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:

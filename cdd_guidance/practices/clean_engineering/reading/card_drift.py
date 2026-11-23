@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import ModuleImports, folders_of, is_under, record_fact
+from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT, IMPORTED_MODULES_FACT, is_under
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of, record_fact
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes
@@ -82,7 +82,7 @@ class CardDrift:
         return [[IMPORT_NOT_ON_CARD, other] for other in self._imported(module) if covered and not self._covers(covered, other)]
 
     def _imported(self, module: "Node") -> list[str]:
-        return list(module.get_fact(ModuleImports.IMPORTED) or [])
+        return list(module.get_fact(IMPORTED_MODULES_FACT) or [])
 
     def _named_folders(self, module: "Node") -> list[tuple[str, list[str]]]:
         """Each folder a card's dependency names, with the folders of the code it stands for: a path from the source

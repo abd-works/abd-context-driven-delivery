@@ -525,13 +525,7 @@ class MarkdownStoryMap(StoryMap):
         reading = ScenarioFileReading(text, file or "story-scenarios.md", MarkdownScenario)
         reading.read()
         story_map = MarkdownStoryMap()
-        level, name = reading.tree_heading.said if reading.tree_heading is not None else ("sub-epic", "Scenarios")
-        epic = MarkdownEpic(name if level.lower() == "epic" else "Stories", 1)
-        holder = epic if level.lower() == "epic" else MarkdownEpic(name, 1)
-        read_at(epic, file, reading.tree_heading_line)
-        read_at(holder, file, reading.tree_heading_line)
-        if reading.document_examples is not None:
-            holder.examples = reading.document_examples.clone(holder)
+        epic, holder = self._scenario_document_epics(reading, file)
         for line in reading.document_lines:
             self._take_section(line, holder, file)
         if not holder.stories:
@@ -543,6 +537,19 @@ class MarkdownStoryMap(StoryMap):
             reading.tree_heading.node = holder
         story_map.scenario_document = ReadScenarioDocument(reading.document_lines, holder, reading.tree_heading, MarkdownStory)
         return story_map
+
+    def _scenario_document_epics(self, reading: ScenarioFileReading, file: str) -> tuple["MarkdownEpic", "MarkdownEpic"]:
+        """The epic a scenarios document sits under and the epic that holds its stories, both read at the document's
+        tree heading: one epic when the heading names an epic, else a Stories epic holding the sub-epic the heading
+        names. The holder takes the document's examples."""
+        level, name = reading.tree_heading.said if reading.tree_heading is not None else ("sub-epic", "Scenarios")
+        epic = MarkdownEpic(name if level.lower() == "epic" else "Stories", 1)
+        holder = epic if level.lower() == "epic" else MarkdownEpic(name, 1)
+        read_at(epic, file, reading.tree_heading_line)
+        read_at(holder, file, reading.tree_heading_line)
+        if reading.document_examples is not None:
+            holder.examples = reading.document_examples.clone(holder)
+        return epic, holder
 
     def _take_section(self, line: ReadLine, holder: MarkdownEpic, file: str) -> None:
         """A story section of a scenarios document becomes a story on holder, which the document then holds in its

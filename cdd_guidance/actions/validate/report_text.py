@@ -115,14 +115,7 @@ class ReportText:
         candidates = [violation for violation in found if violation.is_candidate]
         accepted = self._checked.accepted()
         unread = self._checked.unread
-        lines = ["## Summary", ""]
-        if not self._checked.files:
-            lines.append("**No graph checked.** The judgment covers the checked files.")
-        elif violations:
-            lines.append(f"**Total graph violations:** {len(violations)}")
-            lines.append(f"**Rules with graph hits:** {len(Violation.by_rule(violations))}")
-        elif len(unread) < len(self._checked.edited) or not unread:
-            lines.append("**No graph rule violations.** All scanned graph rules passed.")
+        lines = ["## Summary", "", *self._graph_result_lines(violations, unread)]
         if candidates:
             lines.append(f"**Candidates for the judge to read:** {len(candidates)}. A rule that requires a judge listed each; none is a violation until the judge reads it and fails it.")
         if accepted:
@@ -131,6 +124,17 @@ class ReportText:
             lines.append(self._unread_line(unread))
         lines.extend([f"**AI rules in scope:** {len(self._rules_in_scope())}", ""])
         return lines
+
+    def _graph_result_lines(self, violations: list[Violation], unread: list[str]) -> list[str]:
+        """What the graph rules found: that no graph was checked, how many violations across how many rules, or that
+        every rule passed; nothing when the graph read no node from any named path, which the unread line says."""
+        if not self._checked.files:
+            return ["**No graph checked.** The judgment covers the checked files."]
+        if violations:
+            return [f"**Total graph violations:** {len(violations)}", f"**Rules with graph hits:** {len(Violation.by_rule(violations))}"]
+        if len(unread) < len(self._checked.edited) or not unread:
+            return ["**No graph rule violations.** All scanned graph rules passed."]
+        return []
 
     def _accepted_line(self, accepted: list[Violation]) -> str:
         """That the report leaves out the violations a person accepted, how many, and the file that keeps them, so a

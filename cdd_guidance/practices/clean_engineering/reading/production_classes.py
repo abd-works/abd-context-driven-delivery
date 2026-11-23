@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Callable, Iterator
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
-from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
+from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT
 from cdd_guidance.practices.source_code import ProjectTestCode
 
 if TYPE_CHECKING:
@@ -227,24 +227,6 @@ def _is_production(node: "Node", test_code: "ProjectTestCode") -> bool:
 def _declares_value(node: "Node") -> bool:
     stereotypes = {str(item).lower() for item in node.get_fact("stereotypes", []) or []}
     return "value object" in stereotypes
-
-
-def parameters_of(operation: "Node") -> list["Node"]:
-    """The parameters an operation takes, in the order it declares them: the nodes its hasParameter edges lead to, which
-    a graph read back from its saved file keeps too."""
-    return [edge.child for edge in operation.graph.edges.from_parent("hasParameter", operation)]
-
-
-# The parameter a method takes for its own object, which is no parameter a caller supplies.
-_PARAMETER_NAMES_EXCLUDED_FROM_COUNT = frozenset({"self", "cls"})
-
-
-def counted_parameters(names: list[str], packed: dict[str, int] | None = None) -> int:
-    """Each named parameter counts once, except a packed tuple or ``*args``, which counts each value it carries."""
-    packed = packed or {}
-    named = [name for name in names if name not in _PARAMETER_NAMES_EXCLUDED_FROM_COUNT]
-    unnamed = [values for name, values in packed.items() if name not in named]
-    return sum(packed.get(name, 1) for name in named) + sum(unnamed)
 
 
 def names_in(type_hint: str) -> set[str]:

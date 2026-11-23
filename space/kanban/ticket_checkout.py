@@ -46,11 +46,6 @@ class Leaving:
             raise UnknownLeavingStepError(unknown)
         self._steps = frozenset(steps)
 
-    @classmethod
-    def freeing_worktree(cls) -> Leaving:
-        """Leaving that deletes the ticket's own worktree alone, as archiving or deleting a ticket does."""
-        return cls([LEAVE_DELETE_WORKTREE])
-
     @property
     def writes_handoff(self) -> bool:
         return LEAVE_HANDOFF in self._steps
@@ -237,7 +232,7 @@ class TicketCheckout:
         reaches. A worktree a running program holds open stops it before the ticket changes."""
         own = self._own_branch
         if own is not None:
-            self._delete_worktree(own, Leaving.freeing_worktree())
+            self._delete_worktree(own, Leaving([LEAVE_DELETE_WORKTREE]))
 
     def _worktree_to_delete(self, branch: Branch, leaving: Leaving) -> Repo | None:
         """The branch's own worktree when leaving names delete_worktree or delete_branch: git deletes no branch a

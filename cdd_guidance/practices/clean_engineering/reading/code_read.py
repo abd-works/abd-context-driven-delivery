@@ -22,6 +22,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
+from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
 from cdd_guidance.practices.source_code import ScriptImports, imported_files
 
@@ -39,9 +40,6 @@ PRODUCTION_FACT = "holds_production_code"
 CARD_FACT = "described_in"
 # The fidelities a class is read at, by name: model while none of its operations has a body, code once one has.
 MODEL_FIDELITY, CODE_FIDELITY = "model", "code"
-# The fact a class keeps when a model document describes it: the design, read from the
-# document, standing in for code not written yet.
-DESCRIBED_FACT = "described_by_model_document"
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
 # A run of the characters a class name is spelled with: a type hint names a class when the class's name is one whole run.
 _HINT_WORD = re.compile(r"[A-Za-z0-9_]+")

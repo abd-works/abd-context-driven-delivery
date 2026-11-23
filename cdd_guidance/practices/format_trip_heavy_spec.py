@@ -31,7 +31,7 @@ def _trips_of(practice: str, fidelity: str) -> dict:
         _TRIPS.update({made.key: {} for made in PRACTICE_CATALOGUE.create_all()})
         _TRIPS["made"] = {made.key: made for made in PRACTICE_CATALOGUE.create_all()}
     if fidelity not in _TRIPS[practice]:
-        _TRIPS[practice][fidelity] = FormatTrip.outcomes_of(_TRIPS["made"][practice].fidelities[fidelity])
+        _TRIPS[practice][fidelity] = FormatTrip.of(_TRIPS["made"][practice].fidelities[fidelity]).through_each()
     return _TRIPS[practice][fidelity]
 
 

@@ -18,7 +18,7 @@ from cdd_guidance.practices.clean_engineering.reading.code_file import (
     CodeSpan,
     SpanReach,
 )
-from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
+from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
 
 if TYPE_CHECKING:
@@ -131,10 +131,7 @@ def _header_end(text: str) -> int:
     opens a script class's body."""
     depth = 0
     for position, character in enumerate(text):
-        if character in "([":
-            depth += 1
-        elif character in ")]":
-            depth -= 1
-        elif depth == 0 and character in ":{":
+        if depth == 0 and character in ":{":
             return position + 1
+        depth += (character in "([") - (character in ")]")
     return len(text)

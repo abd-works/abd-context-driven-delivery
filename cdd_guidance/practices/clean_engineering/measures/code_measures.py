@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Callable, Mapping
 from harness.installation.context_config import ContextConfig
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.clean_engineering.reading.production_classes import counted_parameters, parameters_of
+from cdd_guidance.practices.clean_engineering.measures.read_facts import MODULE_IMPORT_LOOPS_FACT, IMPORTED_MODULES_FACT, counted_parameters, parameters_of
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -114,8 +114,8 @@ UNSHARED_METHOD_GROUPS = CodeMeasure(
 )
 # A module's imports are those of its whole folder, the packages inside it included, to other modules
 # (``reading/folder_facts.py``, ``ModuleImports``), which every read keeps.
-IMPORT_LOOPS = CodeMeasure("import_loops", "loops of modules importing one another that a module is part of", "{value} import loops", MODULE, existing="module_import_loops", counted=True)
-MODULES_IMPORTED = CodeMeasure("modules_imported", "modules a module imports (outgoing coupling)", "{value} modules it imports", MODULE, existing="imported_modules", counted=True)
+IMPORT_LOOPS = CodeMeasure("import_loops", "loops of modules importing one another that a module is part of", "{value} import loops", MODULE, existing=MODULE_IMPORT_LOOPS_FACT, counted=True)
+MODULES_IMPORTED = CodeMeasure("modules_imported", "modules a module imports (outgoing coupling)", "{value} modules it imports", MODULE, existing=IMPORTED_MODULES_FACT, counted=True)
 MODULES_IMPORTING = CodeMeasure("modules_importing", "modules that import a module (incoming coupling)", "{value} modules that import it", MODULE)
 COPIED_CODE_BLOCKS = CodeMeasure("copied_code_blocks", "blocks of code a module repeats from another file", "{value} blocks of code repeated from another file", MODULE)
 ABSTRACTNESS = CodeMeasure("abstractness", "share of a module's classes that are abstract (abstractness, 0 to 1)", "{value} of its classes abstract", MODULE)

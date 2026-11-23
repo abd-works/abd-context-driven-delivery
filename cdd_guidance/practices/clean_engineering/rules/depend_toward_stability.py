@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
 
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import ModuleImports
+from cdd_guidance.practices.clean_engineering.measures.read_facts import IMPORTED_MODULES_FACT
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -39,7 +39,7 @@ class DependTowardStability(PracticeGraphRule):
         ]
 
     def _imported(self, module: "Node") -> list[str]:
-        return list(module.get_fact(ModuleImports.IMPORTED) or []) if module.has_fact(ModuleImports.IMPORTED) else []
+        return list(module.get_fact(IMPORTED_MODULES_FACT) or []) if module.has_fact(IMPORTED_MODULES_FACT) else []
 
     def _importers(self, modules: dict[str, "Node"]) -> dict[str, int]:
         """How many modules import each module."""

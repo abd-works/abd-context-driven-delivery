@@ -42,10 +42,8 @@ class Generate(GuidanceAction):
         earlier = self._earlier_renders()
         instructions(earlier)
         self.run(self._generate_item, action="generate")
-        places = self._where_outputs_go()
-        instructions(places)
-        test_tiers = self._supplement_records()
-        instructions(test_tiers)
+        places_and_records = self._places_and_records()
+        instructions(places_and_records)
         if self._writes_whiteboard():
             tools(self._render().publish_board)
             tools(self._render().record_board)
@@ -118,6 +116,10 @@ class Generate(GuidanceAction):
         # The supplements' process opens the reply once, so each fidelity gives only its own words here.
         text = worked.own_instructions if isinstance(worked, FidelityGuidance) else worked.instructions
         return "\n\n".join(part.strip() for part in (text, worked.generate_output()) if part and part.strip())
+
+    def _places_and_records(self) -> str:
+        """Where each format written is saved, then what the supplements keep in the session as its files are written."""
+        return "\n\n".join(part for part in (self._where_outputs_go(), self._supplement_records()) if part)
 
     def _where_outputs_go(self) -> str:
         outputs = [fidelity.session_output.written.output_paths() for fidelity in self._listed_fidelities]

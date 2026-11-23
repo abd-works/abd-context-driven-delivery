@@ -156,7 +156,7 @@ class ChatOpener:
             subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", link], check=True, timeout=OPEN_LINK_SECONDS)
 
     @staticmethod
-    def of_run() -> ChatOpener:
+    def from_environment() -> ChatOpener:
         """What a new chat's link is handed to: the system's, unless the run names a file to keep the links in."""
         kept = os.environ.get(OPENED_CHATS_VARIABLE)
         return RecordedChatOpener(Path(kept)) if kept else ChatOpener()
@@ -245,7 +245,7 @@ class Chats:
     def load(cls, call: ToolCall | None = None) -> Chats:
         """The chats in the folder every process reads, opening new ones through the run's opener beside the chat call
         came from."""
-        return cls(CHATS_FOLDER.path, ChatOpener.of_run(), call.chat_id if call is not None else "")
+        return cls(CHATS_FOLDER.path, ChatOpener.from_environment(), call.chat_id if call is not None else "")
 
     def new_chat(self, folder: str, prompt: str) -> NewChat:
         """A new chat on folder with prompt filled in, opened from the chat that asked, when one did."""

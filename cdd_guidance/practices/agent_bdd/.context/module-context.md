@@ -5,7 +5,9 @@ The spec helpers in `spec_helpers.py` — `repo_root_from`, `sessions_dir`, `exp
 
 - **Purpose:** Test agent behaviour end to end against a real agent, so a spec fails when the agent would actually do the wrong thing.
 - **Seam (terms):** AgentBdd, `agent`, AgentBlock, `instruct`, `instruct_use_tool`, `run_toolset`, ToolsetRequest, `ai_judge`, AgentResult, RunResponse, `agent-bdd.instructions`
-- **Dependencies (one-way):** `cdd_guidance/practices/bdd` (*Bdd*), `cdd_guidance/actions` (*Generate*), `harness/guidance` (*PracticeGuidance*), `harness/agent_tools`, `harness/installation`, `harness/installation` (*Installer*, which the spec support installs a throwaway project with), `harness/mcp` (spec server), `space/session` (*Sessions*, the session an agent run works in). This practice is the one part of cdd_guidance that imports space; space imports actions, not this practice, so no module cycle follows.
+- **Dependencies (one-way):** `cdd_guidance/practices/bdd` (*Bdd*, whose test discipline the practice builds on), `harness/guidance` (*PracticeGuidance*), `harness/agent_tools` (`@agent_toolset`, `@agent_instructions`).
+
+The agent runner behind `agent(...)` (`agent.py`, `agent_bdd_common.py`, `conf.py` and the files beside them) is spec support, which the project's `.context/config.json` names as test code, so its imports are not the practice's dependencies: it reads `harness/installation` (*JsonFile*, and *RepositoryToolsets* for the toolsets a run may call) and `harness/agent_tools` (the toolset a request runs).
 
 ## Constraint
 

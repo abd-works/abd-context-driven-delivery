@@ -128,27 +128,27 @@ class PracticeReading:
 
     def own_graph_checks(self) -> dict[str, PracticeGraphRule]:
         """The graph rules the practice's ``rules`` package lists; a practice that checks more overrides this."""
-        return self.rules_in(f"{self._package}.rules")
-
-    @staticmethod
-    def rules_in(module_path: str) -> dict[str, PracticeGraphRule]:
-        """The graph rules a rules module lists, by slug: its ``BY_SLUG``, else each of its ``RULES``. A module that is
-        not there has none. A pattern's overlay reads its rules modules the same way."""
-        try:
-            module = importlib.import_module(module_path)
-        except ModuleNotFoundError as missing:
-            if missing.name and module_path.startswith(missing.name):
-                return {}
-            raise
-        by_slug = getattr(module, "BY_SLUG", None)
-        if isinstance(by_slug, dict):
-            return dict(by_slug)
-        return {rule.slug: rule for rule in getattr(module, "RULES", ()) if getattr(rule, "slug", "")}
+        return rules_in(f"{self._package}.rules")
 
     def checks(self) -> dict[str, PracticeGraphRule]:
         """The graph rules this practice checks, with those the pattern overlays its graph applies add to it, by slug;
         its own alone for a practice no graph holds."""
         return self.in_graph.rule_run.checks if self.in_graph is not None else dict(self.graph_checks)
+
+
+def rules_in(module_path: str) -> dict[str, PracticeGraphRule]:
+    """The graph rules a rules module lists, by slug: its ``BY_SLUG``, else each of its ``RULES``. A module that is not
+    there has none. A practice reads its own rules package this way, and a pattern's overlay its rules modules."""
+    try:
+        module = importlib.import_module(module_path)
+    except ModuleNotFoundError as missing:
+        if missing.name and module_path.startswith(missing.name):
+            return {}
+        raise
+    by_slug = getattr(module, "BY_SLUG", None)
+    if isinstance(by_slug, dict):
+        return dict(by_slug)
+    return {rule.slug: rule for rule in getattr(module, "RULES", ()) if getattr(rule, "slug", "")}
 
 
 # A practice that names no reading of its own takes part in the graph with this one. harness/guidance sits below this

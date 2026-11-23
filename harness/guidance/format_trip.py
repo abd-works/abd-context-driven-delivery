@@ -99,79 +99,85 @@ class FidelityExample:
         return max(dict.fromkeys(code), key=code.count) if code else self._default_format
 
 
+FORMAT_FAILURES = (ValueError, LookupError, SyntaxError, NotImplementedError)
+"""What a format raises when it cannot write or read back the content it is handed: a value it cannot hold or parse, a
+name or key it cannot find, source it cannot parse, or a direction it does not go. A trip reports these as the format's
+outcome; any other failure is a bug in the trip or the adapter, and is raised."""
+
+
 class FormatTrip:
     """One fidelity's example, written in one of its formats, taken to its other formats and back. The example is
-    text, or the files of a code format by their paths."""
+    text, or the files of a code format by their paths; a fidelity that names no example has none, and each of its
+    formats comes to the outcome saying so."""
 
-    def __init__(self, fidelity: FidelityGuidance, example: str | dict[str, str], written_in: str) -> None:
+    def __init__(self, fidelity: FidelityGuidance, example: str | dict[str, str] | None, written_in: str) -> None:
         self._fidelity = fidelity
         self._example = example
         self._written_in = Format(written_in)
 
     @classmethod
-    def of(cls, fidelity: FidelityGuidance) -> FormatTrip | None:
-        """The trip of the example fidelity names; none for a fidelity that names no example."""
+    def of(cls, fidelity: FidelityGuidance) -> FormatTrip:
+        """The trip of the example fidelity names; one with no example for a fidelity that names none."""
         if not fidelity.example:
-            return None
+            return cls(fidelity, None, "")
         example = FidelityExample(fidelity.module_dir, fidelity.example, fidelity.default_format)
-        return cls(fidelity, example.content, str(cls._declared_for(fidelity, example.path) or example.written_in))
+        return cls(fidelity, example.content, str(_declared_for(fidelity, example.path) or example.written_in))
 
-    @staticmethod
-    def _declared_for(fidelity: FidelityGuidance, file: Path) -> Format | None:
-        """The format fidelity declares files of this file's ending in, so a view in ``.tsx`` is TypeScript; none for
-        a folder, an ending that names one of the practice's formats itself, or an ending no declared file has."""
-        if not file.is_file() or Format.from_extension(file.suffix) in fidelity.practice_guidance.formats:
-            return None
-        declared = fidelity.declared
-        named = (output for output in declared.outputs if any(str(path).endswith(file.suffix) for path in declared.paths_in(output)))
-        return next((Format(output) for output in named if Format(output).is_offered), None)
-
-    @classmethod
-    def outcomes_of(cls, fidelity: FidelityGuidance) -> dict[str, TripOutcome]:
-        """What each format fidelity declares came to; for a fidelity that names no example, each declared format
-        with the outcome saying so, since a format nobody took there and back is not known to hold anything."""
-        trip = cls.of(fidelity)
-        if trip is not None:
-            return trip.through_each()
-        return {str(format): TripOutcome(NO_EXAMPLE) for format in cls._offered_in(fidelity)}
-
-    @staticmethod
-    def _offered_in(fidelity: FidelityGuidance) -> list[Format]:
-        """The formats fidelity declares in its outputs. An output named for what it holds, such as the story map's
+    @property
+    def _offered(self) -> list[Format]:
+        """The formats the fidelity declares in its outputs. An output named for what it holds, such as the story map's
         ``thin_slice``, is left out: its files are written in formats the fidelity declares beside it."""
+        fidelity = self._fidelity
         return [Format(output) for output in fidelity.declared.outputs if Format(output).is_offered or output in fidelity.practice_guidance.formats]
 
     def through_each(self) -> dict[str, TripOutcome]:
-        """The outcome of the trip through each format its fidelity declares, but the one the example is written in."""
-        return {str(format): self.through(str(format)) for format in self._offered_in(self._fidelity) if format != self._written_in}
+        """The outcome of the trip through each format its fidelity declares, but the one the example is written in;
+        with no example, each declared format with the outcome saying so, since a format nobody took there and back is
+        not known to hold anything."""
+        if self._example is None:
+            return {str(format): TripOutcome(NO_EXAMPLE) for format in self._offered}
+        return {str(format): self.through(str(format)) for format in self._offered if format != self._written_in}
 
     def through(self, format: str) -> TripOutcome:
         """The outcome of taking the example to format and back. What comes back is compared with the example as its
         own format writes it, so the spelling that format chooses, such as its quotes, is not counted as lost. A format
-        nothing reads back, which refuses the read with ``NotImplementedError``, holds none of the example."""
+        nothing reads back, which refuses the read with ``NotImplementedError``, holds none of the example. A format
+        that cannot write or read the example (one of ``FORMAT_FAILURES``) fails on the way; any other failure raises."""
+        if self._example is None:
+            return TripOutcome(NO_EXAMPLE)
         leaves_out = str(self._fidelity.leaves_out.get(str(Format(format)), "") or "")
         said = NOT_HELD_BY_THIS_FORMAT if leaves_out else HOLDS_LESS_UNSAID
         try:
-            went_in = ExistingText(self._text_of(self._rendered(self._written_in, self._example, self._written_in)))
+            went_in = ExistingText(_text_of(self._rendered(self._written_in, self._example, self._written_in)))
             there = self._rendered(Format(format), self._example, self._written_in)
-        except Exception as failure:  # noqa: BLE001 - whatever a format raises on the way is the outcome reported
+        except FORMAT_FAILURES as failure:
             return TripOutcome(FAILS_ON_THE_WAY, leaves_out=leaves_out, refused=f"{type(failure).__name__}: {failure}")
         if not went_in.lines_not_in(""):
             # An example its own format reads as nothing would pass every trip, having nothing to lose.
             return TripOutcome(FAILS_ON_THE_WAY, leaves_out=leaves_out, refused=f"{self._written_in} reads nothing from the example")
         try:
-            back =self._rendered(self._written_in, there, Format(format))
+            back = self._rendered(self._written_in, there, Format(format))
         except NotImplementedError as never_read:
             return TripOutcome(said, tuple(went_in.lines_not_in("")), leaves_out, f"{type(never_read).__name__}: {never_read}")
-        except Exception as failure:  # noqa: BLE001 - as above
+        except FORMAT_FAILURES as failure:
             return TripOutcome(FAILS_ON_THE_WAY, leaves_out=leaves_out, refused=f"{type(failure).__name__}: {failure}")
-        lost = went_in.lines_not_in(self._text_of(back))
+        lost = went_in.lines_not_in(_text_of(back))
         return TripOutcome(said if lost else RETURNS_WHAT_WENT_IN, tuple(lost), leaves_out)
 
     def _rendered(self, format: Format, content: Any, source: Format) -> Any:
         return RenderRequest(format, content, source, fidelity=self._fidelity).render().content
 
-    @staticmethod
-    def _text_of(content: Any) -> str:
-        """content as one text; a format written as several files is read as their texts one after another."""
-        return "\n".join(str(part) for part in content.values()) if isinstance(content, dict) else str(content)
+
+def _declared_for(fidelity: FidelityGuidance, file: Path) -> Format | None:
+    """The format fidelity declares files of this file's ending in, so a view in ``.tsx`` is TypeScript; none for a
+    folder, an ending that names one of the practice's formats itself, or an ending no declared file has."""
+    if not file.is_file() or Format.from_extension(file.suffix) in fidelity.practice_guidance.formats:
+        return None
+    declared = fidelity.declared
+    named = (output for output in declared.outputs if any(str(path).endswith(file.suffix) for path in declared.paths_in(output)))
+    return next((Format(output) for output in named if Format(output).is_offered), None)
+
+
+def _text_of(content: Any) -> str:
+    """content as one text; a format written as several files is read as their texts one after another."""
+    return "\n".join(str(part) for part in content.values()) if isinstance(content, dict) else str(content)

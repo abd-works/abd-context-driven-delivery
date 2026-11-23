@@ -3,7 +3,9 @@
 
 - **Purpose:** Keep the graph reading out of DDD's model package, so the model and its formats import nothing that imports them back: the reading imports the markdown format, which imports the model, one way.
 - **Seam (terms):** DddReading
-- **Dependencies (one-way):** `cdd_guidance/practices/ddd/model` and `model/markdown` (the map the reading parses documents into), `cdd_guidance/practices/clean_engineering` (*CleanEngineering*, read first, and its `reading` package's facts), `harness/graph` (*PracticeReading*, nodes, and edges). Nothing in `ddd/model` imports this package; `ddd.py` names *DddReading* as its `reading_type`.
+- **Dependencies (one-way):** `cdd_guidance/practices/ddd` (its `model` package and the markdown format inside it, the map the reading parses documents into, and its rules), `cdd_guidance/practices/clean_engineering` (*CleanEngineering*, read first, and its `reading` package's facts), `cdd_guidance/practices/source_code` (*HoldsProjectTestCode*, which tells test code from production code), `harness/graph` (*PracticeReading*, nodes, and edges), `harness/markdown` (*MarkdownText*), `harness/annotations` (*Name*), `harness/agent_tools` (progress).
+
+The DDD practice (`ddd.py`) names *DddReading* as its `reading_type`, and this package imports the DDD model, so the two modules form a cycle: neither can change or be tested without the other. Nothing in the DDD `model` package imports this package.
 
 ## Constraint
 

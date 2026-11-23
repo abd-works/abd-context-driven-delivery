@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING
 from cdd_guidance.practices.clean_engineering.measures.code_measures import CLASS, FUNCTION, MEASURES, MODULE, ChosenTools, CodeMeasure, MeasureNotTaken
 from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.measures.measuring_tools import MeasuredNode, MeasuringTool, ToolDoesNotTakeMeasure
-from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import is_under
+from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT, is_under
 from cdd_guidance.practices.source_code import CODE_LANGUAGES
 
 if TYPE_CHECKING:

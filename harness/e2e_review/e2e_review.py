@@ -282,21 +282,22 @@ class E2eReview:
     def judge_step(self, run: str, step: str, verdict: str, reason: str) -> E2eRun:
         """The judge's verdict on one step a test ran, with its reason: meets the intent or misses the intent, as its
         screen shows what the step says or not. Judging it again replaces it."""
-        if verdict not in WALK_VERDICTS:
-            raise E2eReviewRefused(f"no judge verdict {verdict!r}: give one of {', '.join(WALK_VERDICTS)}")
-        found = self.run_of(run)
-        self._tool.run("review.ts", "judge", str(found.folder), step, verdict, reason)
-        return found
+        return self._step_verdict("judge", run, verdict, "judge", step, verdict, reason)
 
     @mcp
     @agent_tool
     def record_walked_step(self, run: str, step: str, step_text: str, screenshot: str, verdict: str, reason: str) -> E2eRun:
         """Record one step of a walk by hand: its key, its Given, When or Then text, its screenshot (saved first, relative
         to the run folder), and meets the intent or misses the intent with the reason. Walking it again replaces it."""
+        return self._step_verdict("walk", run, verdict, "walk-step", step, step_text, screenshot, verdict, reason)
+
+    def _step_verdict(self, given_by: str, run: str, verdict: str, command: str, *arguments: str) -> E2eRun:
+        """Write a meets-or-misses verdict on one step of run through review.ts's command, refused when verdict is not
+        one of the walk verdicts; given_by names who gave it (the judge, or a walk by hand) in that refusal."""
         if verdict not in WALK_VERDICTS:
-            raise E2eReviewRefused(f"no walk verdict {verdict!r}: give one of {', '.join(WALK_VERDICTS)}")
+            raise E2eReviewRefused(f"no {given_by} verdict {verdict!r}: give one of {', '.join(WALK_VERDICTS)}")
         found = self.run_of(run)
-        self._tool.run("review.ts", "walk-step", str(found.folder), step, step_text, screenshot, verdict, reason)
+        self._tool.run("review.ts", command, str(found.folder), *arguments)
         return found
 
     @mcp

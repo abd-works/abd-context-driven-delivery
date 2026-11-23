@@ -14,7 +14,7 @@ from mamba import before, description, it
 
 import cdd_guidance.practices  # noqa: F401  (registers the practices)
 from harness.graph.schema_rules import PracticeSchema
-from harness.graph.practice_reading import PracticeReading
+from harness.graph.practice_reading import rules_in
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from cdd_guidance.practices.tdd.tdd import Tdd
 
@@ -24,7 +24,7 @@ def _unlisted(practice) -> list[str]:
     the rule on."""
     listed = PracticeSchema(practice).applicable
     package = type(practice).__module__.rsplit(".", 1)[0]
-    own = PracticeReading.rules_in(f"{package}.rules")
+    own = rules_in(f"{package}.rules")
     return sorted(
         f"{practice.key}: {slug} on {node_type}"
         for slug, rule in own.items()
@@ -80,7 +80,7 @@ def _rule_lines(practice) -> dict[str, str]:
 
 def _own_checks(practice) -> dict:
     package = type(practice).__module__.rsplit(".", 1)[0]
-    return PracticeReading.rules_in(f"{package}.rules")
+    return rules_in(f"{package}.rules")
 
 
 # A rule a program decides is checked; a rule that needs a reading is judged, and its check only lists candidates

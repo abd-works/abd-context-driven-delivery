@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cdd_guidance.practices.clean_engineering.measures.read_facts import IMPORTED_MODULES_FACT, IMPORTING_MODULES_FACT, MODULE_IMPORT_LOOPS_FACT, is_under
 from cdd_guidance.practices.clean_engineering.reading.import_cycles import ImportCycles
 
 if TYPE_CHECKING:
@@ -28,13 +29,6 @@ def own_fact(node: "Node", key: str) -> "FactValue":
     """The fact node itself records, or none: what ``record_fact`` left. A node that records no fact of its own would
     otherwise answer the nearest ancestor's (``Node.get_fact``), so a module would report its parent module's finding."""
     return node.get_fact(key) if node.has_fact(key) else None
-
-
-def is_under(path: str | None, folder: str | None) -> bool:
-    """True for a path at or below folder, both from the source root."""
-    if not path or not folder:
-        return False
-    return path == folder or path.startswith(folder.rstrip("/") + "/")
 
 
 def parent_folder(path: str) -> str:
@@ -86,8 +80,6 @@ class ModuleImports:
     import it (``importing_modules``), and the modules it imports that close a loop of modules (``module_import_loops``:
     the module imported and the loop's size). A package keeps none of them."""
 
-    IMPORTED, IMPORTING, LOOPS = "imported_modules", "importing_modules", "module_import_loops"
-
     def __init__(self, in_graph: "PracticeNodes") -> None:
         self._modules = {module.source.file: module for module in in_graph.nodes("Module") if module.source.file}
         self._folders = folders_of(in_graph)
@@ -108,9 +100,9 @@ class ModuleImports:
         for importer, imported, size in ImportCycles(imports).imports_in_cycles():
             loops[importer].append([self._modules[imported].name, size])
         for path, module in self._modules.items():
-            module.set_fact(self.IMPORTED, sorted(imports[path]))
-            module.set_fact(self.IMPORTING, sorted(importing[path]))
-            module.set_fact(self.LOOPS, loops[path])
+            module.set_fact(IMPORTED_MODULES_FACT, sorted(imports[path]))
+            module.set_fact(IMPORTING_MODULES_FACT, sorted(importing[path]))
+            module.set_fact(MODULE_IMPORT_LOOPS_FACT, loops[path])
 
     def _owner(self, path: str | None) -> str:
         """The path of the module that holds the folder at path: the nearest module at or above it; empty for none."""

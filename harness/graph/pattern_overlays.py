@@ -17,7 +17,7 @@ from harness.annotations.class_folder import class_folder
 from harness.annotations.class_registry import ClassRegistry
 from harness.graph.practice_rule import PracticeGraphRule, SharedPracticeGraphRule
 from harness.graph.schema_conformance import FRAMEWORK_RULES
-from harness.graph.practice_reading import PracticeReading
+from harness.graph.practice_reading import rules_in
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph, Node
@@ -84,14 +84,14 @@ class GraphOverlay:
         is the held pattern's own, the way a practice reads its rules from its own package."""
         if practice.key not in self._rules:
             package = type(self.pattern).__module__.rsplit(".", 1)[0]
-            own = PracticeReading.rules_in(f"{package}.practices.{practice.key}.rules")
+            own = rules_in(f"{package}.practices.{practice.key}.rules")
             self._rules[practice.key] = {**own, **self._shared_rules_for(practice, package)}
         return self._rules[practice.key]
 
     def _shared_rules_for(self, practice: PracticeGuidance, package: str) -> GraphChecks:
         """The rules in its own ``rules`` package it shares across practices, each bound to practice's node types; none
         it does not name practice in."""
-        bound = {slug: rule.for_practice(practice) for slug, rule in PracticeReading.rules_in(f"{package}.rules").items() if isinstance(rule, SharedPracticeGraphRule)}
+        bound = {slug: rule.for_practice(practice) for slug, rule in rules_in(f"{package}.rules").items() if isinstance(rule, SharedPracticeGraphRule)}
         return {slug: rule for slug, rule in bound.items() if rule is not None}
 
 

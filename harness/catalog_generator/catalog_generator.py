@@ -736,8 +736,8 @@ class Catalog:
 
         example_paths={example_paths or 'discover from project tree'}
 
-        Each example lands under one practice and one stage on the approach page.
-        Use the same layout as ``catalog/cdd-approach.html``.
+        Each example lands under one practice and one stage on the approach page. Use the same layout as
+        ``catalog/cdd-approach.html``.
 
         **Where each example goes**
 
@@ -751,24 +751,21 @@ class Catalog:
 
         **Step 1 — Collect examples**
 
-        Read every path in ``example_paths``. When the list is empty,
-        ``generate_project_approach`` walks the project tree itself.
+        Read every path in ``example_paths``. When the list is empty, ``generate_project_approach`` walks the
+        project tree itself.
 
         **Step 2 — Classify each file**
 
-        A file belongs to the fidelity whose declared outputs name it: the
-        same file names and patterns the session uses to find a fidelity's
-        files, such as ``.context/story-map.drawio`` for the story map or
-        ``{{bounded_context}}/{{aggregate}}/{{aggregate}}.ts`` for the domain
-        model. ``generate_project_approach`` classifies discovered files this
-        way, so classify the listed files the same way. A file no fidelity
-        declares has no place until the user names one; ask rather than
-        guess from its name.
+        A file belongs to the fidelity whose declared outputs name it: the same file names and patterns the session
+        uses to find a fidelity's files, such as ``.context/story-map.drawio`` for the story map or
+        ``{{bounded_context}}/{{aggregate}}/{{aggregate}}.ts`` for the domain model. ``generate_project_approach``
+        classifies discovered files this way, so classify the listed files the same way. A file no fidelity declares
+        has no place until the user names one; ask rather than guess from its name.
 
         **Step 3 — Confirm the mapping**
 
-        Show a short table: practice, stage, relative path. Edit it until
-        every practice and stage the user cares about has a file.
+        Show a short table: practice, stage, relative path. Edit it until every practice and stage the user cares
+        about has a file.
 
         **Step 4 — Generate**
 
@@ -778,8 +775,8 @@ class Catalog:
         {{"examples": {{"stories": {{"discovery": "stories/story-map.drawio", ...}}}}}}
         ```
 
-        Call ``generate_project_approach`` with ``examples_json``, and with
-        ``project_title`` when the user names the page."""
+        Call ``generate_project_approach`` with ``examples_json``, and with ``project_title`` when the user names the
+        page."""
         tools(self.generate_project_approach)
         return "Project approach slide generated."
 

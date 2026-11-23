@@ -253,26 +253,51 @@ class _SpecCode:
 def _without_teardown(lines: list[str]) -> list[str]:
     """A block's lines without those that run after its observations, which clean up what the observation did and are
     no part of the event it observes."""
-    kept: list[str] = []
-    inside: str | None = None
-    depth = 0
-    for line in lines:
-        if inside is not None:
-            if inside == "script":
-                depth += line.count("(") - line.count(")")
-                if depth <= 0:
-                    inside = None
-                continue
-            if not line.strip() or len(line) - len(line.lstrip()) > len(inside):
-                continue
-            inside = None
+    teardown = _Teardown()
+    return [line for line in lines if not teardown.holds(line)]
+
+
+class _Teardown:
+    """The teardown a walk down a block's lines is inside: a Python ``with after.each`` block, known by the indent of its
+    opening line, or a script ``afterEach(`` call, known by the brackets still open; outside one, neither."""
+
+    _SCRIPT = "script"
+
+    def __init__(self) -> None:
+        self._inside: str | None = None
+        self._open_brackets = 0
+
+    def holds(self, line: str) -> bool:
+        """Whether line belongs to a teardown: one it opens, or one an earlier line opened and this line continues."""
+        if self._inside == self._SCRIPT:
+            return self._continues_script(line)
+        if self._inside is not None and self._continues_python(line):
+            return True
+        self._inside = None
+        return self._opens(line)
+
+    def _continues_script(self, line: str) -> bool:
+        self._open_brackets += _bracket_balance(line)
+        if self._open_brackets <= 0:
+            self._inside = None
+        return True
+
+    def _continues_python(self, line: str) -> bool:
+        """A blank line, or one indented deeper than the ``with after.each`` that opened the teardown."""
+        return not line.strip() or len(line) - len(line.lstrip()) > len(self._inside or "")
+
+    def _opens(self, line: str) -> bool:
         python = _PYTHON_TEARDOWN.match(line)
         if python is not None:
-            inside = python.group(1)
-            continue
+            self._inside = python.group(1)
+            return True
         if _SCRIPT_TEARDOWN.match(line):
-            depth = line.count("(") - line.count(")")
-            inside = "script" if depth > 0 else None
-            continue
-        kept.append(line)
-    return kept
+            self._open_brackets = _bracket_balance(line)
+            self._inside = self._SCRIPT if self._open_brackets > 0 else None
+            return True
+        return False
+
+
+def _bracket_balance(line: str) -> int:
+    """How many more round brackets line opens than it closes."""
+    return line.count("(") - line.count(")")

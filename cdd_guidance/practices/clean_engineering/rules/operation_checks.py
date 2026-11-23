@@ -12,10 +12,10 @@ from cdd_guidance.practices.clean_engineering.reading.folder_facts import own_fa
 from cdd_guidance.practices.clean_engineering.reading.operation_facts import file_qualified_name
 from cdd_guidance.practices.clean_engineering.reading.operation_verbs import VERBS_FOR_ONE_TARGET
 from cdd_guidance.practices.clean_engineering.reading.same_bodies import SAME_BODY_ELSEWHERE
-from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
+from cdd_guidance.practices.clean_engineering.measures.read_facts import parameters_of
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import StatementCount
 from cdd_guidance.practices.clean_engineering.rules.operation_semantics import SEMANTIC_RULES
-from cdd_guidance.practices.clean_engineering.rules import rule_numbers
+import cdd_guidance.practices.clean_engineering.rules.rule_numbers as rule_numbers
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:

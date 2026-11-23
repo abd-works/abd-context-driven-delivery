@@ -89,6 +89,10 @@ def named_from(project: Path, path: Path) -> str:
         return Path(path).as_posix()
 
 
+PREVIEW_LENGTH = 40
+"""How much of a render's content its ``repr`` shows: enough to tell two renders apart in a failing spec's message."""
+
+
 class Rendered:
     """What a format's adapter and a fidelity answer for a render: the content in the format written. It writes itself
     as the two fields a render has always answered, ``format`` and ``content``."""
@@ -117,7 +121,7 @@ class Rendered:
         return isinstance(other, Rendered) and (self._format, self._content) == (other._format, other._content)
 
     def __repr__(self) -> str:
-        return f"Rendered({self._format!r}, {str(self._content)[:40]!r})"
+        return f"Rendered({self._format!r}, {str(self._content)[:PREVIEW_LENGTH]!r})"
 
 
 class KeptMark:
@@ -128,15 +132,17 @@ class KeptMark:
 
     WORDS = "no longer in the model"
 
-    @staticmethod
-    def marks(lines: Iterable[str] | str) -> bool:
+    def marks(self, lines: Iterable[str] | str) -> bool:
         """Whether lines, the lines above a member or its text, say it is no longer in the model."""
-        return KeptMark.WORDS in lines if isinstance(lines, str) else any(KeptMark.WORDS in line for line in lines)
+        return self.WORDS in lines if isinstance(lines, str) else any(self.WORDS in line for line in lines)
 
-    @staticmethod
-    def line_for(member: str, then: str) -> str:
+    def line_for(self, member: str, then: str) -> str:
         """The marking line a reshaper writes above member, saying it is no longer in the model and what to do: then."""
-        return f"---- {KeptMark.WORDS}: {member}. {then} ----"
+        return f"---- {self.WORDS}: {member}. {then} ----"
+
+
+KEPT_MARK = KeptMark()
+"""The one mark every format and the Render action write and read."""
 
 
 @dataclass(frozen=True)
@@ -181,7 +187,7 @@ class ExistingText:
     def set_apart_below(self, rendered: str, comment: str) -> Reshaped:
         """The rendered shape, then the lines only this text holds as comments under one line saying so; lines an
         earlier render set apart are carried over as they are, so a second render changes nothing."""
-        marked = next((index for index, line in enumerate(self.lines) if KeptMark.marks(line)), len(self.lines))
+        marked = next((index for index, line in enumerate(self.lines) if KEPT_MARK.marks(line)), len(self.lines))
         carried = self.lines[marked + 1:]
         unplaced = ExistingText("\n".join(self.lines[:marked])).lines_not_in(rendered)
         apart = carried + [f"{comment} {line}" for line in unplaced]
@@ -203,15 +209,14 @@ class OutlinedMember:
         self.end = end
         self.indent = indent
 
-    @staticmethod
-    def lead_of(lines: list[str], start: int, indent: str, marks: tuple[str, ...], floor: int = 0) -> int:
-        """The first of the lines written directly above the line at start, at indent, that open with one of marks,
-        such as a comment or a decorator, going no higher than floor; start when none are."""
-        lead = start
-        while lead > floor and lines[lead - 1].startswith(indent) and lines[lead - 1][len(indent):].startswith(marks):
-            lead -= 1
-        return lead
 
+def lead_of(lines: list[str], start: int, indent: str, marks: tuple[str, ...], floor: int = 0) -> int:
+    """The first of the lines written directly above the line at start, at indent, that open with one of marks, such as
+    a comment or a decorator, going no higher than floor; start when none are: where an *OutlinedMember*'s lead is."""
+    lead = start
+    while lead > floor and lines[lead - 1].startswith(indent) and lines[lead - 1][len(indent):].startswith(marks):
+        lead -= 1
+    return lead
 
 
 # What a render converts: text or data in a source format, an object model, or the practice itself, whose own model is
@@ -274,7 +279,7 @@ class RenderRequest:
         project of the session its practice works in, in source, else in the format the fidelity works in. previous is
         the target file as it is now, whose layout a diagram keeps. A renderer that links to other files, such as a
         story map linking to each story's file, finds them in the folder the first path is, or sits in."""
-        folder = cls._folder_holding(paths, fidelity.practice_guidance.session)
+        folder = _folder_holding(paths, fidelity.practice_guidance.session)
         request = cls(Format(format), source=Format(source), previous=previous, folder=folder, fidelity=fidelity)
         return replace(request, content=fidelity.practice_guidance.formats.read(paths, request))
 
@@ -283,19 +288,6 @@ class RenderRequest:
         if self.fidelity is None:
             raise ValueError("a render request renders at a fidelity, and this one names none")
         return self.fidelity.practice_guidance.formats.render(self)
-
-    @staticmethod
-    def _folder_holding(paths: NamedPaths, session: WorkedSession | None) -> str:
-        """The folder the files at paths sit in, where a renderer finds the files they link to: the first path when it
-        is a folder, else its parent. A path is read from the project of session, as the files are, so a path named
-        from the project's root never finds the folder of that name in whatever folder the process runs in."""
-        first = paths[0] if isinstance(paths, (list, tuple)) and paths else paths
-        if not first or not isinstance(first, str):
-            return ""
-        path = session.paths.path_named(first) if session is not None else Path(first)
-        if path.is_dir():
-            return str(path)
-        return str(path.parent) if path.parent.is_dir() else ""
 
     def _keeping_sketch_wording(self) -> RenderRequest:
         """This request, keeping a sketch's own wording when it renders a sketch to a document format: the sketch is the
@@ -516,3 +508,15 @@ class PracticeFormats:
             return json.loads(content)
         return content
 
+
+def _folder_holding(paths: NamedPaths, session: WorkedSession | None) -> str:
+    """The folder the files at paths sit in, where a renderer finds the files they link to: the first path when it is a
+    folder, else its parent. A path is read from the project of session, as the files are, so a path named from the
+    project's root never finds the folder of that name in whatever folder the process runs in."""
+    first = paths[0] if isinstance(paths, (list, tuple)) and paths else paths
+    if not first or not isinstance(first, str):
+        return ""
+    path = session.paths.path_named(first) if session is not None else Path(first)
+    if path.is_dir():
+        return str(path)
+    return str(path.parent) if path.parent.is_dir() else ""

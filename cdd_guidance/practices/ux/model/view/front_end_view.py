@@ -17,7 +17,7 @@ import re
 from dataclasses import dataclass
 from functools import cached_property
 
-from harness.guidance.practice_formats import KeptMark, OutlinedMember
+from harness.guidance.practice_formats import KEPT_MARK, OutlinedMember
 
 # What stands for each character that is not code, where the code is searched.
 _NOT_CODE = "\0"
@@ -762,7 +762,7 @@ class Component:
 
     def marked(self, member: ComponentMember) -> bool:
         """Whether an earlier render set the member apart: its marking line is among the comments above it."""
-        return KeptMark.marks(self._text.text[member.lead:member.start])
+        return KEPT_MARK.marks(self._text.text[member.lead:member.start])
 
     def indent_of(self, position: int) -> str:
         line = self._text.text[self._text.line_start(position):]

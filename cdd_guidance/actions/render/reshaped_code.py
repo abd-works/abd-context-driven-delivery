@@ -30,7 +30,7 @@ from __future__ import annotations
 import re
 from typing import Callable
 
-from harness.guidance.practice_formats import ExistingText, KeptMark, OutlinedMember, Reshaped
+from harness.guidance.practice_formats import KEPT_MARK, ExistingText, KeptMark, OutlinedMember, Reshaped, lead_of
 from harness.markdown.format import Format
 
 _PYTHON = "python"
@@ -96,7 +96,7 @@ class CodeOutline:
 
     def _lead_of(self, start: int, indent: str, floor: int) -> int:
         """The first of the comment and decorator lines written directly above the line at start, at its indent."""
-        return OutlinedMember.lead_of(self.lines, start, indent, _LEADING_MARKS, floor)
+        return lead_of(self.lines, start, indent, _LEADING_MARKS, floor)
 
     def _python_members(self, first: int, last: int, indent: str | None) -> list[CodeMember]:
         """The members whose opening lines sit between first and last at indent; with none given, at the indent of the
@@ -317,7 +317,7 @@ class _FileEdit:
 
     def _is_marked(self, operation: CodeMember) -> bool:
         """Whether an earlier render set the operation apart: its marking line is among the comments above it."""
-        return KeptMark.marks(self._file.lines[operation.lead:operation.start])
+        return KEPT_MARK.marks(self._file.lines[operation.lead:operation.start])
 
     def _set_apart(self, owner: CodeMember, operation: CodeMember) -> list[str]:
         """The operation's own lines under its marking line: the one it already has, else one saying where it was."""

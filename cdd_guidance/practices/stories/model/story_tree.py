@@ -41,9 +41,10 @@ class StoryTree:
     @staticmethod
     def of_graph(graph: Graph) -> Optional["StoryTree"]:
         """The story tree of the Stories practice graph reads; none while it reads no Stories."""
-        from cdd_guidance.practices.stories.stories import Stories
+        from cdd_guidance.practices.stories.model.story_map import StoryNode
 
-        stories = graph.practices.loaded(Stories)
+        # The practice names itself on its model when its module is imported, so the model never imports it back.
+        stories = graph.practices.loaded(StoryNode.practice_class)
         return stories.reading.story_tree if stories is not None else None
 
     @property

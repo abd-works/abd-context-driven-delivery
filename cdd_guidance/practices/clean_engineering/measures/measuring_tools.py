@@ -30,7 +30,7 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     UNSHARED_METHOD_GROUPS,
     CodeMeasure,
 )
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import ModuleImports, is_under
+from cdd_guidance.practices.clean_engineering.measures.read_facts import IMPORTED_MODULES_FACT, IMPORTING_MODULES_FACT, is_under
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -184,11 +184,11 @@ class ReaderTool(MeasuringTool):
 
     def _imported_by(self, measured: MeasuredNode) -> list[str]:
         """The modules the module imports, the packages inside it included, as every read keeps them."""
-        return list(measured.node.get_fact(ModuleImports.IMPORTED) or []) if measured.node.has_fact(ModuleImports.IMPORTED) else []
+        return list(measured.node.get_fact(IMPORTED_MODULES_FACT) or []) if measured.node.has_fact(IMPORTED_MODULES_FACT) else []
 
     def _importing(self, measured: MeasuredNode) -> list[str]:
         """The modules that import the module or a package inside it, as every read keeps them."""
-        return list(measured.node.get_fact(ModuleImports.IMPORTING) or []) if measured.node.has_fact(ModuleImports.IMPORTING) else []
+        return list(measured.node.get_fact(IMPORTING_MODULES_FACT) or []) if measured.node.has_fact(IMPORTING_MODULES_FACT) else []
 
     def _abstractness(self, measured: MeasuredNode) -> float | None:
         """The share of the module's classes that are abstract: those of its own files and of the packages inside it,

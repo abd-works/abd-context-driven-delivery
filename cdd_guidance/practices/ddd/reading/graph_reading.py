@@ -25,7 +25,8 @@ from harness.markdown.markdown import MarkdownText
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 
-from cdd_guidance.practices.clean_engineering.reading.code_read import CODE_FIDELITY, DESCRIBED_FACT, MODEL_FIDELITY
+from cdd_guidance.practices.clean_engineering.reading.code_read import CODE_FIDELITY, MODEL_FIDELITY
+from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.model import Relationship
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
 from cdd_guidance.practices.source_code import HoldsProjectTestCode

@@ -6,7 +6,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of, is_under
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
+from cdd_guidance.practices.clean_engineering.measures.read_facts import is_under
 from cdd_guidance.practices.clean_engineering.reading.imported_classes import ImportedClasses
 from cdd_guidance.practices.clean_engineering.reading.operation_counts import operation_count
 from cdd_guidance.practices.clean_engineering.reading.public_routes import NAMED, PublicRoutes

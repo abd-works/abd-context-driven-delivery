@@ -38,6 +38,31 @@ NOTE = "//"
 _RELATIONSHIP_KINDS = {"composition", "aggregation", "association"}
 
 
+def _property_in(line: str) -> Optional[Property]:
+    """The property a member line of a class card writes; none for an operation, or for a mark that names no
+    relationship. An optional property may be written `name?: Type` or `name: Type | null`."""
+    bare, kind = _without_access(line)
+    if ("<<" in line and kind is None) or not bare or re.match(r"^_?\w+\s*\(", bare):
+        return None
+    prop = Property.from_signature(bare)
+    if prop is None:
+        return Property(name=bare) if re.match(r"^\w+$", bare) else None
+    if kind:
+        prop.stereotype = kind
+    return prop
+
+
+def _operation_in(line: str) -> Optional[Operation]:
+    """The operation a member line of a class card writes; a `- ` line is private, so its name gets a leading
+    underscore."""
+    private = line.startswith("- ")
+    body, _kind = _without_access(line[2:].strip() if private else line)
+    operation = Operation.from_signature(body)
+    if operation is not None and private and not operation.name.startswith("_"):
+        operation.name = f"_{operation.name}"
+    return operation
+
+
 class ClassCard:
     """The members of one class card in the class-card notation: its intent and constructor above ``------``, its
     properties between ``------`` and ``----``, its operations below, each with the calls and notes written under it,
@@ -64,30 +89,6 @@ class ClassCard:
         oclass.operations = self._constructors(constructor_line, constructor_notes) + self._read_operations(ops_text)
         for relationship in dependencies:
             oclass.arrows.place(relationship)
-
-    @staticmethod
-    def property_in(line: str) -> Optional[Property]:
-        """The property a member line writes; none for an operation, or for a mark that names no relationship. An
-        optional property may be written `name?: Type` or `name: Type | null`."""
-        bare, kind = _without_access(line)
-        if ("<<" in line and kind is None) or not bare or re.match(r"^_?\w+\s*\(", bare):
-            return None
-        prop = Property.from_signature(bare)
-        if prop is None:
-            return Property(name=bare) if re.match(r"^\w+$", bare) else None
-        if kind:
-            prop.stereotype = kind
-        return prop
-
-    @staticmethod
-    def operation_in(line: str) -> Optional[Operation]:
-        """The operation a member line writes; a `- ` line is private, so its name gets a leading underscore."""
-        private = line.startswith("- ")
-        body, _kind = _without_access(line[2:].strip() if private else line)
-        operation = Operation.from_signature(body)
-        if operation is not None and private and not operation.name.startswith("_"):
-            operation.name = f"_{operation.name}"
-        return operation
 
     def _read_head(self, head: str) -> Tuple[str, str, List[str]]:
         """The card's intent, its constructor line, and the notes under the constructor, from the part above
@@ -125,7 +126,7 @@ class ClassCard:
             if stripped.startswith((NOTE, CALL)):
                 _note_on_property(props[-1] if props else None, stripped)
                 continue
-            prop = self.property_in(stripped)
+            prop = _property_in(stripped)
             if prop is not None:
                 props.append(prop)
         return props
@@ -139,7 +140,7 @@ class ClassCard:
             if stripped.startswith((NOTE, CALL, "→")):
                 _note_on_operation(ops[-1] if ops else None, stripped)
                 continue
-            operation = self.operation_in(stripped)
+            operation = _operation_in(stripped)
             if operation is not None:
                 ops.append(operation)
         return ops
@@ -296,29 +297,33 @@ class SketchFence:
         lower = line.lower()
         if lower.startswith(_INVARIANT):
             read.invariants.append(line.split(":", 1)[1].strip())
-        elif lower.startswith("refs:"):
-            self._read_references(oclass)
-        elif lower.startswith("repo:"):
-            read.repositories.append(self._repository(line.split(":", 1)[1].strip()))
-        elif line.startswith(CALL) and isinstance(self._last, Operation):
-            self._last.callees.append(line[len(CALL):].strip())
-        elif line.endswith(":") or line.startswith(_MAP_LINES):
             return
-        elif line.startswith(("+", "-")):
+        if lower.startswith("refs:"):
+            self._read_references(oclass)
+            return
+        if lower.startswith("repo:"):
+            read.repositories.append(self._repository(line.split(":", 1)[1].strip()))
+            return
+        if line.startswith(CALL) and isinstance(self._last, Operation):
+            self._last.callees.append(line[len(CALL):].strip())
+            return
+        if line.endswith(":") or line.startswith(_MAP_LINES):
+            return
+        if line.startswith(("+", "-")):
             self._last = self._member(oclass, line)
-        else:
-            self._last = None
-            self._add_sketch_member(oclass, line, self._calls_below())
+            return
+        self._last = None
+        self._add_sketch_member(oclass, line, self._calls_below())
 
     def _member(self, oclass: OoadClass, line: str) -> Property | Operation | None:
         """A member line in the class-card notation, added to oclass: an operation when it has parameters."""
         if "(" in line:
-            operation = ClassCard.operation_in(line)
+            operation = _operation_in(line)
             if operation is not None:
                 operation.sequential_order = len(oclass.operations) + 1
                 oclass.operations.append(operation)
             return operation
-        prop = ClassCard.property_in(line)
+        prop = _property_in(line)
         if prop is not None:
             prop.sequential_order = len(oclass.properties) + 1
             oclass.properties.append(prop)

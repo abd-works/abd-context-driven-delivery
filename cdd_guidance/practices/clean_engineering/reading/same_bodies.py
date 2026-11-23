@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import record_fact
 from cdd_guidance.practices.clean_engineering.reading.operation_facts import code_operations, file_qualified_name
-from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
+from cdd_guidance.practices.clean_engineering.measures.read_facts import parameters_of
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node, PracticeNodes

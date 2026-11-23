@@ -18,7 +18,7 @@ from cdd_guidance.practices.clean_engineering.reading.card_drift import (
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import own_fact
 from cdd_guidance.practices.clean_engineering.reading.owned_dependencies import BUILT_ON_EACH_CALL, DEPENDENCIES_TO_OWN
 from cdd_guidance.practices.clean_engineering.reading.passed_state import HANDS_DOWN, TAKEN_BY_EVERY_OPERATION
-from cdd_guidance.practices.clean_engineering.rules import rule_numbers
+import cdd_guidance.practices.clean_engineering.rules.rule_numbers as rule_numbers
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

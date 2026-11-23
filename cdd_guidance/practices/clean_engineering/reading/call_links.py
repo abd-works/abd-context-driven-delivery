@@ -22,7 +22,7 @@ from cdd_guidance.practices.clean_engineering.reading.code_file import (
     THROUGH_FACT,
 )
 from cdd_guidance.practices.clean_engineering.reading.receiver_causes import UNRESOLVED_CALLS_FACTS
-from cdd_guidance.practices.clean_engineering.reading.code_read import DESCRIBED_FACT
+from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node

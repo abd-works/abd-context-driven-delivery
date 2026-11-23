@@ -221,28 +221,45 @@ def _upgraded(raw: dict) -> dict:
     held = dict(raw)
     practices = {key: dict(value) for key, value in dict(held.get(_PRACTICES) or {}).items()}
     outputs = dict(held.pop("outputs", None) or {})
-    for key, practice in practices.items():
-        formats = practice.pop("formats", None)
-        for name, chosen in dict(formats or {}).items():
-            practice.setdefault(_FIDELITIES, {}).setdefault(name, {})["formats"] = [chosen] if isinstance(chosen, str) else list(chosen)
+    for practice in practices.values():
+        _merge_formats(practice)
     for key, chosen in outputs.items():
-        practice = practices.setdefault(key, {})
-        for name, value in dict(chosen).items():
-            if name == "root":
-                practice.setdefault("root", value)
-                continue
-            fidelity = practice.setdefault(_FIDELITIES, {}).setdefault(name, {})
-            for part, kept in dict(value).items():
-                if part == "root":
-                    fidelity["roots"] = [kept]
-                elif part == "roots":
-                    fidelity["roots"] = list(kept)
-                else:
-                    fidelity.setdefault("file_names", {})[part] = kept
+        _merge_outputs(practices.setdefault(key, {}), dict(chosen))
     if practices:
         held[_PRACTICES] = practices
     held.pop("repo_path", None)
     return held
+
+
+def _merge_formats(practice: dict) -> None:
+    """Move the formats an older file kept under the practice's ``formats`` onto each fidelity's entry."""
+    for name, chosen in dict(practice.pop("formats", None) or {}).items():
+        _fidelity_of(practice, name)["formats"] = [chosen] if isinstance(chosen, str) else list(chosen)
+
+
+def _merge_outputs(practice: dict, chosen: dict) -> None:
+    """Move the practice's root and each fidelity's roots and file names an older file kept under ``outputs`` onto
+    the practice and its fidelities."""
+    for name, value in chosen.items():
+        if name == "root":
+            practice.setdefault("root", value)
+        else:
+            _merge_fidelity_output(_fidelity_of(practice, name), dict(value))
+
+
+def _merge_fidelity_output(fidelity: dict, output: dict) -> None:
+    """One fidelity's output as an older file kept it: a single ``root``, a list of ``roots``, and file names by part."""
+    for part, kept in output.items():
+        if part == "root":
+            fidelity["roots"] = [kept]
+        elif part == "roots":
+            fidelity["roots"] = list(kept)
+        else:
+            fidelity.setdefault("file_names", {})[part] = kept
+
+
+def _fidelity_of(practice: dict, name: str) -> dict:
+    return practice.setdefault(_FIDELITIES, {}).setdefault(name, {})
 
 
 class OwnedFields:

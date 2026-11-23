@@ -277,13 +277,7 @@ class Artboard(NamedTuple):
     @property
     def stem(self) -> str:
         """Its name without its folder or its .dc.html ending: the name a dc-import uses."""
-        return self.stem_of(self.name)
-
-    @staticmethod
-    def stem_of(path: str) -> str:
-        """An artboard file's name without its folder or its .dc.html ending, such as ``verify-ported-number`` for
-        ``screens/verify-ported-number.dc.html``."""
-        return Path(path).name.removesuffix(".dc.html")
+        return artboard_stem(self.name)
 
     @property
     def text(self) -> str:
@@ -293,6 +287,12 @@ class Artboard(NamedTuple):
             component = ZOOM_COMPONENT.replace("__WIDTH__", str(self.width)).replace("__HEIGHT__", str(self.height))
             return _ZOOMABLE_PAGE.format(**fields, zoom_classes=_ZOOM_CLASSES, controls=ZOOM_CONTROLS, component=component)
         return _STATIC_PAGE.format(**fields)
+
+
+def artboard_stem(path: str) -> str:
+    """An artboard file's name without its folder or its .dc.html ending, such as ``verify-ported-number`` for
+    ``screens/verify-ported-number.dc.html``: the name a dc-import uses."""
+    return Path(path).name.removesuffix(".dc.html")
 
 
 class Place(NamedTuple):

@@ -8,8 +8,9 @@ import re
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
-from cdd_guidance.practices.clean_engineering.reading.production_classes import names_in, parameters_of
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of, is_under, parent_folder, record_fact
+from cdd_guidance.practices.clean_engineering.measures.read_facts import is_under, parameters_of
+from cdd_guidance.practices.clean_engineering.reading.production_classes import names_in
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of, parent_folder, record_fact
 from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.source_code import split_top_level
 

@@ -17,7 +17,7 @@ from harness.guidance.format_trip import (
     FormatTrip,
 )
 from harness.guidance.guidance import FidelityGuidance
-from harness.guidance.practice_formats import ExistingText, FormatAdapter, OutlinedMember, PracticeFormats, Rendered, RenderRequest, Written
+from harness.guidance.practice_formats import ExistingText, FormatAdapter, PracticeFormats, Rendered, RenderRequest, Written, lead_of
 from harness.installation.data_class import data_of
 from harness.markdown.format import Format
 
@@ -134,11 +134,11 @@ with description("the text a file holds before a render is written onto it") as 
 with description("a member a reshaper outlines") as self:
     with it("should start at the comments and decorators written directly above it, at its indent"):
         lines = ["class Cart:", "    # adds a book", "    @staticmethod", "    def add():", "        pass"]
-        expect(OutlinedMember.lead_of(lines, 3, "    ", ("#", "@"))).to(equal(1))
+        expect(lead_of(lines, 3, "    ", ("#", "@"))).to(equal(1))
 
     with it("should go no higher than the floor it is given"):
         lines = ["# about", "# the file", "def add():"]
-        expect(OutlinedMember.lead_of(lines, 2, "", ("#",), floor=1)).to(equal(1))
+        expect(lead_of(lines, 2, "", ("#",), floor=1)).to(equal(1))
 
 
 class _ReadsOnly(FormatAdapter):
@@ -229,6 +229,13 @@ class _Torn(_Titles):
         raise ValueError("the page tore")
 
 
+class _Broken(_Titles):
+    """A format whose writing has a bug: it adds a number to a text."""
+
+    def render(self, model, written=Written()):
+        return "lines: " + len(model.lines)
+
+
 class _Tidy(_Lines):
     """A format of lines that writes every quote as a double quote."""
 
@@ -236,7 +243,7 @@ class _Tidy(_Lines):
         return "\n".join(line.replace("'", '"') for line in model.lines)
 
 
-_ADAPTERS = {"lines": _Lines, "titles": _Titles, "poster": _Poster, "torn": _Torn, "tidy": _Tidy}
+_ADAPTERS = {"lines": _Lines, "titles": _Titles, "poster": _Poster, "torn": _Torn, "broken": _Broken, "tidy": _Tidy}
 _EXAMPLE = "# Cart\nadd a book\ncheck out\n"
 
 
@@ -302,6 +309,10 @@ with description("a fidelity's example taken to one of its formats and back") as
 
         with it("should say what failed"):
             expect(self.outcome.refused).to(equal("ValueError: the page tore"))
+
+    with context("through a format whose writing has a bug"):
+        with it("should raise the bug rather than report it as the format's outcome"):
+            expect(lambda: _trip().through("broken")).to(raise_error(TypeError))
 
     with context("whose own format reads nothing from the example"):
         with it("should fail on the way, since an empty example loses nothing in any format"):

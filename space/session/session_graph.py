@@ -36,11 +36,6 @@ class DocumentGraph:
         self._lock = threading.Lock()
 
     @classmethod
-    def of_every_practice(cls) -> DocumentGraph:
-        """A document graph with a new instance of every practice."""
-        return cls(PRACTICE_CATALOGUE.create_all())
-
-    @classmethod
     def of_practices(cls, keys: list[str]) -> DocumentGraph:
         """A document graph with a new instance of each practice whose key is in keys."""
         return cls([practice for practice in PRACTICE_CATALOGUE.create_all() if practice.key in keys])

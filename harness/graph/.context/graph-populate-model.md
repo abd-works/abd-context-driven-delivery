@@ -379,7 +379,7 @@ What one practice gives the graph is its reading part, a *PracticeReading* (`har
 + own_graph_checks(): dict[str, PracticeGraphRule]
 	// -> rules_in(f"{package}.rules")
 + rules_in(module_path: str): dict[str, PracticeGraphRule]
-	// static: the module's BY_SLUG, else its RULES; a pattern's overlay reads its rules modules with it too
+	// a module function of practice_reading.py, not an operation: the module's BY_SLUG, else its RULES; a pattern's overlay reads its rules modules with it too
 
 `PracticeReading.checks()` is its part of the graph's `checks`, which adds each active overlay's `rules_for(practice)` to the practice's own, then each always-on supplement the practice holds (`practice.supplements`), whatever overlays the session chose (`PatternOverlays.checks_of`). A practice's schema reads the same overlays (`PatternOverlays.overlays_for(practice)`: the applied patterns', then its supplements'), so a supplement's `practices/<practice>/model/rules.yaml` gives its node types the supplement's rules, labelled with its name (`tdd.bdd.Spec.unit-tier-fakes-every-boundary`), and their prose comes from the supplement's sections. The build reads each supplement's overlay after the practices, as it reads each pattern's, so it records its facts on their nodes; `node.rules` keeps those whose `node_types` hold the node's type, its file language's, or the Clean Engineering type a pattern's schema anchors it to.
 
@@ -398,8 +398,8 @@ What one pattern or one practice supplement gives the graph on top of the practi
 + read(graph: Graph): None
 + rules_for(practice: PracticeGuidance): dict[str, PracticeGraphRule]
 	// read once per practice: its own practices/{practice}/rules, then its shared rules/ bound to that practice
-	-> PracticeReading.rules_in(f"{package}.practices.{practice.key}.rules")
-	-> PracticeReading.rules_in(f"{package}.rules")
+	-> rules_in(f"{package}.practices.{practice.key}.rules")
+	-> rules_in(f"{package}.rules")
 	-> SharedPracticeGraphRule.for_practice(practice)
 
 ## PracticeGraphRule

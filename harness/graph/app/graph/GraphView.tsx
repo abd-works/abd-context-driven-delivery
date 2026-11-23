@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { KindMark } from '../labels/kind-mark';
-import { ExplorerTrees, type TreeItem } from './explorer-trees';
+import { ExplorerTrees, isRule, leftOutOf, type TreeItem } from './explorer-trees';
 import { ruleHits, selectionForRule, type GraphSelection } from './graph-selection';
 import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures } from './graph-page';
@@ -59,7 +59,7 @@ function TreeNode({
 }) {
   const [open, setOpen] = useState(false);
   const children: TreeItem[] = node.children;
-  const leftOut = ExplorerTrees.leftOutOf(node);
+  const leftOut = leftOutOf(node);
   // An open entry whose answer left its children out reads them: when a person opens it, and when new trees, after a
   // change of filter, arrive under an entry already open.
   useEffect(() => {
@@ -70,9 +70,9 @@ function TreeNode({
   const rulesHolder = node.type === 'rules';
   const selected = rule ? ownerId === selectedId && node.name === activeRule : node.node_id === selectedId;
   const violating = trees.isViolating(node);
-  const hits = ExplorerTrees.isRule(node) ? ruleHits(node) : [];
-  const isCandidate = ExplorerTrees.isRule(node) && node.status === 'candidate';
-  const hitHint = ExplorerTrees.isRule(node) && (node.status === 'violating' || isCandidate) && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
+  const hits = isRule(node) ? ruleHits(node) : [];
+  const isCandidate = isRule(node) && node.status === 'candidate';
+  const hitHint = isRule(node) && (node.status === 'violating' || isCandidate) && hits.length > 0 ? hits.map((hit) => hit.message).join('\n') : undefined;
   const violationHint = hitHint && isCandidate ? `Candidate for a judge to read, not an error:\n${hitHint}` : hitHint;
   return (
     <li
@@ -98,12 +98,12 @@ function TreeNode({
         )}
         <button
           type="button"
-          className={[selected ? 'selected' : '', ExplorerTrees.isRule(node) ? `rule-status ${node.status}` : '', violating ? 'tree-violating' : trees.hasCandidate(node) ? 'tree-candidate' : '']
+          className={[selected ? 'selected' : '', isRule(node) ? `rule-status ${node.status}` : '', violating ? 'tree-violating' : trees.hasCandidate(node) ? 'tree-candidate' : '']
             .filter(Boolean)
             .join(' ')}
           title={violationHint}
           data-testid={rule ? (isCandidate ? 'tree-candidate-rule' : violationHint ? 'tree-violation-rule' : 'tree-rule') : undefined}
-          onClick={() => onSelect(rule && ExplorerTrees.isRule(node) ? selectionForRule(ownerId || node.node_id, node) : { nodeId: node.node_id })}
+          onClick={() => onSelect(rule && isRule(node) ? selectionForRule(ownerId || node.node_id, node) : { nodeId: node.node_id })}
         >
           <KindMark kind={rule ? 'Rule' : rulesHolder ? 'Rules' : node.type} isFile={false} />
           <span className="node-name">{node.name}</span>

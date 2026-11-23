@@ -18,7 +18,7 @@ above it as a comment. Rendering the same view onto the text this made changes n
 
 from __future__ import annotations
 
-from harness.guidance.practice_formats import KeptMark, Reshaped
+from harness.guidance.practice_formats import KEPT_MARK, KeptMark, Reshaped
 
 from cdd_guidance.practices.ux.model.view.front_end_view import Component, ComponentMember, Edit, FrontEndView
 
@@ -86,7 +86,7 @@ class ReshapedView:
         for prop in (prop for prop in held.props if prop not in shape.props):
             self._kept.append(f"{held.name}.{prop}")
             named = f"{held.name}.{prop}"
-            if not any(KeptMark.marks(line) and named in line for line in held.marks.splitlines()):
+            if not any(KEPT_MARK.marks(line) and named in line for line in held.marks.splitlines()):
                 marking = f"{KeptMark.WORDS}: {named}, a prop. Take it out of the component's props once nothing reads it."
                 self._edits.append(Edit(held.start, held.start, f"{held.indent_of(held.start)}// ---- {marking} ----\n"))
         gained = [prop for prop in shape.props if prop not in held.props]

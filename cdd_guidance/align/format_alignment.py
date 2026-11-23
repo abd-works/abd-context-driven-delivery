@@ -42,6 +42,7 @@ from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subje
 from harness.agent_tools.tool_call import ToolCall
 from harness.diagnostics.probe_outcome import raised_by_a_bug
 from harness.graph.saved_graph import SavedPractice
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import long_call, mcp
@@ -464,7 +465,7 @@ class SessionAlignment:
         # such as one an alignment just rendered.
         self._session.session_files.file_manager.search_again()
         covered = self._session.guidance.covered
-        comparison = DocumentGraph.of_every_practice()
+        comparison = DocumentGraph(PRACTICE_CATALOGUE.create_all())
         try:
             gaps = [gap for fidelity in covered for gap in _FidelityAlignment(fidelity, self._session, comparison).gaps()]
         finally:

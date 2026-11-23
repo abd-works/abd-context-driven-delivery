@@ -7,7 +7,7 @@
 
 - **Purpose:** Turn existing documents or a running application into partitioned, indexed context that later stages can search and cite.
 - **Seam (terms):** ContextSetup, LiveAppCapture, ContextIndex, SegmentIndex, IndexedSegment, RankedChunk, EmbeddingProvider, `context-setup.capture_from_live_app`, `context-setup.convert`, `context-setup.smoke_test`, `context-setup.scout_app`, `context-setup.complete_capture`, `context-index.embed`, `context-index.search`, `context-index.ask`
-- **Dependencies (one-way):** `harness/guidance_actions` (*ActionWorksInNoSession*), `harness/agent_tools`, `harness/installation`, `harness/mcp`, `harness/markdown` (*FrontMatter*, which reads a segment's view); the session each call works in (its project's folders); FAISS and an embedding service (OpenAI by default)
+- **Dependencies (one-way):** `harness/guidance_actions` (*ActionWorksInNoSession*), `harness/agent_tools`, `harness/installation`, `harness/mcp`, `harness/markdown` (*FrontMatter*, which reads a segment's view), `harness/process` (`LOOPBACK_CONNECT_SECONDS`, how long a live-app capture waits for a local server to answer); the session each call works in (its project's folders); FAISS and an embedding service (OpenAI by default)
 
 ## Constraint
 

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 from urllib.parse import quote, urlencode
 
-from harness.design_canvas.canvas import Artboard, DesignCanvas, Place
+from harness.design_canvas.canvas import Artboard, DesignCanvas, Place, artboard_stem
 from cdd_guidance.practices.ux.model.claude_design.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
 from cdd_guidance.practices.ux.model.ux_map import UxMap
@@ -201,7 +201,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         if not focus:
             return
         board = self.canvas.placed(name)
-        self.canvas.add(self._context_panel(focus, board["h"], f"{self.context_folder}/{Artboard.stem_of(name)}.dc.html"),
+        self.canvas.add(self._context_panel(focus, board["h"], f"{self.context_folder}/{artboard_stem(name)}.dc.html"),
                         {"x": board["w"] + self.context_gap, "y": 0, "w": self.context_width, "h": board["h"], "page": board["page"], "title": "Stories"})
 
     def _stories_shown_on(self, name: str) -> List[str]:
@@ -343,7 +343,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
             indent = "    " if step.keyword in ("And", "But") else ""
             waiting.append(f"{indent}{step.keyword} {step.text}")
             shown = [screen for screen in shown_on(step, self.screen_map.screens) if not self._blank(screen)]
-            prototype = prototype or next((Artboard.stem_of(s.prototype) for s in shown if s.prototype), "")
+            prototype = prototype or next((artboard_stem(s.prototype) for s in shown if s.prototype), "")
             if shown:
                 groups.append({"x": "\n".join(waiting), "i": [f"../{s.image}" for s in shown if s.image]})
                 waiting = []
@@ -357,14 +357,14 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         """A scenario whose steps show no screen shows its own ``shownOn`` screen, else its story's:
         that screen's prototype, else its screenshot."""
         own = shown_on(scenario, self.screen_map.screens) or shown_on(story, self.screen_map.screens)
-        prototype = next((Artboard.stem_of(screen.prototype) for screen in own if screen.prototype), "")
+        prototype = next((artboard_stem(screen.prototype) for screen in own if screen.prototype), "")
         image = next((screen.image for screen in own if screen.image and not self._blank(screen)), "")
         return prototype, image
 
     def _imports(self) -> List[str]:
         lines = []
         for prototype in self._prototypes():
-            name = Artboard.stem_of(prototype)
+            name = artboard_stem(prototype)
             lines.append(f'<sc-if value="{{{{live.{Name(name).camel}}}}}" hint-placeholder-val="{{{{ false }}}}">'
                          f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" hint-size="1280px,900px" style="display: block; width: 100%; min-height: 100%"></dc-import></sc-if>')
         return lines

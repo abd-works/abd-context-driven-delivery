@@ -18,7 +18,7 @@ from cdd_guidance.practices.bdd.model.nodes import DescribeBlock
 from cdd_guidance.practices.source_code import CallGraph
 from cdd_guidance.practices.clean_engineering.model import Operation
 from cdd_guidance.practices.clean_engineering.model import Property
-from cdd_guidance.practices.clean_engineering.reading.production_classes import parameters_of
+from cdd_guidance.practices.clean_engineering.measures.read_facts import parameters_of
 from harness.graph.edge import Edge
 from harness.graph.graph import Graph, Node
 from harness.graph.saved_graph import SavedGraph
