@@ -32,3 +32,14 @@
 2026-11-18T21:13:56Z tool sessions.current 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-437
 2026-11-18T21:15:12Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-500
 2026-11-18T21:15:45Z tool session.debug_session 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-536
+2026-11-18T21:16:34Z tool prompt-queue.done 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-592
+2026-11-18T21:16:37Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-600
+2026-11-18T21:17:03Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-607
+2026-11-18T21:17:03Z tool prompt-queue.add_interruption 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-609
+2026-11-18T21:17:10Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-616
+2026-11-18T21:17:10Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-616
+2026-11-18T21:21:24Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-616
+2026-11-18T21:21:24Z tool prompt-queue.add_interruption 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-618
+2026-11-18T21:21:29Z tool sessions.current 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-631
+2026-11-18T21:21:36Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-637
+2026-11-18T23:25:24Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-642
