@@ -554,6 +554,14 @@ with description("Render asked for a path, in a session") as self:
             self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
             expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(contain("Browse Product Catalog"))
 
+        # A path named from the project's root is the project's, never the folder the process happens to run in.
+        with it("should link each story to its own file in the project"):
+            story_file = self.folder / "orders" / "browse_product_catalog_story.test.md"
+            story_file.parent.mkdir()
+            story_file.write_text("## Story: Browse Product Catalog\n", encoding="utf-8")
+            self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
+            expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(contain('link="orders/browse_product_catalog_story.test.md"'))
+
     # Exploratory testing, r3-rivet-08: a realization rendered from a saved graph was saved as graph.md beside the graph,
     # a name no fidelity writes, while the fidelity declares .context/{scope}-bdd-realization.md. The person's answer
     # (2026-11-20): every render ends in a saved file, so its scope is named from what the graph was read from.

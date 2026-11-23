@@ -31,6 +31,11 @@ import cdd_guidance.practices  # noqa: F401 - registers the practices with the p
 PRACTICE_CATALOGUE.create_all()
 
 
+def _call_from(repo: Path, chat: str, project: Path | None) -> ToolCall:
+    """A call from chat, naming its transcript in repo, so the call never searches the Claude projects folder for it."""
+    return ToolCall.sent({"conversation_id": chat, "transcript_path": str(repo / f"{chat}.jsonl")}, project)
+
+
 # (E) Record Session Log
 with description("a session loop"):
     with before.each:
@@ -91,33 +96,34 @@ with description("a session loop"):
 
     # One Session per folder holds only when every name of one checkout reaches one Sessions, as one Repo does.
     with context("read by a call that names a folder inside the checkout"):
-        with before.each:
+        # Both chats open the session once, and every example reads what the calls after them were answered.
+        with before.all:
+            self.naming_home = ExampleHome()
             self.repo = Path(tempfile.mkdtemp()).resolve()
             (self.repo / ".git").mkdir()
             (self.repo / "docs").mkdir()
             for chat in ("chat-1", "chat-2"):
-                Sessions.of_project(self.repo).switch("alpha", self.repo, self.call_from(chat, self.repo))
-            self.session = self.call_from("chat-1", self.repo).session
+                Sessions.of_project(self.repo).switch("alpha", self.repo, _call_from(self.repo, chat, self.repo))
+            self.session = _call_from(self.repo, "chat-1", self.repo).session
+            self.inside = _call_from(self.repo, "chat-2", self.repo / "docs").session
+            self.named = _call_from(self.repo, "chat-3", None).session_named(str(self.repo / ".sessions" / "alpha" / "session.json"))
+            self.sessions_inside = Sessions.of_project(self.repo / "docs")
+            self.sessions_at_top = Sessions.of_project(self.repo)
 
         # The process lets go of the checkout's sessions, so a run of many examples does not keep each one's.
-        with after.each:
+        with after.all:
             SERVED_SESSIONS.forget_under(self.repo)
             shutil.rmtree(self.repo, ignore_errors=True)
+            self.naming_home.close()
 
         with it("should be the session object a call naming the checkout's top reads"):
-            inside = self.call_from("chat-2", self.repo / "docs").session
-            expect(inside is self.session).to(equal(True))
+            expect(self.inside is self.session).to(equal(True))
 
         with it("should be the session object a board command naming its session.json with no project reads"):
-            named = self.call_from("chat-3", None).session_named(str(self.repo / ".sessions" / "alpha" / "session.json"))
-            expect(named is self.session).to(equal(True))
+            expect(self.named is self.session).to(equal(True))
 
         with it("should be held by one sessions object for the checkout"):
-            expect(Sessions.of_project(self.repo / "docs") is Sessions.of_project(self.repo)).to(equal(True))
-
-        def call_from(self, chat: str, project: Path | None) -> ToolCall:
-            """A call from chat, naming its transcript, so the call never searches the Claude projects folder for it."""
-            return ToolCall.sent({"conversation_id": chat, "transcript_path": str(self.repo / f"{chat}.jsonl")}, project)
+            expect(self.sessions_inside is self.sessions_at_top).to(equal(True))
 
     with context("whose practice a call reaches"):
         with it("should be the practice's own session, the one the call opened"):

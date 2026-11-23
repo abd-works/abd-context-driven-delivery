@@ -274,7 +274,8 @@ class RenderRequest:
         project of the session its practice works in, in source, else in the format the fidelity works in. previous is
         the target file as it is now, whose layout a diagram keeps. A renderer that links to other files, such as a
         story map linking to each story's file, finds them in the folder the first path is, or sits in."""
-        request = cls(Format(format), source=Format(source), previous=previous, folder=cls._folder_holding(paths), fidelity=fidelity)
+        folder = cls._folder_holding(paths, fidelity.practice_guidance.session)
+        request = cls(Format(format), source=Format(source), previous=previous, folder=folder, fidelity=fidelity)
         return replace(request, content=fidelity.practice_guidance.formats.read(paths, request))
 
     def render(self) -> Rendered:
@@ -284,13 +285,14 @@ class RenderRequest:
         return self.fidelity.practice_guidance.formats.render(self)
 
     @staticmethod
-    def _folder_holding(paths: NamedPaths) -> str:
+    def _folder_holding(paths: NamedPaths, session: WorkedSession | None) -> str:
         """The folder the files at paths sit in, where a renderer finds the files they link to: the first path when it
-        is a folder, else its parent."""
+        is a folder, else its parent. A path is read from the project of session, as the files are, so a path named
+        from the project's root never finds the folder of that name in whatever folder the process runs in."""
         first = paths[0] if isinstance(paths, (list, tuple)) and paths else paths
         if not first or not isinstance(first, str):
             return ""
-        path = Path(first)
+        path = session.paths.path_named(first) if session is not None else Path(first)
         if path.is_dir():
             return str(path)
         return str(path.parent) if path.parent.is_dir() else ""

@@ -936,6 +936,8 @@ with description("a practice"):
     with context("that a practice has been invoked"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())
+            # Marked as a project's root, so finding the checkout that holds it stops here instead of climbing the temp folder.
+            (self.repo / ".git").mkdir()
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
@@ -992,37 +994,6 @@ with description("a practice"):
 
         with it("should start with the practice enabled"):
             expect(self.opened.enabled).to(equal(True))
-
-        with context("with a practice turned off"):
-            with before.each:
-                self.session.practice("ddd").enable(False)
-
-            with it("should save it in the session's session.json"):
-                saved = json.loads((self.session.record_folder / "session.json").read_text(encoding="utf-8"))
-                expect(saved["practices"]["ddd"]["enabled"]).to(equal(False))
-
-            with it("should read as turned off from the same folder later"):
-                later = Sessions(self.repo).held.load(self.session.record_folder)
-                expect(later.practice("ddd").enabled).to(equal(False))
-
-            with it("should be left out of the practices the session works on"):
-                expect(sorted(self.session.practices)).to(equal(["bdd", "clean_engineering", "stories", "ux"]))
-
-            with it("should still be shown, turned off, so a toggle can turn it on again"):
-                expect(data_of(self.session.show())["practices"]["ddd"]["enabled"]).to(equal(False))
-
-            with it("should name its own fidelities, so a page can hide their files"):
-                expect(data_of(self.session.show())["practices"]["ddd"]["fidelity_slugs"]).to(equal(["ddd-bounded-context", "ddd-model", "ddd-tactics"]))
-
-            with it("should be shown in its practice's colour"):
-                expect(data_of(self.session.show())["practices"]["ddd"]["colour"]).to(equal(self.session.practice("ddd").guidance.colour))
-
-            with context("that is turned on again"):
-                with before.each:
-                    self.session.practice("ddd").enable(True)
-
-                with it("should be among the practices the session works on"):
-                    expect(sorted(self.session.practices)).to(equal(["bdd", "clean_engineering", "ddd", "stories", "ux"]))
 
         with context("with the practice default folders"):
             with it("should point that practice's folder at its default workspace folder under workpath"):
@@ -1250,6 +1221,52 @@ with description("a practice"):
             with it("should keep that folder in the session's session.json and nowhere else"):
                 expect((self.repo / ".context" / "practices.json").exists()).to(equal(False))
 
+
+    # The practice is turned off once, and every example reads what that one change saved and shows.
+    with context("with a practice turned off"):
+        with before.all:
+            self.turned_off_home = ExampleHome()
+            self.turned_off_repo = Path(tempfile.mkdtemp())
+            (self.turned_off_repo / ".git").mkdir()
+            Sessions.of_project(self.turned_off_repo).switch("alpha", self.turned_off_repo)
+            self.turned_off = Sessions.of_project(self.turned_off_repo).current()
+            self.turned_off.practice("ddd").enable(False)
+            self.saved = json.loads((self.turned_off.record_folder / "session.json").read_text(encoding="utf-8"))
+            self.later = Sessions(self.turned_off_repo).held.load(self.turned_off.record_folder).practice("ddd").enabled
+            self.working = sorted(self.turned_off.practices)
+            self.shown = data_of(self.turned_off.show())["practices"]["ddd"]
+            self.colour = self.turned_off.practice("ddd").guidance.colour
+
+        with after.all:
+            SERVED_SESSIONS.forget_under(self.turned_off_repo)
+            shutil.rmtree(self.turned_off_repo, ignore_errors=True)
+            self.turned_off_home.close()
+
+        with it("should save it in the session's session.json"):
+            expect(self.saved["practices"]["ddd"]["enabled"]).to(equal(False))
+
+        with it("should read as turned off from the same folder later"):
+            expect(self.later).to(equal(False))
+
+        with it("should be left out of the practices the session works on"):
+            expect(self.working).to(equal(["bdd", "clean_engineering", "stories", "ux"]))
+
+        with it("should still be shown, turned off, so a toggle can turn it on again"):
+            expect(self.shown["enabled"]).to(equal(False))
+
+        with it("should name its own fidelities, so a page can hide their files"):
+            expect(self.shown["fidelity_slugs"]).to(equal(["ddd-bounded-context", "ddd-model", "ddd-tactics"]))
+
+        with it("should be shown in its practice's colour"):
+            expect(self.shown["colour"]).to(equal(self.colour))
+
+        with context("that is turned on again"):
+            with before.all:
+                self.turned_off.practice("ddd").enable(True)
+                self.working_again = sorted(self.turned_off.practices)
+
+            with it("should be among the practices the session works on"):
+                expect(self.working_again).to(equal(["bdd", "clean_engineering", "ddd", "stories", "ux"]))
 
     with context("with harness/guidance as the tree for clean engineering, stories, and bdd"):
         with before.each:
