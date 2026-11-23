@@ -2,8 +2,8 @@
 queue on a real cdd server.
 
 The plugin's own tests (hooks/register.test.tsx) stub the cdd server, the stored state and the clock; this spec runs the
-same hooks for real. A SpecServer serves the PromptQueue toolset; a scratch project's .mcp.json names it ``cdd``; the CLI
-at CLAUDE_CODE_EXECPATH loads the plugin from this checkout with ``--plugin-dir`` and takes each message through
+same hooks for real. A SpecServer serves the PromptQueue toolset; a scratch project's .mcp.json names it ``cdd``; the
+Claude Code CLI (the chat's own, else the desktop app's newest) loads the plugin from this checkout with ``--plugin-dir`` and takes each message through
 stream-json input, so the plugin's prompt.submit, tool.call and turn hooks run as they do in a chat. The queue is then
 read back through the server with prompt-queue.show.
 
@@ -32,6 +32,7 @@ from expects import be_false, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.mcp.spec_support import SpecChat, SpecServer
+from harness.mcp.claude_plugins import ClaudePlugins
 
 TOOLSETS = ("tools.prompt_queue.prompt_queue:PromptQueue",)
 PLUGIN_FOLDER = _REPO_ROOT / "tools" / "prompt_queue"
@@ -48,6 +49,12 @@ _TURN_SECONDS = 240
 # How many times the chat is asked to give the goal its steps before the spec goes on and fails on what it finds.
 _SET_STEPS_ASKS = 3
 _NOTICE ="<task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification>"
+
+
+def _claude_cli() -> str:
+    """The Claude Code this chat runs, when the spec runs from a chat; else the desktop app's newest, as the cdd server
+    finds it, since the cdd server's scheduled runs start outside any chat."""
+    return os.environ.get("CLAUDE_CODE_EXECPATH") or ClaudePlugins().claude_cli or "claude"
 
 
 class HeadlessChat:
@@ -100,7 +107,7 @@ class HeadlessChat:
     def _command(self) -> list[str]:
         allowed = ["--allowedTools", *self._allowed_tools] if self._allowed_tools else []
         return [
-            os.environ["CLAUDE_CODE_EXECPATH"], "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
+            _claude_cli(), "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
             "--session-id", self.id, "--plugin-dir", str(PLUGIN_FOLDER), "--mcp-config", str(self._servers), "--strict-mcp-config",
             "--setting-sources", "project,local", "--model", _MODEL, "--no-session-persistence", *allowed,
         ]

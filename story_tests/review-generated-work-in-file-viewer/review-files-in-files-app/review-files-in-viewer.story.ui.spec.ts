@@ -61,6 +61,8 @@ const ORDER_GRAPH = {
 
 const files = (page: Page) => page.locator('[data-panel="files"]')
 const row = (page: Page, line: number): Locator => files(page).locator(`.code-row[data-line="${line}"]`)
+// The line itself, without the lines a change removed above it, which a diff shows in the same row.
+const lineOf = (page: Page, line: number): Locator => row(page, line).locator('.code-line')
 const marker = (page: Page, line: number): Locator => row(page, line).locator('.comment-marker')
 
 // Seed: order.py in checkout-flow's session folder; with comments, the session's file-comments.json, as FileComments keeps it.
@@ -341,7 +343,7 @@ test.describe('Show Changed File In Viewer', () => {
     })
 
     test(`Then the viewer shows line 14 as ${CHANGED_14.trim()}`, async ({ page }) => {
-      await expect(row(page, 14).locator('.line-text')).toHaveText(CHANGED_14)
+      await expect(lineOf(page, 14).locator('.line-text')).toHaveText(CHANGED_14)
     })
 
     test('And the comment marker still shows beside line 12, processed', async ({ page }) => {
@@ -374,8 +376,6 @@ const PROCESSED_ON_SENT = { start: 12, end: 14, text: COMMENT, ...PROCESSED, sen
 const CHANGED_LINES = ORDER_LINES.map(line => (line === LINE_14 ? CHANGED_14 : line))
 const ADDED_LINES = [...ORDER_LINES.slice(0, 14), '            # a cart needs one item', '            # to be placed', ...ORDER_LINES.slice(14)]
 const changedRows = (page: Page): Locator => files(page).locator('.code-row[data-change]')
-const lineOf = (page: Page, line: number): Locator => row(page, line).locator('.code-line')
-
 test.describe('Show AI Changes As Diff', () => {
   test.describe('Mark the line the chat changed, with the line it replaced', () => {
     test.beforeEach(async ({ page }) => {
