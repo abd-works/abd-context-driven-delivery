@@ -15,6 +15,7 @@ from harness.git.git import Git, RepoConnectError
 from space.repo.git_folder import GitFolder
 from space.repo.origin import Merges, Origin
 from space.repo.worktree import Worktree, Worktrees
+from space.repo.new_repository import NewRepository
 
 # A file git reports as changed that is the hook server's running log, not work: it never blocks a switch or a close.
 _RUNTIME_LOG = "events.log"
@@ -95,6 +96,8 @@ class Repo:
         # Each path already written from the top. The board names every session file this way thousands of times a
         # refresh, and the answer depends only on the path and this repository's root, which never changes.
         self._from_top: dict[Path, str] = {}
+        # The default branch once the refs name it; read again until then.
+        self._default_branch: str | None = None
         # Held while git writes this checkout's index: a commit, a merge, a checkout. The board's saves commit on main
         # from a thread of their own while a tool call commits or merges in the same folder, and two at once fail on
         # git's index.lock. This process holds one Repo per checkout, so the one lock covers every writer in it.
@@ -177,11 +180,30 @@ class Repo:
         read = folder.head_commit() if folder is not None else ""
         return read or self.git.run("rev-parse", "HEAD")
 
-    @cached_property
+    @property
     def default_branch(self) -> str:
-        """The repository's default branch, read once: the branch origin's HEAD names, else main or master, whichever
-        the clone or origin has, else main. A repository made before git named its first branch main keeps master,
-        and a merge or push to its default branch must land there, not on a new main."""
+        """The repository's default branch: the branch origin's HEAD names, else main or master, whichever the clone or
+        origin has. A repository made before git named its first branch main keeps master, and a merge or push to its
+        default branch must land there, not on a new main. A repository git init made has no branch yet, so its default
+        is the branch HEAD names, which its first commit makes; a folder git does not hold has main. Only a branch read
+        from the refs is kept, so a folder made a repository, or given its first commit, is read again."""
+        if self._default_branch is None:
+            found = self._default_branch_in_refs()
+            if not found:
+                return self._unborn_branch() or _DEFAULT_BRANCH_NAMES[0]
+            self._default_branch = found
+        return self._default_branch
+
+    def _unborn_branch(self) -> str:
+        """The branch HEAD names in a clone with no commit on it yet; empty anywhere else."""
+        if not self.is_clone or not self.is_on_branch:
+            return ""
+        return self.current_branch.name
+
+    def _default_branch_in_refs(self) -> str:
+        """The default branch as the refs name it; empty when no ref names one."""
+        if not self.is_clone:
+            return ""
         try:
             named = self.git.run("symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
         except RepoConnectError:
@@ -190,7 +212,7 @@ class Repo:
             return named.removeprefix("origin/")
         candidates = [f"{place}{name}" for place in ("refs/heads/", "refs/remotes/origin/") for name in _DEFAULT_BRANCH_NAMES]
         found = next((ref for ref in candidates if self.refs.has(ref)), "")
-        return found.rsplit("/", 1)[-1] if found else _DEFAULT_BRANCH_NAMES[0]
+        return found.rsplit("/", 1)[-1] if found else ""
 
     @property
     def default_start_point(self) -> str:
@@ -264,6 +286,16 @@ class Repo:
         main, so origin's main holds the work; the main clone goes back to the branch it had. Answer the commit main is
         on."""
         return self.publishing.take_work_to_main(push=True)
+
+    @long_call
+    @agent_tool
+    @mcp
+    def make_repository(self) -> str:
+        """Make the project, a plain folder, a git repository on main with a first commit of its files, so its tickets get
+        branches, worktrees and chats of their own: the chat bar offers it in a session whose project is no repository.
+        Its .gitignore first takes what the CDD checkout ignores. A repository already there is left as it is. Answer what
+        was done."""
+        return NewRepository(self.checkout_folder).make_from_folder()
 
     @command(name="push")
     @agent_instructions

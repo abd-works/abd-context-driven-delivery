@@ -15,7 +15,7 @@ from tools.prompt_queue.examples.prompt_queue_examples import (
     steps_of,
     three_steps_pending,
 )
-from tools.prompt_queue.prompt_queue import PromptNotQueued
+from tools.prompt_queue.prompt_queue import PromptNotQueued, StepStateUnknown
 from story_test import and_, but_, given, scenario, story, then, when
 
 # Epic: Queue Prompts For Later
@@ -68,3 +68,20 @@ with story("Set Steps Of Queued Prompt"):
             expect(self.setting).to(raise_error(PromptNotQueued, contain(f"no prompt {MISSING_PROMPT!r} is on the queue")))
         with and_("the queue still holds WRITE_THE_SCENARIOS with no steps"):
             expect(steps_of(self.queue, WRITE_THE_SCENARIOS)).to(equal([]))
+    with scenario("Leave out a step whose text is only spaces"):
+        with given("the chat's prompt queue holds WRITE_THE_SCENARIOS"):
+            self.queue = seed_queue(WRITE_THE_SCENARIOS)
+        with when("the agent sets the steps of WRITE_THE_SCENARIOS to READ_THE_EPIC done and a step of only spaces, pending"):
+            self.answered = self.queue.set_steps(id_of(self.queue, WRITE_THE_SCENARIOS), steps((READ_THE_EPIC, "done"), ("   ", "pending")))
+        with then("the queue answers WRITE_THE_SCENARIOS with only READ_THE_EPIC done"):
+            expect(steps_of(self.answered, WRITE_THE_SCENARIOS)).to(equal(steps((READ_THE_EPIC, "done"))))
+    with scenario("Refuse a state a step does not have"):
+        with given("WRITE_THE_SCENARIOS has the step READ_THE_EPIC done"):
+            self.queue = seed_queue(WRITE_THE_SCENARIOS)
+            self.queue.set_steps(id_of(self.queue, WRITE_THE_SCENARIOS), steps((READ_THE_EPIC, "done")))
+        with when("the agent sets the steps of WRITE_THE_SCENARIOS to READ_THE_EPIC with the state completed"):
+            self.setting = lambda: self.queue.set_steps(id_of(self.queue, WRITE_THE_SCENARIOS), steps((READ_THE_EPIC, "completed")))
+        with then("the agent is told completed is not a step's state, which is one of pending, in_progress, done"):
+            expect(self.setting).to(raise_error(StepStateUnknown, contain("'completed' is not a step's state, which is one of pending, in_progress, done")))
+        with and_("WRITE_THE_SCENARIOS still has only READ_THE_EPIC done"):
+            expect(steps_of(self.queue, WRITE_THE_SCENARIOS)).to(equal(steps((READ_THE_EPIC, "done"))))

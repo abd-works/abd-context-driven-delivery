@@ -1,4 +1,4 @@
-"""The running parts of CDD that a person needs to see are up: each registered app, and the hook server."""
+"""The running parts of CDD that a person needs to see are up: each registered app, and the latest test runs."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -8,7 +8,6 @@ from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subje
 from harness.diagnostics.app import APPS, App
 from harness.diagnostics.test_runs import SCHEDULED_RELEASE, TestCadence, TestRun, TestRunRecord, default_record_folder, main_checkout
 from harness.e2e_review.e2e_review import E2eReview, E2eRunReview
-from harness.hooks.hook_daemon import HookDaemon
 from harness.installation.data_class import data_field, language_adapter
 from harness.mcp.mcp_annotations import mcp
 
@@ -21,11 +20,9 @@ class ServerHealth:
     # The server health band reads this after every cdd call and every prompt, so its tool stays out of the session log.
     # This tool answers only while the MCP host is up, so the band itself works out that the host is lost.
 
-    def __init__(self, repo_root: Path | str, hook_daemon: HookDaemon | None = None, cadence: TestCadence | None = None,
-                 e2e_review: E2eReview | None = None) -> None:
+    def __init__(self, repo_root: Path | str, cadence: TestCadence | None = None, e2e_review: E2eReview | None = None) -> None:
         self._repo_root = Path(repo_root).resolve()
-        self._hook_daemon = hook_daemon if hook_daemon is not None else HookDaemon(self._repo_root)
-        self._cadence = cadence if cadence is not None else TestCadence(main_checkout(self._repo_root), TestRunRecord(default_record_folder()))
+        self._cadence = cadence if cadence is not None else TestCadence(TestRunRecord(default_record_folder(), main_checkout(self._repo_root)))
         # The scheduled e2e run's screens are reviewed in the main checkout it runs in.
         self._e2e_review = e2e_review if e2e_review is not None else E2eReview(self._cadence.checkout or self._repo_root, SCHEDULED_RELEASE)
 
@@ -39,8 +36,8 @@ class ServerHealth:
     @agent_tool
     @noSessionLog
     def report(self) -> ServerHealth:
-        """Return each registered app with its status and the port it answers on, whether the hook server is running, and
-        the latest heavy and e2e runs. Reading it is the cadence's clock: a tier overdue on main starts in the background."""
+        """Return each registered app with its status and the port it answers on, and the latest heavy and e2e runs.
+        Reading it is the cadence's clock: a tier overdue on main starts in the background."""
         self._cadence.start_due()
         return self
 
@@ -49,11 +46,6 @@ class ServerHealth:
     def apps(self) -> list[App]:
         """Every app a module registered, each read as it is now."""
         return APPS.registered
-
-    @property
-    @data_field
-    def is_hook_server_running(self) -> bool:
-        return self._hook_daemon.is_running()
 
     @property
     @data_field

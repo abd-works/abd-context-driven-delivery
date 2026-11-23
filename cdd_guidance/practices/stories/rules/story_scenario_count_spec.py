@@ -1,4 +1,4 @@
-"""Scenario counts are not a 4–9 map band. A story holds 1–4 scenarios."""
+"""Scenario counts are not a map child band. A story holds at most seven scenarios."""
 
 import sys
 from pathlib import Path
@@ -11,7 +11,7 @@ from expects import contain, equal, expect
 from mamba import context, description, it
 
 from cdd_guidance.practices.stories.model.story_model import Scenario, Story
-from cdd_guidance.practices.stories.rules.story_map import FourToNineChildren, StoryScenariosAtMostSeven
+from cdd_guidance.practices.stories.rules.story_map import ChildCountFitsLayer, StoryScenariosAtMostSeven
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.rule_context import RuleCheckContext
@@ -48,20 +48,14 @@ def _story_node(name: str, scenario_count: int, *, band: str = "") -> Node:
 
 
 with description("story scenario count"):
-    with context("four-to-nine-children"):
+    with context("child-count-fits-layer"):
         with it("should leave a story with two scenarios alone"):
             node = _story_node("Enter Validation Code", 2, band="error")
-            expect(_hits(FourToNineChildren(), node)).to(equal([]))
+            expect(_hits(ChildCountFitsLayer(), node)).to(equal([]))
 
         with it("should leave a scenario's step count alone"):
             node = _Node("Enter validation code", "Scenario", {"child_count": 2, "child_label": "steps", "child_band": "error"})
-            expect(_hits(FourToNineChildren(), node)).to(equal([]))
-
-        with it("should still flag an epic outside 4-9 children"):
-            node = _Node("Onboard A Customer", "Epic", {"child_count": 1, "child_label": "children", "child_band": "error"})
-            expect(_hits(FourToNineChildren(), node)).to(
-                equal(["epic 'Onboard A Customer': 1 children (target 4-9)"])
-            )
+            expect(_hits(ChildCountFitsLayer(), node)).to(equal([]))
 
     with context("story-scenarios-at-most-seven"):
         with it("should accept one to seven scenarios"):
@@ -77,7 +71,7 @@ with description("story scenario count"):
             expect(_hits(StoryScenariosAtMostSeven(), _story_node("Enter Validation Code", 0))).to(equal([]))
 
     with context("a story that records its scenario count"):
-        with it("should not mark two scenarios as a 4-9 child-band error"):
+        with it("should not mark two scenarios as a child-band error"):
             story = Story("Enter Validation Code", 1)
             story.scenarios = [Scenario("Enter validation code", 1), Scenario("Resend validation code", 2)]
             story.load_map_facts()
@@ -87,7 +81,9 @@ with description("story scenario count"):
     with context("schema"):
         with it("should size story scenarios with the at-most-seven rule"):
             expect(PracticeSchema(PRACTICE_CATALOGUE.create("stories")).slugs_for("Story")).to(contain("story-scenarios-at-most-seven"))
-            expect("four-to-nine-children" in PracticeSchema(PRACTICE_CATALOGUE.create("stories")).slugs_for("Story")).to(equal(False))
+            expect("child-count-fits-layer" in PracticeSchema(PRACTICE_CATALOGUE.create("stories")).slugs_for("Story")).to(equal(False))
 
-        with it("should keep four-to-nine on an epic"):
-            expect(PracticeSchema(PRACTICE_CATALOGUE.create("stories")).slugs_for("Epic")).to(contain("four-to-nine-children"))
+        with it("should size an epic and a sub-epic by their layer"):
+            schema = PracticeSchema(PRACTICE_CATALOGUE.create("stories"))
+            expect(schema.slugs_for("Epic")).to(contain("child-count-fits-layer"))
+            expect(schema.slugs_for("SubEpic")).to(contain("child-count-fits-layer"))

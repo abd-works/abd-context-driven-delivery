@@ -14,7 +14,10 @@ param(
     [ValidateSet("unit", "vanilla", "heavy", "e2e", "agent")]
     [string]$Suite = "unit",
     # The unit tier's budget for one example, before.each and after.each included. Over it, the example's file fails.
-    [int]$ExampleBudgetMs = 100
+    [int]$ExampleBudgetMs = 100,
+    # The e2e tier without the agentic BDD specs, whose agents' answers are judged: the browser specs and the
+    # Playwright suite alone, for a check after each fix before a judge round.
+    [switch]$SkipAgents
 )
 if ($Suite -eq "vanilla") { $Suite = "unit" }
 if ($Suite -eq "agent") { $Suite = "e2e" }
@@ -40,7 +43,36 @@ $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
     [StringComparer]::OrdinalIgnoreCase
 )
 
+# Every temporary folder a spec makes, and the cdd homes and output of each batch, go in one folder for the run, which
+# the run removes when it ends: specs that make temporary folders and never remove them left tens of thousands behind in
+# %TEMP%, several gigabytes a day, until the disk filled. A folder a run could not remove, because a server a heavy spec
+# started still held a file in it, or because the run was killed, is removed by a later run once it is a day old.
+$runFolderPrefix = "cdd-test-run-"
+$staleRunHours = 24
+
+function Remove-StaleRunFolders {
+    param([string]$Temp)
+    $cutoff = (Get-Date).AddHours(-$staleRunHours)
+    Get-ChildItem -LiteralPath $Temp -Directory -Filter "$runFolderPrefix*" -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -lt $cutoff } |
+        ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+function Set-RunTemp {
+    # The shell that runs the script keeps its environment after it, so the run gives back the temporary folder it found.
+    $script:shellTemp = $env:TEMP
+    $script:shellTmp = $env:TMP
+    $temp = [IO.Path]::GetTempPath()
+    Remove-StaleRunFolders $temp
+    $script:runTemp = Join-Path $temp ($runFolderPrefix + [guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force $script:runTemp | Out-Null
+    # Python's tempfile reads TEMP and TMP, and .NET's GetTempPath reads TMP, so both point every spec at the run's folder.
+    $env:TEMP = $script:runTemp
+    $env:TMP = $script:runTemp
+}
+
 function Set-TestEnvironment {
+    Set-RunTemp
     $roots = @(".", "cdd_guidance/actions", "tools", "cdd_guidance/practices", "cdd_guidance/patterns")
     # Leave the harness folder off the path so `import mcp` stays the SDK,
     # not harness/mcp. The repo root still exposes the harness package.
@@ -208,7 +240,10 @@ function Start-SpecBatch {
     $env:CDD_HOME = Join-Path $OutputFolder ("home-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Force $env:CDD_HOME | Out-Null
     $out = Join-Path $OutputFolder ([guid]::NewGuid().ToString("N") + ".out")
-    $process = Start-Process -FilePath $Executable -ArgumentList ($Arguments + $Relatives) -WorkingDirectory $repo `
+    # Start-Process joins its arguments with spaces, so a path that holds one is quoted, or Mamba is handed its halves
+    # as two paths, finds neither, and runs nothing.
+    $paths = @($Relatives | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } })
+    $process = Start-Process -FilePath $Executable -ArgumentList ($Arguments + $paths) -WorkingDirectory $repo `
         -NoNewWindow -PassThru -RedirectStandardOutput $out -RedirectStandardError "$out.err"
     # Windows PowerShell reads a started process's exit code only when its handle was taken while it ran.
     $null = $process.Handle
@@ -221,7 +256,21 @@ function Get-FailedFiles {
     $text = Get-Content $Batch.Out, "$($Batch.Out).err" -Raw -ErrorAction SilentlyContinue
     $failed = @($Batch.Relatives | Where-Object { $text -match [regex]::Escape("Failure/Error: " + $_.Replace('/', '\')) -or $text -match [regex]::Escape("Failure/Error: " + $_) })
     if ($Batch.Process.ExitCode -ne 0 -and $failed.Count -eq 0) { return @($Batch.Key) }
+    # A batch that ran no example proved nothing about its files, so each of them fails: a spec file with no example,
+    # or one Mamba never found, would otherwise be counted as passed.
+    if ($failed.Count -eq 0 -and (Get-ExamplesRan ($text -join "`n")) -eq 0) { return @($Batch.Relatives) }
     return $failed
+}
+
+# How many examples a batch's Mamba process says it ran, on its closing line: "12 examples ran in ..." or
+# "2 examples failed of 12 ran in ...". None when it printed no such line.
+function Get-ExamplesRan {
+    param([string]$Text)
+    $ran = 0
+    foreach ($line in [regex]::Matches($Text, '(\d+) (?:examples? )?ran (?:in|\()')) {
+        $ran += [int]$line.Groups[1].Value
+    }
+    return $ran
 }
 
 # The examples the unit guard logged over the budget, each with its spec file from the repository's top.
@@ -358,7 +407,7 @@ try {
         # A browser or an agent per example: one file at a time, so they do not fight over the machine.
         $endToEndSpecs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
             $name = [IO.Path]::GetFileName($_)
-            (Test-EndToEnd $name) -or (Test-AgenticBdd $name)
+            (Test-EndToEnd $name) -or ((-not $SkipAgents) -and (Test-AgenticBdd $name))
         })
         $agentFailures = @()
         foreach ($spec in $endToEndSpecs) {
@@ -384,6 +433,9 @@ try {
     }
 } finally {
     Pop-Location
+    $env:TEMP = $script:shellTemp
+    $env:TMP = $script:shellTmp
+    Remove-Item -LiteralPath $script:runTemp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # A run that stopped before counting its files proved nothing, so it fails.

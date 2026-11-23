@@ -19,15 +19,14 @@ from harness.installation.json_file import JsonFile
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import long_call, mcp
 from harness.git.git import Git
+from space.repo.new_repository import DEFAULT_BRANCH, NewRepository
 from space.repo.repo import Repo
 
-# The checkout serving these tools: its .gitignore is what a new repository ignores, and its install script installs CDD.
+# The checkout serving these tools: its install script installs CDD.
 _CDD_CHECKOUT = Path(__file__).resolve().parents[2]
 _CONFIG_FILE = "config.json"
 _REPOS_FOLDER = "repos_folder"
-_DEFAULT_BRANCH = "main"
 _VISIBILITIES = ("private", "public", "internal")
-_GITIGNORE_HEADER = "# Ignored as the CDD checkout ignores (written by repos.open)"
 _INSTALL_SECONDS = 600
 _PUBLISH_SECONDS = 180
 # How much of a failed install's output its error carries: the end, where the reason is, short enough to read.
@@ -49,23 +48,6 @@ class NotAReposFolderError(ValueError):
         self.folder = folder
 
 
-class FolderIsAWorktreeError(ValueError):
-    """Raised when the repository named is a linked worktree of another one: it is opened through its ticket, not as a
-    repository of its own."""
-
-    def __init__(self, folder: Path) -> None:
-        super().__init__(f"{folder} is a linked worktree of another repository, not a repository of its own")
-        self.folder = folder
-
-
-class PathIsAFileError(ValueError):
-    """Raised when the folder a chat is to open on is a file: it cannot be made a folder without losing the file."""
-
-    def __init__(self, path: Path) -> None:
-        super().__init__(f"{path} is a file, not a folder; choose a folder")
-        self.path = path
-
-
 class UnknownVisibilityError(ValueError):
     def __init__(self, visibility: str) -> None:
         super().__init__(f"visibility must be one of {', '.join(_VISIBILITIES)}, not {visibility!r}")
@@ -77,7 +59,6 @@ class PublishFailedError(RuntimeError):
 
 class InstallFailedError(RuntimeError):
     """Raised when installing CDD into the repository's .claude fails; it carries the install's output."""
-
 
 
 class NewChat:
@@ -236,11 +217,12 @@ class Repos:
         repository's main session. Ask the person for visibility before publishing, offering private as the default."""
         cleaned = self._checked_name(name, visibility)
         root = (Path(folder).expanduser().resolve() if folder else self.folder) / cleaned
-        steps = [self._create(root), self._ignore_as_cdd_does(root)]
+        new = NewRepository(root)
+        steps = [new.create(), new.ignore_as_cdd_does()]
         steps += [self._publish(root, visibility)] if publish else []
         steps += [self._install_cdd(root)] if install else []
         # A new repository's main session is the session of the branch it is created on.
-        chat = NewChat(root, cleaned, _DEFAULT_BRANCH)
+        chat = NewChat(root, cleaned, DEFAULT_BRANCH)
         steps.append(chat.open() if start_chat else chat.instructions)
         return "\n".join(f"- {step}" for step in steps if step)
 
@@ -252,56 +234,6 @@ class Repos:
         if visibility not in _VISIBILITIES:
             raise UnknownVisibilityError(visibility)
         return cleaned
-
-    @mcp
-    @command(name="open-folder")
-    @agent_tool
-    @noSessionLog
-    def open_folder(self, path: str, start_chat: bool = True) -> str:
-        """Open the folder at path, any folder on disk, in a chat of its own, as it is, making it first when it is not
-        there yet: no repository is created, nothing is published or installed, and a folder that is not a git
-        repository stays one. start_chat opens a new top-level Claude chat on it; the person sends its first prompt,
-        which opens the folder's main session. With no git there, its tickets get no worktree or chat of their own."""
-        root = Path(path).expanduser().resolve()
-        if root.is_file():
-            raise PathIsAFileError(root)
-        root.mkdir(parents=True, exist_ok=True)
-        chat = NewChat(root, root.name, root.name)
-        return chat.open() if start_chat else chat.instructions
-
-    def _create(self, root: Path) -> str:
-        if (root / ".git").is_file():
-            raise FolderIsAWorktreeError(root)
-        if SiblingRepo(root).is_repository:
-            branch = Git(root).run("branch", "--show-current")
-            if branch != _DEFAULT_BRANCH:
-                return f"{root} is a repository already, on {branch or 'no branch'}; the new chat opens it as it is."
-            return f"{root} is a repository already, on {_DEFAULT_BRANCH}."
-        root.mkdir(parents=True, exist_ok=True)
-        git = Git(root)
-        git.run("init", "-b", _DEFAULT_BRANCH)
-        readme = root / "README.md"
-        if not readme.exists():
-            readme.write_text(f"# {root.name}\n", encoding="utf-8")
-        git.run("add", "-A")
-        git.run("commit", "-m", "Initial commit")
-        return f"Created {root} on {_DEFAULT_BRANCH} with a first commit."
-
-    def _ignore_as_cdd_does(self, root: Path) -> str:
-        """Add to root's .gitignore every line of the CDD checkout's that it lacks, and commit it."""
-        source = _CDD_CHECKOUT / ".gitignore"
-        if not source.is_file():
-            return "The CDD checkout has no .gitignore to copy."
-        target = root / ".gitignore"
-        have = target.read_text(encoding="utf-8").splitlines() if target.is_file() else []
-        present = {line.strip() for line in have}
-        wanted = [line for line in source.read_text(encoding="utf-8").splitlines() if line.strip() and line.strip() not in present]
-        if not [line for line in wanted if not line.lstrip().startswith("#")]:
-            return ".gitignore already ignores what the CDD checkout ignores."
-        text = "\n".join([*have, *([""] if have else []), _GITIGNORE_HEADER, *wanted]) + "\n"
-        target.write_text(text, encoding="utf-8")
-        Repo.of_project(root).working_tree.commit([str(target)], "Ignore what the CDD checkout ignores", untracked=True)
-        return f"Added {len(wanted)} lines to .gitignore from the CDD checkout's, and committed them."
 
     def _publish(self, root: Path, visibility: str) -> str:
         repo = Repo.of_project(root)

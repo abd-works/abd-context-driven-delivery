@@ -16,6 +16,8 @@ export const FILES_QUERY = 'files'
 export const FIDELITY_QUERY = 'fidelity'
 
 export const isDrawio = (path: string): boolean => path.toLowerCase().endsWith('.drawio')
+// A whiteboard file, which the page draws on a canvas rather than showing its text.
+export const isWhiteboard = (path: string): boolean => path.toLowerCase().endsWith('.whiteboard')
 
 // The address a .drawio file's link opens: the Files server's draw.io page on the file, naming the chat that opened the
 // page so a viewer that does not start is told to that chat, as every failure of the page is, and the page's project,

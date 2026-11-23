@@ -242,6 +242,31 @@ with description("a language adapter"):
             adapters.write_all()
             expect(sorted(path.name for path in tracked)).to(equal(["cdd-connection.ts", "cdd-shared.ts", "cdd-views.tsx", "package.json", "ticket-views.tsx", "ticket.ts"]))
 
+        with context("written whole over a folder that holds files it does not write, such as a copy left beside one"):
+            with before.all:
+                self.whole_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
+                _install(self.whole_path)
+                whole_root = self.whole_path / _ADAPTERS
+                self.copy = whole_root / "space/kanban/ticket (1).ts"
+                self.copy.write_text("// a stale copy", encoding="utf-8")
+                adapters = LanguageAdapterInstallation(IdeLayout("Claude"), self.whole_path, repo=_REPO)
+                for reference in _KANBAN:
+                    adapters.record(AgentToolSet.instantiate(reference))
+                adapters.write_all(whole=True)
+
+            with it("should remove each file it did not write, so the folder holds only the adapters"):
+                expect(self.copy.exists()).to(be_false)
+
+            with it("should keep every file it wrote"):
+                expect((self.whole_path / _ADAPTERS / "space/kanban/ticket.ts").is_file()).to(be_true)
+
+        with context("written in part over a folder that holds files it does not write"):
+            with it("should leave them, since another install's toolsets may have written them"):
+                part_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
+                _install(part_path)
+                _install(part_path, ("space.kanban.ticket:Ticket",))
+                expect((part_path / _ADAPTERS / "space/kanban/board.ts").is_file()).to(be_true)
+
         with context("whose tools run on the one toolset a project holds, which no call loads by name"):
             with before.all:
                 install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))

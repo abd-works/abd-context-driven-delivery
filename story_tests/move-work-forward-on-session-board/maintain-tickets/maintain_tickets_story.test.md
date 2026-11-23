@@ -87,6 +87,40 @@ Seed state from `space/kanban/session_board_examples.py`, which the shared stori
 *Then* sign-up is back on the board with its session log and session.json
 *But* no new ticket is opened
 
+#### Scenario: Refuse an idea whose title another idea's file has
+
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-13. space/kanban module-context: a backlog item's file is the only copy of the idea.
+
+*Given* the Backlog keeps the idea Gift cards, with the text Sell gift cards.
+*When* the Person adds an idea titled Gift cards with another text
+*Then* the board says the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md
+*And* that file still says Sell gift cards.
+
+#### Scenario: Refuse an idea whose title gives its file no name
+
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-13.
+
+*Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows the Backlog
+*When* the Person adds an idea whose title is empty, or 日本語
+*Then* the board says the title gives no name
+*And* no file named .md is written in the Backlog
+
+#### Scenario: Refuse to start an idea whose name a ticket already has
+
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-13.
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is on the board
+*And* the Backlog keeps an idea titled Pet visits
+*When* the Person starts that idea
+*Then* the board says a ticket named pet-visits already exists
+*And* the idea stays in the Backlog
+
 ## Story: Edit Ticket Text
 
 ### Evidence
@@ -237,6 +271,18 @@ Returns and refunds.move_before(Gift cards)
 *Then* the board says no ticket named 'no-such-ticket' on the board
 *But* nothing is moved to .sessions/_archive
 
+#### Scenario: Archive a ticket that is open in its own worktree
+
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket open in its own worktree, with work not saved, is archived'.
+
+> Evidence: exploratory-testing defect gizmo-16. Evidence gap: no source says what becomes of an archived ticket's worktree and branch; this takes what closing with delete_worktree does, awaiting the person's decision.
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is open in its own worktree, with work nobody committed
+*When* the Person archives pet-visits
+*Then* that work is committed on the branch pet-visits on origin
+*And* pet-visits's worktree is gone
+*And* its folder is in .sessions/_archive/pet-visits
+
 ## Story: Delete Ticket
 
 ### Evidence
@@ -278,6 +324,31 @@ CardPlacement.ticket("no-such-ticket")
 
 *Then* the board says no ticket named 'no-such-ticket' on the board
 *And* deleting no-such-ticket removes no other ticket's session folder
+
+#### Scenario: Delete a ticket that is open in its own worktree
+
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket open in its own worktree, with work not saved, is deleted'.
+
+> Evidence: exploratory-testing defect gizmo-16. Evidence gap, as the story's own: no source says what becomes of a deleted ticket's worktree and branch; this takes what closing with delete_worktree does, and keeps the branch, awaiting the person's decision.
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is open in its own worktree, with work nobody committed
+*When* the Person deletes pet-visits
+*Then* that work is committed on the branch pet-visits on origin
+*And* pet-visits's worktree is gone
+*And* .sessions/pet-visits is gone
+
+#### Scenario: Keep a ticket whole when its session folder cannot be removed
+
+> Test: heavy, Windows: space/kanban/ticket_work_heavy_spec.py 'that a ticket whose session folder a running program holds open is deleted'.
+
+> Evidence: exploratory-testing defect gizmo-09, as its second charter repeated it on Windows.
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is on the [board](../../../space/kanban/.context/kanban-model.md#board)
+*And* a running program works in .sessions/pet-visits
+*When* the Person deletes pet-visits
+*Then* the board says the session folder could not be removed, naming it
+*And* .sessions/pet-visits still holds its session.json and session.log
+*And* pet-visits is still on the board
 
 ## Story: Tag Ticket Session
 

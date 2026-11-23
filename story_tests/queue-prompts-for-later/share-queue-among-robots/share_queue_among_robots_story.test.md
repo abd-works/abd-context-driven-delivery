@@ -76,6 +76,14 @@ In sub-agent mode the queue's work is shared among robots, sub-agents that run s
 *When* the person opens the prompt queue
 *Then* ++Bolt++'s queue shows ++[for Bolt] Run the heavy tier++
 
+#### Scenario: Show a card given to one robot only in that robot's queue, whatever robot its text names
+
+*Given* sub-agent mode is on, ++Sparky++ holding ++Write the scenarios++ (a) and ++Bolt++ holding ++Run the unit tier++ (b)
+*And* the queue also holds ++[for Bolt] Run the heavy tier++ (c), given to ++Sparky++
+*When* the person opens the prompt queue
+*Then* ++Sparky++'s queue shows ++[for Bolt] Run the heavy tier++
+*And* ++Bolt++'s queue does not show ++[for Bolt] Run the heavy tier++
+
 ## Story: Assign Queued Prompt To Robot
 
 #### Scenario: Keep a card's robot on the queue

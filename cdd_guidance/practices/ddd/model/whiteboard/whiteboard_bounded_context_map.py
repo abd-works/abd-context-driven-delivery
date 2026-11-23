@@ -43,6 +43,7 @@ class AggregateViewBoard(ClassBoard):
 
     page_inset = 24
     group_role = "boundedcontext"
+    links_across_pages = True
 
     @property
     def draws_one_page(self) -> bool:

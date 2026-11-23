@@ -28,6 +28,15 @@ _VALIDATE_MARKDOWN = Path(__file__).with_name("validate.md").read_text(encoding=
 _LOGGED_VIOLATIONS = 40
 
 
+class UnknownRule(ValueError):
+    """A validate call named a rule none of its listed guidance checks. The message lists the rules there are."""
+
+    def __init__(self, rule: str, rules: list[str]) -> None:
+        super().__init__(f"no rule {rule!r} among the rules the listed guidance checks; the rules are {', '.join(rules)}")
+        self.rule = rule
+        self.rules = tuple(rules)
+
+
 @agent_toolset
 class Validate(GuidanceAction):
     """Validate artifacts for provided context tools."""
@@ -38,6 +47,8 @@ class Validate(GuidanceAction):
         self._graph: CheckedGraph | None = None
         self._reports: ReportFiles | None = None
         self._report_of: ValidationReport | None = None
+        # The one rule this call names, read once from the listed guidance; none when it walks every rule.
+        self._rule: Rule | None = None
 
     @on_stage(2, STEP, CHECKS)
     @mcp
@@ -46,12 +57,12 @@ class Validate(GuidanceAction):
     def validate(
         self,
         guidance: GuidanceArg,
-        rule: Rule | None = None,
+        rule: str | None = None,
         graph: bool | str | list[str] | None = None,
         paths: list[str] | None = None,
     ) -> str:
         """Check artifacts against rules.
-        rule: one Rule to check. Omit it to walk each guidance's rules.
+        rule: the name of one rule to check, such as verb-noun-format. A name none of the listed guidance checks is refused. Omit it to walk each guidance's rules.
         graph: true for the session's graph (graph.json in the session's own folder, created for the session and loaded
         when it is missing), or path(s) to graph_return_nodes JSON
         or a saved graph.json. When set, append a graph-rule report for each guidance's practice and still run AI validation.
@@ -60,9 +71,22 @@ class Validate(GuidanceAction):
         run on them; the saved graph is not read or rebuilt. A path that is not there, or not under the session's root, is refused.
         With no paths and no graph, the folders holding the fidelity's written output are checked."""
         self._work_on(guidance)
+        self._rule = self._rule_named(rule)
         self._check(NamedToCheck(paths, graph, self.call))
-        report = self._report(rule, graph_named=bool(graph))
+        report = self._report(graph_named=bool(graph))
         return self._saved(report)
+
+    def _rule_named(self, name: str | None) -> Rule | None:
+        """The rule name names among the rules the listed guidance checks, each at the fidelity this call works at; none
+        when the call names none. A name none of them has raises *UnknownRule*, before anything is checked or saved."""
+        if not name:
+            return None
+        guidance = [self.work.at_fidelity(item) for item in self.listed() if isinstance(item, Guidance)]
+        rules = [rule for worked in guidance for rule in worked.checked_rules()]
+        found = next((rule for rule in rules if rule.slug == name), None)
+        if found is None:
+            raise UnknownRule(name, list(dict.fromkeys(rule.slug for rule in rules)))
+        return found
 
     def _saved(self, report: str) -> str:
         """Save the report into this call's report files, with the violations of the graph it checked beside them, and
@@ -78,16 +102,16 @@ class Validate(GuidanceAction):
         self._reports = ReportFiles(self.session, fidelities)
         self._graph.check_beside(self._reports)
         guidance = [self.work.at_fidelity(item) for item in self.listed() if not isinstance(item, str)]
-        self._report_of = ValidationReport(self.session, guidance, self._graph)
+        self._report_of = ValidationReport(guidance, self._graph, self._rule)
 
-    def _report(self, rule: Rule | None, graph_named: bool) -> str:
+    def _report(self, graph_named: bool) -> str:
         """The report: how to validate, what the judge judges, the graph's violations, each listed guidance's rules
         (or the one rule named), and the overlaid patterns' rules."""
         sections = [
             _VALIDATE_MARKDOWN,
             self._judging_instruction(),
             self._graph_section(graph_named),
-            *self.run(lambda worked: self._rules_text(worked, rule), action="validate"),
+            *self.run(self._rules_text, action="validate"),
             self._overlay_section(),
         ]
         return "\n\n".join(section for section in sections if section)
@@ -103,15 +127,15 @@ class Validate(GuidanceAction):
             "graph.json in the session's folder, or pass graph as a path to graph_return_nodes JSON."
         )
 
-    def _rules_text(self, worked: Guidance | str, rule: Rule | None) -> str:
-        """What the judge checks worked against: the one rule named, the text itself, or the fidelity's rules; none
+    def _rules_text(self, worked: Guidance | str) -> str:
+        """What the judge checks worked against: the text itself, the one rule named, or the fidelity's rules; none
         when the graph's report already gives them."""
-        if rule is not None:
-            return rule.validate()
         if isinstance(worked, str):
             return worked
         if self._graph.files:
             return ""
+        if self._rule is not None:
+            return self._rule.validate() if self._rule in worked.checked_rules() else ""
         return worked.checked_rules_text()
 
     def _overlay_section(self) -> str:

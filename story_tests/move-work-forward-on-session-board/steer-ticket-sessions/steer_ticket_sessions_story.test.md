@@ -85,6 +85,41 @@ section: body
 *Then* checkout-flow's root reads src/visits  
   *And* each practice's default root sits under src/visits
 
+#### Scenario: Refuse a title that gives a ticket no name
+
+> Test: steer-ticket-sessions.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-04. A ticket's name is its title's letters a to z and digits, joined by hyphens (`Name.title_slug`); the page already keeps Add off with no title.
+
+*Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows checkout-flow
+*When* the Person opens a new ticket whose title is empty, or 日本語
+*Then* the board says the title gives no name, naming the title
+*And* no session file is written in .sessions itself
+
+#### Scenario: Refuse a title whose name a ticket already has
+
+> Test: steer-ticket-sessions.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-05. The second ticket was answered as made while the first one's title was written over.
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is titled Pet visits
+*When* the Person opens a new ticket titled PET VISITS
+*Then* the board says a ticket named pet-visits already exists
+*And* pet-visits is still titled Pet visits
+*When* the Person opens a new ticket titled main
+*Then* the board says a ticket named main already exists
+
+#### Scenario: Refuse a title too long for a name
+
+> Test: steer-ticket-sessions.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-06. Evidence gap: no source gives the limit; 64 characters is `NAME_LENGTH_LIMIT`, awaiting the person's decision.
+
+*Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows checkout-flow
+*When* the Person opens a new ticket whose title makes a name longer than 64 characters
+*Then* the board says the title makes too long a name, naming the limit
+*And* no session folder is made for it
+
 ## Story: Activate Ticket
 
 #### Scenario: Open a ticket in its own worktree
@@ -154,6 +189,49 @@ section: body
 *Given* checkout-flow-retry is a ticket whose work is on the branch checkout-flow-retry
 *When* the Person activates checkout-flow
 *Then* checkout-flow's session records its own branch checkout-flow
+
+#### Scenario: Open a ticket again after its worktree folder was deleted
+
+> Test: heavy: space/repo/worktree_heavy_spec.py 'whose folder was deleted outside CDD'; unit: space/repo/worktree_spec.py.
+
+> Evidence: exploratory-testing defect gizmo-01. space/kanban module-context: a ticket's own worktree is the only way it opens.
+
+*Given* billing-report is open in its own worktree
+*But* that worktree's folder is no longer on disk
+*When* the Person activates billing-report
+*Then* billing-report has its own worktree again, on the branch billing-report
+
+#### Scenario: Give tickets whose names start alike their own worktrees
+
+> Test: heavy: space/repo/worktree_heavy_spec.py 'with another branch whose name starts with the same 24 characters open in its worktree'; unit: space/repo/worktree_spec.py.
+
+> Evidence: exploratory-testing defect gizmo-03. A worktree folder is named for the branch's first 24 characters (`Worktrees.sibling_folder`).
+
+*Given* customer-order-history-export-monthly is open in its own worktree
+*When* the Person activates customer-order-history-export-weekly
+*Then* customer-order-history-export-weekly has a worktree of its own, in another folder
+
+#### Scenario: Refuse to open a ticket onto a folder that is not its checkout
+
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is activated while a folder left on no branch is where its worktree goes'.
+
+> Evidence: exploratory-testing defect gizmo-07.
+
+*Given* billing-report's worktree folder is still there, left on no branch
+*And* the git [repository](../../../space/kanban/.context/kanban-model.md#repo) no longer has the branch billing-report
+*When* the Person activates billing-report
+*Then* the board says billing-report cannot open in a worktree, naming that folder
+*And* the folder's files are as they were
+
+#### Scenario: Answer every chat that activates a ticket at the same moment
+
+> Test: heavy: space/repo/worktree_heavy_spec.py 'that two callers open for one branch at the same moment'.
+
+> Evidence: exploratory-testing defect gizmo-08, for chats on one cdd server.
+
+*Given* billing-report has no worktree yet
+*When* three chats activate billing-report at the same moment
+*Then* each is answered billing-report, in the one worktree
 
 ## Story: Close Active Session
 
@@ -229,6 +307,47 @@ section: body
 *When* the Person closes checkout-flow with nothing chosen  
 *Then* the checkout is back on main  
   *And* main is the active ticket
+
+#### Scenario: Leave what the repository's own folder holds uncommitted out of the close
+
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is closed with its branch merged while the clone's own folder holds an edit nobody committed'.
+
+> Evidence: exploratory-testing defect gizmo-17. space/kanban module-context: the repository's own folder stays on main, and a ticket's worktree's branch carries only the work.
+
+*Given* checkout-flow is open in its own worktree, with work in it
+*And* the repository's own folder holds an edit to README.md that nobody committed
+*When* the Person closes checkout-flow, committing, pushing, merging, and deleting its branch and worktree
+*Then* main on origin holds checkout-flow's work
+*But* main on origin does not hold the edit to README.md
+*And* that edit is still uncommitted in the repository's own folder
+
+#### Scenario: Keep the ticket open when its branch does not merge into main
+
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is closed with its branch merged into a main it conflicts with'.
+
+> Evidence: exploratory-testing defect gizmo-14. `Ticket.close` promises its branch is merged before anything moves.
+
+*Given* checkout-flow is open in its own worktree
+*And* its branch and main on origin each changed the same line
+*When* the Person closes checkout-flow, committing, pushing, merging, and deleting its branch and worktree
+*Then* the board says checkout-flow does not merge into main
+*And* main has no merge half done
+*And* checkout-flow still has its worktree
+*And* checkout-flow stays In progress in Discovery
+
+#### Scenario: Refuse to call a ticket closed while a program holds its worktree open
+
+> Test: heavy, Windows: space/repo/worktree_heavy_spec.py 'whose folder a running program holds open'.
+
+> Evidence: exploratory-testing defect gizmo-15. `Worktrees.remove` promises `WorktreeNotRemovedError` for a folder still there.
+
+*Given* checkout-flow is open in its own worktree
+*And* a running program works in that worktree's folder
+*When* the Person closes checkout-flow, deleting its worktree
+*Then* the board says the worktree could not be removed, naming its folder
+*And* checkout-flow's work is committed on its branch on origin
+*When* that program has ended and the Person activates checkout-flow
+*Then* checkout-flow has its own worktree again
 
 ## Story: Move Ticket
 

@@ -31,8 +31,11 @@ class VerbNounFormat(PracticeGraphRule):
         return [f"{node.type} {node.name!r}: name should start with a verb (got {kind})."]
 
 
-class FourToNineChildren(PracticeGraphRule):
-    slug = "four-to-nine-children"
+class ChildCountFitsLayer(PracticeGraphRule):
+    """An epic or sub-epic holds the number of children its layer reads well: 2-6 under a node that holds sub-epics,
+    2-9 stories under a sub-epic, 4-9 stories under a top epic. The node's map facts carry its count and band."""
+
+    slug = "child-count-fits-layer"
     node_types = ("Epic", "SubEpic")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[str]:
@@ -43,8 +46,9 @@ class FourToNineChildren(PracticeGraphRule):
             return []
         count = node.get_fact("child_count", 0)
         label = node.get_fact("child_label") or "children"
+        target = node.get_fact("child_target") or "4-9"
         kind = node.type.lower().replace("subepic", "sub-epic")
-        return [f"{kind} {node.name!r}: {count} {label} (target 4-9)"]
+        return [f"{kind} {node.name!r}: {count} {label} (target {target})"]
 
 
 class StoryScenariosAtMostSeven(PracticeGraphRule):

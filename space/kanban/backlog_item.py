@@ -13,8 +13,8 @@ from harness.annotations.annotation import hosted_only
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command
-from harness.annotations.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
+from space.kanban.card_name import BacklogItemTakenError, CardName
 # Imported for real, not only for type checking: the backlog-item.start_under tool reads its parent's type to load the
 # ticket the call names.
 from space.kanban.ticket import Ticket
@@ -93,9 +93,13 @@ class BacklogItem(BacklogOrderTools, Card):
     @agent_tool
     @noSessionLog
     def create(cls, title: str, text: str = "", *, project: Path | str) -> BacklogItem:
-        """Add an idea to the Backlog, as the + on the board's Backlog column does: one markdown file, with title as its heading and text under it, committed on main and pushed. Run as the backlog slash command, the words after the command are the title, and any further lines its text."""
+        """Add an idea to the Backlog, as the + on the board's Backlog column does: one markdown file, with title as its heading and text under it, committed on main and pushed. A title that gives no file name, or the name of an idea already in the Backlog, is refused, so no idea is written over. Run as the backlog slash command, the words after the command are the title, and any further lines its text."""
         board = Board.load(project)
-        item = cls(board.sessions.backlog_folder / f"{Name(title).title_slug}.md", board)
+        file = board.sessions.backlog_folder / f"{CardName(title).for_new_card()}.md"
+        # An idea's file is its only copy, kept as that file or inside a folder of its name once it has children.
+        if file.exists() or file.with_suffix("").exists():
+            raise BacklogItemTakenError(title, board.repo.path_from_top(file))
+        item = cls(file, board)
         item._idea.write(title, text)
         board.sessions.saves.later(f"sessions: add {title} to the Backlog")
         return item

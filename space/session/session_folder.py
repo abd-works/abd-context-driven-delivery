@@ -16,6 +16,18 @@ if TYPE_CHECKING:
 COMPLETE_FOLDER = "_complete"
 ARCHIVE_FOLDER = "_archive"
 _HOOK_LOGS_FOLDER = "logs"
+# The name a record folder takes for the moment between leaving the sessions and being deleted; its first character
+# marks a folder the sessions share, so no board lists it as a session.
+_BEING_REMOVED = "_removing-"
+
+
+class SessionFolderHeldError(RuntimeError):
+    """Raised when a session's record folder cannot be removed because a running program holds it open, such as a shell
+    or an editor working in it. Nothing in the folder was deleted. It names the folder."""
+
+    def __init__(self, folder: Path) -> None:
+        super().__init__(f"could not remove the session folder {folder}; close what holds it open and delete it again")
+        self.folder = folder
 
 
 class SessionFolder:
@@ -62,13 +74,25 @@ class SessionFolder:
         return self._move_to(self._session.sessions.folder)
 
     def remove(self) -> None:
-        """Delete this session's record folder and its work folder, log, files, and all; its sessions no longer hold it."""
+        """Delete this session's record folder and its work folder, log, files, and all; its sessions no longer hold it.
+        A record folder a running program holds open raises ``SessionFolderHeldError`` with every file still in it."""
         session = self._session
-        _remove_files_of(session.record_folder)
+        _remove_files_of(self._set_aside(session.record_folder))
         if session.work_folder != session.record_folder and session.work_folder.is_dir():
             _remove_files_of(session.work_folder)
         session.sessions.held.removed(session)
         session.record.saved("removed")
+
+    def _set_aside(self, record_folder: Path) -> Path:
+        """Rename record_folder out from among the sessions and answer where it is now. The operating system renames a
+        folder whole or not at all, and refuses one a running program holds open, so the refusal comes before any file is
+        deleted; deleting file by file would stop halfway and leave a session with a folder and no record."""
+        aside = record_folder.with_name(f"{_BEING_REMOVED}{record_folder.name}")
+        try:
+            record_folder.rename(aside)
+        except PermissionError as held:
+            raise SessionFolderHeldError(record_folder) from held
+        return aside
 
     def _move_to(self, parent: Path) -> Session:
         """Move this session's record folder under ``parent``, such as ``.sessions/_complete/``; the session, now kept

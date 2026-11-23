@@ -1,11 +1,10 @@
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
-import { TipView } from '../shared/tip-view'
 import type { ChatBarDraw } from './chat-bar-view'
 import { repoListShiftOf, sessionListShiftOf } from './bar-columns'
 import { MAIN_SESSION } from './chat-bar-client'
-import { activateTicket, chooseFolder, chooseSessionFolder, closeSession, createSession, openFolder, openRepo } from './session-client'
+import { activateTicket, chooseSessionFolder, closeSession, createSession, openRepo } from './session-client'
 import { cancelClose, chooseNewSessionFolder, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
@@ -57,8 +56,6 @@ const LIST_BORDER_ROWS = 2
 // The cells of the field that names a new session with its ▸ folder button, and of the repo list's fields, as drawn.
 const NEW_SESSION_ROW_CELLS = 30
 const REPO_FIELD_CELLS = 26
-// The folder row: ▸ Choose a folder… with the folder path's field beside it, as drawn.
-const FOLDER_ROW_CELLS = 40
 
 // Each open ticket's label, its stage icon and name, padded to the longest so the buttons share one width.
 function sessionLabels(tickets: { name: string; stage: string }[]): { name: string; label: string }[] {
@@ -80,7 +77,7 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
         <Text color={BRAND.muted}>⌂</Text>
         <Text color={BRAND.accent}>{MAIN_SESSION}</Text>
       </Box>
-      {chatBar.isClone ? TicketChoicesView($, { Box, Button, Input, Text }, { chatBar, view }) : <Text key="session-no-git" color={BRAND.muted}>No git here, so no ticket chats</Text>}
+      {TicketChoicesView($, { Box, Button, Input, Text }, { chatBar, view })}
     </Box>
   )
 }
@@ -89,7 +86,7 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
 // folder chosen for it; none while it is closed.
 export function sessionListRowsOf({ chatBar, view }: ChatBarDraw): number {
   if (!view.isSessionListOpen || !chatBar.isMain) return 0
-  const tickets = chatBar.isClone ? chatBar.openTickets.length + 1 + (view.newSessionFolder ? 1 : 0) : 1
+  const tickets = chatBar.openTickets.length + 1 + (view.newSessionFolder ? 1 : 0)
   return 1 + tickets + LIST_BORDER_ROWS
 }
 
@@ -133,36 +130,18 @@ function folderFromTop(repository: string, folder: string): string {
 
 // In the main chat, the repositories beside this one, opened from the repository's own button before "main +",
 // alone, so the bar stays in view, its left edge under the start of that button. Opening one starts a top-level chat on it; a new
-// name creates the repository, private. Folder Only (No Repo), above them, opens any folder as it is in a top-level
-// chat, chosen with the system's folder picker or typed, and creates nothing there; its tip says when to choose it.
-const FOLDER_ONLY_TIP = "Choose a path if you don't want to work with a repository and want to just work within your local file system"
+// name creates the repository, private.
 
 // Each repository's label: whether it has CDD, its name, and its branch.
 const repoLabelOf = (repo: { name: string; has_cdd: boolean; branch: string }): string =>
   `${repo.has_cdd ? '◆' : '◇'} ${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`
 
-// Folder Only (No Repo): the system's folder picker, or a typed path, opens a folder as it is.
-function FolderOnlyView($: EngineInterface, elements: ElementTable) {
-  const { Box, Button, Input, Text } = elements
-  return [
-    <Box key="folder-heading-box">
-      <Text key="folder-heading" color={BRAND.muted}>Folder Only (No Repo)</Text>
-      {TipView(elements, FOLDER_ONLY_TIP, '', BRAND.muted)}
-    </Box>,
-    <Box key="repo-folder-row" flexDirection="row" gap={1}>
-      <Button key="repo-folder-choose" plain label="▸ Choose a folder…" onPress={() => chooseFolder($)} />
-      <Input key="repo-folder-path" placeholder="Folder path" value="" onSubmit={value => (value.trim() ? openFolder($, value.trim()) : undefined)} />
-    </Box>,
-  ]
-}
-
 export function RepoListView($: EngineInterface, elements: ElementTable, { chatBar, view, version }: ChatBarDraw) {
   const { Box, Button, Input, Text } = elements
   if (!view.isRepoListOpen || !chatBar.isMain) return null
-  const widest = Math.max(REPO_FIELD_CELLS, FOLDER_ROW_CELLS, ...(view.repos ?? []).map(repo => repoLabelOf(repo).length))
+  const widest = Math.max(REPO_FIELD_CELLS, ...(view.repos ?? []).map(repo => repoLabelOf(repo).length))
   return (
     <Box key="repo-list" flexDirection="column" position="absolute" bottom={1} left={repoListShiftOf(chatBar, version.label, widest)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      {FolderOnlyView($, elements)}
       <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>
       {/* A chat bar whose view was saved before repos existed has none. Each repository is a whole button: a
           see-through one laid over its name took no press. */}

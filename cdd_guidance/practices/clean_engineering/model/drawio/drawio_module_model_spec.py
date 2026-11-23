@@ -364,6 +364,18 @@ with description('a Draw.io class diagram'):
             with it('should not place the new class on top of the kept class'):
                 expect(_cell_xy(self.xml, _INVOICE) == (500.0, 300.0)).to(be_false)
 
+        with context('with the drawing it replaces handed to its render, as a render of a saved file does'):
+            with before.all:
+                self.channel = DrawIOCleanEngineeringModel()
+                first = self.channel.render(_shop_model())
+                self.xml = self.channel.render(_shop_model(), previous=_set_cell_xy(first, _CART, 500, 300))
+
+            with it('should keep the class where the person put it'):
+                expect(_cell_xy(self.xml, _CART)).to(equal((500.0, 300.0)))
+
+            with it('should lay the next render out afresh, since the drawing was handed to that render only'):
+                expect(_cell_xy(self.channel.render(_shop_model()), _CART) == (500.0, 300.0)).to(be_false)
+
         with context('with a new relationship added to the model'):
             with before.all:
                 first = DrawIOCleanEngineeringModel().render(_shop_model())

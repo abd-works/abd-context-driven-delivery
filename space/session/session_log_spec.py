@@ -15,6 +15,7 @@ from mamba import after, before, description, context, it
 from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.mcp.mcp_server import McpServer
 from space.session.session import Session
+from harness.process.capped_log_file import LOG_SIZE_LIMIT_BYTES
 from space.session.session_log import LogTimestamp
 from space.session.sessions import Sessions
 from space.session.throwaway_project import ExampleHome
@@ -141,6 +142,41 @@ with description("a session loop"):
         with it("should point the loop marker at the chat that called it"):
             expect(self.log).to(contain(f"--- 2 chat-m {self.transcript} 3"))
 
+    # A session's log is written on every tool call; capped, it cannot grow until it fills the disk.
+    with context("whose log reached its size limit"):
+        with before.each:
+            repo = Path(tempfile.mkdtemp())
+            Sessions(repo).switch("alpha", repo)
+            self.session = Sessions(repo).current()
+            self.session.log.record("--- 3 chat-a")
+            self.session.log.record("x" * LOG_SIZE_LIMIT_BYTES)
+            self.session.log.record("tool board.show")
+            self.folder = repo / ".sessions" / "alpha"
+
+        with it("should keep the earlier lines in session.log.1"):
+            expect((self.folder / "session.log.1").read_text(encoding="utf-8")).to(contain("--- 3 chat-a"))
+
+        with it("should start the new session.log in the loop it was in"):
+            expect(self.session.log.loop_at(3).entries[-1]).to(contain("tool board.show"))
+
+        with it("should number the next loop on from it"):
+            expect(self.session.log.by(None).next_loop().number).to(equal(4))
+
+    with context("whose error file reached its size limit"):
+        with before.each:
+            repo = Path(tempfile.mkdtemp())
+            Sessions(repo).switch("alpha", repo)
+            self.session = Sessions(repo).current()
+            self.folder = repo / ".sessions" / "alpha"
+            (self.folder / "session.err").write_text("x" * LOG_SIZE_LIMIT_BYTES, encoding="utf-8")
+            self.session.log.by(None).failure(RuntimeError("the call failed"), tool="board.show")
+
+        with it("should keep the earlier traces in session.err.1"):
+            expect((self.folder / "session.err.1").stat().st_size).to(equal(LOG_SIZE_LIMIT_BYTES))
+
+        with it("should point the error line at the first line of the new session.err"):
+            expect(self.session.log.entries[-1].text).to(contain(f"{self.folder / 'session.err'} 1 "))
+
     with context("noted through the session tool a chat calls with the session named"):
         with it("should point the note at the chat that called it"):
             repo = Path(tempfile.mkdtemp())
@@ -195,6 +231,23 @@ with description("a hook log"):
 
         with it("should stamp a line with the time it was written"):
             expect(self.text.splitlines()[1]).to(contain("Z dispatch line"))
+
+    with context("that reached its size limit"):
+        with before.each:
+            repo = Path(tempfile.mkdtemp())
+            (repo / ".git").mkdir()
+            Sessions(repo).switch("alpha", repo)
+            logs = repo / ".sessions" / "alpha" / "logs"
+            logs.mkdir(parents=True)
+            (logs / "dispatch.debug").write_text("x" * LOG_SIZE_LIMIT_BYTES, encoding="utf-8")
+            Sessions(repo).current().folder.hook_log("dispatch.debug").stamped("dispatch line")
+            self.logs = logs
+
+        with it("should start a new log with the next line"):
+            expect((self.logs / "dispatch.debug").read_text(encoding="utf-8")).to(contain("Z dispatch line"))
+
+        with it("should keep the earlier entries in the previous file"):
+            expect((self.logs / "dispatch.debug.1").stat().st_size).to(equal(LOG_SIZE_LIMIT_BYTES))
 
 
 # (E) Record Session Log

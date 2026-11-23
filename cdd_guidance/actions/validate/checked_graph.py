@@ -160,10 +160,11 @@ class CheckedGraph:
 
     def _read_named(self) -> list[Path]:
         """The graph files the call names, one path or several, each read as the graph it holds: one file is checked as
-        its graph, and several as one graph of all their violations. None for nothing."""
+        its graph, and several as one graph of all their violations. None for nothing. Each is named from the project's
+        root, or absolute, and one that is not there is refused by name."""
         named = self._named
         entries = [named] if isinstance(named, str) else list(named or [])
-        files = [Path(str(entry).strip()) for entry in entries if str(entry).strip()]
+        files = [self.session.session_files.existing(str(entry).strip()) for entry in entries if str(entry).strip()]
         graphs = [SavedGraph.from_file(file) for file in files]
         if len(graphs) == 1:
             self._checked = graphs[0]
@@ -220,6 +221,21 @@ class CheckedGraph:
         """The folders holding what each listed fidelity declares in its checked format and has already written. The
         folder, not the file, because a story map's stories keep their scenarios in files beside it."""
         declared = [path for fidelity, checked in zip(self._fidelities, self._formats) for path in fidelity.declared.output_paths().get(checked, [])]
-        found = [self.session.paths.path_named(path) for path in declared if "{" not in path]
+        found = [path for named in declared for path in self._written_at(named)]
         folders = {path.parent if path.is_file() else path for path in found if path.exists()}
         return sorted(str(folder) for folder in folders if self.session.session_files.in_root(folder))
+
+    def _written_at(self, declared: str) -> list[Path]:
+        """Where a declared path is written: the path itself, or, for one with a named part, such as ``src/{module}/``,
+        each folder that part can name, which are the folders in the folder above it. A folder whose name opens with a
+        dot holds no written output, such as ``.git`` or ``.sessions``."""
+        above, named_part, _ = declared.partition("{")
+        if not named_part:
+            return [self.session.paths.path_named(declared)]
+        path = self.session.paths.path_named(above)
+        if not above.endswith("/"):
+            # The named part is in a file's name, so the files are in the folder itself.
+            return [path.parent]
+        if not path.is_dir():
+            return []
+        return [folder for folder in sorted(path.iterdir()) if folder.is_dir() and not folder.name.startswith(".")]

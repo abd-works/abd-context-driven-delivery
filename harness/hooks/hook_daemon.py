@@ -31,6 +31,7 @@ from harness.hooks.hook_server import HookResult, HookServer
 from harness.hooks.hooks import InstalledHookHandlers
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
+from harness.process.capped_log_file import CappedLogFile
 from harness.process.process import (
     BackgroundStart,
     ExclusivePort,
@@ -384,7 +385,7 @@ class HookDaemon:
 
     def spawn(self) -> None:
         """Start this checkout's daemon in the background, importing from the checkout, with its output in
-        ``log_path``."""
+        ``log_path``; a log that reached its size starts again, its earlier output kept in its previous file."""
         toolsets = self.toolsets
         existing = os.environ.get("PYTHONPATH", "")
         env = {
@@ -393,6 +394,7 @@ class HookDaemon:
             "PYTHONPATH": os.pathsep.join(part for part in (toolsets.pythonpath(), existing) if part),
         }
         self.folder.mkdir(parents=True, exist_ok=True)
+        CappedLogFile(self.log_path).roll_when_full()
         with open(self.log_path, "a", encoding="utf-8") as log:
             BackgroundStart(log).run(
                 [PythonInterpreter().windowless, "-m", "harness.hooks.hook_daemon", "serve", str(self.repo)],

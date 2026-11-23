@@ -7,7 +7,7 @@ example-of: story-map
 
 # Story Map — Telco Website (slice)
 
-Portion of **Onboard A Customer** — enough hierarchy to place the golden fixture example under Create Customer.
+Portion of **Onboard A Customer** — enough hierarchy to place the golden fixture example under Create Customer. Its nesting belongs to telco onboarding: take your map's epics and sub-epics from your own sources, not from this slice.
 
 (E) Onboard A Customer
     (E) Get Sign Up Plan

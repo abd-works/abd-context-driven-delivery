@@ -184,8 +184,9 @@ class TicketTreeTools:
     @agent_tool
     @noSessionLog
     def add_child(self, title: str) -> Ticket:
-        """Open a child ticket of ticket titled title, a story In progress in Discovery, working where ticket works. Committed on main and pushed."""
-        return self.board.placement.ticket_of(self.session.hierarchy.open_child(title, scope="story"))
+        """Open a child ticket of ticket titled title, a story In progress in Discovery, working where ticket works. A title that gives no name, one too long, or the name of a ticket already there is refused, as for any new ticket. Committed on main and pushed."""
+        placement = self.board.placement
+        return placement.ticket_of(self.session.hierarchy.open_child(placement.free_name_for(title), title, scope="story"))
 
     @mcp
     @agent_tool
@@ -231,19 +232,19 @@ class TicketEnding:
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree), its branch merged before anything moves; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main."""
+        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree), its work committed where it is and its branch merged before anything is removed or moved, so a merge git refuses, or a worktree a running program holds open, stops the close with ticket still open; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main, and what is uncommitted there is never committed for a ticket that has its own worktree."""
         self._refuse_main("close")
         leaving = leaving or []
         checkout = self.checkout
         checkout.write_handoff(leaving)
-        # A worktree something still holds open fails to delete; deleting it first stops the close with nothing changed.
-        checkout.free_worktree(leaving)
-        checkout.keep_landing_release(leaving)
-        self.session.close()
-        # The branch merges before the record moves: the session's work folder it carries lands beside the record in
-        # main's .sessions, and the move takes both among the closed sessions. Moved first, git would find the work
-        # folder added inside a folder main renamed, and refuse the merge.
+        # The work is saved and the branch merged while the ticket still has its worktree and its open session, so a
+        # merge git refuses leaves both as they were. The branch also merges before the record moves: the session's work
+        # folder it carries lands beside the record in main's .sessions, and the move takes both among the closed
+        # sessions. Moved first, git would find the work folder added inside a folder main renamed, and refuse the merge.
         checkout.save_work(leaving)
+        checkout.keep_landing_release(leaving)
+        checkout.leave_branch(leaving)
+        self.session.close()
         closed = self.board.placement.ticket_of(self.session.folder.move_to_closed())
         checkout.return_to_default_branch()
         # The ticket's record is kept on main, so its move among the closed sessions is committed and pushed there.
@@ -254,8 +255,9 @@ class TicketEnding:
     @agent_tool
     @noSessionLog
     def archive(self) -> Ticket:
-        """Archive ticket: its session ends, its folder moves to _archive/, that move is committed on main and pushed, and it leaves the board. Main never archives."""
+        """Archive ticket: its own worktree is removed, its work committed and pushed on its branch first, which stays; then its session ends, its folder moves to _archive/, that move is committed on main and pushed, and it leaves the board. Main never archives."""
         self._refuse_main("archive")
+        self.checkout.free_worktree()
         self.session.close()
         archived = self.board.placement.ticket_of(self.session.folder.move_to_archive())
         self.board.sessions.saves.now(f"sessions: archive {self.name}")
@@ -265,10 +267,11 @@ class TicketEnding:
     @agent_tool
     @noSessionLog
     def delete(self) -> None:
-        """Delete ticket: its session ends and its folder, log, and files are removed, that removal committed on main and pushed, and it leaves the board. Main never deletes."""
+        """Delete ticket: its own worktree is removed, its work committed and pushed on its branch first, which stays; then its session ends and its folder, log, and files are removed, that removal committed on main and pushed, and it leaves the board. A worktree or a session folder a running program holds open refuses the delete with ticket's record still whole. Main never deletes."""
         self._refuse_main("be deleted")
-        self.session.close()
+        self.checkout.free_worktree()
         self.session.folder.remove()
+        self.session.close()
         self.board.placement.reread()
 
     def to_backlog(self) -> BacklogItem:

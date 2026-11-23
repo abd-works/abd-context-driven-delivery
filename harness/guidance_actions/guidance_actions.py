@@ -56,6 +56,8 @@ class ActionSession(Protocol):
     graph: Any
     work_root: Path
     repo_path: Path
+    paths: Any
+    session_files: Any
     record_folder: Path | None
     session_file: Path
 
@@ -71,6 +73,9 @@ GUIDANCE_PARAMETER = (
 )
 _TOOLSET_REF = re.compile(r"^[A-Za-z_][\w.]*:[A-Za-z_]\w*$")
 _GUIDANCE_SLUG = re.compile(r"^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$")
+# One word written the way a slug or a name is, in any case, with hyphens or underscores: sent alone it is meant as a
+# slug, never as prose.
+_SLUG_SHAPED = re.compile(r"^[A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$")
 # The formats a command writes its fidelities in, as the session board names them: `format=drawio,markdown`.
 _FORMAT_WORD = "format="
 # The session a command is for, as the session board names it: `session=.sessions/<name>/session.json`.
@@ -152,26 +157,62 @@ class UnknownGuidance(ValueError):
         self.slugs = tuple(slugs)
 
 
+class GuidanceMappingNamesNoToolset(ValueError):
+    """A guidance mapping with no ``toolset``, which is where a mapping names its practice. The message says what a
+    toolset holds and lists the slugs there are."""
+
+    def __init__(self, mapping: Mapping[str, Any], slugs: Sequence[str]) -> None:
+        super().__init__(
+            f"the guidance mapping {dict(mapping)!r} names no toolset; a mapping names its practice in toolset, as a slug "
+            f"or a module:Class ref; the slugs are {', '.join(slugs)}"
+        )
+        self.mapping = dict(mapping)
+        self.slugs = tuple(slugs)
+
+
+class GuidanceTurnedOff(ValueError):
+    """A guidance word names a practice CDD ships, or one of its fidelities, that is turned off for the session the
+    action works in: the session's practices leave it out."""
+
+
 class GuidanceArgument:
     """The guidance a command names, read as what the action works on. It is the Guidance list, one Guidance (a slug, a
     ``module:Class`` ref, a ``{"toolset": ...}`` mapping or its JSON, or a Guidance already made), or text the action
     runs once on. Agents on MCP often send several slugs in one string; each is Guidance, written in each of the formats
-    the command names that it writes. A string with any other word is text, so prose still runs once.
+    the command names that it writes. A string with any other word is text, so prose still runs once; one word sent
+    alone that is shaped like a slug and names nothing is a misspelt slug, refused as *UnknownGuidance*, since run as
+    text it would generate with no rules and render or check nothing.
 
     A slug or a ref names a practice or a fidelity of the practices the action works with (``practices``), and is read
     once into that object, so the action never looks it up again."""
 
-    def __init__(self, command: GuidanceCommand, practices: Callable[[], PracticeSet]) -> None:
+    def __init__(self, command: GuidanceCommand, practices: Callable[[], PracticeSet], session_name: str = "") -> None:
         self._command = command
         self._guidance = command.guidance
         self._practices = practices
+        # The session whose practices these are; empty for a set that is every practice CDD ships.
+        self._session_name = session_name
 
     @property
     def text(self) -> str | None:
         """The text the action runs once on, as the call wrote it; none when the argument names Guidance."""
         if not isinstance(self._guidance, str) or self._one_item() is not None or self._slug_words():
             return None
+        self._refuse_misspelt_slug()
         return self._command.written
+
+    def _refuse_misspelt_slug(self) -> None:
+        """Refuse a guidance string that is one word, or words joined by commas, each shaped like a slug, when one of
+        them names no practice or fidelity: it was meant as a slug, as the same word in a list is."""
+        words = self._guidance.split()
+        if len(words) != 1:
+            return
+        parts = [part for part in words[0].split(",") if part]
+        if not all(_SLUG_SHAPED.match(part) for part in parts):
+            return
+        unknown = next((part for part in parts if self._named(part) is None), None)
+        if unknown is not None:
+            raise UnknownGuidance(unknown, self.slugs)
 
     @property
     def items(self) -> list[ArgumentEntry]:
@@ -242,15 +283,29 @@ class GuidanceArgument:
     def _mapped(self, mapping: GuidanceRef) -> ArgumentEntry:
         """A ``{toolset, fidelity, format}`` mapping as the practice of the action's set its toolset names, at its
         fidelity; a mapping with constructor arguments of its own, or one whose toolset is no practice of the set, as it
-        was sent, for the action to make. A toolset that is no ``module:Class`` ref raises *UnknownGuidance*."""
+        was sent, for the action to make. A toolset may also be a slug, which names its practice or fidelity as the
+        slug alone does; one that is neither raises *UnknownGuidance*, and a mapping with none raises
+        *GuidanceMappingNamesNoToolset*."""
         toolset = str(mapping.get("toolset") or "")
-        if not _TOOLSET_REF.match(toolset):
-            raise UnknownGuidance(toolset, self.slugs)
-        practice = None if mapping.get("context") else self._practice_of_class(toolset)
-        if practice is None:
+        if not toolset:
+            raise GuidanceMappingNamesNoToolset(mapping, self.slugs)
+        named = self._toolset_named(toolset, bool(mapping.get("context")))
+        if named is None:
             return mapping if len(mapping) > 1 else mapping.get("toolset")
         fidelity = str(mapping.get("fidelity") or "")
-        return NamedGuidance(practice.fidelities[fidelity] if fidelity else practice, str(mapping.get("format") or ""))
+        practice = named.practice_guidance if isinstance(named, FidelityGuidance) else named
+        return NamedGuidance(practice.fidelities[fidelity] if fidelity else named, str(mapping.get("format") or ""))
+
+    def _toolset_named(self, toolset: str, makes_its_own: bool) -> PracticeGuidance | FidelityGuidance | None:
+        """The practice or fidelity of the action's set a mapping's toolset names, by ``module:Class`` ref or by slug;
+        none for a ref to a class that is no practice of the set, or one the mapping gives constructor arguments
+        (makes_its_own), which the action makes. A toolset that is neither a ref nor a slug raises *UnknownGuidance*."""
+        if _TOOLSET_REF.match(toolset):
+            return None if makes_its_own else self._practice_of_class(toolset)
+        named = self._named(toolset)
+        if named is None:
+            raise UnknownGuidance(toolset, self.slugs)
+        return named
 
     def _practice_of_class(self, reference: str) -> PracticeGuidance | None:
         toolset_class = ToolsetReference(reference).toolset_class
@@ -261,7 +316,20 @@ class GuidanceArgument:
         that is no slug."""
         if not _GUIDANCE_SLUG.match(slug):
             return None
-        return self._practices().named(slug)
+        named = self._practices().named(slug)
+        if named is None and self._session_name:
+            self._refuse_turned_off(slug)
+        return named
+
+    def _refuse_turned_off(self, slug: str) -> None:
+        """A slug of a practice CDD ships that the session's practices leave out names a practice turned off for the
+        session; run as text, it would check or render nothing, so it is refused, naming the practice to turn on."""
+        catalogue = PRACTICE_CATALOGUE.create_all()
+        practice = catalogue.practice_answering(slug)
+        if practice is None:
+            return
+        kind = "the practice" if practice.slug == slug else "a fidelity of"
+        raise GuidanceTurnedOff(f"{slug} is {kind} {practice.slug}, which is turned off for session {self._session_name}; turn {practice.slug} on for the session to work on it")
 
     def _json_ref(self, text: str) -> GuidanceRef | None:
         if not (text.startswith("{") and text.endswith("}")):
@@ -304,7 +372,7 @@ class WorkList:
         overlays the command names are chosen on the session first, so the action runs with them."""
         if command.overlays is not None and self._session is not None:
             self._session.choose_overlays(list(command.overlays))
-        argument = GuidanceArgument(command, self.practice_set)
+        argument = GuidanceArgument(command, self.practice_set, self.session_name)
         self.worked_on = command.written
         self._listed = None
         self.text = argument.text
@@ -350,6 +418,13 @@ class WorkList:
         if writer is not None and format and writer.format != format:
             writer.format = format
         return listed
+
+    @property
+    def session_name(self) -> str:
+        """The name of the session whose practices the list works with; empty when it works with every practice."""
+        if self._outer is not None:
+            return self._outer.session_name
+        return getattr(self._session, "name", "") if self._session is not None else ""
 
     def practice_set(self) -> PracticeSet:
         """The practices worked with, made known once: the session's own instances, the ones its graph holds; for no
@@ -489,6 +564,17 @@ class ActionFiles:
         """named as a path in the action's session's project; an absolute path stays where it is, in no session too."""
         path = Path(named)
         return path.resolve() if path.is_absolute() else self._action.session.paths.path_named(path)
+
+    def paths_to_read(self, named: list[str] | str | None) -> list[Path]:
+        """Each path a call names to read, as a path in the action's session's project, which must be there under one of
+        the session's roots: the session's files refuse one that is not, by name, as validate's paths are refused, so an
+        action never reads nothing or writes outside the project and answers as if all were well. An action made for no
+        session, such as one run in process, takes each path as given."""
+        entries = [named] if isinstance(named, (str, Path)) else list(named or [])
+        session = self._action.works_in
+        if session is None:
+            return [self.path_named(entry) for entry in entries]
+        return [session.work_root / session.session_files.from_root(entry) for entry in entries]
 
     def read(self, content: str = "", paths: list[str] | str | None = None) -> str:
         """The document a call names: content, or the files at paths read from the action's session's project; an action

@@ -49,18 +49,17 @@ section: body
 | Source | Note |
 |--------|------|
 | `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/check-cdd-server-health/open-server-health-panel/open_server_health_panel_story.test.ts` (removed) | the story test these scenarios were recovered from |
-| Show every part running on one line | observed: server-health-view.tsx lists MCP host, Tools, Kanban app, Graph app, Hook server; register.test.ts |
+| Show every part running on one line | observed: server-health-view.tsx lists MCP host, Tools, Kanban app, Graph app; register.test.ts. The Hook server part was removed: the hook command starts that server itself |
 | Pin the panel open | requested: the health mark opens only with the session card |
 | Say what is wrong when cdd is down | observed: server-health-view.tsx headlineOf and the Details, Run install, Reconnect buttons |
 
 #### Scenario: Show every part running on one line
 
 *Given* cdd is connected with 116 tools loaded, the Kanban app on port 8778 and the Graph app on port 5173  
-  *And* the hook server is not running  
 *When* the Person opens the server health panel  
 *Then* the session card opens with the panel on top, MCP host, Tools, Kanban app and Graph app green  
   *And* Tools reads 116 loaded, Kanban app 8778 and Graph app 5173  
-  *And* Hook server is grey  
+  *And* no Hook server part shows  
   *And* each part's name shows on hover
 
 #### Scenario: Pin the panel open
@@ -125,6 +124,32 @@ section: body
 *Then* the panel says Install failed. See the error in Details.  
 *When* the Person opens Details  
 *Then* Details shows the tool server-health.report, the installer's error, the server plugin:cdd:cdd and the fix Press Reconnect. If that fails, press Run install.
+
+## Story: Create Git Repository First
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `space/repo/new_repository.py` `NewRepository.make_from_folder` | the first commit "holds the folder's own files and not CDD's install or its sessions' working files" |
+| `.sessions/release-1-2-fixes/exploratory-testing/defects/bolt-05-make-repository-ignores-the-persons-own-files.md` | the defect the second scenario closes |
+| `space/repo/new_repository_spec.py` | unit tier: the patterns written into `.gitignore` |
+| `space/repo/new_repository_heavy_spec.py` | heavy tier, with real git |
+
+#### Scenario: Make a plain folder a repository
+
+*Given* the plain folder shop holds notes.md, CDD installed into .claude, and the main session's log  
+*When* the Person creates the git repository  
+*Then* shop is a repository on main  
+  *And* its first commit holds .gitignore, README.md and notes.md  
+  *And* .claude and the session's log are ignored
+
+#### Scenario: Commit the folder's own files that the CDD checkout would ignore
+
+*Given* the plain folder shop holds pages/_app.tsx, _config.yml, conf/settings.yaml, sandbox/try.py and count_all.py  
+*When* the Person creates the git repository  
+*Then* its first commit holds each of those files  
+  *And* its .gitignore lists only what CDD writes into a project
 
 ## Story: Open App From Health Panel
 

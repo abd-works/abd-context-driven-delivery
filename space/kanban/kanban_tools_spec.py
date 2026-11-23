@@ -21,8 +21,10 @@ from harness.installation.files import FileChannel, FileInstallation  # noqa: E4
 from harness.installation.ide_layout import IdeLayout  # noqa: E402
 from harness.installation.install_target import InstallTarget  # noqa: E402
 from harness.installation.data_class import DataClass  # noqa: E402
+from harness.installation.json_file import JsonFileUnreadable  # noqa: E402
 from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import Stage  # noqa: E402
+from space.kanban.card_name import NAME_LENGTH_LIMIT, BacklogItemTakenError, TicketNameTakenError, TitleNamesNothingError, TitleTooLongError  # noqa: E402
 from harness.graph.violation import Violation  # noqa: E402
 from space.kanban.report import ReportRule  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
@@ -387,6 +389,44 @@ with description("the board tools") as self:
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")
                 expect(report["rules"]).to(equal([]))
 
+        # (S) Board App --> Display Board
+        with context("with another ticket whose session.json is cut off half way"):
+            with before.each:
+                self.cut_off = self.project.ticket("loyalty-points", title="Loyalty points") / "session.json"
+                self.cut_off.write_text('{"name": "loyalty-points", "title": "Loyal', encoding="utf-8")
+                self.shown = self.project.call("board.show")
+
+            with it("should still show the tickets whose files read"):
+                expect(ticket_names_in(self.shown, "Discovery")).to(contain("pet-visits"))
+
+            with it("should leave the ticket it cannot read off its columns"):
+                expect([name for column in self.shown["columns"] for name in ticket_names_in(self.shown, column["name"])]).not_to(contain("loyalty-points"))
+
+            with it("should say which session file could not be read"):
+                expect([unread["file"] for unread in self.shown["unreadable"]]).to(equal([".sessions/loyalty-points/session.json"]))
+
+            with it("should say why it could not be read"):
+                expect(self.shown["unreadable"][0]["error"]).to(contain("not a readable JSON object"))
+
+            with it("should refuse a change to that ticket, leaving its file as it was"):
+                expect(lambda: self.project.call("ticket.tag", ticket="loyalty-points", word="urgent")).to(raise_error(JsonFileUnreadable))
+                expect(self.cut_off.read_text(encoding="utf-8")).to(equal('{"name": "loyalty-points", "title": "Loyal'))
+
+        # (S) Person --> Split Ticket Into Child Tickets
+        with context("that adds a child whose title makes the name of a ticket already there"):
+            with it("should refuse it, naming that ticket"):
+                expect(lambda: self.project.call("ticket.add_child", ticket="pet-visits", title="PET VISITS")).to(raise_error(TicketNameTakenError, contain("pet-visits")))
+
+            with it("should refuse a child whose title gives no name"):
+                expect(lambda: self.project.call("ticket.add_child", ticket="pet-visits", title="日本語")).to(raise_error(TitleNamesNothingError))
+
+        with context("that adds a child to a ticket"):
+            with before.each:
+                self.child = self.project.call("ticket.add_child", ticket="pet-visits", title="Book a visit")
+
+            with it("should name the child after its title, under its parent"):
+                expect((self.child["name"], self.child["session"]["parent"])).to(equal(("book-a-visit", "pet-visits")))
+
         # (E) Tickets
         # (S) Person --> Open Ticket Session
         with context("that opens a new ticket"):
@@ -426,6 +466,40 @@ with description("the board tools") as self:
                 fields = json.loads((self.project.sessions / "pet-records" / "session.json").read_text(encoding="utf-8"))
                 expect("workpath" in fields).to(equal(False))
 
+        with context("that opens a ticket whose title has no letter a to z and no digit"):
+            with it("should refuse an empty title"):
+                expect(lambda: self.project.call("ticket.create", title="   ")).to(raise_error(TitleNamesNothingError))
+
+            with it("should refuse a title in another script"):
+                expect(lambda: self.project.call("ticket.create", title="日本語")).to(raise_error(TitleNamesNothingError))
+
+            with it("should write no session into the sessions folder itself"):
+                expect(lambda: self.project.call("ticket.create", title="日本語")).to(raise_error(TitleNamesNothingError))
+                expect((self.project.sessions / "session.json").exists()).to(be_false)
+
+        with context("that opens a ticket whose title makes the name of a ticket already there"):
+            with it("should refuse it, naming that ticket"):
+                expect(lambda: self.project.call("ticket.create", title="PET VISITS")).to(raise_error(TicketNameTakenError, contain("pet-visits")))
+
+            with it("should keep that ticket's title"):
+                expect(lambda: self.project.call("ticket.create", title="PET VISITS")).to(raise_error(TicketNameTakenError))
+                fields = json.loads((self.project.sessions / "pet-visits" / "session.json").read_text(encoding="utf-8"))
+                expect(fields["title"]).to(equal("Pet visits"))
+
+            with it("should refuse a ticket titled main"):
+                expect(lambda: self.project.call("ticket.create", title="main")).to(raise_error(TicketNameTakenError))
+
+        with context("that opens a ticket whose title makes a name longer than a folder and a branch can be"):
+            with before.each:
+                self.long_title = "A very long title that goes on and on about the bookshop and its many needs"
+
+            with it("should refuse it, naming the limit"):
+                expect(lambda: self.project.call("ticket.create", title=self.long_title)).to(raise_error(TitleTooLongError, contain(str(NAME_LENGTH_LIMIT))))
+
+            with it("should make no session folder"):
+                expect(lambda: self.project.call("ticket.create", title=self.long_title)).to(raise_error(TitleTooLongError))
+                expect([folder.name for folder in self.project.sessions.iterdir() if folder.name.startswith("a-very")]).to(equal([]))
+
         # (S) Person --> Split Ticket Into Child Tickets
         with context("that opens a ticket split from another"):
             with before.each:
@@ -445,6 +519,34 @@ with description("the board tools") as self:
             with it("should write the title and text to one markdown file"):
                 file = self.project.sessions / "_backlog" / "gift-cards.md"
                 expect(file.read_text(encoding="utf-8")).to(equal("# Gift cards\n\nSell gift cards.\n"))
+
+            with context("and then an item whose title makes the same file name"):
+                with it("should refuse it, naming the file that keeps the first idea"):
+                    expect(lambda: self.project.call("backlog-item.create", title="Gift cards", text="A second idea.")).to(raise_error(BacklogItemTakenError, contain("gift-cards.md")))
+
+                with it("should keep the first idea's text"):
+                    expect(lambda: self.project.call("backlog-item.create", title="Gift cards", text="A second idea.")).to(raise_error(BacklogItemTakenError))
+                    file = self.project.sessions / "_backlog" / "gift-cards.md"
+                    expect(file.read_text(encoding="utf-8")).to(equal("# Gift cards\n\nSell gift cards.\n"))
+
+        with context("that adds a backlog item whose title has no letter a to z and no digit"):
+            with it("should refuse it"):
+                expect(lambda: self.project.call("backlog-item.create", title="", text="idea")).to(raise_error(TitleNamesNothingError))
+
+            with it("should write no file without a name"):
+                expect(lambda: self.project.call("backlog-item.create", title="日本語", text="idea")).to(raise_error(TitleNamesNothingError))
+                expect((self.project.sessions / "_backlog" / ".md").exists()).to(be_false)
+
+        with context("that starts a backlog item whose title makes the name of a ticket already there"):
+            with before.each:
+                self.project.backlog_item("pet-visits.md", "Pet visits")
+
+            with it("should refuse it, naming that ticket"):
+                expect(lambda: self.project.call("backlog-item.start", backlog_item="Pet visits")).to(raise_error(TicketNameTakenError, contain("pet-visits")))
+
+            with it("should keep the idea in the Backlog"):
+                expect(lambda: self.project.call("backlog-item.start", backlog_item="Pet visits")).to(raise_error(TicketNameTakenError))
+                expect((self.project.sessions / "_backlog" / "pet-visits.md").is_file()).to(be_true)
 
         # (S) Person --> Add Backlog Item, Start Backlog Item
         with context("that starts a backlog item"):
@@ -696,6 +798,7 @@ with description("the board tools") as self:
                     written = {
                         story_map: "text\n",
                         "notes/plain.txt": "text\n",
+                        ".context/sign-up-sketch.md": "# Stories\n",
                         "src/orders/chat_bar.py": "class ChatBar:\n    pass\n",
                         "src/carts/cart.py": "@aggregate_root\nclass Cart:\n    pass\n",
                         "src/carts/carts.py": "class CartRepository:\n    pass\n",
@@ -714,10 +817,15 @@ with description("the board tools") as self:
                 self.root_files = ProjectTools.answer_of(root_files)
 
             with it("should name the fidelities the story map belongs to"):
-                expect([entry["fidelities"] for entry in self.root_files.values() if entry["format"] == "markdown"]).to(equal([["stories-story-map"]]))
+                expect([entry["fidelities"] for path, entry in self.root_files.items() if entry["format"] == "markdown" and not path.endswith("-sketch.md")]).to(equal([["stories-story-map"]]))
 
             with it("should name no fidelity for a file none declares"):
                 expect(self.root_files["notes/plain.txt"]["fidelities"]).to(equal([]))
+
+            # Reported 2026-11-18 (Nov 18 demo): the Files app opened without the sketch just written, as no fidelity
+            # declares it, so a practice selected hid it.
+            with it("should name the session's fidelities for its sketch, which holds a section for each practice"):
+                expect(self.root_files[".context/sign-up-sketch.md"]["fidelities"]).to(contain("stories-story-map", "ux-ia"))
 
             # Requested 2026-11-16: a design canvas and a whiteboard open where they are published, wherever they lie.
             with it("should list a design canvas the root holds at the link it is published at"):
@@ -762,6 +870,14 @@ with description("the board tools") as self:
 
             with it("should refuse thin_slice as a format of the story map"):
                 expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="thin_slice", is_chosen=True)).to(raise_error(Exception, contain("does not write thin_slice")))
+
+            with it("should take the story map by the slug the guidance names it by, as well as by its name"):
+                chosen = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="stories-story-map", format="markdown", is_chosen=True)
+                expect(chosen["name"]).to(equal("story_map"))
+
+            with it("should refuse a fidelity the practice does not have, naming the ones it has"):
+                expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="ux-ia", format="markdown", is_chosen=True)).to(
+                    raise_error(Exception, contain("stories has no fidelity named ux-ia; it has story_map")))
 
             with it("should show the chip of its default format chosen until a person chooses"):
                 expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["markdown"]))

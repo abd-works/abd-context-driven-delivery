@@ -36,10 +36,12 @@ test("the board opens on the checkout git names as the chat's own", async ($, on
   expect([boardAddress(answer).searchParams.get(PROJECT_QUERY), ran]).toEqual([WORKTREE, [['git', 'rev-parse', '--show-toplevel']]])
 })
 
-test("the board opened outside any repository names no project, so it shows its server's own", async ($, on) => {
+// Reported 2026-11-18: a project that is no git repository opened the Files app on the server's own project, which
+// holds none of its tickets or sessions.
+test('the board opened outside any repository opens on the folder the chat works in', async ($, on) => {
   chatIn(on, null)
 
   const answer = await $.command.run({ command: 'board', args: '' })
 
-  expect(boardAddress(answer).searchParams.has(PROJECT_QUERY)).toBe(false)
+  expect(boardAddress(answer).searchParams.get(PROJECT_QUERY)).toBe(WORKTREE)
 })

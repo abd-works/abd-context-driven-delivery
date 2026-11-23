@@ -1,0 +1,17 @@
+{
+  "chat": "0441e51a-b582-45e7-aefa-d95fcdc406e3",
+  "taken_off": "2026-11-19T17:57:37.569440+00:00",
+  "prompts": [
+    {
+      "id": "fec61e11c0c1",
+      "text": "[interruption] hello",
+      "is_done": false,
+      "steps": [
+        {
+          "text": "[interruption] <pasted_content id=\"2e80\">\ndo a analysis of the story scenarios and the defects to determine any themes around them in terms of areas that are not adaqutaly covered acrosss the testing tiers;\nUSE this as input to perform one r mre exploratory testing rounds where you are the supivosor and testersd are other bots using the /queue in mumtibit mod\ngreate /agents/exploratrory-testing/supervisor.md and tester.md file and deploy them into claude, you breome supervisor and the bots use the tester.md\nyou are reposnible for handing ou all testin and all pre assignemtns\nore the Session\n\n* Define the scope: Pick specific Epics, Stories, new or existingf or recent changes instead of testing the entire app.\n* Prepare the environment: Deploy a stable build, seed realistic test data, and create pre-configured test data with different profiles.\n* use queue bots to intake defects as soon as they appear - add small defect repotry to a ticket for this sedsion and to this /queue (separate bot or bots with defect report.\n* Write test charters: Create short mission prompts so participants focus on different areas and edge cases.\n\n2. Kickoff\n\n* Assign charters: Give each bot(s) a specific charter, persona, or area /them combo.\n* check common defect reortng area ewhren posting defects\n\n3. Active Testing\n\n* Follow charters but improvise: Execute the assigned mission, then branch out into edge cases, boundary inputs, interrupted flows, and unusual user behaviors.\n* Log bugs immediately: Record lightweight notes as issues happen without stopping to write formal reports. use defect reporttingtool\n* Facilitate live: Monitor the chat to unblock testers, clarify intended behavior, and hand out new charters when bot finishes early.\n\n4. Wrap-Up & Triage\n\n* Stop testing and recap: Have participants share the worst bugs, confusing UX spots, or risky areas they found.\n* write scenarios, 3 testing layers to cover all gaps\n* /actions-generate stories-story-map clean-engineering-modules stories-scenarios clean-engineering-model stories-acceptance-tests clean-engineering-code session=C:/dev/abd-context-driven-delivery/.sessions/release-1-2-fixes/session.json format=drawio,whiteboard,markdown,python\n* final report defect from a epic story and module class brakdown , new coverage areas etc\n</pasted_content id=\"2e80\">",
+          "state": "pending"
+        }
+      ]
+    }
+  ]
+}

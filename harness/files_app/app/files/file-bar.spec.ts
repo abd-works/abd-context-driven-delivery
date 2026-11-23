@@ -14,6 +14,7 @@ import { FILE_BAR_WIDTH } from './files-state'
 const STORY_MAP = '.context/story-map.md'
 const ORDER = 'src/checkout/order.py'
 const CART = 'src/checkout/cart.py'
+const SKETCH = '.context/checkout-flow-sketch.md'
 
 // The files of each fidelity the page asks for, as ticket.fidelity_files answers them.
 const byFidelity = (body: Record<string, unknown> | undefined, files: Record<string, FileEntryData[]>) =>
@@ -34,8 +35,21 @@ class FakeFilesServer implements CddApi {
   }
 }
 
+// The Files app's server for a project in a plain folder: the session works in no git repository, so no file is
+// changed; cart.py is declared but not generated yet, the session's sketch is every fidelity's, and a note under the
+// root belongs to no fidelity.
+class PlainFolderServer implements CddApi {
+  async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+    if (path.endsWith('/show')) return { practices: {}, is_repository: false } as Result
+    const missing = { ...entry(CART), exists: false }
+    if (path.endsWith('/fidelity-files')) return byFidelity(body, { markdown: [entry(STORY_MAP)], python: [entry(ORDER), missing] }) as Result
+    if (path.endsWith('/root-files')) return [entry(STORY_MAP), { ...entry(SKETCH), fidelities: ['stories-story-map'] }, entry('notes/plain.txt')] as Result
+    return null
+  }
+}
+
 // The page with its files listed and order.py open, as the person finds it.
-async function pageWithOrderOpen(server = new FakeFilesServer()): Promise<FilesPage> {
+async function pageWithOrderOpen(server: CddApi = new FakeFilesServer()): Promise<FilesPage> {
   const page = new FilesPage(server, new FilesLink(`?files=checkout-flow&fidelity=stories-story-map&file=${ORDER}`))
   page.start()()
   await new Promise(resolve => setTimeout(resolve, 0))
@@ -172,7 +186,28 @@ describe('List This Session Or All Session Files', () => {
 
       it('should count the one changed file on its button', async () => {
         const page = await onlyOrderChanged()
-        expect(page.fileBar.changedCount).toBe(1)
+        expect(page.fileBar.sessionWorkCount).toBe(1)
+      })
+    })
+  })
+
+  // Reported 2026-11-18 (Nov 18 demo): in a plain folder This session listed nothing, as no branch changes any file.
+  describe('with a project that is no git repository', () => {
+    const plainFolder = async () => {
+      const page = await pageWithOrderOpen(new PlainFolderServer())
+      await new Promise(resolve => setTimeout(resolve, 0))
+      return page
+    }
+
+    describe('that lists This session, its default', () => {
+      it('should list the files its fidelities declare that are there, a file of none left out', async () => {
+        const page = await plainFolder()
+        expect(page.fileBar.entries.map(each => each.path)).toEqual([STORY_MAP, ORDER, SKETCH])
+      })
+
+      it('should count them on its button', async () => {
+        const page = await plainFolder()
+        expect(page.fileBar.sessionWorkCount).toBe(3)
       })
     })
   })

@@ -40,7 +40,7 @@ with description("server health") as self:
 
     with context("with no scheduled e2e run that captured its screens"):
         with it("should report no e2e review"):
-            expect(ServerHealth(self.root, cadence=TestCadence(None, TestRunRecord(self.root / "home"))).e2e_review).to(be_none)
+            expect(ServerHealth(self.root, cadence=TestCadence(TestRunRecord(self.root / "home"))).e2e_review).to(be_none)
 
     with context("with a scheduled e2e run whose screen review missed a step"):
         with before.each:
@@ -49,7 +49,7 @@ with description("server health") as self:
             (run / "results.json").write_text(json.dumps([{"key": STEP}]), encoding="utf-8")
             (run / "changed.json").write_text(json.dumps([STEP]), encoding="utf-8")
             (run / "review.json").write_text(json.dumps({"against": "run-1", "pairs": {STEP: {"verdict": "missed by the tests", "reason": "Red on red."}}}), encoding="utf-8")
-            self.health = ServerHealth(self.root, cadence=TestCadence(None, TestRunRecord(self.root / "home")))
+            self.health = ServerHealth(self.root, cadence=TestCadence(TestRunRecord(self.root / "home")))
 
         with it("should report the run's name"):
             expect(self.health.e2e_review.run).to(equal("run-2"))

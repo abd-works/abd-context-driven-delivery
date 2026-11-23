@@ -51,7 +51,7 @@ function PartView({ Box, Button, Text }: ElementTable, part: Part, actions: Acti
   )
 }
 
-// The MCP host, each app, and the hook server as a row of icons, for the top right of the session card.
+// The MCP host, each app, and the test runs as a row of icons, for the top right of the session card.
 export function ServerHealthIconsView(elements: ElementTable, band: Band) {
   const { Box } = elements
   return (

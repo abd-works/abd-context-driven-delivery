@@ -1,0 +1,72 @@
+{
+  "chat": "5b5466c3-9f1f-4998-ace2-5da34679e50c",
+  "taken_off": "2026-11-18T19:52:46.242944+00:00",
+  "prompts": [
+    {
+      "id": "3831c526bdd1",
+      "text": "Install release v1.2 in this worktree",
+      "is_done": true
+    },
+    {
+      "id": "f0e36cdee4b5",
+      "text": "Find why the chat UI shows version 1.1 on its right side",
+      "is_done": true
+    },
+    {
+      "id": "afa97a3f17a4",
+      "text": "List the changes on this branch past v1.2.0",
+      "is_done": true
+    },
+    {
+      "id": "e1768bcc9989",
+      "text": "Drawio renderer, domain model: render each repository with its own \u00abRepository\u00bb heading inside its root's card, instead of merging it into the root with no heading. TDD Flow B: failing spec first. (From main's pml-web handoff .sessions/main/handoff-20261118T175311.md, commit eb529d2; must land before pml-web renders domain-model v5.)",
+      "is_done": true
+    },
+    {
+      "id": "cb2bdd400e76",
+      "text": "Whiteboard renderer, domain model: draw each link between aggregates as a direct arrow between the two cards, as the hand-edited domain-model board v4 does (https://claude.ai/artifact/HeU7u782s8hD4DjVQpWMNZ), not as \u00abfrom:\u00bb proxy squares. Failing spec first. (From main's pml-web handoff; must land before pml-web renders domain-model v5.)",
+      "is_done": true
+    },
+    {
+      "id": "07ad0885e896",
+      "text": "fidelity-session-output.choose_format raises KeyError: 'stories-story-map' and KeyError: 'ux-ia'. (From the client-testimonial-video-creator chat.)",
+      "is_done": true
+    },
+    {
+      "id": "99b99976d9cf",
+      "text": "validate with guidance [\"stories-story-map\",\"ux-ia\"] raises UnknownGuidance for 'ux-ia', though each slug works alone. (From the client-testimonial-video-creator chat.)",
+      "steps": [
+        {
+          "text": "[interruption] Client chat confirmed: ux was off (session.json version 13 had only stories on); \"ux-ia\" alone ran as text. Matches 0d29115c8, which refuses a turned-off practice's slug.",
+          "state": "pending"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "16d47b6921ec",
+      "text": "Files app opened from the chat bar without &project= reports no ticket on the board and no session.json, though both exist. (From the client-testimonial-video-creator chat.)",
+      "is_done": true
+    },
+    {
+      "id": "14a56c0a532d",
+      "text": "prompt-queue.done / set_steps report PromptNotQueued for ids the submit hook just said were on the queue. (From the client-testimonial-video-creator chat.)",
+      "is_done": true
+    },
+    {
+      "id": "bbf1b52980b3",
+      "text": "Get the latest Granola discussion of the code demo",
+      "is_done": true
+    },
+    {
+      "id": "bb426d520d20",
+      "text": "List every CDD defect and needed improvement from the Nov 18 demo with Emil and Timur",
+      "is_done": true
+    },
+    {
+      "id": "67795b6a1dea",
+      "text": "Backlog the Nov 18 demo's unqueued defects and improvements under one parent item",
+      "is_done": true
+    }
+  ]
+}

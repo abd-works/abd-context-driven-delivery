@@ -9,7 +9,7 @@ from unittest.mock import patch
 from expects import be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.installation.json_file import HeldJsonFile, JsonFile, JsonFileUnreadable
+from harness.installation.json_file import HeldJsonFile, JsonFile, JsonFileBusy, JsonFileUnreadable
 
 os_replace = os.replace
 
@@ -78,6 +78,52 @@ with description("a JSON file"):
             with patch("harness.installation.json_file.os.replace", side_effect=refused_once):
                 self.file.write({"name": "beta"})
             expect(self.file.read()).to(equal({"name": "beta"}))
+
+    # Windows refuses a read for the moment another process swaps the file in; read as empty, the owner would save
+    # its next change over everything the file held.
+    with context("that another process is swapping in for a moment"):
+        with it("should still be read"):
+            self.file.write({"name": "alpha"})
+            text = self.path.read_text(encoding="utf-8")
+            with patch("harness.installation.json_file.Path.read_text", side_effect=[PermissionError(13, "Permission denied"), text]):
+                expect(self.file.read()).to(equal({"name": "alpha"}))
+
+    with context("that a person saved with a byte-order mark"):
+        with it("should read the object after the mark"):
+            self.path.parent.mkdir(parents=True)
+            self.path.write_text('{"name": "alpha"}', encoding="utf-8-sig")
+            expect(self.file.read()).to(equal({"name": "alpha"}))
+
+    with context("that is cut off half way"):
+        with it("should raise its owner's kind of unreadable error"):
+            self.path.parent.mkdir(parents=True)
+            self.path.write_text('{"name": "al', encoding="utf-8")
+            expect(lambda: self.file.read()).to(raise_error(_OwnersError))
+
+    with context("that a caller holds for a change"):
+        with before.each:
+            self.hold = self.file.held()
+            self.hold.__enter__()
+
+        with after.each:
+            self.hold.__exit__(None, None, None)
+
+        with it("should refuse another caller's hold once its wait is over, naming the file"):
+            with patch("harness.installation.json_file._HOLD_SECONDS", 0):
+                expect(lambda: JsonFile(self.path).held().__enter__()).to(raise_error(JsonFileBusy, contain(str(self.path))))
+
+        with it("should still be read and written by its holder"):
+            self.file.write({"name": "alpha"})
+            expect(self.file.read()).to(equal({"name": "alpha"}))
+
+    with context("that a caller held for a change and let go"):
+        with it("should be held by the next caller"):
+            first = self.file.held()
+            with first:
+                self.file.write({"name": "alpha"})
+            second = JsonFile(self.path).held()
+            with second:
+                expect(self.file.read()).to(equal({"name": "alpha"}))
 
     with context("that holds something other than an object"):
         with before.each:

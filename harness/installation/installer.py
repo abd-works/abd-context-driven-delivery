@@ -23,16 +23,16 @@ from harness.installation.destination import Installation, ServerInstallation, i
 from harness.installation.files import FileChannel, FileInstallation, command
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_diagnostics import InstallDiagnostics
+from harness.installation.install_lock import InstallLock
 from harness.installation.install_target import InstallTarget
-from harness.installation.install_record import InstallRecord
+from harness.installation.install_record import InstallRecord, LastInstall
 from harness.installation.language_adapter import LanguageAdapterInstallation
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.markdown import markdown
 from harness.markdown.front_matter import FrontMatter
 
-# The record of the last install into a project's own IDE folder; an install into a temporary folder keeps its record
-# in that folder, so a spec's install never replaces the person's.
-_SHARED_RECORD = Path(__file__).resolve().parent / InstallRecord.NAME
+# Where this checkout keeps the IDE and folder it last installed into; each folder keeps the record of its own files.
+_LAST_INSTALL = Path(__file__).resolve().parent / InstallRecord.NAME
 
 _Server = TypeVar("_Server", bound=ServerInstallation)
 
@@ -78,7 +78,7 @@ class InstallChannels:
         }
         self.standing_rules = FileInstallation(installer.target, FileChannel(InstallDestination.RULE), repo=repo)
         for installation in (*self.servers, self.language_adapters, *self._files.values(), self.standing_rules):
-            installation.track_writes_with(lambda written: installer.record.track(written, installer.path))
+            installation.track_writes_with(installer.record.track)
         # The toolsets the server channels publish into every install, such as the hooks that start the cdd server.
         self.toolsets: list[Any] = [AgentToolSet.instantiate(toolset) for server in self.servers for toolset in server.toolsets]
 
@@ -146,33 +146,40 @@ class Deployment:
 
     def run(self, toolsets: Iterable[ToolsetConfiguration] | None, replace: bool) -> InstallChannels:
         """Publish toolsets, every toolset the repository defines when none are named; replace wipes the previous
-        install first."""
+        install first. The run holds the folder's lock, so a second install into the folder waits for it."""
+        with self._installer.lock.held():
+            return self._run(toolsets, replace)
+
+    def _run(self, toolsets: Iterable[ToolsetConfiguration] | None, replace: bool) -> InstallChannels:
         installer = self._installer
         if replace:
             installer.clean()
         else:
-            installer.record.keep_existing(installer.path)
+            installer.last_install.hand_over_to(installer.record)
+            installer.record.keep_existing()
         installer.toolsets.ensure_import_path()
         items = self._repository_toolsets() if toolsets is None else list(toolsets)
         channels = self._channels = InstallChannels(installer, SERVER_CHANNELS.kinds, installing=True)
-        self._publish_every_toolset(items, channels)
+        self._publish_every_toolset(items, channels, whole=replace and toolsets is None)
         self._save_installed_files(replace)
         self._standup_channels()
         self._report_diagnosis()
         return channels
 
-    def install_self(self, *, replace: bool = False) -> InstallChannels:
+    def install_self(self) -> InstallChannels:
         """Deploy only the Installer toolset — ``/install``, ``/clean`` — and the toolsets the server channels publish
-        into every install, such as the hooks that start the cdd server."""
-        return self.run([], replace=replace)
+        into every install, such as the hooks that start the cdd server. It adds to the last install and removes none
+        of it: a refresh of two commands must not take every skill and rule away."""
+        return self.run([], replace=False)
 
-    def _publish_every_toolset(self, items: list[ToolsetConfiguration], channels: InstallChannels) -> None:
+    def _publish_every_toolset(self, items: list[ToolsetConfiguration], channels: InstallChannels, whole: bool) -> None:
         """Write every channel's files for items, the Installer, and the toolsets the server channels publish, then the
-        language adapters, the agents, and the standing rules."""
+        language adapters, the agents, and the standing rules. whole says items are every toolset the repository
+        defines, published in place of the last install, so the adapters' folder keeps nothing else."""
         self._install_all(items)
         for toolset in (self._installer, *channels.toolsets):
             self._install_toolset(toolset)
-        channels.language_adapters.write_all()
+        channels.language_adapters.write_all(whole=whole)
         self._install_agents()
         self._install_standing_rules()
 
@@ -183,8 +190,9 @@ class Deployment:
             # Only after a full wipe and republish do the enrolled MCP names hold the whole catalog; a partial install
             # must not delete skills for toolsets not in this run.
             self._remove_skills_naming_missing_mcp()
-        installer.record.prune_empty_skill_folders(installer.path)
-        installer.record.save(installer.ide, installer.path)
+        installer.record.prune_empty_skill_folders()
+        installer.record.save()
+        installer.last_install.remember(installer.target)
 
     def _report_diagnosis(self) -> None:
         """Diagnose the finished install, printing each red report."""
@@ -206,7 +214,7 @@ class Deployment:
             toolset = AgentToolSet.instantiate(item)
             for each in (toolset, *toolset.child_toolsets()):
                 adapters.record(each)
-        return adapters.write_all()
+        return adapters.write_all(whole=True)
 
     def _repository_toolsets(self) -> list[type]:
         """The class of every toolset the repository defines; one whose module cannot be imported stops the install,
@@ -241,17 +249,20 @@ class Deployment:
 
     def _install_agents(self) -> None:
         """Copy cdd_guidance/agents into the IDE agents folder, each named as its front matter names it. The source
-        stays on cdd_guidance."""
+        stays on cdd_guidance. An agent kept in a folder of its own kind, such as exploratory-testing/tester.md, is
+        installed flat under its front matter's name, since an IDE reads agents from one folder."""
         installer = self._installer
         source = installer.toolsets.agents_folder
         if not source.is_dir():
             return
-        for path in sorted(source.glob("*.md")):
+        for path in sorted(source.rglob("*.md")):
+            if ".context" in path.relative_to(source).parts:
+                continue
             front_matter = FrontMatter.of_file(path)
             dest = installer.path / "agents" / f"{front_matter.fields.get('name') or path.stem}.md"
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(front_matter.text, encoding="utf-8")
-            installer.record.track(dest, installer.path)
+            installer.record.track(dest)
 
     def _install_standing_rules(self) -> None:
         """Install cdd_guidance/rules as always-on rules in the IDE rules folder."""
@@ -286,7 +297,7 @@ class Deployment:
         installer = self._installer
         relative = skill.resolve().relative_to(installer.path.resolve()).as_posix()
         skill.unlink()
-        installer.record.prune_empty_parents(skill, installer.path)
+        installer.record.prune_empty_parents(skill)
         installer.record.forget(relative)
         return relative
 
@@ -333,11 +344,16 @@ class Installer:
     MCP and hook channels each point the IDE at a server, and harness/mcp and harness/hooks register their installation
     with ``SERVER_CHANNELS`` when they are imported, so this module never imports them."""
 
-    def __init__(self, target: InstallTarget, record: InstallRecord, toolsets: RepositoryToolsets) -> None:
+    def __init__(self, target: InstallTarget, toolsets: RepositoryToolsets, last_install: LastInstall) -> None:
         self.target = target
         """The IDE folder it installs into, with that IDE's layout."""
-        self.record = record
-        """The files the last install wrote, read and written by the install and the clean."""
+        self.record = InstallRecord(target)
+        """The files the last install into that folder wrote, kept in the folder, read and written by the install and
+        the clean."""
+        self.last_install = last_install
+        """The IDE and folder the checkout last installed into, where an install that names neither goes."""
+        self.lock = InstallLock(target.path)
+        """The folder's lock: one install or clean in it at a time."""
         self.toolsets = toolsets
         """The toolsets of the repository it installs."""
         self.diagnostics = target.diagnostics
@@ -347,13 +363,14 @@ class Installer:
     @classmethod
     def create(cls, ide: str | None = None, path: str | Path | None = None, *, repo: str | Path) -> Installer:
         """The installer of repo into path for ide; with neither named, into the IDE folder it last installed into,
-        else repo's own folder for the default IDE. An install into a temporary folder keeps its record there."""
+        else repo's own folder for the default IDE. An IDE name that is none CDD installs into is refused with
+        *UnknownIde*, and a path that is empty or a file with *NotAnInstallFolder*."""
         root = Path(repo).resolve()
-        last = InstallRecord(_SHARED_RECORD).saved if ide is None and path is None else {}
+        last_install = LastInstall(_LAST_INSTALL)
+        last = last_install.saved if ide is None and path is None else {}
         layout = IdeLayout(ide or last.get("ide") or IdeLayout.DEFAULT_IDE)
         target = InstallTarget(layout, path) if path is not None else InstallTarget.from_last_install(layout, last.get("path"), root)
-        record = InstallRecord(target.path / InstallRecord.NAME if target.is_temporary else _SHARED_RECORD)
-        return cls(target, record, RepositoryToolsets(root))
+        return cls(target, RepositoryToolsets(root), last_install)
 
     @classmethod
     @tool_subject
@@ -384,8 +401,12 @@ class Installer:
     @agent_tool
     def clean(self) -> list[str]:
         """Remove files from the previous install on this IDE path."""
-        removed = self.record.remove_installed(self.path)
-        self.record.prune_empty_skill_folders(self.path)
+        if not self.path.is_dir():
+            return []
+        with self.lock.held():
+            self.last_install.hand_over_to(self.record)
+            removed = self.record.remove_installed()
+            self.record.prune_empty_skill_folders()
         return removed
 
     @command(name="install")
@@ -401,9 +422,9 @@ class Installer:
 
         Before you run it, write these steps in the chat as a checklist. Then, as each one completes, write ``✓`` and the step in the chat with what the output said for it, so the person follows the install as it goes:
 
-        1. Install every toolset: skills, commands, rules, MCP, and hooks (the line ``hook: …, mcp: …, cdd plugin: …, board: …``).
+        1. Install every toolset: skills, commands, rules, MCP, and hooks (the line ``mcp: …, cdd plugin: …, board: …``).
         2. Check the cdd server runs, moved onto this commit when it ran an older one (``mcp: running (pid …)``, or ``cdd server: …``).
-        3. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, cdd server, hook server, hooks registered.
+        3. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the full summary: color, channel deltas, cdd server, hooks registered.
 
         When a step fails, write ``✗`` and the step with its error, stop, and follow "When install fails" in ``harness/installation/installer.md``."""
         return self.deployment.run(toolsets, replace)
@@ -417,12 +438,12 @@ class Installer:
         Before you run it, put these seven steps in your task list (in Claude Code, the plan the app shows under your message) and write them in the chat as a checklist:
 
         1. Fetch origin's tags and merge the latest release into this checkout. A fetch or merge that fails or conflicts, or an origin with no release tag, stops here, before anything is stopped: tell the person and wait.
-        2. Stop every app's server and the hook server.
-        3. Restart the cdd server.
+        2. Stop every app's server.
+        3. Restart the cdd server on this checkout's commit: its lane (stable from main, dev from a ticket's worktree) serves the release just merged, and the chats point at that lane, so the chat bar's version shows it.
         4. Install every toolset: skills, commands, rules, MCP, and hooks. This is the long step, about a minute.
         5. Ping the cdd server.
         6. Reconnect this chat: when the cdd server reads failed, reconnect it, or ask the person to run ``/reload-plugins``.
-        7. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the summary: color, channel deltas, cdd server, hook server.
+        7. Read ``diagnostics.json`` in the install folder (latest ``diagnose_install`` report) and paste the summary: color, channel deltas, cdd server.
 
         Run the command in the background and watch its output as it runs, rather than waiting for it to end, so the person sees each step finish as it happens. The script writes ``▶ n/7 <step>`` as a step starts and ``✓ n/7 <step>: <result>`` as it is done. On each ``✓`` line, mark that step done in your task list and write the same line in the chat; on a ``✗ n/7`` line, write it, stop, and follow "When install fails" in ``harness/installation/installer.md``. Steps 6 and 7 are yours: mark and write each the same way once you have done it.
 

@@ -22,6 +22,10 @@ def main() -> int:
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8", errors="replace")
     args = _parser().parse_args()
+    refusal = _chat_folder_refusal(args)
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return NOT_A_PROJECT_EXIT
     chat_checkout = _other_chat_checkout(args)
     if chat_checkout is not None:
         return _install_from_chat_checkout(args, chat_checkout)
@@ -39,7 +43,8 @@ def _parser() -> argparse.ArgumentParser:
         default=None,
         metavar="FOLDER",
         help="Install for the chat working in FOLDER: from FOLDER when it is a CDD checkout, the one the person is "
-        "working on, else from this checkout. The chat bar's Run install runs this.",
+        "working on, else from this checkout into FOLDER's IDE folder. The chat bar's Run install runs this, and the "
+        "board mod runs it when a chat starts in a folder without CDD's skills and commands.",
     )
     return parser
 
@@ -60,7 +65,7 @@ def _add_install_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--self",
         action="store_true",
-        help="Deploy only the Installer toolset (slash /install and /clean, hooks).",
+        help="Deploy only the Installer toolset (slash /install and /clean, hooks), leaving the rest of the last install in place.",
     )
 
 
@@ -97,10 +102,36 @@ def _add_serving_options(parser: argparse.ArgumentParser) -> None:
     serving.add_argument(
         "--restart-everything",
         action="store_true",
-        help="Stop every app's server and the hook server, and restart the cdd server at once, even one that holds its "
+        help="Stop every app's server and restart the cdd server at once, even one that holds its "
         "port without answering; then install in full and ping the server. A chat that connected in the seconds it was "
         "down needs its cdd connection reconnected.",
     )
+
+
+# The exit of an install refused for a chat folder that is no project; the board mod reads it to stay quiet at chat start.
+NOT_A_PROJECT_EXIT = 3
+
+
+def _chat_folder_refusal(args: argparse.Namespace) -> str:
+    """Why the chat's folder is no project to install into, when it is none: the home folder, whose ``.claude`` is
+    Claude Code's own settings for every project; a folder in the system's temporary folder, which is thrown away; or one
+    of the desktop app's spare folders, which a chat waits in before the app moves it to its project. Empty otherwise,
+    and when no chat is named or ``--path`` names where to install."""
+    if args.from_chat is None or args.path is not None:
+        return ""
+    if not args.from_chat.strip():
+        return "not installed: the chat's folder is not known (--from-chat names no folder)"
+    from harness.installation.destination import is_temporary
+    from harness.process.claude_chat_process import is_desktop_spare
+
+    folder = Path(args.from_chat).resolve()
+    if folder == Path.home().resolve():
+        return f"not installed: {folder} is the home folder, whose .claude holds Claude Code's settings for every project"
+    if is_temporary(folder):
+        return f"not installed: {folder} is in the temporary folder, which is thrown away"
+    if is_desktop_spare(folder):
+        return f"not installed: {folder} is a spare folder the desktop app keeps a chat in before moving it to its project"
+    return ""
 
 
 def _other_chat_checkout(args: argparse.Namespace) -> Path | None:
@@ -113,19 +144,39 @@ def _other_chat_checkout(args: argparse.Namespace) -> Path | None:
     return chat_checkout
 
 
+def _install_path(args: argparse.Namespace) -> str | None:
+    """The IDE folder to install into: the one ``--path`` names, else, for a chat, the IDE's folder in the chat's own
+    folder, so a chat in any project gets the skills and commands it works with; else none, for the saved install."""
+    if args.path is not None or args.from_chat is None:
+        return args.path
+    from harness.installation.ide_layout import IdeLayout
+
+    return str(Path(args.from_chat).resolve() / IdeLayout(args.ide or IdeLayout.DEFAULT_IDE).folder_name)
+
+
 def _install_from_chat_checkout(args: argparse.Namespace, chat_checkout: Path) -> int:
     passed = [*(["--ide", args.ide] if args.ide else []), *(["--from-latest"] if args.from_latest else [])]
     command = [sys.executable, str(chat_checkout / "scripts" / "install.py"), *passed]
     return subprocess.run(command, cwd=chat_checkout, check=False).returncode
 
 
+# The exit of an install refused for an IDE name that is no IDE, or a path that is empty or a file.
+REFUSED_EXIT = 2
+
+
 def _install(args: argparse.Namespace) -> int:
     # The MCP and hook installations register with the Installer when their modules are imported.
     import harness.hooks.hook_installation  # noqa: F401
+    from harness.installation.ide_layout import UnknownIde
+    from harness.installation.install_target import NotAnInstallFolder
     from harness.installation.installer import Installer
     from harness.mcp.mcp_server import McpInstallation
 
-    installer = Installer.create(ide=args.ide, path=args.path, repo=_REPO)
+    try:
+        installer = Installer.create(ide=args.ide, path=_install_path(args), repo=_REPO)
+    except (UnknownIde, NotAnInstallFolder) as refusal:
+        print(f"not installed: {refusal}", file=sys.stderr)
+        return REFUSED_EXIT
     server = McpInstallation.create(installer.layout, installer.path, repo=_REPO)
     # Switching the code the server runs takes seconds; a full install takes a minute, so the switch runs alone.
     if args.pin_runtime or args.update or args.serve_from_checkout:
@@ -161,7 +212,7 @@ def _switch_server_only(args: argparse.Namespace, installer: Installer, server: 
 
 def _install_toolsets(args: argparse.Namespace, installer: Installer, server: McpInstallation) -> None:
     if args.self:
-        installer.deployment.install_self(replace=not args.no_replace)
+        installer.deployment.install_self()
         return
     installer.install(replace=not args.no_replace)
     # A plain install from the main checkout also moves the server onto the commit it just installed.
@@ -175,7 +226,7 @@ def _install_toolsets(args: argparse.Namespace, installer: Installer, server: Mc
 # watching its output can tick each step in the chat as it happens; the agent does steps 6 and 7 itself.
 INSTALL_LATEST_STEPS = {
     1: "Merge the latest release",
-    2: "Stop every app's server and the hook server",
+    2: "Stop every app's server",
     3: "Restart the cdd server",
     4: "Install every toolset",
     5: "Ping the cdd server",
@@ -240,9 +291,10 @@ _VERSION_LINE = re.compile(r'^version = "[^"]*"$', re.MULTILINE)
 
 def _match_release_version(release: str) -> str:
     """Install from latest runs the version the release carries, so a local edit to the version line in pyproject.toml,
-    which the merge leaves in place, is put back to the release's; the rest of the file keeps any local edits."""
-    shown = _git("show", f"{release}:pyproject.toml")
-    origin_line = _VERSION_LINE.search(shown.stdout) if shown.returncode == 0 else None
+    which the merge leaves in place, is put back to the release's; the rest of the file keeps any local edits. A version
+    line the checkout has committed is no local edit: a checkout past the release keeps its own commits, its version
+    among them."""
+    origin_line = _committed_version_line(release)
     if origin_line is None:
         return f"{release}'s version was not read"
     pyproject = _REPO / "pyproject.toml"
@@ -251,9 +303,18 @@ def _match_release_version(release: str) -> str:
     local_line = _VERSION_LINE.search(local.replace("\r\n", "\n"))
     if local_line is not None and local_line.group(0) == origin_line.group(0):
         return origin_line.group(0)
+    committed_line = _committed_version_line("HEAD")
+    if local_line is not None and committed_line is not None and local_line.group(0) == committed_line.group(0):
+        return f"{local_line.group(0)} (this checkout's own commit, past {release})"
     with pyproject.open("w", encoding="utf-8", newline="") as file:
         file.write(re.sub(r'^version = "[^"]*"(?=\r?$)', origin_line.group(0), local, count=1, flags=re.MULTILINE))
     return f"{origin_line.group(0)} (set from {release})"
+
+
+def _committed_version_line(commit: str) -> re.Match[str] | None:
+    """The version line of pyproject.toml as commit holds it; none when it cannot be read."""
+    shown = _git("show", f"{commit}:pyproject.toml")
+    return _VERSION_LINE.search(shown.stdout) if shown.returncode == 0 else None
 
 
 def _switch_server(args: argparse.Namespace, server: McpInstallation) -> str:
@@ -270,21 +331,28 @@ def _restart_everything(installer: Installer, server: McpInstallation) -> None:
     """Stop each server an install replaces the code of, so none keeps serving what it loaded before. The cdd server
     starts again at once rather than after the install: a chat that connects while it is down runs its header helper,
     which waits for a server longer than Claude Code waits for the helper, and Claude Code then sends no project header,
-    is refused, and leaves that chat's cdd connection failed until it is reconnected."""
+    is refused, and leaves that chat's cdd connection failed until it is reconnected. The hook server is left alone: the
+    next hook command replaces a hook daemon that loaded older hook code."""
     import space.kanban  # noqa: F401  registers the Kanban and Story UI apps
     import space.session  # noqa: F401  registers the Files app
     from harness.diagnostics.app import APPS
-    from harness.hooks.hook_installation import HookInstallation
 
     _step_started(2)
     # Two apps can share one server, as the Kanban and the Story UI do; the second finds it already stopped.
     stopped = [app.label for app in APPS.registered if app.server.stop()]
-    HookInstallation(installer.layout, installer.path, repo=_REPO).daemon.stop()
-    apps = f"stopped {', '.join(stopped)}" if stopped else "no app server was running"
-    _step_done(2, f"{apps}; hook server stopped")
+    _step_done(2, f"stopped {', '.join(stopped)}" if stopped else "no app server was running")
     _step_started(3)
-    restarted = server.daemon.restart()
-    _step_done(3, f"pid {restarted.pid}")
+    _step_done(3, _serve_this_checkout(installer, server))
+
+
+def _serve_this_checkout(installer: Installer, server: McpInstallation) -> str:
+    """Restart the cdd server on this checkout's current commit, served the way its lane already serves it, and point the
+    chats at that lane. A lane pinned to another branch's older commit would keep serving it, and the chat bar would
+    show that branch's version, not the release just merged."""
+    served = server.served.update()
+    if installer.layout.is_claude_code:
+        server.cdd_entry.point_chats_at_served_lane()
+    return served
 
 
 def _ping_server(server: McpInstallation) -> int:

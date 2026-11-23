@@ -1448,6 +1448,11 @@ with description("a session's guidance selection") as self:
     with it("should name its repository, branch, and root, as a page heads them"):
         expect([self.session.repo_name, self.session.branch, self.session.root]).to(equal([self.repo.name, "alpha", str((self.repo / "work").resolve())]))
 
+    # Reported 2026-11-18 (Nov 18 demo): the Files app's This session lists what the branch changed, and a plain folder
+    # has no branch, so the page falls back to the session's own files there.
+    with it("should say it works in no git repository when its project is a plain folder"):
+        expect(self.session.is_repository).to(equal(False))
+
     with context("that nothing has selected yet"):
         with it("should have no stage chosen"):
             expect(self.session.guidance_selection().is_stage_chosen).to(equal(False))

@@ -1,0 +1,11 @@
+{
+  "chat": "5b5466c3-9f1f-4998-ace2-5da34679e50c",
+  "taken_off": "2026-11-18T17:43:36.170739+00:00",
+  "prompts": [
+    {
+      "id": "15fac8e25a79",
+      "text": "Explain how the debug button's request-for-help works",
+      "is_done": true
+    }
+  ]
+}

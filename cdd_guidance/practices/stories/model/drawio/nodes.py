@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
 from cdd_guidance.practices.stories.model.diagram_story_model import (
     DiagramStoryCell,
@@ -278,6 +278,44 @@ class _DrawIOPage:
         return "<?xml version='1.0' encoding='utf-8'?>\n" + ET.tostring(self.mxfile, encoding="unicode")
 
 
+class _KeptPlaces:
+    """Where each cell of a story map drawn before stands, by its cell id: the drawing a person may have moved cards on,
+    which the next render keeps them where they put them."""
+
+    def __init__(self, places: Dict[str, Dict[str, str]]) -> None:
+        self._places = places
+
+    @classmethod
+    def from_text(cls, drawio: Optional[str]) -> "_KeptPlaces":
+        """The places a draw.io file holds; none for no file, or text that is no draw.io file."""
+        if not drawio:
+            return cls({})
+        try:
+            root = ET.fromstring(drawio)
+        except ET.ParseError:
+            return cls({})
+        return cls({cell_id: geometry.attrib for cell_id, geometry in _drawn_geometries(root)})
+
+    def place(self, vertex: "DrawIOStoryModel.Vertex") -> None:
+        """Put vertex where its cell stood before, at the size it had; a cell new to the map stays where it was laid out."""
+        kept = self._places.get(str(vertex.cell_id))
+        if kept is None:
+            return
+        vertex.x = kept.get("x", vertex.x)
+        vertex.y = kept.get("y", vertex.y)
+        vertex.width = kept.get("width", vertex.width)
+        vertex.height = kept.get("height", vertex.height)
+
+
+def _drawn_geometries(root: ET.Element) -> Iterator[Tuple[str, ET.Element]]:
+    """Each drawn cell's id and geometry in a draw.io file; a linked cell's id is on the ``UserObject`` round it."""
+    for holder in root.iter():
+        cell = holder.find("mxCell") if holder.tag == "UserObject" else holder if holder.tag == "mxCell" else None
+        geometry = cell.find("mxGeometry") if cell is not None else None
+        if geometry is not None and holder.get("id"):
+            yield holder.get("id"), geometry
+
+
 class DrawIOStoryModel(DiagramStoryModel):
     suffixes = (".drawio",)
     epic_type = DrawIOEpic
@@ -354,19 +392,27 @@ class DrawIOStoryModel(DiagramStoryModel):
     ) -> str:
         """Draw the story map. In a *workspace* folder, each epic, sub-epic, and story cell links to its
         ``story-map.md`` entry there, and a story to its own file when one exists. With no target file,
-        the cell has no link."""
+        the cell has no link. Each cell a *previous* drawing held stays where it stood there, so the cards a person
+        moved stay put."""
         drawn = self.copy_of(canonical if canonical is not None else self)
         if workspace:
             drawn.links = StoryMapLinks(drawn, workspace)
+        drawn.kept_places = _KeptPlaces.from_text(previous)
         return drawn.save()
 
+    # Where the cells of the drawing this one replaces stood; none while the map is drawn afresh.
+    kept_places: Optional[_KeptPlaces] = None
+
     def save(self) -> str:
-        """Draw this story map; each cell links where the links of the folder it was placed in say."""
+        """Draw this story map; each cell links where the links of the folder it was placed in say, and stands where
+        the drawing it replaces had it."""
         vertices = [vertex for epic in self.epics for vertex in epic.cells()]
         page = _DrawIOPage("Story Map", "story-map")
         for vertex in vertices:
             if self.links is not None:
                 vertex.take_links(self.links)
+            if self.kept_places is not None:
+                self.kept_places.place(vertex)
             page.add(vertex)
         return page.text()
 

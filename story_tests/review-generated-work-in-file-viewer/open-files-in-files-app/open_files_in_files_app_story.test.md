@@ -20,13 +20,16 @@ Map: [story-map.md](../../../.context/story-map.md#e-open-files-in-files-app). A
 
 Requested 2026-11-16, the person: "Same with whiteboard — if the diagram filter is on, we need a link to Claude whiteboard where we see a whiteboard file; whiteboard file entries don't open those files, they open the actual whiteboard."
 
-#### Scenario: Open a whiteboard file's board
+Requested 2026-11-18 (Nov 18 demo fixes): "Whiteboard entry opens as an external link, not a canvas."
+
+#### Scenario: Open a whiteboard file as a canvas
 
 *Given* the session of ticket checkout-flow holds `.context/story-map.whiteboard`, and `.context/whiteboards.json` keeps its board's address
 *And* the diagram chip ◇ is selected
 *When* the file bar lists the Stories story map's files
-*Then* the whiteboard is listed as story-map, marked as a whiteboard, at its board's address
-*And* pressing it opens the board in Claude in a tab of its own, not the text of the file
+*Then* the whiteboard is listed as story-map, marked as a whiteboard
+*And* pressing it draws the board on a canvas beside the file list, its blocks, labels and arrows where the board places them, not the text of the file
+*And* the board in Claude is a press away, at its board's address, opening in Claude's artifact panel
 
 ##### Example: another project
 
@@ -34,13 +37,13 @@ Requested 2026-11-16, the person: "Same with whiteboard — if the diagram filte
 *And* the diagram chip ◇ is selected
 *When* the file bar lists the Stories story map's files
 *Then* the whiteboard is listed as story-map, marked as a whiteboard
-*And* pressing it opens the board at the address that project keeps, not one the CDD checkout keeps
+*And* its board is at the address that project keeps, not one the CDD checkout keeps
 
 #### Scenario: A whiteboard not on a board yet
 
 *Given* `.context/story-map.whiteboard` was never published, so no address is kept for it
 *When* the file bar lists it
-*Then* it is listed as a whiteboard with no board yet, and pressing it opens nothing, rather than the file's text
+*Then* it is listed as a whiteboard not on a board in Claude yet, and pressing it still draws it on a canvas, rather than showing the file's text
 
 #### Scenario: Open the board from every session file
 

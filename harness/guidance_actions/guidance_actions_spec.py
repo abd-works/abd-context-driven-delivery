@@ -165,6 +165,93 @@ with description("a guidance action"):
             action = GuidanceAction()
             expect(lambda: action._work_on(["cdd"])).to(raise_error(ValueError, contain("clean-engineering-model")))
 
+    # Exploratory testing, widget-01: one word shaped like a slug that names nothing ran as text, so generate answered
+    # with no rules and render answered the word back, each with no error.
+    with context("with one word, sent alone, that is shaped like a slug and names no practice or fidelity"):
+        with it("should refuse a made-up word by name"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("wibble-wobble")).to(raise_error(UnknownGuidance, contain("no practice or fidelity has the slug 'wibble-wobble'")))
+
+        with it("should list the slugs there are"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("wibble-wobble")).to(raise_error(UnknownGuidance, contain("stories-story-map")))
+
+        with it("should refuse a real slug written in capitals, as it is refused in a list"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("STORIES-STORY-MAP")).to(raise_error(UnknownGuidance, contain("'STORIES-STORY-MAP'")))
+
+        with it("should refuse a real slug written with underscores, as it is refused in a list"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("stories_story_map")).to(raise_error(UnknownGuidance, contain("'stories_story_map'")))
+
+        with it("should refuse the unknown word among slugs joined by commas"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("stories-story-map,wibble")).to(raise_error(UnknownGuidance, contain("'wibble'")))
+
+        with it("should still refuse it when a command word follows it"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("wibble-wobble format=drawio")).to(raise_error(UnknownGuidance, contain("'wibble-wobble'")))
+
+    # Exploratory testing, widget-02: a mapping whose toolset was a practice's slug was refused with "no practice or
+    # fidelity has the slug 'stories'; the slugs are stories, ...", which denies the slug it then lists.
+    with context("with a mapping whose toolset is a slug"):
+        with it("should work on the practice the slug names, at the fidelity the mapping names"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction()
+            action._work_on({"toolset": "stories", "fidelity": "scenarios"})
+            listed = action.listed()
+            expect((type(listed[0]).__name__, action.work.fidelity_of(listed[0]).name)).to(equal(("Stories", "scenarios")))
+
+        with it("should work on the fidelity a fidelity's slug names"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction()
+            action._work_on({"toolset": "stories-scenarios"})
+            expect(action.work.fidelity_of(action.listed()[0]).name).to(equal("scenarios"))
+
+        with it("should refuse a toolset that is no slug by name"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on({"toolset": "wibble"})).to(raise_error(UnknownGuidance, contain("'wibble'")))
+
+    with context("with a mapping that names no toolset"):
+        with it("should refuse it, saying a mapping names its practice in toolset"):
+            from harness.guidance_actions import GuidanceAction, GuidanceMappingNamesNoToolset
+
+            expect(lambda: GuidanceAction()._work_on({"foo": "bar"})).to(raise_error(GuidanceMappingNamesNoToolset, contain("toolset")))
+
+    # Reported 2026-11-18: with ux off, `ux-ia` alone ran as text, so render answered the slug back and validate checked
+    # nothing, while ["stories-story-map", "ux-ia"] said no practice had the slug.
+    with context("in a session that works on stories with ux turned off"):
+        with before.each:
+            from types import SimpleNamespace
+
+            from cdd_guidance.practices.stories.stories import Stories
+            from harness.guidance_actions import GuidanceAction
+
+            session = SimpleNamespace(name="sign-up", practices={"stories": SimpleNamespace(guidance=Stories())}, overlays=[])
+            self.action = GuidanceAction(session)
+
+        with it("should refuse the slug of a fidelity of the practice turned off, sent alone, saying it is off"):
+            expect(lambda: self.action._work_on("ux-ia")).to(raise_error(ValueError, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
+
+        with it("should refuse it in a list the same way"):
+            expect(lambda: self.action._work_on(["stories-story-map", "ux-ia"])).to(raise_error(ValueError, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
+
+        with it("should refuse a mapping whose toolset is the slug of the practice turned off, saying it is off"):
+            expect(lambda: self.action._work_on({"toolset": "ux", "fidelity": "ia"})).to(raise_error(ValueError, contain("ux is the practice ux, which is turned off for session sign-up")))
+
+        with it("should read a slug of the practice it works on as guidance, not text"):
+            self.action._work_on("stories-story-map")
+            expect(self.action.work.text).to(equal(None))
+
     with it("should run the passed operation on each Guidance when guidance is a list"):
         from harness.guidance_actions import GuidanceAction
 

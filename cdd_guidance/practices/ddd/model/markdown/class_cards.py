@@ -33,6 +33,8 @@ _INVARIANT = "invariant:"
 _ORDER = ("Aggregate Root", "Entity", "Value Object", "Repository")
 _REFERENCE = re.compile(r"^-?\s*(?:→|->)?\s*([A-Za-z][\w ·]*?)\s*\(by\s+([A-Za-z_]\w*)\s*\)")
 _IDENT = re.compile(r"^[A-Za-z_]\w*$")
+# A repository written inside its root's card, below the root's own lines: `**CartRepository** «Repository»`.
+_REPOSITORY_IN_ROOT = re.compile(r"^\*\*([A-Za-z_]\w*)\*\*\s*(?:«|<<)\s*Repository\s*(?:»|>>)$")
 _REPOSITORY_OPERATIONS = re.compile(r"[/,]")
 # Lines in an entity fence that belong to the aggregate's map, not to the class: integration arcs and event lists.
 _MAP_LINES = ("- ", "→", "pattern:", "crosses:", "integrat", "direction:")
@@ -68,6 +70,8 @@ class ClassCard(MarkdownDomainNode):
         self._made_root = False
         super().__init__(*args, **kwargs)
         self.invariants: list[str] = []
+        # A repository written and drawn inside its root's card, under its own heading, rather than as a card.
+        self.drawn_in_root = False
 
     @staticmethod
     def _named(name: str, stereotypes: list[str]) -> "ClassCard":
@@ -83,13 +87,20 @@ class ClassCard(MarkdownDomainNode):
         return ClassCard._named(plain_class_name(heading), marks_in(heading))
 
     @staticmethod
-    def read(section: list[str]) -> "ClassCard":
-        """The card a `####` section writes: its heading, then its members and invariants."""
-        card = ClassCard.from_heading(section[0].strip()[len(CARD):])
-        body = _CardBody(card)
+    def read(section: list[str]) -> list["ClassCard"]:
+        """The cards a `####` section writes: its own, from its heading, members and invariants, then the repository
+        a `**Name** «Repository»` line below them writes inside it, with the members that follow that line."""
+        cards = [ClassCard.from_heading(section[0].strip()[len(CARD):])]
+        body = _CardBody(cards[0])
         for line in (raw.strip() for raw in section[1:] if raw.strip()):
-            body.read(line)
-        return card
+            in_root = _REPOSITORY_IN_ROOT.match(line)
+            if in_root is None:
+                body.read(line)
+                continue
+            cards.append(ClassCard.from_heading(f"{in_root.group(1)} <<Repository>>"))
+            cards[-1].drawn_in_root = True
+            body = _CardBody(cards[-1])
+        return cards
 
     @staticmethod
     def from_code(oclass: OoadClass) -> "ClassCard":
@@ -100,6 +111,7 @@ class ClassCard(MarkdownDomainNode):
         card.intent = oclass.intent
         card.properties = list(oclass.properties)
         card.operations = [item for item in oclass.operations if not item.is_constructor and item.name != oclass.name]
+        card.drawn_in_root = bool(oclass.folded_into)
         return card
 
     @staticmethod
@@ -143,7 +155,8 @@ class ClassCard(MarkdownDomainNode):
 
 
     def lines(self) -> list[str]:
-        written = [f"{CARD}{self.heading}", "", _PROPERTIES]
+        heading = f"**{self.name}** «Repository»" if self.drawn_in_root else f"{CARD}{self.heading}"
+        written = [heading, "", _PROPERTIES]
         written.extend(self._property_lines())
         written.append(_OPERATIONS)
         written.extend(self._operation_lines())

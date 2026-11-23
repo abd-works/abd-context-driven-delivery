@@ -18,11 +18,13 @@ from harness.installation.data_class import data_field, identity, language_adapt
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import mcp
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
+from space.kanban.card_name import CardName, TicketNameTakenError
+from space.kanban.unreadable_session_file import UnreadableSessionFile
 from space.repo.repo import Repo
 from space.session.session_record import SESSION_FILE
 from space.session.session_log import LogTimestamp
 from space.session.session_saves import SaveFailure
-from space.session.sessions import BoardPractices, Sessions
+from space.session.sessions import BoardPractices, Sessions, SessionsRead
 
 if TYPE_CHECKING:
     from harness.catalog_generator.catalog_practice import CatalogPractice
@@ -156,6 +158,14 @@ class Board:
         naming each change not yet saved; none while every save went through. The changes are on disk, so the board
         works on them, and save_again commits and pushes them."""
         return self.sessions.saves.failure
+
+    @property
+    @data_field
+    def unreadable(self) -> list[UnreadableSessionFile]:
+        """Each ticket's session.json the board could not read, such as one cut off half way, with what is wrong in
+        it; none while every one reads. Such a ticket is on no column until its file is repaired, every other ticket
+        shows as it is, and the file is never written over."""
+        return self.reads.unreadable
 
     @property
     @data_field
@@ -341,12 +351,23 @@ class CardPlacement:
 
     def open_ticket(self, title: str, scope: str, path: str = "") -> Ticket:
         """A new ticket titled title in Discovery, its session working on path, a folder in the repository given from its
-        top or in full (its top when empty). A folder outside the repository raises ``FolderOutsideRepositoryError``."""
+        top or in full (its top when empty). A folder outside the repository raises ``FolderOutsideRepositoryError``; a
+        title that gives no name, one too long, or the name of a session already there is refused by ``CardName`` or
+        ``TicketNameTakenError`` before any folder is made."""
         root = self._board.repo.root.resolve()
         workpath = (root / path).resolve() if path else root
         if not workpath.is_relative_to(root):
             raise FolderOutsideRepositoryError(path, str(root))
-        return self.ticket_of(self._board.sessions.create(title, workpath, title=title, scope=scope))
+        return self.ticket_of(self._board.sessions.create(self.free_name_for(title), workpath, title=title, scope=scope))
+
+    def free_name_for(self, title: str) -> str:
+        """The name a new ticket titled title gets, refused while a session has it, main or one open or closed: opening
+        it again would write the new title over that session's record."""
+        name = CardName(title).for_new_card()
+        sessions = self._board.sessions
+        if sessions.named(name) is not None or sessions.folder_of(name).exists():
+            raise TicketNameTakenError(title, name)
+        return name
 
     def make_ticket(self, session: Session) -> Ticket:
         """The ticket the board places for session, as it reads it now."""
@@ -417,7 +438,17 @@ class BoardReads:
 
     @cached_property
     def sessions(self) -> list[Session]:
-        return self._board.sessions.all()
+        """Every session whose session.json reads; one that does not is among ``unreadable`` instead, so a single
+        damaged file never takes every other ticket off the board."""
+        return self._read_apart.sessions
+
+    @cached_property
+    def unreadable(self) -> list[UnreadableSessionFile]:
+        return [UnreadableSessionFile(self._board.repo, failure) for failure in self._read_apart.failures]
+
+    @cached_property
+    def _read_apart(self) -> SessionsRead:
+        return self._board.sessions.read_apart()
 
     @cached_property
     def tickets(self) -> list[Ticket]:

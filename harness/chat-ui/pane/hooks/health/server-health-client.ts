@@ -16,6 +16,8 @@ export const RECONNECT_TRIES = 3
 const TOOL_PREFIX = 'mcp__plugin_cdd_cdd__'
 const RECONNECT_WAIT_MS = 2000
 const INSTALL_TIMEOUT_MS = 600000
+// What scripts/install.py exits with when the chat's folder is no project to install into (NOT_A_PROJECT_EXIT there).
+const NOT_A_PROJECT_EXIT = 3
 const FIRST_LOOK_WAIT_MS = 5000
 const ERROR_LINES_SHOWN = 1
 
@@ -47,10 +49,6 @@ export class ServerHealthClient {
   // The app the status row and the board's chat routes name by its label, its identity.
   appLabelled(label: string): AppData | undefined {
     return this.apps.find(app => app.label === label)
-  }
-
-  get isHookServerRunning(): boolean {
-    return this.json?.is_hook_server_running ?? false
   }
 
   // The latest heavy and e2e run the cdd server ran on main, each that has run.
@@ -121,15 +119,39 @@ export async function hideDetails($: EngineInterface): Promise<void> {
 
 // The MCP host may be what is broken, so the install runs from here and not through a cdd tool.
 export async function runInstall($: EngineInterface): Promise<void> {
+  await installIntoChatFolder($, 'person')
+}
+
+// The folders a chat works with CDD through, in the IDE folder of the folder it works in: its skills and its commands.
+const INSTALLED_FOLDERS = ['.claude/skills', '.claude/commands']
+
+// A chat that starts in a folder CDD was never installed into, or whose install lost its skills or commands, runs the
+// same install Run install runs, so a chat in a new project has CDD's skills and commands without a press.
+export async function installWhenMissing($: EngineInterface): Promise<void> {
+  const folder = await $.session.root()
+  const present = await Promise.all(INSTALLED_FOLDERS.map(installed => $.fs.exists(`${folder}/${installed}`)))
+  if (present.every(Boolean)) return
+  await installIntoChatFolder($, 'chat start')
+}
+
+// The install script refuses a folder that is no project, such as the home folder, a temporary folder or a spare folder
+// the desktop app keeps a chat in. At chat start that is no failure, since nobody asked; a person who pressed Run
+// install is told why.
+async function installIntoChatFolder($: EngineInterface, startedBy: 'person' | 'chat start'): Promise<void> {
+  const context = startedBy === 'person' ? 'Install on the health panel' : 'Starting the chat in a folder without .claude/skills or .claude/commands'
   await update($, install, () => ({ state: 'running', error: null }))
   try {
     const folder = await $.session.root()
     const run = await $.process.run([...(await installCommand($)), folder], { cwd: folder, timeoutMs: INSTALL_TIMEOUT_MS })
+    if (run.exitCode === NOT_A_PROJECT_EXIT && startedBy === 'chat start') {
+      await update($, install, () => ({ state: 'idle', error: null }))
+      return
+    }
     await update($, install, () => (run.exitCode === 0 ? { state: 'installed', error: null } : { state: 'failed', error: lastLines(run.stderr) }))
-    if (run.exitCode !== 0) await showFailure($, `The install failed: ${lastLines(run.stderr)}`, `Install on the health panel, running ${(await installCommand($)).join(' ')} in ${folder}`)
+    if (run.exitCode !== 0) await showFailure($, `The install failed: ${lastLines(run.stderr)}`, `${context}, running ${(await installCommand($)).join(' ')} in ${folder}`)
   } catch (failure) {
     await update($, install, () => ({ state: 'failed', error: String(failure) }))
-    await shownAsFailure($, 'The install did not run', 'Install on the health panel')(failure)
+    await shownAsFailure($, 'The install did not run', context)(failure)
   }
 }
 

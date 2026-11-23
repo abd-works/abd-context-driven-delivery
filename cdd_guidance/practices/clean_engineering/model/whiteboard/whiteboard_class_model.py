@@ -126,6 +126,13 @@ class _BoardText:
     def terms(self) -> List[str]:
         return [line[2:].strip() for line in self.lines[self.at + 1:] if line.startswith("- ") and line[2:].strip() != "..."]
 
+    def folded_parts(self) -> List["_BoardText"]:
+        """The words of each class drawn inside this card below its own operations: each from its italic stereotype
+        line, or its bold name, to the next one's."""
+        names = [index for index, line in enumerate(self.lines) if index > self.at >= 0 and self.BOLD.match(line)]
+        starts = [index - 1 if self.ITALIC.match(self.lines[index - 1]) else index for index in names]
+        return [_BoardText("\n".join(self.lines[start:end])) for start, end in zip(starts, [*starts[1:], len(self.lines)])]
+
     def members(self, part: int) -> List[str]:
         """The member lines under rule number part (0 for the properties, 1 for the operations), without their mark."""
         rules = [index for index, line in enumerate(self.lines) if line == RULE]
@@ -153,8 +160,16 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
     @property
     def shown_text(self) -> str:
         lines = [f"`{self.owning_module}`"] if self.owning_module else []
-        if self.stereotypes:
-            lines.append(f"*{' '.join(f'«{item}»' for item in self.stereotypes)}*")
+        lines.extend(self.own_lines())
+        for folded in self.folded:
+            lines.append(RULE)
+            lines.extend(folded.own_lines())
+        return "\n".join(lines)
+
+    def own_lines(self) -> List[str]:
+        """Its stereotypes, its name in bold, then its properties and its operations, each part under a rule: the
+        whole card, or its part of the card of a class it is folded into."""
+        lines = [f"*{' '.join(f'«{item}»' for item in self.stereotypes)}*"] if self.stereotypes else []
         lines.extend([f"**{self.name}**", RULE])
         lines.extend(f"+ {item.name}{(': ' + item.type_hint) if item.type_hint else ''}" for item in self.properties)
         lines.append(RULE)
@@ -163,7 +178,7 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
             f"{(': ' + item.return_type) if item.return_type else ''}"
             for item in self.operations
         )
-        return "\n".join(lines)
+        return lines
 
     def width(self) -> int:
         return int(_text_box(self.shown_text)[0])
@@ -180,6 +195,8 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
         self.stereotypes = text.stereotypes
         self.properties = [Property.from_signature(line) or Property(name=line.strip()) for line in text.members(0)]
         self.operations = [found for found in (Operation.from_signature(line) for line in text.members(1)) if found is not None]
+        for part in text.folded_parts():
+            self.fold(WhiteboardClass(name=part.name, sequential_order=1).take_text(part))
         return self
 
 
@@ -322,6 +339,9 @@ class ClassBoard(ClassView):
     """The room between a module page's section and the cards in it."""
     group_role = "group"
     """What the id of the section drawn round a group of pages starts with."""
+    links_across_pages = False
+    """True when an arrow from one page's class to another page's is drawn between the two cards themselves; else
+    each page shows the other page's class as a dashed «from:» copy and the arrow ends on that."""
 
     @property
     def draws_one_page(self) -> bool:
@@ -350,7 +370,16 @@ class ClassBoard(ClassView):
             group.draw_section_on(board, corner)
         for group, corner in zip(groups, corners):
             group.draw_pages_on(board, corner)
+        if self.links_across_pages:
+            for arrow in self._arrows_across_pages():
+                board.add(_arrow_element(arrow, f"across.{_key(arrow.source, arrow.target)}", f"class.{_key(arrow.source)}", f"class.{_key(arrow.target)}"))
         return board
+
+    def _arrows_across_pages(self) -> List[DiagramArrow]:
+        """The arrows of the whole model whose two classes sit on different pages, each straight from card to card."""
+        every = ClassViewPage(self)._arrows()
+        page_of = {cell_id: id(self.module_of.get(id(oclass))) for cell_id, oclass in self.classes_by_cell.items()}
+        return [arrow for arrow in every if page_of.get(arrow.source) != page_of.get(arrow.target)]
 
 
 def _flowed(sizes: List[Tuple[float, float]], row_width: float) -> List[Tuple[float, float]]:
@@ -412,6 +441,10 @@ class _ClassBoardPage(ClassViewPage):
 
     def __init__(self, view: ClassBoard, module: Optional[Module] = None) -> None:
         super().__init__(view, module)
+        if view.links_across_pages and self._local_ids is not None:
+            # The board draws the links to other pages itself, so this page shows only its own classes.
+            self._import_ids = []
+            self._page_ids = set(self._local_ids)
         self._view = view
         self._name = module.name.strip() if module is not None else ""
         self._title = view.page_title(module) if module is not None else ""
@@ -464,16 +497,21 @@ class _ClassBoardPage(ClassViewPage):
 
     def _board_arrow(self, arrow: DiagramArrow, cards: Dict[str, DiagramClass], page_name: str) -> BoardElement:
         """The board's arrow for a routed arrow: its kind in its id, the ends it leaves and reaches by, and its route."""
-        kind = arrow.kind if arrow.kind in KINDS else "association"
-        label = "extends" if kind == INHERITANCE and not arrow.label else arrow.label
-        heads = ["circle", "arrow"] if kind in ("composition", "aggregation") else None
-        return BoardElement.arrow(
-            f"{kind}.{_key(page_name, arrow.source, arrow.target)}",
-            from_id=self._element_id(arrow.source, page_name), to_id=self._element_id(arrow.target, page_name),
+        return _arrow_element(
+            arrow, _key(page_name, arrow.source, arrow.target),
+            self._element_id(arrow.source, page_name), self._element_id(arrow.target, page_name),
             from_side=arrow.exit_side, to_side=arrow.entry_side,
-            label=label, dash=kind == "dependency", heads=heads,
             bends=None if arrow.straight else arrow.bends_from_middles(cards[arrow.source].geometry, cards[arrow.target].geometry),
         )
+
+
+def _arrow_element(arrow: DiagramArrow, key: str, from_id: str, to_id: str, **route: object) -> BoardElement:
+    """The board's arrow for arrow between the elements from_id and to_id name: its kind in its id, its words, its dash
+    and its heads, and the route, when one is given; with none, the board draws it straight."""
+    kind = arrow.kind if arrow.kind in KINDS else "association"
+    label = "extends" if kind == INHERITANCE and not arrow.label else arrow.label
+    heads = ["circle", "arrow"] if kind in ("composition", "aggregation") else None
+    return BoardElement.arrow(f"{kind}.{key}", from_id=from_id, to_id=to_id, label=label, dash=kind == "dependency", heads=heads, **route)
 
 
 

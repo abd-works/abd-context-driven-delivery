@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_lock import InstallLock
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.git.git import Git, RepoConnectError
@@ -96,6 +97,8 @@ class CddHome:
         self._runtime_file = JsonFile(self.folder / "runtime.json", RuntimeRecordUnreadable)
         # Where the running server publishes its address and pid, for tools that look for it without calling it.
         self.state_file = JsonFile(self.folder / "server.json", ServerStateUnreadable)
+        # One install publishes this home's mods at a time; a second waits for it.
+        self._publishing = InstallLock(self.folder)
 
     @property
     def is_dev_lane(self) -> bool:
@@ -176,12 +179,15 @@ class CddHome:
 
     def _publish_mods(self, code: Path) -> None:
         """Publish the mods of code: the cdd-board mod, with the draw.io viewer its chat bar opens diagrams in and the
-        install command it runs, and the prompt queue mod; then list them in the marketplace."""
-        board = self._publish_mod(code, BOARD_MOD_FOLDER, BOARD_PLUGIN)
-        if board is not None:
-            self._add_board_extras(code, board)
-        self._publish_mod(code, QUEUE_MOD_FOLDER, QUEUE_PLUGIN)
-        self._write_marketplace()
+        install command it runs, and the prompt queue mod; then list them in the marketplace. One install publishes
+        into the marketplace at a time: installs from the main checkout and a ticket's worktree at the same moment both
+        replace the same mod folders, and one would fail on a file the other had just removed."""
+        with self._publishing.held():
+            board = self._publish_mod(code, BOARD_MOD_FOLDER, BOARD_PLUGIN)
+            if board is not None:
+                self._add_board_extras(code, board)
+            self._publish_mod(code, QUEUE_MOD_FOLDER, QUEUE_PLUGIN)
+            self._write_marketplace()
 
     def _publish_mod(self, code: Path, folder: Path, name: str) -> Path | None:
         """Copy the mod in folder of code to the plugin called name; none when the code has no such mod. Its version

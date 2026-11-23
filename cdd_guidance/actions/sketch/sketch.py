@@ -31,11 +31,6 @@ class Sketch(GuidanceAction):
         return type(self)(agent_dir=self._agent_dir, session=session, call=call)
 
     @property
-    def _sketch_name(self) -> str:
-        """The session's sketch file name: a session is named for the subject it works on, so its sketch is too."""
-        return f"{self.session.name or 'main'}-sketch.md"
-
-    @property
     def sketch_template(self) -> str:
         """The sketch template for this instance's agent_dir (tiered discovery)."""
         return self.find_template()
@@ -85,7 +80,7 @@ class Sketch(GuidanceAction):
         paths: a file, a list of files, or a folder. Pass paths. This action reads them locally. Do not pass the sketch body in content.
         content: in-process text. Leave this empty on an MCP call.
         module: a module's folder under the session root, for a sketch of that module alone; it goes in that module's .context folder."""
-        target = self.session.paths.context_folder(module) / self._sketch_name
+        target = self.session.paths.sketch(module)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(self.files.read(content, paths), encoding="utf-8")
         self.files.wrote([target])
@@ -127,6 +122,7 @@ class Sketch(GuidanceAction):
         self._work_on(guidance)
         "save_sketch the shell in the same turn it is written. After three or four grill answers, sketch the theme into that same file, save_sketch again, then review_sketch. Do not ask the next theme until that review confirms the sketch."
         "Carry forward every mistake named in review. Correct the sketch. Do not regenerate as if those mistakes never happened."
+        "hurry-keeps-the-questions: when the person asks to hurry, to go faster, or to just proceed with the sketch, ask fewer, sharper questions, one or two per theme with your recommendation first, never none, because their answers are what make the sketch better than a guess. Stop asking only when they say plainly to stop and decide for them, and then mark each line you decided alone as `? assumed`, so the next review sees what nobody agreed."
         "Evaluate the sketch against each listed guidance's rules, which the generate instructions below give, as an AI check — not a graph query."
         self.work.each(self._sketch_text)
         instructions(self._grill_context().grill_with_context)

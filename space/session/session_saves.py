@@ -122,9 +122,10 @@ class SessionSaves:
 
     def _save(self, changes: list[str]) -> None:
         """Commit the session folders with changes as the message and push main, while main is checked out in the
-        repository's own folder; a save with nothing to commit or push does nothing."""
+        repository's own folder; a save with nothing to commit or push does nothing. In a repository git init made, the
+        first save is its first commit, so a ticket's branch has a commit to start from."""
         repository = self._repository
-        if not repository.branch_named(repository.default_branch).is_checked_out or not self._folder.is_dir():
+        if not repository.is_clone or not self._folder.is_dir() or repository.current_branch.name != repository.default_branch:
             return
         self._keep_caches_out()
         if repository.working_tree.is_dirty(self._folder):

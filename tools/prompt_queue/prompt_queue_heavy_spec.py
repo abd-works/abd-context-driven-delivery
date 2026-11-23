@@ -9,7 +9,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import equal, expect
+from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.chat.chat import CHATS_FOLDER
@@ -82,3 +82,25 @@ with description("a chat's prompt queue through the cdd server") as self:
         with context("that another chat reads its own queue"):
             with it("should hold none of this chat's work"):
                 expect(texts(SpecChat(self.server, self.project).answer("prompt-queue.show", chat=""))).to(equal([]))
+
+    with context("that an agent names a chat by a path out of the chats folder"):
+        with before.all:
+            _, self.refusal = self.chat.call("prompt-queue.add", chat="..\\escape-chat", text="Run the heavy tier")
+
+        with it("should refuse the call, since a chat id is never a path"):
+            expect(self.refusal).to(contain("escape-chat' is not a chat id"))
+
+        with it("should write no queue outside the chats folder"):
+            expect((CHATS_FOLDER.path.parent / "escape-chat").exists()).to(equal(False))
+
+    with context("that an agent gives a step a state a step does not have"):
+        with before.all:
+            self.steps_chat = SpecChat(self.server, self.project)
+            self.goal = self.steps_chat.answer("prompt-queue.add", chat="", text="Write the scenarios")["prompts"][0]["id"]
+            _, self.refusal = self.steps_chat.call("prompt-queue.set_steps", chat="", prompt=self.goal, steps=[{"text": "Read the epic", "state": "completed"}])
+
+        with it("should refuse the call, naming the state and the three a step has"):
+            expect(self.refusal).to(contain("'completed' is not a step's state, which is one of pending, in_progress, done"))
+
+        with it("should leave the prompt without steps"):
+            expect("steps" in self.steps_chat.answer("prompt-queue.show", chat="")["prompts"][0]).to(equal(False))

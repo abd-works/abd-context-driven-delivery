@@ -37,10 +37,10 @@ class DrawIOBoundedContextMap(DrawnBoundedContextMap, DrawIOCleanEngineeringMode
     module_cell_types = (DrawIOContextCell, DrawIOAggregateCell, DrawIOModule)
 
     def render(self, canonical: BoundedContextMap | None = None, previous: str | None = None) -> str:
-        """The aggregate view when the map's aggregates hold class cards (model fidelity); otherwise the map."""
-        del previous
+        """The aggregate view when the map's aggregates hold class cards (model fidelity); otherwise the map. The cards a
+        person placed on previous, the drawing this one replaces, stay where they are."""
         self.draw(canonical if canonical is not None else self)
-        return DrawIOCleanEngineeringModel.render(self, self)
+        return DrawIOCleanEngineeringModel.render(self, self, previous)
 
     def _read_title(self, cell: ET.Element) -> None:
         """The map's own name, from the title it was drawn under; a modules view's title names its system instead."""

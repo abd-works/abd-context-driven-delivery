@@ -860,10 +860,23 @@ class LanguageAdapterInstallation(Installation):
         if _TYPESCRIPT in DataClass.of(type(toolset)).languages:
             self._recorded.append(toolset)
 
-    def write_all(self) -> list[Path]:
-        """Write every recorded toolset, with the connection and the browser-safe code they share."""
+    def write_all(self, whole: bool = False) -> list[Path]:
+        """Write every recorded toolset, with the connection and the browser-safe code they share. whole says the
+        recorded toolsets are every one the repository adapts, so each other file in the folder, such as a copy a file
+        manager left beside one, is removed and the folder holds the adapters alone."""
         if not self._recorded:
             return []
+        written = self._write_recorded()
+        if whole:
+            self._remove_unwritten(set(written))
+        return written
+
+    def _remove_unwritten(self, written: set[Path]) -> None:
+        for path in (self.path / _FOLDER / _TYPESCRIPT).rglob("*"):
+            if path.is_file() and path not in written:
+                path.unlink()
+
+    def _write_recorded(self) -> list[Path]:
         peers = self._typescript_toolsets()
         root = self.path / _FOLDER / _TYPESCRIPT
         shared = {_CONNECTION_FILE: self._connection(), _SHARED_FILE: self._template(_SHARED_FILE), _VIEWS_FILE: self._template(_VIEWS_FILE), _MANIFEST_FILE: _MANIFEST}

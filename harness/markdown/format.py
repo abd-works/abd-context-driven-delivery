@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 
 class Format(str):
     """*Format* is a channel an artifact is written in, such as `markdown`, `python`, or `drawio`. A format goes by its
@@ -32,6 +34,8 @@ class Format(str):
     # The order a fidelity's files are shown in, by group: prose first, then the code, then the diagrams drawn from them,
     # then the canvas played from them.
     FILE_ORDER: tuple[str, ...] = ("markdown", "code", "diagram", "canvas")
+    # What the name of a file in a format ends with before its extension: a sketch is saved as orders-sketch.md.
+    _FILE_NAME_ENDINGS = {"sketch": "-sketch"}
 
     def __new__(cls, name: str | None = "") -> Format:
         folded = (name or "").strip().casefold()
@@ -99,6 +103,13 @@ class Format(str):
     def template_extension(self) -> str:
         """The extension this format's templates end with; empty for a format whose template is found by name."""
         return self.extension if self.is_templated else ""
+
+    def stem_of(self, file: Path) -> str:
+        """The name of a file in this format without its extension and without the ending this format's files carry,
+        so a file rendered from it can take the same name: ``orders-sketch.md`` is ``orders`` as a sketch."""
+        ending = self._FILE_NAME_ENDINGS.get(self.name, "")
+        stem = file.stem
+        return stem[: -len(ending)] if ending and stem.endswith(ending) else stem
 
 
 # The folder names a practice's templates are kept under, one for each templated format: `md`, `py`, ...
