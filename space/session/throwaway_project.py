@@ -128,7 +128,9 @@ class ThrowawayProject:
 
     def __init__(self, name: str = "") -> None:
         SPEC_RUN_HOME.ensure()
-        self._folder = Path(tempfile.mkdtemp(prefix="cdd-spec-project-"))
+        # A short name: a story test copied in at its real path, five folders deep, must stay under Windows' 260
+        # character path limit below the temporary folder.
+        self._folder = Path(tempfile.mkdtemp(prefix="cdd-p-"))
         self.root = (self._folder / name).resolve() if name else self._folder
         self.root.mkdir(exist_ok=True)
         self._saved = os.environ.get("CDD_PROJECT")

@@ -47,7 +47,7 @@ $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
 # the run removes when it ends: specs that make temporary folders and never remove them left tens of thousands behind in
 # %TEMP%, several gigabytes a day, until the disk filled. A folder a run could not remove, because a server a heavy spec
 # started still held a file in it, or because the run was killed, is removed by a later run once it is a day old.
-$runFolderPrefix = "cdd-test-run-"
+$runFolderPrefix = "cdd-run-"
 $staleRunHours = 24
 
 function Remove-StaleRunFolders {
@@ -64,7 +64,9 @@ function Set-RunTemp {
     $script:shellTmp = $env:TMP
     $temp = [IO.Path]::GetTempPath()
     Remove-StaleRunFolders $temp
-    $script:runTemp = Join-Path $temp ($runFolderPrefix + [guid]::NewGuid().ToString("N"))
+    # Eight characters of the guid keep the folder apart from another run's and keep a spec's deepest file, such as a
+    # story test copied into a throwaway project, under Windows' 260 character path limit.
+    $script:runTemp = Join-Path $temp ($runFolderPrefix + [guid]::NewGuid().ToString("N").Substring(0, 8))
     New-Item -ItemType Directory -Force $script:runTemp | Out-Null
     # Python's tempfile reads TEMP and TMP, and .NET's GetTempPath reads TMP, so both point every spec at the run's folder.
     $env:TEMP = $script:runTemp
