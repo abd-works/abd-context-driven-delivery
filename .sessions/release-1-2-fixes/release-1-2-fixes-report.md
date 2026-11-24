@@ -726,6 +726,7 @@ Files passed of files run. Sources: the handoffs, [final-report.md](C:\dev\abd-c
 | After the refactor and the cross-file checks, 2026-11-22 | `acd46a9e5` (heavy `87a3b8c75`) | 454 of 454 | 71 of 73; the ticket-work race was fixed after (`5de881d36`) and the tier not run again | 12 of 12 |
 | 2026-11-23 | `c7e865340` | not run over the day's changes | not run; the measures' heavy spec needs lizard | not run |
 | After wave 7, 2026-11-24 | `a34fa3501` (heavy: `203eac4a6`) | 476 of 476 | 77 of 77 | 12 of 12 (Playwright 241 of 241) at `96d944ccf`; 9 of 12 at `a34fa3501`, three specs behind two answers already built |
+| After wave 8, 2026-11-24 | merge with main `f0be2bba5` (heavy before it, `1f53943d8`) | 473 of 477 on the merge, the four over budget only under load, none failing | 77 of 77 before the merge; not run on the merge | `prompt_queue_plugin_e2e_spec.py` 8 of 8 at `2bcc98212`; the tier not run |
 | main, after the merge of 2026-11-23 | `f9f655e4a` | 366 of 366 | stopped after 24 files, none failed; the next start failed to make its worktree | failed: the web server did not start (`bff9051ea`) |
 
 The board's acceptance of a violation, the one browser story saved with its screenshots in this session, passes all 14 of its steps ([e2e-test-results](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\e2e-test-results\move-work-forward-on-session-board\work-fidelity-outputs-on-board\pixel-accept\results.json)).
@@ -755,14 +756,17 @@ Closed:
 - Two dropped fixes brought back: the chat bar shows the server's message when `chat.check_in` fails (`4f4ec5966`), and a server's start stops a process that holds its port without answering (`be7b569fc`) (Gizmo, card `030b8b0bb39a`).
 - `repo.clear_worktrees` and the `/clear-worktrees` command, which clear away the worktrees whose work is done and what they left behind; its heavy spec passes 18 of 18, landed in `be7b569fc` (Sparky, card `e5b52b0be41d`). It has not yet been run against the real repository, so item 16's stale `.git\worktrees` entries are still there.
 
+- The unit tier's examples over budget made fast (Widget, card `93530433f8e4`, `1f53943d8`), and the heavy tier, 77 of 77 files before the merge with main (Widget, card `5fe4250169bb`).
+- release-1-2-fixes merged with main, 80 conflicts settled keeping both sides' work, and taken to main (Widget, card `f35acdc649d4`, `f0be2bba5`, main at `75528f3ff`); the story map's drawing and board in Claude drawn again from the merged story map (`ba9338abe`).
+
 Still open:
-- The heavy tier on the full head (Widget): the first run is done and what it found is fixed; the second run is still going.
+- The heavy tier on the merged code: not run, at the person's word.
 - Story map scenarios for today's queue and plugin work, on this branch and on main (Rivet), and main's stable lane check after a repin from main (Sparky).
 
 **Tests**
 1. The tiers over waves 7 and 8:
-   - **Unit:** 475 of 476 files on the branch head. The one failure, `whiteboard_spec.py` over the 100 ms budget, is fixed in `e4d619e11` (63 of 63, slowest example 3 ms); the tier has not been run whole since.
-   - **Heavy:** Widget's first run is done and what it found is fixed; the second run on the full head is still going. Its result goes here when Widget reports.
+   - **Unit:** 476 of 476 files before the Hardening stage, with 24 examples over the budget in parallel and every one within it alone (Widget, card `93530433f8e4`); Bolt's run after the Hardening stage, 473 of 476, failed on Rivet's whiteboard change, fixed in `23dd30c38`, and on `code_measures_spec.py` at 104 ms, fixed in `1f53943d8`. The slow examples are fast since `ce_rules_spec.py`, `cross_file_rules_spec.py`, `render_spec.py` and `code_measures_spec.py` built their graphs and renders once before their examples (were 163, 101, 113 and 104 ms; none over 81 ms alone after). On the merge with main (`f0be2bba5`), 473 of 477 files with no assertion failing: the four failures were examples over the budget while the other robots' heavy runs loaded the machine, a different four in each of two runs, all within it alone but for one `kanban_tools_spec.py` example at 116 to 139 ms, a different example each time; main's new `session_folder_spec.py` was ported to the merged code and passes 3 of 3.
+   - **Heavy:** 77 of 77 files on the code before the merge with main (Widget, card `5fe4250169bb`, at `1f53943d8`); nothing failed, so nothing was fixed. `graph_build_heavy_spec.py` took 980 s of the run, each graph refresh 195 s at the median while twelve ran at once, which Bolt's card `14b03a77c63a` speeds up. No heavy run on the merged code: the person asked to push and merge without one.
    - **E2E:** `prompt_queue_plugin_e2e_spec.py` passed 8 of 8 on `2bcc98212` (one run, 113 s), after the hook fix that names the chat id and keeps the viewer's state out of titles; before that fix the mid-turn work request failed in all three runs. The whole e2e tier has not been run since `96d944ccf` (12 of 12 files, Playwright 241 of 241).
 2. Main's heavy tier: the fixes for its run worktree (`8762cff7a`, `89416dacb`) reach main with the next merge. A leftover run worktree held by a hook daemon that a heavy spec left serving it (`hook_daemon_heavy_spec.py`, `hook_heavy_spec.py` or `installer_heavy_spec.py`) is still to find.
 3. The server health band has no plugin test, and three of the prompt queue's step-button plugin tests fail, as they did before wave 7.

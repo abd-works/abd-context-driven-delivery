@@ -1,0 +1,33 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T22:08:03.206048+00:00",
+  "prompts": [
+    {
+      "id": "5fe4250169bb",
+      "text": "[for Widget] After the unit tier passes and the other robots have pushed, run the heavy tier once (scripts/test.ps1 -Suite heavy), fix what it finds, run it again, and report what it showed. Commit and push.",
+      "steps": [
+        {
+          "text": "Wait for the Hardening card to push and the unit tier to pass",
+          "state": "done"
+        },
+        {
+          "text": "Run scripts/test.ps1 -Suite heavy once",
+          "state": "done"
+        },
+        {
+          "text": "Fix what the heavy tier finds",
+          "state": "done"
+        },
+        {
+          "text": "Run the heavy tier again",
+          "state": "pending"
+        },
+        {
+          "text": "Commit and push; report what it showed",
+          "state": "pending"
+        }
+      ],
+      "robot": "Widget"
+    }
+  ]
+}
