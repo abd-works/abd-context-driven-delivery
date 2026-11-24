@@ -1,0 +1,362 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T21:02:12.558744+00:00",
+  "prompts": [
+    {
+      "id": "4d8b62d4711d",
+      "text": "Add a Hardening stage after Implementation, and TDD's hardening guidance (the person, 2026-11-24). Do it on release-1-2-fixes.\n\nThe person: \"add an additional stage to after implementation called Hardening - the goal is to ensure full readiness to production; i will be adding fidelities for the various practices in the future. for now I want to add guidance / rules on the tdd skill to overlay both bdd and stories (add 2 new fidelities with empty text for now called hardening for the two practices in their md files)\".\n\n1. **The stage.** Add HARDENING after IMPLEMENTATION in `harness/guidance/stages.py`, with its own ApproachStage and a StageScope. Its goal is full readiness for production, for example \"Release\", \"whole release / wide / deep\", covering \"exploration \u00b7 regression \u00b7 readiness\". Update every place that lists the three stages:\n   - the session board's and catalog's columns;\n   - `.context/cdd-approach.md`;\n   - the stage table in AGENTS.md is the person's, so don't edit it; say what needs changing;\n   - each spec that counts three stages.\n\n2. **The fidelities.** Add a `### hardening` fidelity, **Stage:** hardening, at the end of the Fidelities sections of `cdd_guidance/practices/stories/stories.md` and `cdd_guidance/practices/bdd/bdd.md`. Leave its text and rules empty for now, apart from what the fidelity parser requires. Make sure the empty fidelity loads, installs, and shows on the board without an error.\n\n3. **TDD supplements both.** In `cdd_guidance/practices/tdd/tdd.md`, add `stories: hardening` and `bdd: hardening` to `supplements:`. Add a `## stories-hardening, bdd-hardening` section with this guidance, written in plain English with each rule's reason:\n   - **Exploratory testing.** Follow the approach this release used: the exploratory-testing supervisor and tester agents (`.claude/agents`), and how `.sessions/release-1-2-fixes` and `exploratory-testing/` ran.\n     - Analyse the product to propose test themes. Take the themes from the person, who confirms or adds to them.\n     - Then run several queue robots at once, each on its own theme, through the prompt queue. Each robot reports its defects to the shared defect area as it finds them.\n   - **Regression.** Run the e2e tier for every story, and have an AI judge compare each story's screenshots with the last official release's accepted run. Every changed pair gets a verdict with its reason, under `every-run-reviewed` and `person-accepts-the-baseline`.\n   - Add rules under `### Rules` where a finished hardening pass can be checked, for example \"every theme has a robot's report\" and \"every story's e2e screens are judged against the last release\".\n\n4. **Check the supplement's guidance reaches the fidelity.** The prose of a supplement's section, not only its rules, should reach the fidelity it supplements (`PracticeFidelity.supplements` and `text_for` in `harness/guidance/guidance.py`). Check this holds for the new hardening fidelities.\n\n5. **Tests and finishing.** Write the specs first, Flow B. Run the unit tier, reinstall, and repin the dev lane. Commit and push the whole worktree. Report what changed and what the person must edit in AGENTS.md.",
+      "steps": [
+        {
+          "text": "Write the specs first: four stages, the hardening fidelities, TDD supplementing them",
+          "state": "done"
+        },
+        {
+          "text": "Add HARDENING after IMPLEMENTATION in stages.py, with its ApproachStage and StageScope",
+          "state": "done"
+        },
+        {
+          "text": "Add empty hardening fidelities to stories.md and bdd.md",
+          "state": "done"
+        },
+        {
+          "text": "TDD supplements both hardening fidelities, with guidance and rules; front matter takes a list",
+          "state": "done"
+        },
+        {
+          "text": "Check the supplement's prose reaches the hardening fidelities",
+          "state": "done"
+        },
+        {
+          "text": "Board, chat bar, catalog columns and cdd-approach.md show Hardening; specs and stories that counted three stages updated",
+          "state": "done"
+        },
+        {
+          "text": "Run the whole unit tier again",
+          "state": "done"
+        },
+        {
+          "text": "Reinstall for Claude and check the hardening fidelities install",
+          "state": "done"
+        },
+        {
+          "text": "Repin the dev lane",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push the whole worktree; report what AGENTS.md needs",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Bolt"
+    },
+    {
+      "id": "42829a521ca5",
+      "text": "Prompt queue e2e (tools/prompt_queue/prompt_queue_plugin_e2e_spec.py only): a headless chat loading this worktree's queue mod sends a question, an answer and a work request mid-turn and between turns; only the work request is queued, and the viewer's state never reaches a title. Run it (e2e tier), commit and push.",
+      "steps": [
+        {
+          "text": "Write the e2e: question, answer and work request, mid-turn and between turns",
+          "state": "done"
+        },
+        {
+          "text": "Name the chat in the scratch .mcp.json header, as the app's connect script does",
+          "state": "done"
+        },
+        {
+          "text": "Probe how mid-turn messages reach the agent in a headless chat",
+          "state": "done"
+        },
+        {
+          "text": "Make the long turn a foreground command the chat allows",
+          "state": "done"
+        },
+        {
+          "text": "Run the spec until it passes, or report the defect it finds",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Pixel"
+    },
+    {
+      "id": "93530433f8e4",
+      "text": "Unit tier on release-1-2-fixes (spec files the other cards don't touch): run scripts/test.ps1 -Suite unit, fix what fails, and make the examples over the 100 ms budget fast (ce_rules_spec.py, render_spec.py and cross_file_rules_spec.py went over at 163, 113 and 101 ms) or move them to a heavy spec. Commit and push, and say what the tier showed.",
+      "steps": [
+        {
+          "text": "Run scripts/test.ps1 -Suite unit",
+          "state": "done"
+        },
+        {
+          "text": "Fix what fails",
+          "state": "done"
+        },
+        {
+          "text": "Make ce_rules_spec, render_spec and cross_file_rules_spec examples fast, or move them to heavy",
+          "state": "done"
+        },
+        {
+          "text": "Run the unit tier again",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push; say what the tier showed",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Widget"
+    },
+    {
+      "id": "cb9522b6bcd9",
+      "text": "[for Gizmo] Have the cdd plugin itself load from the fixed folder too (harness/mcp only): today only the board and queue mods go through ~/.cdd/chat-plugins; make the cdd plugin's install (McpChannelServer.ensure_running and the installer path) use ClaudePlugins.install the same way, so CLAUDE_CODE_PLUGIN_DIRS names only chat-plugins folders. Heavy spec first (Flow B), commit and push.",
+      "steps": [
+        {
+          "text": "Heavy specs first: install_plugins loads the cdd plugin; a checkout's own folder of a plugin is dropped",
+          "state": "done"
+        },
+        {
+          "text": "McpChannelServer.install_plugins installs the cdd plugin and the mods; ensure_running and the repin path use it",
+          "state": "done"
+        },
+        {
+          "text": "ClaudePlugins drops any watched folder whose manifest names the plugin, so only chat-plugins folders stay",
+          "state": "done"
+        },
+        {
+          "text": "Update module-context, mcp-model (md and drawio) and repo-runtime for install_plugins",
+          "state": "done"
+        },
+        {
+          "text": "Run the lanes and installer heavy specs in a clean worktree",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Gizmo"
+    },
+    {
+      "id": "7f751b9958af",
+      "text": "[for Gizmo] Validate clean-engineering-code on harness/mcp/claude_plugins.py and harness/mcp/mcp_server.py and fix every violation in code, docs and specs (keep-operations-small-focused, limit-function-lines and the rest). Commit and push.",
+      "steps": [
+        {
+          "text": "Validate clean-engineering-code on claude_plugins.py and mcp_server.py",
+          "state": "done"
+        },
+        {
+          "text": "Fix each checked violation in the code",
+          "state": "done"
+        },
+        {
+          "text": "Judge the listed candidates and fix the real ones",
+          "state": "done"
+        },
+        {
+          "text": "Bring docs and specs in line with the fixes",
+          "state": "done"
+        },
+        {
+          "text": "Run the MCP unit specs and the lanes and installer heavy specs",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Gizmo"
+    },
+    {
+      "id": "2dfc808aa644",
+      "text": "[for Pixel] Flush and deleting a card take a robot off fully (tools/prompt_queue only): when no card on the queue names a robot any more, its sub-agent, its task and its open queue are forgotten too, as leaving sub-agent mode does. Plugin test first, commit and push.",
+      "steps": [
+        {
+          "text": "Read how leaving sub-agent mode forgets robots and how register.test.tsx tests it",
+          "state": "done"
+        },
+        {
+          "text": "Plugin tests first: flush and removing a card forget a robot no card names (sub-agent, task, open queue, card handed)",
+          "state": "done"
+        },
+        {
+          "text": "See the tests fail for the right reason",
+          "state": "done"
+        },
+        {
+          "text": "Forget robots no card names after flush and remove",
+          "state": "done"
+        },
+        {
+          "text": "Run the plugin tests",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Pixel"
+    },
+    {
+      "id": "a0eda5b18c36",
+      "text": "[for Pixel] Move the talk rule into the Python domain (tools/prompt_queue only, domain-lives-in-python): PromptQueue decides whether a message the person sent is only talk (a question that asks for no work, an answer, only marks), the hook asks it through the cdd server, and isOnlyTalk in hooks/queue/talk.ts goes. Specs first, commit and push.",
+      "steps": [
+        {
+          "text": "Read how PromptQueue publishes tools and how the hook calls them",
+          "state": "done"
+        },
+        {
+          "text": "Specs first: PromptQueue tells talk from work (answers, marks, short questions, pastes, viewer state) in prompt_queue_spec.py",
+          "state": "done"
+        },
+        {
+          "text": "Add PromptQueue.is_only_talk as a prompt-queue tool",
+          "state": "done"
+        },
+        {
+          "text": "Hook asks the server through prompt-queue.is_only_talk; delete talk.ts and isOnlyTalk",
+          "state": "done"
+        },
+        {
+          "text": "Update plugin tests' stub server and the talk tests",
+          "state": "done"
+        },
+        {
+          "text": "Run the queue specs and plugin tests",
+          "state": "done"
+        },
+        {
+          "text": "Update module docs that name isOnlyTalk or talk.ts (only the story map names them; outside this card, reported)",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Pixel"
+    },
+    {
+      "id": "5085b8932ed8",
+      "text": "[for Rivet] After the scenarios are in, render the story map to whiteboard and put it on its board in Claude (https://claude.ai/artifact/RBc7NrXtfghmJXbCTjvM6a, named in .context/story-map.whiteboard), following publish_board; if you cannot reach the Artifact tool, say the board is not updated. Commit and push.",
+      "steps": [
+        {
+          "text": "Render the story map to whiteboard",
+          "state": "done"
+        },
+        {
+          "text": "Spec first: a kept document is written in numbered parts under the store's record limit and reads back whole",
+          "state": "done"
+        },
+        {
+          "text": "Keep the board's document in numbered parts (KeepsDocumentOnBoard, whiteboard.py) and make the spec pass fast",
+          "state": "done"
+        },
+        {
+          "text": "Run the whiteboard, render and kept-document specs",
+          "state": "done"
+        },
+        {
+          "text": "Render the story map again and write its batches to the board in Claude",
+          "state": "done"
+        },
+        {
+          "text": "Record the board in story-map.whiteboard",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "a08c2666901f",
+      "text": "[for Bolt] After the Hardening stage is in, show it on the session board and the catalog: walk the board in the browser pane (Flow A) with a ticket moved into Hardening, report what shows, and put the walk's screens in the story map scenario for the stage. Commit and push.",
+      "steps": [
+        {
+          "text": "Find how the session board and the catalog are served, and pick a sandbox project with test tickets",
+          "state": "done"
+        },
+        {
+          "text": "Open the session board in the browser pane and move a ticket into Hardening",
+          "state": "done"
+        },
+        {
+          "text": "Screenshot each step of the walk and note what shows",
+          "state": "done"
+        },
+        {
+          "text": "Fix what the walk shows broken, if anything",
+          "state": "done"
+        },
+        {
+          "text": "Generate the catalog into a scratch folder and look at its Hardening column",
+          "state": "done"
+        },
+        {
+          "text": "Write the stage's scenario in the story map with the walk's screens",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push; report what shows",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Bolt"
+    },
+    {
+      "id": "0c2b58df89f1",
+      "text": "[for Pixel] Queue on/off button (tools/prompt_queue only): a button on the queue bar turns the queue on or off for this chat; a chat starts with it off, so its messages, hand-outs and robots stay out of the way until switched on, and it remembers the choice per chat. Keep it on in chat fd34eb9a-88d6-42c4-b249-8c48b8272606. Plugin test first, commit and push.",
+      "steps": [
+        {
+          "text": "Read how the queue's answer, file and band are drawn, and what a chat's state keeps",
+          "state": "done"
+        },
+        {
+          "text": "Specs first: the queue file keeps whether the queue is on, off until switched on (prompt_queue_spec.py)",
+          "state": "done"
+        },
+        {
+          "text": "Add PromptQueue.switch_on / switch_off and is_on in the queue's answer",
+          "state": "done"
+        },
+        {
+          "text": "Plugin tests first: the on/off button, and off keeps notes, hand-outs and robots out of the way",
+          "state": "done"
+        },
+        {
+          "text": "Mod: the button on the queue bar; while off no note, no queue context, no play, no robots",
+          "state": "done"
+        },
+        {
+          "text": "Run the queue specs, heavy spec, plugin tests and the e2e (switched on in its setup)",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        },
+        {
+          "text": "Switch the queue on in chat fd34eb9a once the dev lane serves switch_on",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Pixel"
+    }
+  ]
+}

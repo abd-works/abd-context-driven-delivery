@@ -236,13 +236,23 @@ with description("a whiteboard that keeps the document it was drawn from") as se
             expect(Whiteboard.from_text(board_of_two_cards().save()).kept_document).to(equal(None))
 
     # The board's store takes a record of at most 262,144 bytes, and the story map's markdown outgrew one: the document
-    # is kept in numbered parts, each under the limit, that read back whole.
+    # is kept in numbered parts, each under the limit, that read back whole. Cutting a document this large takes a while,
+    # so the board, its writes and the boards it is drawn over are made once, before the examples, which only read them.
     with context("larger than a record of the board's store holds"):
-        with before.each:
+        with before.all:
             board = board_of_two_cards()
             board.kept_document = _LARGE_MAP
-            self.board = board
-            self.parts = _parts_written(board.batches())
+            saved = board.save()
+            batches = board.batches()
+            longer = board_of_two_cards()
+            longer.kept_document = SourceDocument(Format("markdown"), _LARGE_MAP.text * 2)
+            self.saved = saved
+            self.parts = _parts_written(batches)
+            self.meta = batches[0][0]["data"]
+            self.written_again = _parts_written(Whiteboard.from_text(saved).batches(Whiteboard.from_text(saved)))
+            self.taken_away = [entry["doc_id"] for batch in board.batches(longer) for entry in batch
+                               if entry["op"] == "delete" and entry["collection"] == "board"]
+            self.longer_parts = len(_parts_written(longer.batches()))
 
         with it("should keep it in several numbered parts"):
             expect(sorted(self.parts)).to(equal([f"document-{number}" for number in range(len(self.parts))]))
@@ -252,27 +262,22 @@ with description("a whiteboard that keeps the document it was drawn from") as se
             expect(max(len(json.dumps(part, ensure_ascii=False).encode("utf-8")) for part in self.parts.values())).to(be_below(STORE_RECORD_BYTES))
 
         with it("should name as many parts in the board's meta as it writes"):
-            expect(self.board.batches()[0][0]["data"]["document"]).to(equal({"format": "markdown", "parts": len(self.parts)}))
+            expect(self.meta["document"]).to(equal({"format": "markdown", "parts": len(self.parts)}))
 
         with it("should read the parts back as the whole document, from the board in Claude saved as one"):
-            meta = self.board.batches()[0][0]["data"]
-            read = {**meta, "elements": {}, "document_parts": [self.parts[f"document-{number}"]["text"] for number in range(len(self.parts))]}
+            read = {**self.meta, "elements": {}, "document_parts": [self.parts[f"document-{number}"]["text"] for number in range(len(self.parts))]}
             expect(Whiteboard.from_text(json.dumps(read)).kept_document).to(equal(_LARGE_MAP))
 
         with it("should keep the whole document in the .whiteboard file"):
-            expect(Whiteboard.from_text(self.board.save()).kept_document).to(equal(_LARGE_MAP))
+            expect(Whiteboard.from_text(self.saved).kept_document).to(equal(_LARGE_MAP))
 
         with context("drawn again over the board that keeps it already"):
             with it("should write no part again"):
-                again = Whiteboard.from_text(self.board.save())
-                expect(_parts_written(again.batches(Whiteboard.from_text(self.board.save())))).to(equal({}))
+                expect(self.written_again).to(equal({}))
 
         with context("drawn over a board that kept a longer document"):
             with it("should take away the parts it no longer needs"):
-                longer = board_of_two_cards()
-                longer.kept_document = SourceDocument(Format("markdown"), _LARGE_MAP.text * 2)
-                deleted = [entry["doc_id"] for batch in self.board.batches(longer) for entry in batch if entry["op"] == "delete" and entry["collection"] == "board"]
-                expect(deleted).to(equal([f"document-{number}" for number in range(len(self.parts), len(_parts_written(longer.batches())))]))
+                expect(self.taken_away).to(equal([f"document-{number}" for number in range(len(self.parts), self.longer_parts)]))
 
 
 def _parts_written(batches) -> dict:
