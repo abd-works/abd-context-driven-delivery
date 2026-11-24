@@ -11,17 +11,17 @@ section: body
 
 **Product:** the CDD framework, its CDD Kanban and its Chat Bar, as mapped in [story-map.md](story-map.md).
 
-**Slicing intent:** Increment 0 is what the code does today. The Intended and Requested stories follow the order set on 2026-11-06.
+**Slicing intent:** Increment 0, Built, is everything the code does today. The increments after it are still to build.
 
-**Spine vs optional:** the increments run in the order they are built, as set on 2026-11-10: ticket management and the editor-app stories first, then syncing the design canvas with production and integrating stories with the canvas explorer, then repairing guidance from mistakes, then faster command entry and the Clean Engineering checks on the model, then the fully integrated flow, then the board's file review, workflow customizing and the Story UI editor's own stories; guards, a faster board, chat bar parity and linked models on the canvas follow, and next-step suggestions come last.
+**Spine vs optional:** the increments still to build run in the order of their items in the board's Backlog (2026-11-23); Finish File Manager and Repair Guidance From Mistakes have no backlog item and come last.
 
 ## Increments
 
-### Increment 0: Built Today
+### Increment 0: Built
 
-**Outcome:** what the framework, the CDD Kanban and the Chat Bar do now: every story whose evidence is Observed or Inferred.
+**Outcome:** everything the framework, the CDD Kanban, the chat bar, the Files app and the Story UI do today.
 
-**Slicing notes:** not a slice to build; it is the starting line the other increments add to.
+**Slicing notes:** one increment for all built work, merged on 2026-11-23 from Built Today, Built - Review Work In Board Files, Built - Maintain Tickets On Board, Built - Integrate Practice Content Editor Apps, Built - Check Clean Engineering On The Model, Built - Fully Integrated App Flow, Built - Defect Fixing, Built - File Manager. Not a slice to build; it is the starting line the other increments add to.
 
 **Stories in this increment:**
 
@@ -244,15 +244,6 @@ section: body
 - *Attach Violations To Latest Graph*
 - *Choose Where A Backlog Item Works*
 - *Choose Session And Practice Roots*
-
-### Increment 1: Built - Review Work In Board Files
-
-**Outcome:** a person reads a ticket's context and changed files in a proper viewer, comments on them to the chat, and reads clean reports.
-
-**Slicing notes:** board-enhancements "Files" and the report fixes under "Actions".
-
-**Stories in this increment:**
-
 - *List Ticket Context Files*
 - *Open Session Files From Details*
 - *View Files In Rich Viewer*
@@ -264,15 +255,6 @@ section: body
 - *Show Changed File In Viewer*
 - *Clear Processed File Comments*
 - *Show AI Changes As Diff*
-
-### Increment 2: Built - Maintain Tickets On Board
-
-**Outcome:** a person edits, orders, tags and removes tickets, and arranges them as parents and children.
-
-**Slicing notes:** mod-ideas build order 4, finish the Kanban: board-enhancements "Tickets Enhancements".
-
-**Stories in this increment:**
-
 - *Edit Ticket Text*
 - *Reorder Tickets In Column*
 - *Tag Ticket Session*
@@ -284,15 +266,6 @@ section: body
 - *Detach Child Ticket*
 - *Reassign Ticket Parent*
 - *Place Parent At Leftmost Child Stage*
-
-### Increment 3: Built - Integrate Practice Content Editor Apps
-
-**Outcome:** the board and the chat bar open the Story UI editor, the Claude Design story explorer and the Graph app on the ticket's own scope, using what each app already does.
-
-**Slicing notes:** requested on 2026-11-06: only the small stories that open an existing app in session context; the larger flow follows in Fully Integrated App Flow.
-
-**Stories in this increment:**
-
 - *Open Editor App From App Status Row*
 - *Open Stories File In Story UI Editor*
 - *Load Session Folders In Graph*
@@ -306,15 +279,6 @@ section: body
 - *Invoke Claude Design Story Explorer From Chat Bar*
 - *Show Board's Active Ticket In Story UI*
 - *Save Story Map Edit Through Domain*
-
-### Increment 4: Built - Check Clean Engineering On The Model
-
-**Outcome:** validating at the Clean Engineering model or code fidelity measures each function, class and module, keeps each measure as a fact on its node, and reports what is past a limit in the same validation report; the same validation finds the problems that only show across files, as graph rules where the graph can answer and as one AI-judged pass over the codebase where it cannot.
-
-**Slicing notes:** `.sessions/_backlog/measure-code-on-the-model.md` and `.sessions/_backlog/check-clean-engineering-across-files.md`, merged on 2026-11-11 at the person's request; the always-on metrics gate was removed on 2026-11-09, and its measuring moves into the practice, which also replaces the cross-file passes agents ran by hand. Built on the release-1-2-fixes branch: the code and module measures on 2026-11-22, and the cross-file graph rules and the judged pass over the whole repository in commits 140ccd92f and c5c088785; checked 2026-11-23.
-
-**Stories in this increment:**
-
 - *Record Code Metrics As Node Facts*
 - *Record Module Measures As Node Facts*
 - *Check Code Metrics Against Clean Engineering Limits*
@@ -323,47 +287,13 @@ section: body
 - *Report Disconnected Class*
 - *Report One-Class Package*
 - *Judge Clean Engineering Rules Across Files*
-
-### Increment 5: Built - Fully Integrated App Flow
-
-**Outcome:** the parts of Fully Integrated App Flow that are built: formats kept across a fidelity's actions, graph rules checked when an artifact changes, graph violations fixed from the Files app, and the UX design opened in Claude Design.
-
-**Slicing notes:** moved out of Fully Integrated App Flow and File Manager Complete by the person on 2026-11-23. *Open UX Design In Claude Design* is done: the Files app opens a published design canvas. The other three are queued for the release-1-1-2 chat to finish: every action takes the picked formats, not only generate and render; an edited artifact runs the graph rules and updates the chat bar's count; Fix this one, Fix rule and Fix all in the Files app's file view and graph view. *Sync Chat Bar With Board Selection* was removed at the person's request.
-
-**Stories in this increment:**
-
 - *Keep Chosen Formats Across Actions In A Fidelity*
 - *Check Graph Rules When An Artifact Changes*
 - *Fix Graph Violations From Files App*
 - *Open UX Design In Claude Design*
-
-### Increment 6: Built - Defect Fixing
-
-**Outcome:** small fixes and technical stories that need no increment of their own, built and checked off here.
-
-**Slicing notes:** one increment for miscellaneous fixes, so a small backlog item does not get an increment of its own (the person, 2026-11-23). Show Board Quickly (`.sessions/_complete/show-board-quickly/`): `board.show` stopped repeating git checks, guidance parsing and session file reads. Built on release-1-2-fixes, checked 2026-11-23: git facts read refs from the ref files with no git process (`harness/git/git_facts.py`), guidance files are stamped by change time and size at most once a second (`SourceStamps`, df4042b2c), and `HeldJsonFile` reads session.json again only when it changes.
-
-**Stories in this increment:**
-
 - *Check Ticket Branches Once Per Board Build*
 - *Cache Practice Guidance By File And Change Time*
 - *Read Session File Once Per Board Build*
-
-**Backlog items fixed in this increment** (moved to `.sessions/_complete/` or removed from the backlog on 2026-11-23):
-
-- *Chat UI defects*: every defect on the list fixed (`.sessions/_complete/chat-ui-defects/`)
-- *Install failure themes*: the locked mod file, the missing project header and the held adapter folders (`.sessions/_complete/install-failure-themes/`)
-- *Break module dependency cycles*: no module import cycle left (`.sessions/_complete/break-module-dependency-cycles/`)
-- *Nov 18 demo fixes*: board comments carry the fidelity's rules, the debug button stays in view, file links use the whole path, a plain folder offers only to create the git repository, the Files view opens without Bypass permissions, render saves beside its source, logs roll over at 4 MB, the bar's buttons ask for a skill in plain words, story maps take their shape from the sources, a whiteboard opens as a canvas, a new repository needs no reload, and a chat installs CDD when its folder lacks it
-
-### Increment 7: Built - File Manager
-
-**Outcome:** the Files app shows a session's generated work: files and folders filtered by stage, practice and format, a source view with folds, broken rules and the chat's changes, a graph view filtered like the file list that opens and folds files to the selected nodes, the draw.io editor, and comments and context sent to the chat.
-
-**Slicing notes:** the built part of File Manager Complete, split on 2026-11-23 after checking each story against the code on release-1-2-fixes. What is left is in Finish File Manager.
-
-**Stories in this increment:**
-
 - *Open Stage Files From Chat Bar*
 - *Open Session Folder From Chat Bar*
 - *Open File From Another Page*
@@ -404,7 +334,14 @@ section: body
 - *See Rules Under Node In Files App*
 - *Open Violation In Files App Source*
 
-### Increment 8: Judge And Fix Work From Chat Bar And Board
+**Backlog items fixed in this increment** (moved to `.sessions/_complete/` or removed from the backlog on 2026-11-23):
+
+- *Chat UI defects*: every defect on the list fixed (`.sessions/_complete/chat-ui-defects/`)
+- *Install failure themes*: the locked mod file, the missing project header and the held adapter folders (`.sessions/_complete/install-failure-themes/`)
+- *Break module dependency cycles*: no module import cycle left (`.sessions/_complete/break-module-dependency-cycles/`)
+- *Nov 18 demo fixes*: board comments carry the fidelity's rules, the debug button stays in view, file links use the whole path, a plain folder offers only to create the git repository, the Files view opens without Bypass permissions, render saves beside its source, logs roll over at 4 MB, the bar's buttons ask for a skill in plain words, story maps take their shape from the sources, a whiteboard opens as a canvas, a new repository needs no reload, and a chat installs CDD when its folder lacks it
+
+### Increment 1: Judge And Fix Work From Chat Bar And Board
 
 **Outcome:** generate refreshes the knowledge graph and judges the rules itself, Fix is an action of its own on a rule, a file or every violation, Validate runs on its own only as a slash command, and the chat bar opens the active ticket's card and tiles in a side panel.
 
@@ -418,7 +355,7 @@ section: body
 - *Validate Fidelity On Demand*
 - *Open Board Side Panel From Chat Bar* (partly built: the chat bar opens the whole board, not the ticket's card and tiles)
 
-### Increment 9: Sync Design Canvas With Production
+### Increment 2: Sync Design Canvas With Production
 
 **Outcome:** a design canvas shows production as it is: every file is proven against the product repo by hash, styles and assets come from one pinned Design System package, each screen mounts the real view, hosted edits come back before the next version, and a screen being redesigned is detached and marked diverged until its change reaches production.
 
@@ -477,7 +414,7 @@ section: body
 - *Keep Each Screen's Own Stylesheets* (built in the design canvas explorer only, not in the Story UI)
 - *Invoke Story Explorer In Session Context*
 
-### Increment 10: Customize Board Workflow
+### Increment 3: Customize Board Workflow
 
 **Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
 
@@ -498,7 +435,7 @@ section: body
 - *Choose Testing Strategy*
 - *Toggle Sub Agents*
 
-### Increment 11: Draw Linked Models On The Canvas
+### Increment 4: Draw Linked Models On The Canvas
 
 **Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
 
@@ -514,7 +451,7 @@ section: body
 - *See The Classes A Scenario Touches*
 - *See The Stories That Exercise A Class*
 - *Mark Model Nodes That Fail Rules*
-### Increment 12: Enter Commands Faster
+### Increment 5: Enter Commands Faster
 
 **Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go, and the chat proposes the next command and captures handoffs, corrections and decisions.
 
@@ -533,7 +470,7 @@ section: body
 - *Offer Correction Log Entry*
 - *Offer Decision Record*
 
-### Increment 13: Author Story Maps
+### Increment 6: Author Story Maps
 
 **Outcome:** the Story UI editor gets its own remaining stories: dashboard, nested lanes, the node inspector, save history, real-time sessions and AI story changes.
 
@@ -552,7 +489,7 @@ section: body
 - *Mark Story Without A Screen* (partly built: the design canvas says "No screenshot" for a screen without a picture; a story with no screen gets no frame)
 - *Open Story Explorer From Screen Frame* (built in the design canvas explorer only, not in the Story UI)
 
-### Increment 14: Finish File Manager
+### Increment 7: Finish File Manager
 
 **Outcome:** the Files app shows a session's generated work: files and folders or the graph, filtered like the files, opening and comparing several files, with comments sent to the chat.
 
@@ -567,7 +504,7 @@ section: body
 - *Test Knowledge Graph Explorer On Session Files* (partly built: the Graph app opens on the session's folder and shows violations; no spec runs on a session's files)
 - *Display Drawio File As Diagram* (partly built: the Files app shows the draw.io editor; no Source tab, no red shape for a violation, and a pressed shape does not open its lines)
 
-### Increment 15: Repair Guidance From Mistakes
+### Increment 8: Repair Guidance From Mistakes
 
 **Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
 
