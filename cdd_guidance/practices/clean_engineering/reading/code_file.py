@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import keyword
 import re
+from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, NamedTuple
 
@@ -399,6 +400,9 @@ class CodeFile:
         self._imports = imports
         self._whole = whole
         self._causes: ReceiverCauses | None = None
+        # The files this file's imports name, by the name asked about (None for every name), worked out once: a read of
+        # the whole working copy asks it hundreds of thousands of times of the same few files.
+        self._imported_files: dict[str | None, frozenset[str]] = {}
         # What the type hints this file writes say a value is.
         self.hints = _HintTypes(self, index)
 
@@ -493,7 +497,7 @@ class CodeFile:
             return self._only(imported)
         return self._only([member for member in members if self._beside(member.source.file)])
 
-    def _in_files(self, members: "list[Node]", files: set[str]) -> "list[Node]":
+    def _in_files(self, members: "list[Node]", files: "set[str] | frozenset[str]") -> "list[Node]":
         """The members of members declared in one of files."""
         return [member for member in members if member.source.file in files]
 
@@ -511,15 +515,18 @@ class CodeFile:
             return member
         return self.getter_of(member) or member
 
-    def imported_files_of(self, name: str | None = None) -> set[str]:
+    def imported_files_of(self, name: str | None = None) -> frozenset[str]:
         """The files this file's imports name, those naming name alone when given, in this file's own language; an
         import of a generated language adapter names the Python module it is generated from."""
-        return {
-            path
-            for reference in self._imports if name is None or name in reference.names()
-            for path in reference.files()
-            if reference.through_adapter() or _language_of(path) == _language_of(self.relative)
-        }
+        found = self._imported_files.get(name)
+        if found is None:
+            found = self._imported_files[name] = frozenset(
+                path
+                for reference in self._imports if name is None or name in reference.names()
+                for path in reference.files()
+                if reference.through_adapter() or _language_of(path) == _language_of(self.relative)
+            )
+        return found
 
     def _in_reach(self, candidates: "list[Node]", name: str) -> "Node | None":
         own = next((node for node in candidates if node.source.file == self.relative), None)
@@ -1811,6 +1818,7 @@ def _is_local_name(head: str) -> bool:
     return head[:1].islower() and head not in _OWN_OBJECT and head not in _BASE_OBJECT
 
 
+@cache
 def _language_of(file: str) -> str:
     """The language family a file is written in, by its extension: every script extension is one family."""
     suffix = "." + file.rsplit(".", 1)[-1].lower()
