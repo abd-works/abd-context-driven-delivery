@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Callable, TypedDict
 
 from cdd_guidance.practices.source_code import CodeBody, CodeLanguage
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -102,11 +102,20 @@ class ClassSourceFacts:
         """A property for each public field the constructor assigns that the class does not declare, in the order it
         assigns them, each at the line that assigns it: typed as the assignment writes it, else as the parameter it is
         assigned from."""
+        return self._fields_from(self._assignments_in)
+
+    def assigned_fields(self) -> list[Property]:
+        """The properties ``constructor_fields`` gives, read from the constructor's body rather than the lines of the
+        class's file: a class carried into another language has a body, and no lines of a file of its own."""
+        return self._fields_from(lambda operation: [(0, *found) for found in _ASSIGNED_FROM.findall(operation.body.text)])
+
+    def _fields_from(self, assignments: "Callable[[Operation], list[tuple[int, str, str, str]]]") -> list[Property]:
+        """A property for each public field the constructor's assignments set that the class does not declare."""
         declared = {prop.name for prop in self._class.properties}
         found: dict[str, Property] = {}
         for operation in (item for item in self._class.operations if item.is_constructor):
             hints = {parameter.name: parameter.type_hint for parameter in operation.parameters}
-            for line, name, hint, value in self._assignments_in(operation):
+            for line, name, hint, value in assignments(operation):
                 if name in declared or name in found or name.startswith("_"):
                     continue
                 found[name] = Property(name, len(declared) + len(found) + 1, (hint or hints.get(value.strip(), "") or "").strip())

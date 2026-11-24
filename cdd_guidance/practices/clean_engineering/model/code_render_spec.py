@@ -253,3 +253,56 @@ with description("a body written in one language and kept as comments in another
 
     with it("should read a body with comments of its own as that language's body"):
         expect((self.own.language.name, self.own.text)).to(equal(("typescript", "// add the item\nthis.items.push(item);")))
+
+
+# Seen 2026-11-21 (r3-widget-07): a render of Python code to TypeScript declared no property, imported nothing, called
+# no base constructor, and extended Python's ValueError, so the file did not compile.
+_BOOKSHOP_CODE = Path(__file__).resolve().parent / "fixtures" / "bookshop" / "code"
+
+
+def _bookshop_in_typescript(file: str) -> str:
+    return _render("typescript", (_BOOKSHOP_CODE / file).read_text(encoding="utf-8"), "python")
+
+
+with description("Python code rendered to TypeScript"):
+    with context("whose constructor assigns fields the class does not declare"):
+        with before.all:
+            self.rendered = _bookshop_in_typescript("ordering/cart.py")
+
+        with it("should declare a field typed as its assignment writes it, in TypeScript's spelling"):
+            expect(self.rendered).to(contain("  lines: CartLine[];"))
+
+        with it("should declare a field typed as the parameter it is assigned from"):
+            expect(self.rendered).to(contain("  customerId: string;"))
+
+        with it("should import the classes the file uses from other files"):
+            expect(self.rendered).to(contain('import { Book, OutOfStock } from "src/catalogue/book";'))
+
+        with it("should extend TypeScript's Error where Python extends ValueError"):
+            expect(self.rendered).to(contain("class EmptyCart extends Error {"))
+
+    with context("whose subclass's constructor calls its base class's constructor"):
+        with before.all:
+            self.rendered = _bookshop_in_typescript("fulfilment/shipment.py")
+            self.express = self.rendered[self.rendered.index("class ExpressShipment"):]
+
+        with it("should call the base class's constructor with the arguments the Python passes"):
+            expect(self.express).to(contain("    super(order, address);\n"))
+
+        with it("should assign only the fields the base class does not"):
+            expect(self.express).not_to(contain("this.order = order;"))
+
+
+with description("a markdown class model rendered to TypeScript"):
+    with before.all:
+        model = (Path(__file__).resolve().parent / "fixtures" / "bookshop" / "ordering-model.md").read_text(encoding="utf-8")
+        self.rendered = _render("typescript", model, "markdown")
+
+    with it("should write a list property as a TypeScript array"):
+        expect(self.rendered).to(contain("  lines: CartLine[];"))
+
+    with it("should write a parameter's type in TypeScript's spelling"):
+        expect(self.rendered).to(contain("  add(book: Book, quantity: number): CartLine {"))
+
+    with it("should write a call the model notes as the operation is named in TypeScript"):
+        expect(self.rendered).to(contain("    Book.isInStock();"))

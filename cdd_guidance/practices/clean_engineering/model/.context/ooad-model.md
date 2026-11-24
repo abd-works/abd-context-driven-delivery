@@ -566,6 +566,10 @@ What a class's source says (`source_facts.py`), which the class makes once and k
 	-> CardBullets
 + held_fields(): dict[str, str]
 	// its declared properties, then the fields its constructor assigns
++ constructor_fields(): list[Property]
+	// a property for each public field the constructor assigns that the class does not declare, at the line that assigns it, read from the lines of its file
++ assigned_fields(): list[Property]
+	// the same fields read from the constructor's body, for a class carried into another language, which has no lines of a file of its own
 
 ## CodeClassSourceFacts : ClassSourceFacts
 
@@ -599,7 +603,8 @@ What an operation's source says (`source_facts.py`), which the operation makes o
 	// the lines it spans in its file, kept by take_lines
 ----
 + take_body(text: str, language: CodeLanguage): None
-	// the statements its parser read, as the operation's body
+	// the statements its parser read, as the operation's body; a body that is only what a render wrote from the model (notes, calls, the line that fails until it is written) is no body, and the operation keeps those calls, with their arguments, as its callees
+	-> CodeLanguage.scaffold_calls
 + take_body_fingerprint(body: str): None
 	-> BodyFingerprint.of_body
 + take_lines(lines: list[str]): None
@@ -809,6 +814,13 @@ How a language writes the receiver, a constructor call, and the end of a stateme
 + camel_case: bool
 + base_constructor: str
 + base_receiver: str
++ list_of: str
++ generic_brackets: tuple[str, str]
++ import_statement: str
++ import_pattern: str
+	// how it writes and reads an import of names from a module
++ dotted_modules: bool
+	// whether it names a module with dots (Python) rather than as a path
 
 ## CodeLanguage
 
@@ -835,6 +847,15 @@ How one programming language spells what every code format writes the same way. 
 	// the constructor line that stores a parameter on the new object
 + interaction(callee: str): str
 	// one -> collaborator.operation note as a call in this language. Empty for a prose note
++ scaffold_calls(text: str): list[str] | None
+	// the calls a body holds when it is only what interaction and the notes wrote above the unfinished statement; None for any other body
++ base_constructor_arguments(text: str): list[str] | None
+	// what a body in this language passes to its base class's constructor; None when it calls none
++ base_constructor_call(arguments: list[str]): str
++ imports_in(text: str): list[tuple[str, list[str]]]
+	// each import of names the text states, its module as a path
++ import_line(module: str, names: list[str]): str
+	// one import as this language writes it; a render into another language writes the imports the source's preamble states
 
 ## CodeBody
 
@@ -934,7 +955,7 @@ A class model written as code. The walk and the body rule live here; each langua
 	// the module the last parsed text forms, kept with that text even when it holds no class
 + render(canonical: CleanEngineeringModel, previous: str | None = None): str
 	Invariant: an operation body read in this language is written back exactly as read
-	// becomes the canonical model once, as the language's parts, then writes itself
+	// becomes the canonical model once, as the language's parts, then writes itself; a model from another language also declares each field its constructors assign (declare_assigned_fields), takes the imports its preamble states in this language's spelling, extends its bases by this language's names for them (type_name), and a constructor calls its base class's constructor with what the source passed, assigning only the rest
 	-> translate_from
 	-> render_class
 + operation_body(class_name: str, operation_name: str): CodeBody

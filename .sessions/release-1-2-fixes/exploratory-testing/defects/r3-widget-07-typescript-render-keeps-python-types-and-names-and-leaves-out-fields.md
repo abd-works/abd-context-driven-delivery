@@ -42,3 +42,13 @@ No class of `cart.ts` declares a property, so `lines` (set to `[]` in `__init__`
 
 ## Tier that should catch it
 Unit: `sketch_typescript_render_spec.py` and `code_render_spec.py` check parts of the TypeScript writer; none renders a class with a `list[...]` property, an `int` parameter, a call note, or a subclass, and none checks that the properties set in a Python `__init__` are declared.
+
+## Status: fixed (2026-11-23)
+- From the markdown model (already fixed before this pass by `ed5bc974e` and the one type translation, `CodeLanguage.type_name`): `lines: CartLine[];`, `quantity: number` wherever the model says `int`, and a call note named as the operation is spelled in TypeScript (`Book.isInStock();`).
+- From Python code, fixed now (`cdd_guidance/practices/clean_engineering/model/code_class_model.py`, `source_facts.py`, `cdd_guidance/practices/source_code/code_body.py`):
+  - each field a constructor assigns and the class does not declare becomes a declared property, typed as its assignment writes it or as the parameter it is assigned from (`declare_assigned_fields`, `ClassSourceFacts.assigned_fields`): `customerId: string;`, `lines: CartLine[];`;
+  - the imports the Python file states are written as TypeScript imports (`CodeLanguage.imports_in`, `import_line`): `import { Book, OutOfStock } from "src/catalogue/book";`;
+  - a subclass's constructor calls its base class's constructor with what the Python passed (`super(order, address);`) and assigns only the rest (`base_constructor_arguments`, `base_constructor_call`);
+  - a class extending one of Python's own failures extends `Error` (`ValueError` and the others are TypeScript's and JavaScript's `Error` in `type_names`).
+- Covered by `cdd_guidance/practices/clean_engineering/model/code_render_spec.py`: "Python code rendered to TypeScript" (on the Bookshop's `cart.py` and `shipment.py`) and "a markdown class model rendered to TypeScript" (on `ordering-model.md`).
+- Left as it is: bodies are still carried as Python under a "python body to translate" comment, as round 2 noted; translating statements between languages is out of reach of a format adapter. A field assigned a literal with no annotation and no parameter (`self.dispatched = False`) is declared with no type (`dispatched: any;`). An import path is carried as the Python module names it (`src/catalogue/book`), which resolves only where the TypeScript project maps that path; no file in another language is read to find where the TypeScript file will sit.

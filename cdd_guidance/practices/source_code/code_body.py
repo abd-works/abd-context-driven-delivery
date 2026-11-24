@@ -38,6 +38,11 @@ class CodeSpelling:
     # How it writes a list of a type, and the brackets it puts a generic type's arguments in.
     list_of: str = "{type}[]"
     generic_brackets: Tuple[str, str] = ("<", ">")
+    # How it imports names from another module, as a statement it writes and a pattern it reads one by (its module and
+    # its names), and whether it names a module with dots (`src.ordering.cart`) rather than as a path (`src/ordering/cart`).
+    import_statement: str = 'import {{ {names} }} from "{module}";'
+    import_pattern: str = r"^import\s*\{(?P<names>[^}]*)\}\s*from\s*[\"'](?P<module>[^\"']+)[\"'];?$"
+    dotted_modules: bool = False
 
 
 @dataclass(frozen=True, eq=False)
@@ -132,6 +137,53 @@ class CodeLanguage:
                 return None
             calls.append(statement)
         return calls
+
+    def base_constructor_arguments(self, text: str) -> Optional[List[str]]:
+        """The arguments a body written in this language passes to its base class's constructor (`super().__init__(order,
+        address)`, `super(order, address);`); None when it calls none."""
+        call = re.search(rf"^\s*{re.escape(self.spelling.base_constructor)}\((.*)\)\s*;?\s*$", text, re.MULTILINE)
+        return [argument.strip() for argument in split_top_level(call.group(1)) if argument.strip()] if call else None
+
+    def base_constructor_call(self, arguments: List[str]) -> str:
+        """The call to the base class's constructor with arguments, named as this language names them."""
+        named = ", ".join(self.identifier(argument) for argument in arguments)
+        return f"{self.spelling.base_constructor}({named}){self.spelling.statement_end}"
+
+    def imports_in(self, text: str) -> List[Tuple[str, List[str]]]:
+        """Each import of names a module written in this language states, as (the module as a path, such as
+        `src/ordering/cart` or `./cart`, the names it imports). An import of a whole module, or of what the language
+        itself provides (`__future__`), names nothing to carry into another language."""
+        found = []
+        for line in text.splitlines():
+            statement = re.match(self.spelling.import_pattern, line.strip())
+            if statement is None or statement.group("module") == "__future__":
+                continue
+            names = [name.strip() for name in statement.group("names").split(",") if name.strip()]
+            found.append((self._module_path(statement.group("module")), names))
+        return found
+
+    def import_line(self, module: str, names: List[str]) -> str:
+        """The statement that imports names from module, a path as ``imports_in`` gives one, as this language writes it."""
+        return self.spelling.import_statement.format(module=self._module_name(module), names=", ".join(names))
+
+    def _module_path(self, written: str) -> str:
+        """A module as this language writes it, as a path: `..cart.line` is `../cart/line`, `./cart.ts` is `./cart`."""
+        if not self.spelling.dotted_modules:
+            return re.sub(r"\.(ts|tsx|js|jsx|mjs)$", "", written)
+        dots = len(written) - len(written.lstrip("."))
+        path = written[dots:].replace(".", "/")
+        if not dots:
+            return path
+        return ("./" if dots == 1 else "../" * (dots - 1)) + path
+
+    def _module_name(self, path: str) -> str:
+        """A module path as this language writes a module: dotted, a leading `./` one dot and each `../` one more."""
+        if not self.spelling.dotted_modules:
+            return path
+        parts = [part for part in path.split("/") if part]
+        ups = sum(1 for part in parts if part == "..")
+        dots = "." * (ups + 1) if parts and parts[0] in (".", "..") else ""
+        return dots + ".".join(part for part in parts if part not in (".", ".."))
 
     def assignment(self, name: str) -> str:
         field_name = self.identifier(name)
@@ -332,6 +384,9 @@ class InsideLines:
         return region[:kept], leads, lines[children[-1][1] + 1 : self.end]
 
 
+# Python's own failures, each Error in TypeScript and JavaScript, which a class extends as it extends any base.
+_PYTHON_ERRORS = {name: "Error" for name in ("Exception", "ValueError", "RuntimeError", "LookupError", "KeyError", "TypeError")}
+
 PYTHON_SPELLING = CodeSpelling(
     receiver="self",
     construct="{type}({arguments})",
@@ -341,6 +396,9 @@ PYTHON_SPELLING = CodeSpelling(
     base_receiver="super()",
     list_of="list[{type}]",
     generic_brackets=("[", "]"),
+    import_statement="from {module} import {names}",
+    import_pattern=r"^from\s+(?P<module>[\w.]+)\s+import\s+(?P<names>[^()]+)$",
+    dotted_modules=True,
 )
 C_FAMILY_SPELLING = CodeSpelling(receiver="this", construct="new {type}({arguments})", statement_end=";", camel_case=True)
 
@@ -358,6 +416,7 @@ PYTHON = CodeLanguage(
         "null": "None",
         "undefined": "None",
         "any": "object",
+        "Error": "Exception",
     },
     suffixes=(".py",),
 )
@@ -376,6 +435,7 @@ TYPESCRIPT = CodeLanguage(
         "list": "Array<any>",
         "dict": "Record<string, any>",
         "object": "any",
+        **_PYTHON_ERRORS,
     },
     suffixes=(".ts", ".tsx"),
 )
@@ -385,7 +445,7 @@ JAVASCRIPT = CodeLanguage(
     "  ",
     'throw new Error("not implemented");',
     C_FAMILY_SPELLING,
-    type_names={},
+    type_names=dict(_PYTHON_ERRORS),
     suffixes=(".js", ".jsx"),
 )
 

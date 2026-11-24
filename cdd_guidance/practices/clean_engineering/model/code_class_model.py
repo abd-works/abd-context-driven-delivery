@@ -228,7 +228,7 @@ class CodeClass(OoadClass):
         """`class Name extends Base implements Contract, Other {`: the first base that is not an I{Class} contract is
         extended, and every other base is implemented."""
         extended, implemented = self._heritage(bases)
-        extends = f" extends {extended}" if extended else ""
+        extends = f" extends {self.language.type_name(extended)}" if extended else ""
         implements = f" implements {', '.join(implemented)}" if implemented else ""
         return [f"{self._class_modifiers(implemented)}class {self.name}{extends}{implements} {{"]
 
@@ -301,6 +301,7 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
             own = type(self)(name="", sequential_order=1)
             own.translate_from(canonical)
             own.keep_notes_out_of_code()
+            own.declare_assigned_fields()
             return own.render(own, written)
         kept = type(self)(name="", sequential_order=1)
         if written.previous:
@@ -323,6 +324,13 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
                 operation.return_type = self._type_alone(operation, operation.return_type)
                 for parameter in operation.parameters:
                     parameter.type_hint = self._without_note(parameter.type_hint)[0]
+
+    def declare_assigned_fields(self) -> None:
+        """Make each field a class's constructor assigns, and the class does not declare, a property of it, as Python
+        holds its fields: a language that declares its fields, such as TypeScript, then declares each one."""
+        for oclass in self.every_class():
+            fields = oclass.source_facts.assigned_fields()
+            oclass.properties.extend(oclass.property_type(field.name, field.sequential_order, field.type_hint) for field in fields)
 
     def _keep_class_name_alone(self, oclass: OoadClass) -> None:
         """Name oclass by the identifier its heading starts with, keeping the rest in its description, and its
@@ -418,11 +426,19 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         return lines
 
     def _preamble(self, kept: "CodeCleanEngineeringModel") -> CodeBody:
-        for model in (self, kept):
-            for module in model.modules:
-                if module.preamble.language is self.language:
-                    return module.preamble
-        return CodeBody()
+        """The lines above the first class as this language wrote them, from this model or the previous file; else the
+        imports another language's preamble states, written as this language imports them."""
+        preambles = [module.preamble for model in (self, kept) for module in model.modules]
+        own = next((preamble for preamble in preambles if preamble.language is self.language), None)
+        if own is not None:
+            return own
+        imports = [
+            self.language.import_line(module, names)
+            for preamble in preambles
+            if preamble.language is not None
+            for module, names in preamble.language.imports_in(preamble.text)
+        ]
+        return CodeBody("\n".join(imports), self.language)
 
     def _constructor_body(
         self, oclass: CodeClass, constructor: Optional[Operation], kept: "CodeCleanEngineeringModel"
@@ -434,11 +450,14 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         if body.language is self.language:
             return body.lines_in(self.language, indent, "")
         scaffold = self._scaffold(constructor, body, indent) if constructor is not None else []
+        passed = body.language.base_constructor_arguments(body.text) if body.language is not None else None
+        base_call = [f"{indent}{self.language.base_constructor_call(passed)}"] if passed is not None else []
         assignments = [
             f"{indent}{self.language.assignment(name)}"
             for name, _hint in oclass.constructor_parameters(constructor)
+            if name not in (passed or [])
         ]
-        return scaffold + body.lines_in(self.language, indent, "") + assignments
+        return scaffold + body.lines_in(self.language, indent, "") + base_call + assignments
 
     def _scaffold(self, operation: Operation, body: CodeBody, indent: str) -> List[str]:
         """What the model says about a body nobody has written yet: its invariants, then its interactions.
