@@ -474,9 +474,9 @@ section: body
 
 ### Increment 11: Enter Commands Faster
 
-**Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go.
+**Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go, and the chat proposes the next command and captures handoffs, corrections and decisions.
 
-**Slicing notes:** mod-ideas build order 2, command entry and autocomplete; Choose Format sits here because a format is one of the command's parameters.
+**Slicing notes:** mod-ideas build order 2, command entry and autocomplete; Choose Format sits here because a format is one of the command's parameters. Suggest The Next Step (mod-ideas build order 3) merged in on 2026-11-23.
 
 **Stories in this increment:**
 
@@ -485,6 +485,11 @@ section: body
 - *Display Action Before Fidelity Dots*
 - *Add Comment To Sent Command*
 - *Announce CDD Tool Calls*
+- *Suggest Next Command*
+- *Write Handoff When Session Ends*
+- *Display Latest Session Handoff*
+- *Offer Correction Log Entry*
+- *Offer Decision Record*
 
 ### Increment 12: Fully Integrated App Flow
 
@@ -620,21 +625,7 @@ section: body
 - *See The Stories That Exercise A Class*
 - *Mark Model Nodes That Fail Rules*
 
-### Increment 18: Suggest The Next Step
-
-**Outcome:** the chat proposes the next command, and captures handoffs, corrections and decisions.
-
-**Slicing notes:** mod-ideas build order 3, next-step suggestions.
-
-**Stories in this increment:**
-
-- *Suggest Next Command*
-- *Write Handoff When Session Ends*
-- *Display Latest Session Handoff*
-- *Offer Correction Log Entry*
-- *Offer Decision Record*
-
-### Increment 19: Maybe Later
+### Increment 18: Maybe Later
 
 **Outcome:** work set aside for now because it is complicated and not needed yet; picked up only when asked.
 
