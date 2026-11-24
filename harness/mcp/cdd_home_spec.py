@@ -15,7 +15,7 @@ from expects import contain, end_with, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
-from harness.mcp.cdd_home import CddHome, RuntimeRecordUnreadable
+from harness.mcp.cdd_home import CddHome, RuntimeNotInstalled, RuntimeRecordUnreadable
 from harness.mcp.claude_marketplace import ClaudeMarketplace
 from harness.mcp.cdd_home_checkout_examples import BOARD_MOD, QUEUE_MOD, checkout_with_board_mod
 
@@ -140,6 +140,10 @@ with description("a cdd home's runtime record") as self:
             except RuntimeRecordUnreadable:
                 pass
             expect(self.home.runtime_record.read_text(encoding="utf-8")).to(equal('{"source": '))
+
+    with context("that is not there, since cdd was never installed in the home"):
+        with it("should refuse to name the checkout the server runs, naming the home"):
+            expect(lambda: self.home.source).to(raise_error(RuntimeNotInstalled, contain(str(self.home.folder))))
 
 
 with description("a cdd home's server environment") as self:
