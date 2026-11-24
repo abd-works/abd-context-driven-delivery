@@ -38,6 +38,8 @@ Observed (`cdd_guidance/practices/clean_engineering/measures/code_measures_spec.
 | the function total | line_count | 51 | limit-function-lines | has 51 lines, over the limit of 50. |
 | the class Cart | total_complexity | 101 | limit-class-complexity | has a total complexity of 101 (the paths through all its methods, added up), over the limit of 100. |
 | the class Cart | method_count | 31 | limit-class-methods | has 31 methods, over the limit of 30. |
+| the class Cart | classes_depended_on | 15 | limit-class-coupling | has 15 classes it depends on (coupling between objects), over the limit of 14. |
+| the class Cart | methods_set_off | 51 | limit-class-response | has 51 methods one call into it can set off (response for a class), over the limit of 50. |
 
 #### Scenario: Pass a node whose measure is at its limit
 
@@ -69,7 +71,7 @@ Decided 2026-11-22: one rule holds parameters, `limit-operation-parameters`, at 
 
 #### Scenario Outline: Report a rule's failing example and pass its repaired example
 
-Observed (`cdd_guidance/practices/clean_engineering/measures/code_measures_heavy_spec.py`, with the real tools). The story test runs the three rules whose measure the practice's own reader takes; the three whose measure lizard supplies need the real lizard and run in that heavy spec.
+Observed (`cdd_guidance/practices/clean_engineering/measures/code_measures_heavy_spec.py`, with the real tools). The story test runs the five rules on a function or a class whose measure the practice's own reader takes; the three whose measure lizard supplies need the real lizard and run in that heavy spec. The four rules on a module have examples that are small projects of several modules, each module with its card, and run in `code_measures_spec.py` (`limit-modules-importing`, counted by the reader) and in the heavy spec (the three that need lizard or radon).
 
 *Given* the failing example and the repaired example of <rule>
 *When* the code measures of each are taken and the graph rules run
@@ -84,6 +86,8 @@ Observed (`cdd_guidance/practices/clean_engineering/measures/code_measures_heavy
 | limit-class-complexity |
 | limit-class-methods |
 | keep-class-methods-sharing-data |
+| limit-class-coupling |
+| limit-class-response |
 
 #### Scenario: Report a function past its limit in the validation report
 

@@ -21,7 +21,9 @@ _CODE_ONLY = (
     "no-prototype-swapping", "keep-operations-small-focused", "simplify-control-flow", "use-exceptions-properly",
     "never-swallow-exceptions", "provide-meaningful-context", "prefer-instance-operations",
     "limit-paths-through-a-function", "keep-functions-readable", "limit-function-lines",
-    "limit-class-complexity", "limit-class-methods", "keep-class-methods-sharing-data",
+    "limit-class-complexity", "limit-class-methods", "keep-class-methods-sharing-data", "limit-class-coupling",
+    "limit-class-response", "limit-module-file-lines", "keep-module-files-maintainable", "limit-average-class-complexity",
+    "limit-modules-importing",
 )
 # The rules about use the practice's document states at the model fidelity, which judge a class at either fidelity.
 _USE = (

@@ -12,6 +12,8 @@ import tempfile
 from pathlib import Path
 
 from cdd_guidance.practices.clean_engineering.measures.code_measures import (
+    LEAST_MAINTAINABILITY,
+    LONGEST_FILE_LINES,
     MEASURES,
     ChosenTools,
     PATHS_THROUGH,
@@ -62,14 +64,29 @@ NO_MEASURES_CHOSEN: dict[str, str] = {}
 
 
 class StandInLizard(MeasuringTool):
-    """Lizard, stood in for: every function has 14 paths and a readability score of 3, and every class a total
-    complexity of 40."""
+    """Lizard, stood in for: every function has 14 paths and a readability score of 3, every class a total complexity
+    of 40, and every module's longest file 120 lines of code."""
 
     name = "lizard"
 
     def __init__(self) -> None:
         super().__init__()
-        self._takes = {PATHS_THROUGH.name: lambda measured: 14, READABILITY_SCORE.name: lambda measured: 3, TOTAL_COMPLEXITY.name: lambda measured: 40}
+        self._takes = {
+            PATHS_THROUGH.name: lambda measured: 14,
+            READABILITY_SCORE.name: lambda measured: 3,
+            TOTAL_COMPLEXITY.name: lambda measured: 40,
+            LONGEST_FILE_LINES.name: lambda measured: 120,
+        }
+
+
+class StandInRadon(MeasuringTool):
+    """Radon, stood in for: every module's least maintainable file has a maintainability index of 65."""
+
+    name = "radon"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._takes = {LEAST_MAINTAINABILITY.name: lambda measured: 65}
 
 
 class CountingLizard(MeasuringTool):
@@ -80,7 +97,12 @@ class CountingLizard(MeasuringTool):
 
     def __init__(self) -> None:
         super().__init__()
-        self._takes = {PATHS_THROUGH.name: self._paths, READABILITY_SCORE.name: lambda measured: 0, TOTAL_COMPLEXITY.name: self._paths}
+        self._takes = {
+            PATHS_THROUGH.name: self._paths,
+            READABILITY_SCORE.name: lambda measured: 0,
+            TOTAL_COMPLEXITY.name: self._paths,
+            LONGEST_FILE_LINES.name: lambda measured: 0,
+        }
 
     def _paths(self, measured) -> int:
         first, last = measured.lines
@@ -104,8 +126,8 @@ class MeasuresNothing(MeasuringTool):
         return None
 
 
-STAND_INS = {"lizard": StandInLizard}
-READER_ALONE = {"lizard": MeasuresNothing}
+STAND_INS = {"lizard": StandInLizard, "radon": StandInRadon}
+READER_ALONE = {"lizard": MeasuresNothing, "radon": MeasuresNothing}
 
 
 def shop_project(config: dict[str, str] = MEASURES_CHOSEN, files: dict[str, str] | None = None, tools: dict | None = None) -> RuleFixture:
@@ -145,7 +167,11 @@ def any_measure_kept(project: RuleFixture) -> bool:
 
 def holding(project: RuleFixture, kind: str, name: str, fact: str, value) -> RuleFixture:
     """project whose node holds fact with value, as a read that measured it leaves it."""
-    setattr(node_of(project, kind, name), fact, value)
+    node = node_of(project, kind, name)
+    if fact in node.graph_facts:
+        setattr(node, fact, value)
+    else:
+        node.set_fact(fact, value)
     return project
 
 

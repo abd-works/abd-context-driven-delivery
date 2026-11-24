@@ -43,9 +43,11 @@ _PAST_THE_LIMIT = (
     ("Operation", "total", "line_count", 51, "limit-function-lines", "has 51 lines, over the limit of 50."),
     ("OoadClass", "Cart", "total_complexity", 101, "limit-class-complexity", "has a total complexity of 101 (the paths through all its methods, added up), over the limit of 100."),
     ("OoadClass", "Cart", "method_count", 31, "limit-class-methods", "has 31 methods, over the limit of 30."),
+    ("OoadClass", "Cart", "classes_depended_on", 15, "limit-class-coupling", "has 15 classes it depends on (coupling between objects), over the limit of 14."),
+    ("OoadClass", "Cart", "methods_set_off", 51, "limit-class-response", "has 51 methods one call into it can set off (response for a class), over the limit of 50."),
 )
 # Outline: the rules whose measure the practice's own reader takes, so their examples need no outside tool.
-_READ_BY_THE_READER = ("limit-function-lines", "limit-class-methods", "keep-class-methods-sharing-data")
+_READ_BY_THE_READER = ("limit-function-lines", "limit-class-methods", "keep-class-methods-sharing-data", "limit-class-coupling", "limit-class-response")
 
 with story("Check Code Metrics Against Clean Engineering Limits"):
     with scenario("Report a node whose measure is past its limit"):

@@ -2,7 +2,7 @@
 the measure is past the limit the project keeps for it.
 
 A function's lines and parameters and a class's methods are facts the reader keeps on every read. The measures a
-tool supplies are facts the reader keeps of the files a read names, as the refresh a validate asks for does
+tool supplies, the practice's own reader among the tools, are facts the reader keeps of the files a read names, as the refresh a validate asks for does
 (``measures/checked_measures.py``), so a node of a file no read named holds none and no rule here reports it. A measure
 no tool could take is kept as the reason why, and its rule reports that, so unmeasured code never passes as code within
 its limit. The limit is read from the project's choices, beside the tool that supplies the measure, so a project that
@@ -15,8 +15,14 @@ from typing import TYPE_CHECKING
 from harness.graph.violation import Finding
 
 from cdd_guidance.practices.clean_engineering.measures.code_measures import (
+    AVERAGE_CLASS_COMPLEXITY,
+    CLASSES_DEPENDED_ON,
     CODE_LINES,
+    LEAST_MAINTAINABILITY,
+    LONGEST_FILE_LINES,
     METHOD_COUNT,
+    METHODS_SET_OFF,
+    MODULES_IMPORTING,
     PATHS_THROUGH,
     READABILITY_SCORE,
     TOTAL_COMPLEXITY,
@@ -33,8 +39,9 @@ if TYPE_CHECKING:
 _LIMITS_KEPT_BY = "clean_engineering"
 _FUNCTION_NODES = ("Operation", "Property")
 _CLASS_NODES = ("OoadClass",)
+_MODULE_NODES = ("Module",)
 # How a message names the node measured, by its type: an operation and a getter are both functions to a reader.
-_KIND = {"Operation": "Function", "Property": "Property", "OoadClass": "Class"}
+_KIND = {"Operation": "Function", "Property": "Property", "OoadClass": "Class", "Module": "Module"}
 
 
 class CodeMeasureLimit(ProductionCodeRule):
@@ -51,9 +58,12 @@ class CodeMeasureLimit(ProductionCodeRule):
             return [Finding(node, str(node.data[self.measure.not_taken_fact]))]
         limit = self._limit(context)
         value = self.measure.value_on(node) if limit is not None else None
-        if value is None or limit is None or value <= limit:
+        if value is None or limit is None or not self.measure.is_past(value, limit):
             return []
-        return [Finding(node, f"{_KIND.get(node.type, node.type)} '{node.name}' has {self.measure.said_of(value)}, over the limit of {limit:g}. {self.advice}")]
+        file = node.get_fact(self.measure.file_fact, None)
+        where = f", in {file}" if file else ""
+        said = f"{_KIND.get(node.type, node.type)} '{node.name}' has {self.measure.said_of(value)}{where}, {self.measure.past_said} {limit:g}."
+        return [Finding(node, f"{said} {self.advice}")]
 
 
     def _limit(self, context: "RuleCheckContext") -> float | None:
@@ -106,6 +116,54 @@ class KeepClassMethodsSharingData(CodeMeasureLimit):
     advice = "Each group uses none of the fields the others use, so it is a second class kept inside this one: move it out."
 
 
+class LimitClassCoupling(CodeMeasureLimit):
+    slug = "limit-class-coupling"
+    node_types = _CLASS_NODES
+    measure = CLASSES_DEPENDED_ON
+    advice = "Find the classes it only passes values between and let them talk to each other, or split the class by the collaborators each part needs."
+
+
+class LimitClassResponse(CodeMeasureLimit):
+    slug = "limit-class-response"
+    node_types = _CLASS_NODES
+    measure = METHODS_SET_OFF
+    advice = "Ask each collaborator for the one result the class needs instead of calling its steps one by one, or split the class by the calls each part makes."
+
+
+class ModuleMeasureLimit(CodeMeasureLimit):
+    """A limit on a measure of a module, taken over all its files. A module is no class and is read at no fidelity of
+    its own; it holds these measures only when a read measured code it holds, so it is judged whenever it holds one."""
+
+    node_types = _MODULE_NODES
+
+    def is_judged(self, node: "Node") -> bool:
+        return True
+
+
+class LimitModuleFileLines(ModuleMeasureLimit):
+    slug = "limit-module-file-lines"
+    measure = LONGEST_FILE_LINES
+    advice = "Split the file by the classes or the jobs it holds, each file named for what it keeps."
+
+
+class KeepModuleFilesMaintainable(ModuleMeasureLimit):
+    slug = "keep-module-files-maintainable"
+    measure = LEAST_MAINTAINABILITY
+    advice = "Split the file, and take its longest and most branching functions apart first: size and branching are what lower the index most."
+
+
+class LimitAverageClassComplexity(ModuleMeasureLimit):
+    slug = "limit-average-class-complexity"
+    measure = AVERAGE_CLASS_COMPLEXITY
+    advice = "Take the branching out of its most complex classes, into classes of their own or into data a smaller method looks up."
+
+
+class LimitModulesImporting(ModuleMeasureLimit):
+    slug = "limit-modules-importing"
+    measure = MODULES_IMPORTING
+    advice = "Find what the importers each use and split the module by it, or keep in it only the stable seam they share."
+
+
 MEASURE_LIMIT_RULES: tuple[CodeMeasureLimit, ...] = (
     LimitPathsThroughAFunction(),
     KeepFunctionsReadable(),
@@ -113,4 +171,10 @@ MEASURE_LIMIT_RULES: tuple[CodeMeasureLimit, ...] = (
     LimitClassComplexity(),
     LimitClassMethods(),
     KeepClassMethodsSharingData(),
+    LimitClassCoupling(),
+    LimitClassResponse(),
+    LimitModuleFileLines(),
+    KeepModuleFilesMaintainable(),
+    LimitAverageClassComplexity(),
+    LimitModulesImporting(),
 )

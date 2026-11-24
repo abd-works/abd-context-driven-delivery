@@ -51,19 +51,22 @@ with story("Record Module Measures As Node Facts"):
             expect([IMPORT_LOOPS.value_on(shop), MODULES_IMPORTED.value_on(shop), *self.asked_of_a_tool]).to(equal([0, 0, False, False]))
         with and_("the node keeps no second fact for either"):
             expect([node_of(self.shop, "Module", "shop").has_fact(name) for name in ("import_loops", "modules_imported")]).to(equal([False, False]))
-    with scenario("Show a module's three measures in its metrics group"):
+    with scenario("Show a module's measures in its metrics group"):
         with given("the shop project's config has a `code_measures` section"):
             self.shop = shop_project(files={CART_FILE: CART, **SHOP_CARD})
         with when("the code measures of `shop/cart.py` are taken and the explorer tree is built again"):
             self.shop.practice.reading.keep_code_measures(code_files(self.shop))
             # Graph.explorer_branch -> GraphReading.metrics_of
             self.shown = metrics_under(self.shop, "Module", "shop")
-        with then("the metrics group under the module shop shows its import loops with the limit 0, then the modules it imports and the modules that import it with their value and no limit"):
+        with then("the metrics group under the module shop shows its import loops with the limit 0, the modules it imports with its value and no limit, then the modules that import it, its longest file, its least maintainable file and its average class complexity, each with its limit"):
             expect(self.shown).to(equal([
                 "loops of modules importing one another that a module is part of: 0, limit 0",
                 "modules a module imports (outgoing coupling): 0",
-                "modules that import a module (incoming coupling): 0",
+                "modules that import a module (incoming coupling): 0, limit 40",
+                "lines of code in a module's longest file: 120, limit 800",
+                "maintainability index of a module's least maintainable file (0 to 100; higher is easier to change): 65, limit 20 or higher",
+                "average total complexity of a module's classes: 40, limit 15, past the limit",
             ]))
-        with and_("neither of the two measures with no limit is marked as past a limit"):
+        with and_("the measure with no limit is not marked as past a limit"):
             unlimited = [metric for metric in self.shop.practice.reading.metrics_of(node_of(self.shop, "Module", "shop")) if metric.limit is None]
             expect(any(metric.is_past_limit for metric in unlimited)).to(be_false)

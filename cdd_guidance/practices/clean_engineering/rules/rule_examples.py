@@ -84,12 +84,7 @@ def python_example_pair(slug: str) -> RulePair:
 
 def _example_files(folder: Path) -> dict[str, str]:
     """The example's asset plus its `.context` files, placed in one fixture folder."""
-    files: dict[str, str] = {}
-    for path in folder.rglob("*"):
-        if path.is_file() and "__pycache__" not in path.parts:
-            relative = path.relative_to(folder).as_posix()
-            files[f"{FIXTURE_FOLDER}/{relative}"] = path.read_text(encoding="utf-8")
-    return files
+    return {f"{FIXTURE_FOLDER}/{relative}": text for relative, text in _project_files(folder).items()}
 
 
 def module_example_pair(slug: str) -> RulePair:
@@ -123,3 +118,23 @@ def measured_example_pair(slug: str, tools: dict | None = None) -> RulePair:
     )
     faulty, repaired = (measured(fixture, tools) for fixture in fixtures)
     return RulePair(BY_SLUG[slug], faulty, repaired)
+
+
+def measured_module_example_pair(slug: str, tools: dict | None = None) -> RulePair:
+    """The faulty and repaired example projects of a rule that reads a measure of a module, each measured. Each example
+    folder holds a project's files as they sit from its top folder: the modules, each with its module card, and the
+    project's ``.context/config.json`` when the example sets a limit of its own so its project stays small; without
+    one, the project chose the shipped tools and limits."""
+    root = _PRACTICE / "model" / "python" / "_examples" / slug
+    fixtures = (practice_from_files({**MEASURES_CHOSEN, **_project_files(root / side)}) for side in ("faulty", "repaired"))
+    faulty, repaired = (measured(fixture, tools) for fixture in fixtures)
+    return RulePair(BY_SLUG[slug], faulty, repaired)
+
+
+def _project_files(folder: Path) -> dict[str, str]:
+    """Each file of the example project in folder, by its path from the project's top folder."""
+    return {
+        path.relative_to(folder).as_posix(): path.read_text(encoding="utf-8")
+        for path in folder.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts
+    }

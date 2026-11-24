@@ -23,6 +23,7 @@ _FOLDER = Path(__file__).resolve().parents[1]
 _TYPED_NUMBERS = (
     "35%", "20 statements", "three levels", "0-3 parameters",
     "10 paths", "past ten", "15 or lower", "50 lines", "100 or lower", "30 methods",
+    "14 other classes", "at 50 or fewer", "800 lines", "of 20 or higher", "40 or fewer",
 )
 _MEASURED_LIMIT_RULES = (
     "limit-paths-through-a-function", "keep-functions-readable", "limit-function-lines",

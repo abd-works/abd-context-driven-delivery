@@ -40,6 +40,7 @@ dependencies = [
 # A validate of code fails by name while a chosen tool is missing: pip install -e ".[measures]"
 measures = [
   "lizard>=1.26",
+  "radon>=6",
 ]
 # The checker that every name the code calls or imports still exists (scripts/names_exist) reads undefined Python
 # names with ruff: pip install -e ".[checks]"

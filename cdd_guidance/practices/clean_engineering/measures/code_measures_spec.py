@@ -8,10 +8,15 @@ from expects import be_false, be_none, be_true, contain, equal, expect, have_len
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.measures.code_measures import (
+    AVERAGE_CLASS_COMPLEXITY,
     CODE_LINES,
     IMPORT_LOOPS,
     CLASSES_DEPENDED_ON,
+    LEAST_MAINTAINABILITY,
+    LONGEST_FILE_LINES,
+    METHODS_SET_OFF,
     MODULES_IMPORTED,
+    MODULES_IMPORTING,
     NOT_MEASURED,
     SHIPPED_TOOLS,
     PARAMETERS_TAKEN,
@@ -26,7 +31,7 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
 from cdd_guidance.practices.clean_engineering.measures.measuring_tools import TOOLS, MeasuringTool, MeasuringToolNotInstalled, ToolDoesNotTakeMeasure
 from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 from cdd_guidance.practices.clean_engineering.rules.code_measure_limits import MEASURE_LIMIT_RULES
-from cdd_guidance.practices.clean_engineering.rules.rule_examples import MEASURES_CHOSEN, measured, measured_example_pair, practice_from_files
+from cdd_guidance.practices.clean_engineering.rules.rule_examples import MEASURES_CHOSEN, measured, measured_example_pair, measured_module_example_pair, practice_from_files
 from harness.graph.saved_graph import SavedGraph
 
 _CART = '''class Cart:
@@ -52,6 +57,15 @@ _ONE_GROUP_AND_A_HELPER = (
     "    def total(self) -> int:\n        return sum(self._lines)\n\n"
     "    def is_empty(self) -> bool:\n        return not self._lines\n\n"
     "    def label(self, sku: str) -> str:\n        return sku.upper()\n"
+)
+# Invoice's total calls its own subtotal twice and the methods of two other classes, one of them twice.
+_INVOICE = (
+    "class Tax:\n    def rate(self) -> int:\n        return 2\n\n    def round(self, cents: int) -> int:\n        return cents\n\n\n"
+    "class Discount:\n    def off(self) -> int:\n        return 1\n\n\n"
+    "class Invoice:\n    def __init__(self, tax: Tax, discount: Discount) -> None:\n        self._tax = tax\n        self._discount = discount\n\n"
+    "    def subtotal(self) -> int:\n        return 10\n\n"
+    "    def total(self) -> int:\n        cents = self.subtotal() + self.subtotal() - self._discount.off()\n"
+    "        return self._tax.round(cents * self._tax.rate())\n"
 )
 _CART_IN_JAVASCRIPT = "export class Cart {\n  total(discount) {\n    return discount;\n  }\n}\n"
 _CART_SPEC = "class CartExample:\n    def total(self, discount: int) -> int:\n        return discount\n"
@@ -96,8 +110,8 @@ _LOOP_THROUGH_A_PACKAGE = {
 
 
 class StandInLizard(MeasuringTool):
-    """Lizard, stood in for: every function has 14 paths and a readability score of 3, and every class a total
-    complexity of 40."""
+    """Lizard, stood in for: every function has 14 paths and a readability score of 3, every class a total complexity
+    of 40, and every module's longest file 120 lines of code."""
 
     name = "lizard"
 
@@ -107,7 +121,22 @@ class StandInLizard(MeasuringTool):
             PATHS_THROUGH.name: lambda measured: 14,
             READABILITY_SCORE.name: lambda measured: 3,
             TOTAL_COMPLEXITY.name: lambda measured: 40,
+            LONGEST_FILE_LINES.name: self._longest,
         }
+
+    def _longest(self, measured) -> int:
+        measured.keep_file(LONGEST_FILE_LINES, measured.files[0])
+        return 120
+
+
+class StandInRadon(MeasuringTool):
+    """Radon, stood in for: every module's least maintainable file has a maintainability index of 65."""
+
+    name = "radon"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._takes = {LEAST_MAINTAINABILITY.name: lambda measured: 65}
 
 
 class MeasuresNothing(MeasuringTool):
@@ -115,6 +144,19 @@ class MeasuresNothing(MeasuringTool):
 
     def value(self, measure, measured):
         return None
+
+
+class CountingLizard(MeasuringTool):
+    """Lizard, stood in for where a class's total complexity is read: one path for each line of the class's own."""
+
+    name = "lizard"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._takes = {TOTAL_COMPLEXITY.name: lambda measured: measured.lines[1] - measured.lines[0] + 1}
+
+    def value(self, measure, measured):
+        return super().value(measure, measured) if measure.name in self._takes else None
 
 
 class NotInstalled(MeasuringTool):
@@ -126,8 +168,8 @@ class NotInstalled(MeasuringTool):
         return self._imported("a_measuring_tool_nobody_installed", measure)
 
 
-_STAND_INS = {"lizard": StandInLizard}
-_READER_ALONE = {"lizard": MeasuresNothing}
+_STAND_INS = {"lizard": StandInLizard, "radon": StandInRadon}
+_READER_ALONE = {"lizard": MeasuresNothing, "radon": MeasuresNothing}
 
 
 def _node(fixture, kind: str, name: str):
@@ -139,12 +181,24 @@ def _kept(fixture, kind: str, name: str, measures: list[str]) -> dict:
     return {measure: node.get_fact(measure) for measure in measures if node.has_fact(measure)}
 
 
+def _module_hits_with(slug: str, facts: dict) -> list[str]:
+    """What the rule finds on the module shop once it holds facts, as a read that measured its files leaves them."""
+    fixture = practice_from_files({**MEASURES_CHOSEN, **_SHOP_CARD, "shop/cart.py": _CART})
+    shop = _node(fixture, "Module", "shop")
+    for fact, value in facts.items():
+        shop.set_fact(fact, value)
+    return fixture.hits(BY_SLUG[slug])
+
+
 def _hits_with(slug: str, kind: str, value) -> list[str]:
     """What the rule finds on Cart's total, or on Cart, once the fact the rule's measure is read from holds value."""
     fixture = practice_from_files({**MEASURES_CHOSEN, "shop/cart.py": _CART})
     node = _node(fixture, kind, "total" if kind == "Operation" else "Cart")
-    measure = BY_SLUG[slug].measure
-    setattr(node, measure.existing or measure.name, value)
+    fact = BY_SLUG[slug].measure.existing or BY_SLUG[slug].measure.name
+    if fact in node.graph_facts:
+        setattr(node, fact, value)
+    else:
+        node.set_fact(fact, value)
     return fixture.hits(BY_SLUG[slug])
 
 
@@ -163,8 +217,16 @@ with description("the tools a project chooses for its code measures") as self:
             chosen = [self.chosen.tool_name(TOTAL_COMPLEXITY, language) for language in ("typescript", "python")]
             expect(chosen).to(equal(["lizard", "lizard"]))
 
-        with it("should offer lizard and the practice's own reader, and no other tool"):
-            expect(sorted(TOOLS)).to(equal(["lizard", "reader"]))
+        with it("should offer lizard, radon and the practice's own reader, and no other tool"):
+            expect(sorted(TOOLS)).to(equal(["lizard", "radon", "reader"]))
+
+        with it("should take a module's longest file with lizard, and the maintainability index of its files with radon in Python alone"):
+            chosen = [self.chosen.tool_name(LONGEST_FILE_LINES, "typescript"), *(self.chosen.tool_name(LEAST_MAINTAINABILITY, language) for language in ("python", "typescript"))]
+            expect(chosen).to(equal(["lizard", "radon", None]))
+
+        with it("should count with the practice's own reader the classes a class depends on, the methods one call into it can set off, and a module's average class complexity"):
+            chosen = [self.chosen.tool_name(measure, "python") for measure in (CLASSES_DEPENDED_ON, METHODS_SET_OFF, AVERAGE_CLASS_COMPLEXITY)]
+            expect(chosen).to(equal(["reader", "reader", "reader"]))
 
         with it("should ask no tool for a measure a fact on the node already gives"):
             asked = [self.chosen.supplied_by_a_tool(measure) for measure in (CODE_LINES, PARAMETERS_TAKEN, IMPORT_LOOPS, MODULES_IMPORTED)]
@@ -178,7 +240,14 @@ with description("the tools a project chooses for its code measures") as self:
             expect(limits).to(equal([10, 15, 50, 3, 100]))
 
         with it("should hold a measure kept for information to no limit"):
-            expect(self.chosen.limit(CLASSES_DEPENDED_ON)).to(be_none)
+            expect(self.chosen.limit(MODULES_IMPORTED)).to(be_none)
+
+        with it("should hold a class to the shipped limits on its coupling and on the methods one call into it can set off"):
+            expect([self.chosen.limit(measure) for measure in (CLASSES_DEPENDED_ON, METHODS_SET_OFF)]).to(equal([14, 50]))
+
+        with it("should hold a module to the shipped limits on its importers, its longest file, its least maintainable file and its average class complexity"):
+            limits = [self.chosen.limit(measure) for measure in (MODULES_IMPORTING, LONGEST_FILE_LINES, LEAST_MAINTAINABILITY, AVERAGE_CLASS_COMPLEXITY)]
+            expect(limits).to(equal([40, 800, 20, 15]))
 
         with it("should take in JavaScript each measure lizard gives, as it does in TypeScript"):
             chosen = [self.chosen.tool_name(measure, "javascript") for measure in (PATHS_THROUGH, READABILITY_SCORE, TOTAL_COMPLEXITY)]
@@ -256,6 +325,13 @@ with description("the code measures the reader keeps of the files a read names")
 
         with it("should keep on a module the modules that import it"):
             expect(_kept(self.fixture, "Module", "shop", ["modules_importing"])).to(equal({"modules_importing": 0}))
+
+        with it("should keep on a module its longest file's lines and the file, its least maintainable file's index, and its classes' average total complexity"):
+            kept = _kept(self.fixture, "Module", "shop", ["longest_file_lines", "longest_file_lines_file", "least_maintainability", "average_class_complexity"])
+            expect(kept).to(equal({"longest_file_lines": 120, "longest_file_lines_file": "shop/cart.py", "least_maintainability": 65, "average_class_complexity": 40}))
+
+        with it("should keep on a class the methods one call into it can set off: its own four"):
+            expect(_kept(self.fixture, "OoadClass", "Cart", ["methods_set_off"])).to(equal({"methods_set_off": 4}))
 
         with it("should read a module's import loops and the modules it imports from the facts every read keeps"):
             shop = _node(self.fixture, "Module", "shop")
@@ -360,7 +436,7 @@ with description("the code measures the reader keeps of the files a read names")
         with it("should have the measure's rule report the tools there are"):
             fixture = practice_from_files({".context/config.json": '{"code_measures": {"tools": {"readability_score": {"python": "sonar"}}}}', "shop/cart.py": _CART})
             hits = measured(fixture, _STAND_INS).hits(BY_SLUG["keep-functions-readable"])
-            expect(hits).to(contain(contain("'sonar'", "lizard, reader")))
+            expect(hits).to(contain(contain("'sonar'", "lizard, radon, reader")))
 
     with context("by the refresh of the files a validate names"):
         with before.all:
@@ -383,11 +459,31 @@ with description("the code measures the reader keeps of the files a read names")
             expect(total.facts["paths_through"]).to(equal(14))
 
 
+with description("the methods one call into a class can set off") as self:
+    with context("with a class whose method calls the methods of other classes"):
+        with before.all:
+            self.fixture = measured(practice_from_files({**MEASURES_CHOSEN, "shop/invoice.py": _INVOICE}), _READER_ALONE)
+
+        with it("should count the class's own three methods and the three methods of other classes they call, once each"):
+            expect(_kept(self.fixture, "OoadClass", "Invoice", ["methods_set_off"])).to(equal({"methods_set_off": 6}))
+
+        with it("should count the class's coupling: the other classes it depends on"):
+            expect(_kept(self.fixture, "OoadClass", "Invoice", ["classes_depended_on"])).to(equal({"classes_depended_on": 2}))
+
+
+with description("a module's average class complexity") as self:
+    with context("with two classes the tool measured and a package inside the module"):
+        with it("should average the total complexity of the classes of its files and packages"):
+            fixture = measured(practice_from_files(_MODULES_AND_A_PACKAGE), {"lizard": CountingLizard, "radon": MeasuresNothing})
+            totals = [_node(fixture, "OoadClass", name).get_fact("total_complexity") for name in ("Cart", "Price")]
+            expect(_kept(fixture, "Module", "shop", ["average_class_complexity"])).to(equal({"average_class_complexity": round(sum(totals) / 2, 2)}))
+
+
 with description("a measuring tool asked for a measure") as self:
     with context("that it does not take"):
         with it("should refuse, naming the tool, the measure and the measures it takes"):
             expect(lambda: StandInLizard().value(CODE_LINES, None)).to(
-                raise_error(ToolDoesNotTakeMeasure, contain("'lizard'", "'code_lines'", "it takes paths_through, readability_score, total_complexity"))
+                raise_error(ToolDoesNotTakeMeasure, contain("'lizard'", "'code_lines'", "it takes longest_file_lines, paths_through, readability_score, total_complexity"))
             )
 
         with it("should be a measure not taken, which the read keeps on the node instead of stopping"):
@@ -445,6 +541,42 @@ with description("a limit on a code measure") as self:
         with it("should report more methods than the limit"):
             expect(_hits_with("limit-class-methods", "OoadClass", 31)).to(contain(contain("Class 'Cart' has 31 methods, over the limit of 30.")))
 
+        with it("should report more classes it depends on than the limit"):
+            expect(_hits_with("limit-class-coupling", "OoadClass", 15)).to(contain(contain("Class 'Cart' has 15 classes it depends on (coupling between objects), over the limit of 14.")))
+
+        with it("should report more methods one call into it can set off than the limit"):
+            expect(_hits_with("limit-class-response", "OoadClass", 51)).to(contain(contain("Class 'Cart' has 51 methods one call into it can set off (response for a class), over the limit of 50.")))
+
+    with context("on a class whose measure is at its limit"):
+        with it("should report neither its coupling nor the methods one call into it can set off"):
+            expect([_hits_with("limit-class-coupling", "OoadClass", 14), _hits_with("limit-class-response", "OoadClass", 50)]).to(equal([[], []]))
+
+    with context("on a module whose measure is past its limit"):
+        with it("should report a longest file over the limit, naming the file"):
+            hits = _module_hits_with("limit-module-file-lines", {"longest_file_lines": 801, "longest_file_lines_file": "shop/cart.py"})
+            expect(hits).to(contain(contain("Module 'shop' has a file of 801 lines of code, in shop/cart.py, over the limit of 800.")))
+
+        with it("should report a file whose maintainability index is under the limit, which is the least it may be"):
+            hits = _module_hits_with("keep-module-files-maintainable", {"least_maintainability": 19.5, "least_maintainability_file": "shop/cart.py"})
+            expect(hits).to(contain(contain("Module 'shop' has a file with a maintainability index of 19.5 (0 to 100; higher is easier to change), in shop/cart.py, under the limit of 20.")))
+
+        with it("should report an average class complexity over the limit"):
+            hits = _module_hits_with("limit-average-class-complexity", {"average_class_complexity": 15.5})
+            expect(hits).to(contain(contain("Module 'shop' has classes whose total complexity averages 15.5 (the paths through all a class's methods, added up), over the limit of 15.")))
+
+        with it("should report more modules importing it than the limit"):
+            expect(_module_hits_with("limit-modules-importing", {"modules_importing": 41})).to(contain(contain("Module 'shop' has 41 modules that import it, over the limit of 40.")))
+
+    with context("on a module whose measure is at its limit"):
+        with it("should report nothing"):
+            at_limits = (
+                ("limit-module-file-lines", {"longest_file_lines": 800}),
+                ("keep-module-files-maintainable", {"least_maintainability": 20}),
+                ("limit-average-class-complexity", {"average_class_complexity": 15}),
+                ("limit-modules-importing", {"modules_importing": 40}),
+            )
+            expect([_module_hits_with(slug, facts) for slug, facts in at_limits]).to(equal([[]] * 4))
+
     with context("in a project that sets a limit of its own"):
         with it("should hold the measure to the project's limit"):
             fixture = practice_from_files({".context/config.json": '{"code_measures": {"limits": {"paths_through": 20}}}', "shop/cart.py": _CART})
@@ -462,3 +594,12 @@ with description("a limit on a code measure") as self:
 
         with it("should report a class with a group of methods that share no data with the rest, and pass the repaired one"):
             self.sharing_data_pair.check()
+
+        with it("should report a class that depends on more classes than the limit, and pass the repaired one"):
+            measured_example_pair("limit-class-coupling", _READER_ALONE).check()
+
+        with it("should report a class one call into which can set off more methods than the limit, and pass the repaired one"):
+            measured_example_pair("limit-class-response", _READER_ALONE).check()
+
+        with it("should report a module more modules import than its project's limit, and pass the repaired one"):
+            measured_module_example_pair("limit-modules-importing", _READER_ALONE).check()

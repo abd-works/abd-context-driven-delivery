@@ -3,7 +3,7 @@ that node type, each with its plain-English name, its value and its limit. The o
 from expects import be_false, be_true, contain, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.clean_engineering.measures.code_measures import PATHS_THROUGH, READABILITY_SCORE, TOTAL_COMPLEXITY
+from cdd_guidance.practices.clean_engineering.measures.code_measures import LEAST_MAINTAINABILITY, LONGEST_FILE_LINES, PATHS_THROUGH, READABILITY_SCORE, TOTAL_COMPLEXITY
 from cdd_guidance.practices.clean_engineering.measures.measuring_tools import MeasuringTool
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import MEASURES_CHOSEN, measured, practice_from_files
 from harness.graph.node_filter import Filter, FilterChoices
@@ -32,18 +32,34 @@ _PRICE = "class Price:\n    def of(self, cents: int) -> int:\n        return cen
 
 
 class StandInLizard(MeasuringTool):
-    """Lizard, stood in for: every function has 14 paths and a readability score of 3, every class a total of 40."""
+    """Lizard, stood in for: every function has 14 paths and a readability score of 3, every class a total of 40, and
+    every module's longest file 120 lines of code."""
 
     name = "lizard"
 
     def __init__(self) -> None:
         super().__init__()
-        self._takes = {PATHS_THROUGH.name: lambda measured: 14, READABILITY_SCORE.name: lambda measured: 3, TOTAL_COMPLEXITY.name: lambda measured: 40}
+        self._takes = {
+            PATHS_THROUGH.name: lambda measured: 14,
+            READABILITY_SCORE.name: lambda measured: 3,
+            TOTAL_COMPLEXITY.name: lambda measured: 40,
+            LONGEST_FILE_LINES.name: lambda measured: 120,
+        }
+
+
+class StandInRadon(MeasuringTool):
+    """Radon, stood in for: every module's least maintainable file has a maintainability index of 12."""
+
+    name = "radon"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._takes = {LEAST_MAINTAINABILITY.name: lambda measured: 12}
 
 
 def _tree_of(files: dict[str, str]):
     """The graph of files once their measures are kept and the explorer tree is built again, as a refresh leaves it."""
-    fixture = measured(practice_from_files(files), {"lizard": StandInLizard})
+    fixture = measured(practice_from_files(files), {"lizard": StandInLizard, "radon": StandInRadon})
     graph = fixture.practice.reading.graph
     graph.practices.rebuild_trees()
     return fixture, graph
@@ -72,23 +88,28 @@ with description("the metrics group of a node in the explorer tree") as self:
                 "parameters a function takes: 1, limit 3",
             ]))
 
-        with it("should list, under a class, its total complexity, its methods and its groups of methods sharing no data"):
+        with it("should list, under a class, its total complexity, its methods, its coupling, the methods one call into it can set off, and its groups of methods sharing no data"):
             expect(_group_under(self.graph, _node(self.fixture, "OoadClass", "Cart"))).to(equal([
                 "total complexity of a class (the paths through all its methods, added up): 40, limit 100",
                 "methods in a class: 4, limit 30",
+                "classes a class depends on (coupling between objects): 0, limit 14",
+                "methods one call into a class can set off (response for a class): 4, limit 50",
                 "groups of methods in a class that share no data with one another (lack of cohesion): 2, limit 1, past the limit",
             ]))
 
-        with it("should list, under a module, its import loops with their limit, then the modules it imports and the modules that import it with no limit"):
+        with it("should list, under a module, its import loops, the modules it imports with no limit, then the modules that import it, its longest file, its least maintainable file and its average class complexity, each with its limit"):
             expect(_group_under(self.graph, _node(self.fixture, "Module", "shop"))).to(equal([
                 "loops of modules importing one another that a module is part of: 0, limit 0",
                 "modules a module imports (outgoing coupling): 0",
-                "modules that import a module (incoming coupling): 0",
+                "modules that import a module (incoming coupling): 0, limit 40",
+                "lines of code in a module's longest file: 120, limit 800",
+                "maintainability index of a module's least maintainable file (0 to 100; higher is easier to change): 12, limit 20 or higher, past the limit",
+                "average total complexity of a module's classes: 40, limit 15, past the limit",
             ]))
 
         with it("should mark no metric that has no limit as past it"):
             unlimited = [metric for metric in self.fixture.practice.reading.metrics_of(_node(self.fixture, "Module", "shop")) if metric.limit is None]
-            expect([metric.is_past_limit for metric in unlimited]).to(equal([False, False]))
+            expect([metric.is_past_limit for metric in unlimited]).to(equal([False]))
 
         with it("should give a package, which is part of its module, no group"):
             expect(_group_under(self.graph, _node(self.fixture, "Package", "pricing"))).to(equal([]))

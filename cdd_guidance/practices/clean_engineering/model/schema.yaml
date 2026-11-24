@@ -42,6 +42,10 @@ module:
     - language-modules-one-section
     - modules-not-model-blocks
     - source-parses
+    - limit-module-file-lines
+    - keep-module-files-maintainable
+    - limit-average-class-complexity
+    - limit-modules-importing
 
 package:
   fidelity: modules
@@ -105,6 +109,8 @@ class:
     - limit-class-complexity
     - limit-class-methods
     - keep-class-methods-sharing-data
+    - limit-class-coupling
+    - limit-class-response
     - delete-unused-classes
     - check-use-the-graph-cannot-see
     - connect-disconnected-classes

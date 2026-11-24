@@ -77,13 +77,21 @@ class CheckedCodeMeasures:
         return found
 
     def _measure(self, node: "Node", of: str, files: dict[str, tuple[Path, ...]]) -> None:
-        """Keep each measure taken of this kind of node: the first answer among the languages its files are written
-        in, each asked of the tool chosen for the measure in that language."""
+        """Keep each measure taken of this kind of node: the answers of the languages its files are written in, each
+        asked of the tool chosen for the measure in that language, made one as the measure combines them. A measure
+        taken of one of a module's files keeps the file of the answer it took."""
         for measure in (measure for measure in MEASURES if measure.of == of and self._chosen.supplied_by_a_tool(measure)):
-            answers = (self._answer(measure, language, MeasuredNode(node, self._reading, held)) for language, held in files.items())
-            value = next((answer for answer in answers if answer is not None), None)
-            if value is None:
+            given: list[tuple[float | int, object]] = []
+            for language, held in files.items():
+                answer = self._answer(measure, language, MeasuredNode(node, self._reading, held))
+                if answer is not None:
+                    given.append((answer, node.get_fact(measure.file_fact, None)))
+            if not given:
                 continue
+            value = measure.combine([answer for answer, _file in given])
+            file = next((file for answer, file in given if answer == value), None)
+            if file:
+                node.set_fact(measure.file_fact, file)
             if measure.name in node.graph_facts:
                 setattr(node, measure.name, value)
             else:

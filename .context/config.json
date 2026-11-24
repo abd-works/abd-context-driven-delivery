@@ -39,12 +39,32 @@
         "typescript": "reader",
         "javascript": "reader"
       },
+      "methods_set_off": {
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
+      },
       "unshared_method_groups": {
         "python": "reader",
         "typescript": "not measured",
         "javascript": "not measured"
       },
       "modules_importing": {
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
+      },
+      "longest_file_lines": {
+        "python": "lizard",
+        "typescript": "lizard",
+        "javascript": "lizard"
+      },
+      "least_maintainability": {
+        "python": "radon",
+        "typescript": "not measured",
+        "javascript": "not measured"
+      },
+      "average_class_complexity": {
         "python": "reader",
         "typescript": "reader",
         "javascript": "reader"
@@ -72,8 +92,14 @@
       "parameters_taken": 3,
       "total_complexity": 100,
       "method_count": 30,
+      "classes_depended_on": 14,
+      "methods_set_off": 50,
       "unshared_method_groups": 1,
-      "import_loops": 0
+      "import_loops": 0,
+      "modules_importing": 40,
+      "longest_file_lines": 800,
+      "least_maintainability": 20,
+      "average_class_complexity": 15
     }
   },
   "code_reach": {

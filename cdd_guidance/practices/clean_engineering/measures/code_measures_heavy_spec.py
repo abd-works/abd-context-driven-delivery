@@ -1,4 +1,4 @@
-"""The code measures taken with the real tool, lizard, on real files: each limit rule against its failing
+"""The code measures taken with the real tools, lizard and radon, on real files: each limit rule against its failing
 and its repaired example, code in each language, and a validate in a session whose project chose the tools.
 
 Heavy: every example runs the outside measuring tool, which needs the ``measures`` dependency group installed
@@ -27,6 +27,7 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import (  # no
     example_asset_paths,
     measured,
     measured_example_pair,
+    measured_module_example_pair,
     practice_from_files,
 )
 from space.session.spec_support.throwaway_project import ThrowawayProject  # noqa: E402
@@ -83,6 +84,24 @@ with description("the code measures the real tools take") as self:
 
         with it("should report a class with a group of methods sharing no data with the rest, and pass the repaired one"):
             measured_example_pair("keep-class-methods-sharing-data").check()
+
+        with it("should report a class that depends on more classes than the limit, and pass the repaired one"):
+            measured_example_pair("limit-class-coupling").check()
+
+        with it("should report a class one call into which sets off more methods than the limit, and pass the repaired one"):
+            measured_example_pair("limit-class-response").check()
+
+        with it("should report a module whose longest file has more lines of code than its project's limit, and pass the repaired one"):
+            measured_module_example_pair("limit-module-file-lines").check()
+
+        with it("should report a module with a file whose maintainability index is under the limit, and pass the repaired one"):
+            measured_module_example_pair("keep-module-files-maintainable").check()
+
+        with it("should report a module whose classes' average total complexity is over the limit, and pass the repaired one"):
+            measured_module_example_pair("limit-average-class-complexity").check()
+
+        with it("should report a module more modules import than its project's limit, and pass the repaired one"):
+            measured_module_example_pair("limit-modules-importing").check()
 
     with context("of Python code"):
         with before.all:

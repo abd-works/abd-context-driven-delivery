@@ -4,7 +4,11 @@ A measure is one number about a function, a class, or a module, read from a fact
 wherever a person reads it. Most are facts the reader already keeps on every node it reads: an operation's lines and
 parameters, a class's methods, a module's import loops and the modules it imports. A measure no such fact gives is
 supplied by a tool, kept as a fact when the reader reads a file a read names: the paths through a function, its
-readability score, and a class's total complexity. Which tool supplies one depends on
+readability score, a class's total complexity, the lines of a module's longest file and the maintainability index of
+its least maintainable one. The practice's own reader is the tool for what the graph's nodes and edges give, such as
+the classes a class depends on, the methods one call into it can set off, and the modules that import a module. A
+module is measured over all its files and the packages inside it, so the fact on its node answers for the module as a
+whole: its longest file, its least maintainable file, the average of its classes. Which tool supplies one depends on
 the language the code is written in, so the choice is a table of measure by language, kept with the limits in the
 project's ``.context/config.json`` under ``code_measures``. A project holds its code to the limits once its config has
 that section; the section starts from the shipped table, which fills in Python, TypeScript and JavaScript, and lays
@@ -55,6 +59,30 @@ class CodeMeasure:
     existing: str = ""
     counted: bool = False
     read: Callable[["Node"], float | int | None] | None = field(default=None, compare=False)
+    # True for a measure where higher is better, such as a maintainability index: its limit is the least it may be.
+    least: bool = False
+    # How the answers for a module written in several languages, each from the tool chosen in that language, make one:
+    # the first answer, unless the measure says otherwise, such as the longest of each language's longest files.
+    combined: Callable[[list], float | int] | None = field(default=None, compare=False)
+
+    @property
+    def file_fact(self) -> str:
+        """The fact a module keeps beside a measure taken of one of its files, such as its longest file: that file's
+        path from the source root, which the measure's rule names."""
+        return f"{self.name}_file"
+
+    def is_past(self, value: float | int, limit: float | int) -> bool:
+        """Whether value is past limit: above it, or below it for a measure where higher is better."""
+        return value < limit if self.least else value > limit
+
+    @property
+    def past_said(self) -> str:
+        """How a sentence says a value is past the limit: over it, or under it for a measure where higher is better."""
+        return "under the limit of" if self.least else "over the limit of"
+
+    def combine(self, answers: list) -> float | int:
+        """One value from the answers of each language a module's files are written in."""
+        return self.combined(answers) if self.combined is not None else answers[0]
 
     @property
     def not_taken_fact(self) -> str:
@@ -105,7 +133,13 @@ TOTAL_COMPLEXITY = CodeMeasure(
     CLASS,
 )
 METHOD_COUNT = CodeMeasure("method_count", "methods in a class", "{value} methods", CLASS, existing="method_count")
-CLASSES_DEPENDED_ON = CodeMeasure("classes_depended_on", "classes a class depends on (coupling between objects)", "{value} classes it depends on", CLASS)
+CLASSES_DEPENDED_ON = CodeMeasure("classes_depended_on", "classes a class depends on (coupling between objects)", "{value} classes it depends on (coupling between objects)", CLASS)
+METHODS_SET_OFF = CodeMeasure(
+    "methods_set_off",
+    "methods one call into a class can set off (response for a class)",
+    "{value} methods one call into it can set off (response for a class)",
+    CLASS,
+)
 UNSHARED_METHOD_GROUPS = CodeMeasure(
     "unshared_method_groups",
     "groups of methods in a class that share no data with one another (lack of cohesion)",
@@ -117,14 +151,32 @@ UNSHARED_METHOD_GROUPS = CodeMeasure(
 IMPORT_LOOPS = CodeMeasure("import_loops", "loops of modules importing one another that a module is part of", "{value} import loops", MODULE, existing=MODULE_IMPORT_LOOPS_FACT, counted=True)
 MODULES_IMPORTED = CodeMeasure("modules_imported", "modules a module imports (outgoing coupling)", "{value} modules it imports", MODULE, existing=IMPORTED_MODULES_FACT, counted=True)
 MODULES_IMPORTING = CodeMeasure("modules_importing", "modules that import a module (incoming coupling)", "{value} modules that import it", MODULE)
+LONGEST_FILE_LINES = CodeMeasure(
+    "longest_file_lines", "lines of code in a module's longest file", "a file of {value} lines of code", MODULE, combined=max,
+)
+LEAST_MAINTAINABILITY = CodeMeasure(
+    "least_maintainability",
+    "maintainability index of a module's least maintainable file (0 to 100; higher is easier to change)",
+    "a file with a maintainability index of {value} (0 to 100; higher is easier to change)",
+    MODULE,
+    least=True,
+    combined=min,
+)
+AVERAGE_CLASS_COMPLEXITY = CodeMeasure(
+    "average_class_complexity",
+    "average total complexity of a module's classes",
+    "classes whose total complexity averages {value} (the paths through all a class's methods, added up)",
+    MODULE,
+)
 COPIED_CODE_BLOCKS = CodeMeasure("copied_code_blocks", "blocks of code a module repeats from another file", "{value} blocks of code repeated from another file", MODULE)
 ABSTRACTNESS = CodeMeasure("abstractness", "share of a module's classes that are abstract (abstractness, 0 to 1)", "{value} of its classes abstract", MODULE)
 INSTABILITY = CodeMeasure("instability", "share of a module's imports that go outward (instability, 0 to 1)", "{value} of its imports going outward", MODULE)
 
 MEASURES: tuple[CodeMeasure, ...] = (
     PATHS_THROUGH, READABILITY_SCORE, CODE_LINES, PARAMETERS_TAKEN,
-    TOTAL_COMPLEXITY, METHOD_COUNT, CLASSES_DEPENDED_ON, UNSHARED_METHOD_GROUPS,
-    IMPORT_LOOPS, MODULES_IMPORTED, MODULES_IMPORTING, COPIED_CODE_BLOCKS, ABSTRACTNESS, INSTABILITY,
+    TOTAL_COMPLEXITY, METHOD_COUNT, CLASSES_DEPENDED_ON, METHODS_SET_OFF, UNSHARED_METHOD_GROUPS,
+    IMPORT_LOOPS, MODULES_IMPORTED, MODULES_IMPORTING, LONGEST_FILE_LINES, LEAST_MAINTAINABILITY, AVERAGE_CLASS_COMPLEXITY,
+    COPIED_CODE_BLOCKS, ABSTRACTNESS, INSTABILITY,
 )
 MEASURE_NAMED = {measure.name: measure for measure in MEASURES}
 
@@ -136,14 +188,19 @@ SHIPPED_TOOLS: dict[str, dict[str, str]] = {
     READABILITY_SCORE.name: {"python": "lizard", "typescript": "lizard", "javascript": "lizard"},
     TOTAL_COMPLEXITY.name: {"python": "lizard", "typescript": "lizard", "javascript": "lizard"},
     CLASSES_DEPENDED_ON.name: {"python": READER, "typescript": READER, "javascript": READER},
+    METHODS_SET_OFF.name: {"python": READER, "typescript": READER, "javascript": READER},
     UNSHARED_METHOD_GROUPS.name: {"python": READER, "typescript": NOT_MEASURED, "javascript": NOT_MEASURED},
     MODULES_IMPORTING.name: {"python": READER, "typescript": READER, "javascript": READER},
+    LONGEST_FILE_LINES.name: {"python": "lizard", "typescript": "lizard", "javascript": "lizard"},
+    # Radon takes the maintainability index of Python alone; no tool is shipped for it in the brace languages.
+    LEAST_MAINTAINABILITY.name: {"python": "radon", "typescript": NOT_MEASURED, "javascript": NOT_MEASURED},
+    AVERAGE_CLASS_COMPLEXITY.name: {"python": READER, "typescript": READER, "javascript": READER},
     COPIED_CODE_BLOCKS.name: {"python": NOT_MEASURED, "typescript": NOT_MEASURED, "javascript": NOT_MEASURED},
     ABSTRACTNESS.name: {"python": READER, "typescript": READER, "javascript": READER},
     INSTABILITY.name: {"python": READER, "typescript": READER, "javascript": READER},
 }
-# The most each measure may be before its rule reports the node. A measure with no limit is kept for information.
-# ``one-way-deps`` holds a module to no import loop at all.
+# The most each measure may be before its rule reports the node, or the least, for a measure where higher is better. A
+# measure with no limit is kept for information. ``one-way-deps`` holds a module to no import loop at all.
 SHIPPED_LIMITS: dict[str, float] = {
     PATHS_THROUGH.name: 10,
     READABILITY_SCORE.name: 15,
@@ -151,12 +208,18 @@ SHIPPED_LIMITS: dict[str, float] = {
     PARAMETERS_TAKEN.name: 3,
     TOTAL_COMPLEXITY.name: 100,
     METHOD_COUNT.name: 30,
+    CLASSES_DEPENDED_ON.name: 14,
+    METHODS_SET_OFF.name: 50,
     UNSHARED_METHOD_GROUPS.name: 1,
     IMPORT_LOOPS.name: 0,
+    MODULES_IMPORTING.name: 40,
+    LONGEST_FILE_LINES.name: 800,
+    LEAST_MAINTAINABILITY.name: 20,
+    AVERAGE_CLASS_COMPLEXITY.name: 15,
 }
 # The measures the explorer tree shows under a node for information, with their value and no limit: no rule reads
 # them, so none reports them.
-SHOWN_WITHOUT_LIMIT: tuple[CodeMeasure, ...] = (MODULES_IMPORTED, MODULES_IMPORTING)
+SHOWN_WITHOUT_LIMIT: tuple[CodeMeasure, ...] = (MODULES_IMPORTED,)
 
 
 class MeasureNotTaken(Exception):

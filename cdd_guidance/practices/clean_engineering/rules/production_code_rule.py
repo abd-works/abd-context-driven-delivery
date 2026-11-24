@@ -30,9 +30,14 @@ class ProductionCodeRule(PracticeGraphRule):
         """Judge node unless it is test code, as the project tells it through the reading of the node's practice."""
         if node.practice.reading.test_code.is_test_code(node.source.file):
             return []
-        if self.code_fidelity_only and not node.is_read_at(CODE_FIDELITY):
+        if self.code_fidelity_only and not self.is_judged(node):
             return []
         return self.check_production(node, context)
+
+    def is_judged(self, node: "Node") -> bool:
+        """Whether a rule of the code fidelity alone judges node: a node read at the code fidelity, such as a class one
+        of whose operations has a body."""
+        return node.is_read_at(CODE_FIDELITY)
 
     def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         return []

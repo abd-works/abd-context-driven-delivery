@@ -100,7 +100,7 @@ class GraphReading(HoldsProjectTestCode, PracticeReading):
             return []
         limited = [(measure, chosen.limit(measure)) for measure in MEASURES if node.type in NODE_TYPES[measure.of]]
         held = [(measure, limit, measure.value_on(node)) for measure, limit in limited if limit is not None or measure in SHOWN_WITHOUT_LIMIT]
-        return [NodeMetric(measure.name, measure.label, value, limit) for measure, limit, value in held if value is not None]
+        return [NodeMetric(measure.name, measure.label, value, limit, measure.least) for measure, limit, value in held if value is not None]
 
     def keep_code_measures(self, files: list[Path]) -> None:
         """Keep the code measures of files as facts on the functions, classes and modules read from them, each supplied
