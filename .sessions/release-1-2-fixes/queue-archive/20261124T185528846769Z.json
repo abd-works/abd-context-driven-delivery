@@ -1,0 +1,17 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T18:55:28.846769+00:00",
+  "prompts": [
+    {
+      "id": "9b14c6b51d9f",
+      "text": "[interruption] dont add to queue fixc it",
+      "steps": [
+        {
+          "text": "[interruption] you are supposed to be smart about adding tasks --> clean up name , and only\u2026",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    }
+  ]
+}

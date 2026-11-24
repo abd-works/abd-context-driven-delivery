@@ -1718,6 +1718,18 @@ test("in sub-agent mode the cards no robot has show under the robots at the queu
   expect([JSON.stringify(loose).includes('"card-row-m"'), robots.includes('"card-row-m"'), loose?.props.width]).toEqual([true, false, '100%'])
 })
 
+// A card queued for a robot by name stands in that robot's queue, so it is not drawn again among the cards no robot has.
+test("in sub-agent mode a card queued for a robot by name shows only in that robot's queue, not again under the robots", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...QUEUED.map(prompt => ({ ...prompt, robot: prompt.id === 'a' ? 'Sparky' : 'Bolt' })), { id: 'n', text: '[for Bolt] Run the heavy tier' }]).map(answered) }, version: 2 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const loose = await ui.find({ type: 'Box', key: 'agent-loose-cards' })
+  await ui.unmount()
+
+  expect(JSON.stringify(loose ?? {}).includes('"card-row-n"')).toBe(false)
+})
+
 test('sending the queue to sub-agents keeps their cards, so each can mark its own card done', async ($, on) => {
   const seeded = groupedQueue(on)
   seeded.stored.isPlaying = { value: true, version: 1 }
@@ -1779,7 +1791,7 @@ test("in sub-agent mode the note on a new message shows the robots' queues and l
   await $.prompt.submit({ text: 'also run the heavy tier', wait: false, origin: { kind: 'composer' } })
 
   expect(carried.join()).toContain('Bolt: [b] Run the unit tier')
-  expect(carried.join()).toContain('[for <robot name>]')
+  expect(carried.join()).toContain('prompt-queue.assign')
   expect(carried.join()).toContain('do it yourself')
 })
 

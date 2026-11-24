@@ -291,7 +291,8 @@ function CardButtonsView($: EngineInterface, e: AbovePromptEvent, prompt: Queued
 function AgentColumnsView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
   const { Box } = $.ui.resolve(e)
 
-  const loose = state.queue.prompts.filter(prompt => !prompt.robot)
+  const robotCards = new Set(state.tasks.flatMap((task, place) => robotPromptsOf(state.queue.prompts, task, place).map(prompt => prompt.id)))
+  const loose = state.queue.prompts.filter(prompt => !prompt.robot && !robotCards.has(prompt.id))
 
   return (
     <Box key="agent-mode" flexDirection="column" rowGap="sm" width="100%">

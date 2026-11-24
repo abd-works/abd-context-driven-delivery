@@ -24,6 +24,8 @@ const QUEUE_INSTRUCTIONS = [
   'Keep one card for each goal: when a message the person sends belongs to a goal already on the queue, make it a task of that goal with prompt-queue.set_steps',
   'and take its own card off with prompt-queue.remove; gather related [interruption] cards under one goal card the same way, written as a short title of the goal.',
   'Keep the order done, then being worked, then not started.',
+  'After you add, assign, move or take off cards, call prompt-queue.show and check what you placed: each card stands once, on the goal or robot you meant,',
+  'with no card left over that is only talk or a copy of another; fix what is wrong before you answer the person, so they never have to point it out.',
 ].join(' ')
 // What marks a prompt put back on the queue to wait for the person's answer; play passes over it.
 const DECISION_FLAG = '[decision required]'
@@ -530,8 +532,11 @@ async function addSentGoal($: EngineInterface, title: string): Promise<SentPromp
 /** What the agent is told about a message queued as a goal of its own: fold it into a goal it belongs to, or mark it
  * done once its work is done. */
 function sentGoalNoteOf(sentId: string): string {
-  return `This prompt is on this chat's prompt queue as [${sentId}]. If it belongs to a goal already on the queue, make it a task of that goal ` +
-    'with prompt-queue.set_steps and take this card off with prompt-queue.remove; otherwise, when its work is done, call prompt-queue.done with that id.'
+  return `This prompt is on this chat's prompt queue as [${sentId}], titled with the person's words as typed. Before any other work, decide what it is. ` +
+    'If it is only talk (a question, an answer, a complaint or a comment), take this card off with prompt-queue.remove and just answer it. ' +
+    'If it belongs to a goal already on the queue, make it a task of that goal with prompt-queue.set_steps and take this card off with prompt-queue.remove. ' +
+    'Otherwise it is work of its own: give it with prompt-queue.edit a clean title, a short statement of the goal in plain words with the typing ' +
+    'mistakes, the [interruption] mark and any venting left out, and when its work is done, call prompt-queue.done with that id.'
 }
 
 /** The goal a message the person sends is filed under: the one last worked, if it is on the queue, done or not, while
@@ -584,7 +589,8 @@ function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
   }
   return [
     "Sub-agent mode is on. You decide where this message goes: do it yourself; make it a task of an item in a robot's queue with prompt-queue.add_interruption;",
-    "or give it to a robot as a new item with prompt-queue.add, its text starting [for <robot name>]. Take it off this goal when it goes elsewhere.",
+    'or give it to a robot as a new item: prompt-queue.add, then prompt-queue.assign with the robot\'s name, so it stands in that robot\'s queue alone. Take it off this goal when it goes elsewhere,',
+    "then call prompt-queue.show and check each card stands once, in the robot's queue you meant.",
     "A robot works only the words this chat sends it, and says when it finished: send it new work with SendMessage to its robot name. The robots' queues:",
     ...robots.map((robot, place) => `${agentNameOf(robot, place)}: ${robotPromptsOf(goals, robot, place).map(goal => `[${goal.id}] ${goal.text.slice(0, GOAL_TITLE_COLUMNS)}`).join('; ')}`),
   ]
