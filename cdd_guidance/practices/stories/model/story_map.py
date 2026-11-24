@@ -152,17 +152,17 @@ class StoryNode(ModelNode, ABC):
         # writes it back unchanged.
         self.description_text: str = ""
         self.evidence: List[str] = []
-        # The facts the story map's rules read about this node, which the graph saves as the node's own.
-        self.name_facts = NameFacts(self)
-
-    def fact_parts(self) -> tuple[NameFacts, ...]:
-        return (self.name_facts,)
 
     def load_map_facts(self) -> None:
-        """Fill the facts the story map's rules read about this node (``name_facts``): a node of no layer holds no
-        children it is sized by, and names a generic handler when its name opens with one."""
-        self.name_facts.load(0)
-        self.name_facts.judge(generic_handler=self.name_facts.opens_with_generic_handler)
+        """Keep the facts the story map's rules read about this node (*NameFacts*): a node of no layer holds no children
+        it is sized by, and names a generic handler when its name opens with one."""
+        facts = self._name_facts()
+        facts.judge(generic_handler=facts.opens_with_generic_handler)
+        self.set_facts(facts.facts)
+
+    def _name_facts(self) -> NameFacts:
+        """What the node's name and file say, before it counts its children and judges its place in the map."""
+        return NameFacts(self.name, self.source.file or "")
 
     @property
     def recorded_name(self) -> str:
@@ -867,7 +867,9 @@ class Scenario(CodeHeld):
 
     def load_map_facts(self) -> None:
         """A scenario is sized by its steps, against no band."""
-        self.name_facts.load(len(self.steps), label="steps")
+        facts = self._name_facts()
+        facts.count(len(self.steps), label="steps")
+        self.set_facts(facts.facts)
 
     @property
     def code_key(self) -> tuple:
@@ -996,8 +998,10 @@ class Story(CodeHeld):
         """A story is sized by its scenarios, against no band; its name may hide a generic handler or repeat a later
         sibling's."""
         self.scenario_count = len(self.scenarios)
-        self.name_facts.load(self.scenario_count, label="scenarios")
-        self.name_facts.judge(self.name_facts.opens_with_generic_handler, self._repeats_later_sibling())
+        facts = self._name_facts()
+        facts.count(self.scenario_count, label="scenarios")
+        facts.judge(facts.opens_with_generic_handler, self._repeats_later_sibling())
+        self.set_facts(facts.facts)
 
     def _repeats_later_sibling(self) -> bool:
         siblings = list(getattr(self.parent, "stories", []) or [])
@@ -1189,8 +1193,10 @@ class Epic(CodeHeld):
     def load_map_facts(self) -> None:
         """An epic is sized by its sub-epics and stories, against the band of its layer, and may name the verb all its
         stories open with."""
-        self.name_facts.load(len(self.epics) + len(self.stories), self._child_band_for_layer())
-        self.name_facts.judge(shared_verb=self._shared_opening())
+        facts = self._name_facts()
+        facts.count(len(self.epics) + len(self.stories), self._child_band_for_layer())
+        facts.judge(shared_verb=self._shared_opening())
+        self.set_facts(facts.facts)
 
     def _child_band_for_layer(self) -> ChildBand:
         """The band this node's children fit, by the layer it is (`child-count-fits-layer`, ``LAYER_BANDS``)."""

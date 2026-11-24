@@ -47,7 +47,7 @@ with description("the band of children a story map's layer holds") as self:
             expect((bands.holding_sub_epics.written, bands.sub_epic.written, bands.flat_epic.written)).to(equal(("2-9", "2-9", "4-9")))
 
         with it("should give a sub-epic its target from the band, for the check to report"):
-            expect(_sub_epic_of(10).name_facts.child_target).to(equal(story_map.LAYER_BANDS.sub_epic.written))
+            expect(_sub_epic_of(10).get_fact("child_target")).to(equal(story_map.LAYER_BANDS.sub_epic.written))
 
     with context("in the practice's own files"):
         with it("should not be typed in the practice's document, which carries a marker for it"):
@@ -84,7 +84,7 @@ with description("the band of children a story map's layer holds") as self:
             self.changed.stop()
 
         with it("should change the target the check reports"):
-            expect((_sub_epic_of(6).name_facts.child_band, _sub_epic_of(6).name_facts.child_target)).to(equal(("error", "2-5")))
+            expect((_sub_epic_of(6).get_fact("child_band"), _sub_epic_of(6).get_fact("child_target"))).to(equal(("error", "2-5")))
 
         with it("should change the rule's text"):
             expect(_rule_text("child-count-fits-layer")).to(contain("groups 3-6 children", "holds 2-5", "holds 4-8"))

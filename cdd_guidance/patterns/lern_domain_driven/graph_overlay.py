@@ -12,7 +12,7 @@ from pathlib import Path
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, PracticeNodes
 from harness.graph.pattern_overlays import GraphOverlay
-from harness.graph.practice_node_types import PracticeNodeTypes
+from harness.graph.practice_node_types import NODE_TYPE_TABLES, PracticeNodeTypes
 from harness.graph.skipped_folders import scanned_files
 
 from cdd_guidance.patterns.lern_domain_driven import fact_names
@@ -57,8 +57,6 @@ class LernOverlay(GraphOverlay):
             "writtenBy", "belongsTo",
         }
     )
-
-    types = LernNodeTypes()
 
     def adds_rules_to(self, node: Node) -> bool:
         """LERN is constrained to TypeScript: a node read from code in another language carries none of its rules."""
@@ -290,3 +288,6 @@ class _AggregateTiers:
             return False
         return not any(filename.endswith(f"{suffix}.tsx") for suffix in _VIEW_SKIP_SUFFIXES)
 
+
+# LERN's schema keys join the graph's node type tables when the pattern is imported, as it registers itself then.
+NODE_TYPE_TABLES.read_types(LernNodeTypes())

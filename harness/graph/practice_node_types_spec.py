@@ -2,7 +2,6 @@
 from expects import be_none, be_true, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.annotations.class_registry import ClassRegistry
 from harness.graph.practice_node_types import NodeTypeTables, NodeTypeTablesDisagree, PracticeNodeTypes
 
 
@@ -22,20 +21,18 @@ class _OtherInvokes(PracticeNodeTypes):
     edge_order = {"invokes": 3}
 
 
-class _Reading:
-    def __init__(self, types: PracticeNodeTypes) -> None:
-        self.types = types
-
-
-class _Practices:
-    """A catalogue of practices as the tables read it: each practice's class, whose reading names its types."""
+class _Registered:
+    """What a registry gives the tables: the node types of each class registered with it."""
 
     def __init__(self, *types: PracticeNodeTypes) -> None:
-        self.practice_classes = tuple(type(f"Practice{index}", (), {"reading_type": _Reading(each)}) for index, each in enumerate(types))
+        self.types = list(types)
+
+    def node_types(self) -> tuple[PracticeNodeTypes, ...]:
+        return tuple(self.types)
 
 
 def _tables(*types: PracticeNodeTypes) -> NodeTypeTables:
-    return NodeTypeTables(_Practices(*types), ClassRegistry(lambda pattern: pattern.__name__))
+    return NodeTypeTables(_Registered(*types))
 
 
 with description("node type tables") as self:
@@ -75,8 +72,15 @@ with description("node type tables") as self:
 
     with context("whose registered practices change"):
         with it("should join the tables again"):
-            practices = _Practices(_CodeTypes())
-            tables = NodeTypeTables(practices, ClassRegistry(lambda pattern: pattern.__name__))
+            practices = _Registered(_CodeTypes())
+            tables = NodeTypeTables(practices)
             tables.order_of("participants")
-            practices.practice_classes = _Practices(_StepTypes()).practice_classes
+            practices.types = [_StepTypes()]
             expect(tables.is_child_list("steps")).to(be_true)
+
+    with context("that a source joins later"):
+        with it("should read its node types from then on"):
+            tables = _tables(_CodeTypes())
+            tables.order_of("participants")
+            tables.read_from(_Registered(_StepTypes()))
+            expect(tables.order_of("steps")).to(equal(4))

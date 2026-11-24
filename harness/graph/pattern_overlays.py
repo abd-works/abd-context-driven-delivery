@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING
 
 from harness.annotations.class_folder import class_folder
 from harness.annotations.class_registry import ClassRegistry
-from harness.graph.practice_node_types import PracticeNodeTypes
 from harness.graph.practice_rule import PracticeGraphRule, SharedPracticeGraphRule
 from harness.graph.schema_conformance import FRAMEWORK_RULES
 from harness.graph.practice_reading import rules_in
@@ -36,11 +35,6 @@ class GraphOverlay:
     direct_kinds: frozenset[str] = frozenset()
     """Relationship kinds of the pattern's schema that place a node as a child in the explorer tree; every other kind is
     listed under its kind's name."""
-
-    types: PracticeNodeTypes = PracticeNodeTypes()
-    """What the pattern says of its own node types to the graph's shared tables (``NODE_TYPE_TABLES``), as a practice's
-    reading does: the schema keys of its schemas whose node type is not the key capitalised. One that names none adds
-    nothing."""
 
     def __init__(self, pattern: PracticeGuidance) -> None:
         self.pattern = pattern

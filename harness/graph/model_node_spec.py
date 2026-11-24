@@ -102,21 +102,6 @@ with description("a model object's practice"):
         expect(self.screen.practice).to(be(self.graph.practices.of(Ux)))
 
 
-with description("a model object whose facts a part of it holds"):
-    with before.each:
-        self.story = Story("Submit Order", 1)
-        self.story.load_map_facts()
-
-    with it("should answer the part's fact as its own"):
-        expect(self.story.get_fact("opening_class")).to(equal("verb"))
-
-    with it("should hold the part's fact itself"):
-        expect(self.story.has_fact("child_label")).to(equal(True))
-
-    with it("should save the part's facts with the graph"):
-        expect(self.story.facts["child_label"]).to(equal("scenarios"))
-
-
 with description("an owner that refers to objects it does not own"):
     with before.each:
         self.story_map = StoryMap()

@@ -5,8 +5,9 @@ import functools
 import importlib
 from typing import TYPE_CHECKING
 
-from harness.graph.practice_node_types import PracticeNodeTypes
+from harness.graph.practice_node_types import NODE_TYPE_TABLES, PracticeNodeTypes
 from harness.guidance.guidance import PracticeGuidance
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE, PracticeCatalogue, PracticesNotRegistered
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -155,3 +156,22 @@ def rules_in(module_path: str) -> dict[str, PracticeGraphRule]:
 # A practice that names no reading of its own takes part in the graph with this one. harness/guidance sits below this
 # module, so it names no kind of reading; the graph sets the default when it is imported.
 PracticeGuidance.reading_type = PracticeReading
+
+
+class RegisteredPracticeTypes:
+    """The node types of the practices registered with a catalogue, each said by the reading its class names, as the
+    graph's node type tables read them (``NODE_TYPE_TABLES``)."""
+
+    def __init__(self, catalogue: PracticeCatalogue) -> None:
+        self._catalogue = catalogue
+
+    def node_types(self) -> tuple[PracticeNodeTypes, ...]:
+        """The node types of the practices registered now; none before a package registers them, as in a spec of the
+        framework alone, whose graph then reads only the tables the graph and the patterns give."""
+        try:
+            return tuple(practice.reading_type.types for practice in self._catalogue.practice_classes)
+        except PracticesNotRegistered:
+            return ()
+
+
+NODE_TYPE_TABLES.read_from(RegisteredPracticeTypes(PRACTICE_CATALOGUE))

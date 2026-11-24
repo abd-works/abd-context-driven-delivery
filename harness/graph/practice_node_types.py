@@ -4,13 +4,10 @@ and the tables every graph reads, joined from what each practice and pattern reg
 own types."""
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from harness.annotations.class_registry import ClassRegistry
     from harness.graph.model_node import ModelNode
-    from harness.guidance.guidance import PracticeGuidance
-    from harness.guidance.practice_catalogue import PracticeCatalogue
 
 
 class PracticeNodeTypes:
@@ -20,8 +17,8 @@ class PracticeNodeTypes:
     edges a node's evidence decides, such as a step that ``invokes`` the operation its source calls
     (``evidence_kinds``), whether one holds between two nodes (``links``), and the types whose nodes a session's stories
     scope (``scope_types``), which a validate of a session working on some stories leaves out when they lie outside
-    those stories. A practice's reading holds one (``PracticeReading.types``), and so does a pattern's overlay
-    (``GraphOverlay.types``); one that names none takes this, which adds nothing to the tables, decides no relationship
+    those stories. A practice's reading holds one (``PracticeReading.types``), and a pattern gives the tables its
+    own (``NodeTypeTables.read_types``); a practice that names none takes this, which adds nothing to the tables, decides no relationship
     by evidence and scopes nothing by stories. Every other relationship a schema names is the nodes the owner holds in
     the list named for it."""
 
@@ -67,21 +64,38 @@ class NodeTypeTablesDisagree(ValueError):
         self.name = name
 
 
+class NodeTypeSource(Protocol):
+    """What gives the tables the node types of one kind of thing the process registers, such as its practices: the node
+    types of what is registered now, which the tables compare with those they last joined, to join again only when
+    they change."""
+
+    def node_types(self) -> tuple[PracticeNodeTypes, ...]: ...
+
+
 class NodeTypeTables:
     """The node type tables every graph reads: the edge kinds the graph records itself (*GraphNodeTypes*), joined with
-    what each practice registered with the process (``PRACTICE_CATALOGUE``) says through its reading, and each pattern
-    registered (``REGISTERED_PATTERNS``) through its overlay. The framework names no practice and no pattern: each says
-    its own, and the tables are joined again whenever the registered practices or patterns change. The process holds one
-    (``NODE_TYPE_TABLES``), as it holds one catalogue of practices; a caller that joins others hands their catalogue and
-    registry of patterns in, as a spec does."""
+    what each source gives them (``read_from``). The framework names no practice and no pattern: the module that keeps
+    the practices' readings gives the registered practices' node types when it is imported, and a pattern gives its own
+    when its module is (``read_types``), so these tables import neither. The tables
+    are joined again whenever what a source has registered changes. The process holds one (``NODE_TYPE_TABLES``); a
+    caller that joins others makes its own with its sources, as a spec does."""
 
-    def __init__(self, practices: PracticeCatalogue | None = None, patterns: ClassRegistry[PracticeGuidance] | None = None) -> None:
-        self._practices = practices
-        self._patterns = patterns
-        self._joined_for: tuple[tuple[type, ...], tuple[type, ...]] | None = None
+    def __init__(self, *sources: NodeTypeSource) -> None:
+        self._sources: list[NodeTypeSource] = list(sources)
+        self._joined_for: tuple[PracticeNodeTypes, ...] | None = None
         self._schema_node_types: dict[str, str] = {}
         self._child_lists: frozenset[str] = frozenset()
         self._edge_order: dict[str, int] = {}
+
+    def read_from(self, source: NodeTypeSource) -> None:
+        """Join source's node types into the tables from now on."""
+        self._sources.append(source)
+        self._joined_for = None
+
+    def read_types(self, types: PracticeNodeTypes) -> None:
+        """Join types, which no registry gives, into the tables from now on: a pattern gives its own when its module is
+        imported, as it registers itself then."""
+        self.read_from(_GivenTypes(types))
 
     def node_type_of(self, key: str) -> str | None:
         """The node type a schema key names when it is not the key capitalised; none when it is."""
@@ -104,30 +118,15 @@ class NodeTypeTables:
         return self._edge_order.get(kind)
 
     def _join(self) -> None:
-        """Join the tables of every registered practice and pattern, when those registered differ from the last join."""
-        from harness.graph.pattern_overlays import REGISTERED_PATTERNS, PatternOverlays
-
-        patterns = self._patterns if self._patterns is not None else REGISTERED_PATTERNS
-        registered = (self._registered_practices(), patterns.classes)
-        if registered == self._joined_for:
+        """Join the tables of every source's node types, when they differ from those the last join read."""
+        given = tuple(types for source in self._sources for types in source.node_types())
+        if given == self._joined_for:
             return
-        parts = [GraphNodeTypes(), *(practice.reading_type.types for practice in registered[0] if practice.reading_type is not None)]
-        parts += [overlay.types for overlay in PatternOverlays(registered=patterns).every_graph_overlay]
         self._schema_node_types, child_lists, self._edge_order = {}, set(), {}
-        for part in parts:
+        for part in (GraphNodeTypes(), *given):
             self._take(part, child_lists)
         self._child_lists = frozenset(child_lists)
-        self._joined_for = registered
-
-    def _registered_practices(self) -> tuple[type, ...]:
-        """The practices registered with the process; none before a package registers them, as in a spec of the
-        framework alone, whose graph then reads only the tables the graph and the patterns give."""
-        from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE, PracticesNotRegistered
-
-        try:
-            return (self._practices or PRACTICE_CATALOGUE).practice_classes
-        except PracticesNotRegistered:
-            return ()
+        self._joined_for = given
 
     def _take(self, part: PracticeNodeTypes, child_lists: set[str]) -> None:
         """Add what part says to the tables being joined; *NodeTypeTablesDisagree* when it places a kind or names a key
@@ -139,6 +138,16 @@ class NodeTypeTables:
             if self._edge_order.setdefault(kind, order) != order:
                 raise NodeTypeTablesDisagree("the edge order", kind, self._edge_order[kind], order)
         child_lists.update(part.child_lists)
+
+
+class _GivenTypes:
+    """One part's node types, given to the tables as they are."""
+
+    def __init__(self, types: PracticeNodeTypes) -> None:
+        self._types = types
+
+    def node_types(self) -> tuple[PracticeNodeTypes, ...]:
+        return (self._types,)
 
 
 NODE_TYPE_TABLES = NodeTypeTables()

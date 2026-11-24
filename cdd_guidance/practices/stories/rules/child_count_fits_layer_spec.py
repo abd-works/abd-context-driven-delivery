@@ -38,7 +38,7 @@ def _hits(epic: Epic) -> list[str]:
     node_type = "SubEpic" if epic.is_sub_epic else "Epic"
     node = Node(Graph().practices.named("stories"), NodeIdentity(type=node_type, node_id=f"stories:{node_type}:{epic.name}", name=epic.name), Source(".", 1, 1))
     for fact in ("child_count", "child_label", "child_band", "child_target"):
-        node.set_fact(fact, getattr(epic.name_facts, fact))
+        node.set_fact(fact, epic.get_fact(fact))
     node.practice.reading.in_graph.hold(node)
     return SchemaRuleRun(ChildCountFitsLayer(), RuleCheckContext(node.practice)).node_hits(node)
 

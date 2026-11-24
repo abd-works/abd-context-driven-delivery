@@ -19,7 +19,7 @@ These dependencies are owned by the modules named; this model only uses them. Ea
 
 ## StoryNode : ModelNode
 
-Every epic, increment, story, background, scenario, step, and example. It holds the facts story-map graph rules read as a part of it (*NameFacts*), which the graph saves as the node's own.
+Every epic, increment, story, background, scenario, step, and example. It keeps the facts story-map graph rules read (*NameFacts*) as its own facts, which the graph saves with it.
 
 + StoryNode(name: str, sequential_order: int, graph: Graph | None = None)
 ------
@@ -31,13 +31,11 @@ Every epic, increment, story, background, scenario, step, and example. It holds 
 	// how this node was written in code: a sub-epic file, a story, a background, or a scenario. None outside code
 + setup: CodeBody
 	// the code inside a story or scenario that is not a background, scenario, or step
-+ name_facts: NameFacts
-	// the facts graph rules read; load_map_facts fills them
 ----
 + load_map_facts(): None
-	// each kind of node sizes its children and judges its name: an epic against the band of its layer, a story by its scenarios, a scenario by its steps
-+ fact_parts(): tuple[NameFacts]
-	// the parts whose facts save with the graph as this node's
+	// keeps its NameFacts as its own facts: each kind of node sizes its children and judges its name, an epic against the band of its layer, a story by its scenarios, a scenario by its steps
+- _name_facts(): NameFacts
+	// what its name and file say
 + take_code_from(source: StoryNode): None
 	// keeps written and setup when the node is copied into another format or cloned
 + copy_of(source: StoryNode): StoryNode
@@ -49,9 +47,9 @@ Every epic, increment, story, background, scenario, step, and example. It holds 
 
 ## NameFacts
 
-What a story node's name, file and children say about it, as the story map's rules read them. Its node holds it and the graph saves its facts as the node's own.
+What a story node's name, file and children say about it, as the story map's rules read them. The node keeps its facts as its own, so the graph saves them with it.
 
-+ NameFacts(node: StoryNode)
++ NameFacts(name: str, file: str)
 ------
 + opening_token, opening_class: str
 	// the first word of the name and its class: a verb, a generic verb, an actor noun, a gerund, a nominalisation, a single word, unlisted
@@ -63,9 +61,11 @@ What a story node's name, file and children say about it, as the story map's rul
 + generic_handler, near_duplicate: bool
 + shared_verb: str
 + opens_with_generic_handler: bool
++ facts: dict[str, str | int | bool]
+	// the eleven facts by the names the rules read
 ----
-+ load(children: int, band: ChildBand | None = None, label: str = "children"): None
-	// reads the name and file, counts the children against band, and starts what the node judges empty
++ count(children: int, band: ChildBand | None = None, label: str = "children"): None
+	// counts the children against band, the band of the node's layer
 + judge(generic_handler: bool = False, near_duplicate: bool = False, shared_verb: str = ""): None
 	// keeps what the node judges from its name and its place in the map
 
