@@ -6,7 +6,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from expects import equal, expect
+from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -15,7 +15,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from harness.git.git import RepoConnectError
 from space.repo.mock_repo import MockGit, MockOrigin, MockRepo
-from space.session.session_saves import SessionSaves
+from space.session.session_saves import DefaultBranchNotCheckedOut, SessionSaves
 
 _WAIT_SECONDS = 20
 # No settle: every example queues its one change before it waits, so nothing is left to gather into the commit.
@@ -96,6 +96,31 @@ with description("the saves of a repository's session folders on main"):
                 expect(_until(lambda: self.held.origin.logs["main"][-1] == "sessions: checkout-flow move Specification")).to(equal(True))
 
             with it("should clear the failure"):
+                expect(_until(lambda: self.saves.failure is None)).to(equal(True))
+
+    with context("that the repository's own folder has another branch checked out"):
+        with before.each:
+            self.held.check_out(self.clone, "spike")
+            self.saves.later("sessions: checkout-flow move Specification")
+            _until(lambda: self.saves.failure is not None)
+
+        with it("should say the change waits for main, naming the branch checked out"):
+            expect(self.saves.failure.error).to(contain("spike"))
+
+        with it("should name the change still waiting"):
+            expect(self.saves.failure.changes).to(equal(["sessions: checkout-flow move Specification"]))
+
+        with it("should refuse work that needs main saved before it goes on, naming the branch checked out"):
+            expect(lambda: self.saves.now("sessions: open checkout-flow")).to(raise_error(DefaultBranchNotCheckedOut, contain("spike")))
+
+        with context("that main is checked out there again"):
+            with before.each:
+                self.held.check_out(self.clone, "main")
+
+            with it("should commit the change on main"):
+                expect(_until(lambda: self.held.branches.logs["main"][-1] == "sessions: checkout-flow move Specification")).to(equal(True))
+
+            with it("should clear what it said"):
                 expect(_until(lambda: self.saves.failure is None)).to(equal(True))
 
     with context("that work needs main saved before it goes on"):

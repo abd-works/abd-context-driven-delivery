@@ -363,8 +363,9 @@ class WorkingTree:
 
     @property
     def is_merging(self) -> bool:
-        """Whether a merge is in progress in this checkout, so the next commit would conclude it with everything staged."""
-        return (self._repo.root / ".git" / "MERGE_HEAD").is_file()
+        """Whether a merge is in progress in this checkout, so the next commit would conclude it with everything staged;
+        its checkout's git facts find the merge in a linked worktree's own git folder as in the main clone's."""
+        return self._repo.checkout.facts.is_merging()
 
     def commit(self, paths: list[str], message: str, *, untracked: bool = False) -> str:
         """Commit the changes under paths with message, and with untracked also the new files there; the sha of HEAD

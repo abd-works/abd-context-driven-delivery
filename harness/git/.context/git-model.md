@@ -61,6 +61,8 @@ One checkout of a repository, known by its top folder: whether it is the main cl
 + has_remote(name: str): bool
 + worktrees(): list[tuple[Path, str]]
 + common_folder(): Path
++ is_merging(): bool
+	// a merge going on in this checkout, found in a linked worktree's own git folder as in the main clone's .git
 
 ## GitFolder : GitFacts
 

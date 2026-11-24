@@ -92,6 +92,28 @@ with description("a Repo"):
             with it("should name both files, read from the clone"):
                 expect(sorted(self.repo.branch_named("session/ticket").changed_files())).to(equal(["doing.py", "done.py"]))
 
+        # A linked worktree's .git is a file naming its own git folder, which holds the merge going on there.
+        with context("with a ticket's branch in a worktree of its own, stopped part way through merging main"):
+            with before.each:
+                self.tree = Path(self.tmp.name) / "ticket-tree"
+                _git(self.clone, "worktree", "add", "-b", "session/ticket", str(self.tree), "main")
+                (self.tree / "a.py").write_text("ticket\n", encoding="utf-8")
+                _git(self.tree, "add", "a.py")
+                _git(self.tree, "commit", "-m", "ticket turn")
+                (self.clone / "a.py").write_text("main\n", encoding="utf-8")
+                _git(self.clone, "add", "a.py")
+                _git(self.clone, "commit", "-m", "main turn")
+                subprocess.run(["git", "-C", str(self.tree), "merge", "main"], capture_output=True)
+                (self.tree / "a.py").write_text("both\n", encoding="utf-8")
+                self.ticket = Repo(self.tree)
+
+            with it("should see the merge going on in that worktree"):
+                expect(self.ticket.working_tree.is_merging).to(be_true)
+
+            with it("should conclude the merge when it commits, rather than commit the paths it was named alone"):
+                self.ticket.working_tree.commit([str(self.tree / "a.py")], "merge main into the ticket")
+                expect(len(_git(self.tree, "log", "-1", "--format=%P").split())).to(equal(2))
+
         # (S) Repo --> Push Branch
         with context("with a commit pushed to its branch from elsewhere"):
             with before.each:

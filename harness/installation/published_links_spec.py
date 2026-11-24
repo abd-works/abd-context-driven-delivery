@@ -2,11 +2,11 @@
 import tempfile
 from pathlib import Path
 
-from expects import be_none, equal, expect
-from mamba import before, description, it
+from expects import be_none, contain, equal, expect, raise_error
+from mamba import before, context, description, it
 
 from harness.installation.json_file import JsonFile
-from harness.installation.published_links import PublishedLinks
+from harness.installation.published_links import PublishedLinks, PublishedLinksUnreadable
 
 
 with description("the addresses a folder's files were published to") as self:
@@ -29,6 +29,24 @@ with description("the addresses a folder's files were published to") as self:
         self.links.rename("story-map.whiteboard", "release-1")
         expect(list(self.links.all())).to(equal(["release-1", "modules.whiteboard"]))
 
-    with it("should keep none when the record holds something that is no record of them"):
-        self.file.write_text("not json", encoding="utf-8")
-        expect(self.links.all()).to(equal({}))
+    with context("with a record that cannot be read"):
+        with before.each:
+            self.file.write_text("not json", encoding="utf-8")
+
+        with it("should refuse to read it, naming the file"):
+            expect(lambda: self.links.all()).to(raise_error(PublishedLinksUnreadable, contain(str(self.file))))
+
+        with it("should refuse to record another address over it"):
+            expect(lambda: self.links.record("ux.whiteboard", "https://claude.ai/artifact/ux")).to(
+                raise_error(PublishedLinksUnreadable))
+
+        with it("should leave what the file holds for a person to repair"):
+            try:
+                self.links.record("ux.whiteboard", "https://claude.ai/artifact/ux")
+            except PublishedLinksUnreadable:
+                pass
+            expect(self.file.read_text(encoding="utf-8")).to(equal("not json"))
+
+    with context("with no record kept yet"):
+        with it("should keep no address"):
+            expect(PublishedLinks(JsonFile(self.file.with_name("versions.json"))).all()).to(equal({}))

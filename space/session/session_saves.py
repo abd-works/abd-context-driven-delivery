@@ -20,8 +20,9 @@ SETTLE_SECONDS = 0.5
 
 
 class SaveFailure:
-    """*SaveFailure* is a save on main that git refused: the changes it was saving and what git said. The changes are
-    still in the session folders, so saving again commits them."""
+    """*SaveFailure* is a save on main that could not be made: the changes it was saving and why, such as what git said
+    when it refused, or the branch the repository's own folder has checked out instead of main. The changes are still in
+    the session folders, so saving again commits them."""
 
     def __init__(self, changes: list[str], error: str) -> None:
         self._changes = list(changes)
@@ -37,6 +38,20 @@ class SaveFailure:
     @data_field
     def error(self) -> str:
         return self._error
+
+
+class DefaultBranchNotCheckedOut(Exception):
+    """The session folders are saved on the default branch, and the repository's own folder has another branch checked
+    out, so a commit there would put the records on that branch. The changes stay on disk until the default branch is
+    checked out there again."""
+
+    def __init__(self, folder: Path, checked_out: str, default: str) -> None:
+        super().__init__(
+            f"the session folders are saved on {default}, but {folder} has {checked_out} checked out; the changes stay "
+            f"on disk and are saved once {default} is checked out there again")
+        self.folder = folder
+        self.checked_out = checked_out
+        self.default = default
 
 
 class SessionSaves:
@@ -92,8 +107,10 @@ class SessionSaves:
                 self._worker.start()
 
     def now(self, message: str) -> None:
-        """Save with message in this thread, with every save still queued; git's refusal is raised to the caller."""
+        """Save with message in this thread, with every save still queued; git's refusal is raised to the caller, and so
+        is *DefaultBranchNotCheckedOut*, which leaves the queued saves waiting."""
         with self._saving:
+            self._refuse_off_default_branch()
             changes = [*self._taken(), message]
             self._save(changes)
 
@@ -117,6 +134,11 @@ class SessionSaves:
         if self._repository.working_tree.is_merging:
             return
         with self._saving:
+            try:
+                self._refuse_off_default_branch()
+            except DefaultBranchNotCheckedOut as away:
+                self._wait_for_default_branch(away)
+                return
             changes = self._taken()
             if not changes:
                 return
@@ -126,17 +148,34 @@ class SessionSaves:
                 logger.warning("the board's saves on main failed: %s", refused)
                 self._failure = SaveFailure(changes, str(refused))
 
+    def _refuse_off_default_branch(self) -> None:
+        repository = self._repository
+        if not repository.is_clone:
+            return
+        checked_out = repository.current_branch
+        if checked_out != repository.default_branch:
+            raise DefaultBranchNotCheckedOut(repository.root, checked_out.name, repository.default_branch.name)
+
+    def _wait_for_default_branch(self, away: DefaultBranchNotCheckedOut) -> None:
+        """Keep the queued saves queued, as during a merge, and say why on the board: the saving thread looks again
+        after each settle, and saves them once the default branch is checked out in the repository's own folder."""
+        with self._queue:
+            waiting = list(self._pending)
+        if self._failure is None or self._failure.error != str(away):
+            logger.warning("the board's saves on main wait: %s", away)
+        self._failure = SaveFailure(waiting, str(away))
+
     def _taken(self) -> list[str]:
         with self._queue:
             changes, self._pending = self._pending, []
         return changes
 
     def _save(self, changes: list[str]) -> None:
-        """Commit the session folders with changes as the message and push main, while main is checked out in the
-        repository's own folder; a save with nothing to commit or push does nothing. In a repository git init made, the
-        first save is its first commit, so a ticket's branch has a commit to start from."""
+        """Commit the session folders with changes as the message and push main, which the caller found checked out in
+        the repository's own folder; a save with nothing to commit or push does nothing. In a repository git init made,
+        the first save is its first commit, so a ticket's branch has a commit to start from."""
         repository = self._repository
-        if not repository.is_clone or not self._folder.is_dir() or repository.current_branch != repository.default_branch:
+        if not repository.is_clone or not self._folder.is_dir():
             return
         self._keep_left_out()
         if repository.working_tree.is_dirty(self._folder):

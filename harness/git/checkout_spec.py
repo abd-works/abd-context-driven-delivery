@@ -69,6 +69,19 @@ with description("a checkout") as self:
         with it("should lead back to the main clone"):
             expect(Checkout(self.linked).main_folder).to(equal(self.clone))
 
+        with it("should see no merge going on"):
+            expect(Checkout(self.linked).facts.is_merging()).to(equal(False))
+
+        with context("with a merge going on in it"):
+            with before.each:
+                (self.clone / ".git" / "worktrees" / "pets" / "MERGE_HEAD").write_text("b" * 40 + "\n", encoding="utf-8")
+
+            with it("should see the merge, kept in its own git folder"):
+                expect(Checkout(self.linked).facts.is_merging()).to(equal(True))
+
+            with it("should leave the main clone with no merge going on"):
+                expect(Checkout(self.clone).facts.is_merging()).to(equal(False))
+
     with context("that is a folder in no repository"):
         with it("should be the folder itself"):
             expect(Checkout.holding(self.top).folder).to(equal(self.top))

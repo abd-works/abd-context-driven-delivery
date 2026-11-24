@@ -234,6 +234,9 @@ class MockGitFacts(GitFacts):
     def common_folder(self) -> Path:
         return self._held.root / ".git"
 
+    def is_merging(self) -> bool:
+        return False
+
 
 class MockCheckout(Checkout):
     """One checkout of a *MockGit*: a clone once the spec makes it one, the main clone at the *MockGit*'s root, and its
@@ -317,10 +320,6 @@ class MockWorkingTree(WorkingTree):
 
     def is_dirty(self, path: str | Path | None = None, *, untracked: bool = True) -> bool:
         return bool(self.uncommitted(Path(path) if path is not None else None))
-
-    @property
-    def is_merging(self) -> bool:
-        return False
 
     def commit(self, paths: list[str], message: str, *, untracked: bool = False) -> str:
         """Commit the changes under paths on the branch this checkout has checked out. Without untracked, only files the

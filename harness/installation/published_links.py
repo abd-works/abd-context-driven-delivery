@@ -4,9 +4,19 @@ publish updates the same artifact, and a page opens the artifact instead of the 
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Dict, Optional
 
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
+
+
+class PublishedLinksUnreadable(JsonFileUnreadable):
+    """The record of where a folder's files were published in Claude cannot be read. Nothing is recorded over it, since
+    a record written then would hold one address and lose every other file's."""
+
+    def message(self, path: Path, cause: Exception) -> str:
+        return (f"{path} keeps the addresses in Claude this folder's files were published to, but is not a readable "
+                f"JSON object ({cause}); repair or remove it, and nothing is recorded in it until then")
 
 
 class PublishedLinks:
@@ -17,12 +27,12 @@ class PublishedLinks:
         self._record = record
 
     def all(self) -> Dict[str, str]:
-        """Each address kept, by name; none when the record keeps none, or holds something that is no record of
-        them."""
+        """Each address kept, by name; none while no record is kept. A record that cannot be read raises
+        *PublishedLinksUnreadable*, naming the file."""
         try:
             kept = self._record.read()
-        except JsonFileUnreadable:
-            return {}
+        except JsonFileUnreadable as unreadable:
+            raise PublishedLinksUnreadable(unreadable.path, unreadable.cause) from unreadable
         return {str(name): str(url) for name, url in kept.items()}
 
     def of(self, name: str) -> Optional[str]:

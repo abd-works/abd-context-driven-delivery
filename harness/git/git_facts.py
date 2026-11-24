@@ -54,6 +54,11 @@ class GitFacts(ABC):
     def common_folder(self) -> Path:
         """The git folder that keeps the refs, config and worktrees: the main clone's ``.git``."""
 
+    @abstractmethod
+    def is_merging(self) -> bool:
+        """Whether a merge is going on in this checkout, as ``git rev-parse -q --verify MERGE_HEAD`` says: the next
+        commit concludes it with everything staged."""
+
 
 class GitFolder(GitFacts):
     """*GitFolder* answers a checkout's facts from the files of its ``.git``, because the board and the sessions ask them
@@ -153,6 +158,10 @@ class GitFolder(GitFacts):
         head = (git_folder / "HEAD").read_text(encoding="utf-8").strip() if (git_folder / "HEAD").is_file() else ""
         return head.removeprefix(_SYMBOLIC).removeprefix(_HEADS) if head.startswith(_SYMBOLIC + _HEADS) else ""
 
+    def is_merging(self) -> bool:
+        own = self._own_folder()
+        return own is not None and (own / "MERGE_HEAD").is_file()
+
     def _head(self) -> str:
         own = self._own_folder()
         return (own / "HEAD").read_text(encoding="utf-8").strip() if own is not None and (own / "HEAD").is_file() else ""
@@ -225,6 +234,9 @@ class AskedOfGit(GitFacts):
         named = Path(self._git.run("rev-parse", "--git-common-dir"))
         return (named if named.is_absolute() else self._git.folder / named).resolve()
 
+    def is_merging(self) -> bool:
+        return self._git.succeeds("rev-parse", "-q", "--verify", "MERGE_HEAD")
+
 
 class NoGitFacts(GitFacts):
     """The facts of a folder that is no clone: no branch, no commit, no ref, no origin, and no worktree. Asking git there
@@ -256,3 +268,6 @@ class NoGitFacts(GitFacts):
 
     def common_folder(self) -> Path:
         return self._folder / ".git"
+
+    def is_merging(self) -> bool:
+        return False
