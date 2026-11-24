@@ -1,7 +1,5 @@
 # Suggest The Next Step
 
-Analysis and planning: the stories here are not built yet, or only partly built where a story says so. This is one increment of the thin slice, which sets the order of the increments, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to.
-
 **Outcome:** the chat proposes the next command, and captures handoffs, corrections and decisions.
 
 **Slicing notes:** mod-ideas build order 3, next-step suggestions.
@@ -60,3 +58,5 @@ From `mod-ideas.md`, "Flow" and "Capturing knowledge":
 #### Story: Display Latest Session Handoff
 
 *Chat Bar*. Requested (2026-11-06, as the CDD Kanban does): the chat bar shows the active session's latest handoff.
+
+Analysis and planning: the stories here are not built yet, or only partly built where a story says so. This is one increment of the thin slice, which sets the order of the increments, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to.

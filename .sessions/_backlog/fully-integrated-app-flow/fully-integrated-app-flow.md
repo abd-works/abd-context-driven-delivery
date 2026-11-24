@@ -1,7 +1,5 @@
 # Fully Integrated App Flow
 
-Analysis and planning: the stories here are not built yet, or only partly built where a story says so. This is one increment of the thin slice, which sets the order of the increments, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to.
-
 **Outcome:** the chat bar, the board, the Story UI editor with its story explorer, and the Graph app work on one ticket together, and violations are read from the latest graph that generate refreshes.
 
 **Slicing notes:** requested on 2026-11-06: validation inside generate, the chat bar and board joined with the Story UI editor, the story explorer in the Story UI app framed by design canvas screens, and each app tested on a real session.
@@ -209,3 +207,5 @@ Built today: Attach Violations To Latest Graph (a graph refresh records each vio
 #### Story: Display Drawio File As Diagram
 
 *Person*. Requested on 2026-11-06: a `.drawio` file opens as its diagram, with a Source tab for the XML. A violation marks the shape it names in red, and pressing a shape opens its lines in the source. Built today (checked 2026-11-10): the chat bar's files view offers Open in draw.io, which opens the file in the draw.io editor through `tools/drawio_viewer` (`drawio-viewer-client.ts:44`). Missing: a Source tab, marking the shape a violation names, and opening a pressed shape's lines.
+
+Analysis and planning: the stories here are not built yet, or only partly built where a story says so. This is one increment of the thin slice, which sets the order of the increments, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to.

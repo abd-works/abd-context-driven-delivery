@@ -1,7 +1,5 @@
 # Guard Work And Recover Fast
 
-Analysis and planning: the stories here are not built yet, or only partly built where a story says so. This is one increment of the thin slice, which sets the order of the increments, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to.
-
 **Outcome:** a person sees at once when cdd is down, fixes it from where they are, and the agent is stopped before it breaks a rule.
 
 **Slicing notes:** mod-ideas build order 1, server health band and rule guards: small, and they fix problems that already happened.
@@ -93,3 +91,5 @@ From `board-enhancements.md`: "restart refresh ->onre button relopadsplugins mcp
 #### Story: Open App From Health Panel
 
 *Person*. Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "click on app in health bar"): pressing the Kanban app or Graph app in the server health panel opens that app. Requested (2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"): pressing an app that is not running starts it and then opens it; pressing one that is running opens it. Built on branch `open-app-from-health-panel` (ticket `open-app-from-health-panel`).
+
+Analysis and planning: the stories here are not built yet, or only partly built where a story says so. This is one increment of the thin slice, which sets the order of the increments, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to.

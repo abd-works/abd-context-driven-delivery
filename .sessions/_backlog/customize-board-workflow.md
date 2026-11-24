@@ -1,7 +1,5 @@
 # Customize Board Workflow
 
-Analysis and planning: the stories here are not built yet, or only partly built where a story says so. This is one increment of the thin slice, which sets the order of the increments, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to.
-
 **Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
 
 **Slicing notes:** board-enhancements "Workflow Enhancements"; it changes the board's own structure, so it comes after the board is finished.
@@ -74,3 +72,5 @@ Requested on 2026-11-10: the board displays itself from the customized workflow,
 #### Story: Toggle Sub Agents
 
 *Person*. Intended (`.sessions/_backlog/customize-board-workflow.md` "use sub agents toggle"): a person turns on running a board action in sub-agents.
+
+Analysis and planning: the stories here are not built yet, or only partly built where a story says so. This is one increment of the thin slice, which sets the order of the increments, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to.
