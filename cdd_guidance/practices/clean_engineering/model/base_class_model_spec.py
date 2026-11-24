@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from expects import be, be_true, contain, equal, expect, have_len
+from expects import be, be_true, contain, equal, expect, have_len, raise_error
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -22,6 +22,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from cdd_guidance.practices.clean_engineering.model.translation import TranslationError
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.source_code import CallGraph, CallGraphEntry, parse_arrow_line
 
@@ -195,6 +196,12 @@ with description("OoadClass"):
 
         with it("should hold its own copy of each property"):
             expect(self.cls.properties[0] is self.source.properties[0]).to(equal(False))
+
+    with context("translated from a source of another kind"):
+        with it("should refuse, naming both kinds"):
+            expect(lambda: OoadClass(name="Cart", sequential_order=1).translate_from(Property(name="items", type_hint="list"))).to(
+                raise_error(TranslationError, contain("Cannot translate from Property into OoadClass"))
+            )
 
 
 with description("Module"):
