@@ -39,13 +39,19 @@ class FileListing:
     def formats(self) -> list[str]:
         """The formats of the format groups selected, each once, among the groups the fidelities the selection covers and
         those listed offer; none selected, every format is listed."""
-        return list(dict.fromkeys(name for group in self._selection.format_groups_with(self.listed) if group.is_selected for name in group.formats))
+        return list(dict.fromkeys(name for group in self._chosen_groups for name in group.formats))
+
+    @cached_property
+    def _chosen_groups(self) -> list:
+        """The format groups selected among those the fidelities the selection covers and those listed offer."""
+        return [group for group in self._selection.format_groups_with(self.listed) if group.is_selected]
 
     def of_fidelity(self, slug: str, format: str, entry: FileEntry) -> FileEntry:
         """entry, a file fidelity slug declares in format: listed while slug is listed and format is selected, or no
         format is, or it is published to a link, such as a whiteboard, which opens in Claude whatever format is chosen."""
-        listed = slug in self.listed and self._in_formats(format, entry)
-        return entry.listed_as(listed, self._is_work(entry, is_declared=True))
+        in_format = self._in_formats(format, entry)
+        is_of_listed = slug in self.listed
+        return entry.listed_as(is_of_listed and in_format, self._is_work(entry, is_declared=True), self._hiding(is_of_listed and not in_format))
 
     def of_root(self, entry: FileEntry) -> FileEntry:
         """entry, a file under the session's root: listed while it is in a format selected, or is published to a link,
@@ -57,12 +63,21 @@ class FileListing:
             return self.of_folder(entry)
         in_format = self._in_formats(entry.format, entry)
         belongs = any(slug in self.listed for slug in entry.fidelities) if entry.fidelities else self._is_no_practice_selected
-        return entry.listed_as(in_format and belongs, self._is_work(entry, is_declared=bool(entry.fidelities)))
+        return entry.listed_as(in_format and belongs, self._is_work(entry, is_declared=bool(entry.fidelities)), self._hiding(belongs and not in_format))
 
     def of_folder(self, entry: FileEntry) -> FileEntry:
         """entry, a file of a session's own folder or workpath, which a page opened on that folder lists whatever is
         selected, since the folder is no fidelity's output, and which is the folder's work."""
         return entry.listed_as(True, self._is_work(entry, is_declared=True))
+
+    def _hiding(self, is_hidden_by_formats: bool) -> list[str]:
+        """The labels of the format groups selected, such as markdown or diagram, when they alone leave a file out;
+        none when they do not, so a page tells a list the formats emptied from one with no files yet."""
+        return self._chosen_labels if is_hidden_by_formats else []
+
+    @cached_property
+    def _chosen_labels(self) -> list[str]:
+        return [group.label for group in self._chosen_groups]
 
     def _in_formats(self, format: str, entry: FileEntry) -> bool:
         formats = self.formats

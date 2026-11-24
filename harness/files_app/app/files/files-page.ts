@@ -223,12 +223,12 @@ export class FilesPage {
     if (!this.link.isFolder) await this.readRootFiles()
   }
 
-  // Why the list is empty: the formats selected hold none of the files of the fidelities listed, such as code at a stage
-  // whose fidelities write only documents and diagrams; else there are no files yet.
+  // Why the list is empty: the formats chosen leave out files it would list, as the session says of each file it left out
+  // for them alone, such as code at a stage whose fidelities write only documents and diagrams; else there are no files yet.
   get emptyReason(): string {
-    const chosen = (this.state.guidance?.formats ?? []).filter(format => format.is_selected).map(format => formatGlyphOf(format.label))
-    const anyFiles = this.state.byFidelity.some(each => each.entries.length > 0)
-    if (chosen.length && anyFiles) return `None of these files is in the formats chosen (${chosen.join(' ')}): press a chosen format to show every format.`
+    const answered = [...this.state.byFidelity.flatMap(each => each.entries), ...(this.state.rootFiles ?? [])]
+    const hiding = answered.find(entry => entry.hidden_by_formats.length)?.hidden_by_formats
+    if (hiding) return `None of these files is in the formats chosen (${hiding.map(formatGlyphOf).join(' ')}): press a chosen format to show every format.`
     return 'No files here yet.'
   }
 

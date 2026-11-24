@@ -22,6 +22,7 @@ from harness.markdown.markdown import MarkdownText
 from space.session.files.file_comments import PROCESSED, FileComment
 from space.session.files.file_manager import FileText
 from space.session.files.file_range import LineSpan, Range
+from space.session.files.file_steps import FileStep, StepCallout, StoryTestCode
 from space.session.files.file_view_filter import FileViewFilter
 from space.session.files.session_files import NamedPathNotFoundError
 
@@ -123,34 +124,6 @@ class FileCallout:
         """What the link names that is not there, such as ``.context/domain-model.md has no heading #cartline-entity``;
         nothing when the section is there."""
         return self._missing
-
-
-class FileStep:
-    """A step of a story test in the file that reaches code or examples: the line it starts on, where the viewer opens in
-    place what it invokes and observes, so a story test's callouts sit on the step whose relationships they are."""
-
-    def __init__(self, line: int, invokes: list[NodeSource], observes: list[NodeSource]) -> None:
-        self._line = line
-        self._invokes = invokes
-        self._observes = observes
-
-    @property
-    @data_field
-    def line(self) -> int:
-        """The line, counted from 1, the step starts on: its decorator or its call."""
-        return self._line
-
-    @property
-    @data_field
-    def invokes(self) -> list[NodeSource]:
-        """The functions and operations the step calls, each with its text and file."""
-        return list(self._invokes)
-
-    @property
-    @data_field
-    def observes(self) -> list[NodeSource]:
-        """The examples whose state the step observes, each with its text and file."""
-        return list(self._observes)
 
 
 class FileChange:
@@ -280,6 +253,13 @@ class SessionFile:
 
     @property
     @data_field
+    def rendered_form(self) -> str:
+        """The form a viewer opens the file rendered in, beside its source, such as markdown; none for a file it shows
+        only as source."""
+        return self._text.rendered_form
+
+    @property
+    @data_field
     def comments(self) -> list[FileComment]:
         return self._session.file_comments.on(self._path)
 
@@ -332,8 +312,15 @@ class SessionFile:
         graph = self._session.graph
         steps = (node for practice in graph.practices.opened.values() for node in practice.reading.steps())
         nodes = [node for node in steps if node.source is not None and self._holds(node.source)]
-        found = [FileStep(node.source.start_line, self._sources(graph, "invokes", node), self._sources(graph, "observes", node)) for node in nodes]
-        return sorted((step for step in found if step.invokes or step.observes), key=lambda step: step.line)
+        code = StoryTestCode(self.text, self.language, [node.source.start_line for node in nodes])
+        found = [FileStep(node.source.start_line, self._step_callouts(graph, code, node)) for node in nodes]
+        return sorted((step for step in found if step.callouts), key=lambda step: step.line)
+
+    def _step_callouts(self, graph: Graph, code: StoryTestCode, node: Node) -> list[StepCallout]:
+        """A callout for each thing the step node invokes, then each it observes, on the line of its code naming it."""
+        line = node.source.start_line
+        reached = [*(("call", target) for target in self._sources(graph, "invokes", node)), *(("example", target) for target in self._sources(graph, "observes", node))]
+        return [StepCallout(kind, code.line_naming(line, target.name), target) for kind, target in reached]
 
     def _sources(self, graph: Graph, kind: str, node: Node) -> list[NodeSource]:
         """What node reaches by kind that the file view's filters show, each with its source and the class it belongs

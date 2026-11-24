@@ -21,7 +21,7 @@ const byFidelity = (body: Record<string, unknown> | undefined, files: Record<str
   Object.fromEntries(((body?.fidelities as string[] | undefined) ?? []).map(slug => [slug, files]))
 
 // Listed, and the session's own work exactly when the branch changed it, as the session answers a file in a repository.
-const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '', published_kind: '', format: '', fidelities: [], is_listed: true, is_session_work: is_changed }) as FileEntryData
+const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '', published_kind: '', format: '', fidelities: [], is_listed: true, is_session_work: is_changed, hidden_by_formats: [] }) as FileEntryData
 
 // The Files app's server, answering the session's files in the order the link names them, and nothing else; each file
 // the branch changed unless named unchanged, so This session lists it.

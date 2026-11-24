@@ -150,6 +150,7 @@ class FileEntry:
         # applied (*FileListing*); a file no listing looked at is listed and is no one's work.
         self._is_listed = True
         self._is_session_work = False
+        self._hidden_by_formats: tuple[str, ...] = ()
 
     @property
     @data_field
@@ -205,11 +206,20 @@ class FileEntry:
         changed; in a plain folder no branch changes any file, so a file a fidelity declares or holds that is there."""
         return self._is_session_work
 
-    def listed_as(self, is_listed: bool, is_session_work: bool) -> FileEntry:
-        """This file, listed or not and the session's own work or not, as a listing decided."""
+    @property
+    @data_field
+    def hidden_by_formats(self) -> list[str]:
+        """The format groups selected, such as markdown or diagram, when they alone leave the file out of a page's
+        list, as the listing that answered it decided; none for a file listed, or one left out for its fidelity."""
+        return list(self._hidden_by_formats)
+
+    def listed_as(self, is_listed: bool, is_session_work: bool, hidden_by_formats: list[str] | None = None) -> FileEntry:
+        """This file, listed or not, the session's own work or not, and left out by the formats selected or not, as a
+        listing decided."""
         copy = self._copied(self._published, self._fidelities)
         copy._is_listed = is_listed
         copy._is_session_work = is_session_work
+        copy._hidden_by_formats = tuple(hidden_by_formats or ())
         return copy
 
     def belonging_to(self, fidelities: list[str]) -> FileEntry:
@@ -227,6 +237,7 @@ class FileEntry:
         copy._fidelities = fidelities
         copy._is_listed = self._is_listed
         copy._is_session_work = self._is_session_work
+        copy._hidden_by_formats = self._hidden_by_formats
         return copy
 
 
@@ -245,6 +256,9 @@ LANGUAGES = {
     ".yml": "yaml",
 }
 PLAIN_TEXT = "plaintext"
+# The form a viewer renders a file in beside its source, by its suffix: markdown as the page it describes, an HTML page,
+# an SVG drawing, and JSON laid out; a file of any other suffix shows only as source.
+RENDERED_FORMS = {".md": "markdown", ".markdown": "markdown", ".html": "html", ".htm": "html", ".svg": "svg", ".json": "json"}
 
 
 class FileText:
@@ -276,6 +290,13 @@ class FileText:
     def language(self) -> str:
         """The language a viewer shows the text in, from the file's suffix, such as python or markdown."""
         return LANGUAGES.get(Path(self._path).suffix.lower(), PLAIN_TEXT)
+
+    @property
+    @data_field
+    def rendered_form(self) -> str:
+        """The form a viewer renders the text in beside its source, from the file's suffix: markdown, html, svg or
+        json; none for a file a viewer shows only as source, such as code or a draw.io file."""
+        return RENDERED_FORMS.get(Path(self._path).suffix.lower(), "")
 
 
 @language_adapter(language="typescript", shares_file_views=True)

@@ -2,9 +2,8 @@ import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { FileViolationData, SessionFileData } from '@cdd/space/session/session'
 import type { SourceRule } from '@source-view/SourceView'
 import type { SourceCallout } from '@source-view/source-callouts'
-import type { SourceLines } from '@source-view/source-folding'
 import type { ViolationFocus } from '@graph-app/graph/graph-selection'
-import { MODULE_OWNER, codeOf, withoutCallMarkers } from '@source-view/call-expansion'
+import { withoutCallMarkers } from '@source-view/call-expansion'
 import { saidBy } from './reason'
 
 // The node type the source view is handed for a whole file, which it opens with every fold open.
@@ -21,10 +20,11 @@ export function fileAnswered(answer: unknown): SessionFileData | null {
   if (answer === null || answer === undefined) return null
   const file = answer as Record<string, unknown>
   if (typeof answer !== 'object' || typeof file.path !== 'string' || typeof file.text !== 'string') throw new Error(`session.file answered no file: ${saidBy(answer)}`)
-  const steps = listOf<Record<string, unknown>>(file.steps).map(step => ({ ...step, invokes: listOf(step.invokes), observes: listOf(step.observes) }))
+  const steps = listOf<Record<string, unknown>>(file.steps).map(step => ({ ...step, callouts: listOf(step.callouts) }))
   return {
     ...(file as SessionFileData),
     language: typeof file.language === 'string' ? file.language : '',
+    rendered_form: typeof file.rendered_form === 'string' ? file.rendered_form : '',
     comments: listOf(file.comments),
     changes: listOf(file.changes),
     folds: listOf(file.folds),
@@ -56,38 +56,16 @@ function linkCallout(callout: LinkCallout): SourceCallout {
 }
 
 // What the file opens in place itself: each link to another file, the section or file it names under its line; and in a
-// story test, each connector of a step, what it invokes and observes, collapsed under the line of the step that uses it,
-// so the code it reaches opens where the step reaches it.
+// story test, what each step invokes and observes, on the line and under the title the session answered for it, so the
+// code it reaches opens where the step reaches it.
 export function calloutsOf(file: SessionFileData): SourceCallout[] {
   const sections = file.callouts.map(linkCallout)
-  const code = typeof file.text === 'string' ? codeOf(file.text, monacoLanguageOf(file)).split(String.fromCharCode(10)) : []
-  const starts = file.steps.map(step => step.line).sort((one, other) => one - other)
-  const steps = file.steps.flatMap(step => {
-    const using = (target: NodeSourceData) => lineUsing(code, step.line, starts.find(start => start > step.line), target.name)
-    return [...step.invokes.map(target => stepCallout(using(target), target, 'call')), ...step.observes.map(target => stepCallout(using(target), target, 'example'))]
-  })
+  const steps = file.steps.flatMap(step => step.callouts.map(stepCallout))
   return [...sections, ...steps]
 }
 
-// The first line from the step's own line, before the next step starts, whose code names name; the step's own line when
-// none does, as for a file read with no text.
-function lineUsing(code: string[], stepLine: number, nextStep: number | undefined, name: string): number {
-  const named = new RegExp(`\\b${name.replace(/[^A-Za-z0-9_]/g, '')}\\b`)
-  const last = Math.min(code.length, (nextStep ?? code.length + 1) - 1)
-  for (let line = stepLine; line <= last; line += 1) if (named.test(code[line - 1] ?? '')) return line
-  return stepLine
-}
-
-function stepCallout(line: number, target: NodeSourceData, kind: SourceCallout['kind']): SourceCallout {
-  return { id: target.node_id, kind, line, title: target.owner && target.owner !== MODULE_OWNER ? `${target.owner}.${target.name}` : target.name, path: target.file, startLine: target.start_line, endLine: target.end_line, text: withoutCallMarkers(target.text) }
-}
-
-// The lines whose fold-outs open for the nodes expanded, such as one selected in the graph through a connector: each
-// line of a callout reaching one of them inside the lines around, the node that holds the connector; anywhere in the file
-// when nothing is around.
-export function expandedLines(callouts: SourceCallout[], expanded: string[], around: SourceLines[]): number[] {
-  const inside = (line: number) => !around.length || around.some(lines => lines.start <= line && line <= lines.end)
-  return [...new Set(callouts.filter(callout => expanded.includes(callout.id) && inside(callout.line)).map(callout => callout.line))]
+function stepCallout({ kind, line, title, target }: SessionFileData['steps'][number]['callouts'][number]): SourceCallout {
+  return { id: target.node_id, kind, line, title, path: target.file, startLine: target.start_line, endLine: target.end_line, text: withoutCallMarkers(target.text) }
 }
 
 // Whether the file is a story test whose steps reach code: its callouts are its steps' own, so a class it names, in a

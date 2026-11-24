@@ -15,7 +15,7 @@ import type { CommentLines, FileCommentsActions } from './file-comments-actions'
 import { selectedMarks } from './file-marks'
 import { keepWrap, storedWrap, type ThemeFailure } from './files-theme'
 import type { FilesFoldKeys } from './files-fold-keys'
-import { calloutsOf, expandedLines, isStoryTest, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
+import { calloutsOf, isStoryTest, monacoLanguageOf, rulesOf, sourceOf, violationFocusOf } from './source-of-file'
 
 // How far down the window the first line asked to show sits once the page scrolls to it: near the top, so it is plain
 // where the page went, with a line or two above it for context.
@@ -58,7 +58,6 @@ export function FileSourceView({
   actions,
   onAddToContext,
   openAround = [],
-  expanded = [],
   onGoToFile,
   members = [],
   keys,
@@ -69,7 +68,6 @@ export function FileSourceView({
   actions: FileCommentsActions
   onAddToContext: (lines: CommentLines) => void
   openAround?: SourceLines[]
-  expanded?: string[]
   onGoToFile?: GoToFile
   members?: NodeSourceData[]
   keys: FilesFoldKeys
@@ -96,9 +94,6 @@ export function FileSourceView({
   // The file's callouts as the session answered them for the file view's filters; the page reads the file again when a
   // practice, a format or a connector changes.
   const callouts = useMemo(() => calloutsOf(file), [file])
-  // A node selected through a connector shows on the line of its holder that uses it, which its fold-out opens under.
-  const expandLines = useMemo(() => expandedLines(callouts, expanded, openAround), [callouts, expanded, openAround])
-  const shownAround = useMemo(() => (expandLines.length ? expandLines.map(line => ({ start: line, end: line })) : openAround), [expandLines, openAround])
   const rules = useMemo(() => rulesOf(file), [file])
   const rule = rules.some(shown => shown.name === chosenRule) ? chosenRule : (rules[0]?.name ?? '')
   const compose = useCallback((lines: CommentLines) => {
@@ -113,9 +108,9 @@ export function FileSourceView({
   useAddToContextAction(editor, onAddToContext)
   useFileMarks(editor, file)
   useMarkerPresses(editor, held, open)
-  useSelectedMarks(editor, shownAround, source.end_line)
-  useMembersFolded(editor, file.text, monacoLanguageOf(file), shownAround)
-  const firstShown = shownAround[0]?.start ?? 0
+  useSelectedMarks(editor, openAround, source.end_line)
+  useMembersFolded(editor, file.text, monacoLanguageOf(file), openAround)
+  const firstShown = openAround[0]?.start ?? 0
   useEffect(() => {
     if (!editor || !firstShown) return
     let frame = 0
@@ -155,12 +150,11 @@ export function FileSourceView({
         activeRule={rule}
         onSelectRule={setChosenRule}
         fixes={fixes}
-        openAround={shownAround}
+        openAround={openAround}
         language={monacoLanguageOf(file)}
         keepGlyphMargin
         wordWrap={wrap}
         callouts={callouts}
-        expandLines={expandLines}
         onGoToFile={onGoToFile}
         opensCalls={!isStoryTest(file)}
         onEditor={onEditor}

@@ -509,7 +509,7 @@ Requested 2026-11-16: selecting STORY_MAP in a step's observes group opened the 
 
 *Given* the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose docstring names the class Ticket  
 *When* the Person views the shared story test  
-*Then* the When's line carries a callout to Ticket.delete, the operation it invokes  
+*Then* the line of the When that calls Ticket.delete carries a callout titled Ticket.delete, the operation it invokes  
   *But* the Given's line, calling only its seed, and the docstring's line carry none
 
 #### Scenario: A step in a with-block Python story test invokes the operation its block calls

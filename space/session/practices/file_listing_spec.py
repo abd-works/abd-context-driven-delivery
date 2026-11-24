@@ -18,9 +18,10 @@ SESSION = "checkout-flow"
 def selection(fidelities: list[str], formats: list[list[str]] | None = None, *, is_stage_chosen: bool = True, practices: tuple[bool, ...] = (True,), of_practices: list[str] | None = None, offered: dict[str, list[list[str]]] | None = None):
     """A guidance selection as the listing reads it: the fidelities it covers, the format groups selected, whether stages
     were chosen, whether each practice is selected, the fidelities of the practices selected in every stage (those it
-    covers when none are given), and the format groups selected that a fidelity it does not cover offers, by slug."""
-    groups = [SimpleNamespace(formats=group, is_selected=True) for group in formats or []]
-    offered_groups = {slug: [SimpleNamespace(formats=group, is_selected=True) for group in each] for slug, each in (offered or {}).items()}
+    covers when none are given), and the format groups selected that a fidelity it does not cover offers, by slug. Each
+    group is labelled by its first format."""
+    groups = [SimpleNamespace(label=group[0], formats=group, is_selected=True) for group in formats or []]
+    offered_groups = {slug: [SimpleNamespace(label=group[0], formats=group, is_selected=True) for group in each] for slug, each in (offered or {}).items()}
     return SimpleNamespace(
         fidelities=fidelities,
         formats=groups,
@@ -71,6 +72,26 @@ with description("a listing of a session's files") as self:
             listing = listing_of(selection([STORY_MAP], [["drawio", "whiteboard"]]), is_repository=True)
             shown = [listing.of_fidelity(STORY_MAP, format, FileEntry(f".context/story-map.{format}", True)).is_listed for format in ("markdown", "drawio", "whiteboard")]
             expect(shown).to(equal([False, True, True]))
+
+    # The Files app says why it lists nothing when the formats chosen leave out every file of the fidelities listed;
+    # Python says which formats leave each file out, and the page only words it (release-1-2-fixes report, section 7,
+    # item 13).
+    with context("with markdown selected and a draw.io file of a fidelity listed"):
+        with before.each:
+            self.listing = listing_of(selection([STORY_MAP], [["markdown"]]), is_repository=True)
+
+        with it("should say the markdown format chosen leaves it out"):
+            expect(self.listing.of_fidelity(STORY_MAP, "drawio", FileEntry(".context/story-map.drawio", True)).hidden_by_formats).to(equal(["markdown"]))
+
+        with it("should say no format leaves out a markdown file it lists"):
+            expect(self.listing.of_fidelity(STORY_MAP, "markdown", FileEntry(".context/story-map.md", True)).hidden_by_formats).to(equal([]))
+
+        with it("should say no format leaves out a file of a fidelity not listed, which no format would show"):
+            expect(self.listing.of_fidelity(MODEL, "drawio", FileEntry(".context/context-map.drawio", True)).hidden_by_formats).to(equal([]))
+
+        with it("should say the markdown format chosen leaves out the draw.io file under the root"):
+            held = FileEntry(".context/story-map.drawio", True).belonging_to([STORY_MAP])
+            expect(self.listing.of_root(held).hidden_by_formats).to(equal(["markdown"]))
 
     with context("before anyone chose stages"):
         with it("should list the fidelities the link names that the selection covers"):

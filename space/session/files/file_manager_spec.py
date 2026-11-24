@@ -158,3 +158,22 @@ with description("a session's file manager"):
 
         with it("should list no entries, such as for a folder deleted since a page listed it"):
             expect(self.files.list("src/gone").entries).to(equal([]))
+
+    # Which files the Files app opens rendered, beside their source, is Python's answer: the page draws the form a file
+    # is read with and decides none itself (release-1-2-fixes report, section 7, item 13).
+    with context("that reads a file a viewer can render"):
+
+        with before.each:
+            for path in ("notes/plan.markdown", "notes/page.html", "notes/old.htm", "design/cart.svg", "data/cart.json", "notes/plain.txt", ".context/story-map.drawio", ".context/story-map.MD"):
+                (self.workpath / path).parent.mkdir(parents=True, exist_ok=True)
+                (self.workpath / path).write_text("", encoding="utf-8")
+            self.form_of = lambda *paths: [self.files.read(path).rendered_form for path in paths]
+
+        with it("should say a markdown file renders as markdown, whatever the case of its suffix"):
+            expect(self.form_of("README.md", ".context/story-map.MD", "notes/plan.markdown")).to(equal(["markdown"] * 3))
+
+        with it("should say an HTML page, an SVG drawing and JSON each render in their own form"):
+            expect(self.form_of("notes/page.html", "notes/old.htm", "design/cart.svg", "data/cart.json")).to(equal(["html", "html", "svg", "json"]))
+
+        with it("should say code, plain text and a draw.io file render in no form, showing only as source"):
+            expect(self.form_of("src/order.ts", "notes/plain.txt", ".context/story-map.drawio")).to(equal(["", "", ""]))

@@ -174,6 +174,8 @@ STEP_STORY_HELPER_WHEN = "when the Person looks up the deleted ticket"
 STEP_STORY_DOCSTRING_LINE = 1
 STEP_STORY_GIVEN_LINE = 9
 STEP_STORY_WHEN_LINE = 13
+# The line of the When that calls Ticket.delete, where the callout to it sits.
+STEP_STORY_WHEN_CALL_LINE = 15
 STEP_LISTED = [STEP_STORY, TICKET_CODE, BOARD_CODE, TICKET_EXAMPLES]
 # Seed: Archive Ticket's Python story test, its steps `with` blocks, its When calling Ticket.delete on the ticket its
 # Given holds, as the serve-cdd-code-in-lanes story tests call `self.lanes.for_project(...)`. Like them it imports the

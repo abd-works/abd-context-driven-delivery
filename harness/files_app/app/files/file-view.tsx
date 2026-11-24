@@ -7,7 +7,7 @@ import type { SourceCallout } from '@source-view/source-callouts'
 
 import type { FileCallouts } from './file-callouts'
 import { FileSourceView } from './file-source-view'
-import { opensRendered, renderedFormOf, renderingOf, type RenderedForm, type Rendering } from './file-rendering'
+import { renderingOf, type RenderedForm, type Rendering } from './file-rendering'
 import { FILE_PATH, RenderedCallouts } from './rendered-callouts'
 import { calloutsOf } from './source-of-file'
 
@@ -77,7 +77,9 @@ function useRenderedCallouts({ callouts, members = NO_MEMBERS, onGoToFile }: Pic
 
 function RenderableFileView({ form, callouts, ...props }: FileViewProps & { form: RenderedForm }) {
   const around = props.openAround ?? []
-  const [isRendered, setRendered] = useState(() => opensRendered(form, around))
+  // It opens rendered unless lines of it are asked to show, such as a node selected in the graph view, whose lines,
+  // comments and broken rules only the source view marks.
+  const [isRendered, setRendered] = useState(() => around.length === 0)
   // Lines asked to show once the file is open, such as a node selected in the graph view, show in the source view; the
   // Person can still press Rendered until other lines are asked for.
   const asked = around.map(lines => `${lines.start}-${lines.end}`).join(',')
@@ -99,11 +101,11 @@ function RenderableFileView({ form, callouts, ...props }: FileViewProps & { form
   )
 }
 
-// An open file: a file with a rendered form (markdown, HTML, SVG, JSON) opens rendered, unless lines of it are asked to
+// An open file: a file the session answers a rendered form for (markdown, HTML, SVG, JSON) opens rendered, unless lines of it are asked to
 // show, with Rendered and Source to switch between the two; any other file opens in the source view alone. Both views
 // show the file's callouts and follow its links.
 export function FileView({ callouts, ...props }: FileViewProps) {
-  const form = renderedFormOf(props.file.path)
+  const form = props.file.rendered_form as RenderedForm | ''
   if (!form) return <FileSourceView {...props} />
   return <RenderableFileView {...props} callouts={callouts} form={form} />
 }

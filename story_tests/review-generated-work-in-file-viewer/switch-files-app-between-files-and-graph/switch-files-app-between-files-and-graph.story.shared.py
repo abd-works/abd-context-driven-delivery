@@ -44,6 +44,7 @@ from space.kanban.graph_view_examples import (
     STEP_LISTED,
     STEP_STORY,
     STEP_STORY_HELPER_WHEN,
+    STEP_STORY_WHEN_CALL_LINE,
     STEP_STORY_WHEN_LINE,
     TICKET_EXAMPLES,
     TICKET_EXAMPLES_CONSTANT_LINE,
@@ -644,10 +645,10 @@ def _(s):
     def _(world):
         world.steps = world.data_of(session_of(world).file(path=STEP_STORY, rules=True))["steps"]
 
-    @s.then("the When's line carries a callout to Ticket.delete, but the Given's line, calling only its seed, and the docstring's line carry none")
+    @s.then("the line of the When that calls Ticket.delete carries a callout titled Ticket.delete, but the Given's line, calling only its seed, and the docstring's line carry none")
     def _(world):
-        found = [(step["line"], [target["name"] for target in step["invokes"]], [target["file"] for target in step["invokes"]]) for step in world.steps if step["invokes"]]
-        expect(found).to(equal([(STEP_STORY_WHEN_LINE, ["delete"], [TICKET_CODE])]))
+        found = [(callout["line"], callout["title"], callout["target"]["file"]) for step in world.steps for callout in step["callouts"] if callout["kind"] == "call"]
+        expect(found).to(equal([(STEP_STORY_WHEN_CALL_LINE, "Ticket.delete", TICKET_CODE)]))
 
 
 @shared_stories.scenario("Follow Story Steps To Code", "A step in a with-block Python story test invokes the operation its block calls")
@@ -771,7 +772,7 @@ def reached_by_steps(world, paths: list[str] | None = STEP_LISTED, node_filter: 
     """What each step of Delete Ticket's shared story test carries, by the step's line, as session.file answers it for
     the files at paths and node_filter: the names it invokes, then those it observes."""
     steps = world.data_of(session_of(world).file(path=STEP_STORY, rules=True, paths=paths, node_filter=node_filter))["steps"]
-    return {step["line"]: [target["name"] for target in [*step["invokes"], *step["observes"]]] for step in steps}
+    return {step["line"]: [callout["target"]["name"] for callout in step["callouts"]] for step in steps}
 
 
 def seed_step_story_graph(world) -> None:

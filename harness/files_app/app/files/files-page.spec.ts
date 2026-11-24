@@ -44,11 +44,18 @@ class FakeFilesServer implements CddApi {
   }
 
   // Each fidelity's markdown and drawio file, as ticket.fidelity_files answers them for the selection and the fidelities
-  // the link names: listed while the fidelity is listed and its format selected, or none is.
+  // the link names: listed while the fidelity is listed and its format selected, or none is; a file of a fidelity listed
+  // that the formats selected leave out names them.
   private fidelityFiles(slugs: string[], linked: string[]) {
     const listed = this.listedFor(linked)
     const formats = this.formatsSelected()
-    const answered = (slug: string, format: string, path: string) => ({ ...(entry(path) as object), is_listed: listed.includes(slug) && (!formats.length || formats.includes(format)), is_session_work: false })
+    const inFormats = (format: string) => !formats.length || formats.includes(format)
+    const answered = (slug: string, format: string, path: string) => ({
+      ...(entry(path) as object),
+      is_listed: listed.includes(slug) && inFormats(format),
+      is_session_work: false,
+      hidden_by_formats: listed.includes(slug) && !inFormats(format) ? this.labelsSelected() : [],
+    })
     return Object.fromEntries(slugs.map(slug => [slug, { markdown: [answered(slug, 'markdown', `.context/${slug}.md`)], drawio: [answered(slug, 'drawio', `.context/${slug}.drawio`)] }]))
   }
 
@@ -58,11 +65,11 @@ class FakeFilesServer implements CddApi {
   private rootFilesFor(linked: string[]) {
     const listed = this.listedFor(linked)
     const formats = this.formatsSelected()
-    return (this.rootFiles as { format: string; fidelities: string[]; is_changed: boolean }[]).map(file => ({
-      ...file,
-      is_listed: (!formats.length || formats.includes(file.format)) && (file.fidelities.length ? file.fidelities.some(slug => listed.includes(slug)) : !this.practices.length),
-      is_session_work: file.is_changed,
-    }))
+    return (this.rootFiles as { format: string; fidelities: string[]; is_changed: boolean }[]).map(file => {
+      const inFormats = !formats.length || formats.includes(file.format)
+      const belongs = file.fidelities.length ? file.fidelities.some(slug => listed.includes(slug)) : !this.practices.length
+      return { ...file, is_listed: inFormats && belongs, is_session_work: file.is_changed, hidden_by_formats: belongs && !inFormats ? this.labelsSelected() : [] }
+    })
   }
 
   // The fidelities whose files are listed: those the selection covers once stages were chosen, else those the link names
@@ -70,6 +77,10 @@ class FakeFilesServer implements CddApi {
   private listedFor(linked: string[]): string[] {
     const covered = this.listed()
     return this.stages !== null ? covered : linked.filter(slug => covered.includes(slug))
+  }
+
+  private labelsSelected(): string[] {
+    return this.selection().formats.filter(format => format.is_selected).map(format => format.label)
   }
 
   private formatsSelected(): string[] {
