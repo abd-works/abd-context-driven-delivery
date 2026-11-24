@@ -13,10 +13,7 @@ from __future__ import annotations
 from functools import cached_property
 from typing import TYPE_CHECKING
 
-from harness.graph.graph import READ_AT_FIDELITY
-
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.clean_engineering.reading.code_read import CODE_FIDELITY
 from cdd_guidance.practices.clean_engineering.reading.receiver_causes import ON_UNTYPED_VALUES, OTHERWISE, UNRESOLVED_CALLS_FACTS
 from cdd_guidance.practices.source_code.code_reach import CodeReach
 from cdd_guidance.practices.source_code.script_imports import ClassReference
@@ -68,23 +65,23 @@ class CodeUse:
 
     @cached_property
     def classes(self) -> list[Node]:
-        """The production classes read at the code fidelity, but the holder of a module's functions."""
-        return [node for node in self._context.nodes("OoadClass") if self._is_production(node) and node.name != MODULE_FUNCTION_HOLDER and node.is_read_at(CODE_FIDELITY)]
+        """The production classes, at the model fidelity or the code, but the holder of a module's functions."""
+        return [node for node in self._context.nodes("OoadClass") if self._is_production(node) and node.name != MODULE_FUNCTION_HOLDER]
 
     @cached_property
     def operations(self) -> list[Node]:
-        """The public production operations read at the code fidelity, module functions among them."""
+        """The public production operations, module functions among them."""
         return [node for node in self.members if node.type == "Operation" and self._is_public(node)]
 
     @cached_property
     def members(self) -> list[Node]:
-        """The production members read at the code fidelity whose use a rule asks about: every operation, private ones
+        """The production members, at the model fidelity or the code, whose use a rule asks about: every operation, private ones
         and module functions among them, and every property a class computes (``@property``); but a constructor and a
         member the language calls by its own rules (``__eq__``), and a property's setter, which an assignment calls. A
         field is not asked about: a write and a read of it are one edge to the read."""
         operations = [node for node in self._context.nodes("Operation") if not self._called_by_the_language(node) and not node.get_fact("is_setter")]
         properties = [node for node in self._context.nodes("Property") if node.get_fact("is_property")]
-        return [node for node in [*operations, *properties] if self._is_production(node) and self._is_code(node)]
+        return [node for node in [*operations, *properties] if self._is_production(node)]
 
     def unused_classes(self) -> list[Node]:
         """The classes nothing uses, which use nothing, and which no call the read could not join may use."""
@@ -366,15 +363,6 @@ class CodeUse:
                 if not self._test_code.is_example_code(file):
                     imported.update(target for reference in references for target in ClassReference(*reference).files() if _names_examples(target))
         return imported
-
-    def _is_code(self, member: Node) -> bool:
-        """Whether the member is read at the code fidelity: as its reading recorded on it, such as a member only a model
-        document declares, which is at the model fidelity under a class of code; else as its class is, since a property
-        answers none of its own."""
-        if member.has_fact(READ_AT_FIDELITY):
-            return member.is_read_at(CODE_FIDELITY)
-        owner = self._owner(member)
-        return member.is_read_at(CODE_FIDELITY) or (owner is not None and owner.is_read_at(CODE_FIDELITY))
 
     def _is_public(self, operation: Node) -> bool:
         return not (operation.name.startswith("_") or operation.get_fact("is_private"))

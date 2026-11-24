@@ -22,6 +22,9 @@ _CODE_ONLY = (
     "never-swallow-exceptions", "provide-meaningful-context", "prefer-instance-operations",
     "limit-paths-through-a-function", "keep-functions-readable", "limit-function-lines",
     "limit-class-complexity", "limit-class-methods", "keep-class-methods-sharing-data",
+)
+# The rules about use the practice's document states at the model fidelity, which judge a class at either fidelity.
+_USE = (
     "delete-unused-classes", "delete-unused-operations", "check-use-the-graph-cannot-see",
     "make-module-only-operations-private", "connect-disconnected-classes", "merge-one-class-packages",
 )
@@ -71,7 +74,14 @@ with description("a rule Clean Engineering states only at the code fidelity") as
 
 
 with description("a rule Clean Engineering states at the model fidelity") as self:
+    with it("should hold each rule about use"):
+        expect(sorted(set(_USE) & _stated_at("model"))).to(equal(sorted(_USE)))
+
     with context("on a class whose operations have no bodies"):
+        with it("should report the class nothing uses, since a design nobody uses is one to fix"):
+            declared_only = practice_from_files({"board/board.py": _DECLARED_ONLY})
+            expect(len(declared_only.hits(BY_SLUG["delete-unused-classes"]))).to(equal(1))
+
         with it("should still report an operation that takes five parameters"):
             declared_only = practice_from_files({"board/board.py": _DECLARED_ONLY})
             expect(declared_only.hits(BY_SLUG["limit-operation-parameters"])).to(equal(["Operation 'place' takes 5 parameters (maximum 3, excluding self)."]))

@@ -1,7 +1,8 @@
 """The rules about unused and disconnected code: a class or an operation nothing uses, one only a call the read could
 not join may use, a public operation only its own folder calls, a class joined to others only by inheritance, and a
 package of one class. Each asks how files use one another, so each runs over the whole working copy (scope ``all``)
-and reads *CodeUse* once for the practice it checks."""
+and reads *CodeUse* once for the practice it checks. Each judges a class at the model fidelity as one at the code
+fidelity, as the practice states them at the model fidelity."""
 
 from __future__ import annotations
 
@@ -29,7 +30,6 @@ class DeleteUnusedClasses(ProductionCodeRule):
     slug = "delete-unused-classes"
     node_types = ("OoadClass",)
     scope = SCOPE_ALL
-    code_fidelity_only = True
 
     def check_practice(self, context: RuleCheckContext) -> list[Finding]:
         return [
@@ -46,7 +46,6 @@ class DeleteUnusedOperations(ProductionCodeRule):
     slug = "delete-unused-operations"
     node_types = ("Operation", "Property")
     scope = SCOPE_ALL
-    code_fidelity_only = True
 
     def check_practice(self, context: RuleCheckContext) -> list[Finding]:
         return [
@@ -64,7 +63,6 @@ class CheckUseTheGraphCannotSee(ProductionCodeRule):
     requires_judge = True
     node_types = ("OoadClass", "Operation", "Property")
     scope = SCOPE_ALL
-    code_fidelity_only = True
 
     def check_practice(self, context: RuleCheckContext) -> list[Finding]:
         use = CodeUse(context)
@@ -88,7 +86,6 @@ class MakeModuleOnlyOperationsPrivate(ProductionCodeRule):
     requires_judge = True
     node_types = ("Operation",)
     scope = SCOPE_ALL
-    code_fidelity_only = True
 
     def check_practice(self, context: RuleCheckContext) -> list[Finding]:
         return [
@@ -107,7 +104,6 @@ class ConnectDisconnectedClasses(ProductionCodeRule):
     requires_judge = True
     node_types = ("OoadClass",)
     scope = SCOPE_ALL
-    code_fidelity_only = True
 
     def check_practice(self, context: RuleCheckContext) -> list[Finding]:
         return [Finding(node, self._said(node.name, family)) for node, family in CodeUse(context).disconnected_classes()]
@@ -127,7 +123,6 @@ class MergeOneClassPackages(ProductionCodeRule):
     requires_judge = True
     node_types = ("Package",)
     scope = SCOPE_ALL
-    code_fidelity_only = True
 
     def check_practice(self, context: RuleCheckContext) -> list[Finding]:
         return [

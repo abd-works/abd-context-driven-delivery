@@ -32,6 +32,14 @@ Observed (`code_use_rules.py` `DeleteUnusedClasses`, `DeleteUnusedOperations`, `
 *Then* delete-unused-classes reports Coupon as no use, to delete with its specs
   *And* delete-unused-operations reports none of Coupon's operations, which go with it
 
+#### Scenario: Report a class of the model nothing uses, before its code is written
+
+Observed (`code_fidelity_rules_spec.py`). The person's decisions of 2026-11-22 (`.sessions/_backlog/one-thing-one-node-in-the-graph.md`): a class written in a model document and in code is one node, so the rules about use judge each fidelity.
+
+*Given* the shop module's class model describes the class Voucher, whose operations have no bodies, and no class uses it
+*When* the graph rules run
+*Then* delete-unused-classes reports Voucher as no use, as it reports a class of code nobody uses
+
 #### Scenario: Pass a class another class uses
 
 *Given* the till takes a Coupon off each line it rings up
