@@ -186,8 +186,10 @@ section: body
 - *Read Modules Classes And Operations*
 - *Read Clean Engineering Model Documents*
 - *Place DDD Building Blocks Under Aggregates*
+- *Read Domain Documents And Code*
 - *Read Story Maps And Story Tests*
 - *Read BDD Spec Trees*
+- *Read UX Maps*
 - *Link Steps And Observations To Operations*
 - *Link Markdown Steps To Model Operations*
 - *Link Examples To Classes And Steps*

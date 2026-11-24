@@ -1870,7 +1870,7 @@ Observed: `graph.save_json` writes the serialized graph to the loaded folder's `
 
 Observed: saving merges into the existing `graph.json`, so practices already saved that this load did not include stay in the file (`graph.py` `_merged_graph_document`, `graph_json_spec.py` "should keep other practices when saving a different load").
 
-## (E) Build Practice Trees From Source
+## (E) Read Practice Trees From Source
 ### (S) Knowledge Graph --> Read Modules Classes And Operations
 
 Observed: Clean Engineering reads modules (folders with a module card), packages, classes, operations, properties and parameters, keeps each file's top-level functions in a `_module` class, and orders their groups under each node (`working_copy.py` `_record_clean`, `graph_spec.py` "with clean engineering", `working_copy_scan_spec.py` "over module cards").
@@ -1883,6 +1883,10 @@ Inferred: the load reads each scoped folder's `.context/*-model.md` beside the c
 
 Observed: DDD reads bounded contexts from folders holding `.context/bounded-context.md` and places aggregates, entity roots, value objects and repositories under them by stereotype (`working_copy.py` `_record_ddd`, `graph_spec.py` "with domain-driven design").
 
+### (S) Knowledge Graph --> Read Domain Documents And Code
+
+Observed: DDD reads the bounded contexts, aggregates, context mappings and events the bounded-context map and each domain model document write, and joins a class a document describes to the class in code that implements it with an edge, never on a name alone (`cdd_guidance/practices/ddd/reading/graph_reading.py`, `graph_reading_spec.py`; scenarios in `story_tests/map-work-into-knowledge-graph/read-practice-trees-from-source/read_domain_documents_and_code_story.test.md`).
+
 ### (S) Knowledge Graph --> Read Story Maps And Story Tests
 
 Observed: Stories reads epics, sub-epics and stories from story map markdown and draw.io files, and scenarios, steps and examples from story tests, keeping each node's path and line (`working_copy.py` `_record_stories`, `graph_spec.py` "with stories", `working_copy_scan_spec.py` "limited to an edited story map markdown file", "limited to an edited Python story test").
@@ -1891,6 +1895,19 @@ Observed: Stories reads epics, sub-epics and stories from story map markdown and
 
 Observed: BDD reads each spec file's describe tree into spec, description, context and observation nodes (`working_copy.py` `_record_bdd`, `graph_spec.py` "with behavior-driven development").
 
+### (S) Knowledge Graph --> Read UX Maps
+
+Observed: UX reads each UX map file into screens, regions, controls, interactions and transitions, with edges to the stories a screen shows and the domain terms it names (`cdd_guidance/practices/ux/model/graph_reading.py`, `graph_reading_spec.py`; scenarios in `story_tests/map-work-into-knowledge-graph/read-practice-trees-from-source/read_ux_maps_story.test.md`).
+
+### (S) Knowledge Graph --> Place Story Nodes On Their Source Lines
+
+Observed: scenarios and steps sit in source-line order, a step opens on the call holding its label, a scenario runs through its closing brace, and an imported example sits in its examples file (`graph.py` `Node._edges_in_source_order`, `Source.align_to_label`, `align_to_example_export`, `graph_spec.py` "a scenario", "a step", "an example a story test imports"); `defects.md` still lists scenario and step order under Not fixed.
+
+### (S) Knowledge Graph --> Give Each Node Its Fidelity
+
+Observed: each node knows the fidelity its practice's schema creates it at and every higher fidelity it belongs to (`graph.py` `Node.fidelities`, `graph_spec.py` "a node's fidelity").
+
+## (E) Link Practice Trees Across Practices
 ### (S) Knowledge Graph --> Link Steps And Observations To Operations
 
 Observed: a story step and a BDD observation each get an `invokes` edge to the operations their code calls, with `invokedBy` back on the operation and setup calls of the enclosing context first (`working_copy.py` `_record_story_edges`, `_record_bdd_edges`, `graph_spec.py` "with a step that invokes an operation", `bdd_invokes_spec.py`).
@@ -1902,14 +1919,6 @@ Observed: a When in a markdown scenarios file with a realization gets an `invoke
 ### (S) Knowledge Graph --> Link Examples To Classes And Steps
 
 Observed: an example that demonstrates a class, a then step that observes an example, and an example retrieved using a property each get their relationship edge in both directions (`schema_edges.py` `SchemaEdges.sync`, `graph_spec.py` "with an example that demonstrates a class", "with a then step that observes an example").
-
-### (S) Knowledge Graph --> Place Story Nodes On Their Source Lines
-
-Observed: scenarios and steps sit in source-line order, a step opens on the call holding its label, a scenario runs through its closing brace, and an imported example sits in its examples file (`graph.py` `Node._edges_in_source_order`, `Source.align_to_label`, `align_to_example_export`, `graph_spec.py` "a scenario", "a step", "an example a story test imports"); `defects.md` still lists scenario and step order under Not fixed.
-
-### (S) Knowledge Graph --> Give Each Node Its Fidelity
-
-Observed: each node knows the fidelity its practice's schema creates it at and every higher fidelity it belongs to (`graph.py` `Node.fidelities`, `graph_spec.py` "a node's fidelity").
 
 ## (E) Apply Pattern Overlays
 ### (S) Person --> Add Named Overlay From Catalog
