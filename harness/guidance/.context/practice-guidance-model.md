@@ -300,7 +300,7 @@ set_apart_below(rendered: str, comment: str): Reshaped
 OutlinedMember(name, lead, start, end, indent = '')
 ----
 lead_of(lines, start, indent, marks, floor = 0): int
-	// the first comment or decorator line written directly above start
+	// a module function of practice_formats.py, not an operation: the first comment or decorator line written directly above start
 
 ## PracticeReading
 

@@ -15,7 +15,7 @@ from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUC
 from cdd_guidance.practices.source_code import split_top_level
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Node, PracticeNodes
+    from harness.graph.graph import Node
 
     from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClass, ProductionClasses
 
@@ -202,13 +202,9 @@ class PassThroughClasses(ComparedFact):
     folder whose classes all forward, and all to the classes of one other folder, that folder (``forwards_to_module``,
     empty on every other folder)."""
 
-    def __init__(self, in_graph: "PracticeNodes", classes: "ProductionClasses") -> None:
-        super().__init__(classes)
-        self._in_graph = in_graph
-
     def record(self) -> None:
         targets = {each.node_id: self._forwarding_target(each) for each in self._classes}
-        names = {node.node_id: node.name for node in self._in_graph.nodes("OoadClass")}
+        names = {node.node_id: node.name for node in self._classes.in_graph.nodes("OoadClass")}
         for each in self._classes:
             target = targets[each.node_id]
             record_fact(each.node, "forwards_to", names[target] if target else "")
@@ -244,7 +240,7 @@ class PassThroughClasses(ComparedFact):
 
     def _record_folders(self, targets: dict[str, str]) -> None:
         """Each module folder whose classes all forward, and all to classes of one other folder."""
-        folder_of = {node.node_id: self._folder_id(node) for node in self._in_graph.nodes("OoadClass")}
+        folder_of = {node.node_id: self._folder_id(node) for node in self._classes.in_graph.nodes("OoadClass")}
         members: dict[str, list[str]] = {}
         for each in self._classes:
             members.setdefault(folder_of[each.node_id], []).append(each.node_id)
@@ -253,14 +249,14 @@ class PassThroughClasses(ComparedFact):
             others = {folder_of[targets[class_id]] for class_id in class_ids if targets[class_id]} - {folder_id}
             if all(targets[class_id] for class_id in class_ids) and len(others) == 1:
                 reached[folder_id] = next(iter(others))
-        for folder in folders_of(self._in_graph):
+        for folder in folders_of(self._classes.in_graph):
             folder.set_fact("forwards_to_module", self._name_of(reached.get(folder.node_id, "")))
 
     def _name_of(self, folder_id: str) -> str:
         """The name of the folder called folder_id, or its id when the graph holds no node of it; empty for none."""
         if not folder_id:
             return ""
-        other = self._in_graph.graph.node(folder_id)
+        other = self._classes.in_graph.graph.node(folder_id)
         return other.name if other else folder_id
 
     def _folder_id(self, node: "Node") -> str:

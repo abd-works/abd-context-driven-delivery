@@ -17,7 +17,7 @@ from cdd_guidance.practices.source_code import CODE_LANGUAGES
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-    from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
+    from cdd_guidance.practices.clean_engineering.measures.read_facts import MeasuredReading
 
 # The language each file extension is written in, as the practice's readers name it.
 _LANGUAGE_OF = {suffix: language.name for language in CODE_LANGUAGES for suffix in language.suffixes}
@@ -30,7 +30,7 @@ class CheckedCodeMeasures:
     not installed, is kept as its reason on the first function or class of the file it was asked of, and on the
     module, so its rule reports it once for the file and not for every function in it."""
 
-    def __init__(self, reading: "GraphReading", files: list[Path], chosen: ChosenTools, tools: dict[str, type[MeasuringTool]]) -> None:
+    def __init__(self, reading: "MeasuredReading", files: list[Path], chosen: ChosenTools, tools: dict[str, type[MeasuringTool]]) -> None:
         self._reading = reading
         self._chosen = chosen
         # One of each tool for this taking, made when first asked, so a file a tool reads is read once.

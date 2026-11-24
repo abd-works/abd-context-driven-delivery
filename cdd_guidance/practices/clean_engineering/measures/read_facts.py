@@ -7,10 +7,12 @@ package imports the reading back."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Node
+    from harness.graph.graph import Graph, Node, PracticeNodes
+
+    from cdd_guidance.practices.source_code import ProjectTestCode
 
 # The fact a class keeps when a model document describes it: the design, read from the
 # document, standing in for code not written yet.
@@ -22,6 +24,20 @@ IMPORTING_MODULES_FACT = "importing_modules"
 MODULE_IMPORT_LOOPS_FACT = "module_import_loops"
 # The parameter a method takes for its own object, which is no parameter a caller supplies.
 _PARAMETER_NAMES_EXCLUDED_FROM_COUNT = frozenset({"self", "cls"})
+
+
+class MeasuredReading(Protocol):
+    """What the measures ask of the practice's reading of the code, which ``GraphReading`` answers: the graph, the
+    practice's nodes in it, and the project's test code, which no measure is taken of."""
+
+    @property
+    def graph(self) -> "Graph": ...
+
+    @property
+    def in_graph(self) -> "PracticeNodes": ...
+
+    @property
+    def test_code(self) -> "ProjectTestCode": ...
 
 
 def is_under(path: str | None, folder: str | None) -> bool:

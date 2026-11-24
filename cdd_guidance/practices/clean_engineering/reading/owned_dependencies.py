@@ -18,7 +18,7 @@ from cdd_guidance.practices.clean_engineering.reading.code_file import (
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import record_fact
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Node, PracticeNodes
+    from harness.graph.graph import Node
 
     from cdd_guidance.practices.clean_engineering.reading.production_classes import ProductionClass, ProductionClasses
 
@@ -38,14 +38,10 @@ class DependenciesToOwn(ComparedFact):
     the operations that do it). A value, a failure, or a record with no behaviour the class makes is no dependency to
     own; neither is a class it is handed, holds, or builds once in its constructor."""
 
-    def __init__(self, in_graph: "PracticeNodes", classes: "ProductionClasses") -> None:
-        super().__init__(classes)
-        self._in_graph = in_graph
-
     def record(self) -> None:
         found: dict[str, list[list]] = {}
         production = {each.node_id: each for each in self._classes}
-        for edge in self._in_graph.edge_index.of("dependsOn"):
+        for edge in self._classes.in_graph.edge_index.of("dependsOn"):
             owner = production.get(edge.parent.node_id)
             if owner is None or edge.child.node_id not in production or edge.child is edge.parent:
                 continue

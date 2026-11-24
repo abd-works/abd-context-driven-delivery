@@ -35,7 +35,7 @@ from cdd_guidance.practices.clean_engineering.measures.read_facts import IMPORTE
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-    from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
+    from cdd_guidance.practices.clean_engineering.measures.read_facts import MeasuredReading
 
 # How the optional dependency group that holds the outside tool is installed.
 _INSTALL = 'pip install "lizard>=1.26"   (or, from a CDD checkout: pip install -e ".[measures]")'
@@ -73,7 +73,7 @@ class MeasuredNode:
     it was read from; for a module, each of the checked files it holds that is written in the language asked of."""
 
     node: "Node"
-    reading: "GraphReading"
+    reading: "MeasuredReading"
     files: tuple[Path, ...]
 
     @property

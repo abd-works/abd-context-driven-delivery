@@ -17,7 +17,7 @@ from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIB
 from cdd_guidance.practices.source_code import ProjectTestCode
 
 if TYPE_CHECKING:
-    from harness.graph.graph import Node
+    from harness.graph.graph import Node, PracticeNodes
 
     from cdd_guidance.practices.clean_engineering.reading.graph_reading import GraphReading
 
@@ -145,6 +145,7 @@ class ProductionClasses:
 
     def __init__(self, reading: "GraphReading") -> None:
         in_graph = reading.in_graph
+        self._in_graph = in_graph
         # The index of the classes Clean Engineering read by name, which its type linking asks too.
         self._index = reading.code_index
         self._operations: dict[str, list["Node"]] = {}
@@ -161,6 +162,11 @@ class ProductionClasses:
 
     def __iter__(self) -> Iterator[ProductionClass]:
         return iter(self._classes.values())
+
+    @property
+    def in_graph(self) -> "PracticeNodes":
+        """The nodes of the practice these classes were read from, every class among them, production code or not."""
+        return self._in_graph
 
     def named(self, type_name: str) -> list[ProductionClass]:
         """The production classes the graph holds called type_name."""
