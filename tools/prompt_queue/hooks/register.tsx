@@ -19,6 +19,7 @@ import {
   startRobotAgent,
   startTurn,
   followQueueAnswer,
+  followRobotMessage,
 } from './queue/prompt-queue'
 import { QueueView } from './queue/queue-view'
 import { PLAN_TOOL, PROMPT_QUEUE_TOOL, SET_STEPS_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
@@ -80,6 +81,8 @@ export const register: Register = on => {
       await followPlan($, e as unknown as Record<string, unknown>)
     } else if (e.agentId === undefined && SET_STEPS_TOOL.test(e.tool) && !isRefused(ran)) {
       await followTakenPrompt($, e as unknown as Record<string, unknown>)
+    } else if (e.agentId === undefined && e.tool === 'SendMessage') {
+      await followRobotMessage($, e as unknown as Record<string, unknown>)
     } else if (e.agentId === undefined && WRAP_UP_TOOL.test(e.tool)) {
       await finishPlan($)
       await noteDecisionAsked($, e as unknown as Record<string, unknown>)

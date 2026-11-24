@@ -2145,3 +2145,22 @@ test('grouping asks for work that waits on another prompt\'s result to go to the
 
   expect(systems[0]).toContain("needs another prompt's result")
 })
+
+
+test("a sub-agent this chat starts for a card is that card handed out, so the robot is not handed it again", async ($, on) => {
+  const { seeded } = await agentStarted($, on, 'Bolt: run the tests', 'Card [b]: Run the unit tier')
+
+  expect(seeded.stored.sentCards?.value).toEqual({ Bolt: 'b' })
+})
+
+test("a card this chat sends a robot's sub-agent itself is that card handed out, so the robot is not handed it again", async ($, on) => {
+  const seeded = seedQueue(on, true, '', ROBOT_CARDS)
+  seeded.stored.isSubAgentMode = { value: true, version: 1 }
+  seeded.stored.tasks = { value: GROUPED, version: 1 }
+  seeded.stored.robotAgents = { value: { Sparky: 's1' }, version: 1 }
+  planToolAnswers(on)
+
+  await $.tool.call({ tool: 'SendMessage', to: 's1', message: 'New card [c]: Validate them' })
+
+  expect(seeded.stored.sentCards?.value).toEqual({ Sparky: 'c' })
+})

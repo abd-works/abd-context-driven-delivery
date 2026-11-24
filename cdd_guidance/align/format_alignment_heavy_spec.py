@@ -112,6 +112,23 @@ def _session(project: Path):
     return session
 
 
+def _open(spec) -> None:
+    """Give spec, a context's state, a cdd home and a project of its own with its session and the session's alignment,
+    made once before the context's examples: a context diagnoses or aligns once, and its examples read what that left.
+    A context that changes the files has a project of its own, so no other context sees its changes."""
+    spec.home = ExampleHome()
+    spec.project = _project()
+    spec.session = _session(spec.project)
+    spec.alignment = SessionAlignment(spec.session)
+
+
+def _open_aligned(spec) -> None:
+    """As ``_open``, with every format of the story map written from the markdown."""
+    _open(spec)
+    spec.alignment.align()
+    spec.drawing = spec.project / DRAWING
+
+
 def _without_card(drawing: str, name: str) -> str:
     return re.sub(CARD.format(name=name), "", drawing, flags=re.S)
 
@@ -129,18 +146,13 @@ def _kinds(gaps) -> list[tuple[str, str]]:
 # (E) Align Formats In Files App
 # (S) Person --> Diagnose And Align Session Formats
 with description("a session's story map with its markdown, drawing and whiteboard chosen") as self:
-    with before.each:
-        self.home = ExampleHome()
-        self.project = _project()
-        self.session = _session(self.project)
-        self.alignment = SessionAlignment(self.session)
-
-    with after.each:
-        self.home.close()
-
     with context("whose practice writes under the project's .context folder, with only the markdown written"):
-        with before.each:
+        with before.all:
+            _open(self)
             self.session.practice("stories").choose_root(".context")
+
+        with after.all:
+            self.home.close()
 
         with it("should report the drawing and the whiteboard as missing beside the markdown"):
             expect(_kinds(self.alignment.diagnose().gaps)).to(equal([("missing_file", DRAWING), ("missing_file", BOARD)]))
@@ -150,12 +162,18 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 expect([done.file for done in self.alignment.align().aligned]).to(equal([DRAWING, BOARD]))
 
     with context("with only the markdown written"):
+        with before.all:
+            _open(self)
+
+        with after.all:
+            self.home.close()
+
         with it("should report the drawing and the whiteboard as missing, each aligned from the markdown"):
             gaps = self.alignment.diagnose().gaps
             expect([(gap.kind, gap.file, gap.source, gap.is_alignable) for gap in gaps]).to(equal([("missing_file", DRAWING, STORY_MAP, True), ("missing_file", BOARD, STORY_MAP, True)]))
 
         with context("that is aligned"):
-            with before.each:
+            with before.all:
                 self.result = self.alignment.align()
 
             with it("should render the drawing and the whiteboard from the markdown"):
@@ -168,15 +186,21 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 expect(self.result.diagnosis.is_aligned).to(be_true)
 
     with context("with every format written from the markdown"):
-        with before.each:
-            self.alignment.align()
-            self.drawing = self.project / DRAWING
+        with before.all:
+            _open_aligned(self)
+
+        with after.all:
+            self.home.close()
 
         with it("should find the formats aligned"):
             expect(self.alignment.diagnose().gaps).to(be_empty)
 
         with context("that the whiteboard was deleted from and a story's card was dropped from the drawing"):
-            with before.each:
+            with after.all:
+                self.home.close()
+
+            with before.all:
+                _open_aligned(self)
                 (self.project / BOARD).unlink()
                 moved = _with_card_moved(self.drawing.read_text(encoding="utf-8"), "Change Cart Line Quantity", "777")
                 self.drawing.write_text(_without_card(moved, "Remove Cart Line"), encoding="utf-8")
@@ -195,7 +219,7 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 ))
 
             with context("that is aligned"):
-                with before.each:
+                with before.all:
                     self.result = self.alignment.align()
 
                 with it("should leave no gap and meet no failure"):
@@ -209,7 +233,11 @@ with description("a session's story map with its markdown, drawing and whiteboar
                     expect(card).to(contain('<mxGeometry x="777"'))
 
         with context("that a story was added to in the markdown alone"):
-            with before.each:
+            with after.all:
+                self.home.close()
+
+            with before.all:
+                _open_aligned(self)
                 story_map = self.project / STORY_MAP
                 story_map.write_text(STORY_MAP_TEXT + "\n### (S) Customer --> Empty Cart\n", encoding="utf-8")
 
@@ -219,7 +247,11 @@ with description("a session's story map with its markdown, drawing and whiteboar
         # The person's ruling, 2026-11-22: what the source no longer holds goes to an agent who decides by reading it;
         # Align does not put a story removed from the markdown back into it with no decision made.
         with context("that a story was removed from in the markdown alone"):
-            with before.each:
+            with after.all:
+                self.home.close()
+
+            with before.all:
+                _open_aligned(self)
                 self.story_map = self.project / STORY_MAP
                 self.removed = STORY_MAP_TEXT.replace(CHANGE_QUANTITY, "")
                 self.story_map.write_text(self.removed, encoding="utf-8")
@@ -233,14 +265,18 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 expect(gap.message).to(contain("Story 'Change Cart Line Quantity'", "Decide each by reading it against what the source now holds"))
 
             with context("that is aligned"):
-                with before.each:
+                with before.all:
                     self.alignment.align()
 
                 with it("should not put the story back into the markdown"):
                     expect(self.story_map.read_text(encoding="utf-8")).to(equal(self.removed))
 
         with context("that a story was dropped from in the drawing alone, and another in the markdown alone"):
-            with before.each:
+            with after.all:
+                self.home.close()
+
+            with before.all:
+                _open_aligned(self)
                 self.drawing.write_text(_without_card(self.drawing.read_text(encoding="utf-8"), "Remove Cart Line"), encoding="utf-8")
                 (self.project / STORY_MAP).write_text(STORY_MAP_TEXT.replace(CHANGE_QUANTITY, ""), encoding="utf-8")
                 self.files = [self.project / path for path in (STORY_MAP, DRAWING, BOARD)]
@@ -265,14 +301,18 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 expect(conflict.message).to(contain(f"only {STORY_MAP} holds Story 'Remove Cart Line'", f"only {DRAWING} holds Story 'Change Cart Line Quantity'"))
 
             with context("that is aligned"):
-                with before.each:
+                with before.all:
                     self.alignment.align()
 
                 with it("should leave every file of the story map as it is"):
                     expect([file.read_text(encoding="utf-8") for file in self.files] == self.before).to(be_true)
 
         with context("whose markdown was emptied and whose whiteboard was deleted"):
-            with before.each:
+            with after.all:
+                self.home.close()
+
+            with before.all:
+                _open_aligned(self)
                 (self.project / STORY_MAP).write_text("", encoding="utf-8")
                 (self.project / BOARD).unlink()
                 self.result = self.alignment.align()
@@ -285,7 +325,11 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 expect(failure.message).to(contain("NothingToRender", "is empty"))
 
         with context("whose drawing no longer reads as a drawing"):
-            with before.each:
+            with after.all:
+                self.home.close()
+
+            with before.all:
+                _open_aligned(self)
                 self.drawing.write_text("<mxfile><diagram", encoding="utf-8")
 
             with it("should report the drawing as unreadable, with what the render said"):
@@ -293,7 +337,11 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 expect(gaps).to(equal([("unreadable_format", DRAWING, False)]))
 
         with context("whose story has scenarios in a story test nothing links, and whose markdown links a heading of a model no practice reads"):
-            with before.each:
+            with after.all:
+                self.home.close()
+
+            with before.all:
+                _open_aligned(self)
                 self.session.practice("stories").guidance.fidelities.called("scenarios").session_output.choose_format("markdown", True)
                 (self.project / STORY_TEST).parent.mkdir(parents=True)
                 (self.project / STORY_TEST).write_text(STORY_TEST_TEXT, encoding="utf-8")
@@ -310,7 +358,11 @@ with description("a session's story map with its markdown, drawing and whiteboar
                 expect(unmatched).to(equal([(STORY_MAP, True)]))
 
         with context("whose markdown links a heading its target does not hold"):
-            with before.each:
+            with after.all:
+                self.home.close()
+
+            with before.all:
+                _open_aligned(self)
                 (self.project / ".context" / "domain-model.md").write_text("# Domain Model\n", encoding="utf-8")
                 (self.project / STORY_MAP).write_text(STORY_MAP_TEXT + BROKEN_LINK, encoding="utf-8")
 
@@ -321,7 +373,7 @@ with description("a session's story map with its markdown, drawing and whiteboar
 
 # The person's answer (2026-11-20): every render ends in a saved file, so an alignment renders code formats too.
 with description("a session's domain model with its markdown and Python chosen") as self:
-    with before.each:
+    with before.all:
         self.home = ExampleHome()
         self.project = _project()
         (self.project / DOMAIN_MODEL).write_text(DOMAIN_MODEL_TEXT, encoding="utf-8")
@@ -332,7 +384,7 @@ with description("a session's domain model with its markdown and Python chosen")
         self.session.practice("ddd").guidance.fidelities.called("model").session_output.choose_format("python", True)
         self.alignment = SessionAlignment(self.session)
 
-    with after.each:
+    with after.all:
         self.home.close()
 
     with context("with only the markdown written"):
@@ -341,7 +393,7 @@ with description("a session's domain model with its markdown and Python chosen")
             expect([(gap.kind, gap.source, gap.is_alignable) for gap in gaps]).to(equal([("missing_file", DOMAIN_MODEL, True)]))
 
         with context("that is aligned"):
-            with before.each:
+            with before.all:
                 self.result = self.alignment.align()
 
             with it("should save a Python file for each aggregate where the fidelity declares it"):

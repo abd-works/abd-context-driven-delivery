@@ -1021,8 +1021,26 @@ export async function startRobotAgent($: EngineInterface, spawn: AgentSpawnInput
   const agentId = 'agentId' in started ? started.agentId : undefined
   if (agentId !== undefined) {
     await update($, robotAgents, agents => ({ ...agents, [robot]: agentId }))
+    await noteCardHanded($, robot, spawn.prompt)
   }
   return started
+}
+
+/** This chat sent a robot's sub-agent a message naming a card: that card is handed out, so play does not hand it again. */
+export async function followRobotMessage($: EngineInterface, call: Record<string, unknown>): Promise<void> {
+  const to = typeof call.to === 'string' ? call.to : ''
+  const robot = Object.entries(await read($, robotAgents)).find(([, id]) => id === to)?.[0]
+  if (robot !== undefined && typeof call.message === 'string') {
+    await noteCardHanded($, robot, call.message)
+  }
+}
+
+/** The card words this chat gave a robot name, when it is a card on the queue, as the card that robot was handed. */
+async function noteCardHanded($: EngineInterface, robot: string, words: string): Promise<void> {
+  const card = CARD_OF_PROMPT.exec(words)?.[1]
+  if (card !== undefined && (await read($, queue)).prompts.some(prompt => prompt.id === card)) {
+    await update($, sentCards, cards => ({ ...cards, [robot]: card }))
+  }
 }
 
 /** The robot on the queue a sub-agent is started for: the robot of the card its prompt names, else the robot whose

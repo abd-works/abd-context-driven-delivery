@@ -162,6 +162,16 @@ async def _answer_comment(server: SpecServer, project: Path, board: str) -> tupl
         return bool(result.isError), result.content[0].text
 
 
+def _open_story_map(spec) -> None:
+    """Give spec, a context's state, a throwaway project of its own whose .context holds the story map, made once
+    before the context's examples: every render a context makes is made once, and its examples only read what it left."""
+    spec.project = ThrowawayProject()
+    spec.folder = spec.project.root / ".context"
+    spec.folder.mkdir()
+    (spec.folder / "story-map.md").write_text(_STORY_MAP, encoding="utf-8")
+    spec.drawing = spec.folder / "story-map.drawio"
+
+
 def _card(drawio: str, name: str) -> ET.Element:
     """The cell drawing name in a draw.io story map: the cell itself, or the one inside the link that carries it."""
     for holder in ET.fromstring(drawio).iter():
@@ -175,21 +185,15 @@ with description("Render saving what it makes beside its source, called through 
         self.server = SpecServer((_RENDER, _SESSIONS, _GRAPH))
         self.server.start()
 
+    # Each context renders once, in a project of its own, before its examples, which only read what it saved; every
+    # project is closed once the examples are done.
     with after.all:
+        OPEN_PROJECTS.close_all()
         self.server.stop()
 
-    with before.each:
-        self.project = ThrowawayProject()
-        self.folder = self.project.root / ".context"
-        self.folder.mkdir()
-        (self.folder / "story-map.md").write_text(_STORY_MAP, encoding="utf-8")
-        self.drawing = self.folder / "story-map.drawio"
-
-    with after.each:
-        OPEN_PROJECTS.close_all()
-
     with context("a story map rendered to drawio"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio"))
 
         with it("should save the drawing beside the markdown"):
@@ -201,7 +205,8 @@ with description("Render saving what it makes beside its source, called through 
     # Exploratory testing, r3-gizmo-03: a mockup rendered to claude_design answered {} and saved nothing, and its canvas
     # could not be read back. The person's answer (2026-11-23): a mockup render to claude_design works and renders back.
     with context("a mockup in html rendered to claude_design, then its canvas rendered back to html"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             self.mockup = HtmlUxMap.create().render(OrderingMap().build(UxMap.create()))
             (self.project.root / "bookshop").mkdir()
             (self.project.root / "bookshop" / "buy-a-book.html").write_text(self.mockup, encoding="utf-8")
@@ -219,7 +224,8 @@ with description("Render saving what it makes beside its source, called through 
     # Exploratory testing, r3-bolt-06: a domain model rendered to Python came back as one text and nothing was saved.
     # The person's answer (2026-11-20): every render ends in a saved file.
     with context("a domain model rendered to Python"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             (self.folder / "domain-model.md").write_text(_DOMAIN_MODEL, encoding="utf-8")
             self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "python", ".context/domain-model.md", None, "ddd-model"))
 
@@ -233,7 +239,8 @@ with description("Render saving what it makes beside its source, called through 
     # The person's answer (2026-11-21): a render reshapes an existing file and loses nothing. Their example, through
     # the cdd server: a class that already has code, an operation added in the markdown model, rendered again.
     with context("a class model whose class already has code, with an operation added in the markdown, rendered again"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             self.model = self.project.root / "src" / "ordering" / ".context" / "ordering-model.md"
             self.model.parent.mkdir(parents=True)
             self.model.write_text(_CART_MODEL, encoding="utf-8")
@@ -255,7 +262,8 @@ with description("Render saving what it makes beside its source, called through 
             expect([(each["kept"], each["may_have_replaced_it"]) for each in migrate]).to(equal([("Cart.total", ["Cart.check_out", "Cart.subtotal"])]))
 
     with context("a story map whose drawing a person moved a card on"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             asyncio.run(_render(self.server, self.project.root, "drawio"))
             root = ET.fromstring(self.drawing.read_text(encoding="utf-8"))
             for holder in root.iter():
@@ -269,12 +277,13 @@ with description("Render saving what it makes beside its source, called through 
 
     # Exploratory testing, widget-06: a render of any markdown file in the folder was saved as story-map.drawio.
     with context("a story map whose drawing is there, with another markdown file beside it"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             asyncio.run(_render(self.server, self.project.root, "drawio"))
             self.drawn = self.drawing.read_text(encoding="utf-8")
 
         with context("that holds a story map of its own, rendered to drawio"):
-            with before.each:
+            with before.all:
                 (self.folder / "returns.md").write_text(_STORY_MAP.replace("Browse Product Catalog", "Return Damaged Item"), encoding="utf-8")
                 self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", ".context/returns.md"))
 
@@ -285,7 +294,7 @@ with description("Render saving what it makes beside its source, called through 
                 expect((self.folder / "returns.drawio").read_text(encoding="utf-8")).to(contain("Return Damaged Item"))
 
         with context("that is empty, rendered to drawio"):
-            with before.each:
+            with before.all:
                 (self.folder / "empty.md").write_text("", encoding="utf-8")
                 self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", ".context/empty.md"))
 
@@ -298,7 +307,8 @@ with description("Render saving what it makes beside its source, called through 
     # Exploratory testing, r3-sparky-01: the thin slice, a file the story map fidelity declares, was drawn over the story
     # map's drawing.
     with context("a story map whose drawing is there, with its thin slice rendered to drawio"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             asyncio.run(_render(self.server, self.project.root, "drawio"))
             self.drawn = self.drawing.read_text(encoding="utf-8")
             (self.folder / "thin-slice.md").write_text(_THIN_SLICE, encoding="utf-8")
@@ -312,7 +322,8 @@ with description("Render saving what it makes beside its source, called through 
 
     # Exploratory testing, r3-widget-01: one drawing of every module was saved in the first module's own folder.
     with context("the module cards of two modules rendered to one drawing, with no source named"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             for module in ("catalogue", "ordering"):
                 card = self.project.root / "src" / module / ".context" / "module-context.md"
                 card.parent.mkdir(parents=True)
@@ -329,7 +340,7 @@ with description("Render saving what it makes beside its source, called through 
         # r3-widget-01, step 4: the drawing of every module rendered back to markdown was saved as one modules.md
         # beside it, a name the modules fidelity never writes, holding every card a second time.
         with context("then that drawing rendered back to markdown"):
-            with before.each:
+            with before.all:
                 self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "markdown", ".context/modules.drawio", None, "clean-engineering-modules"))
 
             with it("should write each module's card back to its own module-context.md"):
@@ -345,7 +356,8 @@ with description("Render saving what it makes beside its source, called through 
 
     # Exploratory testing, r3-widget-05: a .md class model with no source named was read as Python by the worker.
     with context("a class model in markdown rendered to drawio with no source named"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             self.model = self.project.root / "src" / "ordering" / ".context" / "ordering-model.md"
             self.model.parent.mkdir(parents=True)
             self.model.write_text(_CLASS_MODEL, encoding="utf-8")
@@ -360,7 +372,8 @@ with description("Render saving what it makes beside its source, called through 
     # render that path, while the save writes the session's own folder, so the render drew an older graph a validate
     # had left in .context.
     with context("a spec rendered to its realization by the realization guidance's steps, with an older graph in .context"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             spec = self.project.root / "src" / "ordering" / "cart_spec.py"
             spec.parent.mkdir(parents=True)
             spec.write_text(_CART_SPEC, encoding="utf-8")
@@ -381,13 +394,14 @@ with description("Render saving what it makes beside its source, called through 
 
     # Exploratory testing, widget-07: render took ../outside.md and wrote story-map.drawio outside the project.
     with context("a story map outside the project, named from it"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             self.outside = self.project.root.parent / f"{self.project.root.name}-outside"
             self.outside.mkdir()
             (self.outside / "story-map.md").write_text(_STORY_MAP, encoding="utf-8")
             self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", f"../{self.outside.name}/story-map.md"))
 
-        with after.each:
+        with after.all:
             shutil.rmtree(self.outside, ignore_errors=True)
 
         with it("should refuse the path by name, as validate does"):
@@ -399,7 +413,8 @@ with description("Render saving what it makes beside its source, called through 
     # Exploratory testing, widget-09: a whiteboard file with no source named was read as markdown and failed with the
     # worker's traceback.
     with context("a story map's whiteboard file rendered to drawio with no source named"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             asyncio.run(_render(self.server, self.project.root, "whiteboard"))
             self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", ".context/story-map.whiteboard", source=None))
 
@@ -407,7 +422,8 @@ with description("Render saving what it makes beside its source, called through 
             expect((self.failed, "Browse Product Catalog" in self.drawing.read_text(encoding="utf-8"))).to(equal((False, True)))
 
     with context("a file that is no story map, rendered to drawio as markdown"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             (self.folder / "notes.md").write_text("just some words\n", encoding="utf-8")
             self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "drawio", ".context/notes.md"))
 
@@ -417,7 +433,8 @@ with description("Render saving what it makes beside its source, called through 
     # Exploratory testing, widget-04: the drawing holds no title, so the markdown written back from it took the
     # template's, and the save wrote that over the person's file.
     with context("a story map with its own title and scope, rendered to drawio and back to markdown"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             (self.folder / "story-map.md").write_text(_BOOKSHOP_STORY_MAP, encoding="utf-8")
             asyncio.run(_render(self.server, self.project.root, "drawio"))
             self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "markdown", ".context/story-map.drawio", "drawio"))
@@ -433,7 +450,8 @@ with description("Render saving what it makes beside its source, called through 
             expect(self.written_back).to(contain("Customer --> Place Order"))
 
     with context("a story map whose board is kept, rendered to whiteboard again"):
-        with before.each:
+        with before.all:
+            _open_story_map(self)
             asyncio.run(_render(self.server, self.project.root, "whiteboard"))
             board_file = self.folder / "story-map.whiteboard"
             board_file.write_text(Whiteboard.published_to(board_file.read_text(encoding="utf-8"), _BOARD), encoding="utf-8")
@@ -453,23 +471,17 @@ with description("A comment a person left on a board in Claude, answered through
         self.server = SpecServer((_RENDER, _SESSIONS))
         self.server.start()
 
-    with after.all:
-        self.server.stop()
-
-    with before.each:
-        self.project = ThrowawayProject()
-        folder = self.project.root / ".context"
-        folder.mkdir()
-        (folder / "story-map.md").write_text(_STORY_MAP, encoding="utf-8")
+        _open_story_map(self)
         asyncio.run(_render(self.server, self.project.root, "whiteboard"))
-        board_file = folder / "story-map.whiteboard"
+        board_file = self.folder / "story-map.whiteboard"
         board_file.write_text(Whiteboard.published_to(board_file.read_text(encoding="utf-8"), _BOARD), encoding="utf-8")
 
-    with after.each:
+    with after.all:
         OPEN_PROJECTS.close_all()
+        self.server.stop()
 
     with context("on the board the story map's whiteboard file was published to"):
-        with before.each:
+        with before.all:
             self.failed, self.answer = asyncio.run(_answer_comment(self.server, self.project.root, _BOARD))
 
         with it("should hand the chat the story map fidelity's rules"):
@@ -479,7 +491,7 @@ with description("A comment a person left on a board in Claude, answered through
             expect(self.answer).to(contain(".context/story-map.md"))
 
     with context("on a board no whiteboard file in the project was published to"):
-        with before.each:
+        with before.all:
             self.failed, self.answer = asyncio.run(_answer_comment(self.server, self.project.root, "https://claude.ai/artifact/Elsewhere"))
 
         with it("should refuse, naming the board"):
