@@ -16,7 +16,7 @@ from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.claude_marketplace import PublishedPlugin
 
-# The cdd home's folder of fixed folders Claude Code loads the plugins from, each leading to the approved lane's copy.
+# The cdd home's folder of fixed folders Claude Code loads the plugins from, each leading to the copy of the lane the cdd plugin serves.
 CHAT_PLUGINS = "chat-plugins"
 # Each claude plugin command clones or reads a marketplace; a slow disk or network can take this long.
 _CLAUDE_COMMAND_TIMEOUT_SECONDS = 120
@@ -62,7 +62,7 @@ class ClaudePlugins:
         self._claude_folder = claude_folder if claude_folder is not None else IdeLayout("Claude").user_settings_folder
 
     def install(self, plugin: PublishedPlugin) -> PluginInstall:
-        """Have Claude Code load plugin from the lane the person approved, never a cached copy: the cdd home's fixed
+        """Have Claude Code load plugin from the folder the install chose, the lane the cdd plugin serves, never a cached copy: the cdd home's fixed
         folder for the plugin (``chat-plugins/{name}``) leads to the folder the plugin is published from, the settings
         name that fixed folder in place of any other folder of the same plugin, and every cached copy is uninstalled.
         The fixed folder never moves, so a repin onto another lane and a reload of the plugins reach every chat; only

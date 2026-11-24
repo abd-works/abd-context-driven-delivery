@@ -63,9 +63,12 @@ with description("a cdd home's Claude Code plugins") as self:
             with it("should have Claude Code load the cdd plugin the stable lane publishes"):
                 expect(self.loaded["cdd"]).to(equal(self.home.marketplace.cdd_plugin.folder))
 
-            # The person approves a lane by pinning it; its chats then load that lane's mods, never a cached copy.
-            with it("should have Claude Code load the mods of the code the dev lane serves"):
-                expect([folder.is_relative_to(self.feature) for name, folder in self.loaded.items() if name != "cdd"]).to(equal([True, True]))
+            # The fixed folders are machine-wide and a mod calls the server the cdd plugin names, so a mod from another
+            # lane gave every chat a button its server could not serve (issue 106, the chat bar's session.toggle_guidance).
+            with it("should have Claude Code load every plugin from the lane the cdd plugin serves"):
+                stable = (self.home.folder, self.home.source)
+                lanes = {name: any(folder.is_relative_to(root) for root in stable) for name, folder in self.loaded.items()}
+                expect(lanes).to(equal({"cdd": True, "cdd-board": True, "prompt-queue": True}))
 
             with it("should leave the stable lane's mods as the stable lane's code has them"):
                 expect(self.queue_of(self.home)).to(equal(STABLE_QUEUE))
