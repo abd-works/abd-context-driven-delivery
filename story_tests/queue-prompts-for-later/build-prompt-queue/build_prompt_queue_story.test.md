@@ -15,7 +15,7 @@ The person puts work on the chat's prompt queue and shapes it before it runs. Th
 - ++queued prompt++ — one prompt on the queue, drawn as a card: its id, its text, and whether it is done.
 - ++draft++ — the text in the chat's prompt box, not yet sent.
 - ++goal++ — a queued prompt seen as the goal its tasks, the steps under it, work towards.
-- ++queue archive++ — the folder that keeps a JSON copy of every prompt clear or remove took off: the session's `queue-archive` folder, or beside the chat's queue file when the chat works in no session.
+- ++queue archive++ — the folder that keeps a JSON copy of every prompt clear, remove or flush took off, and of the whole queue file each time it was flushed: the session's `queue-archive` folder, or beside the chat's queue file when the chat works in no session.
 - ++attachment++ — an image or document pasted in a queued draft, kept as a file beside its prompt.
 - ++failure line++ — CDD's one failure line above the chat bar, with its Fix and ✕, which shows the queue's latest failure.
 
@@ -358,6 +358,24 @@ Intended: built (`movePrompt`, `prompt-queue.move`); the evidence missing is a t
 *And* its prompt queue holds ++Write the scenarios++
 *When* the person clears the queue
 *Then* .sessions/simple-queue/queue-archive in the ticket's worktree holds one copy
+
+## Story: Flush Prompt Queue
+
+Requested 2026-11-23 (the person): a flush button that keeps a timestamped copy of the queue file, then takes the finished cards off. Evidence: `tools/prompt_queue/prompt_queue_spec.py`, `prompt_queue_heavy_spec.py`, the plugin tests "flush keeps a copy of the queue as it stood, then takes the finished cards off" and "flush with nothing finished keeps the copy and every card", and `flush-prompt-queue/flush_prompt_queue_story.test.py`.
+
+#### Scenario: Flush keeps a copy of the whole queue file, then takes the done prompts off
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a), done, then ++Run the unit tier++ (b)
+*When* the person flushes the queue
+*Then* the queue archive holds a copy of the whole queue file as it stood, named prompt-queue and the time it was flushed
+*And* the queue holds only ++Run the unit tier++
+
+#### Scenario: Flush with no prompt done keeps the copy and takes nothing off
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b), neither done
+*When* the person flushes the queue
+*Then* the queue archive holds one copy of the whole queue file
+*And* the queue still holds ++Write the scenarios++, then ++Run the unit tier++
 
 ## Story: Refuse Queue File That Holds No Queue
 

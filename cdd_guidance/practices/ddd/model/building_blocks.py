@@ -70,8 +70,8 @@ class DomainClass(DomainNode, OoadClass):
     """A class of the DDD model: a Clean Engineering class that is one of the domain's building blocks, made with its
     name, its order, and its intent. It holds its *TacticalClass*, the one reading of which building block its
     stereotypes make it, and it is the card every format writes for it: its stereotypes, its members, the invariants
-    it lists, and whether its repository is drawn inside its root's card. A class whose stereotypes name no building
-    block is a plain *DomainClass*."""
+    it lists, and whether the document writes its repository inside its root's card. A class whose stereotypes name
+    no building block is a plain *DomainClass*."""
 
     # Whether its aggregate made it the root, which a card marked <<Aggregate Root>> is already.
     _made_root = False
@@ -80,8 +80,9 @@ class DomainClass(DomainNode, OoadClass):
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
         self.tactical = TacticalClass(self)
         self.invariants: list[str] = []
-        # A repository written and drawn inside its root's card, under its own heading, rather than as a card.
-        self.drawn_in_root = False
+        # A repository the document writes inside its root's card, under a `**Name** «Repository»` line, rather than
+        # under a `####` heading of its own. Every drawing draws a repository inside its root's card either way.
+        self.written_in_root = False
 
     @staticmethod
     def named(name: str, stereotypes: list[str]) -> "DomainClass":
@@ -105,7 +106,6 @@ class DomainClass(DomainNode, OoadClass):
         card.intent = oclass.intent
         card.properties = list(oclass.properties)
         card.operations = [item for item in oclass.operations if not item.is_constructor and item.name != oclass.name]
-        card.drawn_in_root = bool(oclass.folded_into)
         return card
 
     @property
@@ -134,13 +134,15 @@ class DomainClass(DomainNode, OoadClass):
             if isinstance(item, Property) and not isinstance(item, (DomainEvent, InvariantObject))
         ]
 
-    def take_words_from(self, earlier: "DomainClass") -> None:
+    def take_words_from(self, earlier: "DomainClass", drawn_in: dict[str, str]) -> None:
         """Keep the invariants, intent, and member words it has, and take earlier's where it has none, as a card read
         from a drawing takes what the document it is written onto held: where that document writes its repository,
-        each property's note and the relationship a drawing shows no arrow for, and each operation's note and calls."""
+        each property's note and the relationship a drawing shows no arrow for, and each operation's note and calls.
+        drawn_in names the card each class of the document is drawn inside, by the class's name, for each class drawn
+        inside another's card, as each repository is drawn inside its root's."""
         self.invariants = self.invariants or list(earlier.invariants)
         self.intent = self.intent or earlier.intent
-        self.drawn_in_root = earlier.drawn_in_root
+        self.written_in_root = earlier.written_in_root
         written_properties = {item.name: item for item in earlier.plain_properties}
         for prop in self.plain_properties:
             written = written_properties.get(prop.name)
@@ -151,17 +153,21 @@ class DomainClass(DomainNode, OoadClass):
         written_operations = {item.name: item for item in earlier.operations}
         for operation in self.operations:
             if operation.name in written_operations:
-                self._take_operation_words(written_operations[operation.name], operation)
+                self._take_operation_words(written_operations[operation.name], operation, drawn_in)
 
-    def _take_operation_words(self, earlier: Operation, operation: Operation) -> None:
+    def _take_operation_words(self, earlier: Operation, operation: Operation, drawn_in: dict[str, str]) -> None:
         """The operation's note, and its calls as the document writes them: every call inside the card's aggregate,
-        which no arrow shows, each call to another aggregate whose arrow is still drawn, then each arrow the document
-        has no call for."""
+        which no arrow shows, each call to another aggregate whose arrow still reaches the card the called class is
+        drawn in, then each arrow the document has no call for."""
         operation.description = operation.description or earlier.description
         arrows = {called_class(callee) for callee in operation.callees}
         local = {card.name for card in self.parent.classes} if self.parent is not None else {self.name}
-        kept = [callee for callee in earlier.callees if called_class(callee) in local | {""} or called_class(callee) in arrows]
-        written = {called_class(callee) for callee in kept}
+
+        def card_of(callee: str) -> str:
+            return drawn_in.get(called_class(callee), called_class(callee))
+
+        kept = [callee for callee in earlier.callees if called_class(callee) in local | {""} or card_of(callee) in arrows]
+        written = {card_of(callee) for callee in kept}
         operation.callees = kept + [callee for callee in operation.callees if called_class(callee) not in written]
 
     def write_into(self, module: Module, place: list[str]) -> OoadClass:

@@ -305,6 +305,12 @@ export async function clearQueue($: EngineInterface): Promise<void> {
   await changeQueue($, 'clear')
 }
 
+/** Flush: the cdd server keeps a timestamped copy of the whole queue file in the chat's queue archive, then takes the
+ * finished cards off, as prompt-queue.flush does; the button asks for nothing more. */
+export async function flushQueue($: EngineInterface): Promise<void> {
+  await changeQueue($, 'flush')
+}
+
 export async function toggleExpanded($: EngineInterface): Promise<void> {
   await update($, isExpanded, open => !open)
 }

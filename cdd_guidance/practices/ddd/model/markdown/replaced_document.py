@@ -20,6 +20,13 @@ class ReplacedDocument:
     def __init__(self, replaced: BoundedContextMap, read: BoundedContextMap) -> None:
         self._replaced = replaced
         self._read = read
+        # The card each class of the replaced file is drawn inside, by the class's name: each repository is drawn
+        # inside its root's card, so an arrow to the repository reaches the root's card.
+        self.drawn_in = {
+            card.name: aggregate.root_card.name
+            for aggregate in replaced.every_aggregate if aggregate.root_card is not None
+            for card in aggregate.classes if card.is_repository and card is not aggregate.root_card
+        }
 
     def give_its_words(self) -> None:
         """Give the map read from the drawing what the replaced file writes round its title, and each context still on
@@ -66,7 +73,7 @@ class _ReplacedAggregate:
     def give_its_words(self) -> None:
         """The aggregate's own words, its root's and its cards' (``Aggregate.take_words_from``), then the
         integrations the replaced file writes to the targets its arrows still reach."""
-        self._aggregate.take_words_from(self._was)
+        self._aggregate.take_words_from(self._was, self._document.drawn_in)
         self._aggregate.integrations = self._integrations()
 
     def _integrations(self) -> list[Integration]:

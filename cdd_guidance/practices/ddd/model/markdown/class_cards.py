@@ -39,7 +39,7 @@ class CardSection:
                 bodies[-1].append(line)
                 continue
             cards.append(DomainClass.from_heading(f"{in_root.group(1)} <<Repository>>"))
-            cards[-1].drawn_in_root = True
+            cards[-1].written_in_root = True
             bodies.append([])
         for card, body in zip(cards, bodies):
             CardSection(card).read_body(body)
@@ -54,7 +54,7 @@ class CardSection:
 
     def lines(self) -> list[str]:
         card = self._card
-        heading = f"**{card.name}** «Repository»" if card.drawn_in_root else f"{CARD}{card.heading}"
+        heading = f"**{card.name}** «Repository»" if card.written_in_root else f"{CARD}{card.heading}"
         written = [heading, "", *_MEMBERS.lines_of(card, card.plain_properties)]
         if card.invariants:
             written.extend(["", "**Invariants**", ""])

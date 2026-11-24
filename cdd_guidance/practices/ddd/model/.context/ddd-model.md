@@ -44,9 +44,9 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 	// the aggregate a module path names, `Sales | custom/ShoppingCart`
 + wire_events(entries: list[str]): None
 	// each `Event: emitted by Producer; consumed by A, B` entry onto its producer's root
-+ write_classes(model: CleanEngineeringModel): None
-	// one module of model's own format per aggregate, named by its code_place
-	-> Aggregate.write_classes_into(module)
++ write_classes(model: CleanEngineeringModel, draws_repository_in_root: bool = False): None
+	// one module of model's own format per aggregate, named by its code_place; a drawing draws each repository inside its root's class
+	-> Aggregate.write_classes_into(module, draws_repository_in_root)
 + read_class_model(model: CleanEngineeringModel): BoundedContextMap
 	// each class's module_path, else the name of the module a drawing keeps it in, names its context and aggregate; classes with no place gather around the roots that hold them
 	-> Aggregate.take_class(oclass)
@@ -141,12 +141,12 @@ bounded_context_map = MarkdownBoundedContextMap().parse(text)
 	// each labelled arrow a class drawing shows to another aggregate's class: a call by the operation it names, else an integration
 + take_root_from_classes(): None
 	// once its cards are read: the relationships their types name, then the root card, else a root named after it
-+ write_classes_into(module: Module): None
-	// each card as module's own class, kept in the aggregate's place; the root depends on each class an integration reaches
++ write_classes_into(module: Module, draws_repository_in_root: bool = False): None
+	// each card as module's own class, kept in the aggregate's place; the root depends on each class an integration reaches; drawn, the repository is folded into the root's class (OoadClass.fold), however the document writes it, and code keeps it a class of its own
 	-> DomainClass.write_into
 	-> Integration.as_dependency
-+ take_words_from(earlier: Aggregate): None
-	// keeps its own words and takes earlier's where it has none: sentence, group, consumed events, its root's and its cards'
++ take_words_from(earlier: Aggregate, drawn_in: dict[str, str]): None
+	// keeps its own words and takes earlier's where it has none: sentence, group, consumed events, its root's and its cards'; drawn_in names the card each class of earlier is drawn inside, so a call to a repository is kept while an arrow reaches its root's card
 + load_root(): None
 	// -> take_root(root)
 	// -> root.load_invariant_objects()
@@ -258,8 +258,8 @@ their order, a repository drawn inside its root's card, and the invariants it li
 + tactical: TacticalClass
 	// made once with the class: the one reading of which building block its stereotypes make it
 + invariants: list[str]
-+ drawn_in_root: bool
-	// a repository written and drawn inside its root's card
++ written_in_root: bool
+	// a repository the document writes inside its root's card (`**Name** «Repository»`) rather than under its own `####` heading; every drawing draws it inside the root's card either way
 + is_root: bool
 	// marked <<Aggregate Root>>, or made its aggregate's root
 + is_repository: bool
@@ -267,8 +267,8 @@ their order, a repository drawn inside its root's card, and the invariants it li
 + plain_properties: list[Property]
 	// what the class holds, not its events or invariant objects
 ----
-+ take_words_from(earlier: DomainClass): None
-	// keeps its own words and takes earlier's where it has none: invariants, intent, member notes, each operation's calls
++ take_words_from(earlier: DomainClass, drawn_in: dict[str, str]): None
+	// keeps its own words and takes earlier's where it has none: invariants, intent, member notes, each operation's calls, a call to another aggregate kept while an arrow still reaches the card its class is drawn in
 + write_into(module: Module, place: list[str]): OoadClass
 	// adds the card to module as that format's own class: its stereotypes, its intent, its members, and place as its module_path
 
@@ -465,9 +465,10 @@ context and an aggregate are modules and the building blocks are classes, so the
 with its layout and its arrow routing; DDD keeps no layout of its own. The bounded context map is the modules view: each
 context a module, each aggregate a module nested in its context's (named by its `module_path`, `Sales |
 custom/ShoppingCart`) listing its `drawn_members`, and each integration a dependency arrow named by its pattern. At model
-fidelity the aggregate view is the class view: the map writes its cards into its own modules (`write_classes`), each
-card a class with its stereotypes, kept in the module its place names, with a dependency arrow where an operation calls
-into another aggregate and from the root along each integration.
+fidelity the aggregate view is the class view: the map writes its cards into its own modules (`write_classes`, drawing
+each repository inside its root's card, below the root's operations), each card a class with its stereotypes, kept in
+the module its place names, with a dependency arrow where an operation calls into another aggregate, landing on the
+card the called class is drawn in, and from the root along each integration.
 
 ------
 + context_cell_type: type[ContextCell]
@@ -502,6 +503,14 @@ the aggregate its path names, with the root its members show, and each arrow it 
 The `drawio` format. Its cells are *DrawIOContextCell* (*ContextCell*, *DrawIOModule*) and *DrawIOAggregateCell*
 (*AggregateCell*, *DrawIOModule*); each cell's style names its kind (`kind=boundedContext;`, `kind=aggregate;`), which
 Clean Engineering's reader builds back into the cell type through `module_cell_types`.
+
+Its aggregate view is drawn by *AggregateViewDiagram* (its `class_diagram_type`, a Clean Engineering
+*ClassDiagramWriter*) on one page by *AggregateViewPage* (a *ClassDiagramPageWriter*): each aggregate's cards are laid
+out together by the shared card placement, a container titled with the aggregate's name is drawn round them, and the
+aggregates of one bounded context sit side by side in a larger container titled with the context's label (`Ordering |
+custom`); the containers' styles name their kinds as the map's cells do. The containers lie behind the cards on the
+page itself and carry no class title, so every card keeps its place on the page, the shared router and layout scanners
+measure it where it stands, and the reader reads each card by the module its style names and nothing from a container.
 
 ----
 + parse(text: str): DrawIOBoundedContextMap

@@ -17,6 +17,20 @@ def segments_cross(first: Segment, second: Segment) -> bool:
     )
 
 
+def flowed(sizes: list[tuple[float, float]], row_width: float, gap: float) -> list[tuple[float, float]]:
+    """The top-left corner of each box of sizes, laid left to right gap apart, a new row gap under the last when a box
+    would run the row wider than row_width; the first box at (0, 0)."""
+    corners: list[tuple[float, float]] = []
+    left, top, row_bottom = 0.0, 0.0, 0.0
+    for width, height in sizes:
+        if left > 0 and left + width > row_width:
+            left, top = 0.0, row_bottom + gap
+        corners.append((left, top))
+        left += width + gap
+        row_bottom = max(row_bottom, top + height)
+    return corners
+
+
 def _turns_left(point: Point, line: Segment) -> bool:
     """True when walking from the line's start towards ``point`` turns left of the line's direction."""
     (start, end) = line

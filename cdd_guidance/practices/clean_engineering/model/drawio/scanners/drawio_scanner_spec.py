@@ -105,6 +105,18 @@ with description("a Draw.io layout scanner"):
         with it("should name the page and both classes"):
             expect(self.violations[0].message).to(contain("[Page] Order → Customer"))
 
+    with context("that prefers short routes, given two related classes of two modules far apart"):
+        with before.all:
+            two_modules = _FAR_APART
+            two_modules = two_modules.replace('value="&lt;b&gt;Order&lt;/b&gt;"', 'value="&lt;b&gt;Order&lt;/b&gt;" style="module=Ordering;"')
+            two_modules = two_modules.replace('value="&lt;b&gt;Customer&lt;/b&gt;"', 'value="&lt;b&gt;Customer&lt;/b&gt;" style="module=Customers;"')
+            path = _diagram_in_examples()
+            path.write_text(two_modules, encoding="utf-8")
+            self.violations = PreferShortRoutesScanner(explicit_paths=[path]).scan(path.parent, [path])
+
+        with it("should not hold the arrow between the two modules to the gap, which the modules' places set"):
+            expect([item.message for item in self.violations if "endpoint gap" in item.message]).to(equal([]))
+
     with context("that reports on every rule for named paths"):
         with before.all:
             path = _diagram_in_examples()

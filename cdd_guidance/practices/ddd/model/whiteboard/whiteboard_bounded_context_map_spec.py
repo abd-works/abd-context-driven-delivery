@@ -77,10 +77,10 @@ with description("WhiteboardBoundedContextMap"):
             copies = [element.text for element in self.board.elements if isinstance(element, Shape) and "«from:" in element.text]
             expect(copies).to(equal([]))
 
-        with it("should draw a call into another aggregate as one arrow between the two classes' own cards"):
+        with it("should draw a call into another aggregate's repository as one arrow to the root's card the repository is drawn in"):
             ids = {element.text.split("**")[1]: element.id for element in self.board.elements if isinstance(element, Shape) and element.role == "class"}
             calls = [(arrow.from_id, arrow.to_id) for arrow in self.board.elements if isinstance(arrow, Arrow) and arrow.label == "«sendSupportRequest»"]
-            expect(calls).to(equal([(ids["CustomerProfile"], ids["KycInquiryRepository"])]))
+            expect(calls).to(equal([(ids["CustomerProfile"], ids["KycInquiry"])]))
 
         with it("should draw each integration from the root as one arrow to the root it reaches, named by its pattern"):
             ids = {element.text.split("**")[1]: element.id for element in self.board.elements if isinstance(element, Shape) and element.role == "class"}
@@ -106,10 +106,10 @@ with description("WhiteboardBoundedContextMap"):
         with it("should head the repository's part of the card with its «Repository» stereotype, below the root's operations"):
             expect(self.root.index("*«Repository»*\n**KycInquiryRepository**")).to(be_above(self.root.index("+ verify()")))
 
-        with it("should read the repository back as the aggregate's repository, kept inside its root's card"):
+        with it("should read the repository back as the aggregate's repository, with its operations"):
             kyc = next(item for item in WhiteboardBoundedContextMap().parse(self.text).every_aggregate if item.name == "KYC")
-            expect((kyc.repository.name, kyc.repository.drawn_in_root, [item.name for item in kyc.repository.operations])).to(
-                equal(("KycInquiryRepository", True, ["create", "load", "update"])))
+            expect((kyc.repository.name, [item.name for item in kyc.repository.operations])).to(
+                equal(("KycInquiryRepository", ["create", "load", "update"])))
 
     with context("that draws a domain model of two contexts, one holding two aggregates"):
         with before.all:

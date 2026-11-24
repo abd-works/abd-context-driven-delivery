@@ -101,7 +101,7 @@ class DrawnBoundedContextMap(BoundedContextMap):
         fidelity); otherwise the map. The drawing takes the map's own name."""
         self.title = source.title
         if source.has_class_cards:
-            source.write_classes(self)
+            source.write_classes(self, draws_repository_in_root=True)
         else:
             self.modules = self._cells(source)
 

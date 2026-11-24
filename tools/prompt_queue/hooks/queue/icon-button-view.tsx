@@ -111,6 +111,10 @@ export const SUB_AGENTS_SVG = (colour: string) =>
   svgOf(colour, '<circle cx="8" cy="3" r="1.6"/><circle cx="3" cy="13" r="1.6"/><circle cx="8" cy="13" r="1.6"/>'
     + '<circle cx="13" cy="13" r="1.6"/><path d="M8 4.6v6.8M8 7.5 3 11.4M8 7.5l5 3.9"/>')
 
+/** A page with an arrow down into a tray: the queue file is copied into the archive before the finished cards go. */
+export const FLUSH_SVG = (colour: string) =>
+  svgOf(colour, '<path d="M8 2v7M5 6.5 8 9.5l3-3M2.5 10v3.5h11V10"/>')
+
 export const CLEAR_SVG = (colour: string) =>
   svgOf(colour, '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9M7 7v4M9 7v4"/>')
 

@@ -2,6 +2,7 @@ import type { EngineInterface, RenderInput } from 'claude-code'
 
 import {
   clearQueue,
+  flushQueue,
   editPrompt,
   movePrompt,
   removePrompt,
@@ -31,6 +32,7 @@ import { progressOf } from './plan-steps'
 import {
   ADD_SVG,
   CLEAR_SVG,
+  FLUSH_SVG,
   IconButtonView,
   TipView,
   TipLabelView,
@@ -98,6 +100,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
         </Box>
         {state.isExpanded && IconButtonView(elements, playIcon(state), () => togglePlaying($))}
         {state.isExpanded && IconButtonView(elements, subAgentsIcon(state), () => toggleSubAgentMode($))}
+        {state.isExpanded && IconButtonView(elements, FLUSH_ICON, () => flushQueue($))}
         {state.isExpanded && IconButtonView(elements, CLEAR_ICON, () => clearQueue($))}
       </Box>
     </Box>
@@ -124,6 +127,7 @@ function subAgentsIcon(state: QueueState): Icon {
 }
 
 const ADD_ICON: Icon = { key: 'queue-add', svg: ADD_SVG, glyph: '+', tip: 'Run /queue on the draft: place it into the plan (Alt+Enter queues it as it is)' }
+const FLUSH_ICON: Icon = { key: 'queue-flush', svg: FLUSH_SVG, glyph: '⇣', tip: 'Flush: keep a timestamped copy of the queue file in the queue archive, then take the finished cards off' }
 const CLEAR_ICON: Icon = { key: 'queue-clear', svg: CLEAR_SVG, glyph: '✕', tip: 'Clear the queue' }
 
 /**

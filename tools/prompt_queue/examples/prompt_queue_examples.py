@@ -8,7 +8,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from tools.prompt_queue.prompt_queue import PromptQueue, PromptStep
+from tools.prompt_queue.prompt_queue import QUEUE_FILE, PromptQueue, PromptStep
 
 # Seed: the chat whose queue the stories work on.
 CHAT = "chat-1"
@@ -35,7 +35,12 @@ def three_steps_pending() -> list[PromptStep]:
 
 def seed_queue(*texts: str) -> PromptQueue:
     """CHAT's queue in a folder of its own, holding texts in order."""
-    queue = PromptQueue(CHAT, Path(tempfile.mkdtemp()) / "prompt-queue.json")
+    return seed_queue_in(Path(tempfile.mkdtemp()), *texts)
+
+
+def seed_queue_in(folder: Path, *texts: str) -> PromptQueue:
+    """CHAT's queue kept in folder, its queue archive beside it, holding texts in order."""
+    queue = PromptQueue(CHAT, folder / QUEUE_FILE)
     queue.add_all(list(texts))
     return queue
 

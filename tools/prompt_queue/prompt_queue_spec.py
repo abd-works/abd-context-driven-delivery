@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from mamba import after, context, describe, it, before
-from expects import contain, expect, equal, raise_error
+from expects import contain, expect, equal, match, raise_error
 
 from harness.chat.chat import CHATS_FOLDER
 from harness.installation.json_file import JsonFile, JsonFileBusy
@@ -70,6 +70,36 @@ with describe(PromptQueue):
         self.queue.clear()
         archived = [json.loads(saved.read_text(encoding="utf-8")) for saved in (self.folder / "queue-archive").glob("*.json")]
         expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Write the scenarios", "Run the unit tier"]]))
+
+    with context("that the person flushes the queue"):
+        with before.each:
+            self.queue.done(self.queue.prompts[0].id)
+            self.before_flush = json.loads((self.folder / "prompt-queue.json").read_text(encoding="utf-8"))
+            self.flushed = self.queue.flush()
+            self.copies = sorted((self.folder / "queue-archive").glob("prompt-queue-*.json"))
+
+        with it("keeps a copy of the whole queue file as it stood, named for when, in the chat's queue archive"):
+            expect([json.loads(saved.read_text(encoding="utf-8")) for saved in self.copies]).to(equal([self.before_flush]))
+
+        with it("names the copy prompt-queue and the time it was flushed"):
+            expect(self.copies[0].name).to(match(r"^prompt-queue-\d{8}T\d{6}Z\.json$"))
+
+        with it("takes the finished prompts off, leaving the work still to do in order"):
+            expect([prompt.text for prompt in self.flushed.prompts]).to(equal(["Run the unit tier"]))
+
+        with it("still says when a flushed prompt was taken off, when it refuses it"):
+            flushed = self.before_flush["prompts"][0]["id"]
+            expect(lambda: self.queue.done(flushed)).to(raise_error(PromptNotQueued, contain(f"{flushed} was taken off the queue at ")))
+
+    with context("that the person flushes a queue with nothing finished"):
+        with before.each:
+            self.flushed = self.queue.flush()
+
+        with it("still keeps a copy of the whole queue file"):
+            expect(len(list((self.folder / "queue-archive").glob("prompt-queue-*.json")))).to(equal(1))
+
+        with it("takes nothing off"):
+            expect([prompt.text for prompt in self.flushed.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
 
     with it("keeps a copy of a prompt remove takes off, as JSON in the chat's queue archive"):
         self.queue.remove(self.queue.prompts[1].id)

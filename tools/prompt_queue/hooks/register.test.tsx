@@ -46,6 +46,8 @@ function answered(prompt: Prompt) {
  * PromptQueue, each answering the queue. */
 function promptQueueTools(prompts: Prompt[]) {
   let added = 0
+  // The queue as each flush found it, the copy the cdd server keeps in the queue archive.
+  const flushes: string[] = []
   const answer = () => ({ chat: CHAT, prompts: prompts.map(answered) })
   const stepsOf = (args: Record<string, unknown>) => prompts[at(args.prompt)]!.steps ?? []
   const at = (id: unknown) => prompts.findIndex(prompt => prompt.id === id)
@@ -72,6 +74,11 @@ function promptQueueTools(prompts: Prompt[]) {
     clear: () => {
       const unfinished = prompts.filter(prompt => !prompt.is_done)
       prompts.splice(0, prompts.length, ...(unfinished.length === prompts.length ? [] : unfinished))
+      return answer()
+    },
+    flush: () => {
+      flushes.push(JSON.stringify(prompts))
+      prompts.splice(0, prompts.length, ...prompts.filter(prompt => !prompt.is_done))
       return answer()
     },
     done: args => {
@@ -129,7 +136,7 @@ function promptQueueTools(prompts: Prompt[]) {
       return answer()
     },
   }
-  return { prompts, call: (tool: string, args: Record<string, unknown>) => operations[tool.replace('prompt-queue.', '')]!(args) }
+  return { prompts, flushes, call: (tool: string, args: Record<string, unknown>) => operations[tool.replace('prompt-queue.', '')]!(args) }
 }
 
 /** The mod's stored values, kept in memory as the engine keeps them: each write raises the value's version; the queue
@@ -164,7 +171,7 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
     return { value: { isSet: true, version } }
   })
 
-  return { get prompts() { return server.prompts }, stored }
+  return { get prompts() { return server.prompts }, flushes: server.flushes, stored }
 }
 
 for (const surface of ['desktop', 'terminal'] as const) {
@@ -277,6 +284,26 @@ for (const isPlaying of [true, false]) {
     }
   })
 }
+
+test('flush keeps a copy of the queue as it stood, then takes the finished cards off', async ($, on) => {
+  const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true }, { id: 'b', text: 'Run the unit tier' }])
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-flush' })
+
+  expect([seeded.flushes.length, seeded.prompts.map(prompt => prompt.id)]).toEqual([1, ['b']])
+  await ui.unmount()
+})
+
+test('flush with nothing finished keeps the copy and every card', async ($, on) => {
+  const seeded = seedQueue(on, true)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-flush' })
+
+  expect([seeded.flushes.length, seeded.prompts.map(prompt => prompt.id)]).toEqual([1, ['a', 'b']])
+  await ui.unmount()
+})
 
 test("the queue is read from the cdd plugin's server in a chat whose project names no cdd server of its own", async ($, on) => {
   const seeded = seedQueue(on, true, '', QUEUED, false, '', '', ['plugin:cdd:cdd'])

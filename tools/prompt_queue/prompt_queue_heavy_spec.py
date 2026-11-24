@@ -80,6 +80,18 @@ with description("a chat's prompt queue through the cdd server") as self:
                 with it("should leave the work still to do"):
                     expect(texts(self.cleared)).to(equal(["Run the unit tier"]))
 
+        with context("that the person flushes the queue"):
+            with before.all:
+                self.flushed = self.chat.answer("prompt-queue.flush", chat="")
+
+            with it("should keep a copy of the whole queue file in the queue archive of the session the chat works in"):
+                archive = self.project / ".sessions" / "main" / "queue-archive"
+                copies = [json.loads(saved.read_text(encoding="utf-8")) for saved in archive.glob("prompt-queue-*.json")]
+                expect([texts(copy) for copy in copies]).to(equal([["Run the unit tier"]]))
+
+            with it("should take nothing off when nothing is done"):
+                expect(texts(self.flushed)).to(equal(["Run the unit tier"]))
+
         with context("that another chat reads its own queue"):
             with it("should hold none of this chat's work"):
                 expect(texts(SpecChat(self.server, self.project).answer("prompt-queue.show", chat=""))).to(equal([]))

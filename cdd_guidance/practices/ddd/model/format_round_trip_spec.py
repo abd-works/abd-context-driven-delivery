@@ -269,18 +269,23 @@ def _arcs(model) -> list:
     ]
 
 
-def _calls_across(model) -> list:
-    """Each operation that calls a class of another aggregate, with the classes it calls."""
+def _calls_across(model, drawn_in=None) -> list:
+    """Each operation that calls a class of another aggregate, with the classes it calls; with drawn_in, each called
+    class as the card it is drawn inside, as a repository is drawn inside its root's card."""
     found = []
     for aggregate in model.every_aggregate:
         local = {card.name for card in aggregate.classes}
         for card in aggregate.classes:
             for operation in card.operations:
                 called = [callee.partition(".")[0].strip() for callee in operation.callees]
-                across = [name for name in called if name[:1].isupper() and name not in local]
+                across = [(drawn_in or {}).get(name, name) for name in called if name[:1].isupper() and name not in local]
                 if across:
                     found.append((card.name, operation.name, across))
     return found
+
+
+# Each repository of the three contexts' model is drawn inside its root's card, so a call to it points at that card.
+_ROOT_CARDS = {"BookRepository": "Book", "OrderRepository": "Order", "CartRepository": "Cart", "ShipmentRepository": "Shipment"}
 
 
 def _arrows(drawio: str) -> list:
@@ -356,8 +361,8 @@ with description("a domain model of three contexts a person wrote after the temp
         with it("should read each integration's arrow as an integration to the class it points at, with its pattern"):
             expect(_arcs(self.read)).to(equal(_arcs(self.written)))
 
-        with it("should read each arrow named by an operation as a call that operation makes to the class it points at"):
-            expect(_calls_across(self.read)).to(equal(_calls_across(self.written)))
+        with it("should read each arrow named by an operation as a call that operation makes to the card it points at"):
+            expect(_calls_across(self.read)).to(equal(_calls_across(self.written, _ROOT_CARDS)))
 
         with it("should draw the same arrows again from the markdown it writes"):
             expect(_arrows(self.drawn_again)).to(equal(_arrows(self.drawing)))
@@ -370,5 +375,5 @@ with description("a domain model of three contexts a person wrote after the temp
         with it("should read each integration's arrow as an integration to the class it points at, with its pattern"):
             expect(_arcs(self.read)).to(equal(_arcs(self.written)))
 
-        with it("should read each arrow named by an operation as a call that operation makes to the class it points at"):
-            expect(_calls_across(self.read)).to(equal(_calls_across(self.written)))
+        with it("should read each arrow named by an operation as a call that operation makes to the card it points at"):
+            expect(_calls_across(self.read)).to(equal(_calls_across(self.written, _ROOT_CARDS)))

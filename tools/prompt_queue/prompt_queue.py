@@ -31,6 +31,9 @@ ATTACHMENTS_FOLDER = "attachments"
 # The folder that keeps a JSON copy of every prompt clear or remove took off, so the work stays on record: in the session's
 # folder the queue's chat works in, else beside the chat's queue file.
 ARCHIVE_FOLDER = "queue-archive"
+# How a copy of the whole queue file that flush keeps in the queue archive is named, before the time it was copied: it
+# holds the queue as it stood, not prompts taken off, so the lookup of when a prompt was taken off reads past it.
+WHOLE_FILE_COPY = "prompt-queue-"
 # What marks a step that came from a message the person sent: a correction or comment filed under the goal it belongs to.
 INTERRUPTION_MARK = "[interruption]"
 # What marks a prompt that waits for the person's answer to a decision: the queue's pointer passes over it.
@@ -457,6 +460,16 @@ class PromptQueue:
 
     @mcp
     @agent_tool
+    def flush(self) -> PromptQueue:
+        """Keep a copy of the whole queue file as it stands in the chat's queue archive, named prompt-queue and the time, such as prompt-queue-20261124T044511Z.json, then take the done prompts off, leaving the work still to do in order. With no prompt done, the copy is still kept and nothing is taken off. Answers the queue as it then stands."""
+        with self._file.held():
+            self._copy_whole_file()
+            held = self.prompts
+            self._archive([item for item in held if item.is_done])
+            return self._keep([item for item in held if not item.is_done])
+
+    @mcp
+    @agent_tool
     def done(self, prompt: str) -> PromptQueue:
         """Mark the prompt whose id is prompt done once its work is done: it stays in its place, drawn dim, so the person sees it finish, and the next prompt not done is the next to do. An agent working through the queue does each prompt in order, first to last, and calls this as it finishes each one."""
         return self._changing(prompt, QueuedPrompt.mark_done)
@@ -571,6 +584,18 @@ class PromptQueue:
         kept = {"chat": self._chat, "taken_off": taken_off.isoformat(), "prompts": [prompt.record for prompt in prompts]}
         saved.write_text(json.dumps(kept, indent=2), encoding="utf-8")
 
+    def _copy_whole_file(self) -> None:
+        """Keeps a copy of the queue's file, every field it holds, in the chat's queue archive, named for when it was
+        copied; a second copy in the same second gets a number after the time rather than replacing the first."""
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        self._archive_folder.mkdir(parents=True, exist_ok=True)
+        saved = self._archive_folder / f"{WHOLE_FILE_COPY}{stamp}.json"
+        copies = 1
+        while saved.exists():
+            copies += 1
+            saved = self._archive_folder / f"{WHOLE_FILE_COPY}{stamp}-{copies}.json"
+        saved.write_text(json.dumps(self._file.read(), indent=2), encoding="utf-8")
+
     def _found(self, held: list[QueuedPrompt], prompt: str) -> QueuedPrompt:
         """The prompt of held whose id is prompt, refusing an id the queue does not hold."""
         found = next((item for item in held if item.id == prompt), None)
@@ -582,7 +607,7 @@ class PromptQueue:
         """When the chat's queue archive says prompt was taken off the queue, the latest time; empty when it holds none."""
         if not self._archive_folder.is_dir():
             return ""
-        archived = (json.loads(saved.read_text(encoding="utf-8")) for saved in sorted(self._archive_folder.glob("*.json"), reverse=True))
+        archived = (json.loads(saved.read_text(encoding="utf-8")) for saved in sorted(self._archive_folder.glob("*.json"), reverse=True) if not saved.name.startswith(WHOLE_FILE_COPY))
         return next((record.get("taken_off", "") for record in archived if any(item.get("id") == prompt for item in record.get("prompts", []))), "")
 
     def _keep(self, prompts: list[QueuedPrompt]) -> PromptQueue:

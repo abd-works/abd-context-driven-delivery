@@ -95,6 +95,8 @@ The `drawio` format. A modules view when the model has modules and no class memb
 	// becomes the canonical model once (translate_from), then writes its own Draw.io modules and classes
 	-> CardPlacement.place
 	-> ArrowRouter.route
++ class_diagram_type: type[ClassDiagramWriter]
+	// what draws the class view; a model that lays its classes out its own way names its own, as DDD's aggregate view does
 + save(): str
 	-> render
 + kept_previous(): str | None
@@ -137,9 +139,28 @@ The toolset a caller types. Create writes a path. Scan judges layout. Repair fix
 	-> scan
 + verify_regression(examples_root: str = ""): str
 
+## ClassDiagramWriter : ClassView
+
+Writes one class-view diagram as Draw.io pages: one page, or one page per module, each drawn by its `page_type`.
+
+----
++ write(): str
++ page_type: type[ClassDiagramPageWriter]
+	// what draws one page; a writer that lays its pages out its own way names its own
+
+## ClassDiagramPageWriter : ClassViewPage
+
+One Draw.io page of a class diagram: its cards placed (keeping those a person placed), then the cells drawn round groups
+of them, then the cards, then the arrows routed around the cards.
+
+----
++ write(graph: Element, positions: dict, previous_edges: dict): None
++ enclose(root_el: Element, cards: dict[str, DrawIOClass]): None
+	// a cell round each group of the placed cards, behind them; none by default
+
 ## DrawioScanner
 
-Layout audit for an existing mxfile. It reads cells; it does not render them. Each subclass names one `RULE` and checks it in `scan_page`: `base-above-derived`, `class-title-no-markdown-bold`, `distinct-anchor-points`, `edges-approach-perpendicular`, `edges-do-not-cross-classes`, `edges-do-not-cross-other-edges`, `edges-do-not-overlap-edges`, `leaf-nodes-not-in-horizontal-row`, `prefer-short-routes`, and `stereotype-above-class-name`.
+Layout audit for an existing mxfile. It reads cells; it does not render them. Each subclass names one `RULE` and checks it in `scan_page`: `base-above-derived`, `class-title-no-markdown-bold`, `distinct-anchor-points`, `edges-approach-perpendicular`, `edges-do-not-cross-classes`, `edges-do-not-cross-other-edges`, `edges-do-not-overlap-edges`, `leaf-nodes-not-in-horizontal-row`, `prefer-short-routes`, and `stereotype-above-class-name`. `prefer-short-routes` holds only the two classes of one module (the `module=` their styles name) to its gap: an arrow between two modules is as long as the modules' places make it.
 
 + DrawioScanner(rule: str | None = None, explicit_paths: list[Path] = ())
 ------

@@ -29,7 +29,7 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     ImportedClass,
     ModulesView,
 )
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import MODULE_CELL_WIDTH
+from cdd_guidance.practices.clean_engineering.model.diagram.geometry import MODULE_CELL_WIDTH, flowed
 from cdd_guidance.practices.clean_engineering.model.diagram.module_layout import ModuleLayout
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -366,7 +366,7 @@ class ClassBoard(ClassView):
             _ClassBoardPage(self).draw_on(board, Box(0.0, PAGE_MARGIN, 0, 0))
             return board
         groups = [_PageGroup(self, name, modules) for name, modules in self.page_groups()]
-        corners = [Box(left, top + PAGE_MARGIN, 0, 0) for left, top in _flowed([group.size() for group in groups], PAGE_ROW_WIDTH)]
+        corners = [Box(left, top + PAGE_MARGIN, 0, 0) for left, top in flowed([group.size() for group in groups], PAGE_ROW_WIDTH, PAGE_GAP)]
         # Every group's section goes on the board before any page's, so each lies behind the pages it holds.
         for group, corner in zip(groups, corners):
             group.draw_section_on(board, corner)
@@ -384,20 +384,6 @@ class ClassBoard(ClassView):
         return [arrow for arrow in every if page_of.get(arrow.source) != page_of.get(arrow.target)]
 
 
-def _flowed(sizes: List[Tuple[float, float]], row_width: float) -> List[Tuple[float, float]]:
-    """The top-left corner of each box of sizes, laid left to right PAGE_GAP apart, a new row PAGE_GAP under the last
-    when a box would run the row wider than row_width; the first box at (0, 0)."""
-    corners: List[Tuple[float, float]] = []
-    left, top, row_bottom = 0.0, 0.0, 0.0
-    for width, height in sizes:
-        if left > 0 and left + width > row_width:
-            left, top = 0.0, row_bottom + PAGE_GAP
-        corners.append((left, top))
-        left += width + PAGE_GAP
-        row_bottom = max(row_bottom, top + height)
-    return corners
-
-
 class _PageGroup:
     """The module pages of one group on a board, laid out in rows, and, when the group has a name, the section drawn
     round them: GROUP_INSET in from its edges, with SECTION_TITLE_ROOM above the first row for the pages' own titles,
@@ -408,7 +394,7 @@ class _PageGroup:
         self.name = name
         self._pages = [_ClassBoardPage(view, module) for module in modules]
         row_width = MAX_SIDE - 2 * GROUP_INSET if name else PAGE_ROW_WIDTH
-        self._corners = _flowed([page.size() for page in self._pages], row_width)
+        self._corners = flowed([page.size() for page in self._pages], row_width, PAGE_GAP)
 
     @property
     def _inset(self) -> Tuple[float, float]:
@@ -441,11 +427,9 @@ class _ClassBoardPage(ClassViewPage):
     the shared router, the whole page in a section when it is one module's page."""
 
     def __init__(self, view: ClassBoard, module: Optional[Module] = None) -> None:
-        super().__init__(view, module)
-        if view.links_across_pages and self._local_ids is not None:
-            # The board draws the links to other pages itself, so this page shows only its own classes.
-            self._import_ids = []
-            self._page_ids = set(self._local_ids)
+        # The board draws the links to other pages itself when it links across pages, so each page shows only its own
+        # classes.
+        super().__init__(view, module, shows_imports=not view.links_across_pages)
         self._view = view
         self._name = module.name.strip() if module is not None else ""
         self._title = view.page_title(module) if module is not None else ""

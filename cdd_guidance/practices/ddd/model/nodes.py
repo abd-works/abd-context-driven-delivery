@@ -311,10 +311,11 @@ class Aggregate(DomainNode, Module):
         """The aggregate as a module nested in its context's module: `Sales | custom/ShoppingCart`."""
         return f"{self.parent.module_path}{_PATH}{self.name}"
 
-    def take_words_from(self, earlier: "Aggregate") -> None:
+    def take_words_from(self, earlier: "Aggregate", drawn_in: dict[str, str]) -> None:
         """Keep the sentence, group, and consumed events it has, and take earlier's where it has none, as an aggregate
         read from a drawing takes what the document it is written onto held; what a root listed under it, as the
-        bounded-context map writes it, says it is; and each card's words, card by card."""
+        bounded-context map writes it, says it is; and each card's words, card by card, given the card each class of
+        the document is drawn inside (drawn_in)."""
         self.description = self.description or earlier.description
         self.group = self.group or earlier.group
         self.consumed_events = self.consumed_events or list(earlier.consumed_events)
@@ -322,7 +323,7 @@ class Aggregate(DomainNode, Module):
         was_named = {card.name: card for card in earlier.classes}
         for card in self.classes:
             if card.name in was_named:
-                card.take_words_from(was_named[card.name])
+                card.take_words_from(was_named[card.name], drawn_in)
 
     def _take_root_words_from(self, earlier: "Aggregate") -> None:
         """A root listed under this aggregate, as the bounded-context map writes it, takes what earlier says the root
@@ -378,22 +379,25 @@ class Aggregate(DomainNode, Module):
         if self.root is None:
             self.root = Entity(self.name, 1)
 
-    def write_classes_into(self, module: Module) -> None:
+    def write_classes_into(self, module: Module, draws_repository_in_root: bool = False) -> None:
         """Write the aggregate into module as code holds it: each card a class kept in the aggregate's place, and the
-        root alone when it has no cards."""
+        root alone when it has no cards. A drawing draws the repository inside its root's card, as the model fidelity
+        lays an aggregate out; code keeps it a class of its own."""
         written = {id(card): card.write_into(module, self.place_labels) for card in self.ordered_cards}
-        self._fold_into_root(module, written)
+        if draws_repository_in_root:
+            self._fold_into_root(module, written)
         if not module.classes and self.root is not None:
             self.root.write_into(module, self.place_labels)
         self._depend_across(module)
 
     def _fold_into_root(self, module: Module, written: dict[int, OoadClass]) -> None:
-        """Draw each repository written inside its root's card inside the root's class, in place of a class of its own."""
+        """Draw each repository inside the root's class, below the root's operations, in place of a class of its own,
+        however the document writes it."""
         root = self.root_card
-        if root is None:
+        if root is None or root.is_repository:
             return
         for card in self.classes:
-            if card.drawn_in_root and id(card) in written:
+            if card.is_repository and id(card) in written:
                 module.classes.remove(written[id(card)])
                 written[id(root)].fold(written[id(card)])
 
@@ -722,16 +726,16 @@ class BoundedContextMap(FormatAdapter):
         for entry in entries:
             wiring.wire(entry)
 
-    def write_classes(self, model: CleanEngineeringModel) -> None:
+    def write_classes(self, model: CleanEngineeringModel, draws_repository_in_root: bool = False) -> None:
         """Write this map into model, a Clean Engineering model of some format, as that format's own modules and
         classes: one module per aggregate, named by the aggregate's place, holding a class for each of its building
-        blocks."""
+        blocks; a drawing draws each repository inside its root's class instead."""
         modules: list[Module] = []
         for aggregate in self.every_aggregate:
             module = model.load_module(aggregate)
             module.name = aggregate.code_place
             module.sequential_order = len(modules) + 1
-            aggregate.write_classes_into(module)
+            aggregate.write_classes_into(module, draws_repository_in_root)
             modules.append(module)
         model.modules = modules
 

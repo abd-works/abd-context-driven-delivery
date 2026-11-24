@@ -139,7 +139,12 @@ class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
             self.translate_from(canonical)
         if self.is_modules_view:
             return _ModulesDiagramWriter(self, written.previous or self.previous).write()
-        return _ClassDiagramWriter(self, written.previous or self.kept_previous()).write()
+        return self.class_diagram_type(self, written.previous or self.kept_previous()).write()
+
+    @property
+    def class_diagram_type(self) -> type:
+        """What draws the model's class view; a model that lays its classes out its own way names its own."""
+        return ClassDiagramWriter
 
 
     def kept_previous(self) -> Optional[str]:
@@ -408,13 +413,18 @@ class _ModulesDiagramWriter(ModulesView):
         }
 
 
-class _ClassDiagramWriter(ClassView):
-    """Writes one class-view diagram as Draw.io pages."""
+class ClassDiagramWriter(ClassView):
+    """Writes one class-view diagram as Draw.io pages, each drawn by its page_type."""
 
     def __init__(self, channel: DrawIOCleanEngineeringModel, kept: Optional[str] = None) -> None:
         # The drawing this one replaces, whose cards and arrows stay where they stood; set before the view reads its pages.
         self.kept = kept
         super().__init__(channel)
+
+    @property
+    def page_type(self) -> type:
+        """What draws one page of the diagram; a writer that lays its pages out its own way names its own."""
+        return ClassDiagramPageWriter
 
     def write(self) -> str:
         mxfile = ET.Element('mxfile')
@@ -429,7 +439,7 @@ class _ClassDiagramWriter(ClassView):
 
     def _write_single_page(self, mxfile: ET.Element) -> None:
         graph = self._add_diagram_page(mxfile, 'CleanEngineering Model', 'CleanEngineering-model')
-        page = _ClassDiagramPage(self)
+        page = self.page_type(self)
         drawn = ClassDiagramPage(_whole_page(self.kept)) if self.kept else None
         positions = drawn.page.positions() if drawn is not None else {}
         previous_edges = drawn.edges_by_ends() if drawn is not None else {}
@@ -441,7 +451,7 @@ class _ClassDiagramWriter(ClassView):
         drawn = self.previous_pages.get(page_name)
         positions = drawn.page.positions() if drawn is not None else {}
         previous_edges = drawn.edges_by_ends() if drawn is not None else {}
-        _ClassDiagramPage(self, module).write(graph, positions, previous_edges)
+        self.page_type(self, module).write(graph, positions, previous_edges)
 
     def _previous_pages(self) -> Dict[str, ClassDiagramPage]:
         """The pages of the diagram this render replaces, by name; none when it keeps no positions or the previous
@@ -464,7 +474,7 @@ class _ClassDiagramWriter(ClassView):
         return graph
 
 
-class _ClassDiagramPage(ClassViewPage):
+class ClassDiagramPageWriter(ClassViewPage):
     """One Draw.io page of a class diagram."""
 
     def write(self, graph: ET.Element, positions: Dict[str, Tuple[float, float]], previous_edges: Dict[Tuple[str, str], ET.Element]) -> None:
@@ -475,6 +485,8 @@ class _ClassDiagramPage(ClassViewPage):
         if self._writer.kept and self._writer.channel.close_gaps and CardSpacing(list(cards.values()), arrows).close_gaps():
             # A card moved, so an arrow kept from the last drawing no longer meets it: every arrow is drawn again.
             previous_edges = {}
+        # Each cell drawn round a group of cards goes on the page before the cards, so it lies behind them.
+        self.enclose(root_el, cards)
         for card in cards.values():
             card.append_to(root_el)
         kept_pairs = self._copy_kept_edges(root_el, previous_edges)
@@ -483,6 +495,10 @@ class _ClassDiagramPage(ClassViewPage):
         self._append_edges(root_el, cards, ArrowRouter(list(cards.values()), new_arrows, kept_paths=kept_paths).route())
         graph.set('pageWidth', str(int(max((card.geometry.x + card.geometry.w for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
         graph.set('pageHeight', str(int(max((card.geometry.y + card.geometry.h for card in cards.values()), default=0) + PAGE_EDGE_ALLOWANCE)))
+
+    def enclose(self, root_el: ET.Element, cards: Dict[str, DrawIOClass]) -> None:
+        """Draw a cell round each group of the placed cards, such as a container round each module's cards; a page
+        draws none by default."""
 
     def _copy_kept_edges(self, root_el: ET.Element, previous_edges: Dict[Tuple[str, str], ET.Element]) -> set:
         kept_pairs: set[Tuple[str, str]] = set()

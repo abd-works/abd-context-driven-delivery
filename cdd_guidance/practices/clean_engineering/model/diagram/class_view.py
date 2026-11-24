@@ -184,9 +184,9 @@ class ClassView:
 class ClassViewPage:
     """One page of a class diagram: which classes it shows, which of them it owns, and which it imports."""
 
-    def __init__(self, writer: ClassView, module: Optional[Module] = None) -> None:
-        """The page of module's classes, with the classes of other modules it uses shown dashed; with no module, the
-        single page that shows every class."""
+    def __init__(self, writer: ClassView, module: Optional[Module] = None, shows_imports: bool = True) -> None:
+        """The page of module's classes, with the classes of other modules it uses shown dashed unless the view draws
+        those links itself (shows_imports false); with no module, the single page that shows every class."""
         self._writer = writer
         # None on a single page, where every class is local.
         self._local_ids: Optional[set[str]] = None
@@ -194,7 +194,8 @@ class ClassViewPage:
         if module is None:
             self._page_ids = set(writer.classes_by_cell)
             return
-        self._local_ids, self._import_ids = writer.module_page_ids(module)
+        self._local_ids, imports = writer.module_page_ids(module)
+        self._import_ids = imports if shows_imports else []
         self._page_ids = self._local_ids | set(self._import_ids)
 
     def is_imported(self, cell_id: str) -> bool:
@@ -205,7 +206,7 @@ class ClassViewPage:
         """The page's cards, each placed, keeping those already placed at positions, and the arrows between them, not
         yet routed."""
         arrows = self._arrows()
-        cards = self._cards(arrows)
+        cards = self.cards(arrows)
         self._place_cards_keeping(cards, arrows, positions)
         return cards, arrows
 
@@ -268,7 +269,7 @@ class ClassViewPage:
             for source, target, kind in self._writer.relationships
         )
 
-    def _cards(self, arrows: List[DiagramArrow]) -> Dict[str, DiagramClass]:
+    def cards(self, arrows: List[DiagramArrow]) -> Dict[str, DiagramClass]:
         """One card per class on the page, in the model's order so the diagram reads back in that order, wide enough
         to give every arrow on it its own port."""
         cards: Dict[str, DiagramClass] = {}
