@@ -33,7 +33,9 @@ from harness.graph.saved_graph import SavedGraph, SavedNode  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
 from space.session.session import MainStaysOpenError  # noqa: E402
-from space.kanban.board import NotAStageError  # noqa: E402
+from space.kanban.board import FolderOutsideRepositoryError, NotAStageError  # noqa: E402
+from space.kanban.ticket_choices import FormatNotOfferedError as TicketFormatNotOfferedError  # noqa: E402
+from space.session.practices.practice_session_output import FidelityNotInPractice, FormatNotOfferedError as SessionFormatNotOfferedError  # noqa: E402
 from space.kanban.board_practices import PracticeNotFoundError  # noqa: E402
 from space.session import Sessions  # noqa: E402
 from space.session.session import UnknownPracticeError  # noqa: E402
@@ -517,7 +519,7 @@ with description("the board tools") as self:
         with context("that opens a ticket on a folder outside the repository"):
             with it("should refuse it, naming the folder"):
                 outside = str(self.project.root.parent)
-                expect(lambda: self.project.call("ticket.create", title="Pet records", scope="feature", path=outside)).to(raise_error(Exception, contain(outside.replace("\\", "\\\\"))))
+                expect(lambda: self.project.call("ticket.create", title="Pet records", scope="feature", path=outside)).to(raise_error(FolderOutsideRepositoryError, contain(outside.replace("\\", "\\\\"))))
 
         with context("that opens a ticket with no folder"):
             with before.each:
@@ -943,7 +945,7 @@ with description("the board tools") as self:
                 expect([chip["label"] for chip in self.chips if chip["label"] == "thin_slice"]).to(equal([]))
 
             with it("should refuse thin_slice as a format of the story map"):
-                expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="thin_slice", is_chosen=True)).to(raise_error(Exception, contain("does not write thin_slice")))
+                expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="thin_slice", is_chosen=True)).to(raise_error(SessionFormatNotOfferedError, contain("does not write thin_slice")))
 
             with it("should take the story map by the slug the guidance names it by, as well as by its name"):
                 chosen = self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="stories-story-map", format="markdown", is_chosen=True)
@@ -951,7 +953,7 @@ with description("the board tools") as self:
 
             with it("should refuse a fidelity the practice does not have, naming the ones it has"):
                 expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="ux-ia", format="markdown", is_chosen=True)).to(
-                    raise_error(Exception, contain("stories has no fidelity named ux-ia; it has story_map")))
+                    raise_error(FidelityNotInPractice, contain("stories has no fidelity named ux-ia; it has story_map")))
 
             with it("should show the chip of its default format chosen until a person chooses"):
                 expect([chip["label"] for chip in self.chips if chip["is_chosen"]]).to(equal(["markdown"]))
@@ -1032,11 +1034,11 @@ with description("the board tools") as self:
 
             with it("should refuse a chip label the story map does not offer, naming the labels it offers"):
                 expect(lambda: self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="drawio", is_chosen=True)).to(
-                    raise_error(Exception, contain("offers diagram, markdown"))
+                    raise_error(TicketFormatNotOfferedError, contain("offers diagram, markdown"))
                 )
 
             with it("should refuse a format the story map does not write"):
-                expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="python", is_chosen=True)).to(raise_error(Exception, contain("does not write python")))
+                expect(lambda: self.project.call("fidelity-session-output.choose_format", session=session_file_of("sign-up"), practice="stories", fidelity="story_map", format="python", is_chosen=True)).to(raise_error(SessionFormatNotOfferedError, contain("does not write python")))
 
         # Requested 2026-11-16: the realization is a file the scenarios write, not a format a person picks.
         with context("with an action bar opened on its scenarios"):
