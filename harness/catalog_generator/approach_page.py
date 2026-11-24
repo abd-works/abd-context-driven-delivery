@@ -28,7 +28,7 @@ _ITEM_FAMILIES = ("sdd", "uxd", "arc")
 _ITERATE_AND_LEARN = "iterate-and-learn"
 _PRODUCT_ENGINEERING = "product-engineering"
 _EMPHASIS = re.compile(r"\*([^*]+)\*")
-_APPROACH_SCRIPT = '<script src="commons/catalog-approach.js?v=cdd-1"></script>'
+_APPROACH_SCRIPT = '<script src="commons/catalog-approach.js?v=cdd-2"></script>'
 _LIBRARY_HEAD = (
     '<a class="approach-grid__label approach-grid__label--cdd" href="cdd-approach.html">'
     "context-driven-delivery</a>"

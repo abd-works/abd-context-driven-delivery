@@ -47,8 +47,8 @@ class PageShell:
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{self.commons_prefix}site.css?v=foundry-33">
-<link rel="stylesheet" href="{self.commons_prefix}foundry-catalog.css?v=cdd-133">
-<link rel="stylesheet" href="{self.commons_prefix}cdd-board.css?v=cdd-31">
+<link rel="stylesheet" href="{self.commons_prefix}foundry-catalog.css?v=cdd-134">
+<link rel="stylesheet" href="{self.commons_prefix}cdd-board.css?v=cdd-32">
 
 <script src="{self.commons_prefix}catalog-nav.js?v=foundry-13"></script>
 </head>
@@ -120,5 +120,5 @@ class PageShell:
         scripts = _DRAWIO_VIEWER_SCRIPT if has_diagram else ""
         scripts += f'<script src="{self.commons_prefix}catalog-drawio.js?v=cdd-117"></script>'
         if has_columns:
-            scripts += f'<script src="{self.commons_prefix}catalog-refine-row.js?v=cdd-2"></script>'
+            scripts += f'<script src="{self.commons_prefix}catalog-refine-row.js?v=cdd-3"></script>'
         return scripts

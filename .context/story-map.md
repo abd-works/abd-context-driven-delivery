@@ -365,7 +365,7 @@ Observed: `board-page.ts` `start()` reads the board when the page opens.
 
 #### (S) Board App --> [Display Board](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md#story-display-board)
 
-Observed: Backlog, Discovery, Specification, Implementation and Complete, with In progress and Done inside each stage; the board refreshes after each cdd tool call, and a toast announces a ticket's move or review. The scenarios about the cdd server's health and the board's own install moved to Display Board Server Health and Update Board And CDD on 2026-11-24.
+Observed: Backlog, Discovery, Specification, Implementation, Hardening and Complete, with In progress and Done inside each stage; a ticket moved into Hardening was walked by hand on 2026-11-24 (Move a ticket into Hardening, its screens in `walks/hardening/`), not yet in a browser story test; the board refreshes after each cdd tool call, and a toast announces a ticket's move or review. The scenarios about the cdd server's health and the board's own install moved to Display Board Server Health and Update Board And CDD on 2026-11-24.
 
 #### (S) Board App --> [Display Backlog Items As Tickets](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md#story-display-backlog-items-as-tickets)
 

@@ -64,6 +64,24 @@ section: body
 *When* another chat moves move-me into Discovery's Done
 *Then* a toast says Move me moved to Discovery · Done
 
+#### Scenario: Move a ticket into Hardening
+
+> Walked by hand on 2026-11-24 (Flow A), on a board of the throwaway project board-sandbox served by the dev lane at f65c11a24; the screens are in [walks/hardening/](walks/hardening/). Not yet captured in a browser story test.
+
+> Evidence: a board served by a cdd server that has no Hardening stage, such as a stable lane older than the stage, draws no Hardening column and shows a ticket whose session log moved it into Hardening In progress in Discovery.
+
+*Given* the session board shows the [ticket](../../../../space/kanban/.context/kanban-model.md#ticket--card) second-spec In progress in Specification, and almost-shipped in Hardening's Done ([screen](walks/hardening/1-given-board-with-hardening.png))
+*When* the Person drags second-spec into Hardening's In progress
+*Then* second-spec shows In progress in the Hardening [stage](../../../../space/kanban/.context/kanban-model.md#stage--column), between Implementation and Complete
+*And* a toast says Second spec moved to Hardening · In progress ([screen](walks/hardening/2-when-dragged-into-hardening.png))
+*And* the ticket's details read Hardening · in progress, with Stories hardening and BDD hardening under the Hardening head and no hardening [fidelity](../../../../space/kanban/.context/kanban-model.md#fidelityguidance) for DDD, UX, or Clean Engineering
+*When* the Person presses second-spec's card
+*Then* the card lists Stories hardening and BDD hardening as its work in the stage ([screen](walks/hardening/3-then-card-shows-hardening-fidelities.png))
+*When* the Person drags second-spec into Hardening's Done
+*Then* second-spec shows in Hardening's Done, below almost-shipped
+*And* a toast says Second spec moved to Hardening · Done ([screen](walks/hardening/4-when-moved-to-hardening-done.png))
+*And* the catalog's board shows a Hardening column with hardening for Stories and BDD ([screen](walks/hardening/5-catalog-board-hardening-column.png)), and its approach page shows Hardening between Implement and Validate ([screen](walks/hardening/6-catalog-approach-hardening-stage.png))
+
 #### Scenario: Announce a fidelity done
 
 *Given* the [ticket](../../../../space/kanban/.context/kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../../space/kanban/.context/kanban-model.md#fidelityguidance) generated and validated with no violations
