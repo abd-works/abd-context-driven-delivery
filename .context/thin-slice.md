@@ -337,7 +337,19 @@ section: body
 - *Fix Graph Violations From Files App*
 - *Open UX Design In Claude Design*
 
-### Increment 6: File Manager Complete
+### Increment 6: Built - Show Board Quickly
+
+**Outcome:** `board.show` stops repeating git checks, guidance parsing and session file reads, so the board and the chat bar answer faster and `space/kanban/kanban_tools_spec.py` runs in under 60 s.
+
+**Slicing notes:** `.sessions/_backlog/show-board-quickly.md`. Technical stories in shared modules (`space/repo`, `harness/guidance`, `harness/installation`), so reinstall after; small, and can go in at any point. Built on release-1-2-fixes, checked 2026-11-23: git facts read refs from the ref files with no git process (`harness/git/git_facts.py`), guidance files are stamped by change time and size at most once a second (`SourceStamps`, df4042b2c), and `HeldJsonFile` reads session.json again only when it changes.
+
+**Stories in this increment:**
+
+- *Check Ticket Branches Once Per Board Build*
+- *Cache Practice Guidance By File And Change Time*
+- *Read Session File Once Per Board Build*
+
+### Increment 7: File Manager Complete
 
 **Outcome:** the Files app shows a session's generated work: files and folders or the graph, filtered like the files, opening and comparing several files, with comments sent to the chat.
 
@@ -389,7 +401,7 @@ section: body
 - *Count Session Violations From Live Graph*
 - *Count Fidelity Violations From Live Graph*
 
-### Increment 7: Sync Design Canvas With Production
+### Increment 8: Sync Design Canvas With Production
 
 **Outcome:** a design canvas shows production as it is: every file is proven against the product repo by hash, styles and assets come from one pinned Design System package, each screen mounts the real view, hosted edits come back before the next version, and a screen being redesigned is detached and marked diverged until its change reaches production.
 
@@ -419,7 +431,7 @@ section: body
 - *Mark Detached Screen As Diverged*
 - *Reattach A Screen Once Its Change Reaches Production*
 
-### Increment 8: Integrate Stories With The Canvas Explorer
+### Increment 9: Integrate Stories With The Canvas Explorer
 
 **Outcome:** a person tests a screen against its scenarios from the explorer, and changes stories from the canvas or story-ui with the map updating, both ending in the same story code.
 
@@ -441,7 +453,7 @@ section: body
 - *Comment On A Story In Story UI*
 - *Rearrange Stories Inside The Canvas*
 
-### Increment 9: Repair Guidance From Mistakes
+### Increment 10: Repair Guidance From Mistakes
 
 **Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
 
@@ -453,7 +465,7 @@ section: body
 - *Improve Guidance From Mistake*
 - *Add Rule From Failed Example*
 
-### Increment 10: Enter Commands Faster
+### Increment 11: Enter Commands Faster
 
 **Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go.
 
@@ -467,7 +479,7 @@ section: body
 - *Add Comment To Sent Command*
 - *Announce CDD Tool Calls*
 
-### Increment 11: Fully Integrated App Flow
+### Increment 12: Fully Integrated App Flow
 
 **Outcome:** the chat bar, the board, the Story UI editor with its story explorer, and the Graph app work on one ticket together, and violations are read from the latest graph that generate refreshes.
 
@@ -511,7 +523,7 @@ section: body
 - *Test Knowledge Graph Explorer On Session Files* (partly built: the Graph app opens on the session's folder and shows violations; no spec runs on a session's files)
 - *Display Drawio File As Diagram* (partly built: the Files app shows the draw.io editor; no Source tab, no red shape for a violation, and a pressed shape does not open its lines)
 
-### Increment 12: Customize Board Workflow
+### Increment 13: Customize Board Workflow
 
 **Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
 
@@ -532,7 +544,7 @@ section: body
 - *Choose Testing Strategy*
 - *Toggle Sub Agents*
 
-### Increment 13: Author Story Maps
+### Increment 14: Author Story Maps
 
 **Outcome:** the Story UI editor gets its own remaining stories: dashboard, nested lanes, the node inspector, save history, real-time sessions and AI story changes.
 
@@ -545,7 +557,7 @@ section: body
 - *Share Real-Time Story Map Session*
 - *Change Story Map With AI*
 
-### Increment 14: Guard Work And Recover Fast
+### Increment 15: Guard Work And Recover Fast
 
 **Outcome:** a person sees at once when cdd is down, fixes it from where they are, and the agent is stopped before it breaks a rule.
 
@@ -564,18 +576,6 @@ section: body
 - *Update CDD From Chat Bar*
 - *Restart Parts From Chat Bar*
 - *Open App From Health Panel*
-
-### Increment 15: Show Board Quickly
-
-**Outcome:** `board.show` stops repeating git checks, guidance parsing and session file reads, so the board and the chat bar answer faster and `space/kanban/kanban_tools_spec.py` runs in under 60 s.
-
-**Slicing notes:** `.sessions/_backlog/show-board-quickly.md`. Technical stories in shared modules (`space/repo`, `harness/guidance`, `harness/installation`), so reinstall after; small, and can go in at any point.
-
-**Stories in this increment:**
-
-- *Check Ticket Branches Once Per Board Build*
-- *Cache Practice Guidance By File And Change Time*
-- *Read Session File Once Per Board Build*
 
 ### Increment 16: Bring Chat Bar Level With Board
 
