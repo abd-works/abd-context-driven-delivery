@@ -116,7 +116,7 @@ with description("Switch Files App Between Files And Graph, in a real browser") 
         with context("Story: Open Several Files From Graph Nodes"):
             with context("Scenario: Selecting a node opens its file"):
                 with before.all:
-                    open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+                    open_branches(self.page, "clean_engineering", "space/kanban", "Ticket")
                     select(self.page, "Operation delete")
                     line(self.page, "self.close()").wait_for(timeout=SHOWN_MILLISECONDS)
 
@@ -182,7 +182,7 @@ with description("Fold Open Files To Selected Nodes and Open Several Files From 
         with before.all:
             self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
             graph_view(self.page)
-            open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+            open_branches(self.page, "clean_engineering", "space/kanban", "Ticket")
             select(self.page, "Operation delete")
             self.page.locator(".file-selected-range").first.wait_for(timeout=SHOWN_MILLISECONDS)
 
@@ -214,7 +214,7 @@ with description("Fold Open Files To Selected Nodes and Open Several Files From 
         with before.all:
             self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
             graph_view(self.page)
-            open_branches(self.page, "clean_engineering", "kanban", "Ticket", "Board")
+            open_branches(self.page, "clean_engineering", "space/kanban", "Ticket", "Board")
             select(self.page, "Operation delete")
             self.page.locator('button.graph-node[title="Operation reread"]').first.click(modifiers=["Control"])
             self.page.locator(f'section.open-file[aria-label="{BOARD_CODE}"]').wait_for(timeout=SHOWN_MILLISECONDS)
@@ -240,7 +240,7 @@ with description("Fold Open Files To Selected Nodes and Open Several Files From 
         with before.all:
             self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
             graph_view(self.page)
-            open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+            open_branches(self.page, "clean_engineering", "space/kanban", "Ticket")
             select(self.page, "Operation delete")
             line(self.page, "self.close()").wait_for(timeout=SHOWN_MILLISECONDS)
             self.page.locator(".callout-mark").first.wait_for(timeout=SHOWN_MILLISECONDS)
@@ -335,7 +335,7 @@ with description("Switch Files App Between Files And Graph, in a real browser, o
                 expect(sorted(self.page.locator('button.graph-node[title^="Practice "]').evaluate_all("nodes => nodes.map(node => node.title)"))).to(equal(PRACTICE_TREES))
 
             with it("And they are that project's graph, whose class Ticket holds close and delete alone, not the CDD checkout's Ticket"):
-                open_branches(self.page, "clean_engineering", "kanban", "Ticket")
+                open_branches(self.page, "clean_engineering", "space/kanban", "Ticket")
                 operations = lambda: sorted(self.page.locator('button.graph-node[title^="Operation "]').evaluate_all("nodes => nodes.map(node => node.title)"))
                 expect(settled(operations, lambda shown: bool(shown))).to(equal(TICKET_OPERATIONS))
 

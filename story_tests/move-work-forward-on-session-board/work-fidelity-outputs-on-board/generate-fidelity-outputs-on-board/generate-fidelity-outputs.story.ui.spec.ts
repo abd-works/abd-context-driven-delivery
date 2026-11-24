@@ -215,13 +215,14 @@ test.describe('with a chat connected', () => {
         await openWithChat(page)
         const bar = await openStoryMapTile(page)
         await bar.getByRole('combobox', { name: 'Action' }).selectOption('render')
-        // The markdown the map is already in stays picked until the Person unpicks it; each press waits for the session's
-        // answer, so Run sends the formats it chose.
+        // The markdown the map is already in stays picked until the Person unpicks it, and a fidelity keeps at least one
+        // format chosen (widget-13), so the diagram is picked before markdown is unpicked; each press waits for the
+        // session's answer, so Run sends the formats it chose.
         await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'true')
-        await chip(bar, 'markdown').click()
-        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'false')
         await chip(bar, 'diagram').click()
         await expect(chip(bar, 'diagram')).toHaveAttribute('aria-pressed', 'true')
+        await chip(bar, 'markdown').click()
+        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'false')
         await runOf(bar).click()
       })
 
