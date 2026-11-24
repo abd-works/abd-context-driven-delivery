@@ -433,6 +433,11 @@ class Module(OoadNode):
         if drawn.endswith("...") and earlier.description.startswith(drawn[:-3].rstrip()):
             self.description = earlier.description
 
+    def take_dependencies_off(self, earlier: "Module", shown: set[str]) -> None:
+        """Take earlier's dependencies on modules not among shown, the modules a drawing holds: a drawing shows a
+        dependency only as an arrow to a module on it, so one on a module it does not hold comes from earlier."""
+        self.dependencies += [name for name in earlier.dependencies if name not in shown and name not in self.dependencies]
+
     def clone(self) -> "Module":
         cloned = type(self)(self.name, self.sequential_order)
         cloned.update_self(self)
@@ -582,12 +587,15 @@ class CleanEngineeringModel(OoadNode, FormatAdapter):
         self.name = source.name
 
     def take_words_from(self, earlier: "CleanEngineeringModel") -> None:
-        """Give each module and class this model still holds the words earlier held for it, where this model has none:
-        a render from a drawing, which writes no prose, keeps the prose of the document it is written onto."""
+        """Give each module and class this model still holds the words earlier held for it, where this model has none,
+        and each module its dependencies on modules this model does not hold: a render from a drawing, which writes no
+        prose and draws no arrow to a module it does not show, keeps them from the document it is written onto."""
         modules = {module.name: module for module in earlier.modules}
+        shown = {module.name for module in self.modules}
         for module in self.modules:
             if module.name in modules:
                 module.take_words_from(modules[module.name])
+                module.take_dependencies_off(modules[module.name], shown)
         classes = {oclass.name: oclass for oclass in earlier.every_class()}
         for oclass in self.every_class():
             if oclass.name in classes:

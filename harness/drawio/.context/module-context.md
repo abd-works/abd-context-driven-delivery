@@ -3,9 +3,11 @@
 
 *DrawioPage* is one diagram page: its name and its cells (`cells`, `cell(id)`), the box each vertex is drawn in (`boxes`), and where each placed vertex sits (`positions`). A practice draws a vertex on it with `add(id, label, style, box, link)`, which writes a linked vertex inside the `UserObject` that carries its id, words, and link fields, as draw.io does. *DrawioCell* is one cell read from a page: its id, words, *CellStyle*, link, the cells an edge joins, its box (a *Box* of harness/whiteboard), and its geometry as the file writes it, so a drawing a person moved keeps their numbers. A linked cell is read from its `UserObject`, as if its id and words were on the cell. *CellStyle* is the one reader of a cell's style: a value or a number it sets (`value`, `number`), whether it sets a key, and the first word that names what a practice's cell draws (`role`, `role_detail`).
 
+*KeepsDocumentInDrawing* is what a practice's draw.io format mixes in, ahead of its model, to keep the document a drawing was drawn from (*SourceDocument* of harness/markdown, its format and its text): `keeping` writes it on the first page's root cell, inside the `UserObject` draw.io writes for a cell with fields of its own (`DrawioFile.keep`), where draw.io shows it as the diagram's data and draws none of it, and `document_kept_in` reads it back (`DrawioFile.kept_document`). A render of the drawing back into that format writes over the kept document as the file it replaces, so the prose a drawing cannot show comes back.
+
 - **Purpose:** Let every practice that draws a diagram read and write draw.io with one document model, one failure, and one style reader, as harness/whiteboard does for boards.
-- **Seam (terms):** DrawioFile (`from_text`, `pages`, `page`, `whole`, `add_page`, `save`), DrawioPage (`cells`, `cell`, `boxes`, `positions`, `add`, `element`), DrawioCell, CellStyle, UnreadableDrawio
-- **Dependencies (one-way):** harness/whiteboard, for *Box*, the one rectangle.
+- **Seam (terms):** DrawioFile (`from_text`, `pages`, `page`, `whole`, `add_page`, `keep`, `kept_document`, `save`), KeepsDocumentInDrawing (`keeping`, `document_kept_in`), DrawioPage (`cells`, `cell`, `boxes`, `positions`, `add`, `element`), DrawioCell, CellStyle, UnreadableDrawio
+- **Dependencies (one-way):** harness/whiteboard, for *Box*, the one rectangle; harness/markdown, for *Format* and *SourceDocument*.
 
 The practices' draw.io packages depend on it the other way: Stories', UX's and Clean Engineering's `model/drawio`, and DDD's bounded-context map. Clean Engineering keeps its class diagram's edge routing and class boxes in its own *ClassDiagramPage* over a framework page.
 

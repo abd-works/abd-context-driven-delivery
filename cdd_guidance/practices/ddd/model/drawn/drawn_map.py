@@ -123,7 +123,9 @@ class DrawnBoundedContextMap(BoundedContextMap):
     def read_drawing(self) -> "DrawnBoundedContextMap":
         """Read the modules the drawing parsed into this map, and return it: the class view's classes are the cards of
         the aggregates their modules name; each cell of the modules view reads itself in, then each draws its
-        integrations."""
+        integrations. A drawing holds none of the words round the map's title, so a drawing read before by the same
+        format lends this one none either: they come from the document the drawing keeps."""
+        self.opening, self.description = [], []
         if any(module.classes for module in self.modules):
             return self.read_class_model(self)
         self.contexts = []

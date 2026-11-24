@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Protocol, Self
 from harness.guidance.documents import document_in
 from harness.guidance.worked_session import NamedPaths, WorkedSession
 from harness.installation.data_class import data_field
-from harness.markdown.format import Format
+from harness.markdown.format import Format, SourceDocument
 
 if TYPE_CHECKING:
     from harness.guidance.declared_outputs import DeclaredOutputs
@@ -68,6 +68,11 @@ class FormatAdapter:
         text = Path(path).read_text(encoding="utf-8")
         return self.parse(text, file).placed_in(file, text)
 
+    def reads_file(self, file: Path, text: str) -> bool:
+        """Whether file, which holds text, is one this format writes: many files share an ending, so each format says
+        which of them are its own. A format that says nothing reads none."""
+        return False
+
     def placed_in(self, file: str, text: str) -> Self:
         """This model, read from text, the file called file, holding where it was read; a model that names no file of
         its nodes holds nothing more."""
@@ -78,6 +83,15 @@ class FormatAdapter:
         """rendered written onto existing, the text a file holds now, keeping every line it has; none for a format that
         leaves that writing to the Render action."""
         return None
+
+    def document_kept_in(self, text: str) -> SourceDocument | None:
+        """The document a file of this format holds hidden, which it was drawn from; none for a format that keeps none,
+        as every format but a drawing (``harness.drawio.KeepsDocumentInDrawing``, ``harness.whiteboard.KeepsDocumentOnBoard``)."""
+        return None
+
+    def keeping(self, rendered: Any, document: SourceDocument) -> Any:
+        """rendered, in this format, keeping document hidden; as it is for a format that keeps no document."""
+        return rendered
 
 
 def named_from(project: Path, path: Path) -> str:
@@ -428,7 +442,28 @@ class PracticeFormats:
             return self._companion_render(request, source)
         model = self._object_model(request.content, source)
         target = self.adapter(request.format)
-        return Rendered(request.format, target.render(self.model_for(target, model), request._keeping_sketch_wording().written))
+        drawn_from = self._document_drawn_from(request.content, source)
+        written = request._keeping_sketch_wording().written
+        if drawn_from is not None and drawn_from.format == request.format and not written.previous:
+            written = replace(written, previous=drawn_from.text)
+        rendered = target.render(self.model_for(target, model), written)
+        kept = drawn_from or self._document_of(request.content, source)
+        return Rendered(request.format, target.keeping(rendered, kept) if kept is not None else rendered)
+
+    def _document_drawn_from(self, content: RenderContent, source: Format) -> SourceDocument | None:
+        """The document content, a drawing in source, keeps hidden, which it was drawn from: a render back into that
+        document's format writes over it, as the file it replaces, so the words the drawing cannot show come back; none
+        for content that is no drawing, or keeps no document."""
+        if not isinstance(content, str) or source not in self:
+            return None
+        return self.adapter(source).document_kept_in(content)
+
+    def _document_of(self, content: RenderContent, source: Format) -> SourceDocument | None:
+        """content as the document a drawing rendered from it keeps: text in source; none for an object model, guidance,
+        or the files of a code format."""
+        if not isinstance(content, str) or not content.strip() or not source:
+            return None
+        return SourceDocument(source, content)
 
     def parse(self, format: Format, content: TextOrData) -> ObjectModel:
         """The model format's adapter reads from content. A model that says it holds only classes, such as a DDD map

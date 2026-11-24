@@ -76,9 +76,6 @@ outputs:
   drawio: ".context/bounded-context-map.drawio"
   whiteboard: ".context/bounded-context-map.whiteboard"
 example: "model/_examples/trip/bounded-context-map.md"
-leaves_out:
-  drawio: "each context's and aggregate's description, and an integration's direction, what crosses it and how it is integrated. They stay in bounded-context-map.md"
-  whiteboard: "each context's and aggregate's description, and an integration's direction, what crosses it and how it is integrated. They stay in bounded-context-map.md"
 ```
 
 #### Overview
@@ -185,8 +182,6 @@ leaves_out:
   python: "the document's front matter, title and Sources line, each class's description and invariants, and the model's spelling of a type Python spells its own way. They stay in domain-model.md"
   typescript: "the document's front matter, title and Sources line, and each class's description and invariants. They stay in domain-model.md"
   javascript: "the document's front matter, title and Sources line, each class's description and invariants, and the type of every property, parameter and return. They stay in domain-model.md"
-  drawio: "the document's front matter and Sources line, each class's description and invariants, and the notes and calls written under a member. They stay in domain-model.md"
-  whiteboard: "the document's front matter and Sources line, each class's description and invariants, and the notes and calls written under a member. They stay in domain-model.md"
 ```
 
 #### Overview

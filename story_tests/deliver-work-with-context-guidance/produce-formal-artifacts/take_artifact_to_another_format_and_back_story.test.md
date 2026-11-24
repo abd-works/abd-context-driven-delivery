@@ -91,13 +91,17 @@ Observed (`cdd_guidance/practices/ddd/model/format_round_trip_spec.py`).
 *Then* it opens with `# Domain Model — Bookshop`
   *And* OrderLine has no `----` rule under its properties
 
-#### Scenario: Keep the prose a drawing cannot hold
+#### Scenario: Keep the prose a drawing cannot show through a trip to draw.io and back
 
-Intended. Evidence still missing: where the prose is kept is the person's decision. A drawing holds no front matter, descriptions, `//` notes, `->` calls, invariants, or the direction, crossing and call site of an integration, so today a render back from a drawing writes the file without them.
+Observed for every practice and fidelity that draws its documents, as one shared behaviour (`cdd_guidance/practices/format_trip_spec.py` for the story map, the bounded-context map and the domain model; `format_trip_heavy_spec.py` for Clean Engineering's module cards and class model), and for the mechanism itself (`harness/drawio/drawio_spec.py`, `harness/whiteboard/whiteboard_spec.py`, `harness/guidance/format_adapter_spec.py`, "a drawing rendered from a document"). Source: the person's answer of 2026-11-23 to closing choice 10 of the exploratory testing session, "prose a drawing cannot hold is kept in the drawing's hidden metadata, so a trip through a drawing loses nothing". A draw.io file keeps the document on its page's root cell, which draw.io shows as the diagram's data and draws nowhere; a whiteboard keeps it in its board meta.
 
-*Given* ++.context/domain-model.md++ holds an invariant, a note and a call on the Order aggregate
-*When* Claude Code renders ++.context/domain-model.md++ to drawio, then the drawing back to markdown
-*Then* ++.context/domain-model.md++ still holds the invariant, the note and the call
+*Given* ++.context/domain-model.md++ holds front matter, a Sources line, a sentence under each aggregate, an invariant, a `//` note, a `->` call and an Integrations block on the Order aggregate
+*When* Claude Code renders ++.context/domain-model.md++ to drawio
+  *And* the person deletes ++.context/domain-model.md++
+  *And* Claude Code renders ++.context/domain-model.drawio++ back to markdown
+*Then* ++.context/domain-model.md++ reads as the person wrote it, the invariant, the note, the call and the integration included
+  *And* the same holds through whiteboard, and for ++.context/story-map.md++, ++.context/bounded-context-map.md++, the module cards and ++src/.context/src-model.md++
+  *And* a card the person renamed or removed in the drawing is renamed or removed in the markdown, since what the drawing shows is the drawing's
 
 #### Scenario: Name a second class model's own classes in its markdown
 

@@ -3,7 +3,8 @@
 A drawn bounded-context map or domain model holds the contexts, the aggregates, their members and classes, and an arrow
 for each integration and each call to another aggregate. It holds none of the document's prose: the sentence under a
 heading, a note, an invariant, the fields of an integration, the events, a call inside an aggregate. The Render action
-hands the markdown adapter the file as it is before the render (`RenderedFile.previous`), and the adapter asks that
+hands the markdown adapter the file as it is before the render (`RenderedFile.previous`), or, with no file there, the
+document the drawing keeps hidden (`KeepsDocumentInDrawing`), and the adapter asks that
 file, read as the map it was, to give those words to everything still on the map under the same name. What the drawing
 does hold is the drawing's: a context, a class, a member or an arrow removed from it stays removed.
 """

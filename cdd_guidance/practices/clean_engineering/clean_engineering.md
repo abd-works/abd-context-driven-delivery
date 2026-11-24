@@ -45,9 +45,6 @@ outputs:
   drawio: ".context/modules.drawio"
   whiteboard: ".context/modules.whiteboard"
 example: "model/fixtures/bookshop/ordering-module-context.md"
-leaves_out:
-  drawio: "each concept's definition, the module's constraint, and a dependency on a module the drawing does not show. They stay in module-context.md"
-  whiteboard: "each concept's definition, the module's constraint, and a dependency on a module the drawing does not show. They stay in module-context.md"
 ```
 
 **Diagram format:** `drawio` (modules view with blue boxes, public-interface bullets, and one-way dependency arrows; template `templates/modules.drawio`). **Markdown:** `module-context.md` uses template `templates/modules.md`. Programming-language channels are for **model** and later.
@@ -173,8 +170,6 @@ leaves_out:
   python: "the document's front matter, title and Module line, the module's description, and the groups its classes are filed under with their descriptions. They stay in the model's markdown file"
   typescript: "the document's front matter, title and Module line, the module's description, and the groups its classes are filed under with their descriptions, and the model's spelling of a name or type TypeScript spells its own way, such as customer_id (customerId) and str (string). They stay in the model's markdown file"
   javascript: "the document's front matter, title and Module line, the module's description, and the groups its classes are filed under with their descriptions, the model's spelling of a name JavaScript spells its own way, the type of every property, parameter and return, and the notes written under a property. They stay in the model's markdown file"
-  drawio: "the document's front matter, title and Module line, the module's description, and the groups its classes are filed under with their descriptions, the notes written under a member, and the calls an operation makes. They stay in the model's markdown file"
-  whiteboard: "the document's front matter, title and Module line, the module's description, and the groups its classes are filed under with their descriptions, the notes written under a member, and the calls an operation makes. They stay in the model's markdown file"
 ```
 
 #### Overview

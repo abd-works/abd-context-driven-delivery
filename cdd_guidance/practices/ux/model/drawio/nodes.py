@@ -30,7 +30,7 @@ from cdd_guidance.practices.ux.model.served import NavType, Served
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR
 from cdd_guidance.practices.ux.model.story_link import StoryLink
 from cdd_guidance.practices.ux.model.ux_map import UxMap
-from harness.drawio import CellStyle, DrawioCell, DrawioFile, UnreadableDrawio
+from harness.drawio import CellStyle, DrawioCell, DrawioFile, KeepsDocumentInDrawing, UnreadableDrawio
 from harness.guidance.practice_formats import Written
 
 _CLI = Path(__file__).with_name("drawio_ux.mjs")
@@ -337,7 +337,7 @@ class Callout:
         return line[len(heading):]
 
 
-class DrawioUxMap(UxMap):
+class DrawioUxMap(KeepsDocumentInDrawing, UxMap):
     screen_type = DrawioScreen
     region_type = DrawioRegion
     control_type = DrawioControl

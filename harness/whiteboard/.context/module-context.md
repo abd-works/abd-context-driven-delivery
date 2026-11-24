@@ -13,9 +13,11 @@
 
 *StoreWrite* is one write to the artifact's store: set a record, update its changed fields, or delete it; an agent sends them as the entries `Whiteboard.batches(previous)` answers.
 
+*KeepsDocumentOnBoard* is what a practice's whiteboard format mixes in, ahead of its model, to keep the document a board was drawn from (*SourceDocument* of harness/markdown) in the board's meta (`Whiteboard.kept_document`, written as `document` beside the title and the order, so the board in Claude keeps it too): `keeping` writes it there and `document_kept_in` reads it back, as *KeepsDocumentInDrawing* does for a draw.io file.
+
 - **Purpose:** Let any practice draw its diagram on a Claude Whiteboard and read it back, with one board format, one element id, and one way of updating a board in Claude.
-- **Seam (terms):** Whiteboard (`title`, `sections`, `shapes`, `labels`, `arrows`, `holding`, `batches`, `drawn_over`, `links_beside`), WhiteboardFile (`whiteboard-file.show`), BoardElement, Shape, Section, Label, Arrow, ElementId (`of`, `read`, `role`, `parts`, `key`), WhiteboardNode (`KEY_LENGTH`), Box, UnreadableBoard
-- **Dependencies (one-way):** harness/installation, for the JSON record of published addresses and the data annotations; harness/agent_tools and harness/mcp, for *WhiteboardFile*'s tool.
+- **Seam (terms):** KeepsDocumentOnBoard (`keeping`, `document_kept_in`), Whiteboard (`kept_document`, `title`, `sections`, `shapes`, `labels`, `arrows`, `holding`, `batches`, `drawn_over`, `links_beside`), WhiteboardFile (`whiteboard-file.show`), BoardElement, Shape, Section, Label, Arrow, ElementId (`of`, `read`, `role`, `parts`, `key`), WhiteboardNode (`KEY_LENGTH`), Box, UnreadableBoard
+- **Dependencies (one-way):** harness/installation, for the JSON record of published addresses and the data annotations; harness/markdown, for *Format* and *SourceDocument*; harness/agent_tools and harness/mcp, for *WhiteboardFile*'s tool.
 
 The practices' whiteboard packages (`model/whiteboard` in each practice), the Render action, the session's file list and the Files app (through the generated `whiteboard-file` adapter) depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
 

@@ -16,8 +16,9 @@ def _model(module: str) -> str:
 
 
 def _class_headings(markdown: str) -> list:
-    """The class each card heading names, in file order."""
-    return [line.split("**")[1] if "**" in line else line.lstrip("# ").split(" ")[0] for line in markdown.splitlines() if line.startswith(("## ", "### **"))]
+    """The class each card heading names, in file order; a group heading, which names no stereotype, names no class."""
+    headings = [line for line in markdown.splitlines() if line.startswith(("## ", "### **")) and "<<" in line]
+    return [line.split("**")[1] if "**" in line else line.lstrip("# ").split(" ")[0] for line in headings]
 
 
 with description("a class model rendered to markdown") as self:
@@ -36,7 +37,7 @@ with description("a class model rendered to markdown") as self:
             expect(_class_headings(self.second)).to(equal(["Shipment", "ExpressShipment"]))
 
         with it("should keep the base the second model's class extends"):
-            expect(self.second).to(contain("ExpressShipment <<Entity>> : Shipment"))
+            expect(self.second).to(contain("**ExpressShipment** <<Entity>> : Shipment"))
 
     with context("from its drawing, over the markdown the drawing was made from"):
         with before.each:
@@ -60,7 +61,10 @@ with description("a class model rendered to markdown") as self:
         with before.each:
             self.written = _model("fulfilment")
             drawing = self.practice.render("drawio", self.written, source="markdown").content
-            changed = drawing.replace("+ dispatch(): None", "+ dispatch(): None&lt;br&gt;+ recall(): None", 1)
+            # The drawing keeps the markdown it was drawn from ahead of its cards, so the person's change is made on the
+            # card, the last place the operation is written.
+            head, _, tail = drawing.rpartition("+ dispatch(): None")
+            changed = f"{head}+ dispatch(): None&lt;br&gt;+ recall(): None{tail}"
             self.changed = changed != drawing
             self.back = self.practice.render("markdown", changed, source="drawio", previous=self.written).content
 

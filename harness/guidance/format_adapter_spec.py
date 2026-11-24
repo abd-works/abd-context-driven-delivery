@@ -19,7 +19,9 @@ from harness.guidance.format_trip import (
 from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.practice_formats import ExistingText, FormatAdapter, PracticeFormats, Rendered, RenderRequest, Written, lead_of
 from harness.installation.data_class import data_of
-from harness.markdown.format import Format
+import json
+
+from harness.markdown.format import Format, SourceDocument
 
 
 class _Lines(FormatAdapter):
@@ -261,6 +263,57 @@ def _trip(leaves_out: dict | None = None, outputs: dict | None = None, example: 
     declared = DeclaredOutputs(outputs or {"lines": "notes/{cart}.lines", "titles": "notes/{cart}.titles"})
     fidelity = SimpleNamespace(practice_guidance=practice, leaves_out=leaves_out or {}, declared=declared)
     return FormatTrip(fidelity, example, written_in)
+
+
+class _Drawing(_Titles):
+    """A drawing of the titles alone, which keeps the document it was drawn from on its first line, as a draw.io file
+    keeps it on its root cell."""
+
+    def parse(self, text, file=""):
+        return _Lines([line for line in str(text).splitlines() if not line.startswith("kept ")], file)
+
+    def document_kept_in(self, text):
+        first = str(text).splitlines()[0] if str(text).strip() else ""
+        if not first.startswith("kept "):
+            return None
+        kept = json.loads(first[len("kept "):])
+        return SourceDocument(Format(kept["format"]), kept["text"])
+
+    def keeping(self, rendered, document):
+        return "\n".join([f"kept {json.dumps({'format': str(document.format), 'text': document.text})}", rendered])
+
+
+def _formats() -> PracticeFormats:
+    """The formats of a practice of notes, written in lines, and drawn as a drawing of their titles."""
+    practice = SimpleNamespace(format=Format("lines"), working_set=SimpleNamespace(extended=None), default_workspace_folder="")
+    return PracticeFormats(practice, {"lines": _Lines, "drawing": _Drawing})
+
+
+with description("a drawing rendered from a document") as self:
+    with before.each:
+        self.formats = _formats()
+        self.drawing = self.formats.render(RenderRequest(Format("drawing"), _EXAMPLE, Format("lines"))).content
+
+    with it("should draw only what the drawing shows"):
+        expect(self.formats.parse(Format("drawing"), self.drawing).lines).to(equal(["# Cart"]))
+
+    with it("should keep the document it was drawn from, in its format, hidden in the drawing"):
+        expect(_Drawing().document_kept_in(self.drawing)).to(equal(SourceDocument(Format("lines"), _EXAMPLE)))
+
+    with context("rendered back into that document's format, with no file to write over"):
+        with it("should hand the format the document it keeps, as the file it replaces"):
+            back = self.formats.render(RenderRequest(Format("lines"), self.drawing, Format("drawing"))).content
+            expect(back).to(equal("# Cart\n(was 3 lines)"))
+
+    with context("rendered back over a file already there"):
+        with it("should hand the format that file, which a person may have changed since the drawing"):
+            back = self.formats.render(RenderRequest(Format("lines"), self.drawing, Format("drawing"), previous="# Cart\n")).content
+            expect(back).to(equal("# Cart\n(was 1 lines)"))
+
+    with context("drawn again from itself"):
+        with it("should keep the same document"):
+            again = self.formats.render(RenderRequest(Format("drawing"), self.drawing, Format("drawing"))).content
+            expect(_Drawing().document_kept_in(again)).to(equal(SourceDocument(Format("lines"), _EXAMPLE)))
 
 
 with description("a fidelity's example taken to one of its formats and back") as self:

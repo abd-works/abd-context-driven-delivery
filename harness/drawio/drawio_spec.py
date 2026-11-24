@@ -2,7 +2,8 @@
 from expects import be_none, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.drawio import CellStyle, DrawioFile, UnreadableDrawio
+from harness.drawio import CellStyle, DrawioFile, KeepsDocumentInDrawing, UnreadableDrawio
+from harness.markdown.format import Format, SourceDocument
 from harness.whiteboard import Box
 
 
@@ -39,6 +40,58 @@ with description("a draw.io file") as self:
 
         with it("should refuse XML that holds no graph model"):
             expect(lambda: DrawioFile.from_text("<svg/>")).to(raise_error(UnreadableDrawio))
+
+
+_STORY_MAP = SourceDocument(Format("markdown"), "# Story Map\n\n## Order\n\nA customer orders books.\n")
+
+
+with description("a draw.io file that keeps the document it was drawn from") as self:
+    with before.each:
+        self.drawing = DrawioFile()
+        self.drawing.add_page("Story Map", "story-map").add("epic/order", "Order", "epic;rounded=1;", Box(40, 20, 300, 60))
+        self.drawing.keep(_STORY_MAP)
+        self.read = DrawioFile.from_text(self.drawing.save())
+
+    with it("should give back the document, its format and every line of its text"):
+        expect(self.read.kept_document).to(equal(_STORY_MAP))
+
+    with it("should keep it on the page's root cell, inside the UserObject draw.io writes for a cell with fields"):
+        root = self.read.page("Story Map").cell("0")
+        expect((root.element.tag, root.is_vertex, root.label)).to(equal(("mxCell", False, "")))
+
+    with it("should still read every cell it draws"):
+        expect([cell.id for cell in self.read.page("Story Map").cells]).to(equal(["0", "1", "epic/order"]))
+
+    with context("drawn again with another document"):
+        with before.each:
+            self.read.keep(SourceDocument(Format("markdown"), "# Story Map\n"))
+            self.again = DrawioFile.from_text(self.read.save())
+
+        with it("should keep only the newer document"):
+            expect(self.again.kept_document.text).to(equal("# Story Map\n"))
+
+    with context("that keeps none"):
+        with it("should answer no document"):
+            drawing = DrawioFile()
+            drawing.add_page("Story Map", "story-map")
+            expect(DrawioFile.from_text(drawing.save()).kept_document).to(be_none)
+
+
+with description("a practice's draw.io format that keeps the document a drawing was drawn from") as self:
+    with before.each:
+        drawing = DrawioFile()
+        drawing.add_page("Story Map", "story-map")
+        self.format = KeepsDocumentInDrawing()
+        self.kept = self.format.keeping(drawing.save(), _STORY_MAP)
+
+    with it("should read back the document the drawing it rendered keeps"):
+        expect(self.format.document_kept_in(self.kept)).to(equal(_STORY_MAP))
+
+    with it("should answer no document for text that is no drawing"):
+        expect(self.format.document_kept_in("# Story Map")).to(be_none)
+
+    with it("should leave a render that is no drawing as it is"):
+        expect(self.format.keeping("", _STORY_MAP)).to(equal(""))
 
 
 with description("a cell's style"):

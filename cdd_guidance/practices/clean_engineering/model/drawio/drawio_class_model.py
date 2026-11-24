@@ -54,7 +54,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.diagram_node import (
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from harness.drawio import CellStyle, DrawioFile, DrawioPage, UnreadableDrawio
+from harness.drawio import CellStyle, DrawioFile, DrawioPage, KeepsDocumentInDrawing, UnreadableDrawio
 from harness.guidance.practice_formats import Written
 
 _EDGE_BASE_STYLE = 'edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;'
@@ -80,7 +80,7 @@ _MODULE_CHILD_MARKER = 'fillColor=#dae8fc'
 
 
 
-class DrawIOCleanEngineeringModel(DiagramCleanEngineeringModel):
+class DrawIOCleanEngineeringModel(KeepsDocumentInDrawing, DiagramCleanEngineeringModel):
     module_type = DrawIOModule
 
     module_cell_types: Tuple[type, ...] = (DrawIOModule,)

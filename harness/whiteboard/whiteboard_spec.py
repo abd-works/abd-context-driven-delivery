@@ -7,7 +7,8 @@ import json
 import tempfile
 from pathlib import Path
 
-from harness.whiteboard import Arrow, BoardElement, Box, ElementId, Label, Section, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.whiteboard import Arrow, BoardElement, Box, ElementId, KeepsDocumentOnBoard, Label, Section, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
+from harness.markdown.format import Format, SourceDocument
 from harness.installation.data_class import data_of
 from harness.whiteboard.whiteboard import StoreWrite
 from harness.whiteboard.whiteboard_file import WhiteboardFile
@@ -205,6 +206,43 @@ with description("a whiteboard") as self:
         with it("should refuse it"):
             board = Whiteboard("Orders")
             expect(lambda: board.add(Shape("lane.l1", box=Box(0, 0, 100, 9000)))).to(raise_error(ValueError))
+
+
+_STORY_MAP = SourceDocument(Format("markdown"), "# Story Map\n\n## Order\n\nA customer orders books.\n")
+
+
+with description("a whiteboard that keeps the document it was drawn from") as self:
+    with before.each:
+        board = board_of_two_cards()
+        board.kept_document = _STORY_MAP
+        self.board = board
+        self.loaded = Whiteboard.from_text(board.save())
+
+    with it("should give back the document, its format and every line of its text, once saved and loaded"):
+        expect(self.loaded.kept_document).to(equal(_STORY_MAP))
+
+    with it("should keep it in the board's meta, so the board in Claude keeps it too"):
+        meta = self.board.batches()[0][0]
+        expect(meta["data"]["document"]).to(equal({"format": "markdown", "text": _STORY_MAP.text}))
+
+    with it("should draw nothing more"):
+        expect(self.loaded.order).to(equal(board_of_two_cards().order))
+
+    with context("that keeps none"):
+        with it("should answer no document"):
+            expect(Whiteboard.from_text(board_of_two_cards().save()).kept_document).to(equal(None))
+
+
+with description("a practice's whiteboard format that keeps the document a board was drawn from") as self:
+    with before.each:
+        self.format = KeepsDocumentOnBoard()
+        self.kept = self.format.keeping(board_of_two_cards().save(), _STORY_MAP)
+
+    with it("should read back the document the board it rendered keeps"):
+        expect(self.format.document_kept_in(self.kept)).to(equal(_STORY_MAP))
+
+    with it("should answer no document for text that is no board"):
+        expect(self.format.document_kept_in("# Story Map")).to(equal(None))
 
 
 with description("a whiteboard file's board in Claude") as self:

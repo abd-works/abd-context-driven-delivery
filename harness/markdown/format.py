@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -127,3 +128,15 @@ class Format(str):
 
 # The folder names a practice's templates are kept under, one for each templated format: `md`, `py`, ...
 TEMPLATE_FOLDER_NAMES = frozenset(Format(name).short for name in Format.TEMPLATED)
+
+
+@dataclass(frozen=True)
+class SourceDocument:
+    """The document a drawing was drawn from, in the format it was written in, kept hidden in the drawing: a draw.io
+    file keeps it on its page's root cell and a Claude Whiteboard board in its meta, where neither draws it. A drawing
+    shows only part of what a document says, such as a story map's cards without the prose under them, so a render of
+    the drawing back into that format writes over this document as the file it replaces, and the words the drawing
+    cannot show come back."""
+
+    format: Format
+    text: str

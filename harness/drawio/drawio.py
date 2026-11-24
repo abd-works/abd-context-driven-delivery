@@ -12,11 +12,17 @@ import re
 from typing import Dict, List, Optional
 from xml.etree import ElementTree as ET
 
+from harness.markdown.format import Format, SourceDocument
 from harness.whiteboard import Box
 
 # The two cells every draw.io page starts with: the root and the layer every other cell is drawn on.
 _PAGE_CELLS = ("0", "1")
 _HEADER = "<?xml version='1.0' encoding='utf-8'?>\n"
+# The fields of a page's root cell that keep the document the drawing was drawn from, and the tags draw.io writes a cell
+# carrying fields of its own in. draw.io shows a root cell's fields as the diagram's data and draws none of them.
+_KEPT_FORMAT = "cddSourceFormat"
+_KEPT_TEXT = "cddSourceDocument"
+_HOLDERS = ("UserObject", "object")
 
 
 class UnreadableDrawio(ValueError):
@@ -224,6 +230,64 @@ class DrawioFile:
         ET.SubElement(root, "mxCell", attrib={"id": _PAGE_CELLS[1], "parent": _PAGE_CELLS[0]})
         return DrawioPage(name, root)
 
+    @property
+    def kept_document(self) -> Optional[SourceDocument]:
+        """The document this drawing was drawn from, kept on a page's root cell (``keep``); none when it keeps none."""
+        for holder in self._document.iter():
+            if holder.tag in _HOLDERS and holder.get(_KEPT_TEXT) is not None:
+                return SourceDocument(Format(holder.get(_KEPT_FORMAT, "")), holder.get(_KEPT_TEXT, ""))
+        return None
+
+    def keep(self, document: SourceDocument) -> None:
+        """Keep document on the first page's root cell, as fields draw.io keeps with the diagram and draws nowhere: the
+        root cell goes inside a UserObject that carries the document's format and text, as draw.io writes a cell with
+        fields of its own. A drawing with no page keeps nothing."""
+        pages = self.pages
+        if not pages:
+            return
+        root = pages[0].element
+        holder = next((element for element in root if element.tag in _HOLDERS and element.get("id") == _PAGE_CELLS[0]), None)
+        if holder is None:
+            holder = self._root_cell_held(root)
+        holder.set(_KEPT_FORMAT, str(document.format))
+        holder.set(_KEPT_TEXT, document.text)
+
+    def _root_cell_held(self, root: ET.Element) -> ET.Element:
+        """The UserObject the page's root cell is moved into, carrying its id; a page with no root cell gains one."""
+        cell = next((element for element in root if element.tag == "mxCell" and element.get("id") == _PAGE_CELLS[0]), None)
+        at = list(root).index(cell) if cell is not None else 0
+        if cell is not None:
+            root.remove(cell)
+            del cell.attrib["id"]
+        holder = ET.Element("UserObject", attrib={"label": "", "id": _PAGE_CELLS[0]})
+        holder.append(cell if cell is not None else ET.Element("mxCell"))
+        root.insert(at, holder)
+        return holder
+
     def save(self) -> str:
         """The document as the text of a ``.drawio`` file."""
         return _HEADER + ET.tostring(self._document, encoding="unicode")
+
+
+class KeepsDocumentInDrawing:
+    """What a practice's draw.io format mixes in, ahead of its model, to keep the document a drawing was drawn from:
+    the render writes it into the drawing (``keeping``) and a render of the drawing back into that document's format
+    writes over it (``document_kept_in``), so the prose the drawing cannot show comes back."""
+
+    def document_kept_in(self, text: str) -> Optional[SourceDocument]:
+        """The document text, a drawing, keeps; none for a drawing that keeps none, or text that is no drawing."""
+        try:
+            return DrawioFile.from_text(text).kept_document
+        except UnreadableDrawio:
+            return None
+
+    def keeping(self, rendered: object, document: SourceDocument) -> object:
+        """rendered, a drawing, keeping document; anything that is no drawing as it is."""
+        if not isinstance(rendered, str) or not rendered.strip():
+            return rendered
+        try:
+            drawing = DrawioFile.from_text(rendered)
+        except UnreadableDrawio:
+            return rendered
+        drawing.keep(document)
+        return drawing.save()

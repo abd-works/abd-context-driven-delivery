@@ -27,7 +27,7 @@ from cdd_guidance.practices.stories.model.diagram_story_map import (
 )
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
 from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap, StoryType
-from harness.drawio import DrawioCell, DrawioFile, DrawioPage, UnreadableDrawio
+from harness.drawio import DrawioCell, DrawioFile, DrawioPage, KeepsDocumentInDrawing, UnreadableDrawio
 from harness.guidance.practice_formats import Written
 from harness.whiteboard import Box
 
@@ -297,7 +297,7 @@ class _KeptPlaces:
             vertex.width = kept_width
 
 
-class DrawIOStoryMap(DiagramStoryMap):
+class DrawIOStoryMap(KeepsDocumentInDrawing, DiagramStoryMap):
     # Its thin slice places the cells of the drawing it is drawn over itself (*_ThinSlicePlaces*).
     keeps_thin_slice_layout = True
     suffixes = (".drawio",)

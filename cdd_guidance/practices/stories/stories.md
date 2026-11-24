@@ -40,9 +40,6 @@ outputs:
   whiteboard: ".context/story-map.whiteboard"
   thin_slice: [".context/thin-slice.md", ".context/thin-slice.drawio", ".context/thin-slice.whiteboard"]
 example: "_examples/manage-customer-orders/md/story-map.md"
-leaves_out:
-  drawio: "the document's front matter, its title, and prose that is not an epic, a sub-epic, a story or an actor. They stay in story-map.md"
-  whiteboard: "the document's front matter, its title, and prose that is not an epic, a sub-epic, a story or an actor. They stay in story-map.md"
 ```
 
 #### Overview

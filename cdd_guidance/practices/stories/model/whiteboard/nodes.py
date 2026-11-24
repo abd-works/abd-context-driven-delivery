@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List
 
-from harness.whiteboard import BoardElement, Box, ElementId, Section, Shape, Whiteboard, WhiteboardNode
+from harness.whiteboard import BoardElement, Box, ElementId, KeepsDocumentOnBoard, Section, Shape, Whiteboard, WhiteboardNode
 
 from cdd_guidance.practices.stories.model.diagram_story_map import (
     DiagramEpic,
@@ -111,7 +111,7 @@ class WhiteboardEpic(LaidOutEpic, _BoardStoryNode):
         return self.board_shape(element_id, kind="rounded", color="green" if nested else "purple", size="body", text=self.name)
 
 
-class WhiteboardStoryMap(DiagramStoryMap):
+class WhiteboardStoryMap(KeepsDocumentOnBoard, DiagramStoryMap):
     """Whiteboard story-map I/O. IS the format-typed tree root: render draws it on a board, parse reads one back."""
 
     suffixes = (Whiteboard.SUFFIX,)

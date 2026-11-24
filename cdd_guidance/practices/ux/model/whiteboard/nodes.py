@@ -20,7 +20,7 @@ import re
 from pathlib import Path
 from typing import List, Optional
 
-from harness.whiteboard import Arrow, BoardElement, Box, ElementId, Section, Shape, Whiteboard, WhiteboardNode
+from harness.whiteboard import Arrow, BoardElement, Box, ElementId, KeepsDocumentOnBoard, Section, Shape, Whiteboard, WhiteboardNode
 
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, Transition
 from cdd_guidance.practices.ux.model.served import NavType, Served
@@ -201,7 +201,7 @@ class WhiteboardTransition(Transition, DrawnNode):
         self.nav_type = NavType.from_drawn(named.group("nav").strip() if named else "", arrow.dash)
 
 
-class WhiteboardUxMap(UxMap):
+class WhiteboardUxMap(KeepsDocumentOnBoard, UxMap):
     """The ``whiteboard`` format of a UX map: render draws the map on a board, parse reads one back."""
 
     screen_type = WhiteboardScreen

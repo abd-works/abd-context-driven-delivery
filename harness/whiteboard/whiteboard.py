@@ -18,6 +18,7 @@ from typing import ClassVar, Collection, Dict, Iterable, List, Optional
 from harness.installation.data_class import data_field, data_fields
 from harness.installation.json_file import JsonFile
 from harness.installation.published_links import PublishedLinks
+from harness.markdown.format import Format, SourceDocument
 
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_.~:@+-]{1,40}$")
 BATCH_SIZE = 50
@@ -398,6 +399,8 @@ class Whiteboard:
 
     def __init__(self, title: str = "", elements: Iterable[BoardElement] = ()) -> None:
         self._title = title
+        # The document the board was drawn from, kept in its meta, where the board draws none of it.
+        self.kept_document: Optional[SourceDocument] = None
         # The store version each record was read at, by element id and ``meta``; a board drawn by a practice has none.
         self._versions: Dict[str, int] = {}
         self._elements: Dict[str, BoardElement] = {}
@@ -483,7 +486,10 @@ class Whiteboard:
 
     @property
     def _meta(self) -> Dict[str, object]:
-        return {"v": 1, "title": self.title, "order": self.order}
+        meta: Dict[str, object] = {"v": 1, "title": self.title, "order": self.order}
+        if self.kept_document is not None:
+            meta["document"] = {"format": str(self.kept_document.format), "text": self.kept_document.text}
+        return meta
 
     def save(self) -> str:
         """The board as a ``.whiteboard`` file: its meta, every element's record, and the versions they were read at."""
@@ -506,6 +512,9 @@ class Whiteboard:
         order = [key for key in board.get("order", []) if key in records]
         order += [key for key in records if key not in order]
         loaded = cls(str(board.get("title", "")))
+        kept = board.get("document")
+        if isinstance(kept, dict) and isinstance(kept.get("text"), str):
+            loaded.kept_document = SourceDocument(Format(str(kept.get("format", ""))), kept["text"])
         loaded._versions = {str(key): int(value) for key, value in board.get("versions", {}).items()}
         for key in order:
             loaded._elements[key] = BoardElement.from_record(key, records[key])
@@ -559,3 +568,27 @@ class Whiteboard:
             StoreWrite("delete", "elements", element.id, None, before._versions.get(element.id)) for element in before.elements
             if self.element(element.id) is None and not isinstance(element, OtherElement)
         ]
+
+
+class KeepsDocumentOnBoard:
+    """What a practice's whiteboard format mixes in, ahead of its model, to keep the document a board was drawn from in
+    the board's meta: the render writes it there (``keeping``) and a render of the board back into that document's
+    format writes over it (``document_kept_in``), so the prose the board cannot show comes back."""
+
+    def document_kept_in(self, text: str) -> Optional[SourceDocument]:
+        """The document text, a board, keeps; none for a board that keeps none, or text that is no board."""
+        try:
+            return Whiteboard.from_text(text).kept_document
+        except UnreadableBoard:
+            return None
+
+    def keeping(self, rendered: object, document: SourceDocument) -> object:
+        """rendered, a board, keeping document; anything that is no board as it is."""
+        if not isinstance(rendered, str) or not rendered.strip():
+            return rendered
+        try:
+            board = Whiteboard.from_text(rendered)
+        except UnreadableBoard:
+            return rendered
+        board.kept_document = document
+        return board.save()
