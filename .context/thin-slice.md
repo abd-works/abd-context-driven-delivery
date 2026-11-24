@@ -569,7 +569,7 @@ section: body
 - *Share Real-Time Story Map Session*
 - *Change Story Map With AI*
 
-### Increment 15: Bring Chat Bar Level With Board
+### Increment 15: More Repo Actions In Chat Bar
 
 **Outcome:** everything a person can do to one session on the board, they can do from the chat bar.
 

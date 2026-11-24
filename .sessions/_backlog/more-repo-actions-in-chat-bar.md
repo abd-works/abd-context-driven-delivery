@@ -1,4 +1,4 @@
-# Bring Chat Bar Level With Board
+# More Repo Actions In Chat Bar
 
 **Outcome:** everything a person can do to one session on the board, they can do from the chat bar.
 
