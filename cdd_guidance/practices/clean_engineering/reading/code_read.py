@@ -1,5 +1,6 @@
 """One read of the code into Clean Engineering's graph: the files it parses, the folders it takes, and the class nodes
-it adds and links, with each class a model document describes, beside the code that implements it. The practice makes one for each
+it adds and links, each class a model document describes joined to the code's node of that class, or added on its own
+while no code declares it. The practice makes one for each
 read (``GraphReading.read_working_copy``), so nothing one read finds stays on the practice for the next."""
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.code_class_model import CodeCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
 from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext
@@ -65,8 +67,8 @@ class CodeRead:
         self._unreadable: dict[Path, str] = {}
 
     def read(self) -> None:
-        """Parse the files, add the folders, classes, and members they hold, and each class a model document describes
-        then link the types and the folders."""
+        """Parse the files, add the folders, classes, and members they hold, join or add each class a model document
+        describes, then link the types and the folders."""
         self._parse()
         self._record_public_sources()
         declared = self._class_names()
@@ -205,24 +207,71 @@ class OutsideScope:
 
 
 class DescribedClasses:
-    """The classes the practice's model documents describe, added as the code's classes are, so the model's rules
-    check the design whether or not its code is written. Each sits at its card in its document, owned by the folder
-    the document describes (the one holding its ``.context``), else the practice's root, and keeps the fact that a
-    document, not code, declares it. A class code declares too is a node of its own, which the read joins to this one."""
+    """The classes the practice's model documents describe. One class is one node, whatever formats it is written in.
+    A class the code of the module a document describes declares too is the code's node: it takes the document's place
+    (``Node.written_at``), the document's facts, and each member the code lacks, so the code's measures and the
+    document's description sit on one node. A class no code declares yet is added at its card in its document,
+    so the model's rules check the design before its code is written, owned by the folder the document describes (the
+    one holding its ``.context``), else the practice's root, and keeps the fact that only a document declares it."""
 
     def __init__(self, reading: "GraphReading", classes: "ClassNodes") -> None:
         self._documents = reading.model_documents
         self._in_graph = reading.in_graph
+        self._test_code = reading.test_code
         self._classes = classes
+        self._joins = ClassJoins(reading, classes)
 
     def add(self) -> None:
-        """Add each class the documents read now describe, once for each document that describes it."""
+        """Add or join each class the documents read now describe, the documents of the folders nearest the code first,
+        so a class two documents describe keeps the place of the one nearest its code."""
         folders = {node.source.file: node for node in folders_of(self._in_graph)}
-        for relative, oclass in self._documents.described_now():
-            described = Path(relative).parent.parent.as_posix()
-            self._classes.add(relative, folders.get(described, self._in_graph.root), oclass)
+        described = sorted(self._documents.described_now(), key=lambda pair: -_depth(_described_folder(pair[0])))
+        named = {(_described_folder(relative), oclass.name) for relative, oclass in described}
+        coded = [node for node in self._in_graph.nodes("OoadClass") if not node.has_fact(DESCRIBED_FACT)]
+        for relative, oclass in described:
+            folder = _described_folder(relative)
+            code = self._code_of(folder, oclass.name, coded, named)
+            if code is not None:
+                self._joins.join(relative, code, oclass)
+                continue
+            self._classes.add(relative, folders.get(folder, self._in_graph.root), oclass)
             oclass.set_fact(DESCRIBED_FACT, True)
             oclass.set_fact(PRODUCTION_FACT, True)
+
+    def _code_of(self, folder: str, name: str, coded: "list[Node]", named: set[tuple[str, str]]) -> "Node | None":
+        """The class the code of folder declares under name, which the document of folder describes: the one class of
+        that name in a file under folder, production code before test support such as a spec's fixture of the same
+        name, leaving out those a document of a folder nearer their file describes too unless every one is. A document
+        names no file and no language, so where two files of the module declare the name, the class it means cannot be
+        told and its class stays a node of its own."""
+        found = self._declared_under(folder, name, coded)
+        meant = [node for node in found if not self._nearer(node.source.file, folder, name, named)] or found
+        return meant[0] if len(meant) == 1 else None
+
+    def _declared_under(self, folder: str, name: str, coded: "list[Node]") -> "list[Node]":
+        """The classes called name in files under folder: the production ones, else the test support ones."""
+        under = [node for node in coded if node.name == name and _under(node.source.file, folder)]
+        return [node for node in under if not self._test_code.is_test_code(node.source.file)] or under
+
+    def _nearer(self, file: str, folder: str, name: str, named: set[tuple[str, str]]) -> bool:
+        """Whether a document of a folder between folder and file describes name too."""
+        parts = Path(file).parent.as_posix().split("/")
+        return any(("/".join(parts[:end]), name) in named for end in range(_depth(folder) + 1, len(parts) + 1))
+
+
+def _described_folder(document: str) -> str:
+    """The folder a model document describes, the one holding its ``.context``: ``.`` for the practice's root."""
+    return Path(document).parent.parent.as_posix()
+
+
+def _depth(folder: str) -> int:
+    """How many folders deep folder lies under the practice's root: 0 for the root."""
+    return 0 if folder in ("", ".") else len(folder.split("/"))
+
+
+def _under(file: str, folder: str) -> bool:
+    """Whether file, from the practice's root, lies under folder; every file lies under the root."""
+    return folder in ("", ".") or file.startswith(f"{folder}/")
 
 
 class ClassNodes:
@@ -249,15 +298,20 @@ class ClassNodes:
         node.read_at(CODE_FIDELITY if any(operation.has_body for operation in cls.operations) else MODEL_FIDELITY)
         self._graph.edges.link("owns", folder, node)
         self._graph.edges.relate("belongsTo", node, folder)
-        self._written.extend((node, prop.relationship.kind, prop.relationship.target) for prop in cls.properties if prop.stereotype and prop.relationship)
+        self.keep_relationships(node, cls)
         shown = cls.public_properties
         for prop in shown:
-            self._property(relative, node, prop)
+            self.add_property(relative, node, prop)
         # A getter its instances do not show, a private one, is read as the operation it is, so what its body calls and
         # raises is read too.
         for operation in cls.operations:
             if not operation.is_property or not any(operation is prop for prop in shown):
-                self._operation(relative, node, operation)
+                self.add_operation(relative, node, operation)
+
+    def keep_relationships(self, node: "Node", cls: OoadClass) -> None:
+        """Keep each relationship a person wrote on a property of cls, which ``link_types`` links from node once every
+        class is added."""
+        self._written.extend((node, prop.relationship.kind, prop.relationship.target) for prop in cls.properties if prop.stereotype and prop.relationship)
 
     def link_types(self) -> None:
         """Link each property to the classes its type names, and each operation to the classes it returns, once every
@@ -276,7 +330,7 @@ class ClassNodes:
             if related is not None:
                 self._graph.edges.relate(kind, cls, related)
 
-    def _property(self, relative: str, cls: "Node", prop: "Operation | Property") -> None:
+    def add_property(self, relative: str, cls: "Node", prop: "Operation | Property") -> "Node":
         """A field the class declares, or a getter: the operation that reads it, which is the property's node. Its type
         is the field's declared type, or the type the getter returns, which ``link_types`` links once every class is
         added. A getter's node spans the getter's whole body, so the calls its body makes and the failures it raises
@@ -284,8 +338,9 @@ class ClassNodes:
         start, end = prop.source_lines if isinstance(prop, Operation) else (prop.line or 1, prop.line or 1)
         node = self._in_graph.add(prop, f"clean_engineering:Property:{relative}:{prop.name}:{cls.name}", Location(relative, start, end))
         self._graph.edges.group("properties", cls, node)
+        return node
 
-    def _operation(self, relative: str, cls: "Node", operation: "Operation") -> None:
+    def add_operation(self, relative: str, cls: "Node", operation: "Operation") -> "Node":
         start, end = operation.source_lines
         operation.source_facts.load()
         node = self._in_graph.add(operation, f"clean_engineering:Operation:{relative}:{operation.name}:{cls.name}", Location(relative, start, end))
@@ -293,6 +348,7 @@ class ClassNodes:
         for parameter in operation.parameters:
             param_id = f"clean_engineering:Parameter:{relative}:{parameter.name}:{cls.name}.{operation.name}"
             self._graph.edges.relate("hasParameter", node, self._in_graph.add(parameter, param_id, Location(relative, start, start)))
+        return node
 
     def _link_property(self, cls: "Node", prop: "Node") -> None:
         """The class depends on each other class its property's type names, which the property has as its type."""
@@ -322,6 +378,78 @@ class ClassNodes:
             if name in words
             or (not _HINT_WORD.fullmatch(name) and re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", hint))
         )
+
+
+class ClassJoins:
+    """The joining of each class a model document describes to the node of the class the code declares, which one read
+    of the code makes once: the code's node takes the document's place, the document's facts by the format that
+    supplies each, each relationship the document writes on a property, and each member the code does not declare, at
+    the document's lines and read at the model fidelity; a member both declare takes the document's place."""
+
+    def __init__(self, reading: "GraphReading", classes: ClassNodes) -> None:
+        self._graph = reading.graph
+        self._in_graph = reading.in_graph
+        self._classes = classes
+
+    def join(self, relative: str, code: "Node", described: OoadClass) -> None:
+        """Make the class the document at relative describes one node with code. A node the described class was
+        before its code was written is dropped first."""
+        described.source_facts.load()
+        described.properties.extend(described.source_facts.constructor_fields())
+        self._drop_held(relative, described)
+        code.written_at(Location(relative, described.line, described.end_line))
+        self._take_facts(code, described)
+        self._classes.keep_relationships(code, described)
+        declared = {edge.child.name: edge.child for kind in ("owns", "properties") for edge in self._graph.edges.from_parent(kind, code)}
+        for member in [*described.public_properties, *described.operations]:
+            member.keep_owner()
+            self._join_member(relative, code, described, member, declared)
+
+    def _join_member(self, relative: str, code: "Node", described: OoadClass, member: "Operation | Property", declared: "dict[str, Node]") -> None:
+        """The member both declare takes the document's place; one only the document declares is added under code."""
+        held = declared.get(member.name) or self._constructor_named(member.name, described.name, declared)
+        if held is not None:
+            start, end = member.source_lines if isinstance(member, Operation) else (member.line or 1, member.line or 1)
+            held.written_at(Location(relative, start, end))
+            return
+        if any(member is prop for prop in described.public_properties):
+            self._classes.add_property(relative, code, member).read_at(MODEL_FIDELITY)
+        elif isinstance(member, Operation):
+            self._classes.add_operation(relative, code, member).read_at(MODEL_FIDELITY)
+
+    def _constructor_named(self, name: str, class_name: str, declared: "dict[str, Node]") -> "Node | None":
+        """The constructor the code declares, when a document names its class's constructor by the class's name, as a
+        model writes it (`+ Ledger(owner: str)`) and code does not (`__init__`, `constructor`); none for any other name."""
+        if name != class_name:
+            return None
+        return next((declared[found] for found in sorted(CONSTRUCTOR_NAMES) if found in declared), None)
+
+    def _take_facts(self, code: "Node", described: OoadClass) -> None:
+        """Give code each fact of the described class from the format that supplies it: a list, such as the class's
+        stereotypes, holds what each format names, the code's first; any other fact is the code's when its reading
+        records it, else the document's."""
+        for key, value in described.facts.items():
+            held = code.get_fact(key) if code.has_fact(key) else None
+            if isinstance(value, list) and isinstance(held, list):
+                value = [*held, *(item for item in value if item not in held)]
+            elif code.has_fact(key):
+                continue
+            if key in code.graph_facts:
+                setattr(code, key, value)
+            else:
+                code.set_fact(key, value)
+
+    def _drop_held(self, relative: str, described: OoadClass) -> None:
+        """Drop the nodes the class the document at relative describes was held as, with their edges, while no code
+        declared it: a refresh that reads the code new since keeps the document's nodes of the read before, and the
+        class is one node now."""
+        held = self._in_graph.node(f"clean_engineering:OoadClass:{relative}:{described.name}")
+        if held is None:
+            return
+        owned = {id(edge.child) for kind in ("owns", "properties") for edge in self._graph.edges.from_parent(kind, held)}
+        parameters = {id(edge.child) for node in self._in_graph.nodes() if id(node) in owned for edge in self._graph.edges.from_parent("hasParameter", node)}
+        dropped = self._in_graph.drop({id(held), *owned, *parameters})
+        self._in_graph.edge_index.drop(lambda edge: id(edge.parent) in dropped or id(edge.child) in dropped)
 
 
 class CodeFolders:

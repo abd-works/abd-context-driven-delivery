@@ -2018,7 +2018,7 @@ Observed: DDD reads bounded contexts from folders holding `.context/bounded-cont
 
 #### (S) Knowledge Graph --> Read Domain Documents And Code
 
-Observed: DDD reads the bounded contexts, aggregates, context mappings and events the bounded-context map and each domain model document write, and joins a class a document describes to the class in code that implements it with an edge, never on a name alone (`cdd_guidance/practices/ddd/reading/graph_reading.py`, `graph_reading_spec.py`; scenarios in `story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_domain_documents_and_code_story.test.md`).
+Observed: DDD reads the bounded contexts, aggregates, context mappings and events the bounded-context map and each domain model document write, and holds a class a document describes and the code declares, and an aggregate a document describes and a folder holds, as one node that keeps the document's place, matched by the folder the code is in and never on a name alone (`cdd_guidance/practices/ddd/reading/graph_reading.py`, `graph_reading_spec.py`; scenarios in `story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_domain_documents_and_code_story.test.md`).
 
 #### (S) Knowledge Graph --> [Read Story Maps And Story Tests](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_practice_trees_from_source_story.test.md#story-read-story-maps-and-story-tests)
 

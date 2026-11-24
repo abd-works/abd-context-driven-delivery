@@ -200,6 +200,8 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 	// -> GraphRulesCollection.from_node on first read
 + file_language: str | None
 	// python, typescript, javascript, drawio, or graph
++ places: dict[str, Location]
+	// where it is written, by format: its own file's format first, then each format written_at gave it
 + failed_rules: list[str]
 + fidelity: FidelityGuidance | None
 + fidelities: list[FidelityGuidance]
@@ -214,6 +216,9 @@ A parsed object a practice reader added, or a plain node read back from `graph.j
 + has_fact(key): bool
 + place(file, start_line, end_line): None
 	// a practice whose reader finds a node by a nearby line, as Stories' recording does, moves it onto the lines that declare it
++ written_at(location: Location): None
+	// one thing written in several formats is one node: it keeps the most detailed format's file as its source and each
+	// other format's place as the written_in fact, one place for each format, the first given kept unless its own file gives it again
 + forget_rules(): None
 
 ## NodeTree
@@ -521,7 +526,7 @@ practice, node id, and subject are that rule's, its node's, and its practice's. 
 - `ExplorerEntry` — one node at one place in the explorer tree, with the entries below it there and its `label`, what the tree shows for it there.
 - `PlaceLabels` — the labels of the entries one place holds, decided together: a folder by its path from the folder above, entries sharing a label with their file, a link by its words.
 - `FilteredNode` — a node `return_nodes` matched, with its practice, ancestors, children, and rules.
-- `NodeSource` — a node's file, text, lines, and owning class; the opened node also lists every class, operation, and property the loaded graph holds, each as its own `NodeSource`, so a call in it can be opened. The practices name those types in their `PracticeGuidance.class_types` and `member_types`.
+- `NodeSource` — a node's file, text, lines, owning class, and `files`, each file it is written in, one for each format; the opened node also lists every class, operation, and property the loaded graph holds, each as its own `NodeSource`, so a call in it can be opened. The practices name those types in their `PracticeGuidance.class_types` and `member_types`.
 - `GraphLoaded`, `GraphSaved`, `Overlay` — the message, path, or overlay root a tool answers with.
 
 ## graph.json

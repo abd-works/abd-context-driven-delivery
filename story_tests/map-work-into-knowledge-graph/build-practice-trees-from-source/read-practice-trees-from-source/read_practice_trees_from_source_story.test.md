@@ -100,16 +100,26 @@ Observed (`graph_bookshop_spec.py`). Source: `clean_engineering/model/schema.yam
   *And* Cart depends on CartLine, the class its list holds
   *And* `Catalogue.search`, which returns `list[Book]`, returns Book
 
-#### Scenario: Hold a model document's class beside the code class that implements it
+#### Scenario: Hold a class its model document describes and its code declares as one node
 
-Observed (`graph_bookshop_spec.py`, `graph_reading_spec.py`). Source: the person's answer 3 of 2026-11-20, "A class in a model document and the class in code that implements it are two nodes with an edge; neither replaces the other when both are loaded"; defect r3-widget-08.
+Observed (`graph_bookshop_spec.py`, `graph_reading_spec.py`). Source: the person's decisions of 2026-11-22, "One thing is one node in the graph" (`.sessions/_backlog/one-thing-one-node-in-the-graph.md`), which replace their answer 3 of 2026-11-20 that the two were two nodes with an edge; defect r3-widget-08.
 
-*Given* each module of the bookshop holds a class model in `.context` and the Python that implements it
+*Given* each module of the bookshop holds a class model in `.context` and the Python that declares its classes
 *When* the Knowledge Graph reads the bookshop project for Clean Engineering
-*Then* each class a model describes is a node at its card, with the stereotypes the model gives it
-  *And* each code class has an implements edge to the class its own module's model describes under its name
-  *And* a model class has a composition, aggregation or association edge to the class a property of it relates to, as the model writes it
-  *And* the class's name answers the code's class first
+*Then* each class is one node, at its lines in the code
+  *And* the node keeps its card in its own module's model as its place in markdown
+  *And* the node keeps the code's measures and the stereotypes the model gives it
+  *And* an operation only the model declares is a node under the class, at the model's line, read at the model fidelity
+  *And* no edge joins one format to another
+
+#### Scenario: Keep a model's class apart when its module's code cannot tell which class it means
+
+Observed (`graph_reading_spec.py`).
+
+*Given* a module's model describes the class Ledger, and two files of the module's code each declare a class Ledger
+*When* the Knowledge Graph reads the project for Clean Engineering
+*Then* the model's Ledger is a node of its own at its card, beside the two classes of code
+  *And* a model of another module that describes Ledger is a node of its own too, since the module, not the name, says which class a model means
 
 ## Story: Read Story Maps And Story Tests
 

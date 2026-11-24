@@ -2,8 +2,9 @@
 its aggregates from the folders that hold domain classes, and its building blocks from the classes Clean Engineering
 read from code, each seen through the DDD stereotype its declaration gives it, or, in a folder that holds a domain, its
 name; and from the bounded-context map and each domain model document, the contexts, aggregates, classes, integrations
-and events they describe. A class a document describes and the class in code that implements it are two nodes, joined
-by an edge; a building block read from code is joined to the Clean Engineering class it is."""
+and events they describe. One thing is one node: an aggregate a document describes and a folder holds, and a building
+block a document describes and code declares, are each the folder's or the code's node, which keeps the document's
+place too; a building block read from code is joined to the Clean Engineering class it is."""
 
 from __future__ import annotations
 
@@ -578,8 +579,7 @@ class _AggregateBlocks:
 
 
 class _NamedBlocks:
-    """Building blocks by name, several to a name when a class is written in two languages or described in a document
-    as well as declared in code."""
+    """Building blocks by name, several to a name when two aggregates or two languages each declare a class of it."""
 
     def __init__(self, blocks: list[Node]) -> None:
         self.every = blocks
@@ -590,9 +590,8 @@ class _NamedBlocks:
     def nearest(self, block: Node, name: str, aggregate: str = "") -> Node | None:
         """The block called name nearest block: in the folder aggregate names when one is given and some block is
         there, then in block's own file, else written in its language, else in its folder; none when no block is
-        called name. A block a document describes is near only another block of a document, and code only code."""
-        described = block.has_fact(DESCRIBED_FACT)
-        named = [other for other in self._named.get(name, []) if other.has_fact(DESCRIBED_FACT) == described]
+        called name."""
+        named = self._named.get(name, [])
         placed = [other for other in named if aggregate and Name(Path(folder_of(other.source.file)).name).snake == Name(aggregate).snake]
         return min(placed or named, key=lambda other: self._distance(block, other), default=None)
 
@@ -643,8 +642,9 @@ class _DomainDocument:
 class _DescribedDomain:
     """What the documents under the practice's root describe, read into DDD's part of the graph: the bounded contexts
     they head, each aggregate once, under its context, with a building block for each class a domain model draws, the
-    context mappings their integrations write, the events their event maps list, and the edges between them. A block a
-    document describes stays beside the block code declares, and the code's block is joined to it."""
+    context mappings their integrations write, the events their event maps list, and the edges between them. An
+    aggregate a folder of the code holds, and a block the code declares in it, is the one node of that thing: it takes
+    the document's place (``Node.written_at``), and only what no code holds yet is added at the document's lines."""
 
     def __init__(self, reading: DddReading, contexts: _ContextFolders, documents: list[_DomainDocument], links: _LinkedAggregates) -> None:
         self._reading = reading
@@ -681,7 +681,7 @@ class _DescribedDomain:
 
     def read(self) -> None:
         """Once the contexts and the code's aggregates are read: the aggregates the documents describe, then the edges
-        between what they describe, and from the code that implements it."""
+        between what they describe."""
         for document in self._documents:
             for described in document.map.every_aggregate:
                 key = (described.parent.name, described.name)
@@ -691,7 +691,6 @@ class _DescribedDomain:
         for document in self._documents:
             self._read_integrations(document)
             self._read_events(document)
-        self._join_implementations()
 
     def _context_of(self, document: _DomainDocument, name: str) -> Node:
         """The bounded context an aggregate no context's file links sits under: the one called name, unless its file
@@ -701,17 +700,22 @@ class _DescribedDomain:
         return named or self._contexts.around(folder_of(folder_of(document.relative))) or self._in_graph.root
 
     def _read_aggregate(self, document: _DomainDocument, described: Aggregate) -> Node:
-        """The aggregate at the document's section for it, under the bounded context whose own file links that section,
-        else under the context its heading names, holding a building block for each class the document draws in it,
-        each at its card and marked as described by the document."""
+        """The aggregate at the document's section for it: the aggregate the folder of that name under the folder the
+        document describes holds, which takes the section's place, else one added at the section, under the bounded
+        context whose own file links that section, else under the context its heading names. It holds a building block
+        for each class the document draws in it."""
         start, end = document.aggregate_lines(described.name)
         linked = self._links.opening(document, start)
-        context = linked[0] if linked is not None else self._context_of(document, described.parent.name)
-        node = self._in_graph.add(Aggregate(described.name, 1), f"ddd:Aggregate:{document.relative}:{described.name}", Location(document.relative, start, end))
+        node = self._held_aggregate(document, described.name)
+        if node is not None:
+            node.written_at(Location(document.relative, start, end))
+        else:
+            context = linked[0] if linked is not None else self._context_of(document, described.parent.name)
+            node = self._in_graph.add(Aggregate(described.name, 1), f"ddd:Aggregate:{document.relative}:{described.name}", Location(document.relative, start, end))
+            self._edges.link("owns", context, node)
+            self._edges.relate("belongsTo", node, context)
         if linked is not None:
             self._links.hold(*linked, node)
-        self._edges.link("owns", context, node)
-        self._edges.relate("belongsTo", node, context)
         names = [oclass.name for oclass in described.classes]
         for oclass in described.classes:
             tactical = TacticalClass(oclass)
@@ -720,16 +724,38 @@ class _DescribedDomain:
                 self._read_block(document, node, tactical, kind, (described.parent.name, described.name))
         return node
 
+    def _held_aggregate(self, document: _DomainDocument, name: str) -> Node | None:
+        """The aggregate a folder holds that the document's section called name describes: the one folder under the
+        folder the document describes whose name spells name; none when no folder, or more than one, does."""
+        described = folder_of(folder_of(document.relative))
+        found = [
+            node for node in self._in_graph.nodes("Aggregate")
+            if Name(node.name).snake == Name(name).snake and (self._reading.root / node.source.file).is_dir()
+            and (described == "." or node.source.file == described or node.source.file.startswith(f"{described}/"))
+        ]
+        return found[0] if len(found) == 1 else None
+
     def _read_block(self, document: _DomainDocument, aggregate: Node, tactical: TacticalClass, kind: str, key: tuple[str, str]) -> None:
         oclass = tactical.oclass
         document.cards.place(oclass)
         start = aggregate.source.start_line
-        block = self._blocks.add(aggregate, tactical, kind, Location(document.relative, oclass.line or start, oclass.end_line or start))
-        block.set_fact(DESCRIBED_FACT, True)
+        location = Location(document.relative, oclass.line or start, oclass.end_line or start)
+        block = self._declared_block(aggregate, oclass.name)
+        if block is not None:
+            block.written_at(location)
+        else:
+            block = self._blocks.add(aggregate, tactical, kind, location)
+            block.set_fact(DESCRIBED_FACT, True)
         self._read_operations(document, block, oclass)
         self._described.append((block, key[1], self._named_in_card(oclass)))
         if kind == "EntityRoot":
             self._roots[key] = block
+
+    def _declared_block(self, aggregate: Node, name: str) -> Node | None:
+        """The building block called name the code declares in aggregate, which the document's card for it describes;
+        none when the code declares none."""
+        found = (edge.child for kind in ("root", "owns") for edge in self._edges.from_parent(kind, aggregate))
+        return next((block for block in found if block.type in _BLOCK_KINDS and block.name == name and not block.has_fact(DESCRIBED_FACT)), None)
 
     def _read_operations(self, document: _DomainDocument, block: Node, oclass: OoadClass) -> None:
         """Each domain operation the card declares, under its block at the line that declares it, so a scenario's
@@ -810,13 +836,3 @@ class _DescribedDomain:
         for (_context, name), aggregate in self._aggregates.items():
             if name in consumers:
                 self._edges.relate("consumers", node, aggregate)
-
-    def _join_implementations(self) -> None:
-        """Join each building block code declares to the described block it implements: the block of the same name in
-        the aggregate the code's folder names, as generate saves an aggregate's code in a folder named for it."""
-        declared = [node for node in self._in_graph.nodes() if node.type in _BLOCK_KINDS and not node.has_fact(DESCRIBED_FACT)]
-        for block, aggregate, _names in self._described:
-            folder = Name(aggregate).snake
-            for code in declared:
-                if code.name == block.name and Name(Path(folder_of(code.source.file)).name).snake == folder:
-                    self._edges.relate("implements", code, block)

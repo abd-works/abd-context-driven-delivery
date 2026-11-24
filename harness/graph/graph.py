@@ -57,6 +57,9 @@ class Call:
 MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
 # The fact a node keeps the fidelity it was read at under (``Node.read_at``).
 READ_AT_FIDELITY = "read_at_fidelity"
+# The fact a node keeps of where it is written in each format besides its own file's (``Node.written_at``): by the
+# format's name, the file, its first line and its last.
+WRITTEN_IN_FACT = "written_in"
 
 
 class _BracketDepth:
@@ -450,6 +453,29 @@ class Node:
         out (``if not node.is_read_at("code"): return []``), since a rule of the code fidelity has nothing to judge on
         a class with no bodies. A node no reading recorded a fidelity for is read at none."""
         return self.fidelity_read_at == fidelity
+
+    def written_at(self, location: Location) -> None:
+        """Record that this node is written at location too, in another format than its own file's. One thing written
+        in several formats, such as a class a model document describes and code declares, is one node: it keeps the
+        file of the format with the most detail as its source, and each other format's place as a fact
+        (``written_in``), so the file view can show each of its files and a saved graph keeps them. The format is the
+        one that reads location's file. A node keeps one place for each format: the first one given, which its reader
+        gives the nearest file first, moved when the same file gives it again, as a refresh of that file does."""
+        written = Path(location.file)
+        format_name = str(self.practice.formats.reading_with(written, self.graph.practices.held.values()) or "graph")
+        held = dict(self.data.get(WRITTEN_IN_FACT) or {})
+        if format_name in held and held[format_name][0] != location.file:
+            return
+        held[format_name] = [location.file, location.line or 0, location.end_line or 0]
+        self.set_fact(WRITTEN_IN_FACT, held)
+
+    @property
+    def places(self) -> dict[str, Location]:
+        """Where this node is written, by format: its own file's format first, then each other format it is written in
+        (``written_at``)."""
+        own = {str(self.file_language or "graph"): Location(self.source.file, self.source.start_line, self.source.end_line)}
+        others = {name: Location(*place) for name, place in (self.data.get(WRITTEN_IN_FACT) or {}).items()}
+        return {**own, **{name: place for name, place in others.items() if name not in own}}
 
     @property
     def failed_rules(self) -> list[str]:

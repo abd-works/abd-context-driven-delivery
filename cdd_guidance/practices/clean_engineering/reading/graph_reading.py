@@ -1,8 +1,8 @@
 """How Clean Engineering takes part in the graph: it reads each source file with the class model of its language, from
 its own formats, and adds the folders, classes, properties, operations, and parameters it parsed to its graph as nodes;
-it adds each class its model documents describe, beside the code that implements it, so the rules check a design whose code
-is not written; and it keeps the class models those documents describe, so a realization can follow an interaction the
-model gives a member.
+a class its model documents describe is the same node as the class its code declares, and is added on its own while
+no code declares it, so the rules check a design whose code is not written; and it keeps the class models those
+documents describe, so a realization can follow an interaction the model gives a member.
 
 The practice holds two parts for as long as it lives, its code index and its model documents, and makes a code read,
 with the folders that read takes, for each read: what one read finds stays on that read, not on the practice."""
@@ -42,8 +42,8 @@ from cdd_guidance.practices.clean_engineering.model.property import Property
 
 
 class GraphReading(HoldsProjectTestCode, PracticeReading):
-    """How Clean Engineering takes part in the graph: it reads the model documents, then the code, and holds each class
-    a document describes as it holds the code's, each joined to the code class that implements it. Its classes are the classes the source view
+    """How Clean Engineering takes part in the graph: it reads the model documents, then the code, and holds a class a
+    document describes and code declares as one node, written in both. Its classes are the classes the source view
     opens and folds, their operations and properties the members it opens a call to, and its checks run on each class
     as a whole. Every practice that links to the code asks its code index; a realization asks its model documents."""
 
@@ -307,7 +307,7 @@ class ModelDocuments:
     """The class models the practice's model documents describe, ``{folder}/.context/*-model.md``, by each document's
     path from the source root; a document another practice reads in a format of its own, such as DDD's domain model,
     is that practice's. A realization follows an interaction into a class the load left out through them, and the code
-    read adds each class they describe, placed at the document's lines."""
+    read joins each class they describe to the code's node of it, or adds it at the document's lines."""
 
     def __init__(self, reading: GraphReading) -> None:
         self._reading = reading

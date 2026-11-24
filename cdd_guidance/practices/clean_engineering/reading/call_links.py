@@ -1,7 +1,6 @@
 """The edges one read of the code draws between the members and classes it added: each call and read to the member its
-receiver names, each class to the class it extends, and each class a model document describes to the class in code
-that implements it. Each name is resolved by the file it is written in (*CodeFile*), never to every node of that
-name."""
+receiver names, and each class to the class it extends or the protocol it satisfies. Each name is resolved by the file
+it is written in (*CodeFile*), never to every node of that name."""
 
 from __future__ import annotations
 
@@ -42,8 +41,8 @@ _FIELD_RELATIONSHIPS = ("composition", "aggregation", "association")
 
 class ClassLinks:
     """The edges between the classes the graph holds: each class to the class it extends (``baseClass``), and each
-    class in code to the class a model document of its own module describes under its name (``implements``), so the
-    design and the code that implements it are two nodes a reader walks between."""
+    class to each protocol it satisfies (``realizes``). A class a model document describes and code declares is one
+    node, so no edge joins a format to another."""
 
     def __init__(self, reading: "GraphReading") -> None:
         self._graph = reading.graph
@@ -52,16 +51,11 @@ class ClassLinks:
 
     def link(self) -> None:
         classes = list(self._in_graph.nodes("OoadClass"))
-        described = [node for node in classes if node.has_fact(DESCRIBED_FACT)]
         for node in classes:
             for base in node.get_fact("bases") or []:
                 extended = self._index.file(node.source.file).class_named(str(base).split("[")[0].split("<")[0].strip())
                 if extended is not None and extended is not node:
                     self._graph.edges.relate("baseClass", node, extended)
-            if not node.has_fact(DESCRIBED_FACT):
-                design = self._design_of(node, described)
-                if design is not None:
-                    self._graph.edges.relate("implements", node, design)
         self._realize([node for node in classes if not node.has_fact(DESCRIBED_FACT)])
 
     def _realize(self, coded: "list[Node]") -> None:
@@ -84,22 +78,6 @@ class ClassLinks:
             for node in coded:
                 if node is not protocol and not self._index.is_protocol(node) and wanted <= declared.get(id(node), set()):
                     self._graph.edges.relate("realizes", node, protocol)
-
-    def _design_of(self, coded: "Node", described: "list[Node]") -> "Node | None":
-        """The class a model document describes under coded's name, from the nearest folder at or above coded's file
-        whose document describes one; none when no document above it does."""
-        found = [
-            (len(folder), node) for node in described
-            if node.name == coded.name
-            for folder in [self._described_folder(node)]
-            if not folder or coded.source.file.startswith(f"{folder}/")
-        ]
-        return max(found, key=lambda pair: pair[0])[1] if found else None
-
-    def _described_folder(self, design: "Node") -> str:
-        """The folder a model document describes, the one holding its `.context`; empty for the source root."""
-        parts = design.source.file.split("/")[:-2]
-        return "/".join(parts)
 
 
 def _class_attributes(node: "Node") -> set[str]:

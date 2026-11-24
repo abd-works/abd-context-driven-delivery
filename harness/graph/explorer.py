@@ -280,5 +280,12 @@ class NodeSource(NodeAnswer):
 
     @property
     @data_field
+    def files(self) -> list[str]:
+        """Each file the node is written in, one for each format: its own file first, then the file of each other
+        format it is written in, such as the model document that describes a class its code declares."""
+        return [place.file for place in self._node.places.values()]
+
+    @property
+    @data_field
     def members(self) -> list[NodeSource]:
         return list(self._members)

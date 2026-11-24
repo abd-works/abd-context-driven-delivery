@@ -1,6 +1,6 @@
 """How Clean Engineering reads the Bookshop into its graph: three modules of Python whose classes share operation and
 property names (`total`, `lines`, `__init__`), a subclass, and properties assigned in constructors; then the class
-models of the same modules, beside that code."""
+models of the same modules, each class of which is the one node its code is."""
 
 from pathlib import Path
 
@@ -12,6 +12,8 @@ from cdd_guidance.practices.clean_engineering.rules.rule_examples import practic
 
 BOOKSHOP = Path(__file__).resolve().parent / "fixtures" / "bookshop"
 MODULES = ("catalogue", "ordering", "fulfilment")
+# The classes the modules' models describe, each of which the code declares too.
+MODELLED = ("Book", "Cart", "CartLine", "Catalogue", "ExpressShipment", "Order", "Payment", "Shipment")
 
 
 def _code() -> dict:
@@ -109,41 +111,29 @@ with description("Clean Engineering reading the Bookshop into its graph") as sel
             returned = sorted(f"{_owned(self.fixture, edge.parent)} -> {edge.child.name}" for edge in _edges(self.fixture, "returns"))
             expect(returned).to(contain("Catalogue.search -> Book"))
 
-    with context("with a class model beside the code that implements it"):
+    with context("with a class model of each module beside its code"):
         with before.all:
             self.fixture = practice_from_files({**_code(), **_models()})
             self.classes = list(self.fixture.practice.reading.in_graph.nodes("OoadClass"))
 
-        with it("should hold each class the model describes as a node of its own, beside the code's class"):
-            described = sorted(node.name for node in self.classes if not _code_file(node))
-            expect(described).to(equal(["Book", "Cart", "CartLine", "Catalogue", "ExpressShipment", "Order", "Payment", "Shipment"]))
+        with it("should hold one node for each class, read from the code"):
+            named = sorted((node.name, _code_file(node)) for node in self.classes if node.name in MODELLED)
+            expect(named).to(equal([(name, True) for name in sorted(MODELLED)]))
 
-        with it("should keep the code's class of each name"):
-            coded = sorted(node.name for node in self.classes if _code_file(node) and node.name in {"Cart", "Order", "Shipment"})
-            expect(coded).to(equal(["Cart", "Order", "Shipment"]))
+        with it("should keep on each class the place its own module's model describes it"):
+            order = next(node for node in self.classes if node.name == "Order")
+            expect(order.places["markdown"].file).to(equal("src/ordering/.context/ordering-model.md"))
 
-        with it("should join each code class to the model class it implements, the one its own module's model describes"):
-            joined = sorted(f"{edge.parent.source.file} -> {edge.child.source.file}" for edge in _edges(self.fixture, "implements") if edge.parent.name == "Order")
-            expect(joined).to(equal(["src/ordering/order.py -> src/ordering/.context/ordering-model.md"]))
-
-        with it("should keep the stereotypes the model gives a class"):
-            cart = next(node for node in self.classes if node.name == "Cart" and not _code_file(node))
+        with it("should keep the stereotypes the model gives a class on the code's class"):
+            cart = next(node for node in self.classes if node.name == "Cart")
             expect(cart.get_fact("stereotypes")).to(equal(["Aggregate Root"]))
 
-        with it("should join a model class to the class a property of it relates to, by the kind the model writes"):
-            expect(_related_kinds(self.fixture, lambda node: not _code_file(node))).to(equal({
-                "composition": ["Cart -> CartLine"],
-                "aggregation": ["Order -> CartLine"],
-                "association": ["Order -> Payment"],
-            }))
-
-        with it("should read the same kinds from the code that implements the model, by what each class builds or is handed"):
+        with it("should relate the classes by the kinds the model writes and the code reads alike"):
             expect(_related_kinds(self.fixture, _code_file)).to(equal({
                 "composition": ["Cart -> CartLine"],
                 "aggregation": ["Order -> CartLine"],
                 "association": ["Order -> Payment"],
             }))
 
-        with it("should join the model's subclass to the class it extends, in the model"):
-            based = [f"{edge.parent.source.file} -> {edge.child.source.file}" for edge in _edges(self.fixture, "baseClass") if not _code_file(edge.parent)]
-            expect(based).to(equal(["src/fulfilment/.context/fulfilment-model.md -> src/fulfilment/.context/fulfilment-model.md"]))
+        with it("should join the subclass to the class it extends once"):
+            expect(_between_classes(self.fixture, "baseClass")).to(equal(["ExpressShipment -> Shipment"]))

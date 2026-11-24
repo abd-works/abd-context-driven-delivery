@@ -319,7 +319,7 @@ with description("DDD's reading of aggregates written in two languages, in folde
             expect(self.carded.practice.reading.graph.edges.from_parent("isA", catalogue)).to(equal([]))
 
 
-with description("DDD's reading of a domain model beside the code that implements it"):
+with description("DDD's reading of a domain model beside the code of the aggregate it describes"):
     with before.all:
         self.fixture = RuleFixture(
             Ddd,
@@ -328,14 +328,22 @@ with description("DDD's reading of a domain model beside the code that implement
                 "src/cart/cart.py": "@aggregate_root\nclass Cart:\n    def total(self) -> int:\n        return 1\n",
             },
         )
-        self.roots = {root.source.file: root for root in blocks_of(self.fixture, "EntityRoot")}
+        self.roots = blocks_of(self.fixture, "EntityRoot")
+        self.carts = [node for node in ddd_nodes(self.fixture, "Aggregate") if node.name.lower() == "cart"]
 
-    with it("should hold the root the document describes and the root the code declares, neither in place of the other"):
-        expect(sorted(self.roots)).to(equal(["src/.context/domain-model.md", "src/cart/cart.py"]))
+    with it("should hold one root, read from the code"):
+        expect([root.source.file for root in self.roots]).to(equal(["src/cart/cart.py"]))
 
-    with it("should join the code's root to the document's root it implements, in the aggregate its folder names"):
-        code = self.roots.get("src/cart/cart.py")
-        expect(files_reached(self.fixture, "implements", code) if code else None).to(equal(["src/.context/domain-model.md"]))
+    with it("should keep the document's card for the root as the root's place in markdown"):
+        expect(self.roots[0].places["markdown"].file if self.roots else None).to(equal("src/.context/domain-model.md"))
+
+    with it("should hold one aggregate, the one its folder holds, which keeps the document's section as its place in markdown"):
+        expect([(node.source.file, node.places.get("markdown") and node.places["markdown"].file) for node in self.carts]).to(
+            equal([("src/cart", "src/.context/domain-model.md")])
+        )
+
+    with it("should join no format to another with an edge"):
+        expect(list(self.fixture.practice.reading.in_graph.edge_index.of("implements"))).to(equal([]))
 
 
 # A bounded context's own file names each aggregate as a link to that aggregate's heading in the domain model. Here

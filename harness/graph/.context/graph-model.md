@@ -195,6 +195,7 @@ children is the list its tree's populate writes on this node. Direct edges are t
 + fidelities: list[FidelityGuidance]
 + rules: GraphRulesCollection
 + file_language: str | None
++ places: dict[str, Location]
 + failed_rules: list[str]
 + passing_rules: list[str]
 ----
@@ -204,6 +205,7 @@ children is the list its tree's populate writes on this node. Direct edges are t
 + has_fact(key: str): bool
 + forget_rules(): None
 + place(file: str, start_line: int, end_line: int): None
++ written_at(location: Location): None
 ---<<creates>>--> NodeTree
 ---<<reads its part of the graph from>>--> PracticeReading
 ---<<calls changed on>>--> PracticeNodes

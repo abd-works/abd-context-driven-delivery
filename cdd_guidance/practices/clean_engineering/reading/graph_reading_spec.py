@@ -372,31 +372,79 @@ with description("Clean Engineering reading the classes its model documents desc
         with before.all:
             self.fixture = practice_from_files(
                 {
+                    "shop/.context/shop-model.md": _SHOP_MODEL + "+ close(): None\n",
+                    "shop/ledger.py": "class Ledger:\n    def record(self, entry: str) -> str:\n        return entry\n",
+                }
+            )
+            self.ledger = next(iter(_classes(self.fixture)), None)
+
+        with it("should hold one node for the class, read from the code"):
+            expect([(node.name, node.source.file) for node in _classes(self.fixture)]).to(equal([("Ledger", "shop/ledger.py")]))
+
+        with it("should keep the document's place on the class, beside the code's"):
+            places = {name: (place.file, place.line) for name, place in self.ledger.places.items()} if self.ledger else {}
+            expect(places).to(equal({"python": ("shop/ledger.py", 1), "markdown": ("shop/.context/shop-model.md", 3)}))
+
+        with it("should keep the code's measures and the document's stereotypes on the one class"):
+            expect(self.ledger and (self.ledger.has_fact("method_count"), self.ledger.get_fact("stereotypes"))).to(equal((True, ["Entity"])))
+
+        with it("should keep the document's place on an operation the code declares too"):
+            record = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "record")
+            expect(sorted(record.places)).to(equal(["markdown", "python"]))
+
+        with it("should hold an operation only the document declares under the code's class, at the document's line"):
+            expect(sorted((node.name, node.source.file) for node in _members_of(self.fixture, self.ledger))).to(
+                equal([("balance", "shop/.context/shop-model.md"), ("close", "shop/.context/shop-model.md"), ("record", "shop/ledger.py")])
+            )
+
+        with it("should read an operation only the document declares at the model fidelity"):
+            close = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "close")
+            expect(close.fidelity_read_at).to(equal("model"))
+
+        with it("should join no format to another with an edge"):
+            expect(list(self.fixture.practice.reading.in_graph.edge_index.of("implements"))).to(equal([]))
+
+        with it("should take the class as a production class the compared facts measure, once"):
+            expect([each.file for each in ProductionClasses(self.fixture.practice.reading)]).to(equal(["shop/ledger.py"]))
+
+    with context("with code that declares the class in two files of the module the document describes"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
                     "shop/.context/shop-model.md": _SHOP_MODEL,
+                    "shop/ledger.py": "class Ledger:\n    def record(self, entry: str) -> str:\n        return entry\n",
+                    "shop/old/ledger.py": "class Ledger:\n    def record(self, entry: str) -> str:\n        return entry\n",
+                }
+            )
+
+        with it("should keep the document's class a node of its own, since the document names no file to tell them by"):
+            expect(sorted(node.source.file for node in _classes(self.fixture))).to(
+                equal(["shop/.context/shop-model.md", "shop/ledger.py", "shop/old/ledger.py"])
+            )
+
+    with context("with only a spec's support in the module declaring the class the document describes"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/.context/shop-model.md": _SHOP_MODEL,
+                    "shop/ledger_fixture.py": "class Ledger:\n    def record(self, entry: str) -> str:\n        return entry\n",
+                }
+            )
+
+        with it("should hold the class once, read from the code that declares it"):
+            expect([node.source.file for node in _classes(self.fixture)]).to(equal(["shop/ledger_fixture.py"]))
+
+    with context("with a document of another module describing the class the code declares"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "till/.context/till-model.md": _SHOP_MODEL.replace("# shop", "# till"),
                     "shop/ledger.py": "class Ledger:\n    def record(self, entry: str) -> str:\n        return entry\n",
                 }
             )
 
-        with it("should hold a node for the class the document describes and a node for the class the code declares"):
-            expect([(node.name, node.source.file) for node in _classes(self.fixture)]).to(
-                equal([("Ledger", "shop/.context/shop-model.md"), ("Ledger", "shop/ledger.py")])
-            )
-
-        with it("should join the code's class to the document's class it implements"):
-            expect([(edge.parent.source.file, edge.child.source.file) for edge in self.fixture.practice.reading.in_graph.edge_index.of("implements")]).to(
-                equal([("shop/ledger.py", "shop/.context/shop-model.md")])
-            )
-
-        with it("should answer the code's class first for the class's name"):
-            expect(self.fixture.practice.reading.code_index.classes_named("Ledger")[0].source.file).to(equal("shop/ledger.py"))
-
-        with it("should keep the measures of code on the code's class alone"):
-            expect([(node.source.file, node.has_fact("method_count")) for node in _classes(self.fixture)]).to(
-                equal([("shop/.context/shop-model.md", False), ("shop/ledger.py", True)])
-            )
-
-        with it("should take only the code's class as a production class the compared facts measure"):
-            expect([each.file for each in ProductionClasses(self.fixture.practice.reading)]).to(equal(["shop/ledger.py"]))
+        with it("should keep the two classes apart, since the module decides which class a document means"):
+            expect(sorted(node.source.file for node in _classes(self.fixture))).to(equal(["shop/ledger.py", "till/.context/till-model.md"]))
 
     with context("with a folder whose only file is a DDD domain model"):
         with before.all:
@@ -404,6 +452,12 @@ with description("Clean Engineering reading the classes its model documents desc
 
         with it("should leave the domain model to DDD and read no class from it"):
             expect([node.name for node in _classes(self.fixture)]).to(equal([]))
+
+
+def _members_of(fixture, cls) -> list:
+    """The operations and properties cls holds, as its edges in the graph say."""
+    edges = fixture.practice.reading.graph.edges
+    return [edge.child for kind in ("owns", "properties") for edge in edges.from_parent(kind, cls)]
 
 
 def _exempt(fixture, name: str) -> list[str]:

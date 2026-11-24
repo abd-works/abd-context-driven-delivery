@@ -13,6 +13,8 @@ from __future__ import annotations
 from functools import cached_property
 from typing import TYPE_CHECKING
 
+from harness.graph.graph import READ_AT_FIDELITY
+
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER
 from cdd_guidance.practices.clean_engineering.reading.code_read import CODE_FIDELITY
 from cdd_guidance.practices.clean_engineering.reading.receiver_causes import ON_UNTYPED_VALUES, OTHERWISE, UNRESOLVED_CALLS_FACTS
@@ -366,7 +368,11 @@ class CodeUse:
         return imported
 
     def _is_code(self, member: Node) -> bool:
-        """Whether the member is read at the code fidelity, as its class is: a property answers none of its own."""
+        """Whether the member is read at the code fidelity: as its reading recorded on it, such as a member only a model
+        document declares, which is at the model fidelity under a class of code; else as its class is, since a property
+        answers none of its own."""
+        if member.has_fact(READ_AT_FIDELITY):
+            return member.is_read_at(CODE_FIDELITY)
         owner = self._owner(member)
         return member.is_read_at(CODE_FIDELITY) or (owner is not None and owner.is_read_at(CODE_FIDELITY))
 
