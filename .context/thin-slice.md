@@ -404,26 +404,25 @@ section: body
 - *See Rules Under Node In Files App*
 - *Open Violation In Files App Source*
 
-### Increment 8: Finish File Manager
+### Increment 8: Judge And Fix Work From Chat Bar And Board
 
-**Outcome:** the Files app shows a session's generated work: files and folders or the graph, filtered like the files, opening and comparing several files, with comments sent to the chat.
+**Outcome:** generate refreshes the knowledge graph and judges the rules itself, Fix is an action of its own on a rule, a file or every violation, Validate runs on its own only as a slash command, and the chat bar opens the active ticket's card and tiles in a side panel.
 
-**Slicing notes:** what File Manager Complete still lacks after its built stories moved to Built - File Manager on 2026-11-23: saving an edited file, Fix and the live violation counts in the chat bar and board, a spec on a session's files, and the draw.io Source tab and shape marks. the file-manager chat's work, the Review Generated Work In File Viewer epic.
+**Slicing notes:** what was unique to Fully Integrated App Flow, split on 2026-11-23 at the person's request. The Story UI editor's screen frames and increment tickets went to Author Story Maps, the story explorer's stories to Integrate Stories With The Canvas Explorer, Remove Older Versions When Keeping A Release to Sync Design Canvas With Production, and Test Knowledge Graph Explorer On Session Files and Display Drawio File As Diagram to File Manager Complete. The board and chat bar violation and fix stories were dropped as duplicates of File Manager Complete's Count Fidelity Violations From Live Graph, Count Session Violations From Live Graph, Fix Graph Violations From Files App and Fix Graph Violations From Chat Bar.
 
 **Stories in this increment:**
 
-- *Save Edited File*
-- *Fix Graph Violations From Chat Bar*
-- *Count Session Violations From Live Graph*
-- *Count Fidelity Violations From Live Graph*
-- *Test Knowledge Graph Explorer On Session Files* (partly built: the Graph app opens on the session's folder and shows violations; no spec runs on a session's files)
-- *Display Drawio File As Diagram* (partly built: the Files app shows the draw.io editor; no Source tab, no red shape for a violation, and a pressed shape does not open its lines)
+- *Refresh Graph After Generate*
+- *Judge Rules During Generate*
+- *Fix Graph Violations*
+- *Validate Fidelity On Demand*
+- *Open Board Side Panel From Chat Bar* (partly built: the chat bar opens the whole board, not the ticket's card and tiles)
 
 ### Increment 9: Sync Design Canvas With Production
 
 **Outcome:** a design canvas shows production as it is: every file is proven against the product repo by hash, styles and assets come from one pinned Design System package, each screen mounts the real view, hosted edits come back before the next version, and a screen being redesigned is detached and marked diverged until its change reaches production.
 
-**Slicing notes:** `.sessions/_backlog/sync-design-canvas-with-production.md`, the asset reuse plan's phases 1 to 5, the features Trace Canvas Files To Production, Install Production Design System On The Canvas, Mount Production Views As Screens and Redesign A Screen By Detaching It. It comes before every other design canvas increment. Start with the plan's Phase 0 spike on `select-plan`. If its gates 1 to 3 fail, the mounting stories give way to screens rendered to markup and hash-pinned to the TSX; the tracing and Design System stories hold either way. Migrating pml-web's 28 screens and deleting its generators is a task inside this increment.
+**Slicing notes:** Integrate Stories With The Canvas Explorer merged in on 2026-11-23, since its backlog item is a child of this one: a person tests a screen against its scenarios from the explorer and changes stories from the canvas or the Story UI. `.sessions/_backlog/sync-design-canvas-with-production.md`, the asset reuse plan's phases 1 to 5, the features Trace Canvas Files To Production, Install Production Design System On The Canvas, Mount Production Views As Screens and Redesign A Screen By Detaching It. It comes before every other design canvas increment. Start with the plan's Phase 0 spike on `select-plan`. If its gates 1 to 3 fail, the mounting stories give way to screens rendered to markup and hash-pinned to the TSX; the tracing and Design System stories hold either way. Migrating pml-web's 28 screens and deleting its generators is a task inside this increment.
 
 **Stories in this increment:**
 
@@ -449,15 +448,6 @@ section: body
 - *Mark Detached Screen As Diverged*
 - *Reattach A Screen Once Its Change Reaches Production*
 - *Remove Older Versions When Keeping A Release*
-
-### Increment 10: Integrate Stories With The Canvas Explorer
-
-**Outcome:** a person tests a screen against its scenarios from the explorer, and changes stories from the canvas or story-ui with the map updating, both ending in the same story code.
-
-**Slicing notes:** `.sessions/_backlog/integrate-stories-with-the-canvas-explorer.md`, the features Check Screens Against Their Scenarios and Change Stories From Canvas And Story UI. Test results first (slices A, B, C; D only if C proves too limited), and comment to story code first. Decide the source of truth before any story change (story code is recommended, which changes `map-mirrors-drawio` and needs a CDR). Playing UI steps and rearranging stories inside the canvas need Sync Design Canvas With Production's mounted screens.
-
-**Stories in this increment:**
-
 - *Package End-To-End Results With The Canvas*
 - *Mark Each Explorer Scenario Passed Or Failed*
 - *Label Stale Test Results*
@@ -487,52 +477,7 @@ section: body
 - *Keep Each Screen's Own Stylesheets* (built in the design canvas explorer only, not in the Story UI)
 - *Invoke Story Explorer In Session Context*
 
-### Increment 11: Repair Guidance From Mistakes
-
-**Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
-
-**Slicing notes:** the person, 2026-11-11: repair is not built yet, so it is taken out of Built Today and planned as its own increment.
-
-**Stories in this increment:**
-
-- *Repair Guidance Behind Violation*
-- *Improve Guidance From Mistake*
-- *Add Rule From Failed Example*
-
-### Increment 12: Enter Commands Faster
-
-**Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go, and the chat proposes the next command and captures handoffs, corrections and decisions.
-
-**Slicing notes:** mod-ideas build order 2, command entry and autocomplete; Choose Format sits here because a format is one of the command's parameters. Suggest The Next Step (mod-ideas build order 3) merged in on 2026-11-23.
-
-**Stories in this increment:**
-
-- *Autocomplete CDD Commands*
-- *Show Command Argument Hints*
-- *Display Action Before Fidelity Dots*
-- *Add Comment To Sent Command*
-- *Announce CDD Tool Calls*
-- *Suggest Next Command*
-- *Write Handoff When Session Ends*
-- *Display Latest Session Handoff*
-- *Offer Correction Log Entry*
-- *Offer Decision Record*
-
-### Increment 13: Judge And Fix Work From Chat Bar And Board
-
-**Outcome:** generate refreshes the knowledge graph and judges the rules itself, Fix is an action of its own on a rule, a file or every violation, Validate runs on its own only as a slash command, and the chat bar opens the active ticket's card and tiles in a side panel.
-
-**Slicing notes:** what was unique to Fully Integrated App Flow, split on 2026-11-23 at the person's request. The Story UI editor's screen frames and increment tickets went to Author Story Maps, the story explorer's stories to Integrate Stories With The Canvas Explorer, Remove Older Versions When Keeping A Release to Sync Design Canvas With Production, and Test Knowledge Graph Explorer On Session Files and Display Drawio File As Diagram to File Manager Complete. The board and chat bar violation and fix stories were dropped as duplicates of File Manager Complete's Count Fidelity Violations From Live Graph, Count Session Violations From Live Graph, Fix Graph Violations From Files App and Fix Graph Violations From Chat Bar.
-
-**Stories in this increment:**
-
-- *Refresh Graph After Generate*
-- *Judge Rules During Generate*
-- *Fix Graph Violations*
-- *Validate Fidelity On Demand*
-- *Open Board Side Panel From Chat Bar* (partly built: the chat bar opens the whole board, not the ticket's card and tiles)
-
-### Increment 14: Customize Board Workflow
+### Increment 10: Customize Board Workflow
 
 **Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
 
@@ -553,7 +498,42 @@ section: body
 - *Choose Testing Strategy*
 - *Toggle Sub Agents*
 
-### Increment 15: Author Story Maps
+### Increment 11: Draw Linked Models On The Canvas
+
+**Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
+
+**Slicing notes:** `.sessions/_backlog/draw-linked-models-on-the-canvas.md`; depends on nothing, so it can run beside Sync Design Canvas With Production and Integrate Stories With The Canvas Explorer. The bounded context map is the first slice.
+
+**Stories in this increment:**
+
+- *Draw Arrows From Drawio Waypoints*
+- *Draw Bounded Context Map As An Artboard*
+- *Draw Domain Model As An Artboard*
+- *Draw Module Class Models As Artboards*
+- *Follow Links From A Context To Its Models*
+- *See The Classes A Scenario Touches*
+- *See The Stories That Exercise A Class*
+- *Mark Model Nodes That Fail Rules*
+### Increment 12: Enter Commands Faster
+
+**Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go, and the chat proposes the next command and captures handoffs, corrections and decisions.
+
+**Slicing notes:** mod-ideas build order 2, command entry and autocomplete; Choose Format sits here because a format is one of the command's parameters. Suggest The Next Step (mod-ideas build order 3) merged in on 2026-11-23.
+
+**Stories in this increment:**
+
+- *Autocomplete CDD Commands*
+- *Show Command Argument Hints*
+- *Display Action Before Fidelity Dots*
+- *Add Comment To Sent Command*
+- *Announce CDD Tool Calls*
+- *Suggest Next Command*
+- *Write Handoff When Session Ends*
+- *Display Latest Session Handoff*
+- *Offer Correction Log Entry*
+- *Offer Decision Record*
+
+### Increment 13: Author Story Maps
 
 **Outcome:** the Story UI editor gets its own remaining stories: dashboard, nested lanes, the node inspector, save history, real-time sessions and AI story changes.
 
@@ -572,19 +552,29 @@ section: body
 - *Mark Story Without A Screen* (partly built: the design canvas says "No screenshot" for a screen without a picture; a story with no screen gets no frame)
 - *Open Story Explorer From Screen Frame* (built in the design canvas explorer only, not in the Story UI)
 
-### Increment 16: Draw Linked Models On The Canvas
+### Increment 14: Finish File Manager
 
-**Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
+**Outcome:** the Files app shows a session's generated work: files and folders or the graph, filtered like the files, opening and comparing several files, with comments sent to the chat.
 
-**Slicing notes:** `.sessions/_backlog/draw-linked-models-on-the-canvas.md`; depends on nothing, so it can run beside Sync Design Canvas With Production and Integrate Stories With The Canvas Explorer. The bounded context map is the first slice.
+**Slicing notes:** what File Manager Complete still lacks after its built stories moved to Built - File Manager on 2026-11-23: saving an edited file, Fix and the live violation counts in the chat bar and board, a spec on a session's files, and the draw.io Source tab and shape marks. the file-manager chat's work, the Review Generated Work In File Viewer epic.
 
 **Stories in this increment:**
 
-- *Draw Arrows From Drawio Waypoints*
-- *Draw Bounded Context Map As An Artboard*
-- *Draw Domain Model As An Artboard*
-- *Draw Module Class Models As Artboards*
-- *Follow Links From A Context To Its Models*
-- *See The Classes A Scenario Touches*
-- *See The Stories That Exercise A Class*
-- *Mark Model Nodes That Fail Rules*
+- *Save Edited File*
+- *Fix Graph Violations From Chat Bar*
+- *Count Session Violations From Live Graph*
+- *Count Fidelity Violations From Live Graph*
+- *Test Knowledge Graph Explorer On Session Files* (partly built: the Graph app opens on the session's folder and shows violations; no spec runs on a session's files)
+- *Display Drawio File As Diagram* (partly built: the Files app shows the draw.io editor; no Source tab, no red shape for a violation, and a pressed shape does not open its lines)
+
+### Increment 15: Repair Guidance From Mistakes
+
+**Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
+
+**Slicing notes:** the person, 2026-11-11: repair is not built yet, so it is taken out of Built Today and planned as its own increment.
+
+**Stories in this increment:**
+
+- *Repair Guidance Behind Violation*
+- *Improve Guidance From Mistake*
+- *Add Rule From Failed Example*
