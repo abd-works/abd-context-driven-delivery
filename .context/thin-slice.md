@@ -13,7 +13,7 @@ section: body
 
 **Slicing intent:** Increment 0, Built, is everything the code does today. The increments after it are still to build.
 
-**Spine vs optional:** the increments still to build run in the order of their items in the board's Backlog (2026-11-23); Finish File Manager and Repair Guidance From Mistakes have no backlog item and come last.
+**Spine vs optional:** the increments still to build run in the order of their items in the board's Backlog (2026-11-23); Finish File Manager and Repair Guidance From Mistakes have no backlog item and come after them; Defect Fixing holds the small tickets and comes last.
 
 ## Increments
 
@@ -508,3 +508,18 @@ section: body
 - *Repair Guidance Behind Violation*
 - *Improve Guidance From Mistake*
 - *Add Rule From Failed Example*
+
+### Increment 9: Defect Fixing
+
+**Outcome:** the small fixes made on the release-1-2-fixes branch reach the 1.2 release: a whiteboard render ends with its board in Claude, each lane keeps its own mods, every chat loads the plugins of the approved lane, and the prompt queue holds only work, with its robots matching the chat's own background tasks.
+
+**Slicing notes:** the one increment for small tickets, so a defect fix never gets an increment of its own. These tickets were fixed on 2026-11-24 on the release-1-2-fixes branch and join Increment 0, Built, when that branch is merged into main for 1.2.
+
+**Tickets in this increment:**
+
+- *Whiteboard render creates its Claude board*: a whiteboard render finishes by creating its board in Claude, and the `.whiteboard` file keeps the board's address in its own board field
+- *Issue 105, one marketplace per lane*: each lane publishes its mods into its own marketplace only, so a dev-lane install or server restart no longer writes the stable lane's `~/.cdd/claude-plugins`, and the stable server's restart no longer copies the dev lane's mods
+- *Plugins load from the fixed chat-plugins folder*: Claude Code loads every cdd plugin from one fixed folder per plugin, `~/.cdd/chat-plugins/{name}`, which each install and repin points at the approved lane's published folder, never from Claude Code's own plugin cache, so a repin and a reload of the plugins reach every chat
+- *Queue keeps only work*: a question, an answer or a comment is answered in the chat and never queued; a message the person sends creates no card unless it is work, filed under its goal or kept as a card with a clean title
+- *Robots leave with bot mode*: leaving sub-agent mode takes every robot off the prompt queue
+- *Robots match the Claude pane's background tasks*: the robots the prompt queue shows are the background tasks the Claude pane shows for that chat
