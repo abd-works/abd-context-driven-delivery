@@ -306,14 +306,16 @@ class McpChannelServer(ChannelServer):
 
     def install_plugins(self) -> list[str]:
         """Have Claude Code load every cdd plugin from its fixed folder in the cdd home, never a cached copy, one line
-        for each: the cdd plugin the stable lane publishes, whose server every chat names, and the mods of the lane the
-        person approved by serving it, such as the board and the prompt queue: the dev lane's when the install serves a
-        feature there, else the stable lane's. The stable lane's marketplace is never written with a feature's mods. An
-        install for any IDE but Claude Code installs none."""
+        for each: the cdd plugin the stable lane publishes, whose server every chat names, and the mods of that same
+        lane, such as the board and the prompt queue. The fixed folders are machine-wide and a mod calls the server the
+        cdd plugin names, so a lane is loaded whole: a mod from the dev lane would give every chat a button the stable
+        server cannot serve (issue 106). A project's dev-lane choice is carried by its ``.mcp.json`` and the stable
+        server's routing of its calls, never by the mods. An install for any IDE but Claude Code installs none."""
         if self._claude_plugins is None:
             return []
-        lines = [f"cdd plugin: {self._claude_plugins.install(self._daemon.home.marketplace.cdd_plugin)}"]
-        return lines + [f"{plugin.name}: {self._claude_plugins.install(plugin)}" for plugin in self.served.home.marketplace.mods]
+        marketplace = self._daemon.home.marketplace
+        lines = [f"cdd plugin: {self._claude_plugins.install(marketplace.cdd_plugin)}"]
+        return lines + [f"{plugin.name}: {self._claude_plugins.install(plugin)}" for plugin in marketplace.mods]
 
 
 class McpInstallation(RegisteredChannel):
