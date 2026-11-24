@@ -209,8 +209,8 @@ with description("the formats a fidelity declares in its outputs") as self:
         with it("should each have an adapter that reads it and writes it"):
             expect({slug: lacking for slug, lacking in self.lacking.items() if lacking}).to(equal({}))
 
-        with it("should be asked of every fidelity of the five practices"):
-            expect(len(self.lacking)).to(equal(15))
+        with it("should be asked of every fidelity of the five practices, the two hardening fidelities among them"):
+            expect(len(self.lacking)).to(equal(17))
 
 
 

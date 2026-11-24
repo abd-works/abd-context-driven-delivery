@@ -50,12 +50,14 @@ with description("the fidelities of every practice CDD ships") as self:
     with before.all:
         self.practices = PRACTICE_CATALOGUE.create_all()
 
-    with it("should each give a Scaffold, which a partition at that fidelity indexes by"):
+    # A fidelity with no Overview and no Guidance of its own, such as Stories' and BDD's hardening, is held empty until
+    # the person writes it, so it has no Scaffold yet.
+    with it("should each give a Scaffold once written, which a partition at that fidelity indexes by"):
         missing = sorted(
             f"{practice.key}: {fidelity.name}"
             for practice in self.practices
             for fidelity in practice.fidelities
-            if not fidelity.scaffold
+            if (fidelity.overview or fidelity.guidance) and not fidelity.scaffold
         )
         expect(missing).to(equal([]))
 

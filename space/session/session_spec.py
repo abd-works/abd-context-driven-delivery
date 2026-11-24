@@ -1637,7 +1637,7 @@ with description("a session's guidance selection") as self:
                 expect(self.selected.is_stage_chosen).to(equal(True))
 
             with it("should cover Stories' fidelities of every stage, as no stage filter"):
-                expect(self.selected.fidelities).to(equal(["stories-story-map", "stories-scenarios", "stories-acceptance-tests"]))
+                expect(self.selected.fidelities).to(equal(["stories-story-map", "stories-scenarios", "stories-acceptance-tests", "stories-hardening"]))
 
         with context("that has every practice turned off"):
             with before.each:

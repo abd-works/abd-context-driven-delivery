@@ -505,9 +505,9 @@ def _(s):
         expect(ticket_in(world.data_of(world.Board.load().show()), BACK_TO_BACKLOG.name)).to(be_none)
 
 
-@shared_stories.scenario("Move Ticket", "Close a ticket moved on past Implementation")
+@shared_stories.scenario("Move Ticket", "Close a ticket moved on past Hardening")
 def _(s):
-    @s.given("the ticket almost-shipped is in Implementation's Done")
+    @s.given("the ticket almost-shipped is in Hardening's Done")
     def _(world):
         world.project.seed_session(ALMOST_SHIPPED)
 
@@ -539,9 +539,9 @@ def _(s):
     def _(world):
         world.moved = world.data_of(world.Ticket.load(SHIPPED_WORK.name).move_previous())
 
-    @s.then("shipped-work shows in Implementation's Done")
+    @s.then("shipped-work shows in Hardening's Done")
     def _(world):
-        expect_placed(world.moved, "Implementation", is_done=True)
+        expect_placed(world.moved, "Hardening", is_done=True)
 
     @s.and_("its folder is back in .sessions/shipped-work")
     def _(world):

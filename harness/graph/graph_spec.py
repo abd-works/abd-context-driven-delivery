@@ -1068,9 +1068,9 @@ with description("a node's fidelity"):
         with it("should also belong to every higher fidelity of its practice"):
             expect([fidelity.name for fidelity in self.entity.fidelities]).to(equal(["model", "tactics"]))
 
-        with it("should reach implementation from the first fidelity of its practice"):
+        with it("should reach the last stage from the first fidelity of its practice"):
             story = _node(Graph().practices.named("stories"), "Story", "Create account", 1)
-            expect([fidelity.name for fidelity in story.fidelities]).to(equal(["story_map", "scenarios", "acceptance_tests"]))
+            expect([fidelity.name for fidelity in story.fidelities]).to(equal(["story_map", "scenarios", "acceptance_tests", "hardening"]))
 
     with context("with a type the schema gives no fidelity"):
         with it("should have none"):

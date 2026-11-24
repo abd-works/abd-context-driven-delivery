@@ -571,11 +571,10 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> McpHost.from_repo` loads every toolset of the served checkout · harness/mcp/mcp_server.py:278
   - `-> StandUp()` creates what the server serves and skipped · harness/mcp/mcp_server.py:280
 - `McpChannelServer.ensure_running`
-  - `-> ClaudePlugins.install(marketplace.cdd_plugin)` installs the cdd plugin · harness/mcp/mcp_server.py:290
-  - `-> McpChannelServer.install_mods` · harness/mcp/mcp_server.py:291
-- `McpChannelServer.install_mods`
-  - `-> ClaudeMarketplace.publish_mods` publishes a dev lane's mods into the stable lane's marketplace · harness/mcp/mcp_server.py:299
-  - `-> ClaudePlugins.install` installs each of `marketplace.mods` · harness/mcp/mcp_server.py:300
+  - `-> McpChannelServer.install_plugins` · harness/mcp/mcp_server.py:304
+- `McpChannelServer.install_plugins`
+  - `-> ClaudePlugins.install(marketplace.cdd_plugin)` installs the cdd plugin the stable lane publishes · harness/mcp/mcp_server.py:312
+  - `-> ClaudePlugins.install` installs each of the served lane's `marketplace.mods` · harness/mcp/mcp_server.py:313
 
 ## UserMcpConfig
 

@@ -1,6 +1,6 @@
 """Mamba spec: a Claude Whiteboard board as a practice draws it, saves it, and sends it to the board's store."""
 
-from expects import be_below, contain, equal, expect, raise_error
+from expects import be_above, be_below, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 import json
@@ -10,7 +10,7 @@ from pathlib import Path
 from harness.whiteboard import Arrow, BoardElement, Box, ElementId, KeepsDocumentOnBoard, Label, Section, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
 from harness.markdown.format import Format, SourceDocument
 from harness.installation.data_class import data_of
-from harness.whiteboard.whiteboard import StoreWrite
+from harness.whiteboard.whiteboard import STORE_RECORD_BYTES, StoreWrite
 from harness.whiteboard.whiteboard_file import WhiteboardFile
 
 
@@ -221,9 +221,12 @@ with description("a whiteboard that keeps the document it was drawn from") as se
     with it("should give back the document, its format and every line of its text, once saved and loaded"):
         expect(self.loaded.kept_document).to(equal(_STORY_MAP))
 
-    with it("should keep it in the board's meta, so the board in Claude keeps it too"):
+    with it("should name the document's format and its number of parts in the board's meta"):
         meta = self.board.batches()[0][0]
-        expect(meta["data"]["document"]).to(equal({"format": "markdown", "text": _STORY_MAP.text}))
+        expect(meta["data"]["document"]).to(equal({"format": "markdown", "parts": 1}))
+
+    with it("should keep the document's text on the board in Claude, in a record of its own"):
+        expect(_parts_written(self.board.batches())).to(equal({"document-0": {"text": _STORY_MAP.text}}))
 
     with it("should draw nothing more"):
         expect(self.loaded.order).to(equal(board_of_two_cards().order))
@@ -231,6 +234,54 @@ with description("a whiteboard that keeps the document it was drawn from") as se
     with context("that keeps none"):
         with it("should answer no document"):
             expect(Whiteboard.from_text(board_of_two_cards().save()).kept_document).to(equal(None))
+
+    # The board's store takes a record of at most 262,144 bytes, and the story map's markdown outgrew one: the document
+    # is kept in numbered parts, each under the limit, that read back whole.
+    with context("larger than a record of the board's store holds"):
+        with before.each:
+            board = board_of_two_cards()
+            board.kept_document = _LARGE_MAP
+            self.board = board
+            self.parts = _parts_written(board.batches())
+
+        with it("should keep it in several numbered parts"):
+            expect(sorted(self.parts)).to(equal([f"document-{number}" for number in range(len(self.parts))]))
+            expect(len(self.parts)).to(be_above(1))
+
+        with it("should keep every part under the store's limit for a record"):
+            expect(max(len(json.dumps(part, ensure_ascii=False).encode("utf-8")) for part in self.parts.values())).to(be_below(STORE_RECORD_BYTES))
+
+        with it("should name as many parts in the board's meta as it writes"):
+            expect(self.board.batches()[0][0]["data"]["document"]).to(equal({"format": "markdown", "parts": len(self.parts)}))
+
+        with it("should read the parts back as the whole document, from the board in Claude saved as one"):
+            meta = self.board.batches()[0][0]["data"]
+            read = {**meta, "elements": {}, "document_parts": [self.parts[f"document-{number}"]["text"] for number in range(len(self.parts))]}
+            expect(Whiteboard.from_text(json.dumps(read)).kept_document).to(equal(_LARGE_MAP))
+
+        with it("should keep the whole document in the .whiteboard file"):
+            expect(Whiteboard.from_text(self.board.save()).kept_document).to(equal(_LARGE_MAP))
+
+        with context("drawn again over the board that keeps it already"):
+            with it("should write no part again"):
+                again = Whiteboard.from_text(self.board.save())
+                expect(_parts_written(again.batches(Whiteboard.from_text(self.board.save())))).to(equal({}))
+
+        with context("drawn over a board that kept a longer document"):
+            with it("should take away the parts it no longer needs"):
+                longer = board_of_two_cards()
+                longer.kept_document = SourceDocument(Format("markdown"), _LARGE_MAP.text * 2)
+                deleted = [entry["doc_id"] for batch in self.board.batches(longer) for entry in batch if entry["op"] == "delete" and entry["collection"] == "board"]
+                expect(deleted).to(equal([f"document-{number}" for number in range(len(self.parts), len(_parts_written(longer.batches())))]))
+
+
+def _parts_written(batches) -> dict:
+    """The document parts batches set on the board, by record id."""
+    return {entry["doc_id"]: entry["data"] for batch in batches for entry in batch
+            if entry["op"] == "set" and entry["collection"] == "board" and entry["doc_id"] != "meta"}
+
+
+_LARGE_MAP = SourceDocument(Format("markdown"), "".join(f"### (S) Person --> Story {number} with \"quotes\" — and a dash\n\nBuilt.\n\n" for number in range(9000)))
 
 
 with description("a practice's whiteboard format that keeps the document a board was drawn from") as self:

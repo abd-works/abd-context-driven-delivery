@@ -24,6 +24,14 @@ BATCH_SIZE = 50
 """The most writes the artifact store takes in one batch."""
 MAX_SIDE = 8000
 """The widest or tallest block a board draws; the Whiteboard page draws a block over it at its default size."""
+STORE_RECORD_BYTES = 262_144
+"""The largest record the artifact store keeps, in bytes of its JSON."""
+DOCUMENT_PART_BYTES = 200_000
+"""The most bytes of JSON one part of a kept document is written as, well under a store record, so each part is kept."""
+DOCUMENT_PART = "document-{}"
+"""The id of each numbered part of the kept document among the board's records, beside its meta."""
+BATCH_BYTES = 900_000
+"""The most bytes of JSON one batch of writes is sent as, under the store's 1 MiB for a batch."""
 CLEARED = {"__delete__": True}
 """What an update writes for a field the element no longer has, so the store drops it."""
 PIECE_MARK = "~"
@@ -540,9 +548,7 @@ class Whiteboard:
         order += [key for key in records if key not in order]
         loaded = cls(str(board.get("title", "")))
         loaded.board = str(board.get(cls.BOARD) or "")
-        kept = board.get("document")
-        if isinstance(kept, dict) and isinstance(kept.get("text"), str):
-            loaded.kept_document = SourceDocument(Format(str(kept.get("format", ""))), kept["text"])
+        loaded.kept_document = _kept_document_in(board)
         loaded._versions = {str(key): int(value) for key, value in board.get("versions", {}).items()}
         for key in order:
             loaded._elements[key] = BoardElement.from_record(key, records[key])
@@ -574,12 +580,29 @@ class Whiteboard:
         before = previous or Whiteboard()
         kept = [element.id for element in before.elements if isinstance(element, OtherElement)]
         meta = {**self._meta, "order": kept + self.order}
-        return [StoreWrite("set", "board", "meta", meta, before._versions.get("meta")), *self._deletes(before), *self._element_writes(before)]
+        parts = _DocumentParts(self.kept_document)
+        if self.kept_document is not None:
+            meta["document"] = {"format": str(self.kept_document.format), "parts": len(parts.texts)}
+        return [
+            StoreWrite("set", "board", "meta", meta, before._versions.get("meta")),
+            *parts.writes(_DocumentParts(before.kept_document), before._versions),
+            *self._deletes(before),
+            *self._element_writes(before),
+        ]
 
     def batches(self, previous: Optional["Whiteboard"] = None) -> List[List[Dict[str, object]]]:
-        """The writes against previous as ArtifactData ``batch`` entries, at most fifty a batch, in order."""
-        entries = [write.entry for write in self._writes(previous)]
-        return [entries[start:start + BATCH_SIZE] for start in range(0, len(entries), BATCH_SIZE)]
+        """The writes against previous as ArtifactData ``batch`` entries, in order: at most fifty a batch, and no batch
+        over the bytes the store takes in one, since a kept document's parts are each near a record's limit."""
+        found: List[List[Dict[str, object]]] = [[]]
+        size = 0
+        for entry in (write.entry for write in self._writes(previous)):
+            written = len(json.dumps(entry, ensure_ascii=False).encode("utf-8"))
+            if found[-1] and (len(found[-1]) == BATCH_SIZE or size + written > BATCH_BYTES):
+                found.append([])
+                size = 0
+            found[-1].append(entry)
+            size += written
+        return found if found[-1] else []
 
     def _element_writes(self, before: "Whiteboard") -> List[StoreWrite]:
         found: List[StoreWrite] = []
@@ -599,6 +622,71 @@ class Whiteboard:
             StoreWrite("delete", "elements", element.id, None, before._versions.get(element.id)) for element in before.elements
             if self.element(element.id) is None and not isinstance(element, OtherElement)
         ]
+
+
+def _kept_document_in(board: Dict[str, object]) -> Optional[SourceDocument]:
+    """The document a ``.whiteboard`` file keeps whole in its meta, or a store read keeps in the numbered parts its meta
+    counts, saved beside it as ``document_parts``, in order; none when it keeps neither."""
+    kept = board.get("document")
+    if not isinstance(kept, dict):
+        return None
+    if isinstance(kept.get("text"), str):
+        return SourceDocument(Format(str(kept.get("format", ""))), kept["text"])
+    parts = board.get("document_parts")
+    if not isinstance(parts, list) or len(parts) != kept.get("parts"):
+        return None
+    return SourceDocument(Format(str(kept.get("format", ""))), "".join(str(part) for part in parts))
+
+
+class _DocumentParts:
+    """A kept document's text cut into numbered parts at line ends, each written as one record of the board's store
+    under ``DOCUMENT_PART_BYTES``, since the whole document outgrows a record. The same text always cuts the same way,
+    so a render writes only the parts that changed."""
+
+    def __init__(self, document: Optional[SourceDocument]) -> None:
+        self.texts: List[str] = self._cut(document.text) if document is not None else []
+
+    def writes(self, before: "_DocumentParts", versions: Dict[str, int]) -> List[StoreWrite]:
+        """The writes that turn before's parts into these: each part that differs set, each part past the last taken
+        away."""
+        record = DOCUMENT_PART.format
+        changed = [
+            StoreWrite("set", "board", record(number), {"text": text}, versions.get(record(number)))
+            for number, text in enumerate(self.texts) if number >= len(before.texts) or before.texts[number] != text
+        ]
+        gone = [StoreWrite("delete", "board", record(number), None, versions.get(record(number))) for number in range(len(self.texts), len(before.texts))]
+        return changed + gone
+
+    def _cut(self, text: str) -> List[str]:
+        parts: List[str] = []
+        current = ""
+        for piece in self._pieces(text):
+            if current and self._bytes(current + piece) > DOCUMENT_PART_BYTES:
+                parts.append(current)
+                current = ""
+            current += piece
+        return parts + [current] if current or not parts else parts
+
+    def _pieces(self, text: str) -> List[str]:
+        """text's lines, with a line too long for a part on its own cut where it fills one."""
+        pieces: List[str] = []
+        for line in text.splitlines(keepends=True):
+            while self._bytes(line) > DOCUMENT_PART_BYTES:
+                cut = self._longest_fitting(line)
+                pieces.append(line[:cut])
+                line = line[cut:]
+            pieces.append(line)
+        return pieces
+
+    def _longest_fitting(self, line: str) -> int:
+        low, high = 1, len(line)
+        while low < high:
+            middle = (low + high + 1) // 2
+            low, high = (middle, high) if self._bytes(line[:middle]) <= DOCUMENT_PART_BYTES else (low, middle - 1)
+        return low
+
+    def _bytes(self, text: str) -> int:
+        return len(json.dumps({"text": text}, ensure_ascii=False).encode("utf-8"))
 
 
 class KeepsDocumentOnBoard:

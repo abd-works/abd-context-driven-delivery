@@ -15,6 +15,11 @@ from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
 
 
+def is_written(fidelity) -> bool:
+    """Whether the fidelity holds an Overview or Guidance of its own; one with neither is still to be written."""
+    return bool(fidelity.overview or fidelity.guidance)
+
+
 with description("a fidelity's declared outputs") as self:
     with context("with the story map loaded from its practice"):
         with before.each:
@@ -48,12 +53,14 @@ with description("a fidelity's declared outputs") as self:
         with before.each:
             self.practices = [Stories(), Ddd(), Ux(), CleanEngineering(), Bdd()]
 
-        with it("should leave no fidelity without declared outputs"):
+        # A fidelity with no Overview and no Guidance of its own, such as Stories' and BDD's hardening, is held empty until
+        # the person writes it, so it declares no outputs yet.
+        with it("should leave no written fidelity without declared outputs"):
             missing = [
                 f"{type(practice).__name__}.{name}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
-                if not fidelity.outputs
+                if is_written(fidelity) and not fidelity.outputs
             ]
             expect(missing).to(be_empty)
 
@@ -107,12 +114,12 @@ with description("a fidelity's declared outputs") as self:
             ]
             expect(lacking).to(be_empty)
 
-        with it("should give every specification and implementation fidelity a code format"):
+        with it("should give every written specification and implementation fidelity a code format"):
             without_code = [
                 f"{type(practice).__name__}.{name}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
-                if fidelity.stage != "discovery"
+                if fidelity.stage != "discovery" and is_written(fidelity)
                 and not set(fidelity.outputs) & {"python", "typescript", "html"}
             ]
             expect(without_code).to(be_empty)

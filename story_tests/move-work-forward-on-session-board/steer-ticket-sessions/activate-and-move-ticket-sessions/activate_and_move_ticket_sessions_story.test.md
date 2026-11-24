@@ -223,9 +223,9 @@ section: body
 *And* a toast says Back to backlog moved to Backlog
 *But* no stage shows back-to-backlog
 
-#### Scenario: Close a ticket moved on past Implementation
+#### Scenario: Close a ticket moved on past Hardening
 
-*Given* the [ticket](../../../../space/kanban/.context/kanban-model.md#ticket--card) almost-shipped is in Implementation's Done
+*Given* the [ticket](../../../../space/kanban/.context/kanban-model.md#ticket--card) almost-shipped is in Hardening's Done
 *And* almost-shipped is not the active ticket
 *When* the Person moves almost-shipped on into Complete
 *Then* almost-shipped shows in Complete
@@ -235,7 +235,7 @@ section: body
 
 *Given* the closed [ticket](../../../../space/kanban/.context/kanban-model.md#ticket--card) shipped-work is in Complete
 *When* the Person moves shipped-work back
-*Then* shipped-work shows in Implementation's Done
+*Then* shipped-work shows in Hardening's Done
 *And* its folder is back in .sessions/shipped-work
 
 #### Scenario: Refuse a move into a column that is not a stage

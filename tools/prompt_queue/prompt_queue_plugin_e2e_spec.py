@@ -7,8 +7,8 @@ at CLAUDE_CODE_EXECPATH, else claude on the PATH, loads the plugin from this che
 stream-json input, so the plugin's prompt.submit, tool.call and turn hooks run as they do in a chat. The queue is then
 read back through the server with prompt-queue.show.
 
-The scratch .mcp.json names the server with no headersHelper, so a call carries no chat id of its own: the agent is told
-its chat id, as the plugin always names it.
+The scratch .mcp.json names the chat in the header the app's connect script sends, so a call that names no chat, or the
+chat's id, reaches this chat's queue, as it does in the app.
 
 Out of scope, because only the desktop app has them: the app's update_plan and wrap_up task list, the cards the plugin
 draws above the chat bar, and the chat bar's failure line.
@@ -31,6 +31,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
+from harness.mcp.mcp_address import CHAT_HEADER
 from harness.mcp.spec_support import SpecChat, SpecServer
 
 TOOLSETS = ("tools.prompt_queue.prompt_queue:PromptQueue",)
@@ -54,8 +55,9 @@ _VIEWER_STATE = '<artifact-view-context>{"board": "Story map", "selected": "Zanz
 _QUESTION = _VIEWER_STATE + "why is the band grey?"
 _ANSWER = "yes"
 _WORK = _VIEWER_STATE + "Please add a flush button to the queue band"
-# A turn that works long enough for messages to arrive while it runs.
-_LONG_TURN = "Run the Bash command `sleep 30`, then reply only: slept"
+# A turn that works long enough for messages to arrive while it runs: a command in the foreground, since the chat
+# refuses a bare sleep.
+_LONG_TURN = "Run the Bash command `ping -n 31 127.0.0.1` in the foreground, then reply only: pinged"
 # The tools the agent may call without asking: the queue's, to place work, and Bash, for the long turn.
 _QUEUE_TOOLS = (
     "mcp__cdd__prompt-queue_add", "mcp__cdd__prompt-queue_add_interruption", "mcp__cdd__prompt-queue_show",
@@ -92,7 +94,7 @@ class HeadlessChat:
         self.id = str(uuid.uuid4())
         self._project = Path(tempfile.mkdtemp(prefix="queue-plugin-project-"))
         self._servers = self._project / ".mcp.json"
-        self._servers.write_text(json.dumps({"mcpServers": {"cdd": {"type": "http", "url": server.url}}}), encoding="utf-8")
+        self._servers.write_text(json.dumps({"mcpServers": {"cdd": {"type": "http", "url": server.url, "headers": {CHAT_HEADER: self.id}}}}), encoding="utf-8")
         self._queue = SpecChat(server, self._project, chat_id=self.id)
         self._allowed_tools = allowed_tools
         self._process: subprocess.Popen | None = None
@@ -130,7 +132,7 @@ class HeadlessChat:
         if self._process is None:
             raise ClaudeCodeNotFoundError()
         self._write(turn)
-        self._wait_for(_calls_a_tool)
+        self._wait_for(_runs_a_command)
         for message in messages:
             self._write(message)
         self._wait_for(lambda event: event.get("type") == "result")
@@ -187,6 +189,11 @@ def _calls_a_tool(event: dict) -> bool:
     """Whether a line of the chat's output is the agent calling a tool, so its turn is still working."""
     content = event.get("message", {}).get("content") if event.get("type") == "assistant" else None
     return isinstance(content, list) and any(block.get("type") == "tool_use" for block in content)
+
+
+def _runs_a_command(event: dict) -> bool:
+    """Whether a line of the chat's output is the agent starting the long turn's command."""
+    return _calls_a_tool(event) and any(block.get("name") == "Bash" for block in event["message"]["content"])
 
 
 def texts(prompts: list[dict]) -> list[str]:

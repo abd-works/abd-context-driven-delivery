@@ -243,7 +243,7 @@ with description("a board") as self:
             expect([column["name"] for column in self.sent["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Hardening", "Complete"]))
 
         with it("should send each column's kind"):
-            expect([column["kind"] for column in self.sent["columns"]]).to(equal(["backlog", "stage", "stage", "stage", "complete"]))
+            expect([column["kind"] for column in self.sent["columns"]]).to(equal(["backlog", "stage", "stage", "stage", "stage", "complete"]))
 
         with it("should read its tickets once for every column"):
             expect(self.board.column("Discovery").cards[0]).to(be(self.board.tickets[0]))
