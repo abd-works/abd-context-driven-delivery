@@ -2344,10 +2344,6 @@ The chat bar, the CDD Kanban, the Story UI editor and the knowledge graph work o
 
 Requested (2026-11-06, "chat band -> board side panel"): the chat bar opens the active ticket's board card and tiles in a side panel beside the chat.
 
-### (S) Chat Bar --> [Sync Chat Bar With Board Selection](../story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/connect_chat_bar_board_and_story_ui_story.test.md#story-sync-chat-bar-with-board-selection)
-
-Requested (2026-11-06, "update chat band, eg selected stage, next action"; "and on the chat panel"; "and practices enabled for that session"): a ticket, stage or fidelity selected on the board becomes the chat bar's session, shown stage and selected fidelity, so the action button shows that fidelity's next action; the chat panel switches to that ticket's chat and the band shows the practices enabled for its session.
-
 ### (S) Chat Bar --> [Keep Chosen Formats Across Actions In A Fidelity](../story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/connect_chat_bar_board_and_story_ui_story.test.md#story-keep-chosen-formats-across-actions-in-a-fidelity)
 
 Requested (2026-11-06, "have format saved across actions in fidelity"): the formats picked for a fidelity stay picked when the person switches between generate, render, sketch, iterate, document and fix, so each action writes the same formats without picking them again. Built today (checked 2026-11-10): format chips are kept per set of fidelities (`format-choices-client.ts:23,30`, commit 07c9026ee). Missing: the picks go back to the defaults after an action runs, and only generate and render take formats.

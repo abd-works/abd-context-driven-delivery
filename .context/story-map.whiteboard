@@ -613,7 +613,6 @@
   "epic.128c30811e",
   "subepic.0.f62a8e7640",
   "story.user.9f1d4c9fd6",
-  "story.user.ce52251615",
   "story.user.490111daca",
   "story.user.5377831885",
   "story.user.a125d36f8a",
@@ -7370,17 +7369,6 @@
    "kind": "rounded",
    "size": "small",
    "x": 83214.0,
-   "y": 339.0,
-   "w": 152.0,
-   "h": 152.0
-  },
-  "story.user.ce52251615": {
-   "type": "shape",
-   "color": "yellow",
-   "text": "*Chat Bar*\nSync Chat Bar With Board Selection",
-   "kind": "rounded",
-   "size": "small",
-   "x": 83390.0,
    "y": 339.0,
    "w": 152.0,
    "h": 152.0

@@ -22,7 +22,6 @@ section: body
 | ticket | practices |
 | --- | --- |
 | ++checkout-flow++ | Stories, UX, Clean Engineering |
-| ++billing-report++ | Stories, DDD |
 
 ### increments of checkout-flow's story map
 
@@ -47,30 +46,6 @@ section: body
 *When* the Person opens the board from the chat band  
 *Then* the board opens beside the chat  
   *And* ++checkout-flow++'s tile has the thick orange outline
-
-## Story: Sync Chat Bar With Board Selection
-
-### Evidence
-
-| Source | Note |
-|--------|------|
-| artifact comments, 2026-11-06 | "and on the chat panel"; "and practices enabled for that session" |
-| https://claude.ai/artifact/HCCiMNSTMhwB9zQT8tVV8p | the story explorer plays the first scenario on the integrated journey screen |
-
-#### Scenario: Every view switches to the ticket picked on the board
-
-*Given* ++checkout-flow++ is the active ticket  
-  *And* ++billing-report++'s session has Stories and DDD enabled  
-*When* the Person makes ++billing-report++ the active ticket on the board  
-*Then* the band, the chat panel, the story map and the Inspector all switch to ++billing-report++  
-  *And* the band shows ++billing-report++'s enabled practices, Stories and DDD
-
-#### Scenario: Switching back restores the first ticket's practices
-
-*Given* ++billing-report++ is the active ticket  
-*When* the Person makes ++checkout-flow++ the active ticket on the board  
-*Then* the band shows ++checkout-flow++'s Stories, UX and Clean Engineering squares  
-  *And* the chat panel shows ++checkout-flow++'s chat
 
 ## Story: Keep Chosen Formats Across Actions In A Fidelity
 
