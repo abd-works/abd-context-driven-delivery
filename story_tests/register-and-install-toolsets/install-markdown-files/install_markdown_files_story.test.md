@@ -179,6 +179,10 @@ section: body
 | bolt-12 | two installs at the same moment, from the main checkout and a ticket's worktree, both copy the mods into the one `claude-plugins` folder of the cdd home, and one fails with WinError 32 |
 | `harness/mcp/claude_marketplace.py` `ClaudeMarketplace.publish_mods` | the owner of that folder: one install publishes into it at a time |
 | `harness/mcp/cdd_home_heavy_spec.py` | heavy tier: four real processes publishing into one cdd home |
+| commits b123d6925, fa6062c9b (2026-11-24) | a chat kept a queue bar with no Flush after the prompt queue mod gained one, as Claude Code loaded the mod from a copy in its own plugin cache; and a repin reached no chat while the settings named a lane's own folder |
+| `harness/mcp/claude_plugins.py` `ClaudePlugins.install` | names the fixed folder `~/.cdd/chat-plugins/{name}` in `CLAUDE_CODE_PLUGIN_DIRS`, points it at the approved lane's published folder (a junction on Windows), and uninstalls every cached copy |
+| `harness/installation/installer_heavy_spec.py` "installing a cdd plugin" | heavy tier: the fixed folder, a repin to another lane's folder, and the cached copies |
+| `harness/mcp/cdd_home_lanes_heavy_spec.py` "that a dev-lane install installs its mods" | heavy tier: a dev-lane install loads the mods of the code the dev lane serves |
 
 #### Scenario: Install from the main checkout and a ticket's worktree at the same moment
 
@@ -186,3 +190,41 @@ section: body
 *When* an install from each starts at the same moment  
 *Then* both finish  
   *And* the cdd home's marketplace holds the board mod whole
+
+#### Scenario: Load each cdd plugin from the cdd home's fixed folder
+
+Built 2026-11-24 (commit fa6062c9b).
+
+*Given* Claude Code's settings name no folder for the prompt queue mod  
+*When* the Person installs CDD  
+*Then* `CLAUDE_CODE_PLUGIN_DIRS` names ~/.cdd/chat-plugins/prompt-queue once, beside the folders it named already  
+  *And* that folder leads to the folder the approved lane publishes the prompt queue mod into  
+  *And* the install says Claude must restart to load it
+
+#### Scenario: Follow the approved lane on a repin without changing the settings
+
+Built 2026-11-24 (commit fa6062c9b).
+
+*Given* Claude Code loads the prompt queue mod from ~/.cdd/chat-plugins/prompt-queue, leading to the stable lane's folder  
+*When* the Person repins, approving the dev lane, which publishes the mod into ~/.cdd/dev/claude-plugins/prompt-queue  
+*Then* ~/.cdd/chat-plugins/prompt-queue leads to the dev lane's folder  
+  *And* the settings are as they were  
+  *And* the install says the folder is watched, so a reload of the plugins loads the dev lane's mod in every chat
+
+#### Scenario: Take away a cached copy of a cdd plugin
+
+Built 2026-11-24 (commit b123d6925).
+
+*Given* Claude Code holds a cached copy of the prompt queue mod and of the board mod, installed from the cdd home's marketplace  
+*When* the Person installs the prompt queue mod  
+*Then* its cached copy is uninstalled and the board mod's copy is left alone  
+  *And* the settings still name its fixed folder
+
+#### Scenario: Load the mods of the code the dev lane serves
+
+Built 2026-11-24 (commit b123d6925).
+
+*Given* the dev lane serves checkout-flow's worktree  
+*When* the Person installs from that worktree  
+*Then* Claude Code is pointed at the board and prompt queue mods published from checkout-flow's worktree  
+  *And* the stable lane's mods are left as the stable lane's code has them
