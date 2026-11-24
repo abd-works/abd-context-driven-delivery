@@ -681,7 +681,7 @@ function sentNoteOf(chat: string, working: string | undefined, goals: QueuedProm
     `The person sent this message in this chat, chat "${chat}"; it is on no card of the queue. Decide what it is before any other work:`,
     `1. Only talk (a question, an answer, a complaint or a comment): answer it, and put nothing on the queue.`,
     `2. Work for a goal on the queue${working ? `, such as the one being worked, [${working}]` : ''}: file it there with prompt-queue.add_interruption, as a short clean step.`,
-    '3. New work no goal covers: queue it with prompt-queue.add as a card of its own, titled as a short statement of the goal in plain words, with the typing mistakes and any venting left out.',
+    '3. New work no goal covers: queue it with prompt-queue.add as a card of its own, titled as a short statement of the goal in plain words, with the typing mistakes and any venting left out, and, when its work has clear parts, give it its steps with prompt-queue.set_steps as you add it.',
     `Pass chat "${chat}" to every prompt-queue call. A block the Claude app puts before the message, such as <artifact-view-context>, is a viewer's state, not the person's words: never put any of it in a title or a step.`,
     'Then call prompt-queue.show and check that what you placed stands once, where you meant it. The goals on the queue:',
     ...goals.map(goalLineOf),

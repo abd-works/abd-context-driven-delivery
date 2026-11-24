@@ -2191,3 +2191,17 @@ test("the hand-out tells a robot whose card already has steps to work those step
 
   expect(asked[0]).toContain('When a card already has steps, work them')
 })
+
+
+test('the note on a message that is new work says to give its card steps as it is added, when its work has clear parts', async ($, on) => {
+  seedQueue(on, false, '', QUEUED, true)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'add a release checklist', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried.join()).toContain('and, when its work has clear parts, give it its steps with prompt-queue.set_steps')
+})
