@@ -296,6 +296,9 @@ ul.help-overview, ul.help-guidance { padding-left: 18px; }
 .dialog-option { display: flex; align-items: center; gap: 10px; min-height: 28px; color: var(--text); }
 .dialog-option input { width: 16px; height: 16px; accent-color: #E5531A; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.dialog-warning { padding: 8px 10px; background: rgba(239, 68, 68, 0.12); border: 1px solid var(--error); border-radius: 4px; color: var(--text); font-size: 12px; }
+.dialog-warning-text { margin: 0 0 6px; color: var(--error); line-height: 1.5; }
+.dialog-warning-files { margin: 0; padding-left: 18px; font: 12px var(--mono); overflow-wrap: anywhere; }
 .roots-dialog { width: 600px; }
 .root-line { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 10px; background: var(--raised); border: 1px solid var(--border); border-radius: 4px; }
 .root-label { font-weight: 600; font-size: 12px; }

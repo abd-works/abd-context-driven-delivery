@@ -114,15 +114,17 @@ export async function closeSession($: EngineInterface, chatBar: ChatBarClient): 
 }
 
 async function closedSession($: EngineInterface, chatBar: ChatBarClient, leaving: string[]): Promise<ChatBarClient | CloseRefused> {
+  let closed: TicketData
   try {
-    await callTool<TicketData>($, 'ticket.close', { ticket: chatBar.sessionName, leaving })
+    closed = await callTool<TicketData>($, 'ticket.close', { ticket: chatBar.sessionName, leaving })
   } catch (failure) {
     await refreshChatBar($)
     await shownAsFailure($, `${chatBar.title} did not close`, `Closing ${chatBar.sessionName}${leaving.length ? ` leaving ${leaving.join(', ')}` : ''}, calling ticket.close`)(failure)
     return new CloseRefused(reasonOf(failure))
   }
   const left = leaving.map(step => LEFT_STEPS[step] ?? step)
-  $.ui.toast(`${left.length ? `${chatBar.title}: ${left.join(', ')} · ` : ''}Session ${chatBar.title} closed`)
+  const dropped = closed.dropped_work.length ? `uncommitted work lost in ${closed.dropped_work.join(', ')} · ` : ''
+  $.ui.toast(`${left.length ? `${chatBar.title}: ${left.join(', ')} · ` : ''}${dropped}Session ${chatBar.title} closed`)
   await refreshChatBar($)
   return currentChatBar($)
 }

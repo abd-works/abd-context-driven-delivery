@@ -5,7 +5,7 @@ import type { ChatBarDraw } from './chat-bar-view'
 import { repoListShiftOf, sessionListShiftOf } from './bar-columns'
 import { MAIN_SESSION } from './chat-bar-client'
 import { activateTicket, chooseSessionFolder, closeSession, createSession, openRepo } from './session-client'
-import { cancelClose, chooseNewSessionFolder, toggleLeaving } from './session-dialogs-client'
+import { cancelClose, chooseNewSessionFolder, losesWork, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -165,6 +165,20 @@ export function repoListRowsOf({ chatBar, view }: ChatBarDraw): number {
   return 3 + (view.repos ?? []).length + 1 + LIST_BORDER_ROWS
 }
 
+// The Ticket's warning and the files it means, shown while the choices made would delete the worktree or the branch
+// without a commit, so the person sees what goes before pressing Close session.
+function LosingWorkView({ Box, Text }: ElementTable, view: ChatBarDraw['view']) {
+  if (!losesWork(view)) return null
+  return (
+    <Box key="close-warning" flexDirection="column">
+      <Text color={BRAND.error}>{view.leaveWarning}</Text>
+      {view.leaveUnsavedWork.map(file => (
+        <Text key={`unsaved-${file}`} color={BRAND.text}>{`  • ${file}`}</Text>
+      ))}
+    </Box>
+  )
+}
+
 // Closing offers what ticket.close_choices answers: a handoff always, and a commit and a push of the branch the
 // session's work is on while it is checked out, named beside each.
 export function CloseView($: EngineInterface, elements: ElementTable, { chatBar, view }: ChatBarDraw) {
@@ -177,6 +191,7 @@ export function CloseView($: EngineInterface, elements: ElementTable, { chatBar,
       <Text weight="semibold" color={BRAND.text}>{`Close session ${chatBar.title}`}</Text>
       {ChoicesView(elements, leaveHeadingOf(chatBar.sessionName, view.leaveBranch), choices)}
       {branch ? null : <Text color={BRAND.muted}>Nothing checked out is this session's, so nothing is committed.</Text>}
+      {LosingWorkView(elements, view)}
       <Box flexDirection="row" gap={1}>
         <Button key="close-cancel" label="Cancel" onPress={() => cancelClose($)} />
         <Button key="close-confirm" label="Close session" variant="primary" onPress={() => closeSession($, chatBar)} />

@@ -17,12 +17,14 @@ const chatBarView = atom(
     leaveChoices: [],
     leaveBranch: '',
     leaveOwnBranch: '',
+    leaveUnsavedWork: [],
+    leaveWarning: '',
     leaving: [],
     isRepoListOpen: false,
     repos: [],
     newSessionFolder: '',
   } as ChatBarViewJson,
-  { shape: 'chat-bar-view-10' },
+  { shape: 'chat-bar-view-11' },
 )
 
 // A press turns choice on or off; the chosen stay in the order the Ticket offers them, so a choice sent reads the same
@@ -71,10 +73,29 @@ export async function toggleCard($: EngineInterface): Promise<void> {
   await update($, chatBarView, view => ({ ...view, isCardOpen: !view.isCardOpen, isSessionListOpen: false }))
 }
 
-// The close dialog offers what ticket.close_choices answers, with those chosen at first, and the branch closing commits
-// and pushes, or none when nothing checked out is the session's.
+// The close dialog offers what ticket.close_choices answers, with those chosen at first, the branch closing commits
+// and pushes, or none when nothing checked out is the session's, and the work nobody committed that it warns of.
 export async function showClose($: EngineInterface, choices: LeaveChoicesData): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, closing: { branch: choices.branch || null }, leaveChoices: choices.choices, leaveBranch: choices.branch, leaveOwnBranch: choices.own_branch, leaving: choices.chosen }))
+  await update($, chatBarView, view => ({
+    ...view,
+    closing: { branch: choices.branch || null },
+    leaveChoices: choices.choices,
+    leaveBranch: choices.branch,
+    leaveOwnBranch: choices.own_branch,
+    leaveUnsavedWork: choices.unsaved_work,
+    leaveWarning: choices.warning,
+    leaving: choices.chosen,
+  }))
+}
+
+// The choices that take the session's worktree away, and the one that keeps what it holds by committing it first.
+const REMOVING_STEPS = ['delete_worktree', 'delete_branch']
+const KEEPING_STEP = 'commit'
+
+// Whether closing as now chosen loses work nobody committed: the worktree holds some, and the person chose to delete
+// the worktree or the branch without choosing to commit first.
+export function losesWork(view: ChatBarViewJson): boolean {
+  return view.leaveUnsavedWork.length > 0 && !view.leaving.includes(KEEPING_STEP) && REMOVING_STEPS.some(step => view.leaving.includes(step))
 }
 
 export async function cancelClose($: EngineInterface): Promise<void> {

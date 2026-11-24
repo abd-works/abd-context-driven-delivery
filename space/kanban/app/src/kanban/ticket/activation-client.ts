@@ -6,15 +6,26 @@ const LEFT_STEPS: Record<string, string> = { handoff: 'handoff written', commit:
 
 const toggled = (chosen: string[], option: string): string[] => (chosen.includes(option) ? chosen.filter(entry => entry !== option) : [...chosen, option])
 
-// What closing did with the work, in the canvas's words, ahead of the session closed.
-function closedReport(closing: Closing): string {
+// The choices that take the ticket's worktree away, and the one that keeps what it holds by committing it first.
+const REMOVING_STEPS = ['delete_worktree', 'delete_branch']
+const KEEPING_STEP = 'commit'
+
+// What closing did with the work, in the canvas's words, ahead of the session closed, and the files whose uncommitted
+// work went with the worktree, as the closed ticket names them.
+function closedReport(closing: Closing, droppedWork: string[]): string {
   const left = Object.keys(LEFT_STEPS)
     .filter(step => closing.leaving.includes(step))
     .map(step => LEFT_STEPS[step] ?? step)
-  return [left.length ? `${closing.ticket.title}: ${left.join(', ')}` : '', `Session ${closing.ticket.title} closed`].filter(Boolean).join(' · ')
+  const dropped = droppedWork.length ? `uncommitted work lost in ${droppedWork.join(', ')}` : ''
+  return [left.length ? `${closing.ticket.title}: ${left.join(', ')}` : '', dropped, `Session ${closing.ticket.title} closed`].filter(Boolean).join(' · ')
 }
 
 export const closingHeading = (closing: Closing): string => `Close session ${closing.ticket.title}`
+
+// Whether closing as now chosen loses work nobody committed: the worktree holds some, Python warned of it, and the
+// person chose to delete the worktree or the branch without choosing to commit first.
+export const losesWork = (closing: Closing): boolean =>
+  closing.unsavedWork.length > 0 && !closing.leaving.includes(KEEPING_STEP) && REMOVING_STEPS.some(step => closing.leaving.includes(step))
 
 // Activating a ticket opens it in its own worktree in one press, since it changes nothing the chats have open. Closing
 // asks first, in a dialog, because it can commit, push, and merge the ticket's work.
@@ -47,7 +58,14 @@ export class ActivationClient {
   async startClosing(ticket: TicketClient): Promise<void> {
     ticket.selection.select()
     const choices = await ticket.closeChoices()
-    this.show({ ticket, leaving: choices?.chosen ?? [], offeredLeaving: choices?.choices ?? [], leavingBranch: choices?.branch ?? '' })
+    this.show({
+      ticket,
+      leaving: choices?.chosen ?? [],
+      offeredLeaving: choices?.choices ?? [],
+      leavingBranch: choices?.branch ?? '',
+      unsavedWork: choices?.unsaved_work ?? [],
+      warning: choices?.warning ?? '',
+    })
   }
 
   cancel(): void {
@@ -66,6 +84,6 @@ export class ActivationClient {
     await this.page.reader.refresh()
     if (!closed) return
     this.page.ticket(closed.toJSON()).selection.select()
-    this.page.store.toast(closedReport(closing))
+    this.page.store.toast(closedReport(closing, closed.toJSON().dropped_work))
   }
 }

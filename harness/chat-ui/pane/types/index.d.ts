@@ -63,6 +63,10 @@ export type ChatBarViewJson = {
   leaveBranch: string
   // The session's own branch, which merge and delete branch act on, checked out or not; empty while git has none.
   leaveOwnBranch: string
+  // The files in the session's worktree that nobody committed, and the Ticket's warning that deleting the worktree or the
+  // branch without a commit loses them; none and empty when nothing would be lost.
+  leaveUnsavedWork: string[]
+  leaveWarning: string
   leaving: string[]
   // Whether the repo list, opened from its own button beside the session list's +, is open.
   isRepoListOpen: boolean

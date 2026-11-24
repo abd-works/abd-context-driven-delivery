@@ -21,12 +21,15 @@ export type Tile = { ticket: TicketClient; place: string; stage: ColumnClient; f
 
 // A dialog or panel holds the ticket it is about, so its actions reach that ticket's tools without looking it up again.
 // The Close dialog holds what a person has ticked, starting from what Python chooses at first; what closing offers, as
-// Python answers it; and the branch the ticket's work is on, empty while nothing checked out is its own.
+// Python answers it; the branch the ticket's work is on, empty while nothing checked out is its own; and the files in its
+// worktree that nobody committed, with Python's warning that deleting the worktree or branch without a commit loses them.
 export type Closing = {
   ticket: TicketClient
   leaving: string[]
   offeredLeaving: string[]
   leavingBranch: string
+  unsavedWork: string[]
+  warning: string
 }
 
 // The roots dialog: the ticket's workpath on top and each practice's practice root under it. Starting a backlog item asks for its workpath
