@@ -26,7 +26,7 @@
 // FILE 1: story_tests/{epic}/{sub-epic}/{story}/{story_snake}_story.test.ts
 import { expect } from "vitest";
 import { scenario, story } from "../../../story-test";
-import { {EXAMPLE}, seed{Example} } from "../../examples/{concept}.examples";
+import { STORED_{EXAMPLE}, seed{Example} } from "../../examples/{concept}.examples";
 import { {ClassName}Repository, {DomainRefusal} } from "../../../../src/{module}/{family-slug}";
 
 story("{Story Verb–Noun}", () => {
@@ -37,10 +37,10 @@ story("{Story Verb–Noun}", () => {
       repository = seed{Example}(new {ClassName}Repository());
     });
     when("{actor} {does the action}", () => {
-      answer = repository.load({EXAMPLE}.identity).{operation}({EXAMPLE}.value);
+      answer = repository.load(STORED_{EXAMPLE}.identity).{operation}(STORED_{EXAMPLE}.value);
     });
     then("{the outcome a person can check}", () => {
-      expect(answer.{property}).toEqual({EXAMPLE}.expected);
+      expect(answer.{property}).toEqual(STORED_{EXAMPLE}.expected);
     });
   });
 
@@ -51,7 +51,7 @@ story("{Story Verb–Noun}", () => {
     });
     when("{actor} {does the action}", () => {});
     then("{the refusal names what was refused}", () => {
-      expect(() => repository.load({EXAMPLE}.identity).{operation}(undefined)).toThrow({DomainRefusal});
+      expect(() => repository.load(STORED_{EXAMPLE}.identity).{operation}(undefined)).toThrow({DomainRefusal});
     });
   });
 });
@@ -61,12 +61,12 @@ story("{Story Verb–Noun}", () => {
 export function {storyCamel}(world: {Sub-epic}World): void {
   story("{Story Verb–Noun}", () => {
     scenario("{actor} {does the main flow}", ({ given, when, then }) => {
-      given("{the state the scenario starts from}", () => world.seed({EXAMPLE}));
+      given("{the state the scenario starts from}", () => world.seed(STORED_{EXAMPLE}));
       when("{actor} {does the action}", async () => {
-        world.answer = await world.{className}.load({EXAMPLE}.identity).{operation}({EXAMPLE}.value);
+        world.answer = await world.{className}.load(STORED_{EXAMPLE}.identity).{operation}(STORED_{EXAMPLE}.value);
       });
       then("{the outcome a person can check}", () => {
-        expect(world.answer.{property}).toEqual({EXAMPLE}.expected);
+        expect(world.answer.{property}).toEqual(STORED_{EXAMPLE}.expected);
       });
     });
   });
@@ -80,11 +80,11 @@ import { {Tier}World } from "../../test-utils/{tier}-world";
 {storyCamel}(new {Tier}World());
 
 // FILE 4: story_tests/{epic}/examples/{concept}.examples.ts — one named example for each example the scenarios name.
-export const {EXAMPLE} = { identity: "{id}", value: "{value}", expected: "{expected}" } as const;
+export const STORED_{EXAMPLE} = { identity: "{id}", value: "{value}", expected: "{expected}" } as const;
 
 /** Seed state at its real owner: the repository, or the external system's test adapter beneath it. */
 export function seed{Example}(repository: {ClassName}Repository): {ClassName}Repository {
-  repository.create({EXAMPLE}.identity, {EXAMPLE}.value);
+  repository.create(STORED_{EXAMPLE}.identity, STORED_{EXAMPLE}.value);
   return repository;
 }
 

@@ -30,7 +30,7 @@
 from expects import equal, expect
 
 from story_test import given, scenario, story, then, when
-from {module}.{concept}_examples import {EXAMPLE}, seed_{example}
+from {module}.{concept}_examples import STORED_{EXAMPLE}, seed_{example}
 from {module}.{family_slug} import {ClassName}Repository, {DomainRefusal}
 
 with story("{Story Verb–Noun}"):
@@ -38,15 +38,15 @@ with story("{Story Verb–Noun}"):
         with given("{the state the scenario starts from}"):
             self.repository = seed_{example}({ClassName}Repository())
         with when("{actor} {does the action}"):
-            self.answer = self.repository.load({EXAMPLE}.identity).{operation}({EXAMPLE}.value)
+            self.answer = self.repository.load(STORED_{EXAMPLE}.identity).{operation}(STORED_{EXAMPLE}.value)
         with then("{the outcome a person can check}"):
-            expect(self.answer.{property}).to(equal({EXAMPLE}.expected))
+            expect(self.answer.{property}).to(equal(STORED_{EXAMPLE}.expected))
 
     with scenario("{actor} {does the action} {in the edge or error case}"):
         with given("{the state of that case}"):
             self.repository = seed_{example}({ClassName}Repository())
         with when("{actor} {does the action}"):
-            self.refusal = {DomainRefusal}.raised_by(lambda: self.repository.load({EXAMPLE}.identity).{operation}(None))
+            self.refusal = {DomainRefusal}.raised_by(lambda: self.repository.load(STORED_{EXAMPLE}.identity).{operation}(None))
         with then("{the refusal names what was refused}"):
             expect(self.refusal.value).to(equal(None))
 
@@ -57,11 +57,11 @@ def {story_snake}(world) -> None:
     with story("{Story Verb–Noun}"):
         with scenario("{actor} {does the main flow}"):
             with given("{the state the scenario starts from}"):
-                world.seed({EXAMPLE})
+                world.seed(STORED_{EXAMPLE})
             with when("{actor} {does the action}"):
-                world.answer = world.{ClassName}.load({EXAMPLE}.identity).{operation}({EXAMPLE}.value)
+                world.answer = world.{ClassName}.load(STORED_{EXAMPLE}.identity).{operation}(STORED_{EXAMPLE}.value)
             with then("{the outcome a person can check}"):
-                expect(world.answer.{property}).to(equal({EXAMPLE}.expected))
+                expect(world.answer.{property}).to(equal(STORED_{EXAMPLE}.expected))
 
 
 # FILE 3: story_tests/{epic}/{sub-epic}/{sub_epic_slug}.story.domain.spec.py (server: .story.server.spec.py)
@@ -73,10 +73,10 @@ from {module}.{tier}_world import {Tier}World
 
 
 # FILE 4: {module}/{concept}_examples.py — one named example for each example the scenarios name.
-{EXAMPLE} = {ClassName}Example(identity="{id}", value="{value}", expected="{expected}")
+STORED_{EXAMPLE} = {ClassName}Example(identity="{id}", value="{value}", expected="{expected}")
 
 
 def seed_{example}(repository: {ClassName}Repository) -> {ClassName}Repository:
     """Seed state at its real owner: the repository, or the external system's test adapter beneath it."""
-    repository.create({EXAMPLE}.identity, {EXAMPLE}.value)
+    repository.create(STORED_{EXAMPLE}.identity, STORED_{EXAMPLE}.value)
     return repository
