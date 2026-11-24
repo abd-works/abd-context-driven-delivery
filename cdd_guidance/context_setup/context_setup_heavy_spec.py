@@ -85,7 +85,7 @@ class _AppHandler(BaseHTTPRequestHandler):
 
 class SpecFixture:
     """Opens the folders, servers, and projects an example works with, and closes every one of them in ``release``. An
-    ``after.each`` that closed the attributes its ``before.each`` set would raise AttributeError whenever that setup
+    ``after.all`` that closed the attributes its ``before.all`` set would raise AttributeError whenever that setup
     failed part way, and mamba would report that error in place of the one that broke the setup."""
 
     def __init__(self) -> None:
@@ -149,7 +149,7 @@ with description("a ContextSetup"):
     # ── Tool: Convert To Markdown ─────────────────────────────────────────────
 
     with context("whose convert tool is given a folder with a plain markdown file"):
-        with before.each:
+        with before.all:
             self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "notes.md"
@@ -157,7 +157,7 @@ with description("a ContextSetup"):
             fixture.write()
             self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should return a ConversionResult"):
@@ -190,7 +190,7 @@ with description("a ContextSetup"):
             expect(note.word_count > 0).to(be_true)
 
     with context("whose convert tool is given a folder with multiple heading levels"):
-        with before.each:
+        with before.all:
             self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "deep.md"
@@ -198,7 +198,7 @@ with description("a ContextSetup"):
             fixture.write()
             self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should report heading_depth as 3"):
@@ -210,7 +210,7 @@ with description("a ContextSetup"):
             expect(note.heading_count).to(equal(3))
 
     with context("whose convert tool is given a folder with no headings"):
-        with before.each:
+        with before.all:
             self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "flat.md"
@@ -218,7 +218,7 @@ with description("a ContextSetup"):
             fixture.write()
             self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should report heading_depth as 0 (flat document)"):
@@ -230,7 +230,7 @@ with description("a ContextSetup"):
             expect(note.heading_count).to(equal(0))
 
     with context("whose convert tool is given a folder containing an unsupported file type"):
-        with before.each:
+        with before.all:
             self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "ignored.csv"
@@ -241,7 +241,7 @@ with description("a ContextSetup"):
             fixture.write()
             self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should skip the unsupported file"):
@@ -251,10 +251,10 @@ with description("a ContextSetup"):
             expect(Path(self._result.markdown_files[0]).stem).to(equal("kept"))
 
     with context("whose convert tool is given an empty folder"):
-        with before.each:
+        with before.all:
             self._result = fixture.context_setup_for_a_call().convert(str(fixture.temporary_folder()))
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should return no markdown files"):
@@ -264,7 +264,7 @@ with description("a ContextSetup"):
             expect(self._result.structure_notes).to(be_empty)
 
     with context("whose convert tool is given multiple supported files"):
-        with before.each:
+        with before.all:
             self._root = fixture.temporary_folder()
             fixture._root = self._root
             fixture._name = "alpha.md"
@@ -275,7 +275,7 @@ with description("a ContextSetup"):
             fixture.write()
             self._result = fixture.context_setup_for_a_call().convert(str(self._root))
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should produce one entry per file"):
@@ -377,7 +377,7 @@ with description("a ContextSetup"):
     # ── Tool: smoke_test ─────────────────────────────────────────────────────
 
     with context("whose smoke_test tool is given a running web server"):
-        with before.each:
+        with before.all:
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
@@ -388,7 +388,7 @@ with description("a ContextSetup"):
                 entry_paths=["/"],
             )
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should return a SmokeTestResult"):
@@ -412,7 +412,7 @@ with description("a ContextSetup"):
             )
 
     with context("whose smoke_test tool is probing a non-existent server"):
-        with before.each:
+        with before.all:
             self._folder = str(fixture.temporary_folder())
             self._result = fixture.context_setup_for_a_call().smoke_test(
                 repo_path=self._folder,
@@ -421,7 +421,7 @@ with description("a ContextSetup"):
                 entry_paths=["/"],
             )
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should return passed=False when the server is not reachable"):
@@ -431,7 +431,7 @@ with description("a ContextSetup"):
             expect(self._result.screen_results[0].status_code).to(equal(0))
 
     with context("whose smoke_test tool probes multiple paths"):
-        with before.each:
+        with before.all:
             self._folder = str(fixture.temporary_folder())
             port = fixture.start_test_server()
             self._base_url = f"http://localhost:{port}"
@@ -442,7 +442,7 @@ with description("a ContextSetup"):
                 entry_paths=["/", "/login"],
             )
 
-        with after.each:
+        with after.all:
             fixture.release()
 
         with it("should produce one ScreenResult per path"):
