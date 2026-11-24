@@ -2,11 +2,19 @@
 signature names and its body, in Python or a script language. The call resolver reads a function this way where no
 class model holds it, such as one declared inside a block."""
 import re
+from functools import lru_cache
 
 _PYTHON_DEF = r"(?m)^([ \t]*)(?:async[ \t]+)?def[ \t]+{name}[ \t]*\("
 _SCRIPT_FUNCTION = r"(?<![\w$.])(?:function\s*\*?\s*{name}\s*(?:<[^>()]*>)?\s*|(?:const|let|var)\s+{name}\s*=\s*(?:async\s*)?)\("
 _SIGNATURE_END = re.compile(r"[ \t]*(?:->[ \t]*([^:\n]+?))?[ \t]*:")
 _QUOTES = frozenset("'\"`")
+
+
+@lru_cache(maxsize=None)
+def named_pattern(template: str, name: str) -> re.Pattern:
+    """The pattern template writes for name, its ``{name}`` the name escaped, compiled once: a read of the whole working
+    copy searches for thousands of names, more than the regular expression module keeps compiled."""
+    return re.compile(template.format(name=re.escape(name)))
 
 
 def closing_bracket(code: str, opening: int) -> "int | None":
@@ -35,7 +43,7 @@ def closing_bracket(code: str, opening: int) -> "int | None":
 
 def python_function(text: str, name: str) -> "tuple[str, str] | None":
     """The return type a Python function's signature writes, and its body's lines."""
-    declared = re.search(_PYTHON_DEF.format(name=re.escape(name)), text)
+    declared = named_pattern(_PYTHON_DEF, name).search(text)
     closing = closing_bracket(text, declared.end() - 1) if declared else None
     signature = _SIGNATURE_END.match(text, closing + 1) if closing is not None else None
     if signature is None:
@@ -52,7 +60,7 @@ def python_function(text: str, name: str) -> "tuple[str, str] | None":
 def script_function(text: str, name: str) -> "tuple[str, str] | None":
     """The return type a script function's signature writes, `function opened(): Promise<{ page: FilesPage }> {` or
     `const opened = async (): Promise<Page> => {`, and its body's block."""
-    declared = re.search(_SCRIPT_FUNCTION.format(name=re.escape(name)), text)
+    declared = named_pattern(_SCRIPT_FUNCTION, name).search(text)
     closing = closing_bracket(text, declared.end() - 1) if declared else None
     if closing is None:
         return None

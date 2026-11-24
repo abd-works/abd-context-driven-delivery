@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, NamedTuple
 
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES, MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.clean_engineering.reading.function_text import closing_bracket, python_function, script_function
+from cdd_guidance.practices.clean_engineering.reading.function_text import closing_bracket, named_pattern, python_function, script_function
 from cdd_guidance.practices.clean_engineering.reading.receiver_causes import (
     ON_OUTSIDE_OBJECTS,
     ON_UNTYPED_VALUES,
@@ -669,7 +669,7 @@ class MemberAnswers:
             if declared.type != "Property" or declared.get_fact("is_property") or declared.get_fact("owner") != holder.name or declared.source.file != holder.source.file:
                 continue
             code = CodeSpan.code_of(declared.source.text)
-            initialized = re.search(_INITIALIZED.format(name=re.escape(name)), code)
+            initialized = named_pattern(_INITIALIZED, name).search(code)
             if initialized is not None:
                 read = _SpanCalls(file, self._index, CodeSpan(code, holder)).expressions.typed_at(initialized.end())
                 self._field_causes.setdefault((holder.node_id, name), read.cause)
@@ -701,10 +701,10 @@ class MemberAnswers:
 
     def _module_value(self, relative: str, name: str) -> "Typed | None":
         text = CodeSpan.code_of(self.text_of(relative))
-        match = re.search(_MODULE_ASSIGNMENT.format(name=re.escape(name)), text)
+        match = named_pattern(_MODULE_ASSIGNMENT, name).search(text)
         file = self._index.file(relative)
         if match is None:
-            declared = re.search(_MODULE_DECLARATION.format(name=re.escape(name)), text) if file.is_script else None
+            declared = named_pattern(_MODULE_DECLARATION, name).search(text) if file.is_script else None
             return file.hints.typed(declared.group(1)) if declared is not None else None
         if match.group(1):
             self._module_causes[(relative, name)] = file.receiver_causes.of_hint(match.group(1))
@@ -777,7 +777,7 @@ class _TypeArguments:
         bound = self._bound(value) if written else {}
         used = [parameter for parameter in bound if _names_word(written, parameter)]
         for parameter in used:
-            written = re.sub(_WORD_OF.format(name=re.escape(parameter)), bound[parameter][0], written)
+            written = named_pattern(_WORD_OF, parameter).sub(bound[parameter][0], written)
         return self._index.file(bound[used[0]][1]).hints.typed(written, value.of) if used else None
 
     def _bound(self, value: Typed) -> "dict[str, tuple[str, str]]":
@@ -1757,7 +1757,7 @@ def _specialised_bases(declared: "Node") -> "list[tuple[str, list[str]]]":
 
 def _names_word(written: str, name: str) -> bool:
     """Whether a hint names name as a whole word."""
-    return re.search(_WORD_OF.format(name=re.escape(name)), written) is not None
+    return named_pattern(_WORD_OF, name).search(written) is not None
 
 
 def _one_of_many(held: Typed) -> Typed:
