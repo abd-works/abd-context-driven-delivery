@@ -112,6 +112,23 @@ export class BoardOnProject {
             equal([("page", "Promise<{ page: BoardPage; asked: Asked[] }>", ["pageOf"]), ("plain", "{ a: number }", ["makeA"]), ("reset", "void", ["wipe"])])
         )
 
+    with it("should read a method whose parameter has a function type, with that parameter and its own body"):
+        source = """
+export class RunningBoard {
+  unreadPage(timed: (send: Send) => Send = send => send): { page: BoardPage } {
+    return { page: new BoardPage(timed(sendOf(this))) }
+  }
+
+  close(): void {
+    stop(this)
+  }
+}
+"""
+        board = _class(TypeScriptCleanEngineeringModel().parse(source), "RunningBoard")
+        expect([(op.name, [parameter.name for parameter in op.parameters], op.return_type) for op in board.operations]).to(
+            equal([("unreadPage", ["timed"], "{ page: BoardPage }"), ("close", [], "void")])
+        )
+
 with description("CFamilyParse fields"):
     with it("should hold a constructor parameter declared with an access modifier as a field, with its type"):
         source = """

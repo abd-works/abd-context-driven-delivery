@@ -19,6 +19,7 @@ for what it does instead, so the rules judge it.
 
 from __future__ import annotations
 
+import ast
 import re
 from fnmatch import fnmatch
 from pathlib import Path
@@ -153,11 +154,29 @@ class ProjectTestCode:
         if path not in self._declares_tests:
             source = self._root / path
             text = source.read_text(encoding="utf-8", errors="replace") if source.is_file() else ""
-            self._declares_tests[path] = bool(_TEST_FUNCTION.search(text))
+            self._declares_tests[path] = _declares_tests(text)
         return self._declares_tests[path]
 
     def _names(self, path: str) -> bool:
         return any(fnmatch(path, pattern) for pattern in self._patterns)
+
+
+def _declares_tests(text: str) -> bool:
+    """Whether Python text declares a test function as pytest collects one: a `test_` function at the top of the file,
+    or a `test_` method of a class whose name starts with Test. A `test_` method of any other class, such as a
+    property `test_code`, is no test. Text that does not parse is read line by line for a `test_` function."""
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return bool(_TEST_FUNCTION.search(text))
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
+            return True
+        if isinstance(node, ast.ClassDef) and node.name.startswith("Test") and any(
+            isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)) and member.name.startswith("test") for member in node.body
+        ):
+            return True
+    return False
 
 
 class HoldsProjectTestCode:

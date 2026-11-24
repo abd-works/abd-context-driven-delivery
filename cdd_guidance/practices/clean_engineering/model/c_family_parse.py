@@ -31,13 +31,16 @@ _BODILESS_RE = re.compile(
 _NOT_MEMBERS = frozenset({"if", "for", "while", "switch", "catch", "return", "super", "this"})
 # A class's heritage clause: `extends Basket implements Auditable, ICart`.
 _HERITAGE_RE = re.compile(r"\b(?:extends|implements)\s+(.+?)(?=\s+implements\b|$)", re.S)
+# A parameter list, whose parameters may hold brackets of their own one deep, as a function type does:
+# `(timed: (send: Send) => Send = send => send)`.
+_PARAMETERS = r"\(((?:[^()]|\([^()]*\))*)\)"
 _METHOD_RE = re.compile(
     r"(?:public|private|protected|static|async|override)?\s*"
     r"(?:public|private|protected|static|async|override)?\s*"
     r"(?:[\w<>\[\],\s?]+\s+)?"
-    r"(\w+)\s*\(([^)]*)\)\s*(?::\s*([^{;]+))?\s*\{",
+    r"(\w+)\s*" + _PARAMETERS + r"\s*(?::\s*([^{;]+))?\s*\{",
 )
-_CTOR_RE = re.compile(r"constructor\s*\(([^)]*)\)\s*\{")
+_CTOR_RE = re.compile(r"constructor\s*" + _PARAMETERS + r"\s*\{")
 # A TypeScript constructor parameter declared with an access modifier, `private readonly page: BoardPage`, declares a
 # field the class holds as well as a parameter.
 _PARAMETER_PROPERTY_RE = re.compile(

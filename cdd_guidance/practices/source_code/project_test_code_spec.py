@@ -48,6 +48,7 @@ with description("the test code of a project") as self:
             (root / "shop").mkdir()
             (root / "shop" / "test_cart.py").write_text("class TestCart:\n    def test_total(self):\n        assert 1 == 1\n", encoding="utf-8")
             (root / "shop" / "test_runs.py").write_text("class TestRunRecord:\n    def kept(self):\n        return []\n", encoding="utf-8")
+            (root / "shop" / "test_files.py").write_text("class HoldsTestCode:\n    def test_code(self):\n        return None\n", encoding="utf-8")
             self.test_code = ProjectTestCode.from_project(root)
 
         with it("should read one whose test class declares a test function as a test"):
@@ -55,6 +56,9 @@ with description("the test code of a project") as self:
 
         with it("should read one that declares no test function as production code, though a class of it starts with Test"):
             expect(self.test_code.is_test_code("shop/test_runs.py")).to(be_false)
+
+        with it("should read one whose method named test_ sits in a class pytest does not collect as production code"):
+            expect(self.test_code.is_test_code("shop/test_files.py")).to(be_false)
 
     with context("whose config names no test code"):
         with it("should read the spec support as production code, as its name says"):
