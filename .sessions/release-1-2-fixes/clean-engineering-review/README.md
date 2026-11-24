@@ -72,7 +72,7 @@ The durable model of the code stays in `.context/model/`: `repo-model.md`, `repo
 
 ### Release 1.2, second whole-code validate (2026-11-23, `04300fa`)
 
-- **Found:** 2,733 violations and 2,972 candidates ([clean-engineering-code-20261123T205308.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261123T205308.md)). 1,831 of the violations only say lizard is not installed; 529 come from rules that did not report at the first run. Why the number jumped is in section 6 of the release report.
+- **Found:** 2,733 violations and 2,972 candidates ([clean-engineering-code-20261123T205308.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261123T205308.md)). 1,831 of the violations only say lizard is not installed; 529 come from rules that did not report at the first run. What was found, what was fixed, why the number jumped and what is open are in wave 6 of section 2 of [release-1-2-fixes-report.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\release-1-2-fixes-report.md), the measures in its section 6.
 - **Fixed:** 164 of the first run's 388; the import loop between the measures and the reading (`c7e865340`).
 
 ### Release 1.2, latest whole-code validate (2026-11-24 01:08 UTC, `94b59f9`) — the current state

@@ -242,17 +242,62 @@ The unit tier, run after each fix wave, and the person's use of the board found 
 | The graph view's browser story test failed in three e2e tier runs and passed alone each time | `story_tests` | concurrency | none named; the e2e tier passed 12 of 12 files at acd46a9e5 | E2E tier |
 | The desktop walk asked computer control for the Claude app's own window, which is always refused | `cdd_guidance/desktop_walk` | failure-misreported | b2a3537a3 (the walk was removed) | The first real run of the walk |
 
-### Wave 6 — 2026-11-21 to 2026-11-23: the Clean Engineering review, the refactor, and the checks built from it
+### Wave 6 — 2026-11-21 to 2026-11-23: the Clean Engineering review — what was found, what was fixed, what is open
 
-1. **Validate and judges (2026-11-21, `33b3839e3`).** Validate at the Clean Engineering code fidelity over the whole codebase found 388 graph findings in 24 rules ([clean-engineering-code-20261121T212842.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261121T212842.md)). Seven judges then read every production file against the Clean Engineering rules and the refactor guardrails, area by area, and wrote 1,106 findings (counted by their bullets; [defect-causes.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\exploratory-testing\defect-causes.md) counts 1,092), fixes that change no design, 86 proposals, and a section of graph findings they judged noise (the seven `judgment-*.md` files in [judge-round](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\judge-round)). The judges also found two defects: `WhiteboardStoryModel` had no `from_workspace`, and `MernDomainDriven` would fail once it had a practices folder.
-2. **Local fixes (`631e9b19d` to `21158c99b`).** Each area's fixes that change no design.
-3. **Design proposals (`9b9443b17`).** The 86 proposals merged into 25, plus 13 smaller changes, each with its class model as a diff, cost, risk and a decision line, in five waves ([design-proposals.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\judge-round\design-proposals.md)). The person approved them.
-4. **Four rounds of refactoring (2026-11-21 17:32 to 2026-11-22 00:31, ending at `3c77725bc`).** Robots worked in lanes (framework, session and board, practices, render and formats, graph, pages) merged in turn: one graph reading per practice in `reading/` packages, one typed session record, git facts with one reader, one daemon model and one lock file, install channels as objects, practice knowledge out of the framework, one format contract, one validation report object, the pages asking Python for their rules, `space/session` split into modules with one-way imports, `StoryModel` renamed `StoryMap`, one call resolver for Clean Engineering and BDD. The two removals that followed (the chat bar's browser test page and the desktop walk, `eb087631f`, `b2a3537a3`) were the person's order, not part of the refactor.
-5. **Guidance changes from the defect analysis, and code measures (2026-11-22, `73245e7a8`).** The defect causes ([defect-causes.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\exploratory-testing\defect-causes.md)) became guidance: Stories scenarios walk edge and error conditions for every story (`edge-and-error-cases-have-scenarios`); each practice owns its formats, each with an adapter and a there-and-back test of the fidelity's example; one spec runs each template through its own fidelity's rules; the test tiers each module uses are recorded in `session.json`; Clean Engineering's size and complexity limits are graph rules.
-6. **Cross-file Clean Engineering checks (2026-11-22, `140ccd92f`, `c5c088785`, `87a3b8c75`).** The graph records every class-to-class edge from code, and rules of scope "all" read the whole repository: unused classes and operations, use the graph cannot see, module-only operations, disconnected classes, one-class packages, owned dependencies, state passed down, and module cards against the code (`seam-names-current-code`). Plan: [check-clean-engineering-across-files.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\_backlog\check-clean-engineering-across-files.md).
-7. **2026-11-23.** Body measures only on operations read from code (`a69f03a72`), the model drawings drawn again (`a36c244f3`, `c55e43ec3`), Bolt's chain walk for BDD observation links (`10c77ff64`, work in progress, not measured), Sparky's second validate (the 2,733 report, [clean-engineering-code-20261123T205308.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261123T205308.md)) and its fixes (`b2fba7b51`, committed unreviewed when the machine was turned off; `c7e865340`).
+#### What was found
 
-The errors this wave introduced are in section 5, and its numbers in section 6. Every round of the review, this wave and the earlier refactor alike, is indexed in date order in [clean-engineering-review/README.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\README.md). Sources: [handoff-20261123T204655.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\handoff-20261123T204655.md), [handoff-20261123T2130.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\handoff-20261123T2130.md).
+Validate's graph rules found 388 findings in 24 rules on 2026-11-21 ([clean-engineering-code-20261121T212842.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261121T212842.md); 385 distinct, since three are recorded twice). Seven judges then read every production file and wrote 1,106 findings and 86 design proposals (the seven `judgment-*.md` files in [judge-round](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\judge-round)). By kind of problem, grouped by the rule each finding names (the nine kinds hold about 855 of the judges' findings and 325 of the graph's; the rest are spread over smaller rules):
+
+| Kind of problem | Judges | Graph, first run | Example |
+|---|---|---|---|
+| The same work done in two shapes | 199 | 34 | three whiteboard adapters each splitting a board element id their own way; four git readers |
+| Leaky module boundaries | 182 | 8 | `Session` had sixteen public parts `space/kanban` reached through; `space/session` was one flat folder of eight concepts |
+| Names that don't say what they mean | 112 | 49 | `root` meant four different things; `StoryModel` named a story map |
+| Helpers doing an owner's work | 107 | 21 | module functions used by one class; `Render` acting on a data-only `RenderResult` |
+| State passed as parameters | 104 | 90 | `Ticket.close` passing `leaving: list[str]` through nine methods |
+| Generic types where a domain type exists | 61 | 113 | `node_filter: dict` beside an existing `FilterRequest` |
+| Objects looked up again by name | 39 | – | a caller holding a practice passing `practice.key` back to find it |
+| Import cycles | 22 | 10 | the root module card allowed both import directions |
+| Stale module cards and old names after a refactor | 29 | – | the `space/session` card named one dependency; the code imported eleven |
+
+Of the 388 graph findings, 115 were on markdown model documents (`ooad-model.md` alone had 24) and 17 on module folders, and the judges called 85 of the graph's hits noise.
+
+#### What was fixed
+
+All 25 merged proposals and 12 of the 13 smaller changes were built ([design-proposals.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\judge-round\design-proposals.md)), in four rounds ending at `3c77725bc` (2026-11-22), with the last two parts, 8 (c) and 21 (c), at `689eba692`, `57d723cbd` and `857091cb9` (2026-11-23):
+
+- **Two shapes became one:** one board element id and draw.io document (4), one class-card notation (22), one git reader and checkout (5), one format contract (11), one validation report object (13), one daemon model and lock file (16).
+- **Boundaries:** `space/session` split into modules with one-way imports (20); graph reading in `reading/` packages (1); practice knowledge out of the framework (8), down to each practice naming its own node type tables, which ended the import loop the tables closed (8 c); apps and releases out of `harness/diagnostics` (19); the `harness/installation` import cycle ended by the review pass `52d22fe88`.
+- **Owner objects instead of passed state and name strings:** a typed session record (2, 6), the asking chat passed along (15), install channels and toolset names as objects (17), a `Leaving` object for closing a ticket (X3), a rule as one object (9), a story node's rule facts held in one `NameFacts` part (21 c).
+- **Naming:** `StoryModel` renamed `StoryMap` (25).
+
+The violation history ([violation-history.jsonl](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\violation-history.jsonl)) marks 164 of the 388 first-run findings fixed at the 2026-11-23 run: 37 `limit-operation-parameters`, 30 `use-typed-signatures`, 20 `do-not-invent-parallel-object-models`, 16 `keep-classes-single-responsibility`, 13 `prefer-class-operations`, 8 `one-way-deps`, 8 `use-intention-revealing-names`, and 32 in twelve smaller rules; the 2026-11-24 01:30 scoped run marks 3 more. Counting every finding, not only the first run's, the 2026-11-24 01:08 run marks 69 fixed and the 01:30 run 9. The judges' 1,106 findings have no after count: no second judge round ran.
+
+Measured with lizard on production code ([code-measures-before-and-after-judge-fixes.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\judge-round\code-measures-before-and-after-judge-fixes.md), `33b3839e3` against `3c77725bc`), the code got slightly worse while it was reshaped, since nobody measured between rounds: functions with more than 3 parameters 72 → 95, functions with more than 10 paths through them 115 → 117, functions harder to read than the limit 9 → 14, classes whose methods share no data 201 → 211, loops of modules importing one another 2 → 4. Classes with total complexity over 100 went 18 → 17, and classes with more than 30 methods 18 → 16. From 8 (c) on, changes went through the metrics gate again: 8 (c) and 21 (c) passed it with three measures better.
+
+#### Why 388 became 2,733, and is now 2,616
+
+The 2026-11-23 run ([clean-engineering-code-20261123T205308.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261123T205308.md)) reported 2,733 violations; the latest run over the whole code, 2026-11-24 01:08 UTC at `94b59f9` ([clean-engineering-code-20261124T010849.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261124T010849.md)), reports 2,616 in 22 rules. Both leave out the 6 accepted `delete-unused-operations` findings ([violations-accepted.json](C:\dev\abd-cdd-release-1-2-fixes\.context\violations-accepted.json)). The code did not get seven times worse:
+
+| Part | 2026-11-23 | 2026-11-24 01:08 | What it is |
+|---|---|---|---|
+| A missing tool | 1,831 | 1,808 | `limit-paths-through-a-function` (676, then 666), `keep-functions-readable` (676, then 666) and `limit-class-complexity` (479, then 476) each report "lizard not installed" on every function and class. With lizard, on production code at `3c77725bc`, they find 117, 14 and 17. |
+| Rules with nothing on the first run, mostly new | 529 | 479 | `keep-class-methods-sharing-data` 210 → 208, `declared-exception-raised-by-a-test` 163 → 163, `seam-names-current-code` 121 → 76, `limit-class-methods` 16 → 16, `refuse-unreadable-input` 11 → 9, `limit-function-lines` 6 → 3, `named-seam-and-constraint` 2 → 2, and, on 2026-11-24, 2 `delete-unused-operations` past the 6 accepted. |
+| Rules checked every time (259 at the first run) | 373 | 329 | `limit-operation-parameters` 90 → 132 → 133 and `use-typed-signatures` 113 → 131 → 137: on 2026-11-23 about 79 newly long parameter lists and 48 newly untyped signatures, real regressions beside the 37 and 30 fixed. `one-way-deps` 10 → 23 → 3, `prefer-instance-operations` 5 → 30 → 13, `deep-module` 7 → 13 → 13. The rest of the rise is the wider scope: the later runs read the story tests and 28 more files. |
+
+The other 129 findings of the first run were in rules that are now judged (`use-intention-revealing-names`, `keep-classes-single-responsibility`, `prefer-class-operations`, `do-not-invent-parallel-object-models` and nine more); they now appear among the candidates for a judge, not as violations. There were 2,972 candidates on 2026-11-23 and 2,920 on 2026-11-24, mostly from the new cross-file rules: `operation-has-a-proving-test` 1,028, `put-logic-on-the-owning-resource` 700, `check-use-the-graph-cannot-see` 419, `make-module-only-operations-private` 254, `hold-state-on-the-object-not-in-parameters` 217 (2026-11-24 counts). None has been judged.
+
+#### What is still open
+
+- Proposal X5 (board cards through a registry), deferred.
+- The biggest rules at 2026-11-24 01:08: `keep-class-methods-sharing-data` 208, `declared-exception-raised-by-a-test` 163, `use-typed-signatures` 137, `limit-operation-parameters` 133, `seam-names-current-code` 76; `one-way-deps` still reports 3.
+- Install lizard into the dev lane's and the tests' Python, so the 1,808 "not installed" findings become measures; run the unit tier over the 2026-11-23 and 2026-11-24 commits, then the heavy tier; review `b2fba7b51`, committed unreviewed.
+- The 2,920 candidates need a judge pass (`judge_all`); whether to run a second judge round is the person's decision.
+- Nothing checks that a name the code calls or imports still exists; the refactor's merge errors (a renamed member still called, lost imports, a renamed TypeScript getter) slipped through for that reason (section 5).
+- Defects: r3-bolt-04 and r3-lens-09 open, 14 fixed in part; two dev server problems (a render reading a module card as Python; long calls answering "still running" every time, suspected `99260068a`, waiting on the person).
+
+Every round of the review, this wave and the earlier refactor alike, is indexed in date order in [clean-engineering-review/README.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\README.md). The errors this wave introduced are in section 5, and its measures in section 6.
+
 
 ## 3. Defects by module
 
@@ -500,7 +545,7 @@ Plainly: of the fourteen, the graph rules we have now would have caught one (the
 | Measure | Before | After | Where it comes from |
 |---|---|---|---|
 | Graph findings (violations) | 388, in 24 rules | 2,733, in 21 rules | [clean-engineering-code-20261121T212842.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261121T212842.md) (2026-11-21 21:30) and [clean-engineering-code-20261123T205308.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261123T205308.md) (2026-11-23 21:06) |
-| Findings listed in the report | 503 | 2,733 | The first report writes the sections of its first 13 rules twice, so it lists 115 findings two times: 388 distinct. |
+| Findings listed in the report | 503 | 2,733 | The first report writes the sections of its first 13 rules twice, so it lists 115 findings two times: 388 recorded, 385 distinct, since three are recorded twice. |
 | Candidates for a judge to read | none (judged rules did not exist) | 2,972 | The 2026-11-23 report |
 | Accepted violations left out | none | 6 | [.context/violations-accepted.json](C:\dev\abd-cdd-release-1-2-fixes\.context\violations-accepted.json) |
 | Of the 388, fixed by 2026-11-23 | — | 164 | [violation-history.jsonl](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\violation-history.jsonl), events "fixed" of the 2026-11-23 run |
