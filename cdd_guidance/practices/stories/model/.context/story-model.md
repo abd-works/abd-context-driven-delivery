@@ -19,7 +19,7 @@ These dependencies are owned by the modules named; this model only uses them. Ea
 
 ## StoryNode : ModelNode
 
-Every epic, increment, story, background, scenario, step, and example. It carries the facts story-map graph rules read.
+Every epic, increment, story, background, scenario, step, and example. It holds the facts story-map graph rules read as a part of it (*NameFacts*), which the graph saves as the node's own.
 
 + StoryNode(name: str, sequential_order: int, graph: Graph | None = None)
 ------
@@ -31,11 +31,13 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 	// how this node was written in code: a sub-epic file, a story, a background, or a scenario. None outside code
 + setup: CodeBody
 	// the code inside a story or scenario that is not a background, scenario, or step
-+ opening_token, opening_class, child_count, child_label, child_band, near_duplicate, generic_handler, shared_verb, artifact_name, camel_case_path
++ name_facts: NameFacts
 	// the facts graph rules read; load_map_facts fills them
 ----
 + load_map_facts(): None
-	// child_band is "error" unless the count is 0 or 4 to 9
+	// each kind of node sizes its children and judges its name: an epic against the band of its layer, a story by its scenarios, a scenario by its steps
++ fact_parts(): tuple[NameFacts]
+	// the parts whose facts save with the graph as this node's
 + take_code_from(source: StoryNode): None
 	// keeps written and setup when the node is copied into another format or cloned
 + copy_of(source: StoryNode): StoryNode
@@ -44,6 +46,28 @@ Every epic, increment, story, background, scenario, step, and example. It carrie
 	// a copy of this node as its own class, each of its parts a clone keeping its own class, so a markdown story under a plain epic stays a markdown story
 - _copy_fields(original: StoryNode, copy_part: CopyPart): None
 	// the one list of a node's fields that copy_of and clone share; copy_part makes each part
+
+## NameFacts
+
+What a story node's name, file and children say about it, as the story map's rules read them. Its node holds it and the graph saves its facts as the node's own.
+
++ NameFacts(node: StoryNode)
+------
++ opening_token, opening_class: str
+	// the first word of the name and its class: a verb, a generic verb, an actor noun, a gerund, a nominalisation, a single word, unlisted
++ artifact_name: str
++ camel_case_path: bool
++ child_count: int
++ child_label, child_target, child_band: str
+	// child_band is "error" when the count is past the band of the node's layer; a node of no layer holds no band
++ generic_handler, near_duplicate: bool
++ shared_verb: str
++ opens_with_generic_handler: bool
+----
++ load(children: int, band: ChildBand | None = None, label: str = "children"): None
+	// reads the name and file, counts the children against band, and starts what the node judges empty
++ judge(generic_handler: bool = False, near_duplicate: bool = False, shared_verb: str = ""): None
+	// keeps what the node judges from its name and its place in the map
 
 ## StoryMap : StoryNode
 

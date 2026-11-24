@@ -963,14 +963,14 @@ with description("Story name opening") as self:
     with it("should not call an opening word a noun just because the verb list lacks it"):
         story = Story("Carry Plan From Marketing Link", 1)
         story.load_map_facts()
-        expect(story.opening_class).to(equal("unlisted"))
+        expect(story.name_facts.opening_class).to(equal("unlisted"))
 
     with it("should still name the openings that are not verbs"):
         kinds = {}
         for name in ("Handle Request", "Customer Login", "Selecting Plan", "Selection Of Plan", "Submit Order"):
             story = Story(name, 1)
             story.load_map_facts()
-            kinds[name] = story.opening_class
+            kinds[name] = story.name_facts.opening_class
         expect(kinds).to(equal({
             "Handle Request": "generic-verb",
             "Customer Login": "actor-noun",

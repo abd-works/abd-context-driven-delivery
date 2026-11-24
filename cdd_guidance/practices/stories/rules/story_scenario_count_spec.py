@@ -76,7 +76,7 @@ with description("story scenario count"):
             story.scenarios = [Scenario("Enter validation code", 1), Scenario("Resend validation code", 2)]
             story.load_map_facts()
             expect(story.scenario_count).to(equal(2))
-            expect(story.child_band).to(equal(""))
+            expect(story.name_facts.child_band).to(equal(""))
 
     with context("schema"):
         with it("should size story scenarios with the at-most-seven rule"):

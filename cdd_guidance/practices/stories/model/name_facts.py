@@ -1,6 +1,6 @@
-"""What a story node's name and file say about it, as the story map's rules read them: whether the name opens with a
-verb, a generic handler, an actor, a gerund or a nominalisation, and whether its file
-is named in camel case."""
+"""What a story node's name, file and children say about it, as the story map's rules read them: whether the name opens
+with a verb, a generic handler, an actor, a gerund or a nominalisation, whether its file is named in camel case, and
+whether its children fit the band of its layer (*NameFacts*)."""
 
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from harness.graph.graph import Source
+
+    from cdd_guidance.practices.stories.model.story_map import ChildBand, StoryNode
 
 _GENERIC_VERBS = frozenset({"handle", "process", "manage", "perform", "do", "execute", "run"})
 _ACTOR_NOUNS = frozenset({
@@ -70,13 +72,13 @@ def _class_of(token: str) -> str:
     return next((label for label, holds in _OPENINGS if holds(token)), "unlisted")
 
 
-def names_generic_handler(name: str) -> bool:
+def _names_generic_handler(name: str) -> bool:
     """A generic verb such as Handle or Process followed by its object: the name hides what happens."""
     words = (name or "").split()
     return len(words) > 1 and words[0].lower() in _GENERIC_VERBS and words[1][:1].isalpha()
 
 
-def file_name_facts(source: Optional["Source"]) -> tuple[str, bool]:
+def _file_name_facts(source: Optional["Source"]) -> tuple[str, bool]:
     """The name of the file source names, and whether it is named in camel case."""
     relative = str(getattr(source, "file", "") or "") if source is not None else ""
     name = relative.replace("\\", "/").rsplit("/", 1)[-1]
@@ -88,3 +90,56 @@ def _camel_case(name: str) -> bool:
         return False
     return bool(_CAMEL_FILE.search(name) or re.search(r"[A-Z]", name.split(".")[0]))
 
+
+
+class NameFacts:
+    """The facts the story map's rules read about one story node, which the node holds as a part
+    (``StoryNode.name_facts``) and the graph saves as the node's own: how its name opens (``opening_token``,
+    ``opening_class``), the file it was read from and whether that file is named in camel case (``artifact_name``,
+    ``camel_case_path``), how many children it holds against the band of its layer (``child_count``, ``child_label``,
+    ``child_target``, ``child_band``), and three a node judges from its place in the map: whether its name hides what
+    happens behind a generic handler (``generic_handler``), repeats a later sibling's (``near_duplicate``), or opens
+    with the verb all its stories share (``shared_verb``). Each kind of node loads them when its map loads
+    (``load_map_facts``); until then they are empty."""
+
+    graph_facts = (
+        "opening_token", "opening_class", "child_count", "child_label", "child_band", "child_target", "near_duplicate",
+        "generic_handler", "shared_verb", "artifact_name", "camel_case_path",
+    )
+
+    def __init__(self, node: StoryNode) -> None:
+        self._node = node
+        self.opening_token = ""
+        self.opening_class = ""
+        self.artifact_name = ""
+        self.camel_case_path = False
+        self.child_count = 0
+        self.child_label = "children"
+        self.child_target = ""
+        self.child_band = ""
+        self.generic_handler = False
+        self.near_duplicate = False
+        self.shared_verb = ""
+
+    def load(self, children: int, band: ChildBand | None = None, label: str = "children") -> None:
+        """Read what the node's name and file say, and count its children, labelled by band when its layer has one,
+        else by label: past band's limits the count is an error; a node of no layer that is sized, such as a story,
+        holds no band and passes. What the node judges from its place in the map starts empty (``judge``)."""
+        self.opening_token, self.opening_class = opening_of(self._node.name)
+        self.artifact_name, self.camel_case_path = _file_name_facts(getattr(self._node, "source", None))
+        self.child_count = children
+        self.child_label = band.label if band is not None else label
+        self.child_target = band.written if band is not None else ""
+        self.child_band = "" if band is None or band.holds(children) else "error"
+        self.judge()
+
+    def judge(self, generic_handler: bool = False, near_duplicate: bool = False, shared_verb: str = "") -> None:
+        """Keep what the node judges from its name and its place in the map."""
+        self.generic_handler = generic_handler
+        self.near_duplicate = near_duplicate
+        self.shared_verb = shared_verb
+
+    @property
+    def opens_with_generic_handler(self) -> bool:
+        """Whether the node's name opens with a generic verb such as Handle or Process followed by its object."""
+        return _names_generic_handler(self._node.name)
