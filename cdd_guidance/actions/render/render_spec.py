@@ -20,6 +20,7 @@ from mamba import after, before, context, description, it
 from cdd_guidance.actions.render.render import Render
 from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import NothingToRender
+from cdd_guidance.actions.render.source_files import SourceFormatRefused
 from cdd_guidance.actions.render.render_order import RenderFailed
 from cdd_guidance.practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
@@ -905,6 +906,63 @@ with description("A comment a person left on a board in Claude") as self:
 
     with after.each:
         self.project.close()
+    # The dev lane's server, 2026-11-22: a render read a module card's `**Purpose:**` line as Python, because the files
+    # it read in the format the fidelity works in were named by a folder, a sketch's name, or a source the call named.
+    with context("that is a module's .context folder of markdown, with no source named, at a fidelity that works in Python"):
+        with before.each:
+            folder = self.project.root / "src" / "ordering" / ".context"
+            folder.mkdir(parents=True)
+            (folder / "ordering-model.md").write_text(_CLASS_MODEL, encoding="utf-8")
+            (folder / "module-context.md").write_text(_MODULE_CARD.format(module="ordering"), encoding="utf-8")
+            self.results = self.action.render("clean-engineering-model", format="drawio", paths=["src/ordering/.context"])
+
+        with it("should read the folder's files as the markdown their names say they are"):
+            expect(Path(self.results[0].path).read_text(encoding="utf-8")).to(contain("Cart"))
+
+    with context("that is a sketch, with no source named, at a fidelity that works in Python"):
+        with before.each:
+            (self.project.root / "design").mkdir()
+            (self.project.root / "design" / "cart-sketch.md").write_text("Cart\n  owner\n", encoding="utf-8")
+            self.results = self.action.render("clean-engineering-model", format="drawio", paths=["design/cart-sketch.md"])
+
+        with it("should read the file as the sketch its name says it is"):
+            expect(Path(self.results[0].path).read_text(encoding="utf-8")).to(contain("Cart"))
+
+    with context("that is a class model in markdown, with python named as its source"):
+        with before.each:
+            model = self.project.root / "src" / "ordering" / ".context" / "ordering-model.md"
+            model.parent.mkdir(parents=True)
+            model.write_text(_CLASS_MODEL, encoding="utf-8")
+            self.render = lambda: self.action.render("clean-engineering-model", format="drawio", paths=["src/ordering/.context/ordering-model.md"], source="python")
+
+        with it("should refuse the render, naming the file and the format its name says it is in"):
+            expect(self.render).to(raise_error(SourceFormatRefused, contain("ordering-model.md", "markdown", "python")))
+
+    with context("that is a file in a format the fidelity reads none of"):
+        with before.each:
+            (self.project.root / "design").mkdir()
+            (self.project.root / "design" / "cart.png").write_bytes(b"\x89PNG\r\n")
+            self.render = lambda: self.action.render("clean-engineering-model", format="drawio", paths=["design/cart.png"])
+
+        with it("should refuse the render, naming the file and its format"):
+            expect(self.render).to(raise_error(SourceFormatRefused, contain("cart.png", "png", "clean-engineering-model")))
+
+        with it("should save no drawing beside it"):
+            try:
+                self.render()
+            except SourceFormatRefused:
+                pass
+            expect((self.project.root / "design" / "cart.drawio").exists()).to(equal(False))
+
+    with context("that is two files in different formats, with no source named"):
+        with before.each:
+            (self.folder / "story-map.drawio").write_text("<mxfile></mxfile>", encoding="utf-8")
+            paths = [".context/story-map.md", ".context/story-map.drawio"]
+            self.render = lambda: self.action.render("stories-story-map", format="whiteboard", paths=paths)
+
+        with it("should refuse the render, naming each file's format"):
+            expect(self.render).to(raise_error(SourceFormatRefused, contain("story-map.md", "markdown", "story-map.drawio", "drawio")))
+
 
     with context("on the board the story map's whiteboard file was published to"):
         with before.each:

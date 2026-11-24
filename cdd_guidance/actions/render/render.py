@@ -6,6 +6,7 @@ from cdd_guidance.actions.render.rendered_code import RenderedCode, RenderHasNoD
 from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS, WHITEBOARD, RenderedFile
 from cdd_guidance.actions.render.render_order import WorkerRender
 from cdd_guidance.actions.render.render_result import AnsweredContent, RenderResult, SavedCode, SavedFile
+from cdd_guidance.actions.render.source_files import SAVED_GRAPH_SUFFIX, SourceFiles
 from harness.guidance_actions import GuidanceArg, GuidanceAction, WorkedGuidance
 from harness.guidance.declared_outputs import DeclaredOutputs, RenderPlacement
 from harness.guidance.guidance import FidelityGuidance
@@ -20,8 +21,6 @@ from harness.mcp.mcp_annotations import mcp
 from harness.whiteboard import Whiteboard
 
 
-# The file a saved graph is kept in, which a render reads as data.
-_SAVED_GRAPH_SUFFIX = ".json"
 # The declarations of guidance that is no fidelity: none.
 _DECLARES_NOTHING = DeclaredOutputs({})
 
@@ -78,7 +77,7 @@ class Render(GuidanceAction):
         format, such as json, which a program reads and no one saves as a file, answers its content. Only code that no
         declared path places is refused."""
         sources = self.files.paths_to_read(paths)
-        source = source or self._format_named_by(sources)
+        source = SourceFiles(sources, worked).format_read_in(source)
         written = worked.session_output.written if isinstance(worked, FidelityGuidance) else None
         saved = RenderedFile.from_sources(sources, Format(source), Format(format), self._placement_of(worked), written)
         if saved is None and (Format(format).is_code or Format(format).group in SAVED_GROUPS):
@@ -107,7 +106,7 @@ class Render(GuidanceAction):
         first = sources[0]
         if format.is_code:
             return self._saved_code(worked, format, sources, Format(source)).save(worked.render_files(format.name, paths, source))
-        if first.suffix == _SAVED_GRAPH_SUFFIX and isinstance(worked, FidelityGuidance):
+        if first.suffix == SAVED_GRAPH_SUFFIX and isinstance(worked, FidelityGuidance):
             saved = RenderedFile.from_graph(first, worked, format)
             return saved.save(worked.render_files(format.name, paths, source, saved.previous))
         own = RenderedFile(self._placement_of(worked).beside_itself(first, Format(source), format), format, Format(source))
@@ -133,16 +132,6 @@ class Render(GuidanceAction):
         """Where a render at worked is saved, as its declared paths place it; guidance that is no fidelity declares
         none, so a render of it is saved beside its source under the source's own name."""
         return worked.declared.placement if isinstance(worked, FidelityGuidance) else _DECLARES_NOTHING.placement
-
-    def _format_named_by(self, sources: list[Path]) -> str | None:
-        """The format the first source's name says it is in, for a call that names no source: a drawing, a whiteboard,
-        code, or markdown, by its extension, whatever format the fidelity it is rendered at works in. None for a
-        folder, and for a file named as a sketch, such as ``orders-sketch.md``, which the call says is one."""
-        first = sources[0] if sources else None
-        if first is None or not first.is_file() or Format("sketch").names(first):
-            return None
-        named = Format.from_extension(first.suffix)
-        return named.name if named.is_offered else None
 
     def _drawn(self, request: RenderRequest) -> Rendered:
         """What request renders to: drawn by a worker process for a call that answers a chat when it is a diagram, whose

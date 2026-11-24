@@ -24,3 +24,6 @@ The file is read as markdown: render's description says "md is markdown" and to 
 
 ## Tier that should catch it
 Unit, on `Render`'s choice of source format: no example renders a `.md` path at a fidelity whose default format is a programming language.
+
+## Status: fixed (2026-11-23)
+A single `.md` path was already read as markdown by an earlier fix. The dev lane's server still read markdown as Python when the path was a `.context` folder, a sketch named `*-sketch.md` with no source, or a `.md` file with `"source": "python"`, and read a `.png` as Python too. Render now reads every file in the format its name says it is in (`cdd_guidance/actions/render/source_files.py`, *SourceFiles*): a sketch by its name, any other file, or each text file of a folder, by its extension, never in the format the fidelity works in. Files in different formats, a file the named source is not, and a file in a format the fidelity reads none of are refused by name with *SourceFormatRefused*. Covered by `cdd_guidance/actions/render/render_spec.py`, "Render asked for a path, in a session": the class model with no source named, the module's .context folder, the sketch, python named as the source of markdown, a file in a format the fidelity reads none of, and two files in different formats.

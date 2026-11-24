@@ -8,6 +8,9 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 import logging
+import time
+from contextlib import contextmanager
+from unittest.mock import patch
 
 import anyio
 import anyio._backends._asyncio  # noqa: F401 - the backend anyio.run loads, loaded with the module rather than by the first example
@@ -15,6 +18,7 @@ from expects import be_a, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.tool_call import ToolCall, ToolRequest
+from harness.mcp import tool_calls
 from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
 
 # Short enough that a held call outlives it; long enough that a released call finishes inside it.
@@ -44,10 +48,21 @@ class FailedWork:
 
 
 async def _until_every_run_ended(calls: _ToolCalls) -> None:
-    """Wait for every run the calls started to end, so the event loop does not close on a run and stop it."""
+    """Wait for every run whose caller was told it is still running to end, so the event loop does not close on a run
+    and stop it."""
     with anyio.fail_after(LONG_SECONDS):
-        while calls._running:
+        while not all(running.has_ended for running in calls._promised.values()):
             await anyio.sleep(0.001)
+
+
+@contextmanager
+def _an_hour_later():
+    """The clock the tool calls read, an hour on: long after any run that ended has ended."""
+    with patch.object(tool_calls.time, "monotonic", lambda: _NOW + 3600):
+        yield
+
+
+_NOW = time.monotonic()
 
 
 def _call(arguments: dict | None = None) -> ToolCall:
@@ -85,6 +100,10 @@ with description("tool calls on worker threads") as self:
 
         with it("should say so as data a client reads, naming the tool"):
             expect(self.first.structured["still_running"]["tool"]).to(equal(self.first.tool))
+
+        # Claude Code shows an agent a result's structuredContent in place of its text, so the data carries the sentence.
+        with it("should tell the caller how to get the result in the data too"):
+            expect(self.first.structured["still_running"]["message"]).to(equal(self.first.message))
 
         with it("should tell the caller how to get the result"):
             expect(self.first.message).to(contain("Call validate.validate again with the same arguments"))
@@ -131,6 +150,65 @@ with description("tool calls on worker threads") as self:
                     self.work.released.set()
 
             anyio.run(call_twice_at_once)
+            expect(self.work.starts).to(equal(2))
+
+    # The dev lane's server, 2026-11-23: a render whose caller was told it was still running was asked for again ten
+    # minutes later; its outcome had been forgotten, so the render started again and its caller heard "still running"
+    # once more, on every ask, and never its result or its failure.
+    with context("with a call that outlived its time limit, asked for again long after it ended"):
+        with before.each:
+            async def outlive_then_collect_late():
+                self.first = await self.calls.run(_call(), SHORT_SECONDS, None)
+                self.work.released.set()
+                await anyio.to_thread.run_sync(self.work.finished.wait, LONG_SECONDS)
+                await _until_every_run_ended(self.calls)
+                with _an_hour_later():
+                    self.again = await self.calls.run(_call(), LONG_SECONDS, None)
+
+            anyio.run(outlive_then_collect_late)
+
+        with it("should hand the result to the same call made again"):
+            expect(self.again).to(equal("written"))
+
+        with it("should not start the work again"):
+            expect(self.work.starts).to(equal(1))
+
+    with context("with a call that failed after its caller was told it is still running"):
+        with it("should raise the failure to the same call made again"):
+            failing = HeldWork(value=None)
+
+            def fail_when_released(call: ToolCall, reporter) -> object:
+                failing(call, reporter)
+                raise ValueError("graph is corrupt")
+
+            self.calls = _ToolCalls(fail_when_released)
+
+            async def outlive_then_ask_again():
+                await self.calls.run(_call(), SHORT_SECONDS, None)
+                failing.released.set()
+                await _until_every_run_ended(self.calls)
+                with _an_hour_later():
+                    await self.calls.run(_call(), LONG_SECONDS, None)
+
+            expect(lambda: anyio.run(outlive_then_ask_again)).to(raise_error(ValueError, "graph is corrupt"))
+
+    # A second identical call within the first's time limit runs again; the first's caller, told its call is still
+    # running, then asks for the run it was told about, never for a third.
+    with context("with the caller of the first of two identical runs asking again once told it is still running"):
+        with before.each:
+            async def ask_again_for_the_first():
+                async with anyio.create_task_group() as group:
+                    group.start_soon(self.calls.run, _call(), SHORT_SECONDS * 2, None)
+                    await anyio.sleep(SHORT_SECONDS)
+                    group.start_soon(self.calls.run, _call(), LONG_SECONDS, None)
+                    await anyio.sleep(SHORT_SECONDS * 2)
+                    group.start_soon(self.calls.run, _call(), LONG_SECONDS, None)
+                    await anyio.sleep(SHORT_SECONDS)
+                    self.work.released.set()
+
+            anyio.run(ask_again_for_the_first)
+
+        with it("should not start the work a third time"):
             expect(self.work.starts).to(equal(2))
 
     with context("with a different call made while the first is still running"):
@@ -201,7 +279,9 @@ with description("tool calls on worker threads") as self:
                     scope.cancel()
                     await self.calls.run(_call(), LONG_SECONDS, None)
                 failing.released.set()
-                await _until_every_run_ended(self.calls)
+                with anyio.fail_after(LONG_SECONDS):
+                    while not self.logged.messages:
+                        await anyio.sleep(0.001)
 
             anyio.run(cancel_the_caller)
             expect(self.logged.messages).to(contain("MCP tool validate.validate failed after its caller stopped waiting"))
