@@ -17,7 +17,11 @@ chat calls ``cdd.ping`` and that tool every half second for as long as any build
 
 Last, the Graph app's whole load (``graph.load_practice_roots``) of a session whose Stories, DDD and Clean Engineering
 roots are three different folders, with a second folder added to DDD's tactics, holds the nodes a load of the same files
-(``graph.load_files``) holds."""
+(``graph.load_files``) holds.
+
+The four run at the same time, each on a server and a project of its own (``AllAtOnce``), and each context reads the
+run it checks: the refreshes and the validates each take minutes of builds one after another, so running them in turn
+doubled the file's time, and a machine busier with the other runs only makes each answer-time check harder to pass."""
 
 import asyncio
 import json
@@ -25,6 +29,7 @@ import shutil
 import statistics
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -282,6 +287,63 @@ class PracticeRootsLoad:
         shutil.rmtree(self.project.parent, ignore_errors=True)
 
 
+class AllAtOnce:
+    """The four runs this spec checks, each on a server and a project of its own, started together and waited for: the
+    builds, the refreshes, the validates, and the Graph app's whole load. The servers start one after another, since
+    starting one names it in this process's environment, which the server copies; the runs then go on side by side.
+    Each context reads its own run, and stops its own server when it is done with it."""
+
+    def __init__(self) -> None:
+        self.builds_server = self._started(_TOOLSETS)
+        self.databases = [Path(tempfile.mkdtemp(prefix="cdd-graph-database-")) for _ in range(_BUILDERS)]
+        self.builds = BuildsWhilePinging(self.builds_server)
+        self.refresh_server = self._started(_TOOLSETS)
+        self.refresh_project = _practices_copy()
+        self.refreshes = RefreshesWhilePinging(self.refresh_server, self.refresh_project)
+        self.validate_server = self._started(_VALIDATE_TOOLSETS)
+        self.validate_project = _practices_copy()
+        self.validates = ValidatesWhilePinging(self.validate_server, self.validate_project)
+        self.roots_server = self._started(_VALIDATE_TOOLSETS)
+        self.roots = PracticeRootsLoad(self.roots_server)
+        self.seconds: dict[str, float] = {}
+        self.failures: dict[str, BaseException] = {}
+        runs = {"builds": lambda: self.builds.run(self.databases), "refreshes": self.refreshes.run, "validates": self.validates.run, "roots": self.roots.run}
+        threads = [threading.Thread(target=self._timed, args=(name, run), name=f"graph-build-{name}") for name, run in runs.items()]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+    def outcome(self, name: str) -> None:
+        """Raise the failure the named run met, so each of its context's examples reports it."""
+        if name in self.failures:
+            raise self.failures[name]
+
+    def _timed(self, name: str, run) -> None:
+        started = time.monotonic()
+        try:
+            run()
+        except BaseException as failure:  # The context that reads this run raises it in its own setup.
+            self.failures[name] = failure
+        self.seconds[name] = time.monotonic() - started
+
+    @staticmethod
+    def _started(toolsets: tuple[str, ...]) -> SpecServer:
+        server = SpecServer(toolsets)
+        server.start()
+        return server
+
+
+_ALL_AT_ONCE: list[AllAtOnce] = []
+
+
+def _all_at_once() -> AllAtOnce:
+    """The four runs, started by the first context that asks for them."""
+    if not _ALL_AT_ONCE:
+        _ALL_AT_ONCE.append(AllAtOnce())
+    return _ALL_AT_ONCE[0]
+
+
 def _project(role: str) -> Path:
     return Path(tempfile.mkdtemp(prefix=f"cdd-{role}-"))
 
@@ -297,11 +359,11 @@ def _practices_copy() -> Path:
 
 with description("the cdd server while several chats build a graph at once") as self:
     with before.all:
-        self.server = SpecServer(_TOOLSETS)
-        self.server.start()
-        self.databases = [Path(tempfile.mkdtemp(prefix="cdd-graph-database-")) for _ in range(_BUILDERS)]
-        self.probe = BuildsWhilePinging(self.server)
-        self.probe.run(self.databases)
+        runs = _all_at_once()
+        self.server = runs.builds_server
+        self.databases = runs.databases
+        self.probe = runs.builds
+        runs.outcome("builds")
 
     with after.all:
         self.server.stop()
@@ -327,15 +389,14 @@ with description("the cdd server while several chats build a graph at once") as 
 
 with description("the cdd server while several chats refresh the one graph their session holds") as self:
     with before.all:
-        self.server = SpecServer(_TOOLSETS)
-        self.server.start()
-        self.project = _practices_copy()
-        self.probe = RefreshesWhilePinging(self.server, self.project)
-        started = time.monotonic()
-        self.probe.run()
+        runs = _all_at_once()
+        self.server = runs.refresh_server
+        self.project = runs.refresh_project
+        self.probe = runs.refreshes
+        runs.outcome("refreshes")
         pinging = self.probe.pinging
         print(
-            f"\n{len(self.probe.refresh_results)} refreshes in {time.monotonic() - started:.0f} s; each took "
+            f"\n{len(self.probe.refresh_results)} refreshes in {runs.seconds['refreshes']:.0f} s; each took "
             f"{statistics.median(self.probe.refresh_seconds):.1f} s at the median; {len(pinging.answers)} answers, median "
             f"{pinging.median:.2f} s, slowest {pinging.slowest:.2f} s"
         )
@@ -364,15 +425,14 @@ with description("the cdd server while several chats refresh the one graph their
 
 with description("the cdd server while several chats validate files of the one graph their session holds") as self:
     with before.all:
-        self.server = SpecServer(_VALIDATE_TOOLSETS)
-        self.server.start()
-        self.project = _practices_copy()
-        self.probe = ValidatesWhilePinging(self.server, self.project)
-        started = time.monotonic()
-        self.probe.run()
+        runs = _all_at_once()
+        self.server = runs.validate_server
+        self.project = runs.validate_project
+        self.probe = runs.validates
+        runs.outcome("validates")
         pinging = self.probe.pinging
         print(
-            f"\n{len(self.probe.refresh_results)} validates in {time.monotonic() - started:.0f} s; each took "
+            f"\n{len(self.probe.refresh_results)} validates in {runs.seconds['validates']:.0f} s; each took "
             f"{statistics.median(self.probe.refresh_seconds):.1f} s at the median; {len(pinging.answers)} answers, median "
             f"{pinging.median:.2f} s, slowest {pinging.slowest:.2f} s"
         )
@@ -404,10 +464,10 @@ with description("the cdd server while several chats validate files of the one g
 # practice's root.
 with description("the Graph app's whole load of a session whose practices work in different folders") as self:
     with before.all:
-        self.server = SpecServer(_VALIDATE_TOOLSETS)
-        self.server.start()
-        self.load = PracticeRootsLoad(self.server)
-        self.load.run()
+        runs = _all_at_once()
+        self.server = runs.roots_server
+        self.load = runs.roots
+        runs.outcome("roots")
 
     with after.all:
         if getattr(self, "server", None) is not None:
