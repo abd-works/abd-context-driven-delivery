@@ -35,6 +35,7 @@ from mamba import after, before, context, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 from harness.guidance_actions import GuidanceAction  # noqa: F401 - loaded with the module, not by its first example
+from harness.guidance_actions.guidance_actions import GuidanceTurnedOff
 from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: F401 - likewise
 
 
@@ -248,13 +249,13 @@ with description("a guidance action"):
             self.action = GuidanceAction(session)
 
         with it("should refuse the slug of a fidelity of the practice turned off, sent alone, saying it is off"):
-            expect(lambda: self.action._work_on("ux-ia")).to(raise_error(ValueError, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
+            expect(lambda: self.action._work_on("ux-ia")).to(raise_error(GuidanceTurnedOff, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
 
         with it("should refuse it in a list the same way"):
-            expect(lambda: self.action._work_on(["stories-story-map", "ux-ia"])).to(raise_error(ValueError, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
+            expect(lambda: self.action._work_on(["stories-story-map", "ux-ia"])).to(raise_error(GuidanceTurnedOff, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
 
         with it("should refuse a mapping whose toolset is the slug of the practice turned off, saying it is off"):
-            expect(lambda: self.action._work_on({"toolset": "ux", "fidelity": "ia"})).to(raise_error(ValueError, contain("ux is the practice ux, which is turned off for session sign-up")))
+            expect(lambda: self.action._work_on({"toolset": "ux", "fidelity": "ia"})).to(raise_error(GuidanceTurnedOff, contain("ux is the practice ux, which is turned off for session sign-up")))
 
         with it("should read a slug of the practice it works on as guidance, not text"):
             self.action._work_on("stories-story-map")
