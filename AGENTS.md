@@ -40,8 +40,10 @@ python scripts/install.py --ide Claude     # or Cursor, "VS Code", Kilo
 
 ```
 python -m venv .venv && .venv/bin/pip install -e .     # Windows: .venv\Scripts\pip
-.venv/bin/mamba --format documentation path/to/thing_spec.py
+PYTHONUTF8=1 .venv/bin/mamba --format documentation path/to/thing_spec.py
 ```
+
+Run a spec file with `PYTHONUTF8=1` (PowerShell: `$env:PYTHONUTF8 = "1"`), as `scripts/test.ps1` does: Mamba reads each spec file with the system's encoding, so on Windows without it the spec's own text, such as a `—` or a byte-order mark, reads as Windows-1252 and examples fail that pass in the suite.
 
 `scripts/test.ps1` runs one of three tiers. Cloud sessions run `scripts/cloud-setup.sh`.
 

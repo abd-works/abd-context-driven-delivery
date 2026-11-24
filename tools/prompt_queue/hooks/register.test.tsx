@@ -2171,3 +2171,23 @@ test('the hand-out tells each robot to fix every failing test it meets, includin
 
   expect(asked[0]).toContain('including one that failed before your change')
 })
+
+
+test("in sub-agent mode the note on a new message says to give a card its steps when it is added, wherever its work has clear parts", async ($, on) => {
+  groupedQueue(on)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'run every tier and merge', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried.join()).toContain('give it its steps with prompt-queue.set_steps as you add it')
+})
+
+test("the hand-out tells a robot whose card already has steps to work those steps, adding or changing them as it learns", async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS.map(card => (card.id === 'a' ? { ...card, steps: [{ text: 'Read the epic', state: 'pending' as const }] } : card)))
+
+  expect(asked[0]).toContain('When a card already has steps, work them')
+})
