@@ -1,5 +1,6 @@
 """Repos - the repositories kept beside one another, and opening one in a chat of its own."""
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -15,7 +16,7 @@ from mamba import after, before, context, description, it
 from harness.mcp.cdd_home import CddHome
 from harness.git.git import Git
 from space.repo.new_repository import FolderIsAWorktreeError
-from space.repo.repos import CddConfig, NotAReposFolderError, PublishFailedError, Repos, RepoNameRequiredError, UnknownVisibilityError
+from space.repo.repos import CddConfig, InstallFailedError, NotAReposFolderError, PublishFailedError, Repos, RepoNameRequiredError, UnknownVisibilityError
 
 
 def _repository(folder: Path) -> Path:
@@ -125,3 +126,10 @@ with description("Repos") as self:
             with patch("space.repo.repos.shutil.which", return_value=None):
                 opening = lambda: self.repos.open("shop", publish=True, install=False, start_chat=False)
                 expect(opening).to(raise_error(PublishFailedError, contain("gh", "publish false")))
+
+    with context("installing CDD into a new repository whose install fails"):
+        with it("should refuse, naming the folder and what the install said"):
+            failed = subprocess.CompletedProcess([], 1, stdout="", stderr="no module named harness")
+            with patch("space.repo.repos.subprocess.run", return_value=failed):
+                opening = lambda: self.repos.open("shop", publish=False, install=True, start_chat=False)
+                expect(opening).to(raise_error(InstallFailedError, contain(".claude", "no module named harness")))
