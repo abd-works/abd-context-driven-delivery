@@ -1895,6 +1895,10 @@ Observed: BDD reads each spec file's describe tree into spec, description, conte
 
 Observed: a story step and a BDD observation each get an `invokes` edge to the operations their code calls, with `invokedBy` back on the operation and setup calls of the enclosing context first (`working_copy.py` `_record_story_edges`, `_record_bdd_edges`, `graph_spec.py` "with a step that invokes an operation", `bdd_invokes_spec.py`).
 
+### (S) Knowledge Graph --> Link Markdown Steps To Model Operations
+
+Observed: a When in a markdown scenarios file with a realization gets an `invokes` edge to each operation its realization's call graph names, matched in the domain model (DDD) or class model (Clean Engineering) its domain-term links lead to, with `invokedBy` back on the operation; a renamed operation or a step with no realization stays unlinked, and `code-steps-invoke-code` reports a When whose realization names no operation of that model (`realization_links.py` `RealizationLinks`, `realization_links_spec.py`).
+
 ### (S) Knowledge Graph --> Link Examples To Classes And Steps
 
 Observed: an example that demonstrates a class, a then step that observes an example, and an example retrieved using a property each get their relationship edge in both directions (`schema_edges.py` `SchemaEdges.sync`, `graph_spec.py` "with an example that demonstrates a class", "with a then step that observes an example").

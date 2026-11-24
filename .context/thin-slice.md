@@ -189,6 +189,7 @@ section: body
 - *Read Story Maps And Story Tests*
 - *Read BDD Spec Trees*
 - *Link Steps And Observations To Operations*
+- *Link Markdown Steps To Model Operations*
 - *Link Examples To Classes And Steps*
 - *Place Story Nodes On Their Source Lines*
 - *Give Each Node Its Fidelity*
@@ -339,6 +340,7 @@ section: body
 - *Chat UI defects*: every defect on the list fixed (`.sessions/_complete/chat-ui-defects/`)
 - *Install failure themes*: the locked mod file, the missing project header and the held adapter folders (`.sessions/_complete/install-failure-themes/`)
 - *Break module dependency cycles*: no module import cycle left (`.sessions/_complete/break-module-dependency-cycles/`)
+- *Link markdown steps to code through realizations*: a markdown When's realization links it to the model operations it names (`.sessions/_complete/link-markdown-steps-to-code-through-realizations/`)
 - *Nov 18 demo fixes*: board comments carry the fidelity's rules, the debug button stays in view, file links use the whole path, a plain folder offers only to create the git repository, the Files view opens without Bypass permissions, render saves beside its source, logs roll over at 4 MB, the bar's buttons ask for a skill in plain words, story maps take their shape from the sources, a whiteboard opens as a canvas, a new repository needs no reload, and a chat installs CDD when its folder lacks it
 
 ### Increment 1: Judge And Fix Work From Chat Bar And Board
