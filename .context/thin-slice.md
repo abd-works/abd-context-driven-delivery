@@ -138,10 +138,16 @@ section: body
 - *Expand And Collapse Story Cards*
 - *Add, Remove And Rename Map Nodes*
 - *Rearrange Map Nodes By Dragging*
-- *Manage Increments*
-- *Manage Increment Stories*
-- *Add, Rename, Remove And Reorder Scenarios*
-- *Add, Edit, Remove And Reorder Steps*
+- *Add, Rename, Reorder And Remove Increments*
+- *Assign Stories To Increments*
+- *Add Scenario To Story*
+- *Rename Scenario Inline*
+- *Remove Scenario From Story*
+- *Reorder Scenarios By Dragging*
+- *Add Step To Scenario*
+- *Edit Step Keyword And Text*
+- *Remove Step From Scenario*
+- *Reorder Steps By Dragging*
 - *Add And Remove Examples On Scenario*
 - *Add And Remove Example Fields*
 - *Add, Edit, Remove And Reorder Example Lines*
@@ -301,7 +307,37 @@ section: body
 - *Show Board's Active Ticket In Story UI*
 - *Save Story Map Edit Through Domain*
 
-### Increment 4: File Manager Complete
+### Increment 4: Built - Check Clean Engineering On The Model
+
+**Outcome:** validating at the Clean Engineering model or code fidelity measures each function, class and module, keeps each measure as a fact on its node, and reports what is past a limit in the same validation report; the same validation finds the problems that only show across files, as graph rules where the graph can answer and as one AI-judged pass over the codebase where it cannot.
+
+**Slicing notes:** `.sessions/_backlog/measure-code-on-the-model.md` and `.sessions/_backlog/check-clean-engineering-across-files.md`, merged on 2026-11-11 at the person's request; the always-on metrics gate was removed on 2026-11-09, and its measuring moves into the practice, which also replaces the cross-file passes agents ran by hand. Built on the release-1-2-fixes branch: the code and module measures on 2026-11-22, and the cross-file graph rules and the judged pass over the whole repository in commits 140ccd92f and c5c088785; checked 2026-11-23.
+
+**Stories in this increment:**
+
+- *Record Code Metrics As Node Facts*
+- *Record Module Measures As Node Facts*
+- *Check Code Metrics Against Clean Engineering Limits*
+- *Report Unused Class For Deletion*
+- *Report Runtime Dependency That Should Be Owned*
+- *Report Disconnected Class*
+- *Report One-Class Package*
+- *Judge Clean Engineering Rules Across Files*
+
+### Increment 5: Built - Fully Integrated App Flow
+
+**Outcome:** the parts of Fully Integrated App Flow that are built: formats kept across a fidelity's actions, graph rules checked when an artifact changes, graph violations fixed from the Files app, and the UX design opened in Claude Design.
+
+**Slicing notes:** moved out of Fully Integrated App Flow and File Manager Complete by the person on 2026-11-23. *Open UX Design In Claude Design* is done: the Files app opens a published design canvas. The other three are queued for the release-1-1-2 chat to finish: every action takes the picked formats, not only generate and render; an edited artifact runs the graph rules and updates the chat bar's count; Fix this one, Fix rule and Fix all in the Files app's file view and graph view. *Sync Chat Bar With Board Selection* was removed at the person's request.
+
+**Stories in this increment:**
+
+- *Keep Chosen Formats Across Actions In A Fidelity*
+- *Check Graph Rules When An Artifact Changes*
+- *Fix Graph Violations From Files App*
+- *Open UX Design In Claude Design*
+
+### Increment 6: File Manager Complete
 
 **Outcome:** the Files app shows a session's generated work: files and folders or the graph, filtered like the files, opening and comparing several files, with comments sent to the chat.
 
@@ -349,12 +385,11 @@ section: body
 - *Show Only Violating Nodes In Files App*
 - *See Rules Under Node In Files App*
 - *Open Violation In Files App Source*
-- *Fix Graph Violations From Files App*
 - *Fix Graph Violations From Chat Bar*
 - *Count Session Violations From Live Graph*
 - *Count Fidelity Violations From Live Graph*
 
-### Increment 5: Sync Design Canvas With Production
+### Increment 7: Sync Design Canvas With Production
 
 **Outcome:** a design canvas shows production as it is: every file is proven against the product repo by hash, styles and assets come from one pinned Design System package, each screen mounts the real view, hosted edits come back before the next version, and a screen being redesigned is detached and marked diverged until its change reaches production.
 
@@ -384,7 +419,7 @@ section: body
 - *Mark Detached Screen As Diverged*
 - *Reattach A Screen Once Its Change Reaches Production*
 
-### Increment 6: Integrate Stories With The Canvas Explorer
+### Increment 8: Integrate Stories With The Canvas Explorer
 
 **Outcome:** a person tests a screen against its scenarios from the explorer, and changes stories from the canvas or story-ui with the map updating, both ending in the same story code.
 
@@ -395,7 +430,7 @@ section: body
 - *Package End-To-End Results With The Canvas*
 - *Mark Each Explorer Scenario Passed Or Failed*
 - *Label Stale Test Results*
-- *Run A Scenario's Thens On The Canvas*
+- *Test A Scenario's Thens On The Canvas*
 - *Play A Story's UI Steps On A Screen*
 - *Check Screen Logic Against Scenarios From A Command*
 - *Give Each Map Card A Stable Node Id*
@@ -406,7 +441,7 @@ section: body
 - *Comment On A Story In Story UI*
 - *Rearrange Stories Inside The Canvas*
 
-### Increment 7: Repair Guidance From Mistakes
+### Increment 9: Repair Guidance From Mistakes
 
 **Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
 
@@ -418,7 +453,7 @@ section: body
 - *Improve Guidance From Mistake*
 - *Add Rule From Failed Example*
 
-### Increment 8: Enter Commands Faster
+### Increment 10: Enter Commands Faster
 
 **Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go.
 
@@ -432,27 +467,11 @@ section: body
 - *Add Comment To Sent Command*
 - *Announce CDD Tool Calls*
 
-### Increment 9: Check Clean Engineering On The Model
-
-**Outcome:** validating at the Clean Engineering model or code fidelity measures each function, class and module, keeps each measure as a fact on its node, and reports what is past a limit in the same validation report; the same validation finds the problems that only show across files, as graph rules where the graph can answer and as one AI-judged pass over the codebase where it cannot.
-
-**Slicing notes:** `.sessions/_backlog/measure-code-on-the-model.md` and `.sessions/_backlog/check-clean-engineering-across-files.md`, merged on 2026-11-11 at the person's request; the always-on metrics gate was removed on 2026-11-09, and its measuring moves into the practice, which also replaces the cross-file passes agents ran by hand.
-
-**Stories in this increment:**
-
-- *Record Code Metrics As Node Facts*
-- *Check Code Metrics Against Clean Engineering Limits*
-- *Report Unused Class For Deletion*
-- *Report Runtime Dependency That Should Be Owned*
-- *Report Disconnected Class*
-- *Report One-Class Package*
-- *Judge Clean Engineering Rules Across Files*
-
-### Increment 10: Fully Integrated App Flow
+### Increment 11: Fully Integrated App Flow
 
 **Outcome:** the chat bar, the board, the Story UI editor with its story explorer, and the Graph app work on one ticket together, and violations are read from the latest graph that generate refreshes.
 
-**Slicing notes:** requested on 2026-11-06: validation inside generate, the chat bar and board joined with the Story UI editor, the story explorer in the Story UI app framed by design canvas screens, and each app tested on a real session.
+**Slicing notes:** requested on 2026-11-06: validation inside generate, the chat bar and board joined with the Story UI editor, the story explorer in the Story UI app framed by design canvas screens, and each app tested on a real session. Checked against the release-1-2-fixes branch on 2026-11-23: none of these stories is done. Generate still hands over to a separate validate, Validate is still on the board tiles and in the chat bar, there is no Fix action, and the board and chat bar counts still come from the last validation report rather than the graph. Stories without a note are not built at all; the explorer stories work in the design canvas explorer and still have to be built in the Story UI.
 
 **Stories in this increment:**
 
@@ -460,43 +479,39 @@ section: body
 - *Judge Rules During Generate*
 - *Fix Graph Violations*
 - *Validate Fidelity On Demand*
-- *Check Graph Rules When An Artifact Changes*
 - *Read Fidelity Violations From Latest Graph*
 - *Generate And Judge Fidelity From Board*
 - *Fix Graph Violations From Board*
 - *Read Session Violations From Latest Graph*
 - *Generate And Judge Fidelity From Chat Bar*
 - *Fix Graph Violations From Chat Bar*
-- *Open Board Side Panel From Chat Bar*
-- *Sync Chat Bar With Board Selection*
-- *Keep Chosen Formats Across Actions In A Fidelity*
+- *Open Board Side Panel From Chat Bar* (partly built: the chat bar opens the whole board, not the ticket's card and tiles)
 - *Start Ticket Session From Increment*
 - *Show Increment Ticket In Story UI*
-- *Test Story Explorer On Session Story Map*
+- *Test Story Explorer On Session Story Map* (partly built: the explorer runs only on the design canvas, and its specs are scenario files with no tests)
 - *Switch Story Map To Screen Frames View*
-- *Show Screen Frame Under Each Story*
-- *Mark Story Without A Screen*
-- *Open Story Explorer From Screen Frame*
-- *Open The Explorer At A Story, Scenario And Step*
-- *Collapse And Reset The Story Tree*
-- *Play The Next Story*
-- *Hide And Show The Story Panel*
-- *Return To Story UI Map*
-- *Keep The Selected Story In View*
-- *Copy A Request To Open A Story In Its File*
-- *Pick An Outline Scenario's Example*
-- *Show Design Canvas Screen As Explorer Frame*
-- *Choose The Screen For A Step*
-- *Join A Step Without A Screen To The Next Step*
-- *Show A Screenshot When No Screen Runs*
-- *Keep Each Screen's Own Stylesheets*
+- *Show Screen Frame Under Each Story* (built in the design canvas explorer only, not in the Story UI)
+- *Mark Story Without A Screen* (partly built: the design canvas says "No screenshot" for a screen without a picture; a story with no screen gets no frame)
+- *Open Story Explorer From Screen Frame* (built in the design canvas explorer only, not in the Story UI)
+- *Open The Explorer At A Story, Scenario And Step* (built in the design canvas explorer only, not in the Story UI)
+- *Collapse And Reset The Story Tree* (built in the design canvas explorer only, not in the Story UI)
+- *Play The Next Story* (built in the design canvas explorer only, not in the Story UI)
+- *Hide And Show The Story Panel* (built in the design canvas explorer only, not in the Story UI)
+- *Return To Story UI Map* (partly built: the design canvas explorer links back to the canvas map, not the Story UI)
+- *Keep The Selected Story In View* (built in the design canvas explorer only, not in the Story UI)
+- *Copy A Request To Open A Story In Its File* (built in the design canvas explorer only, not in the Story UI)
+- *Pick An Outline Scenario's Example* (built in the design canvas explorer only, not in the Story UI)
+- *Show Design Canvas Screen As Explorer Frame* (built in the design canvas explorer only, not in the Story UI)
+- *Choose The Screen For A Step* (built in the design canvas explorer only, not in the Story UI)
+- *Join A Step Without A Screen To The Next Step* (built in the design canvas explorer only, not in the Story UI)
+- *Show A Screenshot When No Screen Runs* (built in the design canvas explorer only, not in the Story UI)
+- *Keep Each Screen's Own Stylesheets* (built in the design canvas explorer only, not in the Story UI)
 - *Invoke Story Explorer In Session Context*
-- *Open UX Design In Claude Design*
 - *Remove Older Versions When Keeping A Release*
-- *Test Knowledge Graph Explorer On Session Files*
-- *Display Drawio File As Diagram*
+- *Test Knowledge Graph Explorer On Session Files* (partly built: the Graph app opens on the session's folder and shows violations; no spec runs on a session's files)
+- *Display Drawio File As Diagram* (partly built: the Files app shows the draw.io editor; no Source tab, no red shape for a violation, and a pressed shape does not open its lines)
 
-### Increment 11: Customize Board Workflow
+### Increment 12: Customize Board Workflow
 
 **Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
 
@@ -508,7 +523,7 @@ section: body
 - *Write Column Policies*
 - *Collapse Column Policies*
 - *Configure Todo List*
-- *Run Work Type Flows*
+- *Display Work Type Flows On Board*
 - *Display Board From Customized Workflow*
 - *Move Ticket Along Customized Workflow*
 - *Approve Ticket Out Of Human Review Column*
@@ -517,7 +532,7 @@ section: body
 - *Choose Testing Strategy*
 - *Toggle Sub Agents*
 
-### Increment 12: Author Story Maps
+### Increment 13: Author Story Maps
 
 **Outcome:** the Story UI editor gets its own remaining stories: dashboard, nested lanes, the node inspector, save history, real-time sessions and AI story changes.
 
@@ -530,7 +545,7 @@ section: body
 - *Share Real-Time Story Map Session*
 - *Change Story Map With AI*
 
-### Increment 13: Guard Work And Recover Fast
+### Increment 14: Guard Work And Recover Fast
 
 **Outcome:** a person sees at once when cdd is down, fixes it from where they are, and the agent is stopped before it breaks a rule.
 
@@ -550,7 +565,7 @@ section: body
 - *Restart Parts From Chat Bar*
 - *Open App From Health Panel*
 
-### Increment 14: Show Board Quickly
+### Increment 15: Show Board Quickly
 
 **Outcome:** `board.show` stops repeating git checks, guidance parsing and session file reads, so the board and the chat bar answer faster and `space/kanban/kanban_tools_spec.py` runs in under 60 s.
 
@@ -562,7 +577,7 @@ section: body
 - *Cache Practice Guidance By File And Change Time*
 - *Read Session File Once Per Board Build*
 
-### Increment 15: Bring Chat Bar Level With Board
+### Increment 16: Bring Chat Bar Level With Board
 
 **Outcome:** everything a person can do to one session on the board, they can do from the chat bar.
 
@@ -581,7 +596,7 @@ section: body
 - *Push Work From Chat Bar*
 - *Pull Latest From Chat Bar*
 
-### Increment 16: Draw Linked Models On The Canvas
+### Increment 17: Draw Linked Models On The Canvas
 
 **Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
 
@@ -598,7 +613,7 @@ section: body
 - *See The Stories That Exercise A Class*
 - *Mark Model Nodes That Fail Rules*
 
-### Increment 17: Suggest The Next Step
+### Increment 18: Suggest The Next Step
 
 **Outcome:** the chat proposes the next command, and captures handoffs, corrections and decisions.
 
@@ -612,7 +627,7 @@ section: body
 - *Offer Correction Log Entry*
 - *Offer Decision Record*
 
-### Increment 18: Maybe Later
+### Increment 19: Maybe Later
 
 **Outcome:** work set aside for now because it is complicated and not needed yet; picked up only when asked.
 
