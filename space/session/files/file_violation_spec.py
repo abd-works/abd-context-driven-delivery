@@ -15,13 +15,14 @@ _MESSAGE = "Operation 'place' takes 4 parameters (maximum 2)."
 _BROKEN = FileViolation(
     Violation(FoundBy(_SLUG, "clean_engineering"), _MESSAGE, Location("src/order.py", 2, 3)),
     Range("src/order.py", LineSpan(2, 3), "    def place(self, cart, user, store, day):\n        return self"),
+    "clean-engineering-model",
 )
 
 
 with description("a rule broken on a range of a file"):
     with it("should give the comment Fix this one sends: fix it test first, the rule, and what is wrong, without the lines a sent comment quotes"):
         expect(data_of(_BROKEN)["correction_comment"]).to(equal(
-            "Fix this violation using the Clean Engineering practice guidelines and a test-driven approach.\n"
+            "Fix this violation using the clean-engineering-model guidelines and a test-driven approach.\n"
             "Run or add tests that express the intended behavior before or alongside the fix.\n"
             f"\nRule: {_SLUG}\nViolation: {_MESSAGE}"
         ))

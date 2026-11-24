@@ -180,11 +180,13 @@ class FileChange:
 
 
 class FileViolation:
-    """A rule broken on a range of the file."""
+    """A rule broken on a range of the file, with the guidance that states the rule, by its slug, such as
+    ``stories-story-map``; none when the session holds no practice of the rule."""
 
-    def __init__(self, violation: Violation, range: Range) -> None:
+    def __init__(self, violation: Violation, range: Range, guidance: str = "") -> None:
         self._violation = violation
         self._range = range
+        self._guidance = guidance
 
     @property
     @data_field
@@ -200,8 +202,8 @@ class FileViolation:
     @data_field
     def correction_comment(self) -> str:
         """What Fix this one on the Files app's banner comments on the range: how to fix it test first, the rule, and what is
-        wrong; a sent comment already names and quotes the lines."""
-        return ViolationCorrection(self._violation.rule, self._violation.message).comment
+        wrong, by the guidelines of the guidance that states the rule; a sent comment already names and quotes the lines."""
+        return ViolationCorrection(self._violation.rule, self._violation.message, guidance=self._guidance).comment
 
 
 # The most lines the viewer shows of one file. The Files app's editor is as tall as its file, so the page scrolls rather
@@ -391,7 +393,13 @@ class SessionFile:
         finds."""
         own = self._own_violations() if self._reads_rules else []
         found = self._unique([*own, *(self._cross_file_violations() if self._cross_file else [])])
-        return [FileViolation(violation, self.range(violation.line or 1, violation.end_line or violation.line or 1)) for violation in found]
+        return [FileViolation(violation, self.range(violation.line or 1, violation.end_line or violation.line or 1), self._guidance_stating(violation)) for violation in found]
+
+    def _guidance_stating(self, violation: Violation) -> str:
+        """The slug of the guidance that states the rule violation breaks, of the session's practice that checks it;
+        none for a practice the session does not hold."""
+        output = self._session.session_practices.every.get(violation.practice)
+        return output.guidance.guidance_stating(violation.rule).slug if output is not None else ""
 
     def range(self, start_line: int, end_line: int) -> Range:
         """Lines start_line to end_line of this file, with the text they hold now."""

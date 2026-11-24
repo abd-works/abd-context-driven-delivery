@@ -30,6 +30,8 @@ from space.kanban.graph_view_rule_examples import (
 shared_stories = SharedStories("Review Graph Violations In Files App")
 
 LISTED = [STORY_MAP]
+# Interaction: the guidelines a fix of story-name-captures-system-mechanic names: the story map fidelity's, which state it.
+STORY_MAP_GUIDELINES = "the stories-story-map guidelines"
 # Interaction: the lines of the story map each violating story is read from, as the fix names them.
 PROCESS_TICKET_ARCHIVE_LINES = f"{STORY_MAP}:5-5"
 HANDLE_TICKET_DELETION_LINES = f"{STORY_MAP}:6-6"
@@ -115,7 +117,7 @@ def _(s):
 
     @s.then("the chat that opened the page receives the fix for Process Ticket Archive name, with its node, file, lines, rule, excerpt and message")
     def _(world):
-        named = ["Node: Process Ticket Archive (Story)", f"File: {PROCESS_TICKET_ARCHIVE_LINES}", f"Rule: {STORY_NAME_CAPTURES_SYSTEM_MECHANIC}", "Process Ticket Archive", "Violation: "]
+        named = [STORY_MAP_GUIDELINES, "Node: Process Ticket Archive (Story)", f"File: {PROCESS_TICKET_ARCHIVE_LINES}", f"Rule: {STORY_NAME_CAPTURES_SYSTEM_MECHANIC}", "Process Ticket Archive", "Violation: "]
         expect([part for part in named if part not in world.fix]).to(equal([]))
 
     @s.and_("Handle Ticket Deletion name stays unfixed")
@@ -170,7 +172,7 @@ def _(s):
     @s.then("the checkout-chat queue holds one fill with a fix comment on Process Ticket Archive's line and one on Handle Ticket Deletion's line")
     def _(world):
         fills = fills_of(world)
-        expect((len(fills), fills[0].count(f"Rule: {STORY_NAME_CAPTURES_SYSTEM_MECHANIC}"), PROCESS_TICKET_ARCHIVE_LINES in fills[0], HANDLE_TICKET_DELETION_LINES in fills[0])).to(equal((1, 2, True, True)))
+        expect((len(fills), fills[0].count(f"Rule: {STORY_NAME_CAPTURES_SYSTEM_MECHANIC}"), fills[0].count(STORY_MAP_GUIDELINES), PROCESS_TICKET_ARCHIVE_LINES in fills[0], HANDLE_TICKET_DELETION_LINES in fills[0])).to(equal((1, 2, 2, True, True)))
 
     @s.and_("both comments show on the story map as sent")
     def _(world):

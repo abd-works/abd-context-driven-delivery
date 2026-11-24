@@ -129,7 +129,8 @@ class GraphRule:
         start = first.line if first is not None and first.line is not None else source.start_line
         end = first.end_line if first is not None and first.end_line is not None else source.end_line
         place = CorrectedPlace(self.node.name, self.node.type, source.file or "", (start, end), source.text or "")
-        return ViolationCorrection(self._slug, "\n".join(violation.message for violation in self._violations if violation.message), place)
+        messages = "\n".join(violation.message for violation in self._violations if violation.message)
+        return ViolationCorrection(self._slug, messages, place, self.node.practice.guidance_stating(self._slug).slug)
 
     @property
     def is_failing(self) -> bool:

@@ -499,6 +499,12 @@ class PracticeGuidance(Guidance):
             return self
         return next((fidelity for fidelity in self.fidelities if fidelity.slug == slug), None)
 
+    def guidance_stating(self, rule: str) -> PracticeGuidance | FidelityGuidance:
+        """The guidance of this practice that states rule, by its slug: the fidelity whose rules hold it, such as
+        ``stories-story-map`` for ``verb-noun-format``, else the practice itself, whose shared rules every fidelity
+        follows, so a fix of the rule is made by the guidelines that wrote it."""
+        return next((fidelity for fidelity in self.fidelities if any(stated.slug == rule for stated in fidelity.rules)), self)
+
     @property
     def fidelity_slugs(self) -> list[str]:
         """The slug of each of the practice's fidelities, such as `stories-story-map`, which a guidance action lists
