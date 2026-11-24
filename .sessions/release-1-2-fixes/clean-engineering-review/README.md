@@ -81,9 +81,15 @@ The durable model of the code is one class model per module, `{module}/.context/
 - **Fixed since the run before:** 69 findings.
 - **Then:** a review pass (`52d22fe88`) ended the installation import cycle and brought the release and session-diagnostics module cards in line; its scoped validate is [clean-engineering-code-20261124T013014.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261124T013014.md) (323 violations and 101 candidates over the files it touched, 9 fixed). Design proposals 8 (c), the node type tables, and 21 (c), `NameFacts`, were built and passed the metrics gate (`689eba692`, `57d723cbd`, `857091cb9`). `repo-model2.drawio` was removed and `repo-model.whiteboard` drawn again (`62fe55b10`, `86fceac2c`).
 
+### Release 1.2, fixing the review's open items (2026-11-24, `33cd71e5e` to `15fb320ea`)
+
+- **Tooling:** lizard 1.26.1 is installed in the Python the dev lane and the tests share (`C:\dev\abd-context-driven-delivery\.venv`), so `limit-paths-through-a-function`, `keep-functions-readable` and `limit-class-complexity` measure instead of saying lizard is not installed (`code_measures_heavy_spec.py` passes 15 of 15 with real lizard measures); `pyproject.toml` names it, with ruff, as the `measures` and `checks` extras `cloud-setup.sh` installs. Sparky's unreviewed `b2fba7b51` was read against today's code: no behaviour changed by accident and no caller kept an old name; three cards named facts in the wrong place or a deleted operation (`33cd71e5e`).
+- **Gap closed: names that no longer exist.** `scripts/names_exist/names_exist.py` checks that every name the code calls or imports still exists: Python's undefined names (ruff), imports of the repository's own modules, members no reachable code defines, and the TypeScript compiler's missing-name errors over every TypeScript project and Claude Code mod. Its heavy spec holds the whole repository to none (`9f31d09da`). It found `Rendered` and `FidelityGuidance` used in annotations without an import, and a stories app spec missing `root_paths`.
+- **Defects:** r3-bolt-04 (`1f9438e28`), r3-lens-09 (`0ba9d8958`), and the parts left of the fourteen fixed in part (`62ebabd2f`, `b74734be4`, `95f4d5f93`, `97f4b5ea9`, `15fd24e9a`, `937319064`, `47977d9fc`, `c08c702e7`, `d5aa15352`, `24fb21ce7`); each defect file's Status says what is still left. The two dev server problems (`b609c986e`): a render reads each file in the format its name says, and a call told it is still running hears its outcome whenever it asks again (the kept result had expired after 10 minutes; `99260068a`'s joining of identical calls is kept, with its own bug fixed).
+
 ## Still open
 
-1. Install lizard into the tests' and the dev lane's Python, so the 1,808 "not installed" findings become measures, then run the heavy tier once.
+1. Done 2026-11-24: lizard is installed (see the pass above). A whole-code validate has not been run again to count the findings it now measures.
 2. Closed 2026-11-24: the metrics gate is deleted. Validate holds its class and module measures as Clean Engineering code rules (`limit-class-coupling`, `limit-class-response`, `limit-module-file-lines`, `keep-module-files-maintainable`, `limit-average-class-complexity`, `limit-modules-importing`), beside the function and class limits it already held.
 3. The 76 module-card drift findings (`seam-names-current-code`). The 3 `one-way-deps` findings are the three files of one loop in `harness/installation`, ended by `52d22fe88` after that run; a whole-code validate has not confirmed it yet.
 4. The 163 declared exceptions no test raises ([test-every-declared-exception.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\_backlog\test-every-declared-exception.md)) and the 9 `refuse-unreadable-input` violations.
@@ -93,3 +99,8 @@ The durable model of the code is one class model per module, `{module}/.context/
 8. From the earlier refactor and still not measured again: the targets in [remaining-work-plan.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\refactor-rounds-1-9\remaining-work-plan.md).
 
 The full list of the release's open items, tests and defects included, is section 7 of the release report and the latest handoff, [handoff-20261123T2130.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\handoff-20261123T2130.md).
+
+## Second judge round, 2026-11-24
+
+- **Found:** seven judges read the 613 production files changed since 2026-11-21 (`66f410de3` to `5d16245ff`): 1,337 findings, 586 of them still open from the first round, and 137 design proposals ([judge-round-2/README.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\judge-round-2\README.md)), with the defects found while reading.
+- **Open:** all of it; nothing from this round is fixed yet.
