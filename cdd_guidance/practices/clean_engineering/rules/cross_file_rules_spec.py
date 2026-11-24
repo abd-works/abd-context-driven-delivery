@@ -105,29 +105,34 @@ with description("a rule that reads the whole code at once") as self:
     with context("about state handed down as parameters"):
         with before.all:
             self.pair = files_rule_pair(_HELD_STATE, examples.SESSION_HANDED_DOWN, examples.SESSION_HELD)
+            self.handed_down = _listed(_HELD_STATE, examples.SESSION_HANDED_DOWN)
+            self.handed_within_one_class = _listed(_HELD_STATE, examples.SESSION_HANDED_WITHIN_ONE_CLASS)
+            self.handed_to_a_constructor = _listed(_HELD_STATE, examples.SESSION_HANDED_TO_A_CONSTRUCTOR)
+            self.ticket_to_every_operation = _listed(_HELD_STATE, examples.TICKET_TO_EVERY_OPERATION)
+            self.ticket_held = _listed(_HELD_STATE, examples.TICKET_HELD)
 
         with it("should list a parameter handed on unchanged to two other classes, and pass once the object holds it"):
             self.pair.check()
 
         with it("should list it once, on the operation that starts handing it down, with each operation it passes"):
-            expect(_listed(_HELD_STATE, examples.SESSION_HANDED_DOWN)).to(equal([
+            expect(self.handed_down).to(equal([
                 "Operation 'Desk.open' hands its parameter 'session' on unchanged to 2 other classes: Desk.open, Clerk.file, "
                 "Archive.store. Read which object should hold the session, so the operations below it read it there."
             ]))
 
         with it("should not list a parameter one class hands between its own operations"):
-            expect(_listed(_HELD_STATE, examples.SESSION_HANDED_WITHIN_ONE_CLASS)).to(equal([]))
+            expect(self.handed_within_one_class).to(equal([]))
 
         with it("should not list a parameter handed to the constructor of the object made for it"):
-            expect(_listed(_HELD_STATE, examples.SESSION_HANDED_TO_A_CONSTRUCTOR)).to(equal([]))
+            expect(self.handed_to_a_constructor).to(equal([]))
 
         with it("should list a class every operation of which takes the same parameter"):
-            expect(_listed(_HELD_STATE, examples.TICKET_TO_EVERY_OPERATION)).to(equal([
+            expect(self.ticket_to_every_operation).to(equal([
                 "Every operation of 'Board' (3) takes 'ticket'. Read whether 'Board' is made for one ticket and should hold it."
             ]))
 
         with it("should not list the class once it holds what it was handed"):
-            expect(_listed(_HELD_STATE, examples.TICKET_HELD)).to(equal([]))
+            expect(self.ticket_held).to(equal([]))
 
     with context("about a second registry of the same classes"):
         with before.all:
@@ -162,6 +167,8 @@ with description("a rule that reads the whole code at once") as self:
         with before.all:
             self.pair = files_rule_pair(_CARD, examples.CARD_BEHIND_THE_CODE, examples.CARD_MATCHING_THE_CODE)
             self.reported = _listed(_CARD, examples.CARD_BEHIND_THE_CODE)
+            self.before_any_code = _listed(_CARD, examples.CARD_BEFORE_ANY_CODE)
+            self.naming_its_own_package = _listed(_CARD, examples.CARD_NAMING_ITS_OWN_PACKAGE)
 
         with it("should report the card, and pass once it names what the code holds"):
             self.pair.check()
@@ -176,10 +183,10 @@ with description("a rule that reads the whole code at once") as self:
             expect(self.reported).to(contain("Module 'shop' card names 'ledger/books', which is no folder of the code."))
 
         with it("should not report a card whose module declares no code yet, which its seam is written ahead of"):
-            expect(_listed(_CARD, examples.CARD_BEFORE_ANY_CODE)).to(equal([]))
+            expect(self.before_any_code).to(equal([]))
 
         with it("should read a dependency's path from the module's own folder too"):
-            expect(_listed(_CARD, examples.CARD_NAMING_ITS_OWN_PACKAGE)).to(equal([]))
+            expect(self.naming_its_own_package).to(equal([]))
 
         with it("should report a module the code imports that the card does not name"):
             expect(self.reported).to(contain("Module 'shop' imports 'tax', which its card does not name among its dependencies."))

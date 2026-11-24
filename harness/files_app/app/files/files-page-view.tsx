@@ -441,7 +441,7 @@ function ToastsView({ page }: { page: FilesPage }) {
 
 // The chat bar's icon for each stage (harness/chat-ui/pane/hooks/chat-bar/stage-client.ts STAGE_ICONS), so a stage looks
 // the same on the bar and here.
-const STAGE_ICONS: Record<string, string> = { Discovery: '⌕', Specification: '▤', Implementation: '⚙' }
+const STAGE_ICONS: Record<string, string> = { Discovery: '⌕', Specification: '▤', Implementation: '⚙', Hardening: '⛨' }
 
 // A button for each stage, before the practices, as the chat bar's stage buttons: filled orange while selected. A press
 // selects the stage beside those selected, or no longer, here and on the chat bar.

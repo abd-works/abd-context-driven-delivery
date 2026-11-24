@@ -1,12 +1,12 @@
 /**
- * Shared Discovery / Specification / Implementation expand row.
+ * Shared Discovery / Specification / Implementation / Hardening expand row.
  * Each `.approach-refine-row` owns its own rewind/play and open columns.
  * One example expands to full width; switching collapses the previous then opens the next.
  */
 (function () {
   'use strict';
 
-  var STAGE_IDS = ['discovery', 'specification', 'implementation'];
+  var STAGE_IDS = ['discovery', 'specification', 'implementation', 'hardening'];
   // How long a column takes to collapse or expand (its CSS transition), and a little after it for the layout to settle.
   var ANIM_MS = 380;
   var ANIM_SETTLE_MS = 40;

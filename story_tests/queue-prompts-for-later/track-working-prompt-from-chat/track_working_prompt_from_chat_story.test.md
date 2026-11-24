@@ -7,7 +7,7 @@ section: body
 
 # Sub-epic: Track Working Prompt From Chat
 
-Grouped on 2026-11-24 from Nest Prompt Steps In Queue, which had grown to eleven stories: the prompt being worked follows the chat, taking the agent's task list, the prompts the person sends straight to the chat, and the messages the person sends while a goal is worked, titled by what they ask. The queue and its steps stay on the cdd server (`tools/prompt_queue/prompt_queue.py`); the mod (`tools/prompt_queue/hooks/`) copies the agent's task list onto them, files the person's messages, and draws them; the mod's plugin tests (`tools/prompt_queue/hooks/register.test.tsx`) and the server's specs (`tools/prompt_queue/prompt_queue_spec.py`) run them.
+Grouped on 2026-11-24 from Nest Prompt Steps In Queue, which had grown to eleven stories: the prompt being worked follows the chat, taking the agent's task list, while a message the person sends goes to the chat as sent and puts nothing on the queue: the agent decides whether it is work, and files it under its goal or queues it as a card titled cleanly. Rewritten on 2026-11-24 (commit b3d0c6d56): the scenarios in which the mod itself queued a sent prompt, filed a message as an interruption, titled a goal from the message, or told the agent to split a goal beside a message are gone with that behaviour. The queue and its steps stay on the cdd server (`tools/prompt_queue/prompt_queue.py`); the mod (`tools/prompt_queue/hooks/`) copies the agent's task list onto them, files the person's messages, and draws them; the mod's plugin tests (`tools/prompt_queue/hooks/register.test.tsx`) and the server's specs (`tools/prompt_queue/prompt_queue_spec.py`) run them.
 
 ### Domain terms
 
@@ -17,7 +17,9 @@ Grouped on 2026-11-24 from Nest Prompt Steps In Queue, which had grown to eleven
 - ++working prompt++ — the queued prompt the agent was last asked to take, or the prompt the person sent straight to the chat.
 - ++task list++ — the agent's own checklist in the desktop chat, set and advanced with `update_plan`.
 - ++interruption++ — a message the person sent while a goal was worked, or in answer to the question its turn ended with, filed as that goal's step, its text starting "[interruption]".
-- ++goal title++ — what the queue holds for a message the person sent: the first sentence of their own words, or a paste's first line, at most 80 characters, never the paste or its `<pasted_content>` tags.
+- ++goal title++ — what the agent titles a card it queues for a message the person sent: a short statement of the goal in plain words, with the typing mistakes and any venting left out.
+- ++talk++ — a message that asks for no work: only marks such as ???, an answer or acknowledgement such as yes or ok, or a short question such as where is the flush button.
+- ++board viewer's state++ — what the Claude app puts before a message sent while a board viewer is open: an `<artifact-view-context>` holding the viewer's live state, not typed by the person.
 - ++step pointer++ — the mark at the left of a card's first step not done.
 
 > In steps: ++example++ names an example in a table below.
@@ -48,6 +50,9 @@ Grouped on 2026-11-24 from Nest Prompt Steps In Queue, which had grown to eleven
 | ++also run the heavy tier++ | also run the heavy tier |
 | ++background notice++ | <task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification> |
 | ++pasted notes++ | <pasted_content id="7250"> ## Notes from the backlog From `board-enhancements` the board needs a filter. </pasted_content> |
+| ++where is flush++ | where is the flush button |
+| ++viewer question++ | ++board viewer's state++, then ? |
+| ++viewer work++ | ++board viewer's state++, then repin to dev lane |
 
 ### gathered steps
 
@@ -93,22 +98,6 @@ Not yet known: whether a mod's tool-call hook sees the desktop app's `update_pla
 
 ## Story: Queue Sent Prompt As Running
 
-#### Scenario: Put a prompt sent straight to the chat on the queue as the working prompt
-
-*Given* the prompt queue plays and holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
-*But* no goal was worked yet
-*When* the person sends ++Fix the Files app++ straight to the chat
-*Then* the queue holds "[interruption] Fix the Files app" first, then ++Write the scenarios++, then ++Run the unit tier++
-*And* the agent is told the prompt is on the queue as its id, to mark it done when its work is done
-*And* "[interruption] Fix the Files app" is the working prompt its steps are copied onto, as in Copy Task List Onto Working Prompt
-
-#### Scenario: Put a sent prompt above the next prompt to do, below the done ones
-
-*Given* the prompt queue plays and holds ++Write the scenarios++ (a), done, then ++Run the unit tier++ (b)
-*But* no goal was worked yet
-*When* the person sends ++Fix the Files app++ straight to the chat
-*Then* the queue holds ++Write the scenarios++, "[interruption] Fix the Files app", then ++Run the unit tier++
-
 #### Scenario: Leave a background task's notice off the queue
 
 *Given* the prompt queue plays and holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
@@ -124,34 +113,6 @@ Not yet known: whether a mod's tool-call hook sees the desktop app's `update_pla
 
 ## Story: Add Interruption To Working Prompt
 
-#### Scenario: File a message sent mid-work under the working prompt
-
-*Given* the prompt queue plays and holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
-*And* a turn runs on ++Write the scenarios++, the working prompt
-*When* the person sends ++cut the text++
-*Then* ++Write the scenarios++ has the step "[interruption] cut the text with an ellipsis", not started
-*And* the queue still holds only ++Write the scenarios++ and ++Run the unit tier++
-*And* the agent is told the queue filed it under the goal last worked, [a], and to decide before any other work where it belongs, with each goal on the queue listed, such as [b] Run the unit tier
-
-#### Scenario: Open a done goal again for an answer to the agent's question sent between turns
-
-*Given* the prompt queue plays and holds ++Write the scenarios++ (a), done, then ++Run the unit tier++ (b)
-*And* ++Write the scenarios++ was the goal last worked, and its turn ended asking the person something
-*But* no turn runs
-*When* the person sends ++cut the text++
-*Then* ++Write the scenarios++ is no longer done and has the step "[interruption] cut the text with an ellipsis", not started
-*And* the queue still holds only ++Write the scenarios++ and ++Run the unit tier++
-
-#### Scenario: Start a goal of its own for new work sent between turns
-
-*Given* the prompt queue plays and holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
-*And* ++Write the scenarios++ was the goal last worked, and its turn ended asking nothing
-*But* no turn runs
-*When* the person sends ++Fix the Files app++ straight to the chat
-*Then* the queue holds "[interruption] Fix the Files app" first, as the working prompt, then ++Write the scenarios++, then ++Run the unit tier++
-*And* ++Write the scenarios++ has no step from the message
-*And* the agent is told the prompt is on the queue as its id, and to make it a task of a goal it belongs to or mark it done when its work is done
-
 #### Scenario: Keep the interruption when the agent sets a new task list
 
 *Given* ++Write the scenarios++ (a) is the working prompt with the step "[interruption] cut the text with an ellipsis"
@@ -164,7 +125,9 @@ Not yet known: whether a mod's tool-call hook sees the desktop app's `update_pla
 *And* ++Write the scenarios++ was the goal last worked
 *When* the person sends ++also run the heavy tier++
 *Then* the agent reads each robot's queue beside it, such as "Bolt: [b] Run the unit tier"
-*And* it is told it decides where the message goes: do it itself, make it a task of an item in a robot's queue, or give it to a robot as a new item starting "[for <robot name>]"
+*And* it is told it decides where the message goes: do it itself, make it a task of an item in a robot's queue, or give it to a robot with prompt-queue.assign
+
+Evidence: plugin test "in sub-agent mode the note on a new message shows the robots' queues and lets the agent decide where it goes" (commit 140dba085).
 
 #### Scenario: Refuse to file a message under a goal the queue does not hold
 
@@ -182,37 +145,70 @@ Not yet known: whether a mod's tool-call hook sees the desktop app's `update_pla
 
 ## Story: Title Goal From Sent Message
 
-#### Scenario: Title a goal sent as pasted text by its first line, never the paste
+Built 2026-11-24 (commits 3c5dbc74b, 140dba085, b3d0c6d56): a message goes to the chat as sent and creates no card; the agent puts work on the queue itself, titled cleanly, and the queue keeps only work. Evidence: `tools/prompt_queue/hooks/register.test.tsx` and `tools/prompt_queue/prompt_queue_spec.py`, named under each scenario.
 
-*Given* the chat's prompt queue is empty
-*When* the person's first message is ++pasted notes++
-*Then* the queue holds one goal, "[interruption] Notes from the backlog", without the paste or its tags
-*And* the agent still reads the whole message in the chat
+#### Scenario: Put nothing on the queue for a message sent between turns
 
-#### Scenario: Title a goal by the person's own words beside a paste
+*Given* the prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
+*But* no turn runs
+*When* the person sends ++Fix the Files app++, or ++pasted notes++
+*Then* the queue still holds only ++Write the scenarios++ and ++Run the unit tier++
+*And* the agent reads the whole message in the chat
 
-*Given* the chat's prompt queue is empty
-*When* the person sends "Triage these notes into the backlog" with ++pasted notes++ below it
-*Then* the queue holds one goal, "[interruption] Triage these notes into the backlog"
+Evidence: plugin tests "a message sent between turns puts nothing on the queue" and "a pasted message puts nothing on the queue".
 
-#### Scenario: Title a long goal by its first sentence, cut short
+#### Scenario: Add no step to the working prompt for a message sent mid-work
 
-*Given* the chat's prompt queue is empty
-*When* the person sends a message whose first sentence is longer than 80 characters
-*Then* the goal's title is that sentence cut at a word, at most 80 characters, ending in an ellipsis
+*Given* a turn runs on ++Write the scenarios++ (a), the working prompt
+*When* the person sends ++cut the text++
+*Then* ++Write the scenarios++ has no step from the message
 
-#### Scenario: Gather no later messages under a pasted first message
+Evidence: plugin test "a message sent while a prompt is worked adds no step to it".
 
-*Given* the person's first message was ++pasted notes++, queued as "[interruption] Notes from the backlog"
-*When* the person sends ++Fix the Files app++, then ++Run the unit tier++, each between turns
-*Then* each is a goal of its own on the queue
-*And* "[interruption] Notes from the backlog" has no steps
+#### Scenario: Tell the agent the message is on no card and how to place it
 
-#### Scenario: Title a pasted message sent mid-work by its first line
+*Given* a turn runs on ++Write the scenarios++ (a), the working prompt, and ++Run the unit tier++ (b) is still to do
+*When* the person sends ++cut the text++
+*Then* the agent is told the message is on no card of the queue, with the goals still to do and the one being worked, [a]
+*And* it is told to answer talk only, to file work for a goal with prompt-queue.add_interruption, and to queue new work with prompt-queue.add, titled as a short statement of the goal with the typing mistakes and venting left out
+*And* it is told to call prompt-queue.show and check that what it placed stands once, where it meant it
 
-*Given* a turn runs on ++Write the scenarios++, the working prompt
-*When* the person sends ++pasted notes++
-*Then* ++Write the scenarios++ has the step "[interruption] Notes from the backlog", not started
+Evidence: plugin tests "the agent is told the message is on no card and to queue it only when it is work, titled cleanly", "the agent is told the goal being worked when a message is sent mid-work", "the agent is told how to file work under the goal being worked, by its id" and "the agent is told to check the queue after placing the message".
+
+#### Scenario: Answer talk without queueing it
+
+*Given* the prompt queue holds ++Write the scenarios++ (a), the working prompt
+*When* the person sends ++where is flush++, "why is there no flush button?", "yes", "ok" or "???", mid-work or between turns
+*Then* the queue holds no card and no step from the message
+
+Evidence: plugin tests "a message that is only talk, such as …, sent mid-work is not filed on the queue" and "… sent between turns is not queued", one pair for each message.
+
+#### Scenario: Read talk sent from a board viewer by the person's words alone
+
+*Given* the prompt queue holds ++Write the scenarios++ (a), the working prompt
+*When* the person sends ++viewer question++ from an open board viewer
+*Then* the message is read as talk, from its "?" alone
+*And* the queue holds no card and no step from it, and none titled by the ++board viewer's state++
+
+Evidence: the same two plugin tests, run with the board viewer's state before the "?" (commit 3c5dbc74b).
+
+#### Scenario: Keep a board viewer's state out of a card's title and steps
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a)
+*When* the cdd server is asked to queue "[interruption] " followed by ++viewer work++
+*And* it is asked to file the ++board viewer's state++ followed by "why do the first 2 epics have no sub epics" under a
+*Then* the queue's last card reads "[interruption] repin to dev lane"
+*And* ++Write the scenarios++ has the step "[interruption] why do the first 2 epics have no sub epics", not started
+
+Evidence: `prompt_queue_spec.py` "queues only the person's words of a card sent from a board viewer" and "files only the person's words of a message sent from a board viewer, leaving out the viewer's state" (commit b123d6925).
+
+#### Scenario: File nothing for a message that holds only a board viewer's state
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a), with no steps
+*When* the cdd server is asked to file the ++board viewer's state++ alone under a
+*Then* ++Write the scenarios++ still has no steps
+
+Evidence: `prompt_queue_spec.py` "files nothing under a goal for a message that holds only a board viewer's state" (commit b123d6925).
 
 ## Story: Split Goal Of Interruptions
 
@@ -243,8 +239,3 @@ Not yet known: whether a mod's tool-call hook sees the desktop app's `update_pla
 *When* the agent splits z
 *Then* it is told no prompt z is on the queue
 
-#### Scenario: Tell the agent it can split a goal that gathered other work
-
-*Given* a turn runs on ++Write the scenarios++, the working prompt
-*When* the person sends ++cut the text++
-*Then* the agent is told, beside the message, to split a goal's interruptions about other work onto cards of their own with prompt-queue.split

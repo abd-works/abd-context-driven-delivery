@@ -16,8 +16,8 @@ import cdd_guidance.practices  # noqa: F401 - registers the practices with the p
 
 
 with description("the stages of the approach"):
-    with it("should walk Discovery, Specification, and Implementation in order"):
-        expect([stage.title for stage in STAGES]).to(equal(["Discovery", "Specification", "Implementation"]))
+    with it("should walk Discovery, Specification, Implementation, and Hardening in order"):
+        expect([stage.title for stage in STAGES]).to(equal(["Discovery", "Specification", "Implementation", "Hardening"]))
 
     with it("should hold every stage a practice's fidelity names"):
         named = {fidelity.stage for practice in PRACTICE_CATALOGUE.create_all() for fidelity in practice.fidelities}
@@ -32,8 +32,14 @@ with description("the stages of the approach"):
     with description("a stage's scope"):
         with it("should narrow and deepen along the board"):
             expect([stage.scope.reach for stage in STAGES]).to(
-                equal(["wide / shallow", "narrow / deeper", "narrowest / deep"])
+                equal(["wide / shallow", "narrow / deeper", "narrowest / deep", "wide / deep"])
             )
+
+        with it("should take in the whole release for Hardening, to make it ready for production"):
+            expect(data_of(STAGES.of("hardening").scope)).to(equal({
+                "shape": "release", "name": "Whole release", "reach": "wide / deep",
+                "covers": "exploration · regression · readiness",
+            }))
 
         with it("should send its shape, name, reach, and what it covers as data"):
             expect(data_of(STAGES.of("discovery").scope)).to(equal({

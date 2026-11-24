@@ -94,6 +94,18 @@ Answered 2026-11-23 (sparky-06): an agent types a robot's name by hand, so case 
 *Then* ++Sparky++'s queue shows ++[for Bolt] Run the heavy tier++
 *And* ++Bolt++'s queue does not show ++[for Bolt] Run the heavy tier++
 
+#### Scenario: Take every robot off the queue when sub-agent mode is switched off
+
+Built 2026-11-24 (commit 3c5dbc74b): out of sub-agent mode the work is the chat's own again.
+
+*Given* sub-agent mode is on, ++Sparky++ holding ++Write the scenarios++ (a) and ++Bolt++ holding ++Run the unit tier++ (b)
+*And* ++Sparky++'s sub-agent was started for ++Write the scenarios++
+*When* the person switches sub-agent mode off
+*Then* ++Write the scenarios++ and ++Run the unit tier++ are given to no robot
+*And* the queue forgets ++Sparky++ and ++Bolt++, ++Sparky++'s sub-agent and every robot's open queue
+
+Evidence: plugin tests "switching sub-agent mode off takes every robot off the queue" and "switching sub-agent mode off forgets the robots and their sub-agents".
+
 ## Story: Assign Queued Prompt To Robot
 
 #### Scenario: Keep a card's robot on the queue
@@ -147,6 +159,29 @@ Evidence: `prompt_queue_spec.py` "gives a card a robot already on the queue by i
 *When* the person opens the prompt queue
 *Then* ++Write the scenarios++'s card in ++Sparky++'s queue has send now, edit, move up, move down and remove, shown on hover
 
+#### Scenario: Start a robot's sub-agent under the name of the card's robot
+
+Built 2026-11-24 (commit b123d6925): the task in the chat and the robot on the queue share one name.
+
+*Given* sub-agent mode is on, ++Bolt++ holding ++Run the unit tier++ (b)
+*And* the hand-out asks that each robot's sub-agent be started with its card's id, its prompt starting "Card [b]: "
+*When* this chat starts a sub-agent described as "Robot 20: run the tests" with the prompt "Card [b]: Run the unit tier"
+*Then* the sub-agent starts described as "Bolt: run the tests"
+*And* the queue remembers that sub-agent as ++Bolt++'s
+
+Evidence: plugin tests "a sub-agent started for a card goes by the name of the card's robot on the queue, whatever name this chat wrote", "a sub-agent started for a card is remembered as the card's robot", "this chat's Agent call that starts a robot is remembered: the robot's name goes with that sub-agent's id" and "the hand-out asks that each robot's sub-agent be started with its card's id, so the task and the robot share one name".
+
+#### Scenario: Hand a robot its next card through the sub-agent it goes by
+
+Built 2026-11-24 (commit b123d6925).
+
+*Given* sub-agent mode is on and the queue plays, ++Sparky++ holding ++Write the scenarios++ (a), done, then "Validate them" (c)
+*And* the queue remembers sub-agent s1 as ++Sparky++'s
+*When* a turn ends
+*Then* this chat is asked to send "Validate them" to s1 with SendMessage, under the name ++Sparky++
+
+Evidence: plugin tests "a robot whose sub-agent is known is handed its next card by that sub-agent's id" and "a robot is handed out under the name it goes by, so this chat can message it by name".
+
 ## Story: Rename Robot
 
 #### Scenario: Name a robot from the prompt box
@@ -185,3 +220,26 @@ Evidence: `prompt_queue_spec.py` "gives a card a robot already on the queue by i
 *Given* sub-agent mode is on and ++Sparky++'s queue is collapsed
 *When* the person expands ++Sparky++'s queue
 *Then* ++Sparky++'s queue shows ++Write the scenarios++'s card again
+
+#### Scenario: Show a robot's running sub-agent when the robot is pressed
+
+Built 2026-11-24 (commit b123d6925): pressing a robot opens that sub-agent's view, the one the background tasks panel opens.
+
+*Given* sub-agent mode is on, ++Sparky++ holding ++Write the scenarios++ (a), its queue closed
+*And* the queue remembers sub-agent s1 as ++Sparky++'s
+*When* the person presses ++Sparky++
+*Then* the chat shows sub-agent s1's view in place of the main conversation
+*And* ++Sparky++'s queue opens
+
+Evidence: plugin tests "pressing a closed robot whose sub-agent is running shows that sub-agent's task in the main view" and "pressing a closed robot opens its queue".
+
+#### Scenario: Go back to the main conversation when the open robot is pressed
+
+Built 2026-11-24 (commit b123d6925).
+
+*Given* sub-agent mode is on, ++Sparky++'s queue open and its sub-agent s1's view shown
+*When* the person presses ++Sparky++
+*Then* the chat shows the main conversation again
+*And* ++Sparky++'s queue closes, leaving the robots alone
+
+Evidence: plugin tests "pressing the open robot goes back to the main conversation" and "pressing the open robot closes its queue, leaving the robots alone".

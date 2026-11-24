@@ -53,16 +53,20 @@ with description("a cdd home's Claude Code plugins") as self:
             self.dev.serve_from(self.feature)
             self.queue_of = lambda home: (home.marketplace.folder / "prompt-queue" / "hooks" / "register.tsx").read_text(encoding="utf-8")
 
-        with context("that a dev-lane install installs its mods"):
+        with context("that a dev-lane install installs its plugins"):
             with before.each:
-                self.loaded_from: list[Path] = []
-                plugins = SimpleNamespace(install=lambda plugin: self.loaded_from.append(plugin.marketplace.mod_folder(plugin)) or "watched")
+                self.loaded: dict[str, Path] = {}
+                plugins = SimpleNamespace(install=lambda plugin: self.loaded.setdefault(plugin.name, plugin.marketplace.mod_folder(plugin)) and "watched")
                 server = McpChannelServer(self.lanes.dev.served_checkout(self.feature), self.lanes, plugins, IdeLayout("Claude"))
-                server.install_mods()
+                server.install_plugins()
+
+            # The cdd plugin goes through the fixed folders like every mod, so the settings name only those.
+            with it("should have Claude Code load the cdd plugin the stable lane publishes"):
+                expect(self.loaded["cdd"]).to(equal(self.home.marketplace.cdd_plugin.folder))
 
             # The person approves a lane by pinning it; its chats then load that lane's mods, never a cached copy.
             with it("should have Claude Code load the mods of the code the dev lane serves"):
-                expect([folder.is_relative_to(self.feature) for folder in self.loaded_from]).to(equal([True, True]))
+                expect([folder.is_relative_to(self.feature) for name, folder in self.loaded.items() if name != "cdd"]).to(equal([True, True]))
 
             with it("should leave the stable lane's mods as the stable lane's code has them"):
                 expect(self.queue_of(self.home)).to(equal(STABLE_QUEUE))

@@ -1,5 +1,6 @@
-"""TDD supplements the implementation fidelities of Clean Engineering, Stories, BDD, and DDD in every session, and
-holds the test tier, speed, stub, and cadence rules that Stories acceptance tests and BDD development share."""
+"""TDD supplements the implementation fidelities of Clean Engineering, Stories, BDD, and DDD, and the hardening fidelities
+of Stories and BDD, in every session, and holds the test tier, speed, stub, and cadence rules that Stories acceptance
+tests and BDD development share."""
 
 from expects import contain, equal, expect
 from mamba import before, context, description, it
@@ -7,7 +8,10 @@ from mamba import before, context, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices and TDD with the practice catalogue
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
-SUPPLEMENTED = (("clean_engineering", "code"), ("stories", "acceptance_tests"), ("bdd", "development"), ("ddd", "tactics"))
+SUPPLEMENTED = (
+    ("clean_engineering", "code"), ("stories", "acceptance_tests"), ("stories", "hardening"), ("bdd", "development"),
+    ("bdd", "hardening"), ("ddd", "tactics"),
+)
 
 
 def slugs_of(fidelity):
@@ -21,7 +25,7 @@ with description("the TDD supplement") as self:
         self.tdd = self.practices["bdd"].working_set.supplements[0]
 
     with context("that the catalogue makes with a session's practices"):
-        with it("should supplement the four implementation fidelities"):
+        with it("should supplement the four implementation fidelities and the two hardening fidelities"):
             expect([(f.practice_guidance.key, f.name) for f in self.tdd.supplemented_fidelities]).to(equal(list(SUPPLEMENTED)))
 
         with it("should be on without being chosen"):
@@ -53,6 +57,26 @@ with description("the TDD supplement") as self:
 
         with it("should add its flow guidance to the fidelity's instructions"):
             expect(self.fidelity("bdd", "development").instructions).to(contain("## Supplement: tdd", "Flow A"))
+
+    with context("with a hardening fidelity of Stories or BDD, which holds no text of its own yet"):
+        with it("should be a fidelity of the Hardening stage"):
+            for key in ("stories", "bdd"):
+                expect(self.fidelity(key, "hardening").stage).to(equal("hardening"))
+
+        with it("should give the fidelity its guidance on exploratory testing and regression, not only its rules"):
+            for key in ("stories", "bdd"):
+                expect(self.fidelity(key, "hardening").instructions).to(contain(
+                    f"## Supplement: tdd for {key}-hardening", "Exploratory testing", "Regression",
+                ))
+
+        with it("should add the rules a finished hardening pass is checked by"):
+            for key in ("stories", "bdd"):
+                expect(slugs_of(self.fidelity(key, "hardening"))).to(contain(
+                    "every-theme-has-a-robot-report", "every-story-judged-against-the-last-release",
+                ))
+
+        with it("should leave the hardening rules off the implementation fidelities"):
+            expect(slugs_of(self.fidelity("bdd", "development"))).not_to(contain("every-theme-has-a-robot-report"))
 
     with context("with UX front-end code, which it does not supplement"):
         with it("should add no TDD rules"):

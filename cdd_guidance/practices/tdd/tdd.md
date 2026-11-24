@@ -2,14 +2,14 @@
 always_apply: true
 supplements:
   clean_engineering: code
-  stories: acceptance_tests
-  bdd: development
+  stories: [acceptance_tests, hardening]
+  bdd: [development, hardening]
   ddd: tactics
 ---
 
 ## Overview
 
-Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for. The graph checks `unit-tier-fakes-every-boundary` on BDD specs and on Stories acceptance tests, and `declared-exception-raised-by-a-test` on the classes of the code, and it lists candidates for `stubbed-boundary-has-heavy-coverage` on BDD specs and for `operation-has-a-proving-test` on the code's operations. Its overlay records what those rules read: each test file's tier, the real resources a unit test imports and the boundaries it stubs, whether a heavy or e2e spec has one of a unit spec's examples, and whether a test reaches each public operation and names each declared exception. Validate judges the rest. The tiers each module uses are recorded in the session's `session.json` as generate and render write its tests (Set up the tiers of a module, below).
+Test-driven development at implementation: every behavior is proven working for real before it is trusted, then kept proven by a test at the fastest tier that can prove it. TDD supplements the implementation fidelities of Clean Engineering (code), Stories (acceptance tests), BDD (development), and DDD (tactics); UX front-end code is not supplemented. It also supplements the hardening fidelities of Stories and BDD, where the whole release is made ready for production by exploratory testing and a regression run of every story, in its own section below. Its guidance is the process; its rules check what the finished tests and code show. It has no rules for every fidelity it supplements: each section of rules names the fidelities it is for. The graph checks `unit-tier-fakes-every-boundary` on BDD specs and on Stories acceptance tests, and `declared-exception-raised-by-a-test` on the classes of the code, and it lists candidates for `stubbed-boundary-has-heavy-coverage` on BDD specs and for `operation-has-a-proving-test` on the code's operations. Its overlay records what those rules read: each test file's tier, the real resources a unit test imports and the boundaries it stubs, whether a heavy or e2e spec has one of a unit spec's examples, and whether a test reaches each public operation and names each declared exception. Validate judges the rest. The tiers each module uses are recorded in the session's `session.json` as generate and render write its tests (Set up the tiers of a module, below).
 
 ## Guidance
 
@@ -210,3 +210,47 @@ Settle how each building block is tested when you choose its pattern, and prove 
 - **`value-object-tested-by-equality`** — A value object's tests prove equality by value and immutability.
 - **`repository-tested-on-a-real-store`** — A repository has unit tests on the in-memory one and a heavy test on the real store.
 - **`domain-service-tested-with-fakes-at-boundary`** — A domain service's tests fake its collaborators outside the domain and use its domain collaborators for real.
+
+## stories-hardening, bdd-hardening
+
+Hardening makes the whole release ready for production. Implementation proved each story on its own; hardening looks at the release as one product, for the defects no story's tests were written to find and for the screens a change broke somewhere else. It has two parts, and a release is ready when both are finished: exploratory testing, which finds what the tests miss, and a regression run, which shows that nothing already accepted has changed without a reason.
+
+### Exploratory testing
+
+Run exploratory testing the way release 1.2 ran it: an exploratory-testing supervisor hands out the testing, and tester robots do it (the `exploratory-testing-supervisor` and `exploratory-testing-tester` agents, `.claude/agents/`). The session's `exploratory-testing/` folder keeps the record, as `.sessions/release-1-2-fixes/exploratory-testing/` does: the themes, the charters, one file per defect, and the final report.
+
+1. **Analyse the product and propose test themes.** Read the story map, the scenario files and story tests under `story_tests/`, and the defects already known (fix commits, the backlog, handoffs). For each sub-epic count its scenarios and its tests at each tier, and set the known defects beside the counts. A theme is a kind of behaviour that produced defects and that no tier runs for real, such as two callers changing one file at the same time, or an install stopped partway. Write each with its evidence to `exploratory-testing/coverage-themes.md`, because a theme without evidence sends a robot to an area the tests already cover.
+2. **Take the themes from the person.** Show the proposed themes and let the person confirm, drop, or add to them before any robot starts. The person knows where the product hurts in ways the code and the tests do not show, and a robot sent to a theme nobody agreed to spends the session on the wrong risk.
+3. **Write one charter for each theme.** A charter is a short mission, `Explore <area> as <persona> with <data> to discover <risk>`, with its sandbox folder, its own throwaway `CDD_HOME`, its test data, and what is out of bounds. Keep them in `exploratory-testing/charters.md`. Giving each robot its own sandbox and data keeps two robots from changing one another's results or the person's real sessions.
+4. **Run several queue robots at once, each on its own theme.** Put each charter on the prompt queue as its own card (`prompt-queue.add`), give it to a named robot (`prompt-queue.assign`), and start one sub-agent for each robot from the tester agent, handing it its card's words exactly. Robots working at once cover the release in the time one robot takes for a single theme, and the queue shows the person which robot holds which theme.
+5. **Report each defect to the shared defect area as it is found.** Each robot writes one file per defect to `exploratory-testing/defects/` (the steps, what was expected, what was seen, and the tier that should have caught it) and queues a `[defect]` card at once, not at the end of its run. One shared folder lets a robot see that a defect is already reported, and a defect reported as it is found can be fixed while testing goes on.
+6. **Triage and close the gaps.** A robot that did not report a defect reproduces it from the report alone, and the supervisor marks it confirmed, not reproduced, or works as intended, with its severity. Every confirmed defect gets a scenario and a test, seen failing first, at the tier that owns the behaviour (Flow A when the boundary has never been run for real). Each robot writes its report: what it tested, what it found, and what it thinks is still at risk. The final report sets the defects out by story and by module, because a defect fixed with no test comes back in the next release.
+
+### Regression
+
+Run the e2e tier for every story of the release, and review every screen against the last official release. Implementation reviews a ticket's e2e run against the last run the person accepted (Reviewing e2e screens, above); hardening does the same for the whole release against the last release's accepted run, because a change made for one story can break the screen of another story that no ticket touched.
+
+1. **Run every story's e2e tests** (`e2e-review.run` for each sub-epic, or the release's e2e run), so each step records its screenshot and result.
+2. **Have an AI judge compare each step with the last official release's accepted run.** Only the pairs whose pixels changed go to the judge (`e2e-review.changed_pairs`, then `e2e-review.judge_step`).
+3. **Give every changed pair a verdict with its reason** (`e2e-review.record_verdict`): intended, citing the story or commit behind it; regression caught; missed by the tests; or noise, as `every-run-reviewed` asks. A missed change gets its failing test first (`missed-change-adds-a-test-first`).
+4. **The person accepts the run** (`e2e-review.accept`), as `person-accepts-the-baseline` asks, and it becomes the baseline the next release is compared with.
+
+### Rules
+
+```yaml
+alwaysApply: false
+globs: "**/exploratory-testing/**,**/e2e-test-results/**"
+```
+
+Whenever you harden a release for production, by exploratory testing or a regression run. Follow these rules.
+
+**Exploratory testing**
+- **`themes-confirmed-by-the-person`** — Every theme in `exploratory-testing/coverage-themes.md` carries its evidence and was confirmed or added by the person before any robot started, because robots sent to themes nobody agreed to test the wrong risks.
+- **`one-robot-per-theme`** — Every theme has a charter on the prompt queue, assigned to its own named robot with its own sandbox and `CDD_HOME`, because two robots on one theme or one sandbox report each other's changes as defects.
+- **`every-theme-has-a-robot-report`** — Every theme has its robot's report: what it tested, the defects it found, and what it thinks is still at risk. A theme without a report was never tested, and the release looks covered where it is not.
+- **`defects-reported-as-found`** — Every defect is one file in the shared defect area, `exploratory-testing/defects/`, with its steps, what was expected and seen, and the tier that should have caught it, and has a `[defect]` card on the queue, because a defect kept until the end of a robot's run cannot be fixed or matched against other reports while testing goes on.
+- **`every-defect-triaged`** — Every defect is marked confirmed, not reproduced, or works as intended by someone other than its reporter, with its severity, and every confirmed defect has a scenario and a test seen failing first, so the next release's tests catch it.
+
+**Regression**
+- **`every-story-run-at-e2e`** — Every story of the release has an e2e run made on the release's commit, because a story left out of the run is a screen nobody checked before production.
+- **`every-story-judged-against-the-last-release`** — Every story's e2e screens are compared with the last official release's accepted run, and every changed pair has a verdict with its reason (`every-run-reviewed`); the release is ready only when every changed pair is intended and the person has accepted the run (`person-accepts-the-baseline`). A run judged against anything newer than the last release can hide a break made since it.

@@ -1,4 +1,4 @@
-"""Heavy spec: the prompt-queue plugin, loaded into a real Claude Code chat run headless (``claude -p``), keeps the chat's
+"""E2e spec: the prompt-queue plugin, loaded into a real Claude Code chat run headless (``claude -p``), keeps the chat's
 queue on a real cdd server.
 
 The plugin's own tests (hooks/register.test.tsx) stub the cdd server, the stored state and the clock; this spec runs the
@@ -28,7 +28,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_true, contain, equal, expect
+from expects import equal, expect
 from mamba import after, before, context, description, it
 
 from harness.mcp.spec_support import SpecChat, SpecServer
@@ -45,11 +45,22 @@ _CHAT_ENVIRONMENT = (
 _MODEL = "haiku"
 # How long one turn may take, from the message sent to the chat's result.
 _TURN_SECONDS = 240
-# How many times the chat is asked to give the goal its steps before the spec goes on and fails on what it finds.
-_SET_STEPS_ASKS = 3
-_NOTICE ="<task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification>"
-# A paste as Claude Code hands it to the plugin: the pasted text inside its tags.
-_PASTED_NOTES = '<pasted_content id="7250">\n## Notes from the backlog\nFrom `board-enhancements` the board needs a filter.\n</pasted_content>'
+# How long the chat stays quiet after a result before the messages sent during a turn count as all answered.
+_QUIET_SECONDS = 45
+_NOTICE = "<task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification>"
+# What the Claude app puts before a message sent while a board viewer is open: the viewer's live state, never the
+# person's words. Its card name is one no message of the person's uses, so a title holding it holds the viewer's state.
+_VIEWER_STATE = '<artifact-view-context>{"board": "Story map", "selected": "Zanzibar lane"}</artifact-view-context>\n'
+_QUESTION = _VIEWER_STATE + "why is the band grey?"
+_ANSWER = "yes"
+_WORK = _VIEWER_STATE + "Please add a flush button to the queue band"
+# A turn that works long enough for messages to arrive while it runs.
+_LONG_TURN = "Run the Bash command `sleep 30`, then reply only: slept"
+# The tools the agent may call without asking: the queue's, to place work, and Bash, for the long turn.
+_QUEUE_TOOLS = (
+    "mcp__cdd__prompt-queue_add", "mcp__cdd__prompt-queue_add_interruption", "mcp__cdd__prompt-queue_show",
+    "mcp__cdd__prompt-queue_set_steps", "mcp__cdd__prompt-queue_remove", "Bash",
+)
 
 
 class ClaudeCodeNotFoundError(RuntimeError):
@@ -108,9 +119,31 @@ class HeadlessChat:
         Claude Code was found, fails on that, as every example after it does."""
         if self._process is None:
             raise ClaudeCodeNotFoundError()
+        self._write(text)
+        self._wait_for(lambda event: event.get("type") == "result")
+
+    def send_while_working(self, turn: str, messages: list[str]) -> None:
+        """Send turn, and once its agent is calling a tool, send each of messages while that turn still works; then
+        wait until every message is answered and the chat is quiet."""
+        if self._process is None:
+            raise ClaudeCodeNotFoundError()
+        self._write(turn)
+        self._wait_for(_calls_a_tool)
+        for message in messages:
+            self._write(message)
+        self._wait_for(lambda event: event.get("type") == "result")
+        try:
+            while True:
+                self._lines.get(timeout=_QUIET_SECONDS)
+        except queue.Empty:
+            pass
+
+    def _write(self, text: str) -> None:
         self._process.stdin.write(json.dumps({"type": "user", "message": {"role": "user", "content": text}}) + "\n")
         self._process.stdin.flush()
-        while json.loads(self._lines.get(timeout=_TURN_SECONDS)).get("type") != "result":
+
+    def _wait_for(self, arrived) -> None:
+        while not arrived(json.loads(self._lines.get(timeout=_TURN_SECONDS))):
             pass
 
     def stop(self) -> None:
@@ -139,8 +172,29 @@ class HeadlessChat:
                 self._lines.put(line)
 
 
+def _calls_a_tool(event: dict) -> bool:
+    """Whether a line of the chat's output is the agent calling a tool, so its turn is still working."""
+    content = event.get("message", {}).get("content") if event.get("type") == "assistant" else None
+    return isinstance(content, list) and any(block.get("type") == "tool_use" for block in content)
+
+
 def texts(prompts: list[dict]) -> list[str]:
     return [prompt["text"] for prompt in prompts]
+
+
+def entries(prompts: list[dict]) -> list[str]:
+    """Every title the queue shows: each card's text, and each step's text under its card's."""
+    return [title for prompt in prompts for title in [prompt["text"], *(f'{prompt["text"]} / {step["text"]}' for step in prompt.get("steps") or [])]]
+
+
+def placed(before: list[dict], after: list[dict]) -> list[str]:
+    """The titles the queue shows after that it did not show before: the cards and steps the chat put on it."""
+    shown = set(entries(before))
+    return [title for title in entries(after) if title not in shown]
+
+
+def _holds_viewer_state(title: str) -> bool:
+    return "Zanzibar" in title or "artifact-view-context" in title
 
 
 # (S) Person --> Interrupt The Queue From The Chat
@@ -160,32 +214,66 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
             os.environ["CDD_CHATS_FOLDER"] = self.prior_chats
         shutil.rmtree(self.chats, ignore_errors=True)
 
-    with context("that the queue holds a done prompt and one to do, and no goal was last worked"):
+    with context("that the queue holds a done goal and one to do, and no turn is working"):
         with before.all:
-            self.chat = HeadlessChat(self.server)
-            self.chat.queue_work(["Write the scenarios", "Run the unit tier"], done=1)
+            self.chat = HeadlessChat(self.server, allowed_tools=_QUEUE_TOOLS)
+            self.start = self.chat.queue_work(["Write the scenarios", "Run the unit tier"], done=1)
             self.chat.start()
 
         with after.all:
             self.chat.stop()
 
-        with context("that the person sends a prompt straight to the chat"):
+        with context("that the person asks a question, with a board viewer open"):
             with before.all:
-                self.chat.send("Fix the Files app")
+                self.chat.send(_QUESTION)
+                self.asked = self.chat.prompts()
 
-            with it("should go above the next prompt to do, below the done ones, marked as an interruption"):
-                expect(texts(self.chat.prompts())).to(equal(["Write the scenarios", "[interruption] Fix the Files app", "Run the unit tier"]))
+            with it("should put nothing on the queue"):
+                expect(placed(self.start, self.asked)).to(equal([]))
 
-            with context("that the person pastes new work after that turn, which asked nothing"):
+            with context("that the person then answers"):
                 with before.all:
-                    self.chat.send(_PASTED_NOTES)
+                    self.chat.send(_ANSWER)
+                    self.answered = self.chat.prompts()
 
-                with it("should start a goal of its own, titled by the paste's first line"):
-                    expect(texts(self.chat.prompts())).to(contain("[interruption] Notes from the backlog"))
+                with it("should put nothing on the queue"):
+                    expect(placed(self.asked, self.answered)).to(equal([]))
 
-                with it("should leave the goal last worked without a step from it"):
-                    sent = next(prompt for prompt in self.chat.prompts() if prompt["text"] == "[interruption] Fix the Files app")
-                    expect(sent.get("steps") or []).to(equal([]))
+                with context("that the person then asks for work, with a board viewer open"):
+                    with before.all:
+                        self.chat.send(_WORK)
+                        self.worked = self.chat.prompts()
+
+                    with it("should put the work on the queue"):
+                        expect([title for title in placed(self.answered, self.worked) if "flush" in title.lower()]).not_to(equal([]))
+
+                    with it("should keep the viewer's state out of every title"):
+                        expect([title for title in entries(self.worked) if _holds_viewer_state(title)]).to(equal([]))
+
+    with context("that a turn is working"):
+        with before.all:
+            self.chat = HeadlessChat(self.server, allowed_tools=_QUEUE_TOOLS)
+            self.start = self.chat.queue_work(["Write the scenarios", "Run the unit tier"], done=1)
+            self.chat.start()
+
+        with after.all:
+            self.chat.stop()
+
+        with context("that the person sends a question, an answer and a work request, with a board viewer open"):
+            with before.all:
+                self.chat.send_while_working(_LONG_TURN, [_QUESTION, _ANSWER, _WORK])
+                # The turn's own message asks for work too, so the agent may queue it; it is not one of the three.
+                self.placed = [title for title in placed(self.start, self.chat.prompts()) if "sleep" not in title.lower()]
+                print(f"placed while working: {self.placed}")
+
+            with it("should put the work request on the queue"):
+                expect([title for title in self.placed if "flush" in title.lower()]).not_to(equal([]))
+
+            with it("should put nothing else on the queue"):
+                expect([title for title in self.placed if "flush" not in title.lower()]).to(equal([]))
+
+            with it("should keep the viewer's state out of every title"):
+                expect([title for title in entries(self.chat.prompts()) if _holds_viewer_state(title)]).to(equal([]))
 
     with context("that a background task's notice arrives in the chat as a prompt"):
         with before.all:
@@ -199,34 +287,3 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
 
         with it("should not be queued as the person's prompt"):
             expect(texts(self.chat.prompts())).to(equal(["Write the scenarios", "Run the unit tier"]))
-
-    with context("that the agent gives a done goal its steps with prompt-queue.set_steps"):
-        with before.all:
-            self.chat = HeadlessChat(self.server, allowed_tools=("mcp__cdd__prompt-queue_set_steps",))
-            self.goal = self.chat.queue_work(["Write the scenarios", "Run the unit tier"], done=1)[0]
-            self.chat.start()
-            # The cheapest model now and then answers without the call, or makes it with steps it cannot read; the
-            # goal is the one last worked only once its call lands, so the chat is asked again until the steps are there.
-            for _ask in range(_SET_STEPS_ASKS):
-                self.chat.send(
-                    f'Call the tool mcp__cdd__prompt-queue_set_steps once, with chat "{self.chat.id}", prompt "{self.goal["id"]}" '
-                    'and steps [{"text": "Read the epic", "state": "done"}]. Then reply only: ok')
-                if any(prompt["id"] == self.goal["id"] and prompt.get("steps") for prompt in self.chat.prompts()):
-                    break
-
-        with after.all:
-            self.chat.stop()
-
-        with context("that the person then sends a message after that turn, which asked nothing"):
-            with before.all:
-                self.chat.send("cut the text with an ellipsis")
-                self.worked = next(prompt for prompt in self.chat.prompts() if prompt["id"] == self.goal["id"])
-
-            with it("should give the message a goal of its own"):
-                expect([text for text in texts(self.chat.prompts()) if "cut the text" in text]).to(equal(["[interruption] cut the text with an ellipsis"]))
-
-            with it("should leave the goal the agent gave steps to with only those steps"):
-                expect(self.worked["steps"]).to(equal([{"text": "Read the epic", "state": "done"}]))
-
-            with it("should leave that goal done"):
-                expect(self.worked.get("is_done", False)).to(be_true)

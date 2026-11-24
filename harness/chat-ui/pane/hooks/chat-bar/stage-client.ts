@@ -3,8 +3,8 @@ import type { ColumnOverviewData } from '@cdd/space/kanban/board'
 
 
 // One glyph for each column board.overview sends, standing for the canvas's icons: Backlog, Discovery (magnifier),
-// Specification (document), Implementation (gear), Complete (check). A column the canvas has no icon for shows a dot.
-const STAGE_ICONS: Record<string, string> = { Backlog: '☰', Discovery: '⌕', Specification: '▤', Implementation: '⚙', Complete: '✓' }
+// Specification (document), Implementation (gear), Hardening (shield), Complete (check). A column the canvas has no icon for shows a dot.
+const STAGE_ICONS: Record<string, string> = { Backlog: '☰', Discovery: '⌕', Specification: '▤', Implementation: '⚙', Hardening: '⛨', Complete: '✓' }
 
 export function stageIconOf(stage: string): string {
   return STAGE_ICONS[stage] ?? '·'

@@ -52,7 +52,7 @@ class PracticeSupplement(PracticeGuidance):
     """Guidance that adds to other practices at the fidelities it names. It is a practice of its own, kept with the
     practices, but it has no stage and no fidelities on the board: it never moves work forward. Its front matter names
     the fidelities it supplements (``supplements:``, practice key to fidelity name) and whether it is on in every
-    session (``always_apply``). Its document keeps the usual Overview and Guidance, then sections headed with the slugs of
+    session (``always_apply``); a practice with several supplemented fidelities names them as a list. Its document keeps the usual Overview and Guidance, then sections headed with the slugs of
     the fidelities they apply to (``## bdd-development``, or ``## stories-acceptance-tests, bdd-development`` for one
     that applies to both), each with its guidance and a ``### Rules`` list. Its Shared rules are the few that apply to
     all work, such as choosing the flow before writing code; every other rule names the fidelities it is for. A subclass that checks graph rules makes its *GraphOverlay* by overriding ``graph_overlay``, which
@@ -79,8 +79,15 @@ class PracticeSupplement(PracticeGuidance):
         """Read the front matter's practice and fidelity names into the fidelities of practices, the set's own, once:
         after this nothing holds a practice name or fidelity name as text."""
         self.supplemented_fidelities = [
-            self._fidelity_in(practices, key, name) for key, name in (self._settings.get("supplements") or {}).items()
+            self._fidelity_in(practices, key, name)
+            for key, names in (self._settings.get("supplements") or {}).items()
+            for name in self._names_in(names)
         ]
+
+    def _names_in(self, names: str | list[str]) -> list[str]:
+        """The fidelity names front matter gives a practice: one name, such as ``code``, or a list of them, such as
+        ``[acceptance_tests, hardening]``, since a practice is named once in the mapping."""
+        return [names] if isinstance(names, str) else list(names)
 
     def _fidelity_in(self, practices: Mapping[str, PracticeGuidance], key: str, name: str) -> FidelityGuidance:
         practice = practices.get(key)

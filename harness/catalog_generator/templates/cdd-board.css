@@ -1,9 +1,9 @@
-/* CDD catalog board — Foundry shell, CDD header + 5 practice rows × 3 stages.
+/* CDD catalog board — Foundry shell, CDD header + 5 practice rows × 4 stages.
    Stage heads navigate to CDD fidelities (no stage filter). */
 
 .foundry-board-grid.foundry-board-grid--cdd {
   --foundry-skill-row-h: 40px;
-  grid-template-columns: 200px repeat(3, minmax(0, 1fr));
+  grid-template-columns: 200px repeat(4, minmax(0, 1fr));
   grid-template-rows: auto repeat(5, var(--foundry-skill-row-h));
   background: var(--abd-bg, #0d1117);
   border: 1px solid var(--abd-border, #2a2a2a);
@@ -27,6 +27,7 @@
 .foundry-board-grid--cdd > .kb-col[data-stage="discovery"] { grid-column: 2; }
 .foundry-board-grid--cdd > .kb-col[data-stage="specification"] { grid-column: 3; }
 .foundry-board-grid--cdd > .kb-col[data-stage="implementation"] { grid-column: 4; }
+.foundry-board-grid--cdd > .kb-col[data-stage="hardening"] { grid-column: 5; }
 
 .foundry-board-grid--cdd .foundry-practice-col__card--header,
 .foundry-board-grid--cdd .foundry-practice-col__cdd-head {
@@ -72,9 +73,9 @@
   font-size: 12px;
 }
 
-/* Three policy boxes under the three stage columns. */
+/* One policy box under each of the four stage columns. */
 .kanban-stage-questions--cdd {
-  grid-template-columns: 200px repeat(3, minmax(0, 1fr));
+  grid-template-columns: 200px repeat(4, minmax(0, 1fr));
 }
 
 .kanban-stage-questions--cdd .kanban-stage-questions__cell {
@@ -428,7 +429,7 @@ html[data-abd-theme="engineering"] .kanban-stage-questions--cdd .kanban-stage-qu
 }
 
 .foundry-kanban-surface.is-tour-fidelities-shown .foundry-board-grid--cdd {
-  grid-template-columns: 200px repeat(3, minmax(0, 1fr));
+  grid-template-columns: 200px repeat(4, minmax(0, 1fr));
   grid-template-rows: auto repeat(5, var(--foundry-skill-row-h));
   min-height: 0;
   height: auto;

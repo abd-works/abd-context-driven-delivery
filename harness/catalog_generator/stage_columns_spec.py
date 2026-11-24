@@ -8,7 +8,7 @@ from harness.guidance.stages import STAGES
 
 with description("the catalog board's stage columns"):
     with it("should walk the approach's stages in order"):
-        expect(STAGE_COLUMNS.stages).to(equal(("discovery", "specification", "implementation")))
+        expect(STAGE_COLUMNS.stages).to(equal(("discovery", "specification", "implementation", "hardening")))
 
     with it("should head the specification column with the stage's title"):
         expect(STAGE_COLUMNS.of(STAGES.of("specification")).label).to(equal("specification"))

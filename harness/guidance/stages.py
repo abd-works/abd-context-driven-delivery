@@ -1,4 +1,4 @@
-"""The stages of the CDD approach: Discovery, Specification, and Implementation.
+"""The stages of the CDD approach: Discovery, Specification, Implementation, and Hardening.
 
 Each fidelity names its stage in its practice markdown as **Stage:**. The session board, the chat bar, and the catalog
 draw the stages from here, so a stage's order, scope, and actions are written once.
@@ -11,10 +11,12 @@ from harness.installation.data_class import data_field
 DISCOVERY: str = "discovery"
 SPECIFICATION: str = "specification"
 IMPLEMENTATION: str = "implementation"
+HARDENING: str = "hardening"
 
 class StageScope:
     """How much of the solution a stage's work covers, drawn as a shape that narrows and deepens along the board:
-    Discovery takes in the whole solution wide and shallow, Implementation one story narrow and deep."""
+    Discovery takes in the whole solution wide and shallow, Implementation one story narrow and deep, and Hardening the
+    whole release again, wide and deep, to make it ready for production."""
 
     def __init__(self, shape: str, name: str, reach: str, covers: str = "") -> None:
         self._shape = shape
@@ -27,7 +29,7 @@ class StageScope:
     @property
     @data_field
     def shape(self) -> str:
-        """The shape the board draws, such as `solution`, `sprint`, or `story`."""
+        """The shape the board draws, such as `solution`, `sprint`, `story`, or `release`."""
         return self._shape
 
     @property
@@ -102,4 +104,5 @@ STAGES = ApproachStages((
     ApproachStage(DISCOVERY, StageScope("solution", "Whole solution", "wide / shallow", "outcomes · scope · boundaries")),
     ApproachStage(SPECIFICATION, StageScope("sprint", "Sprint", "narrow / deeper", "behaviour · design · logic")),
     ApproachStage(IMPLEMENTATION, StageScope("story", "Story", "narrowest / deep", "tests · code · interface")),
+    ApproachStage(HARDENING, StageScope("release", "Whole release", "wide / deep", "exploration · regression · readiness")),
 ))

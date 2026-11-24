@@ -338,6 +338,14 @@ If this change will not stay here, follow `practices/bdd/bdd-behavior.mdc`.
 
 ---
 
+### hardening
+
+```yaml
+stage: hardening
+```
+
+---
+
 ## Common mistakes still being made
 
 Scratch pad — mistakes people still make against this practice. Each entry: the mistake, an example, what should have happened instead. (Disposition TBD.)

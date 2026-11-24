@@ -66,7 +66,7 @@ from space.kanban.story_test import SharedStories, active_in, column_in, expect_
 
 shared_stories = SharedStories("See Work On Session Board")
 
-STAGES = ("Discovery", "Specification", "Implementation")
+STAGES = ("Discovery", "Specification", "Implementation", "Hardening")
 
 
 @shared_stories.scenario("Open Board", "Open the board on a project")
@@ -106,7 +106,7 @@ def _(s):
 
     @s.and_("each stage shows an In progress list and a Done list")
     def _(world):
-        expect([("in_progress" in column_in(world.read, stage), "done" in column_in(world.read, stage)) for stage in STAGES]).to(equal([(True, True)] * 3))
+        expect([("in_progress" in column_in(world.read, stage), "done" in column_in(world.read, stage)) for stage in STAGES]).to(equal([(True, True)] * len(STAGES)))
 
     @s.and_("the Discovery stage requires story_map, bounded_context, and ia, each through Generate and Validate")
     def _(world):
@@ -424,7 +424,7 @@ def _(s):
 
     @s.then("Discovery, Specification, and Implementation each show the limit 3")
     def _(world):
-        expect([column_in(world.read, stage)["wip_limit"] for stage in STAGES]).to(equal([DISCOVERY_LIMIT] * 3))
+        expect([column_in(world.read, stage)["wip_limit"] for stage in STAGES]).to(equal([DISCOVERY_LIMIT] * len(STAGES)))
 
 
 @shared_stories.scenario("Set Stage WIP Limit", "Show a stage over its limit")

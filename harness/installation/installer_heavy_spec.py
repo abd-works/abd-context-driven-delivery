@@ -1467,6 +1467,19 @@ with description("toolsets installed for Claude Code") as self:
             with it("should name only its own published folder"):
                 expect([f for f in self.plugins.watched_folders if f.endswith("prompt-queue")]).to(equal([str(self.plugins.chat_folder("prompt-queue"))]))
 
+        # A served checkout's own mod folder, named by an older install, holds the plugin under another folder name, so
+        # Claude Code loaded it twice: once from there and once from the fixed folder.
+        with context("that the settings name a checkout's own folder of it"):
+            with before.each:
+                self.checkout_folder = self.plugins.home_folder / "checkout" / "tools" / "prompt_queue"
+                (self.checkout_folder / ".claude-plugin").mkdir(parents=True)
+                (self.checkout_folder / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "prompt-queue"}), encoding="utf-8")
+                self.plugins.watch_folders(str(self.checkout_folder))
+                self.plugins.install(_QUEUE)
+
+            with it("should name only the fixed folder for it"):
+                expect(self.plugins.watched_folders).not_to(contain(str(self.checkout_folder)))
+
         with context("that Claude Code has a cached copy of"):
             with before.each:
                 self.plugins.plugins_installed = {"prompt-queue@cdd-home": "0.1.0-old", "cdd-board@cdd-home": "0.6.3-abc"}

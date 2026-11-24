@@ -372,14 +372,6 @@ export function refreshChatBar($: EngineInterface): void {}
             self.private_operations = rule_pair(
                 "keep-classes-single-responsibility", f"export class Steps {{\n{public}}}\n", f"export class Steps {{\n{mostly_private}}}\n", lang="typescript"
             )
-
-        with it("should flag faultyAsset and accept repairedAsset"):
-            self.pair.check()
-
-        with it("should count only the public operations of a TypeScript class, not those it declares private"):
-            self.private_operations.check()
-
-        with it("should not count a property's setter or a cached property as public behaviour"):
             behaviour = "".join(f"    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
             held = "".join(
                 f"    @cached_property\n    def step{index}(self) -> int:\n        return {index}\n\n"
@@ -389,13 +381,26 @@ export function refreshChatBar($: EngineInterface): void {}
                 for index in range(11)
             )
             header = "from functools import cached_property\n\n\nclass Steps:\n"
-            rule_pair("keep-classes-single-responsibility", header + behaviour, header + held).check()
+            self.setters_and_cached_properties = rule_pair("keep-classes-single-responsibility", header + behaviour, header + held)
+            held_from_functools = "".join(
+                f"    @functools.cached_property\n    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11)
+            )
+            functools_header = "import functools\n\n\nclass Steps:\n"
+            self.cached_properties_from_functools = rule_pair(
+                "keep-classes-single-responsibility", functools_header + behaviour, functools_header + held_from_functools
+            )
+
+        with it("should flag faultyAsset and accept repairedAsset"):
+            self.pair.check()
+
+        with it("should count only the public operations of a TypeScript class, not those it declares private"):
+            self.private_operations.check()
+
+        with it("should not count a property's setter or a cached property as public behaviour"):
+            self.setters_and_cached_properties.check()
 
         with it("should not count a cached property read from functools as public behaviour"):
-            behaviour = "".join(f"    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
-            held = "".join(f"    @functools.cached_property\n    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
-            header = "import functools\n\n\nclass Steps:\n"
-            rule_pair("keep-classes-single-responsibility", header + behaviour, header + held).check()
+            self.cached_properties_from_functools.check()
     with context("use-typed-signatures"):
         with before.all:
             self.pair = python_example_pair("use-typed-signatures")
