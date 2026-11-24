@@ -64,8 +64,11 @@ def until(holds, seconds: float) -> bool:
     return bool(holds())
 
 
+# A run takes a second or more, so each context below makes its checkout and home and runs what it needs once, before its
+# examples, which read what the runs left.
 with description("a tier run") as self:
-    with before.each:
+    def make_checkout(self) -> None:
+        """A throwaway checkout and cdd home of the context's own."""
         self.started = []
         self.root = Path(tempfile.mkdtemp(prefix="test-runs-heavy-"))
         self.checkout = self.repository("checkout")
@@ -73,7 +76,8 @@ with description("a tier run") as self:
         self.home.mkdir()
         self.file = self.home / "test-runs.json"
 
-    with after.each:
+    def end_runs(self) -> None:
+        """Kill every process the context started that still runs, and remove its folder."""
         for process in self.started:
             if process.poll() is None:
                 process.kill()
@@ -142,26 +146,40 @@ with description("a tier run") as self:
         return tier
 
     with context("that is recorded as running under a process id another program now has"):
-        with before.each:
+        with before.all:
+            self.make_checkout()
             self.other_program = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"], stdin=subprocess.DEVNULL)
             self.started.append(self.other_program)
             nine_days_ago = (datetime.now(timezone.utc) - timedelta(days=9)).isoformat()
             self.file.write_text(json.dumps({"heavy": {"latest": {"tier": "heavy", "outcome": "running", "pid": self.other_program.pid,
                                                                     "commit": "z", "started_at": nine_days_ago}}}), encoding="utf-8")
 
+        with after.all:
+            self.end_runs()
+
         with it("should not keep a run by hand waiting"):
             expect(self.ended(self.start())).to(contain("heavy passed on"))
 
     with context("that is killed while its tier works"):
+        with before.all:
+            self.make_checkout()
+
+        with after.all:
+            self.end_runs()
+
         with it("should end its test.ps1 with it"):
             tier = self.killed_while_its_tier_works()
             expect(until(lambda: not tier.alive, ENDED_SECONDS)).to(be_true)
 
         with context("and run again on the same commit"):
-            with before.each:
+            with before.all:
+                self.make_checkout()
                 self.killed_while_its_tier_works()
                 self.again = self.start(seconds=6)
                 self.tier_process()
+
+            with after.all:
+                self.end_runs()
 
             with it("should record the process that runs it now"):
                 expect(RunningProcess(self.recorded()["pid"]).alive).to(be_true)
@@ -174,7 +192,8 @@ with description("a tier run") as self:
                 expect(self.recorded("previous").get("outcome")).to(equal("abandoned"))
 
     with context("that the cadence starts in the background, after a run that failed"):
-        with before.each:
+        with before.all:
+            self.make_checkout()
             self.two_hours_ago = datetime.now(timezone.utc) - timedelta(hours=2)
             record = TestRunRecord(self.home, self.checkout)
             record.save(TestRun(TestTier.E2E, "old", datetime.now(timezone.utc), RunOutcome.PASSED))
@@ -183,7 +202,8 @@ with description("a tier run") as self:
             TestCadence(record).start_due()
             until(lambda: self.recorded().get("outcome") == "failed", SOON_SECONDS)
 
-        with after.each:
+        with after.all:
+            self.end_runs()
             for name in ("RUN_SECONDS", "RUN_EXIT", "RUN_PID_FILE"):
                 os.environ.pop(name, None)
 
@@ -194,7 +214,8 @@ with description("a tier run") as self:
             expect(self.recorded().get("is_new_failure")).to(be_false)
 
     with context("whose checkout takes a commit while its tier works"):
-        with before.each:
+        with before.all:
+            self.make_checkout()
             self.head = git(self.checkout, "rev-parse", "HEAD")
             run = self.start(seconds=6)
             self.tier_process()
@@ -203,6 +224,9 @@ with description("a tier run") as self:
             git(self.checkout, "commit", "-q", "-m", "Moved during the run")
             self.output = self.ended(run)
 
+        with after.all:
+            self.end_runs()
+
         with it("should run the files of the commit it records"):
             expect(self.output).to(contain(f"HEAD {self.head}", "moved False", f"heavy passed on {self.head[:9]}"))
 
@@ -210,8 +234,12 @@ with description("a tier run") as self:
             expect(git(self.checkout, "worktree", "list", "--porcelain").count("worktree ")).to(equal(1))
 
     with context("whose checkout has packages npm installed, which git does not keep"):
-        with before.each:
+        with before.all:
+            self.make_checkout()
             self.output = self.ended(self.start())
+
+        with after.all:
+            self.end_runs()
 
         with it("should run with those packages"):
             expect(self.output).to(contain("packages True"))
@@ -220,13 +248,17 @@ with description("a tier run") as self:
             expect((self.checkout / "app" / "node_modules" / "installed.txt").is_file()).to(be_true)
 
     with context("whose checkout has the language adapters an install wrote, which git does not keep"):
-        with before.each:
+        with before.all:
+            self.make_checkout()
             self.installed = self.checkout / ".claude"
             self.output = self.ended(self.start())
 
         def installed_files(self) -> dict:
             return {file.relative_to(self.installed).as_posix(): file.read_text(encoding="utf-8")
                     for file in self.installed.rglob("*") if file.is_file()}
+
+        with after.all:
+            self.end_runs()
 
         with it("should run with those adapters"):
             expect(self.output).to(contain("adapters True"))
@@ -236,7 +268,8 @@ with description("a tier run") as self:
                                                     "settings.json": "{}"}))
 
     with context("that finds the worktree a run no longer running left, with a read-only folder and a file past the Windows path limit"):
-        with before.each:
+        with before.all:
+            self.make_checkout()
             left = self.home / "test-run-worktrees" / "heavy"
             read_only = left / ".claude" / "language-adapters" / "typescript" / "harness"
             read_only.mkdir(parents=True)
@@ -250,6 +283,9 @@ with description("a tier run") as self:
             self.left = left
             self.output = self.ended(self.start())
 
+        with after.all:
+            self.end_runs()
+
         with it("should run"):
             expect(self.output).to(contain("heavy passed on"))
 
@@ -257,16 +293,26 @@ with description("a tier run") as self:
             expect(self.left.exists()).to(be_false)
 
     with context("whose tier captures screens under the scheduled release"):
+        with before.all:
+            self.make_checkout()
+
+        with after.all:
+            self.end_runs()
+
         with it("should bring them back to the checkout, where they are reviewed"):
             self.ended(self.start(captures=True))
             captured = self.checkout / ".sessions" / "scheduled" / "e2e-test-results" / "run-1" / "step.txt"
             expect(captured.is_file()).to(be_true)
 
     with context("on another checkout than the one whose run failed"):
-        with before.each:
+        with before.all:
+            self.make_checkout()
             self.ended(self.start(exit_code=1))
             self.other = self.repository("other")
             self.ended(self.start(checkout=self.other))
+
+        with after.all:
+            self.end_runs()
 
         with it("should leave the first checkout's result as it was"):
             expect(TestRunRecord(self.home, self.checkout).latest(TestTier.HEAVY).state).to(equal("failed"))
@@ -275,16 +321,22 @@ with description("a tier run") as self:
             expect(TestRunRecord(self.home, self.other).latest(TestTier.HEAVY).state).to(equal("passed"))
 
 
-# A heavy spec of the throwaway checkout, which takes as long as the run asks.
+# A heavy spec of the throwaway checkout, which works for as long as the run asks, or until the file RUN_RELEASE_FILE
+# names is there, whichever comes first.
 SLOW_HEAVY_SPEC = """import os, time
 from mamba import description, it
 
 with description("a slow tier"):
     with it("should take its time"):
-        time.sleep(int(os.environ.get("RUN_SECONDS", "0")))
+        release = os.environ.get("RUN_RELEASE_FILE", "")
+        end = time.monotonic() + int(os.environ.get("RUN_SECONDS", "0"))
+        while time.monotonic() < end and not (release and os.path.exists(release)):
+            time.sleep(0.1)
 """
-# How long the first tier works, long enough for the runner and a second test.ps1 to start beside it.
-FIRST_RUN_SECONDS = 15
+# The longest the first tier works; the spec lets it end sooner, once what it waits beside has started waiting.
+FIRST_RUN_SECONDS = 120
+# What a run that waits for another says, once, before it waits.
+WAITING = "waiting for the heavy run process"
 # How long a run that waits for the first, then runs its own tier, has to end.
 WAITED_SECONDS = 180
 
@@ -298,7 +350,9 @@ with description("a tier started with scripts/test.ps1") as self:
         self.started = []
         self.commit_the_real_script()
         self.env = {key: value for key, value in os.environ.items() if key != "CDD_TEST_RUN_RECORDED"}
-        self.env.update({"CDD_HOME": str(self.home), "PYTHONPATH": str(REPOSITORY), "PYTHONIOENCODING": "utf-8"})
+        self.release = self.root / "release-the-first-run"
+        self.env.update({"CDD_HOME": str(self.home), "PYTHONPATH": str(REPOSITORY), "PYTHONIOENCODING": "utf-8",
+                         "RUN_RELEASE_FILE": str(self.release)})
         self.first = self.script(FIRST_RUN_SECONDS)
         until(lambda: self.script_run().get("outcome") == "running", SOON_SECONDS)
 
@@ -331,6 +385,16 @@ with description("a tier started with scripts/test.ps1") as self:
         """The runner started by hand on the same checkout, as a person or the /release command starts it."""
         return self.begun([sys.executable, "-m", "harness.release.test_runs", "heavy", str(self.checkout), str(self.home)], self.root, 0)
 
+    def output_once_waiting(self, process: subprocess.Popen) -> str:
+        """What process printed by its end, the first run let end once process says it waits for it."""
+        printed = []
+        for line in process.stdout:
+            printed.append(line)
+            if WAITING in line:
+                break
+        self.release.write_text("waited for", encoding="utf-8")
+        return "".join(printed) + process.communicate(timeout=WAITED_SECONDS)[0]
+
     def begun(self, command: list[str], folder: Path, seconds: int) -> subprocess.Popen:
         process = subprocess.Popen(command, cwd=folder, env={**self.env, "RUN_SECONDS": str(seconds)}, stdin=subprocess.DEVNULL,
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
@@ -349,18 +413,19 @@ with description("a tier started with scripts/test.ps1") as self:
         expect(self.script_run().get("pid")).to(equal(self.first.pid))
 
     with it("should keep a run the runner starts beside it waiting until it ends"):
-        output = self.runner().communicate(timeout=WAITED_SECONDS)[0]
-        expect(output).to(contain(f"waiting for the heavy run process {self.first.pid}", "heavy passed on"))
+        output = self.output_once_waiting(self.runner())
+        expect(output).to(contain(f"{WAITING} {self.first.pid}", "heavy passed on"))
 
     with it("should keep a second test.ps1 waiting until it ends"):
-        output = self.script(0).communicate(timeout=WAITED_SECONDS)[0]
-        expect(output).to(contain(f"waiting for the heavy run process {self.first.pid}", "1/1 files passed"))
+        output = self.output_once_waiting(self.script(0))
+        expect(output).to(contain(f"{WAITING} {self.first.pid}", "1/1 files passed"))
 
     with it("should keep the cadence from starting a tier while it runs"):
         expect(TestCadence(TestRunRecord(self.home, self.checkout)).due()).to(equal([]))
 
     with context("that has ended"):
         with it("should no longer be live"):
+            self.release.write_text("ended", encoding="utf-8")
             self.first.communicate(timeout=WAITED_SECONDS)
             expect(TestCadence(TestRunRecord(self.home, self.checkout)).due()).to(equal([TestTier.E2E, TestTier.HEAVY]))
 
