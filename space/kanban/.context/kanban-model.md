@@ -611,9 +611,6 @@ What a person chose to do with a ticket's work as it closes, made by `Ticket.clo
 	// commits, pushes, or changes the branch, which saves what a worktree about to go holds
 + removes_worktree: bool
 	// deletes the worktree, or the branch, which takes its worktree with it
-----
-+ freeing_worktree(): Leaving
-	// deletes the worktree alone, as archiving or deleting a ticket does
 
 ## StagePlace
 
