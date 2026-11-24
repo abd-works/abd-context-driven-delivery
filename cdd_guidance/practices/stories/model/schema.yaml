@@ -148,7 +148,7 @@ then:
   observes?: [example]
   where:
     - id is the text slugs from the root to this node, joined by dots
-    - observes is the examples its own text names and those the Givens of its scenario and of its story's Background name
+    - observes is the examples its own text names and those the Givens of its scenario and of its story's Background name; an example of a markdown scenarios file is observed only by the steps of that file
     - observes is required only where a model is written for the story's area of the map (then-observes-an-example)
   rules:
     - then-observes-an-example

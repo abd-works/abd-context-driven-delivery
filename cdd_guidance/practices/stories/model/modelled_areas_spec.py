@@ -7,6 +7,7 @@ from mamba import before, context, description, it
 from cdd_guidance.practices.stories.model.fixtures.bookshop_project import BookshopWorkingCopy
 
 _ADD_BOOK = "story_tests/fill-cart/add-books/add_book_to_cart_story.test.md"
+_CHANGE_QUANTITY = "story_tests/fill-cart/add-books/change_cart_line_quantity_story.test.md"
 _SEARCH_BOOKS = "story_tests/browse-books/search-books/search_books_story.test.ts"
 _DOMAIN_MODEL = ".context/domain-model.md"
 _BOOK_LINK = "[Book](../../../.context/domain-model.md#book-aggregate-root-entity)"
@@ -43,6 +44,25 @@ with description("scenarios checked against the Stories rules") as self:
 
         with it("should hold no example to show a class"):
             expect(_example_gaps(self.project)).to(be_empty)
+
+        # Seen 2026-11-21 (r3-sparky-04): a row of a markdown examples table was asked to sit in an examples file.
+        with it("should ask no example of a markdown examples table to sit in an examples file"):
+            expect(self.project.findings("domain-fixture-example-files")).to(be_empty)
+
+        with it("should keep the names an outline's examples table gives its rows"):
+            examples = [node.name for node in self.project.stories.nodes("Example") if node.source.file == _CHANGE_QUANTITY]
+            expect(examples).to(equal(["cart with Tiny Tales", "one copy", "two copies", "three copies"]))
+
+        # Seen 2026-11-21 (r3-sparky-04): "the Cart Line of Tiny Tales" names the book, and the step was joined to the
+        # example Tiny Tales of another story's scenarios file.
+        with it("should have no step observe an example of another story's markdown scenarios file"):
+            observed = [
+                edge.child.source.file
+                for step in self.project.stories.nodes()
+                if step.source.file == _CHANGE_QUANTITY
+                for edge in self.project.graph.edges.from_parent("observes", step)
+            ]
+            expect(set(observed)).to(equal({_CHANGE_QUANTITY}))
 
     with context("with steps that link their domain terms to a model document that is not there"):
         with before.all:

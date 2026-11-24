@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import re
 from functools import cached_property
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
 from harness.graph.schema_conformance import EXEMPT_FACT
+from harness.markdown.format import Format
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -24,6 +26,10 @@ then-observes-an-example reads: only there must the Then observe an Example."""
 
 # Where a name written in code breaks into words: at an underscore, and before a capital that follows a small letter.
 _WORD_BREAK = re.compile(r"_+|(?<=[a-z0-9])(?=[A-Z])")
+
+
+def _is_markdown(file: str | None) -> bool:
+    return Format.from_extension(PurePosixPath(file or "").suffix).name == "markdown"
 
 
 class ExampleObservations:
@@ -57,7 +63,11 @@ class ExampleObservations:
 
     def _names(self, text: str, example: "Node", step: "Node") -> bool:
         """Whether text names example: by its name as written, or, for an example of step's own story file, by its
-        name in plain words, in any case."""
+        name in plain words, in any case. An example read from a markdown scenarios file is a line of that file's
+        examples table, so only the steps of that file name it: another story's step that holds the same words, such
+        as a book's title, means the book, not that story's example."""
+        if example.source.file != step.source.file and _is_markdown(example.source.file):
+            return False
         if re.search(rf"\b{re.escape(example.name)}\b", text):
             return True
         if example.source.file != step.source.file:

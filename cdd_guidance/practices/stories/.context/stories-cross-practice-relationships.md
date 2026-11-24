@@ -8,7 +8,7 @@ Stories records its links to Clean Engineering once both practices are read onto
 | invokes, invokedBy | Operation | Step | Recorded on Clean Engineering with each step that invokes the operation |
 | uses | Epic | Module | The module is the folder of an operation a step in the epic invokes |
 | usedBy | Module | Epic | Recorded on Clean Engineering with uses |
-| observes | Step | Example | A Given, When, or Then step's lines name the example |
+| observes | Step | Example | A Given, When, or Then step's lines name the example; an example of a markdown scenarios file only by that file's steps |
 | demonstrates | Example | OoadClass | The `.ts` file that declares a function named after the example names the class |
 | demonstrates, demonstratedThrough | OoadClass | Example | Recorded on Clean Engineering with demonstrates |
 | retrievedUsing | Example | Property | That same file reads `.property`; recorded on both practices |

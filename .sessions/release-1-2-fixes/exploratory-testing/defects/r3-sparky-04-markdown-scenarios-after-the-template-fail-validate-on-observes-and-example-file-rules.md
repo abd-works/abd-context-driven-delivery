@@ -28,3 +28,8 @@ Smaller, in the same file: a Scenario Outline's rows written under `#### Example
 
 ## Tier that should catch it
 Unit (`graph_reading_spec.py` and the rule examples under `stories/rules`): no example validates a markdown scenarios file after the template with only Stories loaded.
+
+## Status: fixed (2026-11-23)
+- Already fixed before this pass (`635b29c4f`, `5c3b22e83`, `7447a2040`): the `observes` edges are made by Stories itself (`ExampleObservations`, `model/modelled_areas.py`), so they no longer depend on Clean Engineering being loaded; a Then must observe an Example only where a model is written for its area of the map (`then-observes-an-example`, `observes?` in `model/schema.yaml`); `domain-fixture-example-files` asks only an example that comes from code; an outline's rows keep the names in their `scenario` column.
+- Fixed now: a step no longer observes an example of another story's markdown scenarios file. "the Cart Line of Tiny Tales" in Change Cart Line Quantity named the book, and was joined to the example Tiny Tales of Add Book To Cart. An example read from a markdown scenarios file is a line of that file's table, so only that file's steps observe it (`ExampleObservations._names`). The schema note and `.context/stories-cross-practice-relationships.md` say so.
+- Covered by `cdd_guidance/practices/stories/model/modelled_areas_spec.py`, context "with no domain model and no class model in the graph" (Stories alone, on the Bookshop project's markdown scenarios after the template): no example asked to sit in an examples file, the outline's row names kept, and no step observing another story file's example; with the earlier examples there, no Then is held to an `observes` edge.
