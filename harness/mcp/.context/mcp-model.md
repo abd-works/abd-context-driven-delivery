@@ -125,7 +125,7 @@ The one cdd server as an install handles it: stood up in the install's process o
 + ensure_running(): list[str]
 	// returns the dev lane to main first when its served feature's worktree is gone, and says so on a `dev lane:` line
 + install_mods(): list[str]
-	// one line for each mod, `{plugin name}: {state}`; a dev lane's mods are published into the stable lane's marketplace first, since chats install from it
+	// one line for each mod, `{plugin name}: {state}`, from the marketplace of the lane the install serves: the dev lane's when it serves a feature there, else the stable lane's
 ---<<loads>>--> McpHost
 ---<<creates>>--> StandUp
 ---<<installs the plugins of>>--> ClaudeMarketplace
@@ -184,7 +184,7 @@ The local Claude Code marketplace a cdd home publishes, its `claude-plugins` fol
 	// a served checkout's own mod folder, so an edit there reloads in every chat, else the published copy
 + publish_cdd_plugin(server: dict[str, object]): list[Path]
 + publish_mods(code: Path): None
-	// into this lane's own marketplace only: a dev lane's mods never reach the stable lane's, which every chat installs from
+	// into this lane's own marketplace only: a dev lane's mods never reach the stable lane's marketplace
 ---<<creates>>--> PublishedPlugin
 ---<<finds the mods to publish through>>--> PublishedMods
 ---<<publishes the mods one install at a time, holding>>--> InstallLock
@@ -222,7 +222,7 @@ The mods a checkout's code declares, each a *PublishedMod*: a folder holding `.c
 
 ## ClaudePlugins
 
-The plugins a cdd home's marketplace publishes, loaded by Claude Code from their published folders, which its user settings name in `CLAUDE_CODE_PLUGIN_DIRS`, never from a copy in its own plugin cache: a cached copy keeps the version it was installed at, so a mod published afterwards never reaches the chats. A cached copy found at install is uninstalled with the `claude` command, along with a checkout's own marketplace (`abd-works`). A plugin is a convenience on top of the install, so a miss is printed, never raised.
+The plugins a cdd home's marketplace publishes, loaded by Claude Code from one fixed folder per plugin, `~/.cdd/chat-plugins/{name}`, which its user settings name in `CLAUDE_CODE_PLUGIN_DIRS`, never from a copy in its own plugin cache: a cached copy keeps the version it was installed at, so a mod published afterwards never reaches the chats. Every install and repin points the fixed folder at the published folder of the lane the person approved (a directory junction on Windows, a symbolic link elsewhere). The settings name the same folder after the first time, so a repin and `/reload-plugins` reach every chat with no restart of the app. There is one fixed folder per plugin, not one per lane, so main's chats load the mods of whichever lane was pinned last. A cached copy found at install is uninstalled with the `claude` command, along with a checkout's own marketplace (`abd-works`). A plugin is a convenience on top of the install, so a miss is printed, never raised.
 
 + ClaudePlugins(home: CddHome | None = None, claude_folder: Path | None = None)
 ------
@@ -230,14 +230,14 @@ The plugins a cdd home's marketplace publishes, loaded by Claude Code from their
 + claude_cli: str | None
 ----
 + install(plugin: PublishedPlugin): PluginInstall
-	// names the plugin's published folder in CLAUDE_CODE_PLUGIN_DIRS in place of any other published copy, and uninstalls every cached copy
+	// points chat-plugins/{name} at the plugin's published folder, names that fixed folder in CLAUDE_CODE_PLUGIN_DIRS in place of any other folder of the plugin, and uninstalls every cached copy
 ---<<loads from its folder>>--> PublishedPlugin
 ---<<creates>>--> PluginInstall
 ---<<reads and writes Claude Code's settings through>>--> IdeLayout
 
 ## PluginInstall
 
-What installing one plugin came to, printed as its state: watched (Claude Code loads it from its folder already), watched from now on (the install named the folder just now; Claude Code reads it when the app restarts), or a cached copy still loaded (no claude command to uninstall it).
+What installing one plugin came to, printed as its state: watched (Claude Code loads it from its folder already), watched from now on (the install named the fixed folder just now; Claude Code reads it when the app restarts, the only restart it needs, since later repins move only where the fixed folder leads), or a cached copy still loaded (no claude command to uninstall it).
 
 + PluginInstall(state: str)
 ------
