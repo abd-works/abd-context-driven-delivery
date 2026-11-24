@@ -975,6 +975,16 @@ with description("Render asked for a path, in a session") as self:
         with it("should refuse the render, naming the file and the format its name says it is in"):
             expect(self.render).to(raise_error(SourceFormatRefused, contain("ordering-model.md", "markdown", "python")))
 
+    # The heavy tier, 2026-11-24: a UX view in CheckoutView.tsx, named as typescript, was refused as a tsx file.
+    with context("that is code in a .tsx file, with typescript named as its source"):
+        with before.each:
+            (self.project.root / "src").mkdir()
+            (self.project.root / "src" / "Cart.tsx").write_text("export class Cart {\n  total(): number {\n    return 0;\n  }\n}\n", encoding="utf-8")
+            self.results = self.action.render("clean-engineering-model", format="markdown", paths=["src/Cart.tsx"], source="typescript")
+
+        with it("should read the file as the TypeScript its extension says it is"):
+            expect(Path(self.results[0].path).read_text(encoding="utf-8")).to(contain("Cart"))
+
     with context("that is a file in a format the fidelity reads none of"):
         with before.each:
             (self.project.root / "design").mkdir()

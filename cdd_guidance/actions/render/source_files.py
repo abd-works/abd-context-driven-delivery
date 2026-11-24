@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from cdd_guidance.practices.source_code.code_body import CODE_LANGUAGES
 from harness.guidance.documents import files_read_from, is_text
 from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.practice_formats import PracticeFormats
@@ -10,6 +11,8 @@ from harness.markdown.format import Format
 
 # A saved graph, which a render reads as data, whatever the name of its file says.
 SAVED_GRAPH_SUFFIX = ".json"
+# The programming language each extension of code is written in, such as TypeScript for a component in a ``.tsx`` file.
+_CODE_FORMATS = {suffix: Format(language.name) for language in CODE_LANGUAGES for suffix in language.suffixes}
 _SKETCH = Format("sketch")
 _MARKDOWN = Format("markdown")
 
@@ -26,7 +29,8 @@ class SourceFormatRefused(ValueError):
 
 class SourceFiles:
     """The files the paths of one render name, each in the format its name says it is in: a sketch by the ending its
-    name carries (``orders-sketch.md``), any other file by its extension. A folder holds the text files a document read
+    name carries (``orders-sketch.md``), code by the language its extension is written in (``CheckoutView.tsx`` is
+    TypeScript), any other file by its extension. A folder holds the text files a document read
     from it is made of. A saved graph is read as data by the render itself, so its name gives no format."""
 
     def __init__(self, sources: list[Path], worked: object) -> None:
@@ -94,7 +98,10 @@ class SourceFiles:
         return [source] if source.is_file() else [file for file in files_read_from(source) if is_text(file)]
 
     def _format_of(self, file: Path) -> Format:
-        """The format file's name says it is in; none for a saved graph."""
+        """The format file's name says it is in, code by the language its extension is written in; none for a saved
+        graph."""
         if file.suffix == SAVED_GRAPH_SUFFIX:
             return Format()
-        return _SKETCH if _SKETCH.names(file) else Format.from_extension(file.suffix)
+        if _SKETCH.names(file):
+            return _SKETCH
+        return _CODE_FORMATS.get(file.suffix.lower()) or Format.from_extension(file.suffix)
