@@ -502,9 +502,10 @@ with description("Render saving what it makes beside its source") as self:
         with it("should save the board file beside the markdown"):
             expect(Whiteboard.from_text(self.board_file.read_text(encoding="utf-8")).title).to(equal("Story Map"))
 
+        # The board's meta, the story map's markdown kept in one part beside it, and every element.
         with it("should answer with the writes that put the whole board on a new board in Claude"):
             saved = Whiteboard.from_text(self.board_file.read_text(encoding="utf-8"))
-            expect(len(_written_ids(self.results[0]))).to(equal(len(saved.elements) + 1))
+            expect(sorted(_written_ids(self.results[0]))).to(equal(sorted(["meta", "document-0", *(element.id for element in saved.elements)])))
 
         with it("should answer with no board, since none is kept for the file yet"):
             expect(self.results[0].board).to(equal(""))

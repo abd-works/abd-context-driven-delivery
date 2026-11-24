@@ -658,14 +658,17 @@ class _DocumentParts:
         return changed + gone
 
     def _cut(self, text: str) -> List[str]:
-        parts: List[str] = []
-        current = ""
+        """Each character is written as JSON on its own, so a part's size is the sum of its pieces' sizes."""
+        parts: List[List[str]] = [[]]
+        size = self._bytes("")
         for piece in self._pieces(text):
-            if current and self._bytes(current + piece) > DOCUMENT_PART_BYTES:
-                parts.append(current)
-                current = ""
-            current += piece
-        return parts + [current] if current or not parts else parts
+            grows = self._bytes(piece) - self._bytes("")
+            if parts[-1] and size + grows > DOCUMENT_PART_BYTES:
+                parts.append([])
+                size = self._bytes("")
+            parts[-1].append(piece)
+            size += grows
+        return ["".join(part) for part in parts]
 
     def _pieces(self, text: str) -> List[str]:
         """text's lines, with a line too long for a part on its own cut where it fills one."""
