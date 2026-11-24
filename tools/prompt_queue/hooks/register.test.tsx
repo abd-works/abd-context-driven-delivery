@@ -1221,6 +1221,57 @@ test('switching sub-agent mode off forgets the robots and their sub-agents', asy
   expect([seeded.stored.tasks!.value, seeded.stored.robotAgents!.value, seeded.stored.expandedAgents!.value]).toEqual([[], {}, []])
 })
 
+/** The grouped queue with each robot's sub-agent running and its card handed to it, each robot's queue open. */
+function runningRobots(on: TestOn) {
+  const seeded = groupedQueue(on)
+  seeded.stored.robotAgents = { value: { Sparky: 'agent-1', Bolt: 'agent-2' }, version: 1 }
+  seeded.stored.sentCards = { value: { Sparky: 'a', Bolt: 'b' }, version: 1 }
+  return seeded
+}
+
+/** What the mod still holds of each robot: its task, its sub-agent, the card it was handed, and the open queues. */
+function robotsHeld(seeded: ReturnType<typeof groupedQueue>) {
+  return [
+    (seeded.stored.tasks!.value as { name: string }[]).map(task => task.name),
+    seeded.stored.robotAgents!.value,
+    seeded.stored.sentCards!.value,
+    seeded.stored.expandedAgents!.value,
+  ]
+}
+
+// A robot no card names any more is gone from the queue, so the mod forgets it as leaving sub-agent mode does.
+test("removing a robot's last card forgets that robot, its sub-agent, its card and its open queue", async ($, on) => {
+  const seeded = runningRobots(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'remove-a' })
+  await ui.unmount()
+
+  expect(robotsHeld(seeded)).toEqual([['Bolt'], { Bolt: 'agent-2' }, { Bolt: 'b' }, [0]])
+})
+
+test('flushing the finished cards forgets a robot whose cards were all finished', async ($, on) => {
+  const seeded = runningRobots(on)
+  seeded.prompts[0]!.is_done = true
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-flush' })
+  await ui.unmount()
+
+  expect(robotsHeld(seeded)).toEqual([['Bolt'], { Bolt: 'agent-2' }, { Bolt: 'b' }, [0]])
+})
+
+test('removing a card keeps a robot another card still names', async ($, on) => {
+  const seeded = runningRobots(on)
+  seeded.prompts[1]!.robot = 'Sparky'
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'remove-a' })
+  await ui.unmount()
+
+  expect((seeded.stored.robotAgents!.value as Record<string, string>).Sparky).toEqual('agent-1')
+})
+
 test("a robot's queue comes back after a reload, from the robot each card keeps on the queue", async ($, on) => {
   const seeded = groupedQueue(on)
   delete seeded.stored.tasks

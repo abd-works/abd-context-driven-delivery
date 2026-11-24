@@ -307,7 +307,28 @@ export async function removePrompt($: EngineInterface, id: string): Promise<void
   const removing = (await read($, queue)).prompts.find(prompt => prompt.id === id)
   if ((await changeQueue($, 'remove', { prompt: id })) && removing) {
     await tellRobotOfChange($, removing, 'the card was taken off the queue: stop its work, and keep what is done')
+    await forgetRobotsNoCardNames($)
   }
+}
+
+/** A robot no card on the queue names any more is gone from the queue, so its task, its sub-agent, the card it was
+ * handed and its open queue are forgotten, as leaving sub-agent mode forgets every robot; a robot still named keeps
+ * its queue open where it now stands. */
+async function forgetRobotsNoCardNames($: EngineInterface): Promise<void> {
+  const prompts = (await read($, queue)).prompts
+  const isNamed = (robot: string) => prompts.some(prompt => isSameRobot(prompt.robot, robot))
+  const before = robotsOf(prompts, await read($, tasks)).map((robot, place) => agentNameOf(robot, place))
+  const openNames = (await read($, expandedAgents)).map(place => before[place]).filter((name): name is string => name !== undefined)
+  await update($, tasks, described => described.filter(task => isNamed(task.name)))
+  await update($, robotAgents, agents => keptFor(agents, isNamed))
+  await update($, sentCards, cards => keptFor(cards, isNamed))
+  const after = robotsOf(prompts, await read($, tasks)).map((robot, place) => agentNameOf(robot, place))
+  await update($, expandedAgents, () => openNames.map(name => after.indexOf(name)).filter(place => place >= 0))
+}
+
+/** The entries of a record kept by robot name whose robot is still named on the queue. */
+function keptFor(byRobot: Record<string, string>, isNamed: (robot: string) => boolean): Record<string, string> {
+  return Object.fromEntries(Object.entries(byRobot).filter(([robot]) => isNamed(robot)))
 }
 
 /** A robot works only the words this chat sends it, so a change the person makes to a card of a robot whose sub-agent
@@ -343,7 +364,9 @@ export async function clearQueue($: EngineInterface): Promise<void> {
 /** Flush: the cdd server keeps a timestamped copy of the whole queue file in the chat's queue archive, then takes the
  * finished cards off, as prompt-queue.flush does; the button asks for nothing more. */
 export async function flushQueue($: EngineInterface): Promise<void> {
-  await changeQueue($, 'flush')
+  if (await changeQueue($, 'flush')) {
+    await forgetRobotsNoCardNames($)
+  }
 }
 
 export async function toggleExpanded($: EngineInterface): Promise<void> {
