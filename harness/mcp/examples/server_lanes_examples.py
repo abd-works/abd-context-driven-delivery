@@ -9,7 +9,7 @@ from pathlib import Path
 
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import DEV_PORT_AFTER_STABLE, LANE_CALL_PATH, LaneReply, McpAddress, SentCall
-from harness.mcp.mcp_server import McpHost
+from harness.mcp.mcp_server import HttpEndpoints, McpHost
 from harness.mcp.server_lanes import ServerLanes
 
 # Seed: the port a throwaway stable lane answers on. Real lanes use 47800 and 47801; a spec takes its own pair so specs
@@ -97,7 +97,7 @@ class DevLaneInProcess(McpAddress):
         super().__init__(DEV_PORT)
         from starlette.testclient import TestClient
 
-        self._client = TestClient(dev_host.http_endpoints.app(DEV_PORT))
+        self._client = TestClient(HttpEndpoints(dev_host).app(DEV_PORT))
         self.handed_over: list[SentCall] = []
 
     def ping_answer(self, reply_seconds: float) -> dict:

@@ -1,9 +1,331 @@
 <mxfile host="CleanEngineering.diagram.drawio">
-  <diagram name="harness/mcp" id="page-harness-mcp">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3640" pageHeight="3758" math="0" shadow="0">
+  <diagram name="CleanEngineering Model" id="CleanEngineering-model">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3030" pageHeight="4198" math="0" shadow="0">
       <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
+        <UserObject label="" id="0" cddSourceFormat="markdown" cddSourceDocument="# harness/mcp&#10;&#10;The *McpHost* is the one cdd server every chat talks to; it keeps one *ProjectToolsets* per project. Chats reach it over HTTP through *HttpEndpoints*, which speak MCP to them through a *ChatProtocol*, and that makes one *ChatRequest* for each request a chat sends. *McpInstallation* is the MCP channel's *RegisteredChannel*: it writes each IDE's `cdd` entry, and its *McpChannelServer* stands the server up, starts it from *CddHome*, and installs the plugins of the home's *ClaudeMarketplace* through *ClaudePlugins*.&#10;&#10;- **Purpose:** Let any chat, in any project, call the operations authors annotate `@mcp`, through one long-running server that keeps each project's toolsets apart.&#10;- **Seam (terms):** Mcp, LongCall, McpHost, ChatProtocol, HttpEndpoints, ProjectToolsets, ChatRequest, McpInstallation, McpChannelServer, CddHome, ClaudeMarketplace, PublishedPlugin, PublishedMods, ClaudePlugins, PluginInstall, ThrottledReporter&#10;- **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/process, harness/git&#10;&#10;## McpHost&#10;&#10;The cdd server's MCP side: one *ProjectToolsets* for each project a chat works on, answering every chat. Chats reach it over HTTP through *HttpEndpoints*, made for it where the server starts. A host serving chats is made with the two lanes and its cdd home, so it hands a call whose project runs on the other lane to that lane; one made in process for a probe or a spec has neither.&#10;&#10;+ McpHost(checkout_toolsets: ProjectToolsets, lanes: ServerLanes | None = None, home: CddHome | None = None)&#10;------&#10;+ &lt;&lt; composition &gt;&gt; checkout_toolsets: ProjectToolsets&#10;+ projects: list[Path]&#10;----&#10;+ dispatch(name: str, arguments: dict[str, object] | None = None, project: Path | None = None): object&#10;+ answer(call: ToolCall): object&#10;+ answer_for_chat(call: ToolCall, reporter: Callable[[str], None] | None): object&#10;&#09;// on a chat's worker thread: reporter listens to its progress, and the answer is read into data while the call is still the one being answered&#10;+ tools_listed_for(project: Path | None): list[dict[str, Any]]&#10;&#09;// as data, with no MCP SDK: the built-in ping and restart, then the toolsets' own; the other lane's when that lane answers project&#10;+ call_sent(arguments: dict[str, object] | None, project: Path | None, request: ToolRequest): ToolCall&#10;+ tool_request(tool: str): ToolRequest&#10;+ restart(): dict[str, Any]&#10;&#09;// publishes the mods of the code it now runs, so a chat watching them reloads with the restart&#10;+ diagnose(): dict[str, Any]&#10;+ from_repo(repo: Path | str, lanes: ServerLanes | None = None, home: CddHome | None = None): McpHost&#10;+ from_refs(toolset_refs: tuple[str, ...], repo: str | None = None, project: str | None = None, lanes: ServerLanes | None = None, home: CddHome | None = None): McpHost&#10;---&lt;&lt;keeps one per project&gt;&gt;--&gt; ProjectToolsets&#10;---&lt;&lt;resolves call name&gt;&gt;--&gt; ProjectToolsets&#10;---&lt;&lt;creates&gt;&gt;--&gt; ToolCall&#10;---&lt;&lt;answers with the data of&gt;&gt;--&gt; DataClass&#10;---&lt;&lt;publishes the mods on restart through&gt;&gt;--&gt; ClaudeMarketplace&#10;&#10;## ChatProtocol&#10;&#10;The MCP protocol a host speaks to chats: the SDK's protocol server with the host's handlers, made the first time it is asked for, so a call dispatched in process (a probe, a script, a spec) never loads the SDK. Each call a chat sends runs on a worker thread, and one still running at its time limit is answered as still running.&#10;&#10;+ ChatProtocol(host: McpHost)&#10;------&#10;+ &lt;&lt; association &gt;&gt; host: McpHost&#10;+ protocol: Any&#10;&#09;// the MCP SDK's protocol server&#10;----&#10;+ content_blocks(answer: SentValue): list[TextContent]&#10;&#09;// the answer as the chat reads it: text, or its data as JSON&#10;---&lt;&lt;answers each call through&gt;&gt;--&gt; McpHost&#10;---&lt;&lt;makes one for each request from the module as it is now&gt;&gt;--&gt; ChatRequest&#10;---&lt;&lt;reports progress through&gt;&gt;--&gt; ThrottledReporter&#10;&#10;## HttpEndpoints&#10;&#10;Where a host answers over HTTP: MCP at `/mcp`, `/ping`, which says which pid and checkout serve, and `/lane-call`, where the other lane's server hands over a chat's call and hears back its answer or its failure by kind and message. Only this machine's own clients get in. `python -m harness.mcp` makes them for its host and serves.&#10;&#10;+ HttpEndpoints(host: McpHost)&#10;------&#10;+ &lt;&lt; association &gt;&gt; host: McpHost&#10;+ &lt;&lt; composition &gt;&gt; chat_protocol: ChatProtocol&#10;&#09;// the MCP protocol it speaks to chats, made for host&#10;----&#10;+ serve(daemon: McpDaemon, listener: socket.socket): None&#10;+ app(port: int): Any&#10;&#09;// the web app answering on port&#10;---&lt;&lt;answers handed-over calls through&gt;&gt;--&gt; McpHost&#10;---&lt;&lt;serves MCP through&gt;&gt;--&gt; ChatProtocol&#10;---&lt;&lt;replies to the other lane with&gt;&gt;--&gt; LaneReply&#10;&#10;## ChatRequest&#10;&#10;One request a chat sent the cdd server, from its headers and the port the caller's end of its connection uses. The host makes it from its module as it is now, so a restarted server names chats and calls with the classes its re-imported tools know.&#10;&#10;+ ChatRequest(headers: Mapping[str, str], client_port: int | None, claude_settings: Path)&#10;------&#10;+ &lt;&lt; association &gt;&gt; process: ClaudeChatProcess | None&#10;&#09;// the process X-CDD-Chat-Process names, else the one holding the request's connection&#10;+ &lt;&lt; association &gt;&gt; chat: ChatPointer | None&#10;----&#10;+ project_for(tool: str): Path | None&#10;&#09;// the folder the chat works in now, read on every call; cdd.ping and cdd.restart need none&#10;&#09;// raises ProjectNotNamed when no folder is found, ProjectIsClaudeSettings when it is Claude Code's settings folder&#10;+ tool_request(tool: str, host: McpHost): ToolRequest&#10;---&lt;&lt;names the chat with&gt;&gt;--&gt; ChatPointer&#10;---&lt;&lt;creates&gt;&gt;--&gt; ToolRequest&#10;&#10;## ProjectToolsets&#10;&#10;The toolsets one project's calls are answered by: every `@mcp` operation of the toolsets it was started with, published under its MCP name, made for that project.&#10;&#10;+ ProjectToolsets(repo: str | Path | None = None, project: str | Path | None = None)&#10;------&#10;+ repo: Path | None&#10;+ project: Path | None&#10;+ started: bool&#10;+ tools: dict[str, AgentTool]&#10;+ prompts: dict[str, AgentTool]&#10;+ &lt;&lt; composition &gt;&gt; skipped: SkippedTools&#10;----&#10;+ enroll(tool: AgentTool): None&#10;+ start(toolsets: Iterable[ToolsetReference]): None&#10;+ for_project(project: Path): ProjectToolsets&#10;+ restarted(): ProjectToolsets&#10;+ resolve_call_name(name: str): str&#10;+ enrolled(name: str): AgentTool | None&#10;+ call_seconds(name: str): float&#10;+ invoke(mcp_name: str, arguments: dict[str, object] | None = None): object&#10;+ answer(mcp_name: str, call: ToolCall): object&#10;&#09;-&gt; AgentTool.answer&#10;+ of_repo(repo: Path | str): ProjectToolsets&#10;&#09;// every annotated toolset class in repo; raises McpStandupFailed when it cannot stand up&#10;+ of_refs(toolset_refs: tuple[str, ...], repo: str | None = None, project: str | None = None): ProjectToolsets&#10;---&lt;&lt;creates&gt;&gt;--&gt; RepositoryToolsets&#10;---&lt;&lt;keeps&gt;&gt;--&gt; AgentTool&#10;---&lt;&lt;makes each toolset with&gt;&gt;--&gt; ToolsetReference&#10;---&lt;&lt;reads the tools published to Mcp of&gt;&gt;--&gt; AgentToolSet&#10;---&lt;&lt;reads arguments of&gt;&gt;--&gt; ToolCall&#10;---&lt;&lt;waits longer for operations annotated&gt;&gt;--&gt; LongCall&#10;---&lt;&lt;serves the operations annotated&gt;&gt;--&gt; Mcp&#10;&#10;## McpInstallation : RegisteredChannel&#10;&#10;Record `@mcp` operations and write each IDE's `cdd` entry once every tool is recorded; its server is the one cdd server (*McpChannelServer*). It names *CddServerHooks*, the hooks that start the server when a chat starts, as a toolset every install publishes.&#10;&#10;+ McpInstallation(target: InstallTarget, record: InstallRecord, served: ServedCheckout)&#10;------&#10;+ destination: Mcp&#10;+ &lt;&lt; association &gt;&gt; served: ServedCheckout&#10;+ lanes: ServerLanes&#10;&#09;// both lanes as the served checkout's sees them; a project pointed at the dev lane names the dev lane's server&#10;+ daemon: McpDaemon&#10;&#09;// the stable lane's server, which every chat's cdd plugin names&#10;+ &lt;&lt; composition &gt;&gt; server: McpChannelServer&#10;+ &lt;&lt; composition &gt;&gt; cdd_entry: CddEntry&#10;+ mcp_operations: list[AgentTool]&#10;+ toolsets: tuple[type, ...]&#10;+ published: list[str]&#10;----&#10;+ create(target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None): McpInstallation&#10;&#09;// serving repository, else the running checkout, on the lane its folder runs on&#10;+ write(tool: AgentTool): None&#10;+ write_once_recorded(): None&#10;&#09;// writes the IDE's cdd entry, or for Claude Code the cdd plugin, once; nothing when no MCP operation was recorded&#10;+ status(): list[str]&#10;&#09;// whether the server the cdd entry names is running&#10;---&lt;&lt;keeps&gt;&gt;--&gt; AgentTool&#10;---&lt;&lt;is handed&gt;&gt;--&gt; ServedCheckout&#10;---&lt;&lt;stands up and starts the server through&gt;&gt;--&gt; McpChannelServer&#10;---&lt;&lt;publishes as a cdd MCP tool&gt;&gt;--&gt; Mcp&#10;---&lt;&lt;publishes the server-starting hooks with&gt;&gt;--&gt; Hook&#10;---&lt;&lt;registers with&gt;&gt;--&gt; Installer&#10;&#10;## McpChannelServer : ChannelServer&#10;&#10;The one cdd server as an install handles it: stood up in the install's process over every toolset of the served checkout, to check it loads, then started from `~/.cdd`, and, for Claude Code, the `cdd` plugin and every mod the served code declares installed. Inside the cdd server, as an install through MCP runs, it stands up nothing.&#10;&#10;+ McpChannelServer(served: ServedCheckout, lanes: ServerLanes, claude_plugins: ClaudePlugins | None)&#10;&#09;// claude_plugins for Claude Code; none for any other IDE, which installs no plugins&#10;------&#10;+ &lt;&lt; association &gt;&gt; served: ServedCheckout&#10;+ runs_this_process: bool&#10;----&#10;+ stand_up(): StandUp&#10;+ ensure_running(): list[str]&#10;&#09;// returns the dev lane to main first when its served feature's worktree is gone, and says so on a `dev lane:` line&#10;+ install_plugins(): list[str]&#10;&#09;// one line for each plugin, `{plugin name}: {state}`: the cdd plugin the stable lane publishes, then the mods of the marketplace of the lane the install serves: the dev lane's when it serves a feature there, else the stable lane's; a full install and every repin run it&#10;---&lt;&lt;loads&gt;&gt;--&gt; McpHost&#10;---&lt;&lt;creates&gt;&gt;--&gt; StandUp&#10;---&lt;&lt;installs the plugins of&gt;&gt;--&gt; ClaudeMarketplace&#10;---&lt;&lt;installs each plugin through&gt;&gt;--&gt; ClaudePlugins&#10;&#10;## CddHome&#10;&#10;The user's cdd folder: which checkout the one server runs, the pinned copy of it, the Python it runs on, and the server's own files. The Claude Code marketplace it publishes is its own object.&#10;&#10;+ CddHome(folder: Path | str | None = None)&#10;------&#10;+ folder: Path&#10;+ state_path: Path&#10;+ log_path: Path&#10;+ connect_script: Path&#10;+ runtime_record: Path&#10;+ pinned_checkout: Path&#10;+ is_installed: bool&#10;+ is_dev_lane: bool&#10;+ source: Path&#10;+ mode: str&#10;+ served_branch: str&#10;+ served_worktree: Path | None&#10;+ interpreter: PythonInterpreter&#10;+ server_environment: dict[str, str]&#10;+ &lt;&lt; composition &gt;&gt; marketplace: ClaudeMarketplace&#10;----&#10;+ is_pinned_to(checkout: Path | str): bool&#10;+ return_to_main_when_feature_gone(): str&#10;&#09;// on the dev lane only: withdraws the runtime record once the served feature's worktree is gone, naming the branch and the worktree&#10;+ install(checkout: Path | str, connect_script: Path | str): None&#10;+ pin(checkout: Path | str): str&#10;+ serve_current(checkout: Path | str): None&#10;+ serve_from(checkout: Path | str): None&#10;---&lt;&lt;creates&gt;&gt;--&gt; Git&#10;---&lt;&lt;creates&gt;&gt;--&gt; PythonInterpreter&#10;---&lt;&lt;takes the import path from&gt;&gt;--&gt; RepositoryToolsets&#10;---&lt;&lt;reads and writes through&gt;&gt;--&gt; JsonFile&#10;---&lt;&lt;publishes the mods of the code it serves through&gt;&gt;--&gt; ClaudeMarketplace&#10;&#10;## ClaudeMarketplace&#10;&#10;The local Claude Code marketplace a cdd home publishes, its `claude-plugins` folder: the `cdd` plugin, which declares the cdd server for every chat, and the mods of the code the server runs. One install publishes into it at a time, so installs from the main checkout and a ticket's worktree at the same moment both finish.&#10;&#10;+ ClaudeMarketplace(folder: Path, home: CddHome)&#10;------&#10;+ folder: Path&#10;+ INSTALL_COMMAND: str&#10;&#09;// install.json, the file in a published mod naming the command its Run install runs&#10;+ cdd_plugin: PublishedPlugin&#10;+ mods: list[PublishedPlugin]&#10;+ install_command: list[str]&#10;----&#10;+ plugin(name: str): PublishedPlugin&#10;+ mod_folder(plugin: PublishedPlugin): Path&#10;&#09;// a served checkout's own mod folder, so an edit there reloads in every chat, else the published copy&#10;+ publish_cdd_plugin(server: dict[str, object]): list[Path]&#10;+ publish_mods(code: Path): None&#10;&#09;// into this lane's own marketplace only: a dev lane's mods never reach the stable lane's marketplace&#10;---&lt;&lt;creates&gt;&gt;--&gt; PublishedPlugin&#10;---&lt;&lt;finds the mods to publish through&gt;&gt;--&gt; PublishedMods&#10;---&lt;&lt;publishes the mods one install at a time, holding&gt;&gt;--&gt; InstallLock&#10;---&lt;&lt;reads and writes through&gt;&gt;--&gt; JsonFile&#10;&#10;## PublishedPlugin&#10;&#10;One plugin of the marketplace by its name, and the one owner of its `{name}/.claude-plugin/plugin.json`. A mod is published from its folder in the code the server runs, versioned by a hash of its files, because Claude Code keeps a plugin it has already seen at the same version.&#10;&#10;+ PublishedPlugin(marketplace: ClaudeMarketplace, name: str)&#10;------&#10;+ &lt;&lt; association &gt;&gt; marketplace: ClaudeMarketplace&#10;+ name: str&#10;+ folder: Path&#10;+ is_published: bool&#10;+ manifest: dict[str, Any]&#10;+ version: str&#10;+ description: str&#10;+ installed_name: str&#10;&#09;// {name}@cdd-home&#10;----&#10;+ write_manifest(manifest: dict[str, Any]): Path&#10;+ publish_from(mod: PublishedMod): None&#10;---&lt;&lt;reads and writes its manifest through&gt;&gt;--&gt; JsonFile&#10;&#10;## PublishedMods&#10;&#10;The mods a checkout's code declares, each a *PublishedMod*: a folder holding `.claude-plugin/plugin.json` and a `cdd-mod.json` beside it, which names the plugin, the files of the checkout it carries besides its own, and the file its Run install command is written to. A mod declares itself in its own folder, so harness/mcp names no folder of a module built on it, and a pinned server publishes the mods its own code declares.&#10;&#10;+ PublishedMods(code: Path)&#10;------&#10;+ code: Path&#10;+ every: list[PublishedMod]&#10;----&#10;&#10;## ClaudePlugins&#10;&#10;The plugins a cdd home's marketplace publishes, loaded by Claude Code from one fixed folder per plugin, `~/.cdd/chat-plugins/{name}`, which its user settings name in `CLAUDE_CODE_PLUGIN_DIRS`, never from a copy in its own plugin cache: a cached copy keeps the version it was installed at, so a mod published afterwards never reaches the chats. Every install and repin points the fixed folder at the published folder of the lane the person approved (a directory junction on Windows, a symbolic link elsewhere). The settings name the same folder after the first time, so a repin and `/reload-plugins` reach every chat with no restart of the app. There is one fixed folder per plugin, not one per lane, so main's chats load the mods of whichever lane was pinned last. A cached copy found at install is uninstalled with the `claude` command, along with a checkout's own marketplace (`abd-works`). A plugin is a convenience on top of the install, so a miss is printed, never raised.&#10;&#10;+ ClaudePlugins(home: CddHome | None = None, claude_folder: Path | None = None)&#10;------&#10;+ installed: dict[str, str]&#10;+ claude_cli: str | None&#10;----&#10;+ install(plugin: PublishedPlugin): PluginInstall&#10;&#09;// points chat-plugins/{name} at the plugin's published folder, names that fixed folder in CLAUDE_CODE_PLUGIN_DIRS in place of any other folder of the plugin (a published copy, another home's fixed folder, or any folder whose manifest names the plugin, such as a checkout's own mod folder), and uninstalls every cached copy&#10;---&lt;&lt;loads from its folder&gt;&gt;--&gt; PublishedPlugin&#10;---&lt;&lt;creates&gt;&gt;--&gt; PluginInstall&#10;---&lt;&lt;reads and writes Claude Code's settings through&gt;&gt;--&gt; IdeLayout&#10;&#10;## PluginInstall&#10;&#10;What installing one plugin came to, printed as its state: watched (Claude Code loads it from its folder already), watched from now on (the install named the fixed folder just now; Claude Code reads it when the app restarts, the only restart it needs, since later repins move only where the fixed folder leads), or a cached copy still loaded (no claude command to uninstall it).&#10;&#10;+ PluginInstall(state: str)&#10;------&#10;+ state: str&#10;+ WATCHED: str&#10;+ NEWLY_WATCHED: str&#10;+ CACHED: str&#10;----&#10;&#10;## ThrottledReporter&#10;&#10;Passes a tool's progress on to its chat at most four times a second.&#10;&#10;+ ThrottledReporter(reporter: Reporter, seconds: float = _REPORT_SECONDS)&#10;------&#10;----&#10;&#10;## Mcp : Destination&#10;&#10;`@mcp` on an operation: install publishes it as the MCP tool `{toolset}.{operation}` of the one `cdd` server, whose entry McpInstallation writes to the IDE's MCP config (`.mcp.json`, `~/.claude.json`).&#10;&#10;------&#10;----&#10;&#10;## LongCall : Annotation&#10;&#10;`@long_call` on an MCP operation: the cdd server waits `LONG_CALL_SECONDS` (600) for its answer instead of `CALL_SECONDS` (10) before telling the chat it is still running.&#10;&#10;------&#10;----&#10;"><mxCell />
+        </UserObject><mxCell id="1" parent="0" />
+        <mxCell id="harness-mcp--mcphost" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;McpHost&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ checkout_toolsets: ProjectToolsets&lt;br/&gt;+ projects: list[Path]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ McpHost(checkout_toolsets: ProjectToolsets, lanes: ServerLanes | None, home: CddHome | None)&lt;br/&gt;+ dispatch(name: str, arguments: dict[str, object] | None, project: Path | None): object&lt;br/&gt;+ answer(call: ToolCall): object&lt;br/&gt;+ answer_for_chat(call: ToolCall, reporter: Callable[[str], None] | None): object&lt;br/&gt;+ tools_listed_for(project: Path | None): list[dict[str, Any]]&lt;br/&gt;+ call_sent(arguments: dict[str, object] | None, project: Path | None, request: ToolRequest): ToolCall&lt;br/&gt;+ tool_request(tool: str): ToolRequest&lt;br/&gt;+ restart(): dict[str, Any]&lt;br/&gt;+ diagnose(): dict[str, Any]&lt;br/&gt;+ from_repo(repo: Path | str, lanes: ServerLanes | None, home: CddHome | None): McpHost&lt;br/&gt;+ from_refs(toolset_refs: tuple[str, ...], repo: str | None, project: str | None, lanes: ServerLanes | None, home: CddHome | None): McpHost&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="880" width="800" height="254" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--chatprotocol" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ChatProtocol&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ host: McpHost&lt;br/&gt;+ protocol: Any&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ChatProtocol(host: McpHost)&lt;br/&gt;+ content_blocks(answer: SentValue): list[TextContent]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="80" y="3888" width="320" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--httpendpoints" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;HttpEndpoints&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ host: McpHost&lt;br/&gt;+ chat_protocol: ChatProtocol&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ HttpEndpoints(host: McpHost)&lt;br/&gt;+ serve(daemon: McpDaemon, listener: socket.socket): None&lt;br/&gt;+ app(port: int): Any&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="60" y="3618" width="340" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--chatrequest" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ChatRequest&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; process: ClaudeChatProcess | None&lt;br/&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; chat: ChatPointer | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ChatRequest(headers: Mapping[str, str], client_port: int | None, claude_settings: Path)&lt;br/&gt;+ project_for(tool: str): Path | None&lt;br/&gt;+ tool_request(tool: str, host: McpHost): ToolRequest&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1940" y="2226" width="520" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--projecttoolsets" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ProjectToolsets&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ repo: Path | None&lt;br/&gt;+ project: Path | None&lt;br/&gt;+ started: bool&lt;br/&gt;+ tools: dict[str, AgentTool]&lt;br/&gt;+ prompts: dict[str, AgentTool]&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; skipped: SkippedTools&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ProjectToolsets(repo: str | Path | None, project: str | Path | None)&lt;br/&gt;+ enroll(tool: AgentTool): None&lt;br/&gt;+ start(toolsets: Iterable[ToolsetReference]): None&lt;br/&gt;+ for_project(project: Path): ProjectToolsets&lt;br/&gt;+ restarted(): ProjectToolsets&lt;br/&gt;+ resolve_call_name(name: str): str&lt;br/&gt;+ enrolled(name: str): AgentTool | None&lt;br/&gt;+ call_seconds(name: str): float&lt;br/&gt;+ invoke(mcp_name: str, arguments: dict[str, object] | None): object&lt;br/&gt;+ answer(mcp_name: str, call: ToolCall): object&lt;br/&gt;+ of_repo(repo: Path | str): ProjectToolsets&lt;br/&gt;+ of_refs(toolset_refs: tuple[str, ...], repo: str | None, project: str | None): ProjectToolsets&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="2226" width="560" height="334" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--mcpinstallation" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;McpInstallation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ destination: Mcp&lt;br/&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; served: ServedCheckout&lt;br/&gt;+ lanes: ServerLanes&lt;br/&gt;+ daemon: McpDaemon&lt;br/&gt;+ server: McpChannelServer&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; cdd_entry: CddEntry&lt;br/&gt;+ mcp_operations: list[AgentTool]&lt;br/&gt;+ toolsets: tuple[type, ...]&lt;br/&gt;+ published: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ McpInstallation(target: InstallTarget, record: InstallRecord, served: ServedCheckout)&lt;br/&gt;+ create(target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None): McpInstallation&lt;br/&gt;+ write(tool: AgentTool): None&lt;br/&gt;+ write_once_recorded(): None&lt;br/&gt;+ status(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="310" width="640" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--mcpchannelserver" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;McpChannelServer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; served: ServedCheckout&lt;br/&gt;+ runs_this_process: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ McpChannelServer(served: ServedCheckout, lanes: ServerLanes, claude_plugins: ClaudePlugins | None)&lt;br/&gt;+ stand_up(): StandUp&lt;br/&gt;+ ensure_running(): list[str]&lt;br/&gt;+ install_plugins(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="700" y="2676" width="580" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--cddhome" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CddHome&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ state_path: Path&lt;br/&gt;+ log_path: Path&lt;br/&gt;+ connect_script: Path&lt;br/&gt;+ runtime_record: Path&lt;br/&gt;+ pinned_checkout: Path&lt;br/&gt;+ is_installed: bool&lt;br/&gt;+ is_dev_lane: bool&lt;br/&gt;+ source: Path&lt;br/&gt;+ mode: str&lt;br/&gt;+ served_branch: str&lt;br/&gt;+ served_worktree: Path | None&lt;br/&gt;+ interpreter: PythonInterpreter&lt;br/&gt;+ server_environment: dict[str, str]&lt;br/&gt;+ marketplace: ClaudeMarketplace&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CddHome(folder: Path | str | None)&lt;br/&gt;+ is_pinned_to(checkout: Path | str): bool&lt;br/&gt;+ return_to_main_when_feature_gone(): str&lt;br/&gt;+ install(checkout: Path | str, connect_script: Path | str): None&lt;br/&gt;+ pin(checkout: Path | str): str&lt;br/&gt;+ serve_current(checkout: Path | str): None&lt;br/&gt;+ serve_from(checkout: Path | str): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="2450" y="880" width="380" height="398" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--claudemarketplace" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClaudeMarketplace&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ INSTALL_COMMAND: str&lt;br/&gt;+ cdd_plugin: PublishedPlugin&lt;br/&gt;+ mods: list[PublishedPlugin]&lt;br/&gt;+ install_command: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ClaudeMarketplace(folder: Path, home: CddHome)&lt;br/&gt;+ plugin(name: str): PublishedPlugin&lt;br/&gt;+ mod_folder(plugin: PublishedPlugin): Path&lt;br/&gt;+ publish_cdd_plugin(server: dict[str, object]): list[Path]&lt;br/&gt;+ publish_mods(code: Path): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="780" y="2966" width="360" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--publishedplugin" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PublishedPlugin&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ marketplace: ClaudeMarketplace&lt;br/&gt;+ name: str&lt;br/&gt;+ folder: Path&lt;br/&gt;+ is_published: bool&lt;br/&gt;+ manifest: dict[str, Any]&lt;br/&gt;+ version: str&lt;br/&gt;+ description: str&lt;br/&gt;+ installed_name: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PublishedPlugin(marketplace: ClaudeMarketplace, name: str)&lt;br/&gt;+ write_manifest(manifest: dict[str, Any]): Path&lt;br/&gt;+ publish_from(mod: PublishedMod): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="3336" width="360" height="222" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--publishedmods" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PublishedMods&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ code: Path&lt;br/&gt;+ every: list[PublishedMod]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PublishedMods(code: Path)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="740" y="3336" width="200" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--claudeplugins" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClaudePlugins&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ installed: dict[str, str]&lt;br/&gt;+ claude_cli: str | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ClaudePlugins(home: CddHome | None, claude_folder: Path | None)&lt;br/&gt;+ install(plugin: PublishedPlugin): PluginInstall&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1760" y="2966" width="380" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--plugininstall" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PluginInstall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ state: str&lt;br/&gt;+ WATCHED: str&lt;br/&gt;+ NEWLY_WATCHED: str&lt;br/&gt;+ CACHED: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PluginInstall(state: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1900" y="3336" width="200" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--throttledreporter" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ThrottledReporter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ThrottledReporter(reporter: Reporter, seconds: float)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="420" y="1390" width="340" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--mcp" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Mcp&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1890" y="310" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--longcall" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;LongCall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="2250" y="310" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="27" value="checkout_toolsets «keeps one per project» «resolves call name»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2381;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--projecttoolsets" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1610" y="1840" />
+              <mxPoint x="1200" y="1840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="27" value="checkout_toolsets «keeps one per project» «resolves call name»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2381;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--projecttoolsets" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1610" y="1840" />
+              <mxPoint x="1200" y="1840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="«publishes the mods on restart through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--claudemarketplace" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1290" y="1130" />
+              <mxPoint x="350" y="1130" />
+              <mxPoint x="350" y="2040" />
+              <mxPoint x="10" y="2040" />
+              <mxPoint x="10" y="2900" />
+              <mxPoint x="960" y="2900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="58" value="«makes one for each request from the module as it is now»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8125;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--chatprotocol" target="harness-mcp--chatrequest" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="340" y="3770" />
+              <mxPoint x="2200" y="3770" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="59" value="«reports progress through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.4062;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--chatprotocol" target="harness-mcp--throttledreporter" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="210" y="3770" />
+              <mxPoint x="30" y="3770" />
+              <mxPoint x="30" y="1510" />
+              <mxPoint x="590" y="1510" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="60" value="chat_protocol «serves MCP through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1875;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--httpendpoints" target="harness-mcp--chatprotocol" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="3830" />
+              <mxPoint x="140" y="3830" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="60" value="chat_protocol «serves MCP through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1875;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--httpendpoints" target="harness-mcp--chatprotocol" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="3830" />
+              <mxPoint x="140" y="3830" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="37" value="«waits longer for operations annotated»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.619;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-mcp--longcall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1360" y="2190" />
+              <mxPoint x="1330" y="2190" />
+              <mxPoint x="1330" y="2210" />
+              <mxPoint x="1180" y="2210" />
+              <mxPoint x="1180" y="1170" />
+              <mxPoint x="1100" y="1170" />
+              <mxPoint x="1100" y="820" />
+              <mxPoint x="1330" y="820" />
+              <mxPoint x="1330" y="840" />
+              <mxPoint x="2350" y="840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="38" value="«serves the operations annotated»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-mcp--mcp" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1310" y="2170" />
+              <mxPoint x="1400" y="2170" />
+              <mxPoint x="1400" y="2210" />
+              <mxPoint x="1490" y="2210" />
+              <mxPoint x="1490" y="2190" />
+              <mxPoint x="1550" y="2190" />
+              <mxPoint x="1550" y="2640" />
+              <mxPoint x="1470" y="2640" />
+              <mxPoint x="1470" y="2840" />
+              <mxPoint x="3100" y="2840" />
+              <mxPoint x="3100" y="1510" />
+              <mxPoint x="2950" y="1510" />
+              <mxPoint x="2950" y="440" />
+              <mxPoint x="1990" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="«publishes as a cdd MCP tool»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.093;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcp" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="40" value="server «stands up and starts the server through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcpchannelserver" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1370" y="800" />
+              <mxPoint x="960" y="800" />
+              <mxPoint x="960" y="1780" />
+              <mxPoint x="370" y="1780" />
+              <mxPoint x="370" y="2080" />
+              <mxPoint x="390" y="2080" />
+              <mxPoint x="390" y="2190" />
+              <mxPoint x="350" y="2190" />
+              <mxPoint x="350" y="2600" />
+              <mxPoint x="860" y="2600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="40" value="server «stands up and starts the server through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcpchannelserver" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1370" y="800" />
+              <mxPoint x="960" y="800" />
+              <mxPoint x="960" y="1780" />
+              <mxPoint x="370" y="1780" />
+              <mxPoint x="370" y="2080" />
+              <mxPoint x="390" y="2080" />
+              <mxPoint x="390" y="2190" />
+              <mxPoint x="350" y="2190" />
+              <mxPoint x="350" y="2600" />
+              <mxPoint x="860" y="2600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="«publishes as a cdd MCP tool»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.093;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcp" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="42" value="«loads»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-mcp--mcphost" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1020" y="2380" />
+              <mxPoint x="1050" y="2380" />
+              <mxPoint x="1050" y="2070" />
+              <mxPoint x="400" y="2070" />
+              <mxPoint x="400" y="1810" />
+              <mxPoint x="980" y="1810" />
+              <mxPoint x="980" y="1150" />
+              <mxPoint x="1450" y="1150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="44" value="«installs the plugins of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-mcp--claudemarketplace" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="860" y="2920" />
+              <mxPoint x="900" y="2920" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="45" value="«installs each plugin through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-mcp--claudeplugins" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1180" y="2880" />
+              <mxPoint x="1860" y="2880" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="47" value="marketplace «publishes the mods of the code it serves through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-mcp--claudemarketplace" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2640" y="1360" />
+              <mxPoint x="2610" y="1360" />
+              <mxPoint x="2610" y="1370" />
+              <mxPoint x="2570" y="1370" />
+              <mxPoint x="2570" y="2640" />
+              <mxPoint x="2810" y="2640" />
+              <mxPoint x="2810" y="2890" />
+              <mxPoint x="1880" y="2890" />
+              <mxPoint x="1880" y="2910" />
+              <mxPoint x="1630" y="2910" />
+              <mxPoint x="1630" y="3120" />
+              <mxPoint x="1170" y="3120" />
+              <mxPoint x="1170" y="2920" />
+              <mxPoint x="1080" y="2920" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="47" value="marketplace «publishes the mods of the code it serves through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-mcp--claudemarketplace" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2640" y="1360" />
+              <mxPoint x="2610" y="1360" />
+              <mxPoint x="2610" y="1370" />
+              <mxPoint x="2570" y="1370" />
+              <mxPoint x="2570" y="2640" />
+              <mxPoint x="2810" y="2640" />
+              <mxPoint x="2810" y="2890" />
+              <mxPoint x="1880" y="2890" />
+              <mxPoint x="1880" y="2910" />
+              <mxPoint x="1630" y="2910" />
+              <mxPoint x="1630" y="3120" />
+              <mxPoint x="1170" y="3120" />
+              <mxPoint x="1170" y="2920" />
+              <mxPoint x="1080" y="2920" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="48" value="cdd_plugin «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=cdd_plugin;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1944;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-mcp--publishedplugin" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="960" y="3290" />
+              <mxPoint x="1150" y="3290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="48" value="cdd_plugin «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=cdd_plugin;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1944;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-mcp--publishedplugin" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="960" y="3290" />
+              <mxPoint x="1150" y="3290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="49" value="«finds the mods to publish through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-mcp--publishedmods" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="870" y="3290" />
+              <mxPoint x="840" y="3290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52" value="marketplace" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3889;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--publishedplugin" target="harness-mcp--claudemarketplace" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1220" y="3220" />
+              <mxPoint x="1050" y="3220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="54" value="«installs»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6111;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudeplugins" target="harness-mcp--publishedplugin" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1840" y="3270" />
+              <mxPoint x="1300" y="3270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="55" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudeplugins" target="harness-mcp--plugininstall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1980" y="3290" />
+              <mxPoint x="2000" y="3290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="61" value="host «answers each call through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6625;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--chatprotocol" target="harness-mcp--mcphost" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="240" y="3850" />
+              <mxPoint x="1660" y="3850" />
+              <mxPoint x="1660" y="2590" />
+              <mxPoint x="1690" y="2590" />
+              <mxPoint x="1690" y="1170" />
+              <mxPoint x="1660" y="1170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="62" value="host «answers handed-over calls through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3375;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--httpendpoints" target="harness-mcp--mcphost" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="230" y="1200" />
+              <mxPoint x="1400" y="1200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
         <mxCell id="harness-annotations--annotation" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/annotations»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Annotation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ flag: str&lt;br/&gt;+ copied: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="1970" y="60" width="280" height="110" as="geometry" />
         </mxCell>
@@ -67,74 +389,6 @@
         <mxCell id="harness-hooks--hook" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/hooks»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Hook&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ EVENTS: frozenset[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="670" y="880" width="260" height="94" as="geometry" />
         </mxCell>
-        <mxCell id="harness-mcp--mcphost" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;McpHost&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ checkout_toolsets: ProjectToolsets&lt;br/&gt;+ projects: list[Path]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ McpHost(checkout_toolsets: ProjectToolsets, lanes: ServerLanes | None, home: CddHome | None)&lt;br/&gt;+ dispatch(name: str, arguments: dict[str, object] | None, project: Path | None): object&lt;br/&gt;+ answer(call: ToolCall): object&lt;br/&gt;+ tools_listed_for(project: Path | None): list[dict[str, Any]]&lt;br/&gt;+ serve(daemon: McpDaemon, listener: socket.socket): None&lt;br/&gt;+ restart(): dict[str, Any]&lt;br/&gt;+ diagnose(): dict[str, Any]&lt;br/&gt;+ from_repo(repo: Path | str, lanes: ServerLanes | None, home: CddHome | None): McpHost&lt;br/&gt;+ from_refs(toolset_refs: tuple[str, ...], repo: str | None, project: str | None, lanes: ServerLanes | None, home: CddHome | None): McpHost&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="1130" y="880" width="800" height="222" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--chatrequest" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ChatRequest&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; process: ClaudeChatProcess | None&lt;br/&gt;+ chat: ChatPointer | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ChatRequest(headers: Mapping[str, str], client_port: int | None, claude_settings: Path)&lt;br/&gt;+ project_for(tool: str): Path | None&lt;br/&gt;+ tool_request(tool: str, host: McpHost): ToolRequest&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="1940" y="2226" width="520" height="126" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--projecttoolsets" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ProjectToolsets&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ repo: Path | None&lt;br/&gt;+ project: Path | None&lt;br/&gt;+ started: bool&lt;br/&gt;+ tools: dict[str, AgentTool]&lt;br/&gt;+ prompts: dict[str, AgentTool]&lt;br/&gt;+ skipped: SkippedTools&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ProjectToolsets(repo: str | Path | None, project: str | Path | None)&lt;br/&gt;+ enroll(tool: AgentTool): None&lt;br/&gt;+ start(toolsets: Iterable[ToolsetReference]): None&lt;br/&gt;+ for_project(project: Path): ProjectToolsets&lt;br/&gt;+ restarted(): ProjectToolsets&lt;br/&gt;+ resolve_call_name(name: str): str&lt;br/&gt;+ enrolled(name: str): AgentTool | None&lt;br/&gt;+ call_seconds(name: str): float&lt;br/&gt;+ invoke(mcp_name: str, arguments: dict[str, object] | None): object&lt;br/&gt;+ answer(mcp_name: str, call: ToolCall): object&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="1100" y="2226" width="420" height="302" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--mcpinstallation" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;McpInstallation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ destination: Mcp&lt;br/&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; served: ServedCheckout&lt;br/&gt;+ daemon: McpDaemon&lt;br/&gt;+ claude_plugins: ClaudePlugins&lt;br/&gt;+ server: McpChannelServer&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; cdd_entry: CddEntry&lt;br/&gt;+ mcp_operations: list[AgentTool]&lt;br/&gt;+ toolsets: tuple[type, ...]&lt;br/&gt;+ published: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ McpInstallation(target: InstallTarget, record: InstallRecord, served: ServedCheckout)&lt;br/&gt;+ create(target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None): McpInstallation&lt;br/&gt;+ write(tool: AgentTool): None&lt;br/&gt;+ write_once_recorded(): None&lt;br/&gt;+ status(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="1050" y="310" width="640" height="270" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--mcpchannelserver" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;McpChannelServer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; served: ServedCheckout&lt;br/&gt;+ runs_this_process: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ McpChannelServer(served: ServedCheckout, daemon: McpDaemon, claude_plugins: ClaudePlugins, layout: IdeLayout)&lt;br/&gt;+ stand_up(): StandUp&lt;br/&gt;+ ensure_running(): list[str]&lt;br/&gt;+ install_plugins(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="700" y="2676" width="640" height="142" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--cddhome" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CddHome&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ state_path: Path&lt;br/&gt;+ log_path: Path&lt;br/&gt;+ connect_script: Path&lt;br/&gt;+ runtime_record: Path&lt;br/&gt;+ pinned_checkout: Path&lt;br/&gt;+ is_installed: bool&lt;br/&gt;+ is_dev_lane: bool&lt;br/&gt;+ stable_lane: CddHome&lt;br/&gt;+ dev_lane: CddHome&lt;br/&gt;+ source: Path&lt;br/&gt;+ mode: str&lt;br/&gt;+ served_branch: str&lt;br/&gt;+ served_worktree: Path | None&lt;br/&gt;+ interpreter: PythonInterpreter&lt;br/&gt;+ server_environment: dict[str, str]&lt;br/&gt;+ marketplace: ClaudeMarketplace&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CddHome(folder: Path | str | None)&lt;br/&gt;+ is_pinned_to(checkout: Path | str): bool&lt;br/&gt;+ install(checkout: Path | str, connect_script: Path | str): None&lt;br/&gt;+ pin(checkout: Path | str): str&lt;br/&gt;+ serve_current(checkout: Path | str): None&lt;br/&gt;+ serve_from(checkout: Path | str): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="2450" y="880" width="380" height="414" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--claudemarketplace" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClaudeMarketplace&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ INSTALL_COMMAND: str&lt;br/&gt;+ cdd_plugin: PublishedPlugin&lt;br/&gt;+ mods: list[PublishedPlugin]&lt;br/&gt;+ install_command: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ClaudeMarketplace(folder: Path, home: CddHome)&lt;br/&gt;+ plugin(name: str): PublishedPlugin&lt;br/&gt;+ mod_folder(plugin: PublishedPlugin): Path&lt;br/&gt;+ publish_cdd_plugin(server: dict[str, object]): list[Path]&lt;br/&gt;+ publish_mods(code: Path): None&lt;br/&gt;+ publish_mods_for_chats(is_dev_lane_running: bool): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="780" y="2966" width="360" height="222" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--publishedplugin" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PublishedPlugin&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ marketplace: ClaudeMarketplace&lt;br/&gt;+ name: str&lt;br/&gt;+ folder: Path&lt;br/&gt;+ is_published: bool&lt;br/&gt;+ manifest: dict[str, Any]&lt;br/&gt;+ version: str&lt;br/&gt;+ description: str&lt;br/&gt;+ installed_name: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PublishedPlugin(marketplace: ClaudeMarketplace, name: str)&lt;br/&gt;+ write_manifest(manifest: dict[str, Any]): Path&lt;br/&gt;+ publish_from(mod: PublishedMod): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="1080" y="3336" width="360" height="222" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--publishedmods" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PublishedMods&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ code: Path&lt;br/&gt;+ every: list[PublishedMod]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PublishedMods(code: Path)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="740" y="3336" width="200" height="94" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--claudeplugins" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClaudePlugins&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ installed: dict[str, str]&lt;br/&gt;+ claude_cli: str | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ClaudePlugins(home: CddHome | None)&lt;br/&gt;+ install(plugin: PublishedPlugin): PluginInstall&lt;br/&gt;+ is_watched(plugin: PublishedPlugin): bool&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="1760" y="2966" width="300" height="126" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--plugininstall" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PluginInstall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ state: str&lt;br/&gt;+ INSTALLED: str&lt;br/&gt;+ WATCHED: str&lt;br/&gt;+ MISSING: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PluginInstall(state: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="1900" y="3336" width="200" height="126" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--throttledreporter" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ThrottledReporter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ThrottledReporter(reporter: Reporter, seconds: float)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="420" y="1390" width="340" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--mcp" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Mcp&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="1890" y="310" width="200" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="harness-mcp--longcall" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;LongCall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
-          <mxGeometry x="2250" y="310" width="200" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="3" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8269;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3462;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-installation--repositorytoolsets" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1560" y="1350" />
-              <mxPoint x="1790" y="1350" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="4" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-agent-tools--toolcall" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1390" y="1300" />
-              <mxPoint x="390" y="1300" />
-              <mxPoint x="390" y="1800" />
-              <mxPoint x="990" y="1800" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="5" value="«reports progress through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3269;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--throttledreporter" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1300" y="1320" />
-              <mxPoint x="590" y="1320" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
         <mxCell id="6" value="«answers with the data of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1731;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-installation--dataclass" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
@@ -142,9 +396,6 @@
               <mxPoint x="190" y="1280" />
             </Array>
           </mxGeometry>
-        </mxCell>
-        <mxCell id="17" value="«publishes as a cdd MCP tool»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.093;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcp" parent="1">
-          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="16" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8276;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6591;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-agent-tools--agenttool" parent="1">
           <mxGeometry relative="1" as="geometry">
@@ -160,9 +411,6 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="17" value="«publishes as a cdd MCP tool»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.093;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcp" parent="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
         <mxCell id="18" value="«publishes the server-starting hooks with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1724;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-hooks--hook" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
@@ -176,22 +424,6 @@
             <Array as="points">
               <mxPoint x="1340" y="820" />
               <mxPoint x="2060" y="820" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="21" value="interpreter «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6053;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-process--pythoninterpreter" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="2680" y="1350" />
-              <mxPoint x="2770" y="1350" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="22" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7895;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-git--git" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="2750" y="1330" />
-              <mxPoint x="3230" y="1330" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -219,65 +451,11 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="25" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcp" target="harness-annotations--destination" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1750" y="200" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="26" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--longcall" target="harness-annotations--annotation" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="2080" y="200" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="27" value="checkout_toolsets «keeps one per project» «resolves call name»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2381;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--projecttoolsets" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1610" y="1840" />
-              <mxPoint x="1200" y="1840" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="28" value="«makes one for each request from the module as it is now»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--chatrequest" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1770" y="1310" />
-              <mxPoint x="2050" y="1310" />
-              <mxPoint x="2050" y="1840" />
-              <mxPoint x="2540" y="1840" />
-              <mxPoint x="2540" y="2180" />
-              <mxPoint x="2200" y="2180" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="29" value="«publishes the mods on restart through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--claudemarketplace" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1290" y="1130" />
-              <mxPoint x="350" y="1130" />
-              <mxPoint x="350" y="2040" />
-              <mxPoint x="10" y="2040" />
-              <mxPoint x="10" y="2900" />
-              <mxPoint x="960" y="2900" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
         <mxCell id="30" value="chat «names the chat with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6731;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--chatrequest" target="harness-agent-tools--chatpointer" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="2290" y="2630" />
               <mxPoint x="2500" y="2630" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="31" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3269;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--chatrequest" target="harness-agent-tools--toolrequest" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="2110" y="2630" />
-              <mxPoint x="1810" y="2630" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -321,162 +499,6 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="37" value="«waits longer for operations annotated»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.619;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-mcp--longcall" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1360" y="2190" />
-              <mxPoint x="1330" y="2190" />
-              <mxPoint x="1330" y="2210" />
-              <mxPoint x="1180" y="2210" />
-              <mxPoint x="1180" y="1170" />
-              <mxPoint x="1100" y="1170" />
-              <mxPoint x="1100" y="820" />
-              <mxPoint x="1330" y="820" />
-              <mxPoint x="1330" y="840" />
-              <mxPoint x="2350" y="840" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="38" value="«serves the operations annotated»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-mcp--mcp" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1310" y="2170" />
-              <mxPoint x="1400" y="2170" />
-              <mxPoint x="1400" y="2210" />
-              <mxPoint x="1490" y="2210" />
-              <mxPoint x="1490" y="2190" />
-              <mxPoint x="1550" y="2190" />
-              <mxPoint x="1550" y="2640" />
-              <mxPoint x="1470" y="2640" />
-              <mxPoint x="1470" y="2840" />
-              <mxPoint x="3100" y="2840" />
-              <mxPoint x="3100" y="1510" />
-              <mxPoint x="2950" y="1510" />
-              <mxPoint x="2950" y="440" />
-              <mxPoint x="1990" y="440" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="39" value="claude_plugins" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--claudeplugins" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1530" y="610" />
-              <mxPoint x="1860" y="610" />
-              <mxPoint x="1860" y="280" />
-              <mxPoint x="2970" y="280" />
-              <mxPoint x="2970" y="1290" />
-              <mxPoint x="3490" y="1290" />
-              <mxPoint x="3490" y="2930" />
-              <mxPoint x="1970" y="2930" />
-              <mxPoint x="1970" y="2920" />
-              <mxPoint x="1960" y="2920" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="40" value="server «stands up and starts the server through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcpchannelserver" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1370" y="800" />
-              <mxPoint x="960" y="800" />
-              <mxPoint x="960" y="1780" />
-              <mxPoint x="370" y="1780" />
-              <mxPoint x="370" y="2080" />
-              <mxPoint x="390" y="2080" />
-              <mxPoint x="390" y="2190" />
-              <mxPoint x="350" y="2190" />
-              <mxPoint x="350" y="2600" />
-              <mxPoint x="860" y="2600" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="41" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-installation--registeredchannel" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="700" y="2196" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="42" value="«loads»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-mcp--mcphost" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1020" y="2380" />
-              <mxPoint x="1050" y="2380" />
-              <mxPoint x="1050" y="2070" />
-              <mxPoint x="400" y="2070" />
-              <mxPoint x="400" y="1810" />
-              <mxPoint x="980" y="1810" />
-              <mxPoint x="980" y="1150" />
-              <mxPoint x="1450" y="1150" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="43" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-installation--standup" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1020" y="2900" />
-              <mxPoint x="1450" y="2900" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="44" value="«installs the plugins of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-mcp--claudemarketplace" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="860" y="2920" />
-              <mxPoint x="900" y="2920" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="45" value="«installs each plugin through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-mcp--claudeplugins" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1180" y="2880" />
-              <mxPoint x="1860" y="2880" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="46" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.75;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-installation--channelserver" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1720" y="2366" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="47" value="marketplace «publishes the mods of the code it serves through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-mcp--claudemarketplace" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="2640" y="1360" />
-              <mxPoint x="2610" y="1360" />
-              <mxPoint x="2610" y="1370" />
-              <mxPoint x="2570" y="1370" />
-              <mxPoint x="2570" y="2640" />
-              <mxPoint x="2810" y="2640" />
-              <mxPoint x="2810" y="2890" />
-              <mxPoint x="1880" y="2890" />
-              <mxPoint x="1880" y="2910" />
-              <mxPoint x="1630" y="2910" />
-              <mxPoint x="1630" y="3120" />
-              <mxPoint x="1170" y="3120" />
-              <mxPoint x="1170" y="2920" />
-              <mxPoint x="1080" y="2920" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="48" value="cdd_plugin «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=cdd_plugin;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1944;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-mcp--publishedplugin" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="960" y="3290" />
-              <mxPoint x="1150" y="3290" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="49" value="«finds the mods to publish through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-mcp--publishedmods" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="870" y="3290" />
-              <mxPoint x="840" y="3290" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
         <mxCell id="50" value="«publishes the mods one install at a time, holding»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1667;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-installation--installlock" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
@@ -496,14 +518,6 @@
               <mxPoint x="3120" y="2860" />
               <mxPoint x="3120" y="1540" />
               <mxPoint x="2230" y="1540" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="52" value="marketplace" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3889;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--publishedplugin" target="harness-mcp--claudemarketplace" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1220" y="3220" />
-              <mxPoint x="1050" y="3220" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -533,30 +547,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="54" value="«installs»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6111;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudeplugins" target="harness-mcp--publishedplugin" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1840" y="3270" />
-              <mxPoint x="1300" y="3270" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="55" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudeplugins" target="harness-mcp--plugininstall" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1980" y="3290" />
-              <mxPoint x="2000" y="3290" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="56" value="«reads Claude Code's settings through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudeplugins" target="harness-installation--idelayout" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1910" y="3290" />
-              <mxPoint x="1690" y="3290" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-      </root>
+        </root>
     </mxGraphModel>
-  </diagram></mxfile>
+  </diagram>
+</mxfile>

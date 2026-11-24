@@ -21,7 +21,7 @@ from expects import be_below, be_false, be_true, contain, equal, expect, raise_e
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
-from harness.mcp.mcp_server import McpHost
+from harness.mcp.mcp_server import ChatProtocol, McpHost
 from harness.git.git import Git, RepoConnectError
 from space.repo.latest_release import LatestRelease
 from space.repo.repo import Repo
@@ -518,7 +518,7 @@ with description("the repo push toolset"):
             commit = host.dispatch(
                 "repo.push_commit", {"message": "push: checkpoint", "sync_remote": False}
             )
-            payload = json.loads(host.chat_protocol.content_blocks(commit)[0].text)
+            payload = json.loads(ChatProtocol(host).content_blocks(commit)[0].text)
             expect(payload["sha"]).to(equal(_git(self.repo_root, "rev-parse", "HEAD")))
 
         with it("should publish push_commit on MCP and keep /push as instructions only"):

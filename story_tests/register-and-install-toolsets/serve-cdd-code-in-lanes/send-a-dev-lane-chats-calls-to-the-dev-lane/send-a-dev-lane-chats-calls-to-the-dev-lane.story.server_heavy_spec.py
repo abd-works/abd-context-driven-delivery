@@ -21,6 +21,7 @@ from harness.mcp.examples import server_lanes_examples as examples
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_address import DEV_LANE_FOLDER, McpAddress
 from harness.mcp.mcp_daemon import McpDaemon
+from harness.mcp.mcp_server import HttpEndpoints
 from harness.mcp.server_lanes import LaneCallFailed, ServerLanes
 
 _START_SECONDS = 20
@@ -33,7 +34,7 @@ def _listening_dev_lane(home: CddHome, worktree: Path) -> McpAddress:
     listener.listen()
     address = McpAddress(listener.getsockname()[1])
     daemon = McpDaemon(home, address)
-    threading.Thread(target=examples.seed_host(worktree).serve, args=(daemon, listener), daemon=True).start()
+    threading.Thread(target=HttpEndpoints(examples.seed_host(worktree)).serve, args=(daemon, listener), daemon=True).start()
     deadline = time.time() + _START_SECONDS
     while address.ping_answer(1) is None and time.time() < deadline:
         time.sleep(0.1)

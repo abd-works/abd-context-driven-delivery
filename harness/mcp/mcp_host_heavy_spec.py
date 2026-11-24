@@ -22,7 +22,7 @@ from harness.installation.installer import Installer
 from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_daemon import McpDaemon
-from harness.mcp.mcp_server import McpHost, McpInstallation
+from harness.mcp.mcp_server import ChatProtocol, McpHost, McpInstallation
 from harness.mcp.spec_support import UserHome
 from harness.graph.graph import Graph
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
@@ -335,7 +335,7 @@ with description("an MCP host tool result") as self:
             self.work.mkdir()
             Sessions(self.repo).switch("alpha", self.work, create=True)
             self.host = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo))
-            self.blocks = self.host.chat_protocol.content_blocks(Sessions(self.repo).current())
+            self.blocks = ChatProtocol(self.host).content_blocks(Sessions(self.repo).current())
             self.payload = json.loads(self.blocks[0].text)
 
         with after.each:
@@ -351,7 +351,7 @@ with description("an MCP host tool result") as self:
         with before.each:
             self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
             commit = Commit("abc123", "push: checkpoint\nReviewed-By: human")
-            self.payload = json.loads(self.host.chat_protocol.content_blocks(commit)[0].text)
+            self.payload = json.loads(ChatProtocol(self.host).content_blocks(commit)[0].text)
 
         with it("should expose the commit sha as JSON"):
             expect(self.payload["sha"]).to(equal("abc123"))

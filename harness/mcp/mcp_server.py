@@ -659,7 +659,7 @@ class _LaneCallFailed(Exception):
 class McpHost:
     """The cdd server's MCP side: one *ProjectToolsets* for each project a chat works on, answering every chat. The
     toolsets of the checkout it serves from answer the tool list, which every project shares, and give each new project
-    its toolsets. It speaks MCP to chats through its *ChatProtocol* and answers over HTTP through its *HttpEndpoints*. A
+    its toolsets. Chats reach it over HTTP through *HttpEndpoints*, which speak MCP to them through a *ChatProtocol*. A
     host serving chats is made with the two lanes as the running server sees them and its cdd home, so it hands a call
     whose project runs on the other lane to that lane; a host made in process for a probe or spec has neither."""
 
@@ -670,23 +670,11 @@ class McpHost:
         self._restart_gate = _RestartGate()
         self._home = home
         self._lanes = lanes
-        self._chat_protocol = ChatProtocol(self)
-        self._http_endpoints = HttpEndpoints(self, self._chat_protocol)
 
     @property
     def checkout_toolsets(self) -> ProjectToolsets:
         """The server on the checkout this host serves from: the tools every chat lists, and what start-up skipped."""
         return self._checkout_toolsets
-
-    @property
-    def chat_protocol(self) -> ChatProtocol:
-        """The MCP protocol this host speaks to chats."""
-        return self._chat_protocol
-
-    @property
-    def http_endpoints(self) -> HttpEndpoints:
-        """The HTTP endpoints this host answers on: MCP, the ping, and the other lane's handed-over calls."""
-        return self._http_endpoints
 
     @property
     def projects(self) -> list[Path]:
@@ -709,9 +697,25 @@ class McpHost:
         other_lane = self._other_lane_answering(self.call_sent({}, project, self.tool_request(BUILTIN_LIST_TOOLS))) if project else None
         if other_lane is not None:
             return other_lane.tools_for(project)
+        no_arguments = {"type": "object", "properties": {}}
+        builtins = [
+            self._listed(BUILTIN_PING_TOOL, "Health check for the CDD MCP host process.", no_arguments),
+            self._listed(
+                BUILTIN_RESTART_TOOL,
+                "Restart the CDD MCP host on the code as it is now: reload its Python and start its toolsets again, on the same connection.",
+                no_arguments,
+            ),
+        ]
         enrolled = (*self._checkout_toolsets.tools.values(), *self._checkout_toolsets.prompts.values())
-        listed = [_listed_tool(tool.mcp_name, tool.listed_description, tool.input_schema) for tool in enrolled]
-        return [*_BUILTIN_TOOLS, *listed]
+        return [*builtins, *(self._listed(tool.mcp_name, tool.listed_description, tool.input_schema) for tool in enrolled)]
+
+    def _listed(self, name: str, description: str | None, input_schema: dict[str, Any]) -> dict[str, Any]:
+        """One tool as a chat's tool list shows it, as the MCP SDK's ``Tool`` reads it; a tool with no description has
+        none."""
+        listed: dict[str, Any] = {"name": name, "inputSchema": input_schema}
+        if description:
+            listed["description"] = description
+        return listed
 
     def call_sent(self, arguments: dict[str, object] | None, project: Path | None, request: ToolRequest) -> ToolCall:
         """A call this host answers, made from ``tool_call`` as it is now. A restart imports the checkout again but keeps
@@ -789,10 +793,6 @@ class McpHost:
         if session is not None:
             session.log_failure(call, failure)
 
-    def serve(self, daemon: McpDaemon, listener: socket.socket) -> None:
-        """Answer every chat over HTTP on ``listener``, which ``daemon`` claimed, until the process is stopped."""
-        self._http_endpoints.serve(daemon, listener)
-
     def restart(self) -> dict[str, Any]:
         """Swap in a server on the code as it is now, for every chat. Connections, and this host object holding them,
         stay. Each project's toolsets start again on the new code the next time a call names it."""
@@ -840,25 +840,6 @@ class McpHost:
     ) -> McpHost:
         """A host over the toolsets the ``module:Class`` references name, as a process is started with them."""
         return cls(ProjectToolsets.of_refs(toolset_refs, repo=repo, project=project), lanes, home)
-
-
-def _listed_tool(name: str, description: str | None, input_schema: dict[str, Any]) -> dict[str, Any]:
-    """One tool as a chat's tool list shows it, as the MCP SDK's ``Tool`` reads it; a tool with no description has none."""
-    listed: dict[str, Any] = {"name": name, "inputSchema": input_schema}
-    if description:
-        listed["description"] = description
-    return listed
-
-
-# The tools every host lists before its toolsets' own.
-_BUILTIN_TOOLS = (
-    _listed_tool(BUILTIN_PING_TOOL, "Health check for the CDD MCP host process.", {"type": "object", "properties": {}}),
-    _listed_tool(
-        BUILTIN_RESTART_TOOL,
-        "Restart the CDD MCP host on the code as it is now: reload its Python and start its toolsets again, on the same connection.",
-        {"type": "object", "properties": {}},
-    ),
-)
 
 
 class ChatProtocol:
@@ -1039,11 +1020,12 @@ class ChatProtocol:
 class HttpEndpoints:
     """Where a host answers over HTTP: MCP over Streamable HTTP at ``/mcp``, a ``/ping`` that says which pid and checkout
     are serving, and ``/lane-call``, where the other lane's server hands over a chat's call. Only this machine's own
-    clients get in: the Host must name the port, and a browser page's Origin is refused."""
+    clients get in: the Host must name the port, and a browser page's Origin is refused. They speak MCP to chats through
+    the *ChatProtocol* they make for host."""
 
-    def __init__(self, host: McpHost, chat_protocol: ChatProtocol) -> None:
+    def __init__(self, host: McpHost) -> None:
         self._host = host
-        self._chat_protocol = chat_protocol
+        self._chat_protocol = ChatProtocol(host)
 
     def serve(self, daemon: McpDaemon, listener: socket.socket) -> None:
         """Answer every chat on ``listener``, which ``daemon`` claimed, until the process is stopped."""

@@ -1,6 +1,6 @@
 # harness/mcp
 
-The *McpHost* is the one cdd server every chat talks to; it keeps one *ProjectToolsets* per project, speaks MCP to chats through its *ChatProtocol*, which makes one *ChatRequest* for each request a chat sends, and answers over HTTP through its *HttpEndpoints*. *McpInstallation* is the MCP channel's *RegisteredChannel*: it writes each IDE's `cdd` entry, and its *McpChannelServer* stands the server up, starts it from *CddHome*, and installs the plugins of the home's *ClaudeMarketplace* through *ClaudePlugins*.
+The *McpHost* is the one cdd server every chat talks to; it keeps one *ProjectToolsets* per project. Chats reach it over HTTP through *HttpEndpoints*, which speak MCP to them through a *ChatProtocol*, and that makes one *ChatRequest* for each request a chat sends. *McpInstallation* is the MCP channel's *RegisteredChannel*: it writes each IDE's `cdd` entry, and its *McpChannelServer* stands the server up, starts it from *CddHome*, and installs the plugins of the home's *ClaudeMarketplace* through *ClaudePlugins*.
 
 - **Purpose:** Let any chat, in any project, call the operations authors annotate `@mcp`, through one long-running server that keeps each project's toolsets apart.
 - **Seam (terms):** Mcp, LongCall, McpHost, ChatProtocol, HttpEndpoints, ProjectToolsets, ChatRequest, McpInstallation, McpChannelServer, CddHome, ClaudeMarketplace, PublishedPlugin, PublishedMods, ClaudePlugins, PluginInstall, ThrottledReporter
@@ -8,13 +8,11 @@ The *McpHost* is the one cdd server every chat talks to; it keeps one *ProjectTo
 
 ## McpHost
 
-The cdd server's MCP side: one *ProjectToolsets* for each project a chat works on, answering every chat. It speaks MCP to chats through its *ChatProtocol* and answers over HTTP through its *HttpEndpoints*. A host serving chats is made with the two lanes and its cdd home, so it hands a call whose project runs on the other lane to that lane; one made in process for a probe or a spec has neither.
+The cdd server's MCP side: one *ProjectToolsets* for each project a chat works on, answering every chat. Chats reach it over HTTP through *HttpEndpoints*, made for it where the server starts. A host serving chats is made with the two lanes and its cdd home, so it hands a call whose project runs on the other lane to that lane; one made in process for a probe or a spec has neither.
 
 + McpHost(checkout_toolsets: ProjectToolsets, lanes: ServerLanes | None = None, home: CddHome | None = None)
 ------
 + << composition >> checkout_toolsets: ProjectToolsets
-+ << composition >> chat_protocol: ChatProtocol
-+ << composition >> http_endpoints: HttpEndpoints
 + projects: list[Path]
 ----
 + dispatch(name: str, arguments: dict[str, object] | None = None, project: Path | None = None): object
@@ -25,7 +23,6 @@ The cdd server's MCP side: one *ProjectToolsets* for each project a chat works o
 	// as data, with no MCP SDK: the built-in ping and restart, then the toolsets' own; the other lane's when that lane answers project
 + call_sent(arguments: dict[str, object] | None, project: Path | None, request: ToolRequest): ToolCall
 + tool_request(tool: str): ToolRequest
-+ serve(daemon: McpDaemon, listener: socket.socket): None
 + restart(): dict[str, Any]
 	// publishes the mods of the code it now runs, so a chat watching them reloads with the restart
 + diagnose(): dict[str, Any]
@@ -33,8 +30,6 @@ The cdd server's MCP side: one *ProjectToolsets* for each project a chat works o
 + from_refs(toolset_refs: tuple[str, ...], repo: str | None = None, project: str | None = None, lanes: ServerLanes | None = None, home: CddHome | None = None): McpHost
 ---<<keeps one per project>>--> ProjectToolsets
 ---<<resolves call name>>--> ProjectToolsets
----<<speaks MCP to chats through>>--> ChatProtocol
----<<answers over HTTP through>>--> HttpEndpoints
 ---<<creates>>--> ToolCall
 ---<<answers with the data of>>--> DataClass
 ---<<publishes the mods on restart through>>--> ClaudeMarketplace
@@ -57,12 +52,13 @@ The MCP protocol a host speaks to chats: the SDK's protocol server with the host
 
 ## HttpEndpoints
 
-Where a host answers over HTTP: MCP at `/mcp`, `/ping`, which says which pid and checkout serve, and `/lane-call`, where the other lane's server hands over a chat's call and hears back its answer or its failure by kind and message. Only this machine's own clients get in.
+Where a host answers over HTTP: MCP at `/mcp`, `/ping`, which says which pid and checkout serve, and `/lane-call`, where the other lane's server hands over a chat's call and hears back its answer or its failure by kind and message. Only this machine's own clients get in. `python -m harness.mcp` makes them for its host and serves.
 
-+ HttpEndpoints(host: McpHost, chat_protocol: ChatProtocol)
++ HttpEndpoints(host: McpHost)
 ------
 + << association >> host: McpHost
-+ << association >> chat_protocol: ChatProtocol
++ << composition >> chat_protocol: ChatProtocol
+	// the MCP protocol it speaks to chats, made for host
 ----
 + serve(daemon: McpDaemon, listener: socket.socket): None
 + app(port: int): Any
