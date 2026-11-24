@@ -1008,7 +1008,7 @@ with description("an @agent_instructions body with a line that fails"):
         with it("should name the file line the failing line is on"):
             source_line = next(
                 number for number, text in enumerate(Path(__file__).read_text(encoding="utf-8").splitlines(), 1)
-                if text.strip() == "if self.missing_flag:"
+                if text.strip().startswith("if self.missing_flag:")
             )
             expect(lambda: self.body.prompt).to(raise_error(RecipeLineFailed, contain(f":{source_line} ")))
 
