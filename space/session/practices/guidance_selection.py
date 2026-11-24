@@ -269,7 +269,7 @@ class GuidanceSelection:
 
     def listing(self, linked: list[str]) -> FileListing:
         """What a page lists of the session's files for this selection and linked, the fidelities its link names."""
-        return FileListing(self, linked, self._session.is_repository)
+        return FileListing(self, linked, self._session.is_repository, self._session.paths)
 
     def toggle(self, part: SelectionPart, name: str) -> GuidanceSelection:
         """Select the stage, practice, or format group called name beside those selected, or no longer; before anyone

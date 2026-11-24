@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from functools import cached_property
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from space.session.files.file_manager import FileEntry
 
 if TYPE_CHECKING:
     from space.session.practices.guidance_selection import GuidanceSelection
+    from space.session.session_paths import SessionPaths
 
 
 class FileListing:
@@ -19,10 +21,11 @@ class FileListing:
     for the ticket until someone chooses hides none a link names. Each file it answers says ``is_listed`` and
     ``is_session_work``, so a page draws what Python decided and restates no rule."""
 
-    def __init__(self, selection: GuidanceSelection, linked: list[str], is_repository: bool) -> None:
+    def __init__(self, selection: GuidanceSelection, linked: list[str], is_repository: bool, paths: SessionPaths) -> None:
         self._selection = selection
         self._linked = list(linked)
         self._is_repository = is_repository
+        self._paths = paths
 
     @cached_property
     def listed(self) -> list[str]:
@@ -47,7 +50,11 @@ class FileListing:
     def of_root(self, entry: FileEntry) -> FileEntry:
         """entry, a file under the session's root: listed while it is in a format selected, or is published to a link,
         such as a design canvas, and belongs to a fidelity listed. A file no fidelity declares, such as a practice's
-        example, belongs to no practice, so it is listed only while no practice is selected, which filters no practice."""
+        example, belongs to no practice, so it is listed only while no practice is selected, which filters no practice.
+        The session's sketch holds a section for every practice and is the next thing its person reviews, so it is
+        listed whatever is selected, as a file of the session's own folder is."""
+        if self._paths.is_sketch(Path(entry.path)):
+            return self.of_folder(entry)
         in_format = self._in_formats(entry.format, entry)
         belongs = any(slug in self.listed for slug in entry.fidelities) if entry.fidelities else self._is_no_practice_selected
         return entry.listed_as(in_format and belongs, self._is_work(entry, is_declared=bool(entry.fidelities)))
