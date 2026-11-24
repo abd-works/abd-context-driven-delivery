@@ -5,9 +5,9 @@ format: md
 section: body
 ---
 
-# Sub-epic: Build Practice Trees From Source
+# Sub-epic: Read Practice Trees From Source
 
-Story map: [Build Practice Trees From Source](../../../.context/story-map.md#e-build-practice-trees-from-source). Session release-1-2-fixes.
+Story map: [Read Practice Trees From Source](../../../../.context/story-map.md#e-read-practice-trees-from-source). Session release-1-2-fixes.
 
 **Evidence mode.** Every scenario here is *Observed*: it holds for the practices' graph readings today and names the spec that runs it. They were written after exploratory testing (defects widget-18, widget-21) showed a file could drop out of the graph without a word.
 

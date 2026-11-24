@@ -5,13 +5,11 @@ format: md
 section: body
 ---
 
-# Sub-epic: Build Practice Trees From Source
+# Sub-epic: Read Practice Trees From Source
 
-Story map: [Build Practice Trees From Source](../../../.context/story-map.md#e-build-practice-trees-from-source). Session release-1-2-fixes.
+Story map: [Read Practice Trees From Source](../../../../.context/story-map.md#e-read-practice-trees-from-source). Session release-1-2-fixes.
 
 **Evidence mode.** Every scenario here is *Observed*: it holds for UX's graph reading today (`cdd_guidance/practices/ux/model/graph_reading.py`) and names the spec that runs it. They were written after round 3 of exploratory testing (defect r3-gizmo-06) showed that no UX file added a node to the knowledge graph, and the person answered that UX joins the graph.
-
-The story below is not on the story map yet.
 
 ### Domain terms
 

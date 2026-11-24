@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Callable, Iterable, Iterator
+from typing import TYPE_CHECKING, Callable, Iterable, Iterator, Protocol
 
 
 from harness.agent_tools import agent_tool, agent_toolset
@@ -312,6 +312,13 @@ class Source:
         return re.search(r"(?:async|function|def|public|private|protected|static|get|set)\s+$", line[:start]) is not None
 
 
+class FactPart(Protocol):
+    """A part of a parsed object that holds facts of its own, named in its ``graph_facts``, which save with the graph as
+    the object's node's (``Node.fact_parts``)."""
+
+    graph_facts: tuple[str, ...]
+
+
 class Node:
     """children is the list populate writes on this node. Direct edges are the children. Grouped and relationship edges sit under one child named for the kind.
 
@@ -323,6 +330,11 @@ class Node:
 
     graph_facts: tuple[str, ...] = ()
     """The attributes of a parsed object that save with the graph, so a reloaded graph still answers ``get_fact``."""
+
+    def fact_parts(self) -> tuple[FactPart, ...]:
+        """The parts of a parsed object that hold facts of their own, each naming them in its ``graph_facts``: they
+        save with the graph as this node's, as a story node's name facts do. None unless a kind of node holds one."""
+        return ()
 
     def __init__(self, practice: PracticeGuidance, identity: NodeIdentity, source: Source) -> None:
         self.practice = practice
@@ -353,8 +365,9 @@ class Node:
         node no practice holds yet has only the ancestors its parser gave it."""
         node, visited = self, set()
         while node is not None and id(node) not in visited:
-            if node._holds_attribute(key):
-                return getattr(node, key)
+            holder = node._holder_of(key)
+            if holder is not None:
+                return getattr(holder, key)
             if key in node.data:
                 return node.data[key]
             visited.add(id(node))
@@ -365,24 +378,33 @@ class Node:
         """Add values to a list fact this node keeps, each once, sorted: on its parsed object's own field when the
         object saves that fact, else among the facts the node keeps itself."""
         merged = sorted(set(self.get_fact(key) or []) | set(values))
-        if key in self.graph_facts:
-            setattr(self, key, merged)
+        holder = self if key in self.graph_facts else self._part_holding(key)
+        if holder is not None:
+            setattr(holder, key, merged)
         else:
             self.set_fact(key, merged)
 
     def has_fact(self, key: str) -> bool:
         """True when this node itself records the fact."""
-        return self._holds_attribute(key) or key in self.data
+        return self._holder_of(key) is not None or key in self.data
 
     @property
     def facts(self) -> NodeFacts:
-        """Every fact this node records: its saved attributes, then ``data``. This is what ``graph.json`` keeps."""
-        found = {name: getattr(self, name) for name in self.graph_facts if hasattr(self, name)}
+        """Every fact this node records: its parts' saved facts, its own saved attributes, then ``data``. This is what
+        ``graph.json`` keeps."""
+        found = {name: getattr(part, name) for part in self.fact_parts() for name in part.graph_facts}
+        found.update({name: getattr(self, name) for name in self.graph_facts if hasattr(self, name)})
         found.update(self.data)
         return found
 
-    def _holds_attribute(self, key: str) -> bool:
-        return key in self.graph_facts and hasattr(self, key)
+    def _holder_of(self, key: str) -> Node | FactPart | None:
+        """What holds the fact key as an attribute: this node, or one of its fact parts; none when neither does."""
+        if key in self.graph_facts and hasattr(self, key):
+            return self
+        return self._part_holding(key)
+
+    def _part_holding(self, key: str) -> FactPart | None:
+        return next((part for part in self.fact_parts() if key in part.graph_facts), None)
 
     @property
     def graph(self) -> Graph:

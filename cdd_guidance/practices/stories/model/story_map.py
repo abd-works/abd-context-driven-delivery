@@ -27,7 +27,7 @@ from harness.mcp.mcp_annotations import mcp
 from cdd_guidance.practices.source_code import CallGraph
 from cdd_guidance.practices.source_code import CodeBody, WrittenBlock
 
-from . import name_facts
+from .name_facts import NameFacts
 from .opened_story_map import OpenedStoryMap, StoryMapEditRefused, UnopenedStoryMap
 from .story_copies import StoryCopies
 from .story_map_files import source_at
@@ -134,21 +134,7 @@ class StoryNode(ModelNode, ABC):
     """
 
     _semantic_type_name: str = "StoryNode"
-    graph_facts = (
-        "opening_token",
-        "opening_class",
-        "child_count",
-        "child_label",
-        "child_band",
-        "child_target",
-        "near_duplicate",
-        "generic_handler",
-        "shared_verb",
-        "artifact_name",
-        "camel_case_path",
-        "evidence",
-        "scenario_count",
-    )
+    graph_facts = ("evidence", "scenario_count")
     _belongs = _BELONGS
 
     @property
@@ -166,44 +152,17 @@ class StoryNode(ModelNode, ABC):
         # writes it back unchanged.
         self.description_text: str = ""
         self.evidence: List[str] = []
-        self._start_map_facts()
+        # The facts the story map's rules read about this node, which the graph saves as the node's own.
+        self.name_facts = NameFacts(self)
 
-    def _start_map_facts(self) -> None:
-        """The name and child-count facts a node holds before its map loads them (``load_map_facts``)."""
-        self.opening_token = ""
-        self.opening_class = ""
-        self.child_count = 0
-        self.child_label = "children"
-        self.child_band = ""
-        self.child_target = ""
-        self.near_duplicate = False
-        self.generic_handler = False
-        self.shared_verb = ""
-        self.artifact_name = ""
-        self.camel_case_path = False
+    def fact_parts(self) -> tuple[NameFacts, ...]:
+        return (self.name_facts,)
 
     def load_map_facts(self) -> None:
-        """Fill the name, evidence, and child-count facts this node already owns."""
-        self._load_opening()
-        self._load_path_case()
-        self.generic_handler = name_facts.names_generic_handler(self.name)
-        self.near_duplicate = False
-        self.shared_verb = ""
-        self._load_child_band(0, None)
-
-    def _load_opening(self) -> None:
-        self.opening_token, self.opening_class = name_facts.opening_of(self.name)
-
-    def _load_path_case(self) -> None:
-        self.artifact_name, self.camel_case_path = name_facts.file_name_facts(getattr(self, "source", None))
-
-    def _load_child_band(self, count: int, band: ChildBand | None) -> None:
-        """Record how many children the node holds and whether that count is outside the band of its layer; a node of
-        no layer that is sized, such as a story, holds no band and passes."""
-        self.child_count = count
-        self.child_label = band.label if band is not None else "children"
-        self.child_target = band.written if band is not None else ""
-        self.child_band = "" if band is None or band.holds(count) else "error"
+        """Fill the facts the story map's rules read about this node (``name_facts``): a node of no layer holds no
+        children it is sized by, and names a generic handler when its name opens with one."""
+        self.name_facts.load(0)
+        self.name_facts.judge(generic_handler=self.name_facts.opens_with_generic_handler)
 
     @property
     def recorded_name(self) -> str:
@@ -907,14 +866,8 @@ class Scenario(CodeHeld):
         return runs + [run] if run[0] or run[1] else runs
 
     def load_map_facts(self) -> None:
-        self._load_opening()
-        self._load_path_case()
-        self.generic_handler = False
-        self.near_duplicate = False
-        self.shared_verb = ""
-        self.child_count = len(self.steps)
-        self.child_label = "steps"
-        self.child_band = ""
+        """A scenario is sized by its steps, against no band."""
+        self.name_facts.load(len(self.steps), label="steps")
 
     @property
     def code_key(self) -> tuple:
@@ -1040,15 +993,11 @@ class Story(CodeHeld):
         return self.story_map.opened.save()
 
     def load_map_facts(self) -> None:
-        self._load_opening()
-        self._load_path_case()
-        self.generic_handler = name_facts.names_generic_handler(self.name)
-        self.shared_verb = ""
+        """A story is sized by its scenarios, against no band; its name may hide a generic handler or repeat a later
+        sibling's."""
         self.scenario_count = len(self.scenarios)
-        self.child_count = self.scenario_count
-        self.child_label = "scenarios"
-        self.child_band = ""
-        self.near_duplicate = self._repeats_later_sibling()
+        self.name_facts.load(self.scenario_count, label="scenarios")
+        self.name_facts.judge(self.name_facts.opens_with_generic_handler, self._repeats_later_sibling())
 
     def _repeats_later_sibling(self) -> bool:
         siblings = list(getattr(self.parent, "stories", []) or [])
@@ -1238,12 +1187,10 @@ class Epic(CodeHeld):
         return list(dict.fromkeys(labels))
 
     def load_map_facts(self) -> None:
-        self._load_opening()
-        self._load_path_case()
-        self.generic_handler = False
-        self.near_duplicate = False
-        self._load_child_band(len(self.epics) + len(self.stories), self._child_band_for_layer())
-        self.shared_verb = self._shared_opening()
+        """An epic is sized by its sub-epics and stories, against the band of its layer, and may name the verb all its
+        stories open with."""
+        self.name_facts.load(len(self.epics) + len(self.stories), self._child_band_for_layer())
+        self.name_facts.judge(shared_verb=self._shared_opening())
 
     def _child_band_for_layer(self) -> ChildBand:
         """The band this node's children fit, by the layer it is (`child-count-fits-layer`, ``LAYER_BANDS``)."""

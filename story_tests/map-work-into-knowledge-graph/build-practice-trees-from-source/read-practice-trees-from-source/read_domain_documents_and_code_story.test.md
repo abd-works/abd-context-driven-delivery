@@ -5,13 +5,11 @@ format: md
 section: body
 ---
 
-# Sub-epic: Build Practice Trees From Source
+# Sub-epic: Read Practice Trees From Source
 
-Story map: [Build Practice Trees From Source](../../../.context/story-map.md#e-build-practice-trees-from-source). Session release-1-2-fixes.
+Story map: [Read Practice Trees From Source](../../../../.context/story-map.md#e-read-practice-trees-from-source). Session release-1-2-fixes.
 
 **Evidence mode.** Every scenario here is *Observed*: it holds for DDD's graph reading today (`cdd_guidance/practices/ddd/reading/graph_reading.py`) and is run by `cdd_guidance/practices/ddd/reading/graph_reading_spec.py`. They were written after round 3 of exploratory testing (defects r3-bolt-01, r3-bolt-02, r3-bolt-05 and the question r3-cog-05) showed that the graph held none of the contexts, integrations and events the bounded-context map and the domain model write, and after the person answered that one class in several practices is several nodes joined by edges.
-
-The story below is not on the story map yet.
 
 ### Domain terms
 

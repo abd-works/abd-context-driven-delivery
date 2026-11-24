@@ -5,9 +5,9 @@ format: md
 section: body
 ---
 
-# Sub-epic: Build Practice Trees From Source
+# Sub-epic: Link Practice Trees Across Practices
 
-Story map: [Build Practice Trees From Source](../../../.context/story-map.md#e-build-practice-trees-from-source). Session release-1-2-fixes.
+Story map: [Link Practice Trees Across Practices](../../../../.context/story-map.md#e-link-practice-trees-across-practices). Session release-1-2-fixes.
 
 **Evidence mode.** Every scenario here is *Observed*: it holds for the BDD graph reading today (`cdd_guidance/practices/bdd/model/graph_reading.py`) and names the spec that runs it. They were written after exploratory testing round 3 (defects r3-cog-01, r3-rivet-09), and follow the person's answer of 2026-11-20: "Nothing is joined on a name alone: a call or a link goes to the node the file's own imports, path or link target name."
 
