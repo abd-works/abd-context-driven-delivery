@@ -732,7 +732,7 @@ The board's acceptance of a violation, the one browser story saved with its scre
 
 ## 7. What is still open
 
-Only what is still open at the end of 2026-11-24, at `6a6d507d4`. What was finished is in waves 7 and 8 and section 6; every question file and every one of the closing robots' choices is answered and built, and the story map's whiteboard is published at https://claude.ai/artifact/RBc7NrXtfghmJXbCTjvM6a.
+Only what is still open at the end of 2026-11-24, at `e4d619e11`. What was finished is in waves 7 and 8 and section 6; every question file and every one of the closing robots' choices is answered and built, and the story map's whiteboard is published at https://claude.ai/artifact/RBc7NrXtfghmJXbCTjvM6a.
 
 **Today's cards on this chat's prompt queue**
 
@@ -743,18 +743,27 @@ Closed:
 - The MCP module's docs record the fixed plugin folders (Gizmo, `be87250fe`).
 - The release report holds wave 8 (Cog, `6a6d507d4`).
 - The thin slice on main puts today's tickets in Increment 9, Defect Fixing (Sparky, `098ab71e2` on main).
+- The prompt queue e2e spec: only a work request is queued, and the viewer's state never reaches a title (Pixel, card `42829a521ca5`, `2bcc98212`).
+- Flush and taking a card off take a robot off fully (Pixel, card `2dfc808aa644`, `075226f7c`).
+- The talk rule lives in Python, `PromptQueue.is_only_talk` (Pixel, card `a0eda5b18c36`, `be0d7dfd3`).
+- The queue bar's on/off button; a chat's queue is off until the person switches it on, and it is on in this chat (card `0c2b58df89f1`, `f855b1c5f`).
+- The Hardening stage after Implementation, with `hardening` fidelities for Stories and BDD and TDD's hardening guidance over both (Bolt, card `4d8b62d4711d`, `f65c11a24`), and its walk on the session board and catalog (Bolt, card `a08c2666901f`, `a713728d7`).
+- The story map's board in Claude keeps the whole markdown it was drawn from, in numbered parts under the store's limit for a record (Rivet, card `5085b8932ed8`, `23dd30c38`).
+- The whiteboard spec within the unit tier's budget: slowest example 3 ms, 63 of 63 pass (Rivet, card `8f5ea5889f02`, `e4d619e11`).
+- Clean engineering of `harness/mcp`'s server and plugins (Gizmo, card `7f751b9958af`, `1c72ddbb8`).
+- AGENTS.md's practice table has the Hardening column, and the corrections rule says to fix an agent's behaviour in CDD guidance and agent tools (`1b7157051`).
 
 Still open:
-- The Hardening stage after Implementation, with empty `hardening` fidelities for Stories and BDD and TDD's hardening guidance over both (Bolt), then walking it on the session board and catalog (Bolt).
-- Story map scenarios for today's queue and plugin work, on this branch and on main (Rivet), then rendering the story map onto its board in Claude (Rivet).
-- The prompt queue e2e spec: only a work request is queued, and the viewer's state never reaches a title (Pixel). The spec is edited in the worktree and not yet committed.
-- Flush and deleting a card take a robot off fully (Pixel), and the talk rule moved into Python's `PromptQueue` (Pixel).
-- Main's stable lane: after a repin from main, the fixed chat-plugins folders lead to the stable lane's mods (Sparky).
-- The cdd plugin itself loaded from the fixed folder (Gizmo), and `claude_plugins.py` and `mcp_server.py` validated and fixed (Gizmo).
-- The unit tier with the three examples over budget made fast (Widget), then the heavy tier once (Widget). `installer_heavy_spec.py` and `cdd_home_lanes_heavy_spec.py` are edited in the worktree and not yet committed.
+- The heavy tier on the full head (Widget): the first run is done and what it found is fixed; the second run is still going.
+- `repo.clear_worktrees` (Sparky, card `e5b52b0be41d`), in the worktree and not yet committed.
+- Two dropped fixes brought back (Gizmo, card `030b8b0bb39a`).
+- Story map scenarios for today's queue and plugin work, on this branch and on main (Rivet), and main's stable lane check after a repin from main (Sparky).
 
 **Tests**
-1. The tiers over waves 7 and 8 as a whole. Unit and heavy: Widget has not reported yet. E2E: Pixel has not reported yet. The last results are the unit tier's 476 of 476 at `a34fa3501`, the heavy tier's 77 of 77 at `203eac4a6` and the e2e tier's 12 of 12 (Playwright 241 of 241) at `96d944ccf`, all before wave 8. Each wave 8 commit ran only its own specs.
+1. The tiers over waves 7 and 8:
+   - **Unit:** 475 of 476 files on the branch head. The one failure, `whiteboard_spec.py` over the 100 ms budget, is fixed in `e4d619e11` (63 of 63, slowest example 3 ms); the tier has not been run whole since.
+   - **Heavy:** Widget's first run is done and what it found is fixed; the second run on the full head is still going. Its result goes here when Widget reports.
+   - **E2E:** `prompt_queue_plugin_e2e_spec.py` passed 8 of 8 on `2bcc98212` (one run, 113 s), after the hook fix that names the chat id and keeps the viewer's state out of titles; before that fix the mid-turn work request failed in all three runs. The whole e2e tier has not been run since `96d944ccf` (12 of 12 files, Playwright 241 of 241).
 2. Main's heavy tier: the fixes for its run worktree (`8762cff7a`, `89416dacb`) reach main with the next merge. A leftover run worktree held by a hook daemon that a heavy spec left serving it (`hook_daemon_heavy_spec.py`, `hook_heavy_spec.py` or `installer_heavy_spec.py`) is still to find.
 3. The server health band has no plugin test, and three of the prompt queue's step-button plugin tests fail, as they did before wave 7.
 
@@ -776,4 +785,3 @@ Still open:
 **Left to the person**
 15. Walk the chat bar, the queue mod (talk left off the queue, robots leaving with sub-agent mode), Auto mode and Remote Control in the Claude desktop app, which a robot cannot be given control of; what to look at is in [chat-ui-defects.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\_backlog\chat-ui-defects.md).
 16. Delete `C:\g` (five `gate-*` folders the deleted metrics gate left) and `C:\t` (an empty folder the gate used on 2026-11-23), and the 20 stale entries in the main checkout's `.git\worktrees`, each holding only logs, refs and `ORIG_HEAD`.
-17. Edit the stage table in AGENTS.md for the Hardening stage, once Bolt's card says what it needs.
