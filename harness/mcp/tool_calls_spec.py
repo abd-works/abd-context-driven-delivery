@@ -24,6 +24,8 @@ from harness.mcp.tool_calls import ThrottledReporter, _StillRunning, _ToolCalls
 # Short enough that a held call outlives it; long enough that a released call finishes inside it.
 SHORT_SECONDS = 0.02
 LONG_SECONDS = 5
+# Long enough for a call just started to reach the run it joins, so an example need not wait a whole SHORT_SECONDS.
+STARTED_SECONDS = 0.005
 
 
 class HeldWork:
@@ -203,7 +205,7 @@ with description("tool calls on worker threads") as self:
                     group.start_soon(self.calls.run, _call(), LONG_SECONDS, None)
                     await anyio.sleep(SHORT_SECONDS * 2)
                     group.start_soon(self.calls.run, _call(), LONG_SECONDS, None)
-                    await anyio.sleep(SHORT_SECONDS)
+                    await anyio.sleep(STARTED_SECONDS)
                     self.work.released.set()
 
             anyio.run(ask_again_for_the_first)
