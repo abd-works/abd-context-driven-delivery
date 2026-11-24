@@ -3,8 +3,10 @@ relative script imports reach."""
 
 from __future__ import annotations
 
+import json
 import posixpath
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import List, NamedTuple
 
@@ -22,6 +24,8 @@ _PY_COMMENT = re.compile(r"#[^\n]*")
 _JS_FROM = re.compile(r"""\b(import|export)\s+((?:(?!\b(?:import|export)\b)[^;'"])*?)\s*\bfrom\s*['"]([^'"]+)['"]""")
 _JS_CLAUSE = re.compile(r"(?:type\s+)?(?:([\w$]+)\s*,?\s*)?(?:\{([^}]*)\}|\*(?:\s+as\s+([\w$]+))?)?")
 _ALIAS = re.compile(r"\s+as\s+")
+# A comment on a line of its own in a tsconfig.json, which JSON does not allow and TypeScript does.
+_JSON_COMMENT = re.compile(r"(?m)^\s*//[^\n]*$")
 _NAME = re.compile(r"[\w$]+")
 # What every name a star import brings in is recorded as.
 STAR = "*"
@@ -78,7 +82,7 @@ class ScriptImports:
         """Each class name the file at file imports or re-exports, or reaches as `module.Class` through a module it
         imports, with the module it names it from, in order, each once."""
         package = file.parent.relative_to(root).as_posix()
-        found = PythonImports(self._text, package) if file.suffix == ".py" else ScriptImportClauses(self._text, package)
+        found = PythonImports(self._text, package) if file.suffix == ".py" else ScriptImportClauses(self._text, package, path_aliases(file, root))
         return list(dict.fromkeys(found.references()))
 
     def targets(self, file: Path, root: Path) -> List[str]:
@@ -168,11 +172,13 @@ class PythonImports:
 class ScriptImportClauses:
     """<<Value Object>> The class names a script file's text imports or re-exports, with the module each comes from:
     `import D, { A, B as C } from`, `import * as ns from` with `ns.X`, `export { A } from`, and `export * from`. A
-    relative module is a path from the source root; any other keeps its spelling."""
+    relative module, and one a path alias of the file's tsconfig maps (``path_aliases``), is a path from the source
+    root; any other keeps its spelling."""
 
-    def __init__(self, text: str, package: str) -> None:
+    def __init__(self, text: str, package: str, aliases: "dict[str, str] | None" = None) -> None:
         self._text = text
         self._package = "" if package == "." else package
+        self._aliases = aliases or {}
         self._qualified = QualifiedNames(text)
 
     def references(self) -> List[ClassReference]:
@@ -194,6 +200,40 @@ class ScriptImportClauses:
         return [ClassReference(module, name) for name in names if name == STAR or _NAME.fullmatch(name or "")]
 
     def _module(self, specifier: str) -> str:
+        aliased = next((alias for alias in self._aliases if specifier.startswith(alias)), None)
+        if aliased is not None:
+            return posixpath.normpath(self._aliases[aliased] + specifier[len(aliased):])
         if not specifier.startswith("."):
             return specifier
         return posixpath.normpath(posixpath.join(self._package, specifier))
+
+
+def path_aliases(file: Path, root: Path) -> dict[str, str]:
+    """The path aliases the tsconfig.json nearest a script file names, `test-utils/*` for `./test-utils/*`, each as
+    the prefix an import writes and the folder it means, from the source root: a script imports its test support and
+    its own source by them as it does by a relative path. An alias of a folder outside the source root, and the
+    language adapters' alias, keep their spelling, and so does every import of a file under no tsconfig."""
+    folder = file.parent
+    while folder != root and root in folder.parents:
+        if (folder / "tsconfig.json").is_file():
+            return dict(_aliases_named_in(str(folder / "tsconfig.json"), str(root)))
+        folder = folder.parent
+    return {}
+
+
+@lru_cache(maxsize=None)
+def _aliases_named_in(tsconfig: str, root: str) -> "tuple[tuple[str, str], ...]":
+    """The folder aliases a tsconfig's `compilerOptions.paths` names inside root, longest first, read once per file."""
+    try:
+        options = json.loads(_JSON_COMMENT.sub("", Path(tsconfig).read_text(encoding="utf-8"))).get("compilerOptions") or {}
+    except (OSError, UnicodeDecodeError, ValueError, AttributeError):
+        return ()
+    base = (Path(tsconfig).parent / str(options.get("baseUrl") or ".")).resolve()
+    found: dict[str, str] = {}
+    for alias, targets in (options.get("paths") or {}).items():
+        if not alias.endswith("/*") or alias.startswith(LANGUAGE_ADAPTER_ALIAS) or not targets or not str(targets[0]).endswith("/*"):
+            continue
+        target = (base / str(targets[0])[:-2]).resolve()
+        if target.is_relative_to(Path(root).resolve()):
+            found[alias[:-1]] = target.relative_to(Path(root).resolve()).as_posix() + "/"
+    return tuple(sorted(found.items(), key=lambda pair: -len(pair[0])))

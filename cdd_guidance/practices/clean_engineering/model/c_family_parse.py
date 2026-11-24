@@ -254,31 +254,53 @@ class CFamilyParse:
         operations: list[Operation] = []
         position = 0
         while (match := _METHOD_RE.search(self._class_body, position)) is not None:
-            method_body, body_start = self._method_body(match)
+            return_type, opening = self._return_type_of(match)
+            method_body, body_start = self._method_body(match, opening)
             if method_body is None:
                 position = match.end(1)
                 continue
             # Reading on after the body keeps a statement inside it, such as `for (...) {`, from being taken for the next header.
             position = body_start + len(method_body) + 1
-            operations.append(self._method(match, method_body))
+            operations.append(self._method(match, method_body, return_type, opening))
         return operations
 
-    def _method_body(self, match: re.Match) -> tuple[str | None, int]:
-        """The braces of the method whose header is match; none for a header that declares no method."""
+    def _return_type_of(self, match: re.Match) -> tuple[str, int]:
+        """The return type the header match writes and where the method's body opens. A return type that writes an
+        object of named fields, `{ page: BoardPage }` or inside a generic, `Promise<{ page: BoardPage }>`, holds braces
+        of its own, so the body opens at the first brace after every bracket of the type is closed, not at the type's
+        own brace."""
+        written, opening = match.group(3), match.end() - 1
+        if written is None:
+            return "", opening
+        angles = written.count("<") - written.count(">")
+        if angles <= 0 and written.strip():
+            return written.strip(), opening
+        braces = 0
+        for index in range(opening, len(self._class_body)):
+            character = self._class_body[index]
+            if character == "{" and angles == 0 and braces == 0 and index > opening:
+                return (written + self._class_body[match.end() - 1 : index]).strip(), index
+            angles += {"<": 1, ">": -1}.get(character, 0)
+            braces += {"{": 1, "}": -1}.get(character, 0)
+        return written.strip(), opening
+
+    def _method_body(self, match: re.Match, opening: int) -> tuple[str | None, int]:
+        """The braces of the method whose header is match, opening at opening; none for a header that declares no
+        method."""
         name_start = match.start(1)
         # A name after a dot is a call on something (`this.store.change(`), not a method this class declares. The
         # check reads the character before the name, since a match can open on the full stop ending a comment above.
         if (name_start > 0 and self._class_body[name_start - 1] == ".") or match.group(1) in _NOT_METHOD_NAMES:
             return None, -1
-        return self._brace_body(self._class_body, match.end() - 1)
+        return self._brace_body(self._class_body, opening)
 
-    def _method(self, match: re.Match, method_body: str) -> Operation:
-        """The method whose header is match."""
-        operation = self._declared_operation(match.group(1), match.group(2) or "", (match.group(3) or "").strip())
+    def _method(self, match: re.Match, method_body: str, return_type: str, opening: int) -> Operation:
+        """The method whose header is match, which returns return_type and whose body opens at opening."""
+        operation = self._declared_operation(match.group(1), match.group(2) or "", return_type)
         header = match.group(0)
         header_start = match.start() + len(header) - len(header.lstrip())
         operation.line = self._line_at(self._text, self._body_start + header_start)
-        self._apply_method_end_line(operation, match.end() - 1)
+        self._apply_method_end_line(operation, opening)
         filled = self._operation_from_body(operation, method_body)
         self._read_modifiers(filled, match)
         filled.description = self._doc_comment_above(header_start) or filled.description

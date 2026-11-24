@@ -1,14 +1,17 @@
 """The classes one source file names, each with the module it names it from."""
 
-from pathlib import Path
+import json
+import shutil
 import sys
+import tempfile
+from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from expects import contain, equal, expect
-from mamba import description, context, it
+from mamba import after, before, description, context, it
 
 from cdd_guidance.practices.source_code.script_imports import ClassReference, ScriptImports
 
@@ -59,3 +62,23 @@ with description("script imports"):
 
         with it("should keep a package's name as the import spells it"):
             expect(_references("app/ui/view.ts", "import { useState } from 'react';\n")).to(equal([ClassReference("react", "useState")]))
+
+    with context("with a TypeScript file under a tsconfig that names path aliases"):
+        with before.all:
+            self.root = Path(tempfile.mkdtemp())
+            (self.root / "app").mkdir()
+            paths = {"test-utils/*": ["./test-utils/*"], "@cdd/*": ["../.claude/adapters/*"], "react": ["./node_modules/@types/react"]}
+            (self.root / "app" / "tsconfig.json").write_text(json.dumps({"compilerOptions": {"baseUrl": ".", "paths": paths}}), encoding="utf-8")
+
+        with after.all:
+            shutil.rmtree(self.root, ignore_errors=True)
+
+        with it("should name a module an alias maps to by its path from the source root"):
+            text = "import { BoardOnProject } from 'test-utils/board-page-support'\n"
+            references = ScriptImports(text).class_references(self.root / "app" / "src" / "board.spec.ts", self.root)
+            expect(references).to(equal([ClassReference("app/test-utils/board-page-support", "BoardOnProject")]))
+
+        with it("should keep the language adapters' alias and a package's name as the import spells them"):
+            text = "import { Cart } from '@cdd/shop/cart'\nimport React from 'react'\n"
+            references = ScriptImports(text).class_references(self.root / "app" / "src" / "board.spec.ts", self.root)
+            expect(references).to(equal([ClassReference("@cdd/shop/cart", "Cart"), ClassReference("react", "React")]))
