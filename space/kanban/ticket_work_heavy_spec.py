@@ -350,6 +350,48 @@ with description("a ticket's work through the cdd server") as self:
             expect(self.readme_on_origin).not_to(contain("the person's own edit"))
 
     # (S) Person --> Close Active Session
+    # Exploratory testing, gizmo-17: the person's own edit in the clone's folder was committed on main under the
+    # ticket's name and pushed.
+    with context("that a ticket is closed with its branch merged while the clone's own folder holds an uncommitted edit to a file the ticket changed"):
+        with before.all:
+            self.chat.answer("ticket.create", title="Walk overlap")
+            self.chat.answer("ticket.activate", ticket="walk-overlap")
+            self.overlap_worktree = self.clone.worktree_of("walk-overlap")
+            (self.overlap_worktree / "README.md").write_text("# Work\nthe ticket's line\n", encoding="utf-8")
+            (self.clone.work / "README.md").write_text("# Work\nthe person's own line\n", encoding="utf-8")
+            self.main_before = git(self.clone.work, "rev-parse", "main")
+            _, self.error = self.chat.call("ticket.close", ticket="walk-overlap", leaving=["commit", "push", "merge", "delete_branch", "delete_worktree"])
+            self.main_after = git(self.clone.work, "rev-parse", "main")
+            self.left_uncommitted = git(self.clone.work, "status", "--porcelain", "--", "README.md")
+            self.readme_on_origin = git(self.clone.work, "show", "origin/main:README.md")
+            self.ticket_head = self.clone.subject("walk-overlap")
+            self.still_open = (self.clone.work / ".sessions" / "walk-overlap" / "session.json").is_file()
+            self.worktree_kept = self.overlap_worktree.is_dir() and self.clone.worktree_of("walk-overlap") == self.overlap_worktree
+            git(self.clone.work, "checkout", "-q", "--", "README.md")
+            self.chat.answer("ticket.close", ticket="walk-overlap", leaving=["delete_branch"])
+
+        with it("should refuse the close, naming the file the clone's own folder holds uncommitted"):
+            expect(self.error).to(contain("walk-overlap is not closed: the repository's own folder holds uncommitted changes to README.md"))
+
+        with it("should leave the person's edit uncommitted in the clone's own folder"):
+            expect(self.left_uncommitted).to(equal("M README.md"))
+
+        with it("should commit nothing on main"):
+            expect(self.main_after).to(equal(self.main_before))
+
+        with it("should keep the person's edit off origin's main"):
+            expect(self.readme_on_origin).not_to(contain("the person's own line"))
+
+        with it("should commit nothing of the ticket's work, since the close changed nothing"):
+            expect(self.ticket_head).not_to(equal("walk-overlap: leave session"))
+
+        with it("should keep the ticket's worktree"):
+            expect(self.worktree_kept).to(be_true)
+
+        with it("should keep the ticket among the open sessions"):
+            expect(self.still_open).to(be_true)
+
+    # (S) Person --> Close Active Session
     with context("that a ticket is closed with its branch merged into a main it conflicts with"):
         with before.all:
             self.chat.answer("ticket.create", title="Walk clash")

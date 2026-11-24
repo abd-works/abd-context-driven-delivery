@@ -347,6 +347,15 @@ class WorkingTree:
             args.extend(["--", self._relative(path)])
         return any(not self._is_runtime_log(line) for line in self._repo.git.run(*args).splitlines() if line.strip())
 
+    def uncommitted(self, under: Path | None = None) -> list[str]:
+        """The files in this checkout, or under a folder of it, that are changed, added, or deleted and not committed,
+        as paths from the checkout's top; new files are listed one by one, and the files .gitignore names are not."""
+        args = ["status", "--porcelain", "--untracked-files=all", "--no-renames"]
+        if under is not None:
+            args.extend(["--", self._relative(under)])
+        # A status entry is two status letters, a space, and the path.
+        return [entry[3:] for entry in self._repo.git.listed(*args)]
+
     def _is_runtime_log(self, porcelain_line: str) -> bool:
         raw = porcelain_line[3:] if len(porcelain_line) >= 3 else porcelain_line
         name = raw.split(" -> ")[-1].replace("\\", "/").strip()
@@ -504,9 +513,7 @@ class Branch:
         checkout = self.checkout
         if checkout is None:
             return committed
-        # A status entry is two status letters, a space, and the path.
-        uncommitted = checkout.git.listed("status", "--porcelain", "--untracked-files=all", "--no-renames")
-        return [*committed, *(entry[3:] for entry in uncommitted)]
+        return [*committed, *checkout.working_tree.uncommitted()]
 
     @property
     def checkout(self) -> Repo | None:

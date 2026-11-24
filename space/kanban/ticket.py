@@ -328,10 +328,11 @@ class TicketEnding:
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree; any other is refused with UnknownLeavingStepError, before anything changes), its work committed where it is and its branch merged before anything is removed or moved, so a merge git refuses, or a worktree a running program holds open, stops the close with ticket still open; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main, and what is uncommitted there is never committed for a ticket that has its own worktree."""
+        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree; any other is refused with UnknownLeavingStepError, before anything changes), its work committed where it is and its branch merged before anything is removed or moved, so a merge git refuses, or a worktree a running program holds open, stops the close with ticket still open; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main, and what is uncommitted there is never committed for a ticket that has its own worktree: a merge that would run over it is refused with EditsInTheWayOfMergeError before anything changes."""
         self._refuse_main("close")
         chosen = Leaving(leaving or [])
         checkout = self.checkout
+        checkout.refuse_edits_merge_would_overwrite(chosen)
         checkout.write_handoff(chosen)
         # The work is saved and the branch merged while the ticket still has its worktree and its open session, so a
         # merge git refuses leaves both as they were. The branch also merges before the record moves: the session's work

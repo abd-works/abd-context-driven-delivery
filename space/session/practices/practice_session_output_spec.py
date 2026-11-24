@@ -41,6 +41,22 @@ with description("a practice's root in a session") as self:
                 pass
             expect(self.stories.root).to(equal(before_choice))
 
+    with context("that a person chooses as a folder beside the project, climbing out of it"):
+        with it("should be refused, naming the path as outside the project"):
+            expect(lambda: self.stories.choose_root("../outside-root")).to(raise_error(OutputRootRefused, contain("../outside-root is outside the project")))
+
+        with it("should leave no root chosen"):
+            try:
+                self.stories.choose_root("../outside-root")
+            except OutputRootRefused:
+                pass
+            expect(self.stories.is_root_chosen).to(equal(False))
+
+    with context("that a person chooses as a whole path to a folder outside the project"):
+        with it("should be refused, naming the path as outside the project"):
+            outside = self.refund.repo.parent.as_posix()
+            expect(lambda: self.stories.choose_root(outside)).to(raise_error(OutputRootRefused, contain(f"{outside} is outside the project")))
+
     with context("that a person chooses with an empty path"):
         with it("should be refused, saying the path is empty"):
             expect(lambda: self.stories.choose_root("  ")).to(raise_error(OutputRootRefused, contain("an empty path names no folder")))
@@ -80,6 +96,26 @@ with description("a fidelity's root in a session") as self:
             except OutputRootRefused:
                 pass
             expect(self.refund.session.practice("stories").fields.fidelity("acceptance_tests").roots).to(equal([]))
+
+    with context("that a person chooses as a folder outside the project"):
+        with it("should be refused, naming the path as outside the project"):
+            expect(lambda: self.tests.choose_root("../..")).to(raise_error(OutputRootRefused, contain("../.. is outside the project")))
+
+        with it("should keep no root for the fidelity in the session's record"):
+            try:
+                self.tests.choose_root("../..")
+            except OutputRootRefused:
+                pass
+            expect(self.refund.session.practice("stories").fields.fidelity("acceptance_tests").roots).to(equal([]))
+
+    with context("that a person chooses as a folder of the project, read back from its answer"):
+        with it("should show the root it now has"):
+            expect(self.tests.choose_root(REFUND_STORIES).root_paths).to(equal([REFUND_STORIES]))
+
+    with context("that has one root, with a folder outside the project added beside it"):
+        with it("should refuse the folder by name"):
+            self.tests.choose_root(REFUND_STORIES)
+            expect(lambda: self.tests.add_root("../outside-root")).to(raise_error(OutputRootRefused, contain("../outside-root is outside the project")))
 
     with context("that has one root, with a file added beside it"):
         with before.each:

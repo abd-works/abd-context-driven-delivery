@@ -9,7 +9,7 @@ from expects import contain, expect, equal, raise_error
 
 from harness.chat.chat import CHATS_FOLDER
 from harness.installation.json_file import JsonFile, JsonFileBusy
-from tools.prompt_queue.prompt_queue import ChatIdNotAnId, PromptNotQueued, PromptQueue, QueueFileUnreadable, StepNotPlanned, StepStateUnknown
+from tools.prompt_queue.prompt_queue import ChatIdNotAnId, ChatNotKnown, PromptNotQueued, PromptQueue, QueueFileUnreadable, StepNotPlanned, StepStateUnknown
 
 
 
@@ -292,6 +292,26 @@ with describe(PromptQueue):
 
         with it("refuses an empty chat id from a call that came from no chat"):
             expect(lambda: PromptQueue.load(" ", call=SimpleNamespace(chat_id="", session=None))).to(raise_error(ChatIdNotAnId))
+
+        with it("refuses a chat no chat folder is kept for, when the call came from another chat, naming it"):
+            call = SimpleNamespace(chat_id="chat-1", session=None)
+            expect(lambda: PromptQueue.load("chat-9", call=call)).to(raise_error(ChatNotKnown, contain("no chat 'chat-9' is known")))
+
+        with it("makes no folder for a chat it does not know"):
+            try:
+                PromptQueue.load("chat-9", call=SimpleNamespace(chat_id="chat-1", session=None)).add("Report the defect")
+            except ChatNotKnown:
+                pass
+            expect((CHATS_FOLDER.path / "chat-9").exists()).to(equal(False))
+
+        with it("queues on another chat whose folder is kept"):
+            (CHATS_FOLDER.path / "chat-2").mkdir(parents=True)
+            PromptQueue.load("chat-2", call=SimpleNamespace(chat_id="chat-1", session=None)).add("Report the defect")
+            expect([prompt.text for prompt in PromptQueue.of_chat("chat-2").prompts]).to(equal(["Report the defect"]))
+
+        with it("queues on the calling chat's own queue the first time, before its folder is there"):
+            PromptQueue.load("chat-1", call=SimpleNamespace(chat_id="chat-1", session=None)).add("Write the scenarios")
+            expect((CHATS_FOLDER.path / "chat-1" / "prompt-queue.json").is_file()).to(equal(True))
 
         with it("writes no queue outside the chats folder for a chat id it refuses"):
             try:

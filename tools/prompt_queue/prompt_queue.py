@@ -285,6 +285,16 @@ class ChatIdNotAnId(ValueError):
         self.chat = chat
 
 
+class ChatNotKnown(LookupError):
+    """A call from one chat named another chat that no folder in the chats folder is kept for: a mistyped chat id, or a
+    chat that never connected. Queued there, the card would wait on a queue nobody reads while the caller is told it
+    worked."""
+
+    def __init__(self, chat: str, chats_folder: Path) -> None:
+        super().__init__(f"no chat {chat!r} is known: the chats folder {chats_folder} keeps no folder for it; check the chat id, or name no chat to use the calling chat's own queue")
+        self.chat = chat
+
+
 class QueueFileUnreadable(JsonFileUnreadable):
     """A chat's queue file does not hold a prompt queue: it is damaged, cut off, empty, or holds something other than
     cards that each have an id of their own and a text. Nothing is written over it, so what it holds stays for a person
@@ -318,6 +328,7 @@ class PromptQueue:
 
     def __init__(self, chat: str, file: Path, archive: Path | None = None) -> None:
         self._chat = chat
+        self._folder = file.parent
         self._file = JsonFile(file, QueueFileUnreadable)
         self._archive_folder = archive or file.parent / ARCHIVE_FOLDER
 
@@ -325,12 +336,17 @@ class PromptQueue:
     @tool_subject
     def load(cls, chat: str, *, call: ToolCall) -> PromptQueue:
         """The queue of chat; with chat empty, of the chat the call came from, so an agent queues work on its own
-        chat's queue without knowing its id. Prompts taken off it are archived in the folder of the session the call
+        chat's queue without knowing its id. Another chat must be one the chats folder keeps a folder for, else
+        *ChatNotKnown* is raised and nothing is written, so a mistyped chat id never makes a queue nobody reads. Prompts taken off it are archived in the folder of the session the call
         works in: its work folder, in the ticket's worktree, beside the rest of that session's work; in no session,
         beside the queue in the chat's folder."""
         session = call.session
         archive = session.work_folder / ARCHIVE_FOLDER if session is not None and session.work_folder is not None else None
-        return cls.of_chat(chat.strip() or call.chat_id, archive)
+        named = chat.strip() or call.chat_id
+        queue = cls.of_chat(named, archive)
+        if named != call.chat_id and not queue.is_kept:
+            raise ChatNotKnown(named, CHATS_FOLDER.path)
+        return queue
 
     @classmethod
     def of_chat(cls, chat: str, archive: Path | None = None) -> PromptQueue:
@@ -340,6 +356,11 @@ class PromptQueue:
         if not chat.strip() or any(mark in chat for mark in _PATH_MARKS):
             raise ChatIdNotAnId(chat)
         return cls(chat, CHATS_FOLDER.path / chat / QUEUE_FILE, archive)
+
+    @property
+    def is_kept(self) -> bool:
+        """Whether the chat's own folder is there, which its first check-in or its first queued card makes."""
+        return self._folder.is_dir()
 
     @property
     @data_field

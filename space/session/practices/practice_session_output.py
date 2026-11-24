@@ -204,16 +204,22 @@ class PracticeSessionOutput:
     @agent_tool
     @noSessionLog
     def choose_root(self, path: str) -> PracticeSessionOutput:
-        """Write this practice's files under path, a folder in the repository. An empty path and a file are refused."""
+        """Write this practice's files under path, a folder in the repository. An empty path, a file, and a folder outside the project are refused."""
         self.keep_root(self.root_named(path))
         return self
 
     def root_named(self, path: str) -> Path:
-        """The folder path names as a root, read from the repository; an empty path, which names no folder, and a path
-        to a file raise *OutputRootRefused*. A folder that is not there yet is a root the practice writes into."""
+        """The folder path names as a root, read from the repository; an empty path, which names no folder, a path to
+        a file, and a folder outside the project raise *OutputRootRefused*. A folder that is not there yet is a root the
+        practice writes into."""
         if not str(path or "").strip():
             raise OutputRootRefused(path, "an empty path names no folder")
-        root = self._session.checkout.root / path
+        project = self._session.checkout.root.resolve()
+        root = (project / path).resolve()
+        # A ticket's session works in its own worktree, beside the repository's own folder; a root may be in either.
+        checkouts = {project, self._session.sessions.repo.root.resolve()}
+        if not any(root.is_relative_to(checkout) for checkout in checkouts):
+            raise OutputRootRefused(path, f"{path} is outside the project {project.as_posix()}")
         if root.is_file():
             raise OutputRootRefused(path, f"{path} is a file")
         return root
@@ -234,8 +240,8 @@ class PracticeSessionOutput:
 
 
 class OutputRootRefused(ValueError):
-    """A path was chosen as the root a practice or a fidelity writes under that names no folder: an empty path, or a
-    file. Kept as a root, the agent would be told to write its files there."""
+    """A path was chosen as the root a practice or a fidelity writes under that names no folder of the project: an empty
+    path, a file, or a folder outside the project. Kept as a root, the agent would be told to write its files there."""
 
     def __init__(self, path: str, reason: str) -> None:
         super().__init__(f"{reason}; choose a folder in the repository as a root")
@@ -332,7 +338,7 @@ class FidelitySessionOutput:
     @agent_tool
     @noSessionLog
     def choose_root(self, path: str) -> FidelitySessionOutput:
-        """Write this fidelity's files under path, a folder in the repository, apart from its practice's root; an empty path and a file are refused: such as the stories scenarios and acceptance tests of one epic in story_tests/<epic>, while the story map stays in the practice's root, the project's .context."""
+        """Write this fidelity's files under path, a folder in the repository, apart from its practice's root; an empty path, a file, and a folder outside the project are refused: such as the stories scenarios and acceptance tests of one epic in story_tests/<epic>, while the story map stays in the practice's root, the project's .context."""
         self.keep_roots([self._practice.root_named(path)])
         return self
 
@@ -340,7 +346,7 @@ class FidelitySessionOutput:
     @agent_tool
     @noSessionLog
     def add_root(self, path: str) -> FidelitySessionOutput:
-        """Write this fidelity's files under path as well, a folder in the repository, beside the roots it has; an empty path and a file are refused: such as one more sub-epic's folder in story_tests that the session's ticket works on, so the session holds that sub-epic's scenarios and story tests and no other's."""
+        """Write this fidelity's files under path as well, a folder in the repository, beside the roots it has; an empty path, a file, and a folder outside the project are refused: such as one more sub-epic's folder in story_tests that the session's ticket works on, so the session holds that sub-epic's scenarios and story tests and no other's."""
         added = self._relative(self._practice.root_named(path))
         before = [self._relative(root) for root in self.roots]
 
@@ -425,6 +431,13 @@ class FidelitySessionOutput:
     def _relative(self, root: Path) -> str:
         """root as session.json keeps it: its path from the folder the session works in."""
         return Path(os.path.relpath(Path(root).resolve(), self._session.work_root)).as_posix()
+
+    @property
+    @data_field
+    def root_paths(self) -> list[str]:
+        """The folders this fidelity writes under (``roots``), each a path from the project, so the answer to a choice of
+        root shows the roots it now has."""
+        return [self._session.paths.from_project(root) for root in self.roots]
 
     @property
     def root(self) -> Path:

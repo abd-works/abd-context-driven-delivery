@@ -32,7 +32,7 @@ What one practice has in one session: the session's one instance of the practice
 + enable(is_enabled: bool): PracticeSessionOutput
 + choose_root(path: str): PracticeSessionOutput
 + root_named(path: str): Path
-	// an empty path and a path to a file raise OutputRootRefused; a folder that is not there yet is a root the practice writes into
+	// an empty path, a path to a file, and a folder outside the project raise OutputRootRefused; a folder that is not there yet is a root the practice writes into
 + keep_root(root: Path): None
 + use_default_root(): PracticeSessionOutput
 ---<<creates>>--> FidelitySessionOutput
@@ -55,6 +55,7 @@ Where one fidelity writes in one session: its output paths by format, the files 
 + is_enabled: bool
 + reports_folder: Path
 + root: Path
++ root_paths: list[str]
 + chosen_formats: list[str]
 + fields: FidelityFields
 + << composition >> formats: FidelityFormats
@@ -91,7 +92,7 @@ The files one fidelity writes in a session (`session_output.written`): where it 
 
 ## OutputRootRefused : ValueError
 
-A path was chosen as the root a practice or a fidelity writes under that names no folder: an empty path, or a file.
+A path was chosen as the root a practice or a fidelity writes under that names no folder of the project: an empty path, a file, or a folder outside the project.
 
 + OutputRootRefused(path: str, reason: str)
 ------

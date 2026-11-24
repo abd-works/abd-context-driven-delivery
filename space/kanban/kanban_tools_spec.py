@@ -784,9 +784,10 @@ with description("the board tools") as self:
                 opened = self.project.call("session.read_file", session=session_file_of("pet-visits"), path="docs/.context/gone.md")
                 expect(opened).to(equal({"path": "docs/.context/gone.md", "text": "", "language": "markdown"}))
 
-            # A ticket's worktree sits beside the repository, so its practices write outside it.
-            with it("should return the text of a file under a practice root outside the repository, such as the ticket's worktree"):
-                worktree = Path(tempfile.mkdtemp(prefix="kanban-worktree-"))
+            # A practice root is a folder of the project, which a page may name by its whole path.
+            with it("should return the text of a file named by its whole path under a practice root"):
+                worktree = self.project.root / "kanban-worktree"
+                worktree.mkdir(exist_ok=True)
                 (worktree / "story-map.md").write_text("# Worktree map\n", encoding="utf-8")
                 self.project.call("practice-session-output.choose_root", session=session_file_of("pet-visits"), practice="stories", path=str(worktree))
                 opened = self.project.call("session.read_file", session=session_file_of("pet-visits"), path=(worktree / "story-map.md").as_posix())

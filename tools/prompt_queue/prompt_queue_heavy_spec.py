@@ -94,6 +94,17 @@ with description("a chat's prompt queue through the cdd server") as self:
         with it("should write no queue outside the chats folder"):
             expect((CHATS_FOLDER.path.parent / "escape-chat").exists()).to(equal(False))
 
+    # Exploratory testing, sparky-09: a mistyped chat id made a new queue nobody reads, and the call answered success.
+    with context("that an agent queues work on a chat the server has never seen"):
+        with before.all:
+            _, self.unknown_refusal = self.chat.call("prompt-queue.add", chat="some-other-chat", text="Report the defect")
+
+        with it("should refuse the call, naming the chat"):
+            expect(self.unknown_refusal).to(contain("no chat 'some-other-chat' is known"))
+
+        with it("should make no folder for that chat"):
+            expect((CHATS_FOLDER.path / "some-other-chat").exists()).to(equal(False))
+
     with context("that an agent gives a step a state a step does not have"):
         with before.all:
             self.steps_chat = SpecChat(self.server, self.project)

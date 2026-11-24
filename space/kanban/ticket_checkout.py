@@ -189,6 +189,23 @@ class TicketCheckout:
         if leaving.merges:
             LatestRelease(self._repo.main_clone, self._ticket.name).keep()
 
+    def refuse_edits_merge_would_overwrite(self, leaving: Leaving) -> None:
+        """Refuse a close that merges the ticket's own branch, open in its own worktree, while the repository's own
+        folder holds uncommitted changes to files that branch changed: the merge would run over them, and committing
+        them first would publish a person's edits under the ticket's name. Raised before anything of the ticket
+        changes, naming the files, so the person commits or sets them aside and closes again. Uncommitted changes to
+        other files stay where they are, uncommitted."""
+        own = self._own_branch
+        if own is None or not leaving.merges:
+            return
+        clone = self._repo.main_clone
+        checkout = own.checkout
+        if checkout is None or checkout.root.resolve() == clone.root.resolve():
+            return
+        in_the_way = sorted(set(clone.working_tree.uncommitted()) & set(own.changed_files()))
+        if in_the_way:
+            raise EditsInTheWayOfMergeError(self._ticket.name, own.name, clone.root, in_the_way)
+
     def write_handoff(self, leaving: Leaving) -> None:
         """Write a handoff for the ticket's session when leaving names one."""
         if leaving.writes_handoff:
@@ -291,6 +308,21 @@ class TicketWorktreeBlockedError(RuntimeError):
         super().__init__(f"{ticket} cannot open in a worktree: the folder {folder} is already there and is not {ticket}'s checkout; move or remove that folder and activate {ticket} again")
         self.ticket = ticket
         self.folder = folder
+
+
+class EditsInTheWayOfMergeError(RuntimeError):
+    """Raised when a ticket is closed with its branch merged while the repository's own folder holds uncommitted
+    changes to files that branch changed. It names the ticket, the folder and those files; nothing of the ticket has
+    changed, and the person's changes stay uncommitted where they are."""
+
+    def __init__(self, ticket: str, branch: str, folder: Path, files: list[str]) -> None:
+        super().__init__(
+            f"{ticket} is not closed: the repository's own folder holds uncommitted changes to {', '.join(files)}, which "
+            f"merging {branch} into main would run over; commit them or set them aside in {folder}, then close {ticket} again"
+        )
+        self.ticket = ticket
+        self.folder = folder
+        self.files = files
 
 
 class TicketBranchUnclearError(LookupError):
