@@ -204,6 +204,9 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 + actors: list[str]
 + domain_terms: list[str]
 + evidence: list[str]
++ front_matter: str
++ notes: str
+	// what a person wrote about the story in its scenarios file that no scenario holds: the front matter above its heading, and the lines under it before its examples, backgrounds and scenarios (its kind, a story map link, its domain terms, prose). A code format writes each line in the story's comment under `^` or `|` and reads it back; the scenarios file links each underlined domain term a step names as the notes link it (*DomainTermLinks*)
 + backgrounds: list[Background]
 + scenarios: list[Scenario]
 + scenario_class: type
@@ -602,7 +605,10 @@ A story file whose language finds its blocks: each story is made from its block 
 One block of a story file: a story, background, scenario, or step call, an abstract class *PythonBlock* and *BraceBlock* extend for their language.
 
 ----
-+ name, line_span, opening_line, is_chained, inside_lines, body, body_text, text
++ name, line_span, opening_line, is_chained, inside_lines, body, body_text, text, language
++ realization(): CallGraph
+	// the call graph a step block opens with as comments, as a story file writes a When's realization; a step reads it back (`Step.read_code`), and holds no body when the block holds nothing else
++ holds_only_comments(): bool
 + written(lead): WrittenBlock
 + split_inside(children): tuple
 + scenarios(), backgrounds(scenarios), steps(skip): list[StoryBlock]

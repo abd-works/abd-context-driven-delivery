@@ -47,7 +47,7 @@ from cdd_guidance.practices.stories.model.reshaped_story_file import ReshapedSto
 from harness.guidance.practice_formats import Reshaped, Written
 from cdd_guidance.practices.stories.model.story_recording import StorySources
 from cdd_guidance.practices.stories.model.story_file import StoryBlock, StoryFile, flat_steps, read_step_code
-from cdd_guidance.practices.stories.model.story_writing import OUTLINE_EXAMPLES, SCENARIO_EXAMPLES, StoryFilePlace, StoryWriting, as_read
+from cdd_guidance.practices.stories.model.story_writing import FRONT_MATTER_MARK, NOTES_MARK, OUTLINE_EXAMPLES, SCENARIO_EXAMPLES, StoryFilePlace, StoryWriting, as_read
 
 
 class CodeStoryMapError(Exception):
@@ -276,6 +276,13 @@ class CodeStory(Story, CodeStoryNode):
         evidence = re.search(rf"{mark}Evidence:\s*([A-Za-z][A-Za-z ,-]*)", content, re.MULTILINE)
         if evidence:
             self.evidence = [part.strip() for part in evidence.group(1).split(",") if part.strip()]
+        self.front_matter = self._marked_lines(content, FRONT_MATTER_MARK)
+        self.notes = self._marked_lines(content, NOTES_MARK)
+
+    def _marked_lines(self, content: str, mark: str) -> str:
+        """The lines the story's comment writes under mark, as its scenarios file held them (``story_notes_lines``)."""
+        found = re.findall(rf"^\s*{self.syntax.description_mark}{re.escape(mark)}(?: (.*))?$", content, re.MULTILINE)
+        return "\n".join(found)
 
     @classmethod
     def load_all(cls, content: str) -> List["CodeStory"]:

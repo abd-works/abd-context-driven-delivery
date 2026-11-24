@@ -34,6 +34,18 @@ class StorySection:
         self.scenarios: list = []
         # The story's own background (`### Story Background`), which the story that takes this section takes too.
         self.story_backgrounds: Optional[List[Background]] = None
+        # The front matter above the file's first story heading, and the lines under this section's heading before its
+        # examples, backgrounds and scenarios, which the story that takes this section keeps as written.
+        self.front_matter: List[str] = []
+        self.notes: List[str] = []
+        self.is_taking_notes = heading is not None
+
+    def give_notes(self, story: Story) -> None:
+        """Give story the front matter and the notes this section was read with, unless it already holds some."""
+        if not story.front_matter and self.front_matter:
+            story.front_matter = "\n".join(self.front_matter)
+        if not story.notes and self.notes:
+            story.notes = "\n".join(self.notes).strip("\n")
 
     def names(self, story: Story) -> bool:
         """Whether this section holds story's scenarios: it is headed with the story's name."""

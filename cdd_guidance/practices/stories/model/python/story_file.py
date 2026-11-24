@@ -75,6 +75,10 @@ class PythonBlock(StoryBlock):
         return CodeBody(self.body_text, self.file.language)
 
     @property
+    def language(self) -> CodeLanguage:
+        return self.file.language
+
+    @property
     def body_text(self) -> str:
         return "\n".join(self.inside_lines)
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import List, Sequence, Tuple
 
-from cdd_guidance.practices.source_code import BraceCall, CodeBody, InsideLines, WrittenBlock
+from cdd_guidance.practices.source_code import BraceCall, CodeBody, CodeLanguage, InsideLines, WrittenBlock
 from cdd_guidance.practices.stories.model.code_story_map import unescaped
 from cdd_guidance.practices.stories.model.story_file import BlockStoryFile, StoryBlock
 
@@ -104,6 +104,10 @@ class BraceBlock(StoryBlock):
     @property
     def body(self) -> CodeBody:
         return CodeBody(self.call.body, self.file.language)
+
+    @property
+    def language(self) -> CodeLanguage:
+        return self.file.language
 
     @property
     def body_text(self) -> str:

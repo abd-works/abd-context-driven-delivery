@@ -27,6 +27,26 @@ def unlink(text: str) -> str:
     return _LINK.sub(lambda match: match.group(1), text)
 
 
+class DomainTermLinks:
+    """The link each domain term has in a story's notes, ``++[Cart](domain-model.md#cart-entity)++``, so a step that
+    names the term underlined, ``++Cart++``, is written with the same link. A step read from code names its terms
+    without links, which the notes of its story keep."""
+
+    _LINKED = re.compile(r"\+\+\[([^\]\n]+)\]\(([^)\n]*)\)\+\+")
+    _UNDERLINED = re.compile(r"\+\+([^\[\]+\n]+?)\+\+")
+
+    def __init__(self, notes: str) -> None:
+        self._targets = {label.strip(): target for label, target in self._LINKED.findall(notes)}
+
+    def linked(self, line: str) -> str:
+        """line with each underlined term the notes link written as that link; every other term as it is."""
+        return self._UNDERLINED.sub(self._link_of, line)
+
+    def _link_of(self, match: re.Match) -> str:
+        target = self._targets.get(match.group(1).strip())
+        return f"++[{match.group(1)}]({target})++" if target else match.group(0)
+
+
 def heading_anchor(heading: str) -> str:
     """The anchor GitHub and VS Code give a heading: lower case, punctuation dropped, spaces as hyphens."""
     text = unlink(heading).strip().lower()

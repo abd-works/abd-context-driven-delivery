@@ -23,9 +23,9 @@ from cdd_guidance.practices.sketch_document.discovery_document import DiscoveryD
 from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryType
 from cdd_guidance.practices.stories.model.story_map import Background, StepType, Scenario
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, path_from, source_at
-from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
+from cdd_guidance.practices.stories.model.markdown.links import DomainTermLinks, StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.markdown.map_reading import OutlineLines, ReplacedOutline, described, has_map_structure, is_outline, read_at, read_map
-from cdd_guidance.practices.stories.model.markdown.markup import MarkdownExample, MarkdownStep, step_line, step_lines, strip_backticks
+from cdd_guidance.practices.stories.model.markdown.markup import STEP_LINE, MarkdownExample, MarkdownStep, step_line, step_lines, strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, ScenarioFiles
 from cdd_guidance.practices.stories.model.markdown.read_lines import HeadingLine, HeldLines, ReadLine, ReadScenarioDocument, written_lines
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import StorySection
@@ -159,10 +159,14 @@ class MarkdownStory(Story):
         return scenario if isinstance(scenario, MarkdownScenario) else MarkdownScenario.copy_of(scenario)
 
     def scenarios_text(self) -> str:
-        """This story's own scenarios file: its heading, the examples its scenarios share, its backgrounds, then its
-        scenarios."""
-        lines = [f"## Story: {self.name}", ""] if self.name else []
-        lines.extend(self._scenario_section_lines())
+        """This story's own scenarios file: its front matter, its heading and the notes under it, the examples its
+        scenarios share, its backgrounds, then its scenarios, each domain term a step names linked as the notes link
+        it."""
+        lines = [self.front_matter, ""] if self.front_matter else []
+        lines.extend([f"## Story: {self.name}", ""] if self.name else [])
+        lines.extend([self.notes, ""] if self.notes else [])
+        links = DomainTermLinks(self.notes)
+        lines.extend(links.linked(line) if STEP_LINE.match(line) else line for line in self._scenario_section_lines())
         return "\n".join(lines).rstrip() + "\n"
 
     def outline_lines(self, level: int, links: Optional[StoryMapLinks]) -> List[str]:
@@ -215,6 +219,7 @@ class MarkdownStory(Story):
         took_examples = False
         seen = set()
         for section in (section for section in sections if section.names(self)):
+            section.give_notes(self)
             self._take_story_backgrounds(section.story_backgrounds)
             for scenario in section.scenarios:
                 scenario = scenario.clone()
@@ -559,6 +564,7 @@ class MarkdownStoryMap(StoryMap):
         section = line.node
         story = MarkdownStory(section.name, len(holder.stories) + 1, StoryType.USER)
         read_at(story, file, section.line)
+        section.give_notes(story)
         if section.background.steps:
             story.backgrounds = [section.background]
         for scenario in section.scenarios:

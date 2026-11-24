@@ -12,7 +12,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Sequence, Tuple
 
-from cdd_guidance.practices.source_code import CodeBody, CodeLanguage, InsideLines, WrittenBlock
+from cdd_guidance.practices.source_code import CallGraph, CodeBody, CodeLanguage, InsideLines, WrittenBlock
 from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 if TYPE_CHECKING:
@@ -53,6 +53,32 @@ class StoryBlock(ABC):
     @abstractmethod
     def body(self) -> CodeBody:
         """The code inside it, as a step holds it."""
+
+    @property
+    @abstractmethod
+    def language(self) -> CodeLanguage:
+        """The language its file is written in."""
+
+    def realization(self) -> CallGraph:
+        """The call graph a step block opens with as comments, as a story file writes a step's realization: a call,
+        then the lines indented under it, at least one an arrow (``-> Book.reserve(1)``). Empty when it opens with
+        none, such as a block holding only a comment that says the step is not written yet."""
+        sign = self.language.line_comment
+        lines = [line.strip() for line in self.body_text.splitlines() if line.strip()]
+        written: List[str] = []
+        for line in lines:
+            text = line[len(sign):].removeprefix(" ") if line.startswith(sign) else None
+            if text is None or not text.strip() or (written and not text.startswith(" ")):
+                break
+            written.append(text)
+        graph = CallGraph().read("\n".join(written))
+        return graph if any(entry.kind != "call" for entry in graph) else CallGraph()
+
+    def holds_only_comments(self) -> bool:
+        """Whether every line inside it is a comment or says the step is not written yet."""
+        sign = self.language.line_comment
+        code = [line.strip() for line in self.body_text.splitlines() if line.strip() and not line.strip().startswith(sign)]
+        return self.language.is_unfinished("\n".join(code))
 
     @property
     @abstractmethod

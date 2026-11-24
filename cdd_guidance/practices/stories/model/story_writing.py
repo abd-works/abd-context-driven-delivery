@@ -86,6 +86,18 @@ def story_description(story: Story, prefix: str) -> List[str]:
     return lines
 
 
+# The marks a story's comment writes its front matter and its notes under, one line each, as its scenarios file holds them.
+FRONT_MATTER_MARK = "^"
+NOTES_MARK = "|"
+
+
+def story_notes_lines(story: Story, prefix: str) -> List[str]:
+    """The story's front matter and notes as lines of its comment, each line under its mark, so a scenarios file
+    rendered to code and back keeps what a person wrote about the story; none when it holds neither."""
+    marked = [(FRONT_MATTER_MARK, story.front_matter), (NOTES_MARK, story.notes)]
+    return [f"{prefix}{mark} {line}".rstrip() for mark, text in marked if text for line in text.split("\n")]
+
+
 def background_examples_line(story: Story, prefix: str) -> List[str]:
     """The examples the story's background holds, as the one comment line a story file carries them on; none when it
     holds none."""

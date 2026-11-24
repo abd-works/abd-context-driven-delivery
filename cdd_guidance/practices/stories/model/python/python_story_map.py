@@ -14,7 +14,7 @@ from cdd_guidance.practices.stories.model.python.shared_story_file import SHARED
 from cdd_guidance.practices.stories.model.python.story_file import PythonStoryFile
 from cdd_guidance.practices.stories.model.story_file import StoryFile, flat_steps
 from cdd_guidance.practices.stories.model.story_map import Background, Story
-from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description
+from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description, story_notes_lines
 
 
 class PythonStoryWriting(StoryWriting):
@@ -42,7 +42,7 @@ class PythonStoryWriting(StoryWriting):
         return ["from __future__ import annotations", "", "from story_test import and_, background, but_, given, scenario, story, then, when", *example_import, "", *heading]
 
     def story_open(self, story: "Story") -> List[str]:
-        lines = [self.language.comment(f"Story: {story.name}"), *story_description(story, "# ")]
+        lines = [self.language.comment(f"Story: {story.name}"), *story_description(story, "# "), *story_notes_lines(story, "# ")]
         if story.domain_terms:
             lines.append(self.language.comment("Domain terms: " + ", ".join(story.domain_terms)))
         return lines + background_examples_line(story, "# ") + [f"with story({self._quoted(story.name)}):"]

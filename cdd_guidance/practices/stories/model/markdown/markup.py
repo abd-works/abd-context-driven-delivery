@@ -15,6 +15,8 @@ _ITALIC_VALUE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
 _LINKED_TERM = re.compile(r"\+\+\[([^\]\n]+)\]\([^)\n]*\)\+\+")
 _STEP_CONTINUATION = re.compile(r"^(And|But)\s+", re.IGNORECASE)
 TABLE_LINE = re.compile(r"^\s*\|(.+)\|\s*$")
+# A step line as markdown writes one: `*Given* a cart`.
+STEP_LINE = re.compile(r"^\s*\*(Given|When|Then|And|But)\*\s")
 
 
 def strip_backticks(text: str) -> str:

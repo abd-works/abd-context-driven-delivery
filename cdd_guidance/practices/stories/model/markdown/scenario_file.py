@@ -36,6 +36,10 @@ _ITALIC_STEP = re.compile(r"^\s*\*(Given|When|Then|And|But)\*\s+(.+?)\s*$", re.I
 _BULLET_STEP = re.compile(r"^\s*[-*]\s+(Given|When|Then|And|But)\b\s*(.+?)\s*$", re.IGNORECASE)
 _H1 = re.compile(r"^#\s+(.+)$")
 _PHASES = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}
+# The line that opens and closes a file's front matter.
+_FRONT_MATTER_MARK = "---"
+# The heading the scenarios of a story's section stand under, which ends the notes above them.
+_BEHAVIORS = "behaviors"
 # A Story heading names a file's story only near its top, and its title only on its first lines.
 _STORY_HEADING_LINES = 20
 _TITLE_LINES = 5
@@ -134,9 +138,31 @@ class ScenarioFileReading:
         for number, raw in enumerate(self.lines, start=1):
             self.number, self.raw = number, raw
             self.kept = self.kept_lines[number - 1] if number - 1 < len(self.kept_lines) else raw
+            self._take_note()
             self._read_line()
         self._close_scenario()
         return self.sections
+
+    def _front_matter(self) -> List[str]:
+        """The front matter the file opens with, between its two `---` lines, those lines included; none when it opens
+        with none."""
+        if not self.lines or self.lines[0].strip() != _FRONT_MATTER_MARK:
+            return []
+        closing = next((index for index, line in enumerate(self.lines[1:], start=1) if line.strip() == _FRONT_MATTER_MARK), None)
+        return self.lines[: closing + 1] if closing is not None else []
+
+    def _take_note(self) -> None:
+        """The line, kept as a note of the story section being read while the section's notes are open: a line under
+        the story's heading before its examples, backgrounds, Behaviors heading, scenarios or first step."""
+        section = self.section
+        if section is None or not section.is_taking_notes or self.number == section.line:
+            return
+        kind, match = _heading_of(self.raw)
+        is_step = _ITALIC_STEP.match(self.raw) or _BULLET_STEP.match(self.raw)
+        ends_notes = is_step or kind not in ("", "heading") or (kind == "heading" and self._level()[1].lower() == _BEHAVIORS)
+        section.is_taking_notes = not ends_notes
+        if section.is_taking_notes:
+            section.notes.append(self.raw)
 
     def _read_line(self) -> None:
         if not self.raw.strip():
@@ -184,9 +210,10 @@ class ScenarioFileReading:
         self.examples.heading("scenario", 0, "")
 
     def _open_section(self, name: str, heading: Optional[str]) -> StorySection:
+        section = StorySection(name, heading, self.number, self.rel)
         if not self.sections:
             self.document_examples = self.backgrounds.shared.examples
-        section = StorySection(name, heading, self.number, self.rel)
+            section.front_matter = self._front_matter()
         self.sections.append(section)
         self.document_lines.append(HeldLines(section))
         self.section = section

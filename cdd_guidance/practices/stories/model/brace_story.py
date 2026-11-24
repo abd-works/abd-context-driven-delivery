@@ -11,7 +11,7 @@ from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
 from cdd_guidance.practices.stories.model.code_story_map import CodeScenario, CodeStory, CodeStoryMap, StorySyntax, unescaped
 from cdd_guidance.practices.stories.model.story_file import StoryFile
 from cdd_guidance.practices.stories.model.story_map import Background, Story
-from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description
+from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description, story_notes_lines
 
 
 class BraceSyntax(StorySyntax):
@@ -149,7 +149,7 @@ class BraceStoryWriting(StoryWriting):
         raise NotImplementedError(f"{type(self).__name__} must import its story-test helpers")
 
     def story_open(self, story: "Story") -> List[str]:
-        lines = ["/**", f" * Story: {story.name}", *story_description(story, " * "), " */", ""]
+        lines = ["/**", f" * Story: {story.name}", *story_description(story, " * "), *story_notes_lines(story, " * "), " */", ""]
         return lines + background_examples_line(story, "// ") + [f"story({self._quoted(story.name)}, () => {{"]
 
     def story_background_lines(self, background: "Background") -> List[str]:

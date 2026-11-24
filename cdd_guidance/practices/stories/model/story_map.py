@@ -620,9 +620,15 @@ class Step(CodeHeld):
         return (self.keyword, self.text, self.body.text)
 
     def read_code(self, block: "StoryBlock") -> None:
-        """The body of the step block found where this step sits in its file, when that block is this step's call; a
-        step whose text differs keeps no body."""
-        if self.text == block.name:
+        """The body of the step block found where this step sits in its file, when that block is this step's call, and
+        the realization its comments open with, as a story file writes it; a block that holds nothing but those
+        comments holds no body, so the realization is written once. A step whose text differs keeps neither."""
+        if self.text != block.name:
+            return
+        realization = block.realization()
+        if realization:
+            self.call_graph = realization
+        if not (realization and block.holds_only_comments()):
             self.body = block.body
 
     @property
@@ -939,6 +945,11 @@ class Story(CodeHeld):
         self.actors: List[str] = []
         self.domain_terms: List[str] = []
         self.evidence: List[str] = []
+        # What a person wrote about the story in its scenarios file that no scenario, step or example holds: the front
+        # matter above its heading, and the lines under the heading before its examples, backgrounds and scenarios,
+        # such as its kind, a link to the story map, its domain terms and prose. Each format carries them as written.
+        self.front_matter = ""
+        self.notes = ""
         self._backgrounds = ModelChildren(self, "background")
         self._scenarios = ModelChildren(self, "scenarios")
 
@@ -946,6 +957,7 @@ class Story(CodeHeld):
         self.sequential_order, self.story_type = original.sequential_order, original.story_type
         self.actors, self.domain_terms, self.evidence = list(original.actors), list(original.domain_terms), list(original.evidence)
         self.description_text = original.description_text
+        self.front_matter, self.notes = original.front_matter, original.notes
         self.backgrounds = [copy_part(background, type(self).background_class) for background in original.backgrounds]
         self.scenarios = [copy_part(scenario, type(self).scenario_class) for scenario in original.scenarios]
         self.take_code_from(original)
