@@ -1049,8 +1049,10 @@ class _Expressions:
         read = self._chain_value(code, start)
         rest = code[read.end:].lstrip(" \t")
         if rest and rest[0] not in _ENDS and _ALTERNATIVE.match(rest) is None:
-            # An expression that opens with a literal, `[1, 2]` or `"".join(parts)`, is a built-in object.
-            return _Read(None, read.end, cause=read.cause if read.end == start else OTHERWISE)
+            # An expression that opens with a literal, `[1, 2]` or `"".join(parts)`, is a built-in object, and so is an
+            # operator on an object from outside the code read, `root / "hooks.json"`.
+            outside = read.end == start or (read.value is None and read.cause == ON_OUTSIDE_OBJECTS)
+            return _Read(None, read.end, cause=read.cause if outside else OTHERWISE)
         return read
 
     def _chain_value(self, code: str, start: int) -> _Read:
@@ -1394,16 +1396,21 @@ class _ChainWalk:
         opens = self._at == 0 and _is_local_name(self._head) and bool(steps) and steps[0].kind == "member"
         if not opens:
             return False
-        if value is None:
+        if value is None and self._goes_on_past_a_guess():
             return True
-        return not (len(steps) > 1 and steps[1].kind == "member") and self._lacks_member(value, steps[0].text)
+        return not (len(steps) > 1 and steps[1].kind == "member") and (value is None or self._lacks_member(value, steps[0].text))
+
+    def _goes_on_past_a_guess(self) -> bool:
+        """Whether a chain of no known class goes on past its guessed first member: not when its first name is an
+        object from outside the code read, such as a path, which no class of the code is."""
+        return self._cause != ON_OUTSIDE_OBJECTS
 
     def _go_on_from(self, guessed: "Node | None") -> bool:
         """Go on along a chain of three or more parts from the member its first name was guessed to reach, as what
         that member answers or holds, `fixture.board.column("Backlog").cards`; whether any step is left to take."""
         steps = self._steps
         holder = self._span.index.class_declaring(guessed) if guessed is not None else None
-        if holder is None:
+        if holder is None or not self._goes_on_past_a_guess():
             return False
         name, calls = steps[0].text, len(steps) > 1 and steps[1].kind == "call"
         self._at = 2 if calls else 1

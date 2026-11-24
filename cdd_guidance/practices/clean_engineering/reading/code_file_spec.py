@@ -37,6 +37,10 @@ class CartLine:
     def quantity(self) -> int:
         return 1
 
+    @property
+    def parent(self) -> "Cart":
+        return Cart()
+
 
 class Cart:
     def __init__(self) -> None:
@@ -141,6 +145,8 @@ function filled() {
 
 # A spec that declares a helper inside its describe block, which the code read does not index.
 _CART_SPEC = """\
+from pathlib import Path
+
 from shop.cart import Cart
 
 with description("a cart"):
@@ -264,6 +270,13 @@ with description("a file of the code read"):
 
         with it("should reach nothing when two classes declare the member the chain opens with"):
             expect(self.called("cart.add('a').quantity")).to(equal([]))
+
+    with context("whose span follows a chain of three or more parts from an object from outside the code read"):
+        with it("should reach no member of the code's classes"):
+            expect(self.called("folder = Path('shop')\nfolder.parent.till.open()")).to(equal([]))
+
+        with it("should read an operator on that object as an object from outside the code too"):
+            expect(self.called("handlers = Path('shop') / 'a.json'\nhandlers.parent.till.open()")).to(equal([]))
 
     with context("whose span builds a class through the module it imports"):
         with it("should invoke the constructor and reach the class's member"):
