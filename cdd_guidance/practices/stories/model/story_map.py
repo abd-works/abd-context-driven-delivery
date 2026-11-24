@@ -621,15 +621,15 @@ class Step(CodeHeld):
 
     def read_code(self, block: "StoryBlock") -> None:
         """The body of the step block found where this step sits in its file, when that block is this step's call, and
-        the realization its comments open with, as a story file writes it; a block that holds nothing but those
-        comments holds no body, so the realization is written once. A step whose text differs keeps neither."""
+        the realization its comments open with, as a story file writes it, so a scenarios file written from the step
+        holds it again. The body keeps those comments, so code written from the step writes the realization once. A
+        step whose text differs keeps neither."""
         if self.text != block.name:
             return
+        self.body = block.body
         realization = block.realization()
         if realization:
             self.call_graph = realization
-        if not (realization and block.holds_only_comments()):
-            self.body = block.body
 
     @property
     @data_field

@@ -164,23 +164,33 @@ with description("a generate action on practice guidance") as self:
 
         # Seen 2026-11-21 (r3-sparky-11): acceptance tests with TypeScript chosen were handed Clean Engineering's Python
         # class template and no shape for the story test files the save line names.
-        with context("that generates acceptance tests with TypeScript chosen"):
-            with before.each:
-                self.prose = _expanded_generate(self.action, {"guidance": "stories-acceptance-tests format=typescript"}).instructions
+        with context("that generates acceptance tests in each code language"):
+            # One project for every example: each generate takes most of an example's time budget.
+            with before.all:
+                self.languages_project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
+                (self.languages_project / ".git").mkdir()
+                sessions = Sessions(self.languages_project)
+                sessions.opened.open(sessions.create("alpha", self.languages_project), "")
+                action = _made_for(self.languages_project)
+                self.typescript = _expanded_generate(action, {"guidance": "stories-acceptance-tests format=typescript"}).instructions
+                self.python = _expanded_generate(action, {"guidance": "stories-acceptance-tests format=python"}).instructions
 
-            with it("should hand over the TypeScript shape of the shared scenarios each tier replays"):
-                expect(self.prose).to(contain("Acceptance tests template (TypeScript)"))
+            with after.all:
+                shutil.rmtree(self.languages_project, ignore_errors=True)
 
-            with it("should hand over Clean Engineering's reference written in TypeScript"):
-                expect(self.prose).to(contain("Conceptual Clean Engineering Reference (TypeScript style)"))
+            with context("with TypeScript chosen"):
+                with it("should hand over the TypeScript shape of the shared scenarios each tier replays"):
+                    expect(self.typescript).to(contain("Acceptance tests template (TypeScript)"))
 
-            with it("should hand over no Python template"):
-                expect(self.prose).not_to(contain("(Python style)"))
+                with it("should hand over Clean Engineering's reference written in TypeScript"):
+                    expect(self.typescript).to(contain("Conceptual Clean Engineering Reference (TypeScript style)"))
 
-        with context("that generates acceptance tests with Python chosen"):
-            with it("should hand over the Python shape of the shared scenarios each tier replays"):
-                prose = _expanded_generate(self.action, {"guidance": "stories-acceptance-tests format=python"}).instructions
-                expect(prose).to(contain("Acceptance tests template (Python)"))
+                with it("should hand over no Python template"):
+                    expect(self.typescript).not_to(contain("(Python style)"))
+
+            with context("with Python chosen"):
+                with it("should hand over the Python shape of the shared scenarios each tier replays"):
+                    expect(self.python).to(contain("Acceptance tests template (Python)"))
 
         with context("that generates a fidelity that writes no whiteboard"):
             with it("should say nothing of publishing to a board"):

@@ -135,7 +135,8 @@ class CodeLanguage:
             statement = line.removesuffix(self.spelling.statement_end).strip()
             if not _WHOLE_CALL.fullmatch(statement):
                 return None
-            calls.append(statement)
+            # A call the model names without arguments, `-> Book.is_in_stock`, is written with empty parentheses.
+            calls.append(statement.removesuffix("()"))
         return calls
 
     def base_constructor_arguments(self, text: str) -> Optional[List[str]]:

@@ -607,8 +607,7 @@ One block of a story file: a story, background, scenario, or step call, an abstr
 ----
 + name, line_span, opening_line, is_chained, inside_lines, body, body_text, text, language
 + realization(): CallGraph
-	// the call graph a step block opens with as comments, as a story file writes a When's realization; a step reads it back (`Step.read_code`), and holds no body when the block holds nothing else
-+ holds_only_comments(): bool
+	// the call graph a step block opens with as comments, as a story file writes a When's realization; a step reads it back as its call graph (`Step.read_code`) and keeps the block's body as read
 + written(lead): WrittenBlock
 + split_inside(children): tuple
 + scenarios(), backgrounds(scenarios), steps(skip): list[StoryBlock]

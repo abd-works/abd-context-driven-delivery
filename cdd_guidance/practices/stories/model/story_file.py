@@ -74,11 +74,6 @@ class StoryBlock(ABC):
         graph = CallGraph().read("\n".join(written))
         return graph if any(entry.kind != "call" for entry in graph) else CallGraph()
 
-    def holds_only_comments(self) -> bool:
-        """Whether every line inside it is a comment or says the step is not written yet."""
-        sign = self.language.line_comment
-        code = [line.strip() for line in self.body_text.splitlines() if line.strip() and not line.strip().startswith(sign)]
-        return self.language.is_unfinished("\n".join(code))
 
     @property
     @abstractmethod
