@@ -261,7 +261,6 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
                     with before.all:
                         self.chat.send(_WORK)
                         self.worked = self.chat.prompts()
-                        print(f"calls between turns: {self.chat.calls}")
 
                     with it("should put the work on the queue"):
                         expect([title for title in placed(self.answered, self.worked) if "flush" in title.lower()]).not_to(equal([]))
@@ -282,8 +281,7 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
             with before.all:
                 self.chat.send_while_working(_LONG_TURN, [_QUESTION, _ANSWER, _WORK])
                 # The turn's own message asks for work too, so the agent may queue it; it is not one of the three.
-                self.placed = [title for title in placed(self.start, self.chat.prompts()) if "sleep" not in title.lower()]
-                print(f"placed while working: {self.placed} calls: {self.chat.calls}")
+                self.placed = [title for title in placed(self.start, self.chat.prompts()) if "ping" not in title.lower()]
 
             with it("should put the work request on the queue"):
                 expect([title for title in self.placed if "flush" in title.lower()]).not_to(equal([]))

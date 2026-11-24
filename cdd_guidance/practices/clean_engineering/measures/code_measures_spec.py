@@ -401,9 +401,11 @@ with description("the code measures the reader keeps of the files a read names")
             expect(_kept(self.fixture, "Module", "payments", ["modules_importing"])).to(equal({"modules_importing": 1}))
 
     with context("with two modules that import each other only through a package inside one of them"):
+        with before.all:
+            self.fixture = measured(practice_from_files(_LOOP_THROUGH_A_PACKAGE), _READER_ALONE)
+
         with it("should count the loop on each module"):
-            fixture = measured(practice_from_files(_LOOP_THROUGH_A_PACKAGE), _READER_ALONE)
-            expect([IMPORT_LOOPS.value_on(_node(fixture, "Module", name)) for name in ("shop", "catalogue")]).to(equal([1, 1]))
+            expect([IMPORT_LOOPS.value_on(_node(self.fixture, "Module", name)) for name in ("shop", "catalogue")]).to(equal([1, 1]))
 
     with context("in a project whose config chooses no tools"):
         with it("should keep no measure"):
@@ -501,10 +503,12 @@ with description("the methods one call into a class can set off") as self:
 
 with description("a module's average class complexity") as self:
     with context("with two classes the tool measured and a package inside the module"):
+        with before.all:
+            self.fixture = measured(practice_from_files(_MODULES_AND_A_PACKAGE), {"lizard": CountingLizard, "radon": MeasuresNothing})
+
         with it("should average the total complexity of the classes of its files and packages"):
-            fixture = measured(practice_from_files(_MODULES_AND_A_PACKAGE), {"lizard": CountingLizard, "radon": MeasuresNothing})
-            totals = [_node(fixture, "OoadClass", name).get_fact("total_complexity") for name in ("Cart", "Price")]
-            expect(_kept(fixture, "Module", "shop", ["average_class_complexity"])).to(equal({"average_class_complexity": round(sum(totals) / 2, 2)}))
+            totals = [_node(self.fixture, "OoadClass", name).get_fact("total_complexity") for name in ("Cart", "Price")]
+            expect(_kept(self.fixture, "Module", "shop", ["average_class_complexity"])).to(equal({"average_class_complexity": round(sum(totals) / 2, 2)}))
 
 
 with description("the blocks of code a module repeats from another file") as self:
@@ -599,8 +603,12 @@ with description("a limit on a code measure") as self:
             expect(_hits_with("limit-class-response", "OoadClass", 51)).to(contain(contain("Class 'Cart' has 51 methods one call into it can set off (response for a class), over the limit of 50.")))
 
     with context("on a class whose measure is at its limit"):
+        # Each read builds a project's graph, so both are read once, before the example.
+        with before.all:
+            self.at_limit = [_hits_with("limit-class-coupling", "OoadClass", 14), _hits_with("limit-class-response", "OoadClass", 50)]
+
         with it("should report neither its coupling nor the methods one call into it can set off"):
-            expect([_hits_with("limit-class-coupling", "OoadClass", 14), _hits_with("limit-class-response", "OoadClass", 50)]).to(equal([[], []]))
+            expect(self.at_limit).to(equal([[], []]))
 
     with context("on a module whose measure is past its limit"):
         with it("should report a longest file over the limit, naming the file"):
