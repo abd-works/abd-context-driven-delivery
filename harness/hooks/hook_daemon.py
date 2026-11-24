@@ -230,7 +230,7 @@ class HookDaemon(ServerDaemon):
 
     def __init__(self, repo: Path | str, port: int | None = None) -> None:
         self.repo = Path(repo).resolve()
-        super().__init__(ExclusivePort(self.HOST, port or self._port_of(self.repo)), CappedLogFile(self.folder / "server.log"))
+        super().__init__(ExclusivePort(self.HOST, port or self._own_port), CappedLogFile(self.folder / "server.log"))
         self.toolsets = RepositoryToolsets(self.repo)
         self.address = HookDaemonAddress(self.HOST, self.port)
         self.address_file = HookDaemonAddressFile(self.folder / "address.json", self.HOST)
@@ -240,10 +240,10 @@ class HookDaemon(ServerDaemon):
     def __str__(self) -> str:
         return f"the hook daemon of {self.repo}"
 
-    @staticmethod
-    def _port_of(repo: Path) -> int:
-        """The one port the daemon of repo may listen on, the same every start."""
-        key = str(repo).casefold().encode("utf-8")
+    @property
+    def _own_port(self) -> int:
+        """The one port the daemon of this checkout may listen on, the same every start."""
+        key = str(self.repo).casefold().encode("utf-8")
         offset = int.from_bytes(hashlib.sha256(key).digest()[:4], "big")
         return _PORT_RANGE_START + offset % _PORT_RANGE_SIZE
 

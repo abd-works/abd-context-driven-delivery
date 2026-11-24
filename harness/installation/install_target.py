@@ -3,11 +3,29 @@ from __future__ import annotations
 
 import functools
 import os
+import tempfile
 from pathlib import Path
 
-from harness.installation.destination import is_temporary
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_diagnostics import InstallDiagnostics
+
+
+def is_temporary(folder: Path) -> bool:
+    """Whether folder is in the system's temporary folder, as a spec's install is: such an install keeps its record and
+    its MCP entry in the folder itself, so it never touches the person's own."""
+    try:
+        temp = _resolved_temp()
+        resolved = Path(folder).resolve()
+    except OSError:
+        return False
+    return resolved == temp or temp in resolved.parents
+
+
+@functools.cache
+def _resolved_temp() -> Path:
+    """The system's temporary folder, resolved once: it does not move while a process runs, and resolving a path on
+    Windows asks the file system for every folder in it."""
+    return Path(tempfile.gettempdir()).resolve()
 
 
 class NotAnInstallFolder(ValueError):

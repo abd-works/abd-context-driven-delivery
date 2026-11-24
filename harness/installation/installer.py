@@ -18,7 +18,8 @@ from harness.agent_tools.agent_tools import (
     tool_subject,
 )
 from harness.annotations.annotation import annotation_kinds, noCatalog
-from harness.installation.destination import ChannelServer, Installation, RegisteredChannel, is_temporary
+from harness.installation.destination import ChannelServer, Installation, RegisteredChannel
+from harness.installation.install_target import is_temporary
 from harness.installation.files import CommandInstallation, FileInstallation, RulesInstallation, SkillInstallation, command
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.install_diagnostics import Deployed, InstallDiagnosis

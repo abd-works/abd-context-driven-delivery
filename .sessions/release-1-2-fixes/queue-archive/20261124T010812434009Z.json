@@ -1,0 +1,21 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T01:08:12.434009+00:00",
+  "prompts": [
+    {
+      "id": "92067a4c8cc8",
+      "text": "[interruption] .sessions\\main\\handoff-20261118T173207.md  what is missinfg that could go into /queue",
+      "steps": [
+        {
+          "text": "[interruption] all thast are dtill relevant",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] pin to dev server also",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    }
+  ]
+}

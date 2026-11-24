@@ -78,6 +78,8 @@ export class ReviewRefused extends Error {}
 const LOOK_GATE_BLOCKS = 4;
 const LOOK_BLOCK_PX = 8;
 const LOOK_BLOCK_LIMIT = 6;
+// How much red, green and blue each count towards the grey a person sees (the ITU-R BT.601 luma weights).
+const LUMA_WEIGHTS = { red: 0.299, green: 0.587, blue: 0.114 };
 const JUDGE_VERDICTS: Verdict[] = ['meets the intent', 'misses the intent'];
 
 /** A sub-epic's runs: its folder, the run it accepted, and its runs by name. */
@@ -320,7 +322,7 @@ function blockGrey(image: PNG, left: number, top: number): number {
   for (let y = top; y < top + LOOK_BLOCK_PX; y++) {
     for (let x = left; x < left + LOOK_BLOCK_PX; x++) {
       const at = (y * image.width + x) * 4;
-      sum += 0.299 * image.data[at] + 0.587 * image.data[at + 1] + 0.114 * image.data[at + 2];
+      sum += LUMA_WEIGHTS.red * image.data[at] + LUMA_WEIGHTS.green * image.data[at + 1] + LUMA_WEIGHTS.blue * image.data[at + 2];
     }
   }
   return sum / (LOOK_BLOCK_PX * LOOK_BLOCK_PX);

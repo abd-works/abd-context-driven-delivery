@@ -230,10 +230,10 @@ What a screen or a control serves (`ServesStories.served`), in the one notation 
 for each kind it serves any of, `Stories: Browse Books · Check Out`, the things joined by ` · `.
 
 + Served(node: ServesStories)
-+ Served.kind_headed(heading: str): str
 ------
 + stories, scenarios, steps: list[StoryLink]
 ----
++ kind_headed(heading: str): str
 + serve(kind: str, shown: str): None
 + as_lines(link_text: Callable[[StoryLink], str]): list[str]
 + read_lines(lines: list[str]): None

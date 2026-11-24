@@ -121,7 +121,7 @@ def _chat_folder_refusal(args: argparse.Namespace) -> str:
         return ""
     if not args.from_chat.strip():
         return "not installed: the chat's folder is not known (--from-chat names no folder)"
-    from harness.installation.destination import is_temporary
+    from harness.installation.install_target import is_temporary
     from harness.process.claude_chat_process import is_desktop_spare
 
     folder = Path(args.from_chat).resolve()

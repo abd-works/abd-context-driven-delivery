@@ -1,0 +1,45 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T01:08:06.097460+00:00",
+  "prompts": [
+    {
+      "id": "492b84b2d84a",
+      "text": "[interruption] please merge all bots into relase-1-1-2 foixes",
+      "steps": [
+        {
+          "text": "[interruption] at the right time",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] wghatrs keft to do",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] can we move this to  a cloud chat",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] ok jst do  a handoff need to turnh machine off",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] Sparky, Bolt and Widget",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] actually how long",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] ok ten ask all agents to report a handoff p[lease and conmsliodate",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] tel them to STOP and handoff!~",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    }
+  ]
+}

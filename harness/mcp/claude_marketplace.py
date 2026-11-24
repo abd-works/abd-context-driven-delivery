@@ -213,10 +213,15 @@ class ClaudeMarketplace:
                 plugin = self.plugin(mod.name)
                 plugin.publish_from(mod)
                 if mod.install_command_file:
-                    JsonFile(plugin.folder / mod.install_command_file).write({"command": self.install_command})
-                    if self._home.mode == self._home.CHECKOUT and Path(code).resolve() == self._home.source.resolve():
-                        JsonFile(mod.folder / mod.install_command_file).write({"command": self.install_command})
+                    self._write_install_command(plugin, mod, code)
             self._write_listing()
+
+    def _write_install_command(self, plugin: PublishedPlugin, mod: PublishedMod, code: Path) -> None:
+        """Give a mod that runs an install the command it runs, in its published folder, and in its own mod folder too
+        when the checkout it was published from is the one served from disk."""
+        JsonFile(plugin.folder / mod.install_command_file).write({"command": self.install_command})
+        if self._home.mode == self._home.CHECKOUT and Path(code).resolve() == self._home.source.resolve():
+            JsonFile(mod.folder / mod.install_command_file).write({"command": self.install_command})
 
     def publish_mods_for_chats(self, is_dev_lane_running: bool) -> None:
         """Publish this lane's mods when its server restarts, then the mods every chat installs, which come from the

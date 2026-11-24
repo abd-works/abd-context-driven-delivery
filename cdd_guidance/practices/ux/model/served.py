@@ -33,10 +33,9 @@ class Served:
     def steps(self) -> List["StoryLink"]:
         return self._node.links_of("Step")
 
-    @classmethod
-    def kind_headed(cls, heading: str) -> str:
+    def kind_headed(self, heading: str) -> str:
         """The kind a heading lists, whatever its case: `Story` for `stories`; none for any other heading."""
-        return next((kind for written, kind in cls.KINDS if written.lower() == heading.strip().lower()), "")
+        return next((kind for written, kind in self.KINDS if written.lower() == heading.strip().lower()), "")
 
     def serve(self, kind: str, shown: str) -> None:
         """Serve each thing of kind one line lists in shown, the things joined by ` · `."""

@@ -307,7 +307,7 @@ class Callout:
             served = _CONTROL_LINE.match(line)
             control = screen.control_at(served.group("by").strip()) if served is not None else None
             if control is not None:
-                control.served.serve(Served.kind_headed(served.group("kind")), served.group("items"))
+                control.served.serve(control.served.kind_headed(served.group("kind")), served.group("items"))
 
     def _listed(self, heading: str) -> str:
         """What the line that starts with heading lists after it; nothing when the callout has no such line."""

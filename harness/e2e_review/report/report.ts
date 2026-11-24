@@ -238,6 +238,10 @@ class EmbeddedShots {
   }
 }
 
+// The highest value a colour channel holds; as alpha it is a pixel that cannot be seen through. A pixel that can be
+// seen through is laid over white when the screen is halved.
+const FULL_CHANNEL = 255;
+
 /** Average each 2×2 block of pixels, on a white background. */
 function halfSize(image: PNG): PNG {
   const width = Math.max(1, image.width >> 1);
@@ -247,10 +251,10 @@ function halfSize(image: PNG): PNG {
     for (let x = 0; x < width; x++) {
       const corners = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([dx, dy]) => (Math.min(y * 2 + dy, image.height - 1) * image.width + Math.min(x * 2 + dx, image.width - 1)) * 4);
       for (let channel = 0; channel < 3; channel++) {
-        const sum = corners.reduce((total, at) => total + (image.data[at + channel] * image.data[at + 3] + 255 * (255 - image.data[at + 3])) / 255, 0);
+        const sum = corners.reduce((total, at) => total + (image.data[at + channel] * image.data[at + 3] + FULL_CHANNEL * (FULL_CHANNEL - image.data[at + 3])) / FULL_CHANNEL, 0);
         half.data[(y * width + x) * 4 + channel] = Math.round(sum / 4);
       }
-      half.data[(y * width + x) * 4 + 3] = 255;
+      half.data[(y * width + x) * 4 + 3] = FULL_CHANNEL;
     }
   }
   return half;
@@ -271,9 +275,12 @@ function areaStyle(area: Area): string {
   return `left:${percent(area.left)};top:${percent(area.top)};width:${percent(area.width)};height:${percent(area.height)}`;
 }
 
+// The share of the screen's width and height past which a change is said to be across the whole screen.
+const WHOLE_SCREEN_SHARE = 0.8;
+
 /** Where on the screen an area is, in words: the top left, the middle, across the whole screen. */
 export function placeOf(area: Area): string {
-  if (area.width > 0.8 && area.height > 0.8) return 'across the whole screen';
+  if (area.width > WHOLE_SCREEN_SHARE && area.height > WHOLE_SCREEN_SHARE) return 'across the whole screen';
   const third = (share: number) => Math.min(2, Math.floor(3 * share));
   const across = ['left', 'middle', 'right'][third(area.left + area.width / 2)];
   const down = ['top', 'middle', 'bottom'][third(area.top + area.height / 2)];
@@ -424,7 +431,7 @@ const PAGE_TEMPLATE = `<!doctype html>
 <title>{{title}}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script>try { if (localStorage.getItem('abd-mode') === 'engineering') document.documentElement.setAttribute('data-theme', 'engineering'); } catch (e) {}</script>
+<script>try { if (localStorage.getItem('abd-mode') === 'engineering') document.documentElement.setAttribute('data-theme', 'engineering'); } catch (e) { console.warn('This browser did not give back the chosen view, so the report opens in the default view: ' + e); }</script>
 <style>
 /* abd.works brand tokens (abd-works-brand/css/brand.css), inlined so the report stays one file. */
 :root {
@@ -611,7 +618,7 @@ body.missed-only tbody tr:not(.failing):not(.sub-epic) { display: none; }
   function setMode(mode, persist) {
     if (mode === 'engineering') root.setAttribute('data-theme', 'engineering'); else root.removeAttribute('data-theme');
     modeButtons.forEach(function (b) { var on = b.dataset.mode === mode; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', String(on)); });
-    if (persist) { try { localStorage.setItem('abd-mode', mode); } catch (e) {} }
+    if (persist) { try { localStorage.setItem('abd-mode', mode); } catch (e) { console.warn('This browser did not keep the chosen view, so the report opens in the default view next time: ' + e); } }
   }
   modeButtons.forEach(function (b) { b.addEventListener('click', function () { setMode(b.dataset.mode, true); }); });
   setMode(root.getAttribute('data-theme') === 'engineering' ? 'engineering' : 'executive', false);
