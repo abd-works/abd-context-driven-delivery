@@ -966,7 +966,9 @@ A class model written as code. The walk and the body rule live here; each langua
 	-> CodeProperty.lines
 	-> CodeOperation.signature
 + render_body(operation: Operation, previous: CodeBody): list[str]
+	// a body read in another language is translated statement by statement; a statement outside the subset stays in its own language under a note naming it, and the body then ends with the unfinished statement
 	-> CodeBody.in_language_of
+	-> BodyTranslation.translate
 	-> CodeBody.lines_in
 + file_header(preamble: CodeBody): list[str]
 

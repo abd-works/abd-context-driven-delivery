@@ -152,10 +152,10 @@ with description("a Ddd toolset"):
             expect(result.format).to(equal("markdown"))
 
         with context("with a domain model read from python and rendered to typescript"):
-            with it("should carry each python body commented out inside its method"):
+            with it("should translate each python body into its method"):
                 python = "class Cart:\n    def add(self, item: object) -> None:\n        self.items.append(item)\n"
                 result = Ddd(fidelity="model").render("typescript", python, source="python")
-                expect("    // self.items.append(item)" in result.content).to(be_true)
+                expect("    this.items.push(item);" in result.content).to(be_true)
 
 
 with description("a Ddd practice made in a set with the Clean Engineering practice it extends"):

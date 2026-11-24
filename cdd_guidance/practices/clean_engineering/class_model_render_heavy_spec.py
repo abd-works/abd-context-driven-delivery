@@ -84,3 +84,6 @@ with description("a class model rendered to code through a cdd server") as self:
     with context("that is a module's Python file, rendered to TypeScript"):
         with it("should save the code in the same module's TypeScript file"):
             expect(_saved(self.project.root, self.translated)).to(equal((False, ["billing/billing.ts"])))
+
+        with it("should translate each body into TypeScript statements"):
+            expect((self.project.root / "billing" / "billing.ts").read_text(encoding="utf-8")).to(contain("  add(line: CartLine): void {\n    this.lines.push(line);\n  }\n"))

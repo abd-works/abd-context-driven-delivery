@@ -20,9 +20,11 @@ from cdd_guidance.practices.source_code.code_body import (
 )
 from cdd_guidance.practices.source_code.script_imports import STAR, ClassReference, ScriptImports, imported_files
 from cdd_guidance.practices.source_code.source_text import MeasuredBody, SourceText, SpanCollaborators, SpanFailures
+from cdd_guidance.practices.source_code.statement_translation import BodyTranslation, TranslatedBody
 from cdd_guidance.practices.source_code.test_files import HoldsProjectTestCode, ProjectTestCode, TestFileName
 
 __all__ = [
+    "BodyTranslation",
     "BraceCall",
     "BracketStructure",
     "CODE_LANGUAGES",
@@ -45,6 +47,7 @@ __all__ = [
     "SpanFailures",
     "TYPESCRIPT",
     "TestFileName",
+    "TranslatedBody",
     "WrittenBlock",
     "WrittenKey",
     "imported_files",

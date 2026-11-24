@@ -277,3 +277,67 @@ with description("a domain model rendered from one code format to the other") as
 
         with it("should keep each call with its arguments"):
             expect(self.back).to(contain("\t-> BookRepository.load(bookId)"))
+
+
+# Requested 2026-11-24 (r3-bolt-07): a domain model's bodies, written in code, are translated into the other language
+# statement by statement, through the one translation Clean Engineering's render uses.
+_CART_CODE = '''\
+@aggregate_root
+@entity
+class Cart:
+    """Module: Ordering | custom · Cart"""
+
+    def add(self, book: Book, quantity: int) -> CartLine:
+        if quantity <= 0:
+            raise OutOfStock(book.title)
+        for line in self.lines:
+            if line.book == book:
+                line.quantity += quantity
+                return line
+        line = CartLine(book, quantity)
+        self.lines.append(line)
+        return line
+'''
+
+_ADD_IN_TYPESCRIPT = """\
+  add(book: Book, quantity: number): CartLine {
+    if (quantity <= 0) {
+      throw new OutOfStock(book.title);
+    }
+    for (const line of this.lines) {
+      if (line.book === book) {
+        line.quantity += quantity;
+        return line;
+      }
+    }
+    const line = new CartLine(book, quantity);
+    this.lines.push(line);
+    return line;
+  }
+"""
+
+_ADD_IN_PYTHON = """\
+    def add(self, book: Book, quantity: float) -> CartLine:
+        if quantity <= 0:
+            raise OutOfStock(book.title)
+        for line in self.lines:
+            if line.book == book:
+                line.quantity += quantity
+                return line
+        line = CartLine(book, quantity)
+        self.lines.append(line)
+        return line
+"""
+
+
+with description("a domain model whose operation has a body written in code") as self:
+    with context("rendered from Python to TypeScript"):
+        with it("should translate the guard, the loop and the raise into TypeScript"):
+            typescript = Ddd(fidelity="model").render("typescript", _CART_CODE, source="python").content
+            expect(typescript).to(contain(_ADD_IN_TYPESCRIPT))
+
+    with context("rendered from Python to TypeScript and back"):
+        with it("should come back as the same Python statements"):
+            typescript = Ddd(fidelity="model").render("typescript", _CART_CODE, source="python").content
+            back = Ddd(fidelity="model").render("python", typescript, source="typescript").content
+            expect(back).to(contain(_ADD_IN_PYTHON))

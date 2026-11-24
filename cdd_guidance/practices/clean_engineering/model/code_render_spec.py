@@ -306,3 +306,144 @@ with description("a markdown class model rendered to TypeScript"):
 
     with it("should write a call the model notes as the operation is named in TypeScript"):
         expect(self.rendered).to(contain("    Book.isInStock();"))
+
+
+# Requested 2026-11-24 (r3-bolt-07, r3-widget-07): a body written in code is translated into the other language,
+# statement by statement, not carried over as a comment; a statement outside what translates is the only one kept so.
+_CART_WITH_BODIES = '''\
+class OutOfStock(ValueError):
+    """A book that cannot be added."""
+
+
+class Cart:
+    """The books a customer has chosen."""
+
+    def __init__(self, customer_id: str) -> None:
+        self.customer_id = customer_id
+        self.lines: list[CartLine] = []
+
+    def add(self, book: Book, quantity: int) -> CartLine:
+        """Add a line for the book; a book out of stock is refused."""
+        # a book out of stock is refused
+        if quantity <= 0 or not book.is_in_stock(quantity):
+            raise OutOfStock(f"{book.title} is out of stock")
+        for line in self.lines:
+            if line.book is book:
+                line.quantity += quantity
+                return line
+        line = CartLine(book, quantity)
+        self.lines.append(line)
+        return line
+
+    def is_empty(self) -> bool:
+        return len(self.lines) == 0
+
+    def titles(self) -> list[str]:
+        return [line.book.title for line in self.lines if line.quantity > 0]
+
+    def total(self) -> int:
+        return sum(line.subtotal() for line in self.lines)
+'''
+
+_ADD_IN_TYPESCRIPT = """\
+  add(book: Book, quantity: number): CartLine {
+    // a book out of stock is refused
+    if (quantity <= 0 || !book.isInStock(quantity)) {
+      throw new OutOfStock(`${book.title} is out of stock`);
+    }
+    for (const line of this.lines) {
+      if (line.book === book) {
+        line.quantity += quantity;
+        return line;
+      }
+    }
+    const line = new CartLine(book, quantity);
+    this.lines.push(line);
+    return line;
+  }
+"""
+
+_CART_IN_TYPESCRIPT = """\
+class Cart {
+  lines: CartLine[];
+
+  constructor(lines: CartLine[]) {
+    this.lines = lines;
+  }
+
+  count(): number {
+    let counted = 0;
+    for (const line of this.lines) {
+      if (line.quantity > 0 && line.book !== null) {
+        counted += line.quantity;
+      }
+    }
+    return counted;
+  }
+
+  named(title: string): CartLine[] {
+    return this.lines.filter((line) => line.book.title === title);
+  }
+}
+"""
+
+_COUNT_IN_PYTHON = """\
+    def count(self) -> float:
+        counted = 0
+        for line in self.lines:
+            if line.quantity > 0 and line.book is not None:
+                counted += line.quantity
+        return counted
+"""
+
+
+with description("a body written in code, rendered into the other language"):
+    with context("from Python to TypeScript"):
+        with before.all:
+            self.rendered = _render("typescript", _CART_WITH_BODIES, "python")
+
+        with it("should translate a guard, a loop, a raise, a local and a call, statement by statement"):
+            expect(self.rendered).to(contain(_ADD_IN_TYPESCRIPT))
+
+        with it("should translate the constructor's assignments into the constructor"):
+            expect(self.rendered).to(contain("  constructor(customerId: string) {\n    this.customerId = customerId;\n    this.lines = [];\n  }\n"))
+
+        with it("should translate len into length"):
+            expect(self.rendered).to(contain("    return this.lines.length === 0;\n"))
+
+        with it("should translate a list comprehension into filter and map"):
+            expect(self.rendered).to(contain("    return this.lines.filter((line) => line.quantity > 0).map((line) => line.book.title);\n"))
+
+        with it("should keep a statement it cannot translate as Python under a note that names it"):
+            expect(self.rendered).to(contain("    // python statement to translate:\n    // return sum(line.subtotal() for line in self.lines)\n"))
+
+        with it("should leave no whole body to translate"):
+            expect(self.rendered).not_to(contain("python body to translate"))
+
+    with context("from Python to TypeScript and back"):
+        with before.all:
+            self.back = _render("python", _render("typescript", _CART_WITH_BODIES, "python"), "typescript")
+
+        with it("should come back as Python statements"):
+            expect(self.back).to(contain(
+                "        if quantity <= 0 or not book.isInStock(quantity):\n"
+                "            raise OutOfStock(f'{book.title} is out of stock')\n"
+                "        for line in self.lines:\n"
+                "            if line.book == book:\n"
+            ))
+
+        with it("should keep the note above the statement it was written over"):
+            expect(self.back).to(contain("        # a book out of stock is refused\n        if quantity"))
+
+        with it("should leave no whole body to translate"):
+            expect(self.back).not_to(contain("body to translate"))
+
+    with context("from TypeScript to Python"):
+        with before.all:
+            self.rendered = _render("python", _CART_IN_TYPESCRIPT, "typescript")
+
+        with it("should translate a local, a loop, a guard and an addition"):
+            expect(self.rendered).to(contain(_COUNT_IN_PYTHON))
+
+        with it("should translate filter into a list comprehension"):
+            expect(self.rendered).to(contain("        return [line for line in self.lines if line.book.title == title]\n"))

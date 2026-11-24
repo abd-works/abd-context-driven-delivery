@@ -4,6 +4,7 @@ operation are subclasses of the domain parts that spell their own lines."""
 from __future__ import annotations
 
 import re
+from functools import cached_property
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
@@ -14,7 +15,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocComment
-from cdd_guidance.practices.source_code import CodeBody, CodeLanguage
+from cdd_guidance.practices.source_code import BodyTranslation, CodeBody, CodeLanguage, TranslatedBody
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.source_code import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
@@ -405,7 +406,29 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         indent = self.language.indent * 2
         if body.language is self.language:
             return body.lines_in(self.language, indent, self.language.unfinished)
+        translated = self._translated(operation, body)
+        if translated is not None:
+            unfinished = [f"{indent}{self.language.unfinished}"] if translated.untranslated else []
+            return [f"{indent}{line}" if line else line for line in translated.lines] + unfinished
         return self._scaffold(operation, body, indent) + body.lines_in(self.language, indent, self.language.unfinished)
+
+    def _translated(self, operation: Optional[Operation], body: CodeBody) -> Optional[TranslatedBody]:
+        """body, written in another language, translated statement by statement into this one; none when the two
+        languages have no translation between them, or the body holds nothing."""
+        if body.language is None or body.is_empty:
+            return None
+        parameters = [parameter.name for parameter in operation.parameters] if operation is not None else []
+        return BodyTranslation(body.language, self.language, self._parameters_by_operation).translate(body.text, parameters)
+
+    @cached_property
+    def _parameters_by_operation(self) -> dict:
+        """The parameters of each operation the model declares, by its name: what a call with keyword arguments is
+        ordered by."""
+        return {
+            operation.name: [parameter.name for parameter in operation.parameters]
+            for oclass in self.every_class()
+            for operation in oclass.operations
+        }
 
     def file_header(self, preamble: CodeBody) -> List[str]:
         return preamble.lines_in(self.language, "", "")
@@ -449,6 +472,9 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         indent = self.language.indent * 2
         if body.language is self.language:
             return body.lines_in(self.language, indent, "")
+        translated = self._translated(constructor, body)
+        if translated is not None and not translated.untranslated:
+            return [f"{indent}{line}" if line else line for line in translated.lines]
         scaffold = self._scaffold(constructor, body, indent) if constructor is not None else []
         passed = body.language.base_constructor_arguments(body.text) if body.language is not None else None
         base_call = [f"{indent}{self.language.base_constructor_call(passed)}"] if passed is not None else []

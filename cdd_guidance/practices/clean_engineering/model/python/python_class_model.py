@@ -182,7 +182,7 @@ class PythonClass(CodeClass):
     operation_type = PythonOperation
 
     def opening(self, known_names: List[str]) -> List[str]:
-        bases = ", ".join(self.declared_bases(known_names) or (["ABC"] if self.is_contract else []))
+        bases = ", ".join(self.language.type_name(base) for base in self.declared_bases(known_names) or (["ABC"] if self.is_contract else []))
         heading = f"class {self.name}({bases}):" if bases else f"class {self.name}:"
         lines = ["", ""] + [f"@{snake_case_decorator(item)}" for item in self.stereotypes] + [heading]
         doc = self._doc_intent()
