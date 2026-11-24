@@ -33,6 +33,13 @@ Requested 2026-11-16, "Whiteboard entries open the board": a published board's a
 *When* the agent records a new address for the same file
 *Then* the file keeps only the new address, and the other files' addresses in the folder stay as they were
 
+#### Scenario: A record of boards that cannot be read is left for a person to repair
+
+*Given* `.context/whiteboards.json` holds text that is not a JSON object, such as a file cut off half way
+*When* the agent records the board `.context/story-map.whiteboard` was published to
+*Then* the call is refused, naming `.context/whiteboards.json` as unreadable
+*And* the file keeps what it held, so the other boards' addresses in it are not written over
+
 #### Scenario: Only a whiteboard file is published to a board
 
 *Given* `.context/story-map.drawio`, which is not a whiteboard file

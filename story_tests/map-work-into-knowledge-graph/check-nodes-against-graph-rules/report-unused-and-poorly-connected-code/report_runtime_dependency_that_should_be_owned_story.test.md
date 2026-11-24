@@ -5,9 +5,9 @@ format: md
 section: body
 ---
 
-# Sub-epic: Check Clean Engineering Code Through The Graph
+# Sub-epic: Report Unused And Poorly Connected Code
 
-Story map: [Check Clean Engineering Code Through The Graph](../../../../.context/story-map.md#e-check-clean-engineering-code-through-the-graph). Session release-1-2-fixes.
+Story map: [Report Unused And Poorly Connected Code](../../../../.context/story-map.md#e-report-unused-and-poorly-connected-code). Session release-1-2-fixes.
 
 **Evidence mode.** Every scenario here is *Observed*: it holds today and names the code that runs it, `cdd_guidance/practices/clean_engineering/rules/cross_file_rules.py` (`PutLogicOnTheOwningResource`) reading the fact `reading/owned_dependencies.py` records, with each example in `rules/fixtures/cross_file_examples.py`; `rules/cross_file_rules_spec.py` and the story test beside this file run them. Built on 2026-11-22, step 2 of `.sessions/_backlog/check-clean-engineering-across-files.md`.
 

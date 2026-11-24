@@ -75,6 +75,23 @@ The session fill-cart works on Stories alone, with markdown, drawio and whiteboa
 *When* the Person aligns the session's formats
 *Then* every file of the story map is left as it is
 
+#### Scenario: Diagnose and align from the Files app
+
+*Given* the session ++fill-cart++ has written its story map as markdown alone, and the Person has the Files app open on it
+*When* the Person presses Diagnose
+*Then* the Files app lists the two missing files as gaps, each marked as one Align closes
+*When* the Person presses Align
+*Then* the Files app lists `.context/story-map.drawio` and `.context/story-map.whiteboard` as rendered from `.context/story-map.md`
+*And* the Files app says no gap is left
+
+#### Scenario: Send a gap a render does not close to be fixed
+
+*Given* the Files app shows a gap that waits for a person, or a failure the alignment met
+*When* the Person presses Fix on it
+*Then* the failure band shows it in the session's own words with the file it is in, where its Fix sends it to the chat as [Send Failure To Be Fixed](../review-files-in-files-app/send_failure_to_be_fixed_story.test.md#story-send-failure-to-be-fixed) describes
+
+## Story: Render Formats Into Their Files
+
 #### Scenario: Answer a render that fails as a failure
 
 *Given* the session ++fill-cart++ has its story map written in every chosen format
@@ -121,6 +138,8 @@ Answered 2026-11-21, the person: "render should match files to the new shape, bu
 *Then* the render fails, naming the line it would lose
 *And* the file is left as it was
 
+## Story: Diagnose Drawings And Callouts
+
 #### Scenario: Report a drawing that cannot be read
 
 *Given* the session ++fill-cart++ has its story map written in every chosen format
@@ -143,18 +162,3 @@ Answered 2026-11-21, the person: "render should match files to the new shape, bu
 *Then* the diagnosis reports the edge from the story to each scenario as an edge no callout shows
 *And* the diagnosis reports the link to `#cart` as a callout no edge matches
 *And* a story test whose `# Map:` line names its story's heading reports no gap, because the edge from the story to its scenarios matches the callout
-
-#### Scenario: Diagnose and align from the Files app
-
-*Given* the session ++fill-cart++ has written its story map as markdown alone, and the Person has the Files app open on it
-*When* the Person presses Diagnose
-*Then* the Files app lists the two missing files as gaps, each marked as one Align closes
-*When* the Person presses Align
-*Then* the Files app lists `.context/story-map.drawio` and `.context/story-map.whiteboard` as rendered from `.context/story-map.md`
-*And* the Files app says no gap is left
-
-#### Scenario: Send a gap a render does not close to be fixed
-
-*Given* the Files app shows a gap that waits for a person, or a failure the alignment met
-*When* the Person presses Fix on it
-*Then* the failure band shows it in the session's own words with the file it is in, where its Fix sends it to the chat as [Send Failure To Be Fixed](../review-files-in-files-app/send_failure_to_be_fixed_story.test.md#story-send-failure-to-be-fixed) describes

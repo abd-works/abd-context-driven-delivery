@@ -107,6 +107,35 @@ Observed (`graph_reading_spec.py`).
   *And* the story View Book has a `shownOn` edge to Home
   *And* Home has no edge for Wish For Book, which the story map does not hold
 
+#### Scenario: Join a screen to the domain class a domain term names
+
+Observed (`graph_reading_spec.py`).
+
+*Given* ++.context/domain-model.md++ holds the aggregate Book with its root Book
+*When* the Knowledge Graph reads the bookshop project for UX, DDD and Clean Engineering
+*Then* Book List has a `domainTerms` edge to the DDD class Book, the aggregate's root
+  *And* Home has no `domainTerms` edge, since no class is named Shelf
+
+#### Scenario: Run the screen rules on the screens read
+
+Observed (`graph_reading_spec.py`).
+
+*Given* ++bookshop/ux-map.json++ holds a screen named Home
+*When* the Knowledge Graph reads the bookshop project for UX and runs its rules
+*Then* the screen Home carries a screen-names-use-domain-terms violation
+
+#### Scenario: Read a UX map file again after it changes
+
+Observed (`graph_reading_spec.py`).
+
+*Given* the Knowledge Graph has read the bookshop project for UX and Stories
+  *And* a person adds the screen Cart, which shows View Book, to ++bookshop/ux-map.json++
+*When* the Knowledge Graph refreshes ++bookshop/ux-map.json++
+*Then* the map holds Book List, Home, Book Details and Cart, each once
+  *And* Cart has a `shows` edge to the story View Book
+
+## Story: Join UX Controls To The Steps They Serve
+
 #### Scenario: Join a control to the story, scenario and step it serves
 
 Observed (`graph_reading_spec.py`, "from a project whose story map and domain model the graph reads too").
@@ -165,15 +194,6 @@ Observed (`graph_reading_spec.py`, "from a project that holds the map as JSON, i
   *And* Open book has no `shows`, `showsScenarios` or `showsSteps` edge
   *And* the read reports no failure
 
-#### Scenario: Join a screen to the domain class a domain term names
-
-Observed (`graph_reading_spec.py`).
-
-*Given* ++.context/domain-model.md++ holds the aggregate Book with its root Book
-*When* the Knowledge Graph reads the bookshop project for UX, DDD and Clean Engineering
-*Then* Book List has a `domainTerms` edge to the DDD class Book, the aggregate's root
-  *And* Home has no `domainTerms` edge, since no class is named Shelf
-
 #### Scenario: Join a Story Demo control to the step it runs and the property it shows
 
 Observed (`graph_reading_spec.py`).
@@ -183,21 +203,3 @@ Observed (`graph_reading_spec.py`).
 *Then* Titles has a `storySteps` edge to the When step `the Customer opens the book list` of Browse Book List, a story its screen shows
   *And* Titles has a `boundField` edge to the property `title` of the class Book
   *And* Titles has no edge for a step no story holds
-
-#### Scenario: Run the screen rules on the screens read
-
-Observed (`graph_reading_spec.py`).
-
-*Given* ++bookshop/ux-map.json++ holds a screen named Home
-*When* the Knowledge Graph reads the bookshop project for UX and runs its rules
-*Then* the screen Home carries a screen-names-use-domain-terms violation
-
-#### Scenario: Read a UX map file again after it changes
-
-Observed (`graph_reading_spec.py`).
-
-*Given* the Knowledge Graph has read the bookshop project for UX and Stories
-  *And* a person adds the screen Cart, which shows View Book, to ++bookshop/ux-map.json++
-*When* the Knowledge Graph refreshes ++bookshop/ux-map.json++
-*Then* the map holds Book List, Home, Book Details and Cart, each once
-  *And* Cart has a `shows` edge to the story View Book

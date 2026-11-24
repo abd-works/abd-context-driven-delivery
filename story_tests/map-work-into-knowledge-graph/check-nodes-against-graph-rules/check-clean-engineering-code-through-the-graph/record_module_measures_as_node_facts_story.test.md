@@ -38,11 +38,11 @@ Observed (`cdd_guidance/practices/clean_engineering/measures/code_measures_spec.
 *Then* its import loops and the modules it imports are counted from the imports between modules every read records, and no tool is asked
   *And* the node keeps no second fact for either
 
-#### Scenario: Show a module's three measures in its metrics group
+#### Scenario: Show a module's measures in its metrics group
 
-Decided 2026-11-22: a module's metrics group shows its import loops, held to none, and the modules it imports and the modules that import it, which have no limit and raise no violation.
+Decided 2026-11-22: a module's metrics group shows its import loops, held to none, and the modules it imports, which has no limit and raises no violation. Decided 2026-11-24 ("we should add facts at the class and module level ... so that way we have no metrics gate, validate does it"): the modules that import it are held to 40, and the group shows three more measures taken over all its files, each with its limit: the lines of code in its longest file (800), the maintainability index of its least maintainable file (20 or higher), the average total complexity of its classes (15), and the blocks of code it repeats from another file (0, counted as jscpd counts a clone: five or more lines and fifty or more tokens).
 
 *Given* the shop project's config has a `code_measures` section
 *When* the code measures of `shop/cart.py` are taken and the explorer tree is built again
-*Then* the metrics group under the module shop shows its import loops with the limit 0, then the modules it imports and the modules that import it with their value and no limit
-  *And* neither of the two measures with no limit is marked as past a limit
+*Then* the metrics group under the module shop shows its import loops with the limit 0, the modules it imports with its value and no limit, then the modules that import it, its longest file, its least maintainable file, its average class complexity and its copied blocks, each with its limit
+  *And* the measure with no limit is not marked as past a limit

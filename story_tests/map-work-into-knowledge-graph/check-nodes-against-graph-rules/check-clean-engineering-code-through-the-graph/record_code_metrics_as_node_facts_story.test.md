@@ -47,6 +47,14 @@ Decided 2026-11-22: a method that uses no field of its class holds no data to sh
 *When* the code measures of `shop/cart.py` are taken
 *Then* the node of the class Cart still holds unshared_method_groups 2
 
+#### Scenario: Measure only the files a read names
+
+*Given* the shop project's config has a `code_measures` section
+*When* the whole working copy of the shop project is loaded into the graph
+*Then* no node holds a code measure
+
+## Story: Measure Code With The Project's Chosen Tools
+
 #### Scenario Outline: Take a measure with the tool chosen for its language
 
 Observed (`cdd_guidance/practices/clean_engineering/measures/code_measures_heavy_spec.py`, with the real lizard). Decided 2026-11-22: JavaScript is measured with lizard, as TypeScript is.
@@ -85,12 +93,6 @@ The shipped table chooses a tool, or writes `not measured`, for every measure in
 *When* the code measures of `shop/cart.py` are taken
 *Then* the node of the module shop holds no copied_code_blocks
   *And* no rule reports the measure as not taken
-
-#### Scenario: Measure only the files a read names
-
-*Given* the shop project's config has a `code_measures` section
-*When* the whole working copy of the shop project is loaded into the graph
-*Then* no node holds a code measure
 
 #### Scenario: Take no measure in a project that chose no tools
 

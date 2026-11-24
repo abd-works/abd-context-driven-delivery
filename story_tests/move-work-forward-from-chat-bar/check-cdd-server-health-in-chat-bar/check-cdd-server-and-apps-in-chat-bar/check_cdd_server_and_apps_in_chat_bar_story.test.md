@@ -5,7 +5,7 @@ format: md
 section: body
 ---
 
-# Sub-epic: Check CDD Server Health In Chat Bar
+# Sub-epic: Check CDD Server And Apps In Chat Bar
 
 > Evidence: recovered on 2026-11-16 from the chat bar's TypeScript story tests, removed with the chat bar's stubbed
 > tests in 8c56ab052 and 5a851e2e5, each scenario's steps as those tests wrote them. Display CDD Version Badge, Set Next
@@ -192,22 +192,6 @@ section: body
 *Then* the board server starts from the repository's own folder  
   *And* once it answers, the board page opens in the browser pane
 
-#### Scenario: Open an app from a ticket's worktree on the dev lane
-
-Requested 2026-11-16: a chat in file-manager's worktree opened the Files page naming the main checkout, so its calls ran on the stable lane's older code and the page stopped on a file without callouts.
-
-*Given* the chat works in the ticket file-manager's worktree, C:\dev\abd-cdd-file-manager, which the dev lane serves  
-*When* the Person opens the Files app from the chat bar  
-*Then* the Files page's link names the worktree C:\dev\abd-cdd-file-manager as its project, not the main checkout C:\dev\abd-context-driven-delivery  
-  *And* every call the page makes is answered by the dev lane's server, on the ticket's code
-
-#### Scenario: Open an app from the main checkout on the stable lane
-
-*Given* the chat works in the main checkout, C:\dev\abd-context-driven-delivery  
-*When* the Person opens the Files app from the chat bar  
-*Then* the Files page's link names the main checkout as its project  
-  *And* every call the page makes is answered by the stable lane's server
-
 #### Scenario: Open an app named in any case
 
 Requested 2026-11-16: a chat asked to open the app "files" and was refused, since no app is registered as files; the registered app is Files.
@@ -232,6 +216,38 @@ Requested 2026-11-16: a chat asked to open the app "files" and was refused, sinc
   *And* the Graph app opens where its start script says it answers  
   *And* the Person is told it is starting
 
+## Story: Open App On The Chat's Session And Lane
+
+#### Scenario: Open an app from a ticket's worktree on the dev lane
+
+Requested 2026-11-16: a chat in file-manager's worktree opened the Files page naming the main checkout, so its calls ran on the stable lane's older code and the page stopped on a file without callouts.
+
+*Given* the chat works in the ticket file-manager's worktree, C:\dev\abd-cdd-file-manager, which the dev lane serves  
+*When* the Person opens the Files app from the chat bar  
+*Then* the Files page's link names the worktree C:\dev\abd-cdd-file-manager as its project, not the main checkout C:\dev\abd-context-driven-delivery  
+  *And* every call the page makes is answered by the dev lane's server, on the ticket's code
+
+#### Scenario: Open an app from the main checkout on the stable lane
+
+*Given* the chat works in the main checkout, C:\dev\abd-context-driven-delivery  
+*When* the Person opens the Files app from the chat bar  
+*Then* the Files page's link names the main checkout as its project  
+  *And* every call the page makes is answered by the stable lane's server
+
+#### Scenario: Open the Kanban app on the chat’s ticket
+
+*Given* the Kanban app is running, and the chat works on ticket pet-visits  
+*When* the Person presses the Kanban app on the server health panel  
+*Then* the board page opens with the chat's ticket selected
+
+#### Scenario: Open the Graph app on the chat’s session path
+
+*Given* the Graph app is running, and the chat works on ticket pet-visits, whose session works in harness/graph  
+*When* the Person presses the Graph app on the server health panel  
+*Then* the Graph app opens on the session's path
+
+## Story: Say Why App Did Not Open
+
 #### Scenario: Say why the Graph app did not start
 
 *Given* the Graph app is not running, and its app server does not come up  
@@ -250,15 +266,3 @@ Requested 2026-11-16: a chat asked to open the app "files" and was refused, sinc
 *Given* the Graph app is running, but its page does not load in the browser pane  
 *When* the Person presses the Graph app on the server health panel  
 *Then* the Person is told the page did not load, in the pane's own words
-
-#### Scenario: Open the Kanban app on the chat’s ticket
-
-*Given* the Kanban app is running, and the chat works on ticket pet-visits  
-*When* the Person presses the Kanban app on the server health panel  
-*Then* the board page opens with the chat's ticket selected
-
-#### Scenario: Open the Graph app on the chat’s session path
-
-*Given* the Graph app is running, and the chat works on ticket pet-visits, whose session works in harness/graph  
-*When* the Person presses the Graph app on the server health panel  
-*Then* the Graph app opens on the session's path

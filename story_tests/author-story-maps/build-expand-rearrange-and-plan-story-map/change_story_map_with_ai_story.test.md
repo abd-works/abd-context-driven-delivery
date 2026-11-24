@@ -5,7 +5,9 @@ format: md
 section: body
 ---
 
-# Sub-epic: Author Story Changes With AI
+# Sub-epic: Build, Expand, Rearrange And Plan Story Map
+
+The scenarios of the story map's Change Story Map With AI, written as the Story UI app's own four stories. Moved on 2026-11-24 from the sub-epic Author Story Changes With AI, which held that one story, into Build, Expand, Rearrange And Plan Story Map, whose outcome it serves.
 
 ### Domain terms
 

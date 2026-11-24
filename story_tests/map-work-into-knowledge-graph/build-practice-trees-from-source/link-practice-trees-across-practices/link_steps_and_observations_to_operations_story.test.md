@@ -85,6 +85,8 @@ Observed (`cdd_guidance/practices/stories/model/story_tests_on_map_spec.py`). De
 *Then* the When invokes `load` of OrderRepository and `pack` of Order in `src/bookshop/order.py`
   *And* it invokes nothing in `src/bookshop/order.ts` or `ordering/order/order.py`
 
+## Story: Find The Class A Step Calls
+
 #### Scenario: Link a step to the class its linked domain term names
 
 Observed (`cdd_guidance/practices/stories/model/term_links_spec.py`). Source: the person's answer 2, 2026-11-20, "A step's linked domain term is an edge from the step to the DDD class it links to"; defect r3-sparky-05.

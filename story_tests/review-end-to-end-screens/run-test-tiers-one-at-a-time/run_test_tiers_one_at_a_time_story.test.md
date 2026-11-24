@@ -57,6 +57,8 @@ Story map: [Run Test Tiers One At A Time](../../../.context/story-map.md#e-run-t
 *When* the health report asks the [cadence](../../../harness/release/.context/release-model.md#testcadence) what is due
 *Then* the cadence starts nothing until test.ps1 ends
 
+## Story: Record Test Run
+
 #### Scenario: Run a tier again after a killed run
 
 > Test: unit: harness/release/test_runs_spec.py 'that a process that was killed left running on this commit'; heavy: harness/release/test_runs_heavy_spec.py 'that is killed while its tier works' ('should record a run of its own, the killed run before it recorded as abandoned').

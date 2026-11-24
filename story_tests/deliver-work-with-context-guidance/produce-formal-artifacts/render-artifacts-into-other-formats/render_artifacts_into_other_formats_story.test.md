@@ -5,9 +5,9 @@ format: md
 section: body
 ---
 
-# Sub-epic: Produce Formal Artifacts
+# Sub-epic: Render Artifacts Into Other Formats
 
-Story map: [Produce Formal Artifacts](../../../.context/story-map.md#e-produce-formal-artifacts). Session release-1-2-fixes.
+Story map: [Render Artifacts Into Other Formats](../../../../.context/story-map.md#e-render-artifacts-into-other-formats). Session release-1-2-fixes.
 
 **Evidence mode.** Every scenario here is *Observed*: it holds for the Generate and Render actions today (`cdd_guidance/actions/generate`, `cdd_guidance/actions/render`, `harness/guidance_actions/guidance_actions.py`). They were written after exploratory testing round 1 (defects widget-01, 02, 06, 07, 09) showed the behaviour had no scenario.
 
@@ -44,50 +44,6 @@ Story map: [Produce Formal Artifacts](../../../.context/story-map.md#e-produce-f
 | ++.context/empty.md++ | nothing |
 | ++../outside/story-map.md++ | a story map in a folder beside the project |
 
-## Story: Generate Fidelity Artifact
-
-### Evidence
-
-| Source | Note |
-|--------|------|
-| `harness/guidance_actions/guidance_actions.py` `GUIDANCE_PARAMETER` | "Any other string is text this action runs once" |
-| `harness/guidance_actions/guidance_actions.py` `UnknownGuidance` | a listed word that is no slug is refused, listing the slugs there are |
-| Defects widget-01, widget-02 | a misspelt slug sent alone ran as text with no rules; a mapping whose toolset was a slug was refused as an unknown slug |
-
-#### Scenario: Refuse a misspelt slug sent alone
-
-Observed.
-
-*Given* the bookshop session works on Stories
-*When* Claude Code generates with guidance ++stories_story_map++
-*Then* the call is refused, saying no practice or fidelity has the slug ++stories_story_map++
-  *And* the refusal lists ++stories-story-map++ among the slugs there are
-
-#### Scenario: Run prose once as text
-
-Observed.
-
-*Given* the bookshop session works on Stories
-*When* Claude Code generates with guidance ++write the story map++
-*Then* the answer holds ++write the story map++
-
-#### Scenario: Work on the practice a mapping names by its slug
-
-Observed.
-
-*Given* the bookshop session works on Stories
-*When* Claude Code generates with the guidance mapping ++{toolset: stories, fidelity: story_map}++
-*Then* the answer holds the rules of ++stories-story-map++
-
-#### Scenario: Refuse a mapping that names no toolset
-
-Observed.
-
-*Given* the bookshop session works on Stories
-*When* Claude Code generates with the guidance mapping ++{foo: bar}++
-*Then* ++{foo: bar}++ is refused, saying a mapping names its practice in toolset
-  *And* the refusal lists ++stories-story-map++ among the slugs there are
-
 ## Story: Render Artifact Into Another Format
 
 ### Evidence
@@ -97,16 +53,6 @@ Observed.
 | `cdd_guidance/actions/render/render.py` `Render.render` | a render of paths "is saved beside the first path ... keeping the layout people gave a drawing already there" |
 | `cdd_guidance/actions/validate/validate.py` `Validate.validate` | "A path that is not there, or not under the session's root, is refused" |
 | Defects widget-06, widget-07, widget-09 | any markdown file's render replaced story-map.drawio; a path outside the project was rendered and saved there; a whiteboard file with no source failed with a traceback |
-
-#### Scenario: Save another file's drawing under that file's own name
-
-Observed.
-
-*Given* ++.context/story-map.drawio++ holds the story map's drawing, with Place Order moved by a person
-  *And* ++.context/returns.md++ holds another story map
-*When* Claude Code renders ++.context/returns.md++ to drawio at ++stories-story-map++
-*Then* the saved file is .context/returns.drawio, which draws Return Damaged Book
-  *And* ++.context/story-map.drawio++ is as the person left it
 
 #### Scenario: Refuse to render an empty file
 
@@ -147,15 +93,6 @@ Observed for what the drawing holds (`cdd_guidance/practices/stories/thin_slice_
   *And* the saved file is `.context/thin-slice.drawio`
   *And* ++.context/story-map.drawio++ is as the person left it
 
-#### Scenario: Save one drawing of every module where the modules fidelity declares it
-
-Observed (`cdd_guidance/actions/render/render_spec.py`, `render_saves_beside_source_heavy_spec.py`). Written after exploratory testing round 3 (defect r3-widget-01): the drawing of all the modules was saved in the first module's own `.context` folder. `clean_engineering.md` declares `.context/modules.drawio` for the modules fidelity.
-
-*Given* `src/catalogue/.context/module-context.md` and `src/ordering/.context/module-context.md` each hold a module card
-*When* Claude Code renders both cards to drawio at ++clean-engineering-modules++
-*Then* the saved file is `.context/modules.drawio` in the project's root, which draws both modules
-  *And* no drawing is saved in `src/catalogue/.context`
-
 #### Scenario: Read a markdown file as markdown at a fidelity that works in code
 
 Observed (`cdd_guidance/actions/render/render_spec.py`, `render_saves_beside_source_heavy_spec.py`). Written after exploratory testing round 3 (defects r3-widget-05, widget-09): a `.md` path with no source named was read in the fidelity's own format, Python, and refused as Python that does not parse. Render's description says to omit source "for a file whose extension says its format".
@@ -163,15 +100,6 @@ Observed (`cdd_guidance/actions/render/render_spec.py`, `render_saves_beside_sou
 *Given* `src/ordering/.context/ordering-model.md` holds a class model with the class Cart
 *When* Claude Code renders `src/ordering/.context/ordering-model.md` to drawio at ++clean-engineering-model++, naming no source
 *Then* the saved file is `src/ordering/.context/ordering-model.drawio`, which draws Cart
-
-#### Scenario: Save a class model drawn from code under the name the model fidelity writes markdown to
-
-Observed (`cdd_guidance/actions/render/render_spec.py`, `harness/guidance/declared_outputs_spec.py`). Written after exploratory testing (defect widget-15): a class model rendered from code to markdown was saved beside the code under the code's own name, `src/order.md`. `clean_engineering.md` declares `{module}/` for the model's code and `{module}/.context/{module}-model.md` for its markdown; the module is the folder holding the code.
-
-*Given* `src/ordering/cart.ts` holds the class Cart, in the module folder `src/ordering`
-*When* Claude Code renders `src/ordering/cart.ts` to markdown at ++clean-engineering-model++
-*Then* the saved file is `src/ordering/.context/ordering-model.md`, which holds Cart
-  *And* no `src/ordering/cart.md` is saved beside the code
 
 #### Scenario: Refuse a fidelity that declares no file in the format rendered to
 
@@ -191,6 +119,36 @@ Observed (`cdd_guidance/actions/render/render_spec.py`, `cdd_guidance/practices/
 *Then* the call is refused, naming should total its lines as a test whose body would be lost
   *And* `src/cart_spec.py` is as it was
 
+## Story: Save Rendered Artifact Where Its Fidelity Declares It
+
+#### Scenario: Save another file's drawing under that file's own name
+
+Observed.
+
+*Given* ++.context/story-map.drawio++ holds the story map's drawing, with Place Order moved by a person
+  *And* ++.context/returns.md++ holds another story map
+*When* Claude Code renders ++.context/returns.md++ to drawio at ++stories-story-map++
+*Then* the saved file is .context/returns.drawio, which draws Return Damaged Book
+  *And* ++.context/story-map.drawio++ is as the person left it
+
+#### Scenario: Save one drawing of every module where the modules fidelity declares it
+
+Observed (`cdd_guidance/actions/render/render_spec.py`, `render_saves_beside_source_heavy_spec.py`). Written after exploratory testing round 3 (defect r3-widget-01): the drawing of all the modules was saved in the first module's own `.context` folder. `clean_engineering.md` declares `.context/modules.drawio` for the modules fidelity.
+
+*Given* `src/catalogue/.context/module-context.md` and `src/ordering/.context/module-context.md` each hold a module card
+*When* Claude Code renders both cards to drawio at ++clean-engineering-modules++
+*Then* the saved file is `.context/modules.drawio` in the project's root, which draws both modules
+  *And* no drawing is saved in `src/catalogue/.context`
+
+#### Scenario: Save a class model drawn from code under the name the model fidelity writes markdown to
+
+Observed (`cdd_guidance/actions/render/render_spec.py`, `harness/guidance/declared_outputs_spec.py`). Written after exploratory testing (defect widget-15): a class model rendered from code to markdown was saved beside the code under the code's own name, `src/order.md`. `clean_engineering.md` declares `{module}/` for the model's code and `{module}/.context/{module}-model.md` for its markdown; the module is the folder holding the code.
+
+*Given* `src/ordering/cart.ts` holds the class Cart, in the module folder `src/ordering`
+*When* Claude Code renders `src/ordering/cart.ts` to markdown at ++clean-engineering-model++
+*Then* the saved file is `src/ordering/.context/ordering-model.md`, which holds Cart
+  *And* no `src/ordering/cart.md` is saved beside the code
+
 #### Scenario: Answer a render that saves nothing with its content and where the fidelity declares it
 
 Observed (`cdd_guidance/actions/render/render_spec.py`). Written after exploratory testing round 3 (defects r3-bolt-06, r3-sparky-07, r3-rivet-08): a render to code answered one text with no word of where it goes, and a realization rendered from a saved graph was saved as `graph.md` beside the graph. Render's description says a render other than drawio, whiteboard or markdown "returns its content"; whether a render to code should save one file for each aggregate or story itself waits for the person's decision.
@@ -208,6 +166,8 @@ Observed (`cdd_guidance/actions/render/render_spec.py`). Written after explorato
 *When* Claude Code renders `graphs/graph.json` to markdown at ++bdd-realization++ with source graph
 *Then* the answer holds the realization and names `.context/{scope}-bdd-realization.md` as where the fidelity declares it
   *And* no `graph.md` is saved beside `graphs/graph.json`
+
+## Story: Render Story Tests For Each Story
 
 #### Scenario Outline: Save a story test for each story where the fidelity declares it
 
@@ -249,6 +209,8 @@ Observed (`stories_render_saves_heavy_spec.py`, `scenarios_code_render_spec.py`)
 *Given* the Pack Orders project holds its story tests in TypeScript
 *When* Claude Code renders `story_tests` to markdown at ++stories-scenarios++
 *Then* render saves `pack_order_story.test.md` and `cancel_order_story.test.md` in `story_tests/fulfil-order/pack-orders`, as the scenarios fidelity declares them
+
+## Story: Render Onto File Already There
 
 #### Scenario Outline: Write changed scenarios onto a story test already there, losing nothing
 

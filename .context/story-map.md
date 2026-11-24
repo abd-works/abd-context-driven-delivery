@@ -147,35 +147,113 @@ Observed: `record-decisions.write_cdr` writes a decision record under the sessio
 
 ## (E) Produce Formal Artifacts
 
-### (S) Agent --> [Generate Fidelity Artifact](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/produce_formal_artifacts_story.test.md#story-generate-fidelity-artifact)
+Grouped on 2026-11-24 into four sub-epics, as splitting its stories into stories of seven scenarios or fewer took it past nine: Generate Fidelity Artifacts, Render Artifacts Into Other Formats, Take Practice Artifacts To Other Formats And Back, and Take UX Artifacts To Other Formats And Back.
+
+### (E) Generate Fidelity Artifacts
+
+The agent writes each listed guidance's artifact at its fidelity, from the fidelity before it, and records the test tiers of the modules it writes tests for. Grouped on 2026-11-24 from Produce Formal Artifacts.
+
+#### (S) Agent --> [Generate Fidelity Artifact](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/generate-fidelity-artifacts/generate_fidelity_artifacts_story.test.md#story-generate-fidelity-artifact)
 
 Observed: `/generate` writes each listed guidance's artifact at its fidelity, such as a story map, a class model or acceptance tests, into the session workpath's `.context/` or code folder, then validates what it wrote (`actions/generate`).
 
-### (S) Agent --> [Render Artifact Into Another Format](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/produce_formal_artifacts_story.test.md#story-render-artifact-into-another-format)
-
-Observed: `/render` turns an artifact already generated into another format on the same guidance, such as a markdown story map into drawio (`actions/render`).
-
-### (S) Agent --> [Take Artifact To Another Format And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take_artifact_to_another_format_and_back_story.test.md#story-take-artifact-to-another-format-and-back)
-
-Observed (2026-11-19, the practices' format adapters under `cdd_guidance/practices/stories/model`, `clean_engineering/model` and `ddd/model`): an artifact rendered to another format and rendered back keeps what a person wrote: a story comes back under the sub-epic its cell names, and a class model gains no relationship nobody wrote. Split from Render Artifact Into Another Format, whose scenarios say where a render is saved. Intended: the scenarios in the story's file that name the evidence still missing.
-
-### (S) Agent --> [Record Test Tiers Of Module](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/record_test_tiers_of_module_story.test.md#story-record-test-tiers-of-module)
-
-Requested (2026-11-22, change 6 of the defect analysis: "the tiers in use are tracked in session.json, for each module", filled by "the appropriate generate or render command"); Built (2026-11-22): a generate or a render at Stories acceptance tests or BDD development records in the session's `session.json` the test tiers of the module it writes tests for, each with its test tool: unit by default, server and web once a test file of that tier is there. Where it cannot tell the module, the tool, or whether the module needs the server or web tier, its reply asks the agent to decide and record it with `session.record_test_tier` (`space/session/test_tiers.py`, `cdd_guidance/practices/tdd/module_tiers.py`).
-
-### (S) Agent --> Generate From Previous Fidelity
+#### (S) Agent --> Generate From Previous Fidelity
 
 Observed: generating a fidelity reads the artifact of the fidelity before it, such as scenarios from the story map, and when the two use different formats the earlier one is rendered into the new format first (`Ticket.generate_commands`; `catalog/workflow.md` Scenario 1).
 
-### (S) Agent --> Generate Several Practices In One Command
+#### (S) Agent --> Generate Several Practices In One Command
 
 Observed: one action with several guidance names produces every practice's artifact at the same depth, such as Stories, Clean Engineering, UX and DDD at specification (`catalog/workflow.md` Scenario 3).
+
+#### (S) Agent --> [Record Test Tiers Of Module](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/generate-fidelity-artifacts/record_test_tiers_of_module_story.test.md#story-record-test-tiers-of-module)
+
+Requested (2026-11-22, change 6 of the defect analysis: "the tiers in use are tracked in session.json, for each module", filled by "the appropriate generate or render command"); Built (2026-11-22): a generate or a render at Stories acceptance tests or BDD development records in the session's `session.json` the test tiers of the module it writes tests for, each with its test tool: unit by default, server and web once a test file of that tier is there. Where it cannot tell the module, the tool, or whether the module needs the server or web tier, its reply asks the agent to decide and record it with `session.record_test_tier` (`space/session/test_tiers.py`, `cdd_guidance/practices/tdd/module_tiers.py`).
+
+#### (S) Agent --> [Record Decided Test Tier](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/generate-fidelity-artifacts/record_test_tiers_of_module_story.test.md#story-record-decided-test-tier)
+
+Built (2026-11-22): the agent records the tier it decided with `session.record_test_tier`, which refuses a tier that is none of unit, server and web, a tier with no test tool and a record that is wrongly shaped, keeps the tool the agent recorded when a later render looks again, and reports a recorded module whose folder is gone (`space/session/test_tiers.py`). Split from Record Test Tiers Of Module on 2026-11-24.
+
+### (E) Render Artifacts Into Other Formats
+
+The agent turns an artifact already generated into another format on the same guidance and saves it where the fidelity declares it, without losing what a file already there holds. Grouped on 2026-11-24 from Produce Formal Artifacts.
+
+#### (S) Agent --> [Render Artifact Into Another Format](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/render-artifacts-into-other-formats/render_artifacts_into_other_formats_story.test.md#story-render-artifact-into-another-format)
+
+Observed: `/render` turns an artifact already generated into another format on the same guidance, such as a markdown story map into drawio, reading the source's format from its name, and refuses an empty file, a path outside the session's root, and a format the fidelity declares no file in (`actions/render`).
+
+#### (S) Agent --> [Save Rendered Artifact Where Its Fidelity Declares It](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/render-artifacts-into-other-formats/render_artifacts_into_other_formats_story.test.md#story-save-rendered-artifact-where-its-fidelity-declares-it)
+
+Observed (`cdd_guidance/actions/render/render.py`): a render is saved beside its source under the name the fidelity writes that format to, or the source's own name, and a render that saves nothing answers with its content and where the fidelity declares it. Split from Render Artifact Into Another Format on 2026-11-24.
+
+#### (S) Agent --> [Render Story Tests For Each Story](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/render-artifacts-into-other-formats/render_artifacts_into_other_formats_story.test.md#story-render-story-tests-for-each-story)
+
+Observed: a render of scenarios to code saves one story test for each story the named file holds, where the fidelity declares it, importing the step library by its path from the story test's folder, and a folder of story tests renders back to a scenarios file for each story. Split from Render Artifact Into Another Format on 2026-11-24.
+
+#### (S) Agent --> [Render Onto File Already There](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/render-artifacts-into-other-formats/render_artifacts_into_other_formats_story.test.md#story-render-onto-file-already-there)
+
+Observed: a render onto a story test or a document already there writes the changed scenarios and loses nothing, changes nothing when rendered again, leaves a step library a person changed as it is, and hands what the source no longer holds to the agent to decide. Split from Render Artifact Into Another Format on 2026-11-24.
+
+### (E) Take Practice Artifacts To Other Formats And Back
+
+An artifact of Stories, Clean Engineering, BDD or DDD rendered to another format and rendered back keeps what a person wrote. Grouped on 2026-11-24 from Produce Formal Artifacts.
+
+#### (S) Agent --> [Take Artifact To Another Format And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-practice-artifacts-to-other-formats-and-back/take_artifact_to_another_format_and_back_story.test.md#story-take-artifact-to-another-format-and-back)
+
+Observed (2026-11-19, the practices' format adapters under `cdd_guidance/practices/stories/model`, `clean_engineering/model` and `ddd/model`): an artifact rendered to another format and rendered back keeps what a person wrote: a story comes back under the sub-epic its cell names, and the prose a drawing cannot show is kept in the drawing. Split from Render Artifact Into Another Format, whose scenarios say where a render is saved. Intended: the scenarios in the story's file that name the evidence still missing.
+
+#### (S) Agent --> [Take Class Model To Another Format And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-practice-artifacts-to-other-formats-and-back/take_artifact_to_another_format_and_back_story.test.md#story-take-class-model-to-another-format-and-back)
+
+Observed (`cdd_guidance/practices/clean_engineering/model`): a class model taken through draw.io or code and back gains no relationship nobody wrote, keeps its classes' notes and calls, spells types in the language it is rendered to, and is saved in each module's own file. Split from Take Artifact To Another Format And Back on 2026-11-24.
+
+#### (S) Agent --> [Take Module Cards To Another Format And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-practice-artifacts-to-other-formats-and-back/take_artifact_to_another_format_and_back_story.test.md#story-take-module-cards-to-another-format-and-back)
+
+Observed: module cards come back from their drawing as the person wrote them, and a modules whiteboard is read back with only the modules a person wrote. Split from Take Artifact To Another Format And Back on 2026-11-24.
+
+#### (S) Agent --> [Take BDD Specs To Another Format And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-practice-artifacts-to-other-formats-and-back/take_artifact_to_another_format_and_back_story.test.md#story-take-bdd-specs-to-another-format-and-back)
+
+Observed (`cdd_guidance/practices/bdd`): a finished spec comes back from another language as it was written, keeping its observations' order, nested states and call graphs; a realization sketch is read and written in the sketch template's notation; and BDD offers only the formats it reads, renders and checks. Split from Take Artifact To Another Format And Back on 2026-11-24.
+
+#### (S) Agent --> [Take Domain Documents To Another Format And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-practice-artifacts-to-other-formats-and-back/take_domain_documents_to_another_format_and_back_story.test.md#story-take-domain-documents-to-another-format-and-back)
+
+Observed (`cdd_guidance/practices/ddd/model`; exploratory-testing defects widget-20, r3-bolt-03): a bounded-context map and a domain model keep every line a person wrote when read and written again, and when a drawing is written back over them or with no markdown beside it; a domain model rendered to code is saved in each aggregate's own file. Its scenarios were written before the story was on the map; it was put on the map on 2026-11-24, with the two scenarios about domain models from Take Artifact To Another Format And Back.
+
+#### (S) Agent --> [Keep Aggregate Links Through Another Format](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-practice-artifacts-to-other-formats-and-back/take_domain_documents_to_another_format_and_back_story.test.md#story-keep-aggregate-links-through-another-format)
+
+Observed: the arrows between aggregates are read back from a domain model's drawing and drawn again from the markdown, an integration whose arrow a person removed is left out, and a bounded context's file names each aggregate as a link to the domain model, keeping what a person wrote. Split from Take Domain Documents To Another Format And Back on 2026-11-24.
+
+### (E) Take UX Artifacts To Other Formats And Back
+
+A UX map, a mockup and a view rendered to another format and rendered back keep what a person wrote. Grouped on 2026-11-24 from Produce Formal Artifacts; its scenarios were headed under Take Artifact To Another Format And Back.
+
+#### (S) Agent --> [Take UX Map To Another Format And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-ux-artifacts-to-other-formats-and-back/take_ux_map_to_another_format_and_back_story.test.md#story-take-ux-map-to-another-format-and-back)
+
+Observed (`cdd_guidance/practices/ux/model`; exploratory-testing defects r3-gizmo-01, 02): the UX context and the UX map's drawing each keep what the other cannot hold, and a drawing is read back with its stories, domain terms, layouts, areas and kinds of navigation. Split from Take Artifact To Another Format And Back on 2026-11-24.
+
+#### (S) Agent --> [Take Mockup Drawing To Another Format And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-ux-artifacts-to-other-formats-and-back/take_ux_map_to_another_format_and_back_story.test.md#story-take-mockup-drawing-to-another-format-and-back)
+
+Observed: a mockup's drawing is saved beside its board, shows what each screen and control serves, and is read back with its controls in their own regions. Split from Take Artifact To Another Format And Back on 2026-11-24.
+
+#### (S) Agent --> [Take Mockup To Claude Whiteboard And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-ux-artifacts-to-other-formats-and-back/take_ux_map_to_another_format_and_back_story.test.md#story-take-mockup-to-claude-whiteboard-and-back)
+
+Observed: a mockup's board shows what each screen and control serves and is read back with it, reading a control where a person moved its card and keeping where a person put a screen. Split from Take Artifact To Another Format And Back on 2026-11-24.
+
+#### (S) Agent --> [Take Mockup To Claude Design Canvas And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-ux-artifacts-to-other-formats-and-back/take_ux_map_to_another_format_and_back_story.test.md#story-take-mockup-to-claude-design-canvas-and-back)
+
+Observed: a mockup goes to a Claude Design canvas and back, a canvas missing a screen's prototype page is refused, and a published canvas and a screen people ported are left as they are. Split from Take Artifact To Another Format And Back on 2026-11-24.
+
+#### (S) Agent --> [Take View Code To Another Language And Back](../story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/take-ux-artifacts-to-other-formats-and-back/take_ux_map_to_another_format_and_back_story.test.md#story-take-view-code-to-another-language-and-back)
+
+Observed: the front-end code fidelity starts in a format it writes, a view renders between TypeScript and JavaScript both ways onto the file a person wrote into, losing nothing, and a render that cannot hold the view, or between a view and a UX map, is refused. Split from Take Artifact To Another Format And Back on 2026-11-24.
 
 ## (E) Check Artifacts Against Rules
 
 ### (S) Agent --> [Validate Artifact Against Rules](../story_tests/deliver-work-with-context-guidance/check-artifacts-against-rules/check_artifacts_against_rules_story.test.md#story-validate-artifact-against-rules)
 
 Observed: `/validate` runs the practice's graph rules over the files and judges every rule Pass or Fail without editing, then saves the report, which the board and chat bar read (`actions/validate`).
+
+### (S) Agent --> [Read Validated Files As Their Practice Writes Them](../story_tests/deliver-work-with-context-guidance/check-artifacts-against-rules/check_artifacts_against_rules_story.test.md#story-read-validated-files-as-their-practice-writes-them)
+
+Observed (exploratory-testing round 3, defects r3-rivet-10, r3-sparky-10, r3-sparky-04): validate reads each file as its practice writes it: a spec's describes however it quotes them, a story test validated alone at the place its story map gives it, and a markdown scenarios file's examples without asking for an examples file. Split from Validate Artifact Against Rules on 2026-11-24.
 
 ### (S) Agent --> Satisfy Violations Until Clean
 
@@ -273,43 +351,53 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart refresh -
 
 ## (E) See Work On Session Board
 
-### (S) Person --> [Open Board](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-open-board)
+The board shows the tickets and lets a person arrange what it shows. Its scenarios are in the files of its two sub-epics; its shared steps and tier specs stay in `see-work-on-session-board/`. Grouped into two sub-epics on 2026-11-24, as it had grown to ten stories.
+
+### (E) [Show Tickets On Board](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md)
+
+The board opens on a project and shows every ticket and backlog item in the column its work puts it in. Grouped on 2026-11-24 from See Work On Session Board.
+
+#### (S) Person --> [Open Board](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md#story-open-board)
 
 Observed: `board-page.ts` `start()` reads the board when the page opens.
 
-### (S) Board App --> [Display Board](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-board)
+#### (S) Board App --> [Display Board](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md#story-display-board)
 
 Observed: Backlog, Discovery, Specification, Implementation and Complete, with In progress and Done inside each stage; the board refreshes after each cdd tool call, and a toast announces a ticket's move or review. The scenarios about the cdd server's health and the board's own install moved to Display Board Server Health and Update Board And CDD on 2026-11-24.
 
-### (S) Person --> [Arrange Board And Details](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-board-and-details)
-
-Observed: a drag on the split bar resizes the board and details; either can take the whole page.
-
-### (S) Board App --> [Display Backlog Items As Tickets](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-backlog-items-as-tickets)
+#### (S) Board App --> [Display Backlog Items As Tickets](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md#story-display-backlog-items-as-tickets)
 
 Observed: the Backlog column shows the title of each file in `.sessions/_backlog/`.
 
-### (S) Board App --> [Display Ticket Card](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-card)
+#### (S) Board App --> [Display Ticket Card](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md#story-display-ticket-card)
 
 Observed: `ticket-card-view.tsx` draws the title, age and one block per enabled practice; the active ticket has a thick orange outline.
 
-### (S) Board App --> [Place Ticket In Column](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-place-ticket-in-column)
+#### (S) Board App --> [Place Ticket In Column](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md#story-place-ticket-in-column)
 
 Observed: a ticket shows in the stage of its latest move or, before any move, in the earliest stage its session shows work in; work in a later or an earlier stage moves it there, and a person's move holds until the next work (`see-work-on-session-board.story.shared.py`). Split from Display Ticket Card on 2026-11-24.
 
-### (S) Board App --> [Display Ticket Details](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-details)
+### (E) [Arrange Board And Ticket Details](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md)
+
+The person sizes the board, its details and its side panels, sets each stage's limit, and opens a ticket's card and details. Grouped on 2026-11-24 from See Work On Session Board.
+
+#### (S) Person --> [Arrange Board And Details](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md#story-arrange-board-and-details)
+
+Observed: a drag on the split bar resizes the board and details; either can take the whole page.
+
+#### (S) Board App --> [Display Ticket Details](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md#story-display-ticket-details)
 
 Observed: a press on a card shows its practices, fidelity progress and latest validation reports below the board; with none pressed, the details show the active ticket.
 
-### (S) Person --> [Set Stage WIP Limit](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-set-stage-wip-limit)
+#### (S) Person --> [Set Stage WIP Limit](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md#story-set-stage-wip-limit)
 
 Observed: `BoardFile.set_wip_limit`, saved in `.sessions/_board.json`.
 
-### (S) Person --> [Arrange Side Panel](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-side-panel)
+#### (S) Person --> [Arrange Side Panel](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md#story-arrange-side-panel)
 
 Observed: the report, files and help panels resize, expand one at a time and close.
 
-### (S) Person --> [Expand Ticket From Empty Area](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-expand-ticket-from-empty-area)
+#### (S) Person --> [Expand Ticket From Empty Area](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md#story-expand-ticket-from-empty-area)
 
 Observed: one ticket's card is expanded at a time, and a press on a card's fidelity segment opens the card on that fidelity (scenarios moved from Display Ticket Details on 2026-11-24). Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "click any empty area to expand ticket"): a press anywhere on a card that is not a control expands it. Built today (checked 2026-11-11): a press on a card chooses it and shows its details (`ticket-card-view.tsx:198`); only the expand mark opens the card's actions (`ticket-card-view.tsx:57`). Missing: expanding from an empty area.
 
@@ -317,61 +405,79 @@ Built (2026-11-12): on the board, driven by its screen story in `story_tests/mov
 
 ## (E) Steer Ticket Sessions
 
-### (S) Person --> [Open Ticket Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-open-ticket-session)
+A ticket's session is opened, made active, moved and closed from the board. Its scenarios are in the files of its three sub-epics; its shared steps and tier specs stay in `steer-ticket-sessions/`. Grouped into three sub-epics on 2026-11-24, as it had grown to fifteen stories with Delete Ticket Branch.
+
+### (E) [Open Ticket Sessions](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-sessions/open_ticket_sessions_story.test.md)
+
+A person opens a ticket's session, chooses where its work goes, and reaches the ticket's chat. Grouped on 2026-11-24 from Steer Ticket Sessions.
+
+#### (S) Person --> [Open Ticket Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-sessions/open_ticket_sessions_story.test.md#story-open-ticket-session)
 
 Observed: `Ticket.new` calls `Session.new`; a person can open the ticket on a folder of the repository.
 
-### (S) Person --> [Choose Ticket Workpath And Roots](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-choose-ticket-workpath-and-roots)
+#### (S) Person --> [Choose Ticket Workpath And Roots](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-sessions/open_ticket_sessions_story.test.md#story-choose-ticket-workpath-and-roots)
 
 Observed: a person browses to the folder a ticket's work goes in, for the whole ticket or one practice, and can put a practice back on its default root (the roots dialog; `steer-ticket-sessions.story.shared.py`). Split from Open Ticket Session on 2026-11-24.
 
-### (S) Board App --> [Refuse Unusable Ticket Title](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-refuse-unusable-ticket-title)
+#### (S) Person --> Choose Where A Backlog Item Works
+
+Observed (checked 2026-11-10): starting a backlog item opens Where <item> works, a folder browser that starts at the whole repository with Up and one button per folder; Use <folder> starts the item's session with that folder as its workpath (`root-choice-client.ts` `start`, `root-choice-view.tsx`).
+
+#### (S) Board App --> [Refuse Unusable Ticket Title](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-sessions/open_ticket_sessions_story.test.md#story-refuse-unusable-ticket-title)
 
 Observed (exploratory-testing defects gizmo-04, 05, 06): a new ticket's title that gives no name, whose name a ticket already has, or whose name is longer than 64 characters is refused, naming the title or the limit, and nothing is written for it. Split from Open Ticket Session on 2026-11-24.
 
-### (S) Person --> [Activate Ticket](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-activate-ticket)
-
-Observed: Activate opens a dialog with what to do on leaving (commit, push, merge into main) and on opening (branch and worktree), then calls `board.activate`.
-
-### (S) Board App --> [Find Ticket Branch And Worktree](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-find-ticket-branch-and-worktree)
-
-Observed: activating a ticket finds the branch and worktree its work is on when its session records none or a wrong one, says which branches could be its own rather than guess, leaves a branch named as another ticket to that ticket, and refuses to open onto a folder that is not its checkout (`Ticket.activate`; `space/repo/worktree.py`). Split from Activate Ticket on 2026-11-24.
-
-### (S) Person --> [Switch Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-switch-session)
-
-Observed: a chat switches to the session it names (`sessions.switch`, `OpenSessions.switch` in `space/session/open_sessions.py`); a chat in a ticket's own worktree always works on that ticket's session, and a new chat started for a ticket first switches to it. A name no session has is refused, naming the sessions there are, unless the switch asks for a new session (`create=true`), which makes its folder and so its card on the board (exploratory-testing question gizmo-10, answered 2026-11-23). Scenarios moved from Activate Ticket on 2026-11-24.
-
-### (S) Person --> [Close Active Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-close-active-session)
-
-Observed: Close asks what to do with the work, then `Ticket.close` moves the folder to `.sessions/_complete/`, so the ticket shows in Complete.
-
-### (S) Board App --> [Protect Work When Closing Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-protect-work-when-closing-session)
-
-Observed (exploratory-testing defects gizmo-14, 15, 17 and questions gizmo-11, 12): closing offers to commit a branch open in its worktree, warns that deleting a worktree without a commit loses its work, leaves what the repository's own folder holds uncommitted out of the close, keeps the ticket open when its branch does not merge into main or a program holds its worktree open, and refuses to close main. Split from Close Active Session on 2026-11-24.
-
-### (S) Person --> [Move Ticket](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-move-ticket)
-
-Observed: the arrows or a drag move a ticket one column on (`Ticket.move_next`) or back (`Ticket.move_previous`); out of Implementation it closes into Complete, and back out of Discovery it goes to the Backlog with its work.
-
-### (S) Person --> [Write Ticket Handoff](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-write-ticket-handoff)
-
-Observed: Handoff fills the prompt with `/space-handoff-handoff-session`.
-
-### (S) Board App --> [Display Latest Handoff](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-display-latest-handoff)
-
-Observed: `Ticket.latest_handoff`.
-
-### (S) Person --> [Restrict Actions To Active Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-restrict-actions-to-active-session)
-
-Observed: with Active session only on, a ticket that is not the active session disables what sends commands to a chat; moving, activating and information stay open.
-
-### (S) Board App --> [Open Ticket Chat On Session Open](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-open-ticket-chat-on-session-open)
+#### (S) Board App --> [Open Ticket Chat On Session Open](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-sessions/open_ticket_sessions_story.test.md#story-open-ticket-chat-on-session-open)
 
 Observed (checked 2026-11-10): a press on a card points the board at the ticket's own chat (`ticket-client.tsx:184-188`), and the card's chat button opens the worktree, making it first if needed, then a new Claude chat on it through Python's `chats.open` (`Chats.open`, `harness/chat/chat.py`) (`ticket-client.tsx:196-205`, `chat-client.tsx:72-80`, `claude-link.ts`). It opens a new chat rather than the one the ticket ran in, and Activate opens none. Was: Intended (`.sessions/_backlog/suggest-the-next-step.md` "open associated chat on session open / manually"): opening a ticket's session opens the Claude Code chat it ran in. Observed today: a press on a ticket switches to its chat by hand (`chats.open`).
 
-### (S) Person --> Choose Where A Backlog Item Works
+### (E) [Activate And Move Ticket Sessions](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md)
 
-Observed (checked 2026-11-10): starting a backlog item opens Where <item> works, a folder browser that starts at the whole repository with Up and one button per folder; Use <folder> starts the item's session with that folder as its workpath (`root-choice-client.ts` `start`, `root-choice-view.tsx`).
+A person makes a ticket's session the active one, in its own branch and worktree, and moves the ticket from stage to stage. Grouped on 2026-11-24 from Steer Ticket Sessions.
+
+#### (S) Person --> [Activate Ticket](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md#story-activate-ticket)
+
+Observed: Activate opens a dialog with what to do on leaving (commit, push, merge into main) and on opening (branch and worktree), then calls `board.activate`.
+
+#### (S) Board App --> [Find Ticket Branch And Worktree](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md#story-find-ticket-branch-and-worktree)
+
+Observed: activating a ticket finds the branch and worktree its work is on when its session records none or a wrong one, says which branches could be its own rather than guess, leaves a branch named as another ticket to that ticket, and refuses to open onto a folder that is not its checkout (`Ticket.activate`; `space/repo/worktree.py`). Split from Activate Ticket on 2026-11-24.
+
+#### (S) Person --> [Switch Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md#story-switch-session)
+
+Observed: a chat switches to the session it names (`sessions.switch`, `OpenSessions.switch` in `space/session/open_sessions.py`); a chat in a ticket's own worktree always works on that ticket's session, and a new chat started for a ticket first switches to it. A name no session has is refused, naming the sessions there are, unless the switch asks for a new session (`create=true`), which makes its folder and so its card on the board (exploratory-testing question gizmo-10, answered 2026-11-23). Scenarios moved from Activate Ticket on 2026-11-24.
+
+#### (S) Person --> [Restrict Actions To Active Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md#story-restrict-actions-to-active-session)
+
+Observed: with Active session only on, a ticket that is not the active session disables what sends commands to a chat; moving, activating and information stay open.
+
+#### (S) Person --> [Move Ticket](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md#story-move-ticket)
+
+Observed: the arrows or a drag move a ticket one column on (`Ticket.move_next`) or back (`Ticket.move_previous`); out of Implementation it closes into Complete, and back out of Discovery it goes to the Backlog with its work.
+
+### (E) [Close And Hand Off Ticket Sessions](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md)
+
+A person closes a ticket's session without losing its work, deletes its branch, and hands the work on. Grouped on 2026-11-24 from Steer Ticket Sessions.
+
+#### (S) Person --> [Close Active Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md#story-close-active-session)
+
+Observed: Close asks what to do with the work, then `Ticket.close` moves the folder to `.sessions/_complete/`, so the ticket shows in Complete.
+
+#### (S) Board App --> [Protect Work When Closing Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md#story-protect-work-when-closing-session)
+
+Observed (exploratory-testing defects gizmo-14, 15, 17 and questions gizmo-11, 12): closing offers to commit a branch open in its worktree, warns that deleting a worktree without a commit loses its work, leaves what the repository's own folder holds uncommitted out of the close, keeps the ticket open when its branch does not merge into main or a program holds its worktree open, and refuses to close main. Split from Close Active Session on 2026-11-24.
+
+#### (S) Person --> [Delete Ticket Branch](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md#story-delete-ticket-branch)
+
+Observed (requested 2026-11-09: deleting a branch only deletes the branch, and merging is its own choice): closing a ticket can delete its branch, here and on origin, without merging it into main; the worktree that has the branch goes with it, and a branch checked out nowhere is offered for deletion with no commit or push of main (`steer-ticket-sessions.story.shared.py`; `delete_ticket_branch_story.test.py`). Put on the story map on 2026-11-24, where its scenarios already were.
+
+#### (S) Person --> [Write Ticket Handoff](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md#story-write-ticket-handoff)
+
+Observed: Handoff fills the prompt with `/space-handoff-handoff-session`.
+
+#### (S) Board App --> [Display Latest Handoff](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md#story-display-latest-handoff)
+
+Observed: `Ticket.latest_handoff`.
 
 ## (E) Maintain Tickets
 
@@ -575,6 +681,10 @@ Intended (`.sessions/_backlog/show-board-quickly.md` cause 3): `session.json` is
 
 Observed: the tile's action bar lists the actions and format chips, with the default format picked unless that output exists.
 
+#### (S) Person --> [Run Chosen Formats](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-run-chosen-formats)
+
+Observed: a tile's Run stays off on a render with nothing to render, with no chat, and on a locked ticket, and a stage's Run sends the formats picked so each fidelity writes the first it takes (`tile-client.spec.ts`; `choose_action_and_formats_story.test.py`, `run_chosen_formats_story.test.py`). Split from Choose Action And Formats on 2026-11-24.
+
 #### (S) Claude Code --> [Resolve Fidelity Output Paths](../story_tests/move-work-forward-on-session-board/work-fidelity-outputs-on-board/generate-fidelity-outputs-on-board/generate_fidelity_outputs_on_board_story.test.md#story-resolve-fidelity-output-paths)
 
 Observed: `Generate` and `Session.fidelity_outputs` take the outputs a fidelity declares, with the `session.json` overrides.
@@ -697,47 +807,65 @@ The Chat Bar is the line above the chat prompt for the one session the chat work
 
 ## (E) Check CDD Server Health In Chat Bar
 
-### (S) Chat Bar --> [Display Server Health Mark](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-display-server-health-mark)
+The chat bar's health mark, the server health panel and the apps it opens, and the version of CDD the chat runs. Grouped on 2026-11-24 into two sub-epics, as it had grown to twelve stories.
+
+### (E) [Check CDD Server And Apps In Chat Bar](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check-cdd-server-and-apps-in-chat-bar/check_cdd_server_and_apps_in_chat_bar_story.test.md)
+
+The health mark, the server health panel, and the repairs and apps a person reaches from it. Grouped on 2026-11-24 from Check CDD Server Health In Chat Bar.
+
+#### (S) Chat Bar --> [Display Server Health Mark](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check-cdd-server-and-apps-in-chat-bar/check_cdd_server_and_apps_in_chat_bar_story.test.md#story-display-server-health-mark)
 
 Observed: `ServerHealthBandView` draws ✓ connected, ⟳ reconnecting, ✕ disconnected or ! tools missing, right of the session's name and its buttons, before the version (`chat-bar-view.tsx` `LineView`).
 
-### (S) Person --> [Open Server Health Panel](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-open-server-health-panel)
+#### (S) Person --> [Open Server Health Panel](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check-cdd-server-and-apps-in-chat-bar/check_cdd_server_and_apps_in_chat_bar_story.test.md#story-open-server-health-panel)
 
 Observed: the session card shows one line of icons, the MCP host and each app the health report names (Graph, Files, Kanban, Story UI), each icon's tip giving its name and state, the tool count in the MCP host's; above them the panel gives a headline saying what is wrong, only while something is; pressing the mark pins the card open.
 
-### (S) Person --> [Reconnect CDD Server](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-reconnect-cdd-server)
+#### (S) Person --> [Reconnect CDD Server](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check-cdd-server-and-apps-in-chat-bar/check_cdd_server_and_apps_in_chat_bar_story.test.md#story-reconnect-cdd-server)
 
 Observed: Reconnect retries `cdd` up to three times (`RECONNECT_TRIES`), then reads the active session again.
 
-### (S) Person --> [Create Git Repository First](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-create-git-repository-first)
+#### (S) Person --> [Create Git Repository First](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check-cdd-server-and-apps-in-chat-bar/check_cdd_server_and_apps_in_chat_bar_story.test.md#story-create-git-repository-first)
 
 Built (2026-11-18), not seen (the coordinator, relaying the person: "A git repository is required: remove every way to choose or work in a plain folder, and in a plain folder the chat bar asks to create the git repository first"): CDD works in a git repository. In a session whose project is no git repository, the chat bar's line holds only the folder's path, "is no git repository, and CDD works in one", a Create the git repository button, the health mark and the version badge: no stages, fidelities, actions, session card or lists. The press calls `repo.make_repository` (`Repo.make_repository`, `NewRepository.make_from_folder`): the folder's `.gitignore` takes what the CDD checkout ignores, then `git init -b main` and a first commit of the folder's own files with a README, leaving `.claude` and `.sessions` out; the bar is read again and draws the session. The repository list's Folder Only (No Repo) section and the `repos.open_folder` tool and `/open-folder` command, which opened a folder as it was, are gone. Tests: `harness/chat-ui/pane/hooks/chat-bar/make-repository.test.ts` (`claude plugin test`), `space/repo/new_repository_heavy_spec.py`.
 
-### (S) Person --> [Reinstall CDD Tools](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-reinstall-cdd-tools)
+#### (S) Person --> [Reinstall CDD Tools](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check-cdd-server-and-apps-in-chat-bar/check_cdd_server_and_apps_in_chat_bar_story.test.md#story-reinstall-cdd-tools)
 
 Observed: Run install runs the installer and says installing, installed (open a new session) or failed; Details shows the tool, error, server and fix.
 
 Built (2026-11-18), not seen (the person: "When the plugin starts in a chat, run the installer into that chat's folder if its .claude, skills and commands are missing"): when the board mod starts in a chat whose folder has no `.claude/skills` or no `.claude/commands`, it runs the same install Run install runs (`installWhenMissing`, `health/server-health-client.ts`), beside the board's first read, and the health panel says installing, installed or failed. `scripts/install.py --from-chat FOLDER` for a folder that is no CDD checkout now installs into `FOLDER/.claude`, where it had installed into the served checkout's own `.claude`. It refuses the home folder, a folder in the temporary folder and the desktop app's spare folders (exit 3, `NOT_A_PROJECT_EXIT`), so a chat started there never writes CDD's skills into `~/.claude` or a folder that is thrown away; at chat start the refusal shows nothing, and a pressed Run install shows why on the failure line. Observed (2026-11-18, a headless chat loading the worktree's mod): a chat in an empty folder that is no git repository got `.claude` with skills and commands; the same chat without the mod got none; a chat in a temporary folder got none. Tests: `harness/chat-ui/pane/hooks/health/install-on-start.test.ts` (`claude plugin test`), `scripts/install_spec.py`.
 
-### (S) Chat Bar --> Display CDD Version Badge
+#### (S) Person --> [Open App From Health Panel](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check-cdd-server-and-apps-in-chat-bar/check_cdd_server_and_apps_in_chat_bar_story.test.md#story-open-app-from-health-panel)
+
+Observed: pressing the Kanban app or the Graph app on the server health panel opens it in the browser, and starts it first when it reads not running (requested 2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"). The Kanban app starts as `/board` starts it (`startedBoard` in `board-server.ts`) and opens on this repository's board page; the Graph app starts with the repository's own `scripts/start_graph_web.py` and `scripts/start_graph_app.py` and opens where the second says it answers. A start that fails says why in a toast (`health/open-app-client.ts`). Its scenarios about the chat's session and lane, and about an app that did not open, became stories of their own on 2026-11-24.
+
+#### (S) Person --> [Open App On The Chat's Session And Lane](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check-cdd-server-and-apps-in-chat-bar/check_cdd_server_and_apps_in_chat_bar_story.test.md#story-open-app-on-the-chats-session-and-lane)
+
+Observed: an app opened from the chat bar names the checkout the chat works in, so a ticket's worktree is answered by the dev lane and the main checkout by the stable lane; the Kanban app opens with the chat's ticket selected and the Graph app on the chat's session path (`health/open-app-client.ts`). Split from Open App From Health Panel on 2026-11-24.
+
+#### (S) Chat Bar --> [Say Why App Did Not Open](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check-cdd-server-and-apps-in-chat-bar/check_cdd_server_and_apps_in_chat_bar_story.test.md#story-say-why-app-did-not-open)
+
+Observed: when the Graph app's start script fails, the chat has no browser pane, or the app's page does not load in the pane, nothing opens elsewhere and the Person is told why, naming the failing script and its log or in the pane's own words (`health/open-app-client.ts`). Split from Open App From Health Panel on 2026-11-24.
+
+#### (S) Person --> Restart Parts From Chat Bar
+
+Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart buttons not on panel"): the restart controls sit on the chat bar itself, not only inside the server health panel.
+
+### (E) Keep CDD Version Current In Chat Bar
+
+The version badge, the next version a person sets, and the update the badge runs. Grouped on 2026-11-24 from Check CDD Server Health In Chat Bar; these stories have no scenarios yet.
+
+#### (S) Chat Bar --> Display CDD Version Badge
 
 Observed (requested 2026-11-14, "a small button with v.<major.minor> ... green current version; yellow behind minor; red behind major"): as the chat opens, `cdd-version.check` (`CddVersion.check`, `harness/release/cdd_version.py`) fetches origin main and answers the version the cdd server runs, read as major and minor from `pyproject.toml`, the version on origin main, and how the two stand; the badge at the end of the line shows `v0.1` green when current, yellow a minor version behind, red a major version behind, grey when origin main was never fetched, with the summary on hover (`health/cdd-version-view.tsx`). Specs: `harness/release/cdd_version_spec.py`.
 
-### (S) Person --> Set Next CDD Version
+#### (S) Person --> Set Next CDD Version
 
 Observed (requested 2026-11-14, "/version --> enters the next version to repo config e.g. push", "dont version automatically"): `/version` (`cdd-version.set_next`, `CddVersion.set_next`) writes the next version into the `version` of the repository's `pyproject.toml`: the version given, such as `0.2` or `1.0.1`, or with none given the next minor version; text that is not a version is refused (*VersionNotValid*). Nothing raises the version by itself, so a person runs it when a change is a release, before pushing to main; the version badge in other chats turns yellow or red once that push reaches origin main. Specs: `harness/release/cdd_version_spec.py`.
 
-### (S) Person --> Update CDD From Chat Bar
+#### (S) Person --> Update CDD From Chat Bar
 
 Observed (requested 2026-11-14, "click opens dialog update and reinstall? use above script if yes"): pressing the version badge asks to update and reinstall; Update and reinstall runs `/harness:installation:install-latest` in the chat (`updateToLatest`, `health/cdd-version-client.ts`), so the chat lists its seven steps and ticks each off as it finishes: pull origin main, stop every app, restart the cdd server, install every toolset, ping the server; once the command's turn ends the badge reads the version again; hovering the badge says updating…, up to date, or update failed, and a failure shows why on the failure line. The agent does the same with `/install-latest` (`Installer.install_latest`), which ticks off each step as `scripts/install.py` reports it.
-
-### (S) Person --> [Open App From Health Panel](../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md#story-open-app-from-health-panel)
-
-Observed: pressing the Kanban app or the Graph app on the server health panel opens it in the browser, and starts it first when it reads not running (requested 2026-11-10, "clicking on app in chat ui starts it if down, opens it if up"). The Kanban app starts as `/board` starts it (`startedBoard` in `board-server.ts`) and opens on this repository's board page; the Graph app starts with the repository's own `scripts/start_graph_web.py` and `scripts/start_graph_app.py` and opens where the second says it answers. A start that fails says why in a toast (`health/open-app-client.ts`).
-
-### (S) Person --> Restart Parts From Chat Bar
-
-Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart buttons not on panel"): the restart controls sit on the chat bar itself, not only inside the server health panel.
 
 ## (E) See Work In Chat Bar
 
@@ -795,6 +923,14 @@ Observed: the ✕ icon opens a dialog saying the session's work is committed and
 
 Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"), from `.sessions/_backlog/bring-chat-bar-level-with-board.md`: an Add to backlog button on the chat bar adds a feature to the backlog, as the board's Add Backlog Item does.
 
+### (S) Person --> [Debug A Failure From Chat Bar](../story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md#story-debug-a-failure-from-chat-bar)
+
+Requested (the person, 2026-11-15): a debug button right after handoff sends the agent to capture what went wrong as fully as it can, stack traces included, then asks for more detail and whether to fix the bug or request help; help emails jeff.anderson@abdworks.com, and a fix is made in a sub-agent and pushed to main, or sent as a pull request to the CDD repository where the person cannot push there. The chat bar's Fix buttons take the same fix. Built (2026-11-15): the 🐞 icon after ⇥ puts `/space-session-debug-session` in the prompt box (`Session.debug_session`); it writes `debug/debug-{time}.md` in the session's folder, asks with AskUserQuestion, opens the help email as a draft in the person's mail program for them to send, and checks `gh api repos/<owner>/<repo> --jq .permissions.push` before pushing or opening the pull request. Fix on a failure line starts it with `choice=fix` and the failure as its details; Fix on a board that did not answer adds it as a last step.
+
+## (E) Sync Session Work With Git From Chat Bar
+
+The chat bar's buttons that commit the session's work, push its branch, merge it to main and pull the latest commits. Grouped on 2026-11-24 from Steer Sessions, which had grown to eleven stories.
+
 ### (S) Person --> Commit Work From Chat Bar
 
 Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Commit button commits the active session's changes (`WorkingTree.commit`, `repo.working_tree`, in `space/repo/repo.py`).
@@ -807,10 +943,6 @@ Observed (2026-11-14): the ⤴ icon, first of the session buttons, calls `repo.p
 
 Observed (2026-11-14): the ⇪ icon after ⤴, "push & merge to origin/main", asks "Push <session> and merge it to origin/main?", and yes calls `repo.push_to_main` (`Repo.push_to_main`) for the folder the chat works in, whichever repository holds it: the checkout commits its work on its branch and pushes the branch, the main clone merges that branch into the repository's default branch (`Branch.merge_into_default`; `Repo.default_branch` is the branch origin's HEAD names, else main or master), pushes it, and goes back to the branch it had. On main itself it commits and pushes main. The version is not raised; `/version` does that when the person chooses. `repo.merge_to_main` does the same without pushing, for an agent; the chat bar has no button for it (2026-11-14: "we only need the other button").
 
-### (S) Person --> [Debug A Failure From Chat Bar](../story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md#story-debug-a-failure-from-chat-bar)
-
-Requested (the person, 2026-11-15): a debug button right after handoff sends the agent to capture what went wrong as fully as it can, stack traces included, then asks for more detail and whether to fix the bug or request help; help emails jeff.anderson@abdworks.com, and a fix is made in a sub-agent and pushed to main, or sent as a pull request to the CDD repository where the person cannot push there. The chat bar's Fix buttons take the same fix. Built (2026-11-15): the 🐞 icon after ⇥ puts `/space-session-debug-session` in the prompt box (`Session.debug_session`); it writes `debug/debug-{time}.md` in the session's folder, asks with AskUserQuestion, opens the help email as a draft in the person's mail program for them to send, and checks `gh api repos/<owner>/<repo> --jq .permissions.push` before pushing or opening the pull request. Fix on a failure line starts it with `choice=fix` and the failure as its details; Fix on a board that did not answer adds it as a last step.
-
 ### (S) Person --> Pull Latest From Chat Bar
 
 Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add feature to backlog button and buttons for common repo actions eg push, pull, commit"): a Pull button pulls the latest commits into the active session's checkout (`Repo.pull` in `space/repo/repo.py`).
@@ -821,7 +953,7 @@ Requested (2026-11-10, "add feature to backlog widget in chat ui --> have add fe
 
 Observed: once every fidelity of the stage has passed validate, the action button shows ➜ and pressing it calls `ticket.move_next` (`action-button-view.tsx` `actionOf`).
 
-### (S) Person --> [Invoke Next Fidelity Action](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md#story-invoke-next-fidelity-action)
+### (S) Person --> [Invoke Next Fidelity Action](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices-in-chat-bar/guide_work_through_practices_in_chat_bar_story.test.md#story-invoke-next-fidelity-action)
 
 From the chat bar's own map (harness/chat-ui/.context/story-map.md, folded in 2026-11-16). Mirrors Send Next Fidelity Action, for one fidelity: the action button runs generate, validate or review on the selected fidelity (CDR "Action button and ▾ picker"; "Actions run on one fidelity at a time"). Its story test was removed with the chat bar's stubbed tests (8c56ab052).
 
@@ -837,27 +969,31 @@ Requested (2026-11-06, as the CDD Kanban does): the chat bar moves the session b
 
 Requested (2026-11-06, as the CDD Kanban does): the chat bar marks the active session Done in its stage and back to In progress.
 
-### (S) Person --> [Choose Session Practices](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md#story-choose-session-practices)
-
-Requested (2026-11-06, as the CDD Kanban does): the chat bar turns the active session's practices on and off through `ticket.enable_practice`. Observed (`session-card-view.tsx` `FidelityCellView`): on the session card, one button holds a fidelity's coloured square and its name, and its press turns that fidelity's practice off for the session, or on again, through `session.toggle_guidance`; picking a fidelity from the dots on the line is Select Fidelity. Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "Toggle practices on and off from the card"): the practices turn on and off from the expanded session card.
-
 ### (S) Person --> Open Fidelity Help
 
 Requested (2026-11-06, as the CDD Kanban does): the chat bar opens the same help for a fidelity or practice through `board.help`.
+
+## (E) [Choose Session Practices And Overlays In Chat Bar](../story_tests/move-work-forward-from-chat-bar/choose-session-practices-and-overlays-in-chat-bar/choose_session_practices_and_overlays_in_chat_bar_story.test.md)
+
+What a session works with, chosen from the chat bar: its practices, its folders, and the pattern overlays its graph applies. Grouped on 2026-11-24 from Guide Work Through Practices In Chat Bar, which had grown to eleven stories.
+
+### (S) Person --> [Choose Session Practices](../story_tests/move-work-forward-from-chat-bar/choose-session-practices-and-overlays-in-chat-bar/choose_session_practices_and_overlays_in_chat_bar_story.test.md#story-choose-session-practices)
+
+Requested (2026-11-06, as the CDD Kanban does): the chat bar turns the active session's practices on and off through `ticket.enable_practice`. Observed (`session-card-view.tsx` `FidelityCellView`): on the session card, one button holds a fidelity's coloured square and its name, and its press turns that fidelity's practice off for the session, or on again, through `session.toggle_guidance`; picking a fidelity from the dots on the line is Select Fidelity. Intended (`.sessions/_backlog/bring-chat-bar-level-with-board.md` "Toggle practices on and off from the card"): the practices turn on and off from the expanded session card.
 
 ### (S) Person --> Choose Session Folders From Chat Bar
 
 Requested (2026-11-10, "new session or session where folders aren't set on switch --> probably one dialog box, eg expand above chat bar"): when the chat bar creates a session that does not come from a backlog item, or switches to a session whose workpath and practice roots are not set, one dialog opens above the chat bar to choose the workpath and each practice's root, as the board's Choose Where A Backlog Item Works and Choose Session And Practice Roots do.
 
-### (S:system) Ticket --> [List Available Patterns](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md#story-list-available-patterns)
+### (S:system) Ticket --> [List Available Patterns](../story_tests/move-work-forward-from-chat-bar/choose-session-practices-and-overlays-in-chat-bar/choose_session_practices_and_overlays_in_chat_bar_story.test.md#story-list-available-patterns)
 
 Requested (2026-11-11, "opens a list box for LERN, MERN eg all patterns we have ... set this list dynamically based on contents of folder"): a ticket's `overlay_choices` answers one choice per pattern, each with its icon and whether the session chose it. The patterns are every one registered from `cdd_guidance/patterns/`, where each subfolder whose module of the same name defines a pattern class registers itself (`PatternOverlays.names`), so a pattern folder added there is offered with no change to the chat bar.
 
-### (S) Person --> [Choose Graph Overlays](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md#story-choose-graph-overlays)
+### (S) Person --> [Choose Graph Overlays](../story_tests/move-work-forward-from-chat-bar/choose-session-practices-and-overlays-in-chat-bar/choose_session_practices_and_overlays_in_chat_bar_story.test.md#story-choose-graph-overlays)
 
 Requested (2026-11-11, "right after practices we need + overlay button where we can add one or more graph overlays ... can select more than one"): a + right after the fidelity dots opens a list box of the patterns the board lists, the session's chosen ones marked; a press on one adds it to or takes it out of the session's overlays through `ticket.choose_overlays`, which keeps them in the session's `session.json` and applies them to the session's graph (`Graph.overlays`).
 
-### (S) Chat Bar --> [Display Overlay Icons](../story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/guide_work_through_practices_story.test.md#story-display-overlay-icons)
+### (S) Chat Bar --> [Display Overlay Icons](../story_tests/move-work-forward-from-chat-bar/choose-session-practices-and-overlays-in-chat-bar/choose_session_practices_and_overlays_in_chat_bar_story.test.md#story-display-overlay-icons)
 
 Requested (2026-11-11, "adds a new icon to bar, pushing action and format", "icon is first and last letter of pattern"): each overlay the session has chosen shows as an icon after the + and before the format chips and the action button, its pattern's first and last letter in capitals (`lern_domain_driven` is LN), the pattern's name on hover.
 
@@ -941,10 +1077,6 @@ Intended (requested on 2026-11-06, as the CDD Kanban): the chat bar opens the Cl
 
 Requested (2026-11-06, non-functional): the Story UI app runs on the same app server and instance as the board's state, so the story map, the explorer and the board share one state for the active ticket. Requested (2026-11-12): built with the cdd_web_domain_access and lern_domain_driven patterns. The repeatable behaviour: the board's server serves the Story UI editor, which shows the ticket activated on the board.
 
-#### (S) Story UI App --> Save Story Map Edit Through Domain
-
-Requested (2026-11-06, non-functional): the Story UI app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls. Requested (2026-11-12): the story map's backend moves out of TypeScript into the MCP-generated domain objects, not a JSON story map; each edit is saved and rendered to the formats chosen in the chat bar, which the Story UI app can toggle.
-
 #### (S) Person --> [Open UX Design In Claude Design](../story_tests/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-open-ux-design-in-claude-design)
 
 Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "claude design integration with ux tool"): the UX practice's design opens in Claude Design from the chat.
@@ -952,6 +1084,26 @@ Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "claude design integ
 #### (S) Person --> [Trace Story Through Artifacts](../story_tests/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md#story-trace-story-through-artifacts)
 
 Intended (`.sessions/_backlog/integrate-practice-content-editor-apps.md` "Trace pane"): picking a story shows its scenarios, tests and code from `harness/graph`, with the domain, class and bounded-context diagrams. Built today (checked 2026-11-10): the Graph app folds story, scenario and step and shows a step's invokes, observes and demonstrates with its source (`harness/graph/app/app.test.tsx:429,746`). Missing: one trace view of a picked story's scenarios, tests and code, and the diagrams.
+
+### (E) [Edit Story Map Files In Story UI](../story_tests/move-work-forward-from-chat-bar/edit-story-map-files-in-story-ui/edit_story_map_files_in_story_ui_story.test.md)
+
+The Story UI editor edits a story map, its descriptions and increments, and its scenario files through the CDD domain, and links each story to its acceptance tests. Grouped on 2026-11-24 from Integrate Practice Content Editor Apps In Chat Bar, with the scenarios of Refactor Story UI App To Web Domain Access, a story of the scenario file that was on no story of the map.
+
+#### (S) Story UI App --> [Save Story Map Edit Through Domain](../story_tests/move-work-forward-from-chat-bar/edit-story-map-files-in-story-ui/edit_story_map_files_in_story_ui_story.test.md#story-save-story-map-edit-through-domain)
+
+Requested (2026-11-06, non-functional): the Story UI app reaches the CDD domain through the TypeScript language adapter generated by the cdd_web_domain_access pattern, instead of its own calls. Requested (2026-11-12): the story map's backend moves out of TypeScript into the MCP-generated domain objects, not a JSON story map; each edit is saved and rendered to the formats chosen in the chat bar, which the Story UI app can toggle. Its scenarios were the scenario file's story Refactor Story UI App To Web Domain Access, split on 2026-11-24.
+
+#### (S) Person --> [Edit Descriptions And Increments On Story Map](../story_tests/move-work-forward-from-chat-bar/edit-story-map-files-in-story-ui/edit_story_map_files_in_story_ui_story.test.md#story-edit-descriptions-and-increments-on-story-map)
+
+Requested (2026-11-12, `harness/.context/grill-answers.md`): a story's, an epic's and a sub-epic's description is the paragraph under its heading and is edited there, and increments are edited through the story map and kept in its thin slice, every other line staying as written. Split from Refactor Story UI App To Web Domain Access on 2026-11-24.
+
+#### (S) Person --> [Edit Scenario Files Through Story Model](../story_tests/move-work-forward-from-chat-bar/edit-story-map-files-in-story-ui/edit_story_map_files_in_story_ui_story.test.md#story-edit-scenario-files-through-story-model)
+
+Requested (2026-11-12, `harness/.context/grill-answers.md`): a scenario file is edited in the Story UI editor through the story model, and an example's cell is written back in its row, an example keeping the place its table gives it. Split from Refactor Story UI App To Web Domain Access on 2026-11-24.
+
+#### (S) Story UI App --> [Link Story To Its Acceptance Tests](../story_tests/move-work-forward-from-chat-bar/edit-story-map-files-in-story-ui/edit_story_map_files_in_story_ui_story.test.md#story-link-story-to-its-acceptance-tests)
+
+Decided (2026-11-12, `harness/.context/grill-answers.md`): a story's acceptance tests are links that open in the file viewer of the chat that opened the editor, never edited; an editor no chat opened names the file and says where to read it. Split from Refactor Story UI App To Web Domain Access on 2026-11-24.
 
 ### (E) Capture Session Knowledge
 
@@ -1007,7 +1159,7 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Branch guard"): a
 
 The prompt queue is its own Claude Code mod, `prompt-queue`, not part of the CDD chat bar: it sits above the chat bar, at rest only a stack image with the count drawn on it (the person, 2026-11-16: "this shouldnt be part of the cdd chat bar / it should be above it with some separation / a separate mod from chat ui"). Sources: the brief that started the simple-queue chat on 2026-11-16 (stack above the prompt, a `+` button, Ctrl+Enter, reordering, a sub-agent mode, sending on `turn.complete` ahead of Claude's own queue, a `/queue` command) and the person's directions in that chat. The mod is `tools/prompt_queue/hooks/`, published by the installer, with its `claude plugin test` specs in `register.test.tsx`. Evidence words as on the chat bar epics: **Observed** seen working in the desktop chat, **Built** in code and plugin tests but not seen, **Intended** asked for and not done.
 
-Grouped on 2026-11-17 into four sub-epics, as the epic had grown to sixteen children: Build Prompt Queue (the person puts work on the queue and shapes it), Work Through Prompt Queue (play, pause and the agent take the work in order), Nest Prompt Steps In Queue (each card's steps), and Share Queue Among Robots (sub-agent mode). The story names stay as they were. On 2026-11-24 a fifth, Keep Queue Files Safe, took the two stories exploratory testing added to Build Prompt Queue about the queue's file.
+Grouped on 2026-11-17 into four sub-epics, as the epic had grown to sixteen children: Build Prompt Queue (the person puts work on the queue and shapes it), Work Through Prompt Queue (play, pause and the agent take the work in order), Nest Prompt Steps In Queue (each card's steps), and Share Queue Among Robots (sub-agent mode). The story names stay as they were. On 2026-11-24 a fifth, Keep Queue Files Safe, took the two stories exploratory testing added to Build Prompt Queue about the queue's file. Later on 2026-11-24 a sixth, Track Working Prompt From Chat, took the stories of Nest Prompt Steps In Queue about the prompt being worked following the chat, as that sub-epic had grown to eleven stories.
 
 ## (E) [Build Prompt Queue](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md)
 
@@ -1113,27 +1265,9 @@ Built (2026-11-17), not seen: the agent gives a queued prompt its steps, each pe
 
 Built (2026-11-17), not seen: the agent marks one step of a prompt done (`prompt-queue.step_done`); once every step is done the prompt is ready for `prompt-queue.done`, which still takes it off the queue.
 
-### (S:system) Prompt Queue --> [Copy Task List Onto Working Prompt](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-copy-task-list-onto-working-prompt)
-
-Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): the queue mod's `tool.call` hook replays each `update_plan` call (a whole list, advance, done, start) and copies the list onto the prompt being worked with `prompt-queue.set_steps`; a `wrap_up` finishes every step. Not yet seen: whether the desktop app hands the mod's hook its own `update_plan` calls; until the mod has seen one, the queue beside a prompt tells the agent to set the steps and mark each one done itself.
-
-Built (2026-11-17), not seen (the person: the queue and task list "doesnt make sense"; the steps had landed on the person's last message, not the queue item worked): the queue tells the agent to call `prompt-queue.set_steps` with a prompt's id when it takes it, and the mod's `tool.call` hook makes that prompt the one being worked (`followTakenPrompt`), so the task list's next changes follow onto it. A wrap-up still marks every step done, as the desktop app's own wrap-up checks off the task list.
-
-### (S:system) Prompt Queue --> [Queue Sent Prompt As Running](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-queue-sent-prompt-as-running)
-
-Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): a prompt the person sends straight to the chat, not from the queue, goes on the queue first as the prompt being worked, and the agent is told its id to mark it done, so its steps have a prompt to sit under. Built (2026-11-17, `register.test.tsx` "a prompt sent straight to the chat goes above the next prompt to do, below the done ones, marked as an interruption"): the prompt goes just above the next prompt to do, below the done ones, its text starting "[interruption]"; a background task's notice arriving in the chat is not queued.
-
-### (S:system) Prompt Queue --> [Add Interruption To Working Prompt](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-add-interruption-to-working-prompt)
-
-Observed (2026-11-17): after /reload-plugins, the person's message "heavy test are written and run in a sub task tho", sent between turns, was filed by the cdd server under the goal last worked as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "YES and update backend for this", to filing a message sent between turns under the goal last worked): the cdd server files a message under a goal (`prompt-queue.add_interruption`): it becomes the goal's last step, not started, marked "[interruption]", and a done goal opens again; the mod calls it for every message the person sends while a goal last worked is on the queue, mid-turn or between turns, and a card of its own is made only when there is none. Built (2026-11-17), not seen (the person: "you should be putting these interruptions into one goal and adding tasks to them, add smarter organizing instructions"): the queue tells the agent to keep one card for each goal: a message that belongs to a goal already on the queue becomes a task of that goal and its own card comes off, related [interruption] cards gather under one goal card, and the order stays done, being worked, not started. Observed (2026-11-17): a message the person sent while the agent worked the sub-agent columns prompt joined it as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "a new chat message from the edit box doesnt go to top of queue it goes above the active or next item in queue as an interruption OR inside current queue item as a task"): a message sent when no turn runs goes on the queue just above the next prompt to do, below the done ones, its text starting "[interruption]". Built (2026-11-17), not seen (the person: "if its a simple correction or comment in flight pertaining to a current queue then add it to the queues list as a task in process, put a special annotation in front and save that it was a user interruption"): a message the person sends while a turn runs on a queued prompt becomes a step of that prompt, its text starting "[interruption]", instead of a new card (`addInterruption`); the agent is told which prompt it joined and may move it to a card of its own with `prompt-queue.add` when it is separate work. A new task list from the agent keeps interruption steps it does not list (`keptInterruptions`). Observed (2026-11-23, the person: "wth"): the main chat's queue band read "70/77 1. [interruption] <pasted_content id="7250"> ## Notes from the backlog…": the chat's first message, a paste, became the goal with the raw paste and its tags as its title, and every later message was filed under it as an [interruption] step until it held 77. Built (2026-11-23, `register.test.tsx` "a message about new work sent between turns starts a goal of its own, not another step of the goal last worked", "a goal sent as pasted text is titled by the paste's first line, without its tags"): a message is filed under the goal last worked only while a turn works it or when its turn ended asking the person something; any other message sent between turns is new work, a goal of its own. The queue holds a message's title, never the message: the first sentence of the person's own words with any `<pasted_content>` paste taken out, or the paste's first line when the message is only a paste, cut at a word to 80 characters with an ellipsis (`goalTitleOf`, `queue/goal-title.ts`).
-
 ### (S) Person --> [Show Prompt Steps In Queue](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-show-prompt-steps-in-queue)
 
 Built (2026-11-17), not seen: each card shows how many of its steps are done (3/7) as a button that opens its steps under it, done ones ticked and dim and the one being worked marked; the card being worked is bright and a card whose steps are all done dim. Built (2026-11-24), not seen (main's chat-ui-defects, a goal with 77 interruption steps: "its finished steps folded away"; `register.test.tsx` "a card's finished steps fold into one line under it once there are three, the steps still to do shown"): once a card holds three or more finished steps, every step above its step pointer folds into one line, "▸ ✓ 3 done", which shows them again when pressed ("▾ ✓ 3 done") (`toggleDoneSteps`, `shownDoneSteps`).
-
-### (S) Person --> [Split Goal Of Interruptions](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-split-goal-of-interruptions)
-
-Built (2026-11-24), not seen (main's chat-ui-defects: "a goal holding many unrelated interruptions is split"; `prompt_queue_spec.py` "that the goal is split", `register.test.tsx` "split on a card puts each interruption still to do on a card of its own, right after it"): the cdd server splits a goal (`prompt-queue.split`, `PromptQueue.split`): each [interruption] step not done becomes a card of its own, in order, right after the goal and given the goal's robot, and comes off the goal's steps; the goal keeps its own steps and the interruptions already done, and a goal with no interruption still to do changes nothing. A card whose goal holds an interruption still to do shows split, ⑂, among its buttons (`splitGoal`); the note beside a filed message tells the agent to split a goal's interruptions about other work with `prompt-queue.split`.
 
 ### (S) Person --> [Edit Prompt Steps](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-edit-prompt-steps)
 
@@ -1146,6 +1280,32 @@ Built (2026-11-17), not seen (commit 3d19477a7, the person: a step has all of a 
 ### (S) Person --> [Move Step Pointer](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-move-step-pointer)
 
 Built (2026-11-17, commit c2cff7454): a card's open steps have a pointer of their own at the left of the first step not done (`QueuedPrompt.step_pointer`, which the server answers). ▲ works the done step above it again and puts every step after it back to not started (`prompt-queue.step_back`); ▼ marks its step done and starts the next (`prompt-queue.step_on`). A step's ↑, ↓ and ✕ each call one tool too (`prompt-queue.move_step`, `prompt-queue.remove_step`), so the mod and the agent follow the server's one rule.
+
+## (E) [Track Working Prompt From Chat](../story_tests/queue-prompts-for-later/track-working-prompt-from-chat/track_working_prompt_from_chat_story.test.md)
+
+The prompt being worked follows the chat: it takes the agent's task list, a prompt the person sends straight to the chat goes on the queue as the one being worked, and a message the person sends while a goal is worked is filed under that goal, titled by what it asks, or split off again. Grouped on 2026-11-24 from Nest Prompt Steps In Queue, which had grown to eleven stories.
+
+### (S:system) Prompt Queue --> [Copy Task List Onto Working Prompt](../story_tests/queue-prompts-for-later/track-working-prompt-from-chat/track_working_prompt_from_chat_story.test.md#story-copy-task-list-onto-working-prompt)
+
+Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): the queue mod's `tool.call` hook replays each `update_plan` call (a whole list, advance, done, start) and copies the list onto the prompt being worked with `prompt-queue.set_steps`; a `wrap_up` finishes every step. Not yet seen: whether the desktop app hands the mod's hook its own `update_plan` calls; until the mod has seen one, the queue beside a prompt tells the agent to set the steps and mark each one done itself.
+
+Built (2026-11-17), not seen (the person: the queue and task list "doesnt make sense"; the steps had landed on the person's last message, not the queue item worked): the queue tells the agent to call `prompt-queue.set_steps` with a prompt's id when it takes it, and the mod's `tool.call` hook makes that prompt the one being worked (`followTakenPrompt`), so the task list's next changes follow onto it. A wrap-up still marks every step done, as the desktop app's own wrap-up checks off the task list.
+
+### (S:system) Prompt Queue --> [Queue Sent Prompt As Running](../story_tests/queue-prompts-for-later/track-working-prompt-from-chat/track_working_prompt_from_chat_story.test.md#story-queue-sent-prompt-as-running)
+
+Observed (2026-11-17): after /reload-plugins, the person's prompt "?" went first on the queue as the one being worked, and the agent's task list was copied onto it as five steps (prompt-queue.show). Built (2026-11-17): a prompt the person sends straight to the chat, not from the queue, goes on the queue first as the prompt being worked, and the agent is told its id to mark it done, so its steps have a prompt to sit under. Built (2026-11-17, `register.test.tsx` "a prompt sent straight to the chat goes above the next prompt to do, below the done ones, marked as an interruption"): the prompt goes just above the next prompt to do, below the done ones, its text starting "[interruption]"; a background task's notice arriving in the chat is not queued.
+
+### (S:system) Prompt Queue --> [Add Interruption To Working Prompt](../story_tests/queue-prompts-for-later/track-working-prompt-from-chat/track_working_prompt_from_chat_story.test.md#story-add-interruption-to-working-prompt)
+
+Observed (2026-11-17): after /reload-plugins, the person's message "heavy test are written and run in a sub task tho", sent between turns, was filed by the cdd server under the goal last worked as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "YES and update backend for this", to filing a message sent between turns under the goal last worked): the cdd server files a message under a goal (`prompt-queue.add_interruption`): it becomes the goal's last step, not started, marked "[interruption]", and a done goal opens again; the mod calls it for every message the person sends while a goal last worked is on the queue, mid-turn or between turns, and a card of its own is made only when there is none. Built (2026-11-17), not seen (the person: "you should be putting these interruptions into one goal and adding tasks to them, add smarter organizing instructions"): the queue tells the agent to keep one card for each goal: a message that belongs to a goal already on the queue becomes a task of that goal and its own card comes off, related [interruption] cards gather under one goal card, and the order stays done, being worked, not started. Observed (2026-11-17): a message the person sent while the agent worked the sub-agent columns prompt joined it as an "[interruption]" step, and the agent was told so. Built (2026-11-17), not seen (the person: "a new chat message from the edit box doesnt go to top of queue it goes above the active or next item in queue as an interruption OR inside current queue item as a task"): a message sent when no turn runs goes on the queue just above the next prompt to do, below the done ones, its text starting "[interruption]". Built (2026-11-17), not seen (the person: "if its a simple correction or comment in flight pertaining to a current queue then add it to the queues list as a task in process, put a special annotation in front and save that it was a user interruption"): a message the person sends while a turn runs on a queued prompt becomes a step of that prompt, its text starting "[interruption]", instead of a new card (`addInterruption`); the agent is told which prompt it joined and may move it to a card of its own with `prompt-queue.add` when it is separate work. A new task list from the agent keeps interruption steps it does not list (`keptInterruptions`). Observed (2026-11-23, the person: "wth"): the main chat's queue band read "70/77 1. [interruption] <pasted_content id="7250"> ## Notes from the backlog…": the chat's first message, a paste, became the goal with the raw paste and its tags as its title, and every later message was filed under it as an [interruption] step until it held 77. Built (2026-11-23, `register.test.tsx` "a message about new work sent between turns starts a goal of its own, not another step of the goal last worked", "a goal sent as pasted text is titled by the paste's first line, without its tags"): a message is filed under the goal last worked only while a turn works it or when its turn ended asking the person something; any other message sent between turns is new work, a goal of its own.
+
+### (S:system) Prompt Queue --> [Title Goal From Sent Message](../story_tests/queue-prompts-for-later/track-working-prompt-from-chat/track_working_prompt_from_chat_story.test.md#story-title-goal-from-sent-message)
+
+Built (2026-11-23, after the main chat's queue band read "70/77 1. [interruption] <pasted_content id="7250"> ## Notes from the backlog…"; `register.test.tsx` "a goal sent as pasted text is titled by the paste's first line, without its tags"): the queue holds a message's title, never the message: the first sentence of the person's own words with any `<pasted_content>` paste taken out, or the paste's first line when the message is only a paste, cut at a word to 80 characters with an ellipsis (`goalTitleOf`, `queue/goal-title.ts`). A pasted first message gathers no later messages under it. Split from Add Interruption To Working Prompt on 2026-11-24.
+
+### (S) Person --> [Split Goal Of Interruptions](../story_tests/queue-prompts-for-later/track-working-prompt-from-chat/track_working_prompt_from_chat_story.test.md#story-split-goal-of-interruptions)
+
+Built (2026-11-24), not seen (main's chat-ui-defects: "a goal holding many unrelated interruptions is split"; `prompt_queue_spec.py` "that the goal is split", `register.test.tsx` "split on a card puts each interruption still to do on a card of its own, right after it"): the cdd server splits a goal (`prompt-queue.split`, `PromptQueue.split`): each [interruption] step not done becomes a card of its own, in order, right after the goal and given the goal's robot, and comes off the goal's steps; the goal keeps its own steps and the interruptions already done, and a goal with no interruption still to do changes nothing. A card whose goal holds an interruption still to do shows split, ⑂, among its buttons (`splitGoal`); the note beside a filed message tells the agent to split a goal's interruptions about other work with `prompt-queue.split`.
 
 ## (E) [Share Queue Among Robots](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md)
 
@@ -1245,37 +1405,59 @@ Built (2026-11-14): a practice turned on or off in the Files app sends the chat 
 
 ## (E) View Files In Source View
 
-### (S) Person --> [View File In Source View](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-view-file-in-source-view)
+The open file shows in the Files app's view, rendered or as source, and its code folds and carries the marks of the rules it breaks. Grouped on 2026-11-24 into two sub-epics, as it had grown to ten stories.
+
+### (E) Read Files In Source View
+
+The file opens rendered or as source, its links and callouts open in place, and its lines lay out for reading. Grouped on 2026-11-24 from View Files In Source View.
+
+#### (S) Person --> [View File In Source View](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-view-file-in-source-view)
 
 Observed (2026-11-14): the open file shows in the graph explorer's Monaco source view, read-only, its lines numbered and coloured by language (`file-source-view.tsx`, `@source-view/SourceView`). Was the board's View Files In Rich Viewer and the graph's Open Node Source.
 
 Built (2026-11-19, requested: scenarios, story maps and domain models read as pages, their text a press away): a markdown, HTML, SVG or JSON file opens rendered, with Rendered and Source toggles leading the file's bar (`files/file-view.tsx`, `files/file-rendering.ts`); a file opened at lines asked for, such as a node selected in the graph view, opens in the source view. Markdown and SVG are cleaned with DOMPurify, markdown rendered with marked, both the versions Monaco already loads; an HTML page shows in a sandboxed frame that runs no script.
 
-### (S) Person --> [Fold Classes And Operations](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-fold-classes-and-operations)
+#### (S) Person --> [Render File As A Page](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-render-file-as-a-page)
+
+Built (2026-11-19): a markdown, HTML, SVG or JSON file opens rendered as the page it describes, each format the page can draw, a generated UX mockup walked in its frame, front matter shown as the file's facts, a scenario's domain terms and examples underlined and an indented tree keeping its levels (`files/file-view.tsx`, `files/file-rendering.ts`). Split from View File In Source View on 2026-11-24.
+
+#### (S) Person --> [Follow Links And Callouts In A File](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-follow-links-and-callouts-in-a-file)
+
+Built: a link or a callout on a rendered page or in the source view opens what it names in place, or the file it names, and says what is not there for a heading or a file that is missing; the file view's filters choose which callouts show. Split from View File In Source View on 2026-11-24.
+
+#### (S) Person --> [Lay Out Lines In Source View](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-lay-out-lines-in-source-view)
+
+Built: the source view scrolls a long line sideways or wraps it, in Cursor's default colours with an orange cursor. Split from View File In Source View on 2026-11-24.
+
+#### (S) Person --> Browse Files Without Reading Rules
+
+Built (2026-11-15): Rules and Cross-file toggles at the top of the Files app, both off by default. With Rules on, `Session.file(rules=True)` reads the open file into the session's live graph when it changed (about 1.5 s) and answers its folds and broken rules, with the last validate's saved findings beside them, as the Graph app's source view shows them; Cross-file has the graph hold the whole working copy first (`Graph.hold_whole`). Fixed (2026-11-15): the two toggles are independent; Rules reads the file alone (`SessionGraph.alone`, a *DocumentGraph*, about 0.8 s), Cross-file adds only what the whole working copy finds. The person: "when loading files don't use cross file unless cross file is toggled, and vice versa". Requested (the person, 2026-11-15): "I don't see code folding in here I don't see any of the violations", then "toggle at top and have it off by default; for rules; same with cross file that way we don't incur a performance penalty when we just want to browse files".
+
+#### (S) Person --> [Save Edited File](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-save-edited-file)
+
+Intended: Edit turns the file editable and Save writes it through the file manager (`session.write_file`). The board's panel does it; the Files app is read-only today.
+
+### (E) Fold And Mark Code In Source View
+
+The source view folds a file's classes, operations and headings, opens the calls and classes the code reaches in place, and marks the lines a broken rule names. Grouped on 2026-11-24 from View Files In Source View.
+
+#### (S) Person --> [Fold Classes And Operations](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-fold-classes-and-operations)
 
 Built: the session's graph places each class and operation, and the source view folds each one as a block (`session.file` folds). Was the graph's Unfold Calls And Classes In Source.
 
 Changed (2026-11-16, "native expand collapse for class functions, heading levels in markdown etc like a real IDE"): the source view folds with Monaco's own folding, classes, functions and blocks as Monaco reads the language, and markdown by its headings (`source/source-folding.ts` `foldMarkdownHeadings`), with or without Rules; the session's folds stay for the board's files panel.
 
-### (S) Person --> [Fold With Keyboard Shortcuts](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-fold-with-keyboard-shortcuts)
+#### (S) Person --> [Fold With Keyboard Shortcuts](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-fold-with-keyboard-shortcuts)
 
 Requested (2026-11-16, "Cursor-equivalent keyboard shortcuts (or VS Code, configurable in a context config json), e.g. Ctrl+K Ctrl+0, Ctrl+M etc."). Built: VS Code's fold chords, which `.context/files-app-keybindings.json`, written as VS Code's keybindings.json, overrides command by command; a wrong file keeps VS Code's and a toast says why (`FoldKeys`, `FilesFoldKeys`).
 
-### (S) Person --> [Open Calls And Classes In Place](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-calls-and-classes-in-place)
+#### (S) Person --> [Open Calls And Classes In Place](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-calls-and-classes-in-place)
 
 Requested (2026-11-16, "too aggressive on the shading and double shading ... on expand, hide the callout label and show the content; on collapse, bring it back; only shade once"). Built: a call or class the code reaches is a callout like a markdown link's: a label after its line while closed; open, its lines alone in a view zone under the line, shaded once, a call inside it one shade deeper; never from a comment, a docstring or a string, and without the graph's `/* call: */` marks (`source/call-expansion.ts` *CallCatalog*, `source/source-callouts.ts`).
 
-### (S) Person --> [Mark Lines A Broken Rule Names](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-mark-lines-a-broken-rule-names)
+#### (S) Person --> [Mark Lines A Broken Rule Names](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-mark-lines-a-broken-rule-names)
 
 Built: the rules the session's saved graph found broken in the file mark their lines with a rule chip (`session.file` violations). Was the graph's Open Violation In Source.
-
-### (S) Person --> Browse Files Without Reading Rules
-
-Built (2026-11-15): Rules and Cross-file toggles at the top of the Files app, both off by default. With Rules on, `Session.file(rules=True)` reads the open file into the session's live graph when it changed (about 1.5 s) and answers its folds and broken rules, with the last validate's saved findings beside them, as the Graph app's source view shows them; Cross-file has the graph hold the whole working copy first (`Graph.hold_whole`). Fixed (2026-11-15): the two toggles are independent; Rules reads the file alone (`SessionGraph.alone`, a *DocumentGraph*, about 0.8 s), Cross-file adds only what the whole working copy finds. The person: "when loading files don't use cross file unless cross file is toggled, and vice versa". Requested (the person, 2026-11-15): "I don't see code folding in here I don't see any of the violations", then "toggle at top and have it off by default; for rules; same with cross file that way we don't incur a performance penalty when we just want to browse files".
-
-### (S) Person --> [Save Edited File](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-save-edited-file)
-
-Intended: Edit turns the file editable and Save writes it through the file manager (`session.write_file`). The board's panel does it; the Files app is read-only today.
 
 ## (E) Review Files With Comments
 
@@ -1327,13 +1509,29 @@ Requested (2026-11-15, "the actual file viewer is going to have a toggle that ca
 
 Built (2026-11-15), not walked: the file bar's Graph button beside List and Folders (`files-graph-view.tsx` *FilesGraphView*), reading `session.graph_trees` for the files the bar lists; each practice tree starts collapsed and the open file stays open. Fixed (2026-11-15, "why is story graph empty"; 2026-11-16, "the graph needs to have the same file filtering that vanilla session files does"): the graph view's graph is read from exactly the files the page lists, each named from the project, its story tests in markdown and code alike, and keeps only what they hold, so the page's file filters are the one filter (`Session.graph_trees`, `Graph.load_files`). Tests: `harness/files_app/app/files/files-graph.spec.ts`, `space/session/session_graph_spec.py`.
 
+### (S) Files App --> [Read Story Map Into Stories Tree](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-read-story-map-into-stories-tree)
+
+Built (2026-11-15, "why is story graph empty"): the graph view's Stories tree holds the project's story map, a story listed only by its story test in code or by its scenarios in markdown, and every epic of a map listed beside a code story test; a map listed in markdown and drawio is read once, from its markdown, and a story listed only by its map holds its scenarios (`Session.graph_trees`). Split from Switch Files App To Graph View on 2026-11-24.
+
 ### (S) Files App --> [Filter Graph Like The File List](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-graph-like-the-file-list)
 
 Requested (2026-11-15, "graph filtered like file filter is"): the graph view holds only the nodes of the files the file list would show: the stages, practices and format groups of the session's guidance selection, the chat bar's selected fidelity dots while any are selected, and the Changed button's branch changes while it is on (`files-page.ts` `filesShown`, `file-bar.ts` `entries`). A filter changed in either view shows in both.
 
 Built (2026-11-15), not walked: the graph is read again whenever the bar lists other files (`FilesGraph.follow`), so a practice turned off here or on the chat bar, and the Changed button, narrow it as they narrow the list; the session keeps only the nodes read from those files (`Session.graph_trees`, the graph filter's `paths`).
 
-### (S) Person --> [Open Several Files From Graph Nodes](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-several-files-from-graph-nodes)
+### (S) Files App --> [Filter Callouts Like The Graph](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-callouts-like-the-graph)
+
+Requested (2026-11-20, "callout filtering should be done exactly the same way knowledge graph filtering is done"). Built (2026-11-20): the session answers only the callouts the file view's filters show: the files listed for the stages, practices and formats chosen, and the graph view's node filter, decided in Python by the graph's own filter (`space/session/files/file_view_filter.py` *FileViewFilter*); the page sends its filters with `session.file` and draws what comes back.
+
+### (S) Files App --> [Filter Step Callouts By Node Filter](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-step-callouts-by-node-filter)
+
+Built (2026-11-20): a connector or a node type left out of the graph view's node filter leaves out what a step reaches by it, while a step keeps what it reaches in the files listed with it (*FileViewFilter*). Split from Filter Callouts Like The Graph on 2026-11-24.
+
+## (E) Open Graph Nodes In Files App
+
+[Scenarios](../story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md). A node selected in the graph view opens the files and lines it covers in the file view, a story's scenarios and the code its steps reach included. Grouped on 2026-11-24 from Switch Files App Between Files And Graph, as it had grown to twelve stories; the steps stay in `switch-files-app-between-files-and-graph.story.shared.py`.
+
+### (S) Person --> [Open Several Files From Graph Nodes](../story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md#story-open-several-files-from-graph-nodes)
 
 Requested (2026-11-15, "except for you're now selecting file(s), eg more than one file opens"): selecting a node in the graph view opens its file in the source view; selecting nodes in more than one file opens each of those files, where the Files app opens one file today and the Graph app shows one node's source.
 
@@ -1341,27 +1539,31 @@ Built (2026-11-15), not walked: selecting a node opens its file at its lines (`S
 
 Changed (2026-11-16): each open file collapses to its name and expands on its own, with Collapse all and Expand all above several (`OpenFiles`).
 
-### (S) Files App --> [Fold Open Files To Selected Nodes](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-fold-open-files-to-selected-nodes)
+### (S) Person --> [Open Story Test Lines From Graph Nodes](../story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md#story-open-story-test-lines-from-graph-nodes)
+
+Built (2026-11-15): selecting a step opens its scenarios file at the step's line, and a scenario, a step or a story of a Python story test opens the lines of its whole function or its scenarios, never the examples module an example comes from (`Session.graph_node_ranges`). Split from Open Several Files From Graph Nodes on 2026-11-24.
+
+### (S) Files App --> [Fold Open Files To Selected Nodes](../story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md#story-fold-open-files-to-selected-nodes)
 
 Requested (2026-11-15, "expand and collapse in file viewer based on the nodes in the graph"): each open file unfolds the blocks of the nodes selected in the graph and folds its other classes and operations, from the folds the session's graph places (`session.file` folds); selecting another node unfolds it and leaves the rest folded. Builds on the Files app's Fold Classes And Operations and the Graph app's Unfold Calls And Classes In Source.
 
 Built (2026-11-15), not walked: an open file opens only the folds holding a selected node, its class too, and closes the rest (`SourceView` `openAround`, Monaco's Fold All then Unfold up from the node since 2026-11-16), and the page scrolls the first a third of the way down the window: the editor is as tall as its file, so the page scrolls, not the editor ("we should scroll to line of member if it's below the fold"). Changed (2026-11-16, "make that line be near the top of the screen so it's obvious we are there; select the lines of the clicked node in a file if it's not the whole file"): the first selected line scrolls near the top and the selected lines are marked.
 
-### (S) Person --> [Open Story Scenarios Across Files](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-story-scenarios-across-files)
+### (S) Person --> [Open Story Scenarios Across Files](../story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md#story-open-story-scenarios-across-files)
 
 Requested (2026-11-16, "story map md story has scenario file"): selecting a story the markdown story map holds opens its scenarios, which live in another file, beside the story map's line; a markdown scenario spans its heading through its last step.
 
-### (S) Person --> [Open Linked Sections In Place](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-open-linked-sections-in-place)
+### (S) Files App --> [Show Rules Story Tests Break](../story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md#story-show-rules-story-tests-break)
+
+Built (2026-11-16): the file view shows the rules a story test breaks: a When in a story test that calls none of the code it tests is flagged, a markdown When is not asked to invoke code before a realization names it, and a story test outside the session's folder shows its rules too. Split from Open Story Scenarios Across Files on 2026-11-24.
+
+### (S) Person --> [Open Linked Sections In Place](../story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md#story-open-linked-sections-in-place)
 
 Requested (2026-11-16, "should have callout to expand and see story scenarios; scenario has domain references in its terms, callout to markdown class model if it exists"): a markdown line that links to a heading in another file carries a callout that opens that heading's section in place, as a call opens in place in code: a story map story opens its scenarios, and a scenario's domain term opens its class in the markdown model (`SessionFile.callouts`).
 
-### (S) Person --> [Follow Story Steps To Code](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-follow-story-steps-to-code)
+### (S) Person --> [Follow Story Steps To Code](../story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md#story-follow-story-steps-to-code)
 
 Requested (2026-11-16, "observes and invokes do not reach the Python code; tested for TypeScript but not Python"; "class callouts in tests should be placed next to steps if they are step relationships"): a Python story test's step invokes the functions it calls by name as well as the operations it calls on an object (`StoryLinks._functions_called`), and in the source view a story test's callouts sit on the step whose invokes and observes they are, never on a line that only names a class in prose.
-
-### (S) Files App --> [Filter Callouts Like The Graph](../story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md#story-filter-callouts-like-the-graph)
-
-Requested (2026-11-20, "callout filtering should be done exactly the same way knowledge graph filtering is done"). Built (2026-11-20): the session answers only the callouts the file view's filters show: the files listed for the stages, practices and formats chosen, and the graph view's node filter, decided in Python by the graph's own filter (`space/session/files/file_view_filter.py` *FileViewFilter*); the page sends its filters with `session.file` and draws what comes back.
 
 ## (E) Explore Graph In Files App
 
@@ -1439,6 +1641,14 @@ Requested (2026-11-06, "default is to have a graph and just read the violations"
 
 Requested (2026-11-20, "we need a diagnose and align button that goes on context viewer through graph and selected stages, fidelities, formats and determines gaps and then syncs, failures can be fixed; check graphs for alignment; check callouts match"). Built (2026-11-20): Diagnose goes through the session's selected stages, practices and chosen formats and its graph and lists each gap in plain words: a chosen format with no file, formats of one document whose graph readings differ, callouts that match no edge (`format-alignment.diagnose_alignment`). Align renders the format that lacks from the one that holds more through the Render action; formats that conflict wait for the person; each failure can be sent to be fixed (`format-alignment.align_formats`).
 
+### (S) Person --> [Render Formats Into Their Files](../story_tests/review-generated-work-in-file-viewer/align-formats-in-files-app/align_formats_in_files_app_story.test.md#story-render-formats-into-their-files)
+
+Built (2026-11-20, the person: "all renders should result in the final output -> file"; 2026-11-21, "existing code, comments, whatever exists only in one shape must be preserved"): a render saves the chosen code format that has no file, reshapes a code file that already has code keeping its bodies, keeps a member the model no longer holds for migration, fails a render that would lose a line, and answers a render that fails as a failure. Split from Diagnose And Align Session Formats on 2026-11-24.
+
+### (S) Person --> [Diagnose Drawings And Callouts](../story_tests/review-generated-work-in-file-viewer/align-formats-in-files-app/align_formats_in_files_app_story.test.md#story-diagnose-drawings-and-callouts)
+
+Built (2026-11-20): the diagnosis reports a drawing that cannot be read, a callout whose target is missing, and callouts and edges that do not match. Split from Diagnose And Align Session Formats on 2026-11-24.
+
 # (E) Author Story Maps
 
 This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; its evidence lines name the app's files. Condensed on 2026-11-16 at the person's request on the story map whiteboard: stories that were one interaction each became one story with acceptance criteria, which stay here in the source until they become scenarios.
@@ -1497,6 +1707,13 @@ This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; i
 **Acceptance criteria:**
 - Observed: dropping a Story card on an increment lane moves it into that increment, out of any other, while it stays under its SubEpic column (stories.ts `assignStoryToIncrement`).
 - Observed: dropping a Story card on the Unassigned zone, shown only in Increment View, removes it from its increment (stories.ts `unassignStoryFromIncrement`).
+
+### (S) Story Designer --> [Change Story Map With AI](../story_tests/author-story-maps/build-expand-rearrange-and-plan-story-map/change_story_map_with_ai_story.test.md)
+
+**Acceptance criteria:**
+- Intended: the designer asks for a change in an AI chat panel; no chat panel or ai-mutation module exists (story_map.stories.md, Request AI Story Mutation; story_map.information_architecture.md, AI Chat Panel).
+- Intended: the agent applies the change to the story map directly (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes").
+- Moved on 2026-11-24 from the sub-epic Author Story Changes With AI, which held only this story, into this sub-epic, whose outcome it serves.
 
 ## (E) Author Scenarios And Steps
 ### (S) Story Designer --> Add Scenario To Story
@@ -1585,13 +1802,6 @@ This epic is the app's own story map, `C:/dev/story-ui/.context/story-map.md`; i
 
 **Acceptance criteria:**
 - Requested on 2026-11-06: the Story UI editor opens a CDD session's `story-map.md`, edits it and saves it back, and its tests run against that map; each gap a test finds becomes an Intended story here, fixed before the board or chat bar invokes the app.
-
-## (E) Author Story Changes With AI
-### (S) Story Designer --> Change Story Map With AI
-
-**Acceptance criteria:**
-- Intended: the designer asks for a change in an AI chat panel; no chat panel or ai-mutation module exists (story_map.stories.md, Request AI Story Mutation; story_map.information_architecture.md, AI Chat Panel).
-- Intended: the agent applies the change to the story map directly (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes").
 
 # (E) Explore Stories In Story UI
 
@@ -2016,34 +2226,58 @@ Inferred: the load reads each scoped folder's `.context/*-model.md` beside the c
 
 Observed: DDD reads bounded contexts from folders holding `.context/bounded-context.md` and places aggregates, entity roots, value objects and repositories under them by stereotype (`working_copy.py` `_record_ddd`, `graph_spec.py` "with domain-driven design").
 
-#### (S) Knowledge Graph --> Read Domain Documents And Code
+#### (S) Knowledge Graph --> [Read Domain Documents And Code](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_domain_documents_and_code_story.test.md#story-read-domain-documents-and-code)
 
-Observed: DDD reads the bounded contexts, aggregates, context mappings and events the bounded-context map and each domain model document write, and joins a class a document describes to the class in code that implements it with an edge, never on a name alone (`cdd_guidance/practices/ddd/reading/graph_reading.py`, `graph_reading_spec.py`; scenarios in `story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_domain_documents_and_code_story.test.md`).
+Observed: DDD reads the bounded contexts, aggregates, context mappings and events the bounded-context map and each domain model document write, and holds a class a document describes and the code declares, and an aggregate a document describes and a folder holds, as one node that keeps the document's place, matched by the folder the code is in and never on a name alone (`cdd_guidance/practices/ddd/reading/graph_reading.py`, `graph_reading_spec.py`; scenarios in `story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_domain_documents_and_code_story.test.md`).
 
-#### (S) Knowledge Graph --> [Read Story Maps And Story Tests](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_practice_trees_from_source_story.test.md#story-read-story-maps-and-story-tests)
+#### (S) Knowledge Graph --> [Join Domain Blocks Across Documents And Code](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_domain_documents_and_code_story.test.md#story-join-domain-blocks-across-documents-and-code)
 
-Observed: Stories reads epics, sub-epics and stories from story map markdown and draw.io files, and scenarios, steps and examples from story tests, keeping each node's path and line (`working_copy.py` `_record_stories`, `graph_spec.py` "with stories", `working_copy_scan_spec.py` "limited to an edited story map markdown file", "limited to an edited Python story test").
+Observed: a building block is joined to the block written in its own language and to the Clean Engineering class it is, a block the domain model draws and the code declares is one node, and a bounded context is given the aggregates its file links, heads under another name, or names in plain words (`cdd_guidance/practices/ddd/reading/graph_reading.py`, `graph_reading_spec.py`). Split from Read Domain Documents And Code on 2026-11-24.
 
-#### (S) Knowledge Graph --> Read BDD Spec Trees
-
-Observed: BDD reads each spec file's describe tree into spec, description, context and observation nodes (`working_copy.py` `_record_bdd`, `graph_spec.py` "with behavior-driven development").
-
-#### (S) Knowledge Graph --> Read UX Maps
+#### (S) Knowledge Graph --> [Read UX Maps](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_ux_maps_story.test.md#story-read-ux-maps)
 
 Observed: UX reads each UX map file into screens, regions, controls, interactions and transitions, with edges to the stories a screen shows and the domain terms it names (`cdd_guidance/practices/ux/model/graph_reading.py`, `graph_reading_spec.py`; scenarios in `story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_ux_maps_story.test.md`).
 
-#### (S) Knowledge Graph --> Place Story Nodes On Their Source Lines
+#### (S) Knowledge Graph --> [Join UX Controls To The Steps They Serve](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-practice-trees-from-source/read_ux_maps_story.test.md#story-join-ux-controls-to-the-steps-they-serve)
 
-Observed: scenarios and steps sit in source-line order, a step opens on the call holding its label, a scenario runs through its closing brace, and an imported example sits in its examples file (`graph.py` `Node._edges_in_source_order`, `Source.align_to_label`, `align_to_example_export`, `graph_spec.py` "a scenario", "a step", "an example a story test imports"); `defects.md` still lists scenario and step order under Not fixed.
+Observed: a control, whether in a UX map or drawn on a mockup's board, is joined to the story, scenario and step its served link names, a link written from the project's folder or saved in an epic's `.context` is followed, a link that names no story file or heading joins nothing, what a control serves is kept when the scenarios are not read, and a Story Demo control is joined to the step it runs and the property it shows (`cdd_guidance/practices/ux/model/graph_reading.py`, `graph_reading_spec.py`). Split from Read UX Maps on 2026-11-24.
 
 #### (S) Knowledge Graph --> Give Each Node Its Fidelity
 
 Observed: each node knows the fidelity its practice's schema creates it at and every higher fidelity it belongs to (`graph.py` `Node.fidelities`, `graph_spec.py` "a node's fidelity").
 
+### (E) [Read Story And Spec Trees From Source](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-story-and-spec-trees-from-source/read_story_and_spec_trees_from_source_story.test.md)
+
+The knowledge graph reads the Stories practice's story maps and story tests, in whichever language they are written, and the BDD practice's specs, into trees that keep each node on its source lines. Grouped on 2026-11-24 from Read Practice Trees From Source, which had grown past nine stories.
+
+#### (S) Knowledge Graph --> [Read Story Maps And Story Tests](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-story-and-spec-trees-from-source/read_story_and_spec_trees_from_source_story.test.md#story-read-story-maps-and-story-tests)
+
+Observed: Stories reads epics, sub-epics and stories from story map markdown and draw.io files, and scenarios, steps and examples from story tests, keeping each node's path and line (`working_copy.py` `_record_stories`, `graph_spec.py` "with stories", `working_copy_scan_spec.py` "limited to an edited story map markdown file", "limited to an edited Python story test").
+
+#### (S) Knowledge Graph --> [Report Story Files The Map Does Not Hold](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-story-and-spec-trees-from-source/read_story_and_spec_trees_from_source_story.test.md#story-report-story-files-the-map-does-not-hold)
+
+Observed (exploratory-testing defect widget-21): the stories a scenarios file or a story test in code names that the map does not hold are kept in the graph and reported by `scenarios-name-a-story-on-the-map`, and a scenarios file whose stories the map holds is reported for nothing. Split from Read Story Maps And Story Tests on 2026-11-24.
+
+#### (S) Knowledge Graph --> [Read Story Files In Any Language](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-story-and-spec-trees-from-source/read_story_and_spec_trees_from_source_story.test.md#story-read-story-files-in-any-language)
+
+Observed: story files written in markdown, Python, TypeScript or JavaScript give the same graph, a JavaScript shared story file and screen spec are read as the TypeScript ones are, and JavaScript story tests are read as the map where no story map names their epics. Split from Read Story Maps And Story Tests on 2026-11-24.
+
+#### (S) Knowledge Graph --> Read BDD Spec Trees
+
+Observed: BDD reads each spec file's describe tree into spec, description, context and observation nodes (`working_copy.py` `_record_bdd`, `graph_spec.py` "with behavior-driven development").
+
+#### (S) Knowledge Graph --> Place Story Nodes On Their Source Lines
+
+Observed: scenarios and steps sit in source-line order, a step opens on the call holding its label, a scenario runs through its closing brace, and an imported example sits in its examples file (`graph.py` `Node._edges_in_source_order`, `Source.align_to_label`, `align_to_example_export`, `graph_spec.py` "a scenario", "a step", "an example a story test imports"); `defects.md` still lists scenario and step order under Not fixed.
+
 ### (E) Link Practice Trees Across Practices
-#### (S) Knowledge Graph --> Link Steps And Observations To Operations
+#### (S) Knowledge Graph --> [Link Steps And Observations To Operations](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/link-practice-trees-across-practices/link_steps_and_observations_to_operations_story.test.md#story-link-steps-and-observations-to-operations)
 
 Observed: a story step and a BDD observation each get an `invokes` edge to the operations their code calls, with `invokedBy` back on the operation and setup calls of the enclosing context first (`working_copy.py` `_record_story_edges`, `_record_bdd_edges`, `graph_spec.py` "with a step that invokes an operation", `bdd_invokes_spec.py`).
+
+#### (S) Knowledge Graph --> [Find The Class A Step Calls](../story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/link-practice-trees-across-practices/link_steps_and_observations_to_operations_story.test.md#story-find-the-class-a-step-calls)
+
+Observed: a step's `invokes` edge goes to the class its linked domain term names, the one class its seed's package holds that declares the operation, or the class the story file built the receiver as; it links nothing when two classes in reach declare the operation and the receiver's class is not written, and a link to a heading the domain model does not hold gives no edge. Split from Link Steps And Observations To Operations on 2026-11-24.
 
 #### (S) Knowledge Graph --> Link Markdown Steps To Model Operations
 
@@ -2196,41 +2430,57 @@ Observed: every rule is labelled `practice.node.rule`, with the owning pattern i
 
 Validate at Clean Engineering's modules, model and code fidelities checks what one file at a time cannot see: the size and complexity of each function, class and module, and the relationships between classes across files.
 
-#### (S:system) Knowledge Graph --> Record Code Metrics As Node Facts
+#### (S:system) Knowledge Graph --> [Record Code Metrics As Node Facts](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/record_code_metrics_as_node_facts_story.test.md#story-record-code-metrics-as-node-facts)
 
 Requested (2026-11-10, "when we run validation at clean model or clean code we integrate the metrics ... and add those findings onto the model itself, it's just another fact on the model: what is its cyclomatic complexity"); Built (2026-11-22, the person's decisions of that day in `.sessions/_backlog/measure-code-on-the-model.md`; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/record_code_metrics_as_node_facts_story.test.md)): the Clean Engineering reader takes the measures of the files a validate is given and keeps each as a fact on its function or class node: the paths through a function (cyclomatic complexity), its readability score (cognitive complexity), and a class's total complexity, classes depended on, and groups of methods sharing no data. A measure a fact on the node already gives is read from that fact with no tool: a function's lines and parameters, a class's methods. Each other measure is supplied by the tool the project's `.context/config.json` chooses for it in the code's language (`code_measures`: lizard or the practice's own reader, for Python, TypeScript and JavaScript); code in a language with no tool chosen, or a chosen tool that is not installed, is reported by name by the measure's rule (`measures/checked_measures.py`, `code_measures_spec.py`, `code_measures_heavy_spec.py`).
 
-#### (S:system) Knowledge Graph --> Record Module Measures As Node Facts
+#### (S:system) Knowledge Graph --> [Measure Code With The Project's Chosen Tools](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/record_code_metrics_as_node_facts_story.test.md#story-measure-code-with-the-projects-chosen-tools)
+
+Built (2026-11-22, `.sessions/_backlog/measure-code-on-the-model.md`): each measure is taken with the tool the project's `.context/config.json` chooses for it in the code's language (`code_measures`); code in a language with no tool chosen and a chosen tool that is not installed are reported by name, a measure the project says is not measured is left out, and a project that chose no tools takes no measure (`measures/checked_measures.py`, `code_measures_spec.py`, `code_measures_heavy_spec.py`). Split from Record Code Metrics As Node Facts on 2026-11-24.
+
+#### (S:system) Knowledge Graph --> [Record Module Measures As Node Facts](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/record_module_measures_as_node_facts_story.test.md#story-record-module-measures-as-node-facts)
 
 Requested (2026-11-22, "the item names functions, classes and modules, and listed no measure for a module"); Built (2026-11-22, the person's decisions of that day in `.sessions/_backlog/measure-code-on-the-model.md`; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/record_module_measures_as_node_facts_story.test.md)): the same read keeps on each module node the modules that import it, and its abstractness and instability, the last two for information only. Its import loops and the modules it imports are facts every read already keeps, and copied function bodies are the facts `eliminate-duplication` reports, so no tool repeats them. Blocks of code copied across files are written as not measured until a tool is chosen, and defects for each thousand lines of a branch are not part of this build (`measures/measuring_tools.py` `ReaderTool`).
 
-#### (S:system) Validate --> Check Code Metrics Against Clean Engineering Limits
+#### (S:system) Validate --> [Check Code Metrics Against Clean Engineering Limits](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/check_code_metrics_against_clean_engineering_limits_story.test.md#story-check-code-metrics-against-clean-engineering-limits)
 
 Requested (2026-11-10, "when we run validation at clean model or clean code we integrate the metrics ... and add those findings onto the model itself, it's just another fact on the model: what is its cyclomatic complexity"); Built (2026-11-22, the person's decisions of that day in `.sessions/_backlog/measure-code-on-the-model.md`; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/check_code_metrics_against_clean_engineering_limits_story.test.md)): seven named graph rules read the measures off the nodes and report a node past its limit in the same validation report as the other rules, each naming its measure in plain English: a function over 10 paths, a readability score over 15, over 50 lines of code or over 5 parameters, a class over 100 total complexity or 30 methods, and a class whose methods fall into more than one group sharing no data. The limits are kept beside the chosen tools in the project's config. An import loop is already reported by `one-way-deps`, and a class that depends on more classes than before is kept as a fact with no rule, since it needs a base commit to compare with (`rules/code_measure_limits.py`).
 
-#### (S:system) Knowledge Graph --> Report Unused Class For Deletion
-
-Requested (`.sessions/_backlog/check-clean-engineering-across-files.md` "Every class is used or uses something"); Built (2026-11-22; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/report_unused_and_disconnected_code_story.test.md)): a production class no other class uses and which uses none, which nothing calls into, and which none of the ways the project's `.context/config.json` names under `code_reach` reaches, is reported as no use, delete (`delete-unused-classes`), and so is a public operation of a used class nothing calls (`delete-unused-operations`). One a call the read could not join may reach, in a file that could reach it, is listed for a reading instead (`check-use-the-graph-cannot-see`). A class others use that uses nothing is in use (`rules/code_use.py`, `code_use_rules.py`).
-
-#### (S:system) Knowledge Graph --> Report Operation Used Only Inside Its Module
-
-Requested (`.sessions/_backlog/check-clean-engineering-across-files.md` "internal operations left public"); Built (2026-11-22; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/report_unused_and_disconnected_code_story.test.md)): a public operation of a class its module shows other modules, which only code inside the module calls, is listed for a reading as an operation to make private (`make-module-only-operations-private`).
-
-#### (S:system) Knowledge Graph --> Report Runtime Dependency That Should Be Owned
-
-Built (2026-11-22, step 2 of `.sessions/_backlog/check-clean-engineering-across-files.md`; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/report_runtime_dependency_that_should_be_owned_story.test.md)): `put-logic-on-the-owning-resource`, judged and of scope all, lists each class that builds another on each call from strings or dicts, or looks it up by name, naming the class as the owner to consider and the relationship it could hold instead, a part it builds once and keeps (composition) or one handed to it (association); a class it is handed, holds, or builds in its constructor, a value, a failure, a record with no behaviour, and one built from a formatted message are not listed (`cross_file_rules.py`, `reading/owned_dependencies.py`). Re-reading a file another object holds and passing the owner's data into a helper are not listed yet.
-
-#### (S:system) Knowledge Graph --> Report Disconnected Class
-
-Requested (`.sessions/_backlog/check-clean-engineering-across-files.md` "Disconnected classes"); Built (2026-11-22; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/report_unused_and_disconnected_code_story.test.md)): a used class whose family is connected to other classes only by inheritance, or not at all, is listed for a reading as a relationship the model missed or as code that is not resource-oriented, naming the composition or association it may be missing (`connect-disconnected-classes`).
-
-#### (S:system) Knowledge Graph --> Report One-Class Package
-
-Requested (`.sessions/_backlog/check-clean-engineering-across-files.md` "One-class packages"); Built (2026-11-22; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/report_unused_and_disconnected_code_story.test.md)): a package, a folder with no module card, holding one class and no folder is listed for a reading as unused (delete), part of a bigger package (merge), or not fully modelled (`merge-one-class-packages`).
-
-#### (S:system) Validate --> Judge Clean Engineering Rules Across Files
+#### (S:system) Validate --> [Judge Clean Engineering Rules Across Files](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/judge_clean_engineering_rules_across_files_story.test.md#story-judge-clean-engineering-rules-across-files)
 
 Built (2026-11-22, step 2 of `.sessions/_backlog/check-clean-engineering-across-files.md`; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/judge_clean_engineering_rules_across_files_story.test.md)): rules of scope all compare the files of the whole codebase, each listing its candidates in the paths a validate is given and over the rest of the working copy when validate is asked for the judged pass (`judge_all`): `eliminate-duplication` lists, as one candidate, operations in different files whose bodies match once their own names are set aside; `hold-state-on-the-object-not-in-parameters` a parameter handed down unchanged to two other classes, and a class every operation of which takes one parameter; `do-not-invent-parallel-object-models` a second registry, a collection naming the classes another file's collection names; `use-consistent-naming` two verbs used for one target across classes; and `seam-names-current-code`, checked, a module card whose seam terms or dependencies no longer match the code. Global or ambient state, legacy names and dead code, and swallowed failures are left to the rules that already check them.
+
+#### (S:system) Validate --> [Judge Passed Parameters And Second Registries](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/check-clean-engineering-code-through-the-graph/judge_clean_engineering_rules_across_files_story.test.md#story-judge-passed-parameters-and-second-registries)
+
+Built (2026-11-22, step 2 of `.sessions/_backlog/check-clean-engineering-across-files.md`): `hold-state-on-the-object-not-in-parameters` lists a parameter handed down unchanged to two other classes and a class every operation of which takes the same parameter, passing one handed between a class's own operations or to a constructor; `do-not-invent-parallel-object-models` lists a second registry of the same classes, passing a list of exported names and one that spells the classes' names as labels (`cross_file_rules.py`). Split from Judge Clean Engineering Rules Across Files on 2026-11-24.
+
+### (E) Report Unused And Poorly Connected Code
+
+Validate at Clean Engineering's model and code fidelities reports code nothing uses for deletion, an operation only its own module calls, and classes and packages joined to the rest of the code too loosely or built where they should be owned. Grouped on 2026-11-24 from Check Clean Engineering Code Through The Graph, which had grown past nine stories.
+
+#### (S:system) Knowledge Graph --> [Report Unused Class For Deletion](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_unused_and_disconnected_code_story.test.md#story-report-unused-class-for-deletion)
+
+Requested (`.sessions/_backlog/check-clean-engineering-across-files.md` "Every class is used or uses something"); Built (2026-11-22; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_unused_and_disconnected_code_story.test.md)): a production class no other class uses and which uses none, which nothing calls into, and which none of the ways the project's `.context/config.json` names under `code_reach` reaches, is reported as no use, delete (`delete-unused-classes`), and so is a public operation of a used class nothing calls (`delete-unused-operations`). One a call the read could not join may reach, in a file that could reach it, is listed for a reading instead (`check-use-the-graph-cannot-see`). A class others use that uses nothing is in use (`rules/code_use.py`, `code_use_rules.py`).
+
+#### (S:system) Knowledge Graph --> [Count Indirect Uses Before Reporting Deletion](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_unused_and_disconnected_code_story.test.md#story-count-indirect-uses-before-reporting-deletion)
+
+Built (2026-11-22, `.sessions/_backlog/check-clean-engineering-across-files.md`): before a class or member is reported for deletion, a use from example code counts only when production imports it, spec support the project's config names as test code gives no use, a call through a protocol is a use of each class that satisfies it, and a class or member a library outside the code read or a call the read could not join may use is listed as a candidate for a reading, not reported as a violation (`check-use-the-graph-cannot-see`; `rules/code_use.py`, `code_use_rules.py`). Split from Report Unused Class For Deletion on 2026-11-24.
+
+#### (S:system) Knowledge Graph --> [Report Operation Used Only Inside Its Module](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_unused_and_disconnected_code_story.test.md#story-report-operation-used-only-inside-its-module)
+
+Requested (`.sessions/_backlog/check-clean-engineering-across-files.md` "internal operations left public"); Built (2026-11-22; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_unused_and_disconnected_code_story.test.md)): a public operation of a class its module shows other modules, which only code inside the module calls, is listed for a reading as an operation to make private (`make-module-only-operations-private`).
+
+#### (S:system) Knowledge Graph --> [Report Runtime Dependency That Should Be Owned](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_runtime_dependency_that_should_be_owned_story.test.md#story-report-runtime-dependency-that-should-be-owned)
+
+Built (2026-11-22, step 2 of `.sessions/_backlog/check-clean-engineering-across-files.md`; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_runtime_dependency_that_should_be_owned_story.test.md)): `put-logic-on-the-owning-resource`, judged and of scope all, lists each class that builds another on each call from strings or dicts, or looks it up by name, naming the class as the owner to consider and the relationship it could hold instead, a part it builds once and keeps (composition) or one handed to it (association); a class it is handed, holds, or builds in its constructor, a value, a failure, a record with no behaviour, and one built from a formatted message are not listed (`cross_file_rules.py`, `reading/owned_dependencies.py`). Re-reading a file another object holds and passing the owner's data into a helper are not listed yet.
+
+#### (S:system) Knowledge Graph --> [Report Disconnected Class](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_unused_and_disconnected_code_story.test.md#story-report-disconnected-class)
+
+Requested (`.sessions/_backlog/check-clean-engineering-across-files.md` "Disconnected classes"); Built (2026-11-22; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_unused_and_disconnected_code_story.test.md)): a used class whose family is connected to other classes only by inheritance, or not at all, is listed for a reading as a relationship the model missed or as code that is not resource-oriented, naming the composition or association it may be missing (`connect-disconnected-classes`).
+
+#### (S:system) Knowledge Graph --> [Report One-Class Package](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_unused_and_disconnected_code_story.test.md#story-report-one-class-package)
+
+Requested (`.sessions/_backlog/check-clean-engineering-across-files.md` "One-class packages"); Built (2026-11-22; [scenarios](../story_tests/map-work-into-knowledge-graph/check-nodes-against-graph-rules/report-unused-and-poorly-connected-code/report_unused_and_disconnected_code_story.test.md)): a package, a folder with no module card, holding one class and no folder is listed for a reading as unused (delete), part of a bigger package (merge), or not fully modelled (`merge-one-class-packages`).
 
 ## (E) Review Violations In Graph App
 
@@ -2559,7 +2809,11 @@ Observed (`harness/release/test_runs.py`; `test_runs_spec.py`, `test_runs_heavy_
 
 ### (S) Person --> [Run Test Tier](../story_tests/review-end-to-end-screens/run-test-tiers-one-at-a-time/run_test_tiers_one_at_a_time_story.test.md#story-run-test-tier)
 
-Observed (`harness/release/test_runs.py`, tested by `harness/release/test_runs_spec.py` and `test_runs_heavy_spec.py`): `python -m harness.release.test_runs <tier>` and `scripts/test.ps1` each wait for a tier already running on the same checkout, saying which process they wait for; the cadence starts nothing while one runs; a run again after a killed run is the latest, the killed one abandoned; the process the cadence started finishes the run the cadence recorded rather than recording a second; and a run by `scripts/test.ps1` on uncommitted edits is never the tier's latest result. Its scenarios are tested by those specs; no story test file runs them.
+Observed (`harness/release/test_runs.py`, tested by `harness/release/test_runs_spec.py` and `test_runs_heavy_spec.py`): `python -m harness.release.test_runs <tier>` and `scripts/test.ps1` each wait for a tier already running on the same checkout, saying which process they wait for, and the cadence starts nothing while one runs. Its scenarios are tested by those specs; no story test file runs them.
+
+### (S:system) Test Runner --> [Record Test Run](../story_tests/review-end-to-end-screens/run-test-tiers-one-at-a-time/run_test_tiers_one_at_a_time_story.test.md#story-record-test-run)
+
+Observed (`harness/release/test_runs.py`, tested by `harness/release/test_runs_spec.py` and `test_runs_heavy_spec.py`): the record of test runs keeps the run the release reads as a tier's latest: a run again after a killed run is the latest, the killed one abandoned; the process the cadence started finishes the run the cadence recorded rather than recording a second; and a run by `scripts/test.ps1` on uncommitted edits is never the tier's latest result. Its scenarios are tested by those specs; no story test file runs them. Split from Run Test Tier on 2026-11-24, as a sub-epic holds at least two stories and keeping the record is a mechanic of its own.
 
 ## (E) Read E2E Reports
 

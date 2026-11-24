@@ -14,7 +14,7 @@ Story map: [Read Practice Trees From Source](../../../../.context/story-map.md#e
 ### Domain terms
 
 - ++domain document++ — a document DDD reads contexts and aggregates from, in a `.context` folder: the bounded-context map (`bounded-context-map.md`) or a domain model (`domain-model.md`).
-- ++described block++ — the building block a domain model draws as a class card, a node at the card's lines in the document.
+- ++described block++ — the building block a domain model draws as a class card that no code declares, a node at the card's lines in the document.
 - ++declared block++ — the building block a class in code is, a node at the class's lines in its file.
 - ++marker file++ — `.context/bounded-context.md` in a folder, which makes that folder a bounded context.
 
@@ -46,7 +46,8 @@ Story map: [Read Practice Trees From Source](../../../../.context/story-map.md#e
 |--------|------|
 | `cdd_guidance/practices/ddd/model/schema.yaml` | a `boundedContext` holds `aggregate`; `mappedTo: contextMapping` with `local`, `remote` and `pattern`; a `repository` `accesses` its `entityRoot`; an `entityRoot` `associates` with entities |
 | `cdd_guidance/practices/ddd/model/nodes.py` `DomainEvent` | "One producer aggregate, one or many consumers" |
-| `.sessions/release-1-2-fixes/exploratory-testing/closing-brief-round-3.md`, the person's answer 3 | a DDD node has an "is a" edge to the Clean Engineering class read from the same file; a class in a model document and the class in code that implements it are two nodes with an edge; nothing is joined on a name alone |
+| `.sessions/release-1-2-fixes/exploratory-testing/closing-brief-round-3.md`, the person's answer 3 | a DDD node has an "is a" edge to the Clean Engineering class read from the same file; nothing is joined on a name alone |
+| `.sessions/_backlog/one-thing-one-node-in-the-graph.md`, the person's decisions of 2026-11-22 | one thing written in several formats is one node; a block the domain model draws and the code declares, and an aggregate the model draws and a folder holds, are each one node |
 | Defects r3-bolt-01, r3-bolt-02, r3-bolt-05, r3-cog-05 | one bounded context called "bounded context"; no mapping, event or dependency between aggregates; a mapping with no side; a Python repository accessing the TypeScript root; a model's class leaving the graph when code is loaded |
 
 #### Scenario: Read the bounded contexts the domain documents head
@@ -91,6 +92,8 @@ Story map: [Read Practice Trees From Source](../../../../.context/story-map.md#e
 *When* Claude Code loads the bookshop into the graph
 *Then* the mapping `Cart → Catalogue · Book` of ++ordering/.context/bounded-context.md++ has the aggregate `cart` as its local side and the aggregate `book` as its remote side
 
+## Story: Join Domain Blocks Across Documents And Code
+
 #### Scenario: Link a block to the block written in its own language
 
 *Given* the bookshop holds its code
@@ -104,12 +107,13 @@ Story map: [Read Practice Trees From Source](../../../../.context/story-map.md#e
 *When* Claude Code loads the bookshop into the graph
 *Then* the ++declared block++ Cart of ++ordering/cart/cart.py++ has an `isA` edge to the Clean Engineering class Cart read from ++ordering/cart/cart.py++
 
-#### Scenario: Keep a described block beside the declared block that implements it
+#### Scenario: Hold a block the domain model draws and the code declares as one node
 
 *Given* a project holds `src/.context/domain-model.md`, which draws the root Cart in the aggregate Cart, and `src/cart/cart.py`, which declares the class Cart as an aggregate root
 *When* Claude Code loads the project into the graph
-*Then* the DDD practice holds the ++described block++ Cart and the ++declared block++ Cart
-  *And* the ++declared block++ has an `implements` edge to the ++described block++, because its folder `cart` is named for the aggregate the document draws the class in
+*Then* the DDD practice holds one root Cart, the ++declared block++ of `src/cart/cart.py`, which keeps the card in the domain model as its place in markdown, because its folder `cart` is named for the aggregate the document draws the class in
+  *And* it holds one aggregate Cart, the one the folder `src/cart` holds, which keeps the document's section as its place in markdown
+  *And* no edge joins one format to another
 
 #### Scenario: Give a bounded context the aggregates its file links
 

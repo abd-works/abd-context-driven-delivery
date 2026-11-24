@@ -5,9 +5,9 @@ format: md
 section: body
 ---
 
-# Sub-epic: Produce Formal Artifacts
+# Sub-epic: Generate Fidelity Artifacts
 
-Story map: [Produce Formal Artifacts](../../../.context/story-map.md#e-produce-formal-artifacts). Session release-1-2-fixes.
+Story map: [Generate Fidelity Artifacts](../../../../.context/story-map.md#e-generate-fidelity-artifacts). Session release-1-2-fixes.
 
 **Evidence modes.** Every scenario below is *Observed*: it runs in `record-test-tiers-of-module/record_test_tiers_of_module_story.test.py`, and each names the spec that also runs it. The story was decided by the person on 2026-11-22, as change 6 of the defect analysis (`.sessions/release-1-2-fixes/exploratory-testing/defect-causes.md`, shortcoming 6: nothing says which tier a story needs).
 
@@ -77,15 +77,6 @@ Observed (`module_tiers_spec.py`; `cdd_guidance/actions/render/render_spec.py` f
 *Then* `session.json` records unit and server with mamba and web with playwright for ++shop/orders++
   *And* the render asks nothing more about the tiers of ++shop/orders++
 
-#### Scenario: Record a tier the agent decided
-
-Observed (`space/session/test_tiers_spec.py`).
-
-*Given* `session.json` records the unit tier of ++shop/orders++ with mamba
-*When* the agent records the web tier of ++shop/orders++ with playwright
-*Then* the session answers ++shop/orders++ with unit mamba and web playwright
-  *And* another reader of `session.json` reads the same tiers
-
 #### Scenario: Ask the agent for the module of a story test under no module's folder
 
 Observed (`module_tiers_spec.py`).
@@ -103,6 +94,17 @@ Observed (`module_tiers_spec.py`).
 *When* the render records what the saved file shows
 *Then* `session.json` records no tier for ++shop/orders++
   *And* the render asks the agent to record the unit tier with the test tool the module's tests run with
+
+## Story: Record Decided Test Tier
+
+#### Scenario: Record a tier the agent decided
+
+Observed (`space/session/test_tiers_spec.py`).
+
+*Given* `session.json` records the unit tier of ++shop/orders++ with mamba
+*When* the agent records the web tier of ++shop/orders++ with playwright
+*Then* the session answers ++shop/orders++ with unit mamba and web playwright
+  *And* another reader of `session.json` reads the same tiers
 
 #### Scenario: Refuse a tier that is none of unit, server and web
 
