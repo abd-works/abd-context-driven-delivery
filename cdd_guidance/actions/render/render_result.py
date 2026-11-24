@@ -3,7 +3,7 @@
 A render of paths ends in saved files, which the result names; only a render into a data format a program reads, such
 as json, answers its content. Each kind of result writes itself as the fields the Render action has always answered,
 so an agent reads ``path`` for a saved drawing or document, ``paths`` for saved code, ``migrate`` for what waits for a
-person in a file already there, and ``board`` and ``batches`` for a whiteboard's board in Claude.
+person in a file already there, and ``board``, ``batches`` and ``publish`` for a whiteboard's board in Claude.
 """
 
 from __future__ import annotations
@@ -29,6 +29,21 @@ DECIDE_EACH = (
     "source's model_has is right, and bring the other up to date. Decide each by reading both: who added it or who "
     "removed it plays no part, and no rule decides it for you. Where reading both does not tell you, ask the person, "
     "naming the file, the leftover and what may have replaced it. Until you have decided an entry, it stays where it is."
+)
+
+# What a whiteboard render whose file was never published tells the agent: the render ends with the board in Claude.
+PUBLISH_NEW_BOARD = (
+    "This render is not finished until the whiteboard file is on a board in Claude. Create a Whiteboard artifact "
+    "titled after the file with Claude's Artifact tool, write each batch to its store in order with ArtifactData "
+    "batch, then call record_board with this file's path and the board's address, which keeps the address in the file "
+    "so the next render updates the same board and the Files app opens it. A robot or sub-agent that cannot reach the "
+    "Artifact tool reports that the board is unpublished, naming the file, rather than leave it out."
+)
+# What a whiteboard render whose file is already on a board in Claude tells the agent.
+PUBLISH_TO_BOARD = (
+    "This render is not finished until the board in Claude shows it: write each batch to the store of the board at "
+    "board, in order, with ArtifactData batch. The batches change only what the render changed, so what people moved "
+    "or added on the board stays."
 )
 
 
@@ -181,6 +196,13 @@ class SavedBoard(SavedFile):
     @data_field
     def batches(self) -> list:
         return self._batches
+
+    @property
+    @data_field
+    def publish(self) -> str:
+        """What the agent does to finish the render: put the file on a new board and record its address when it was
+        never published, else write the batches to its board."""
+        return PUBLISH_TO_BOARD if self._board else PUBLISH_NEW_BOARD
 
 
 class SavedFiles(RenderResult):

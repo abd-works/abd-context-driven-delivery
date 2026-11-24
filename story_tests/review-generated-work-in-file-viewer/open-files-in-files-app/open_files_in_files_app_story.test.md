@@ -12,7 +12,7 @@ Map: [story-map.md](../../../.context/story-map.md#e-open-files-in-files-app). A
 ### Domain terms
 
 - whiteboard file: a `.whiteboard` file a practice renders its diagram to, such as `.context/story-map.whiteboard` (`harness/whiteboard/whiteboard.py` *Whiteboard*), which the page reads as Python reads it (`harness/whiteboard/whiteboard_file.py` *WhiteboardFile*, `whiteboard-file.show`).
-- board: the Claude Whiteboard artifact the whiteboard file was published to. Its address is kept beside the file, in the folder's `whiteboards.json`, by the file's name, as a design canvas keeps its links in `versions.json` (`Whiteboard.links_beside`, a *PublishedLinks*).
+- board: the Claude Whiteboard artifact the whiteboard file was published to. Its address is kept in the whiteboard file itself, as the file's `board` field (`Whiteboard.board_of`), which the render's publish step writes once it creates the board.
 
 > The example ++another project++ is the Files app opened on a project other than the CDD checkout, its server started for the CDD checkout, as [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md#example-another-project) names it.
 
@@ -24,7 +24,7 @@ Requested 2026-11-18 (Nov 18 demo fixes): "Whiteboard entry opens as an external
 
 #### Scenario: Open a whiteboard file as a canvas
 
-*Given* the session of ticket checkout-flow holds `.context/story-map.whiteboard`, and `.context/whiteboards.json` keeps its board's address
+*Given* the session of ticket checkout-flow holds `.context/story-map.whiteboard`, and the file keeps its board's address
 *And* the diagram chip ◇ is selected
 *When* the file bar lists the Stories story map's files
 *Then* the whiteboard is listed as story-map, marked as a whiteboard
@@ -33,7 +33,7 @@ Requested 2026-11-18 (Nov 18 demo fixes): "Whiteboard entry opens as an external
 
 ##### Example: another project
 
-*Given* the Files app is opened on ++another project++, whose design-review session holds `design/.context/story-map.whiteboard`, and `design/.context/whiteboards.json` keeps its board's address
+*Given* the Files app is opened on ++another project++, whose design-review session holds `design/.context/story-map.whiteboard`, and the file keeps its board's address
 *And* the diagram chip ◇ is selected
 *When* the file bar lists the Stories story map's files
 *Then* the whiteboard is listed as story-map, marked as a whiteboard

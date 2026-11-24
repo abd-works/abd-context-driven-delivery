@@ -900,8 +900,7 @@ with description("the board tools") as self:
                         "lib/billing/billing.py": "class Billing:\n    pass\n",
                         "old/design-canvas/version-1/project/canvas.json": "{}\n",
                         "old/design-canvas/versions.json": '{"version-1": "https://claude.ai/artifact/old-canvas"}\n',
-                        "notes/flow.whiteboard": "{}\n",
-                        "notes/whiteboards.json": '{"flow.whiteboard": "https://claude.ai/artifact/flow-board"}\n',
+                        "notes/flow.whiteboard": '{"board": "https://claude.ai/artifact/flow-board", "title": "Flow", "elements": {}}\n',
                     }
                     for path, text in written.items():
                         (project.root / path).parent.mkdir(parents=True, exist_ok=True)

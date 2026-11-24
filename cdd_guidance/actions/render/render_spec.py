@@ -37,7 +37,7 @@ from harness.installation.data_class import data_of
 from space.session import Sessions
 from space.session.files.session_files import NamedPathNotFoundError
 from space.session.spec_support.throwaway_project import ThrowawayProject
-from harness.whiteboard import Whiteboard
+from harness.whiteboard import UnreadableBoard, Whiteboard
 
 _REF = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 _STORIES = "cdd_guidance.practices.stories.stories:Stories"
@@ -289,23 +289,44 @@ with description("Render publishing a whiteboard file to its board in Claude") a
         self.file.write_text(Whiteboard("Story Map").save(), encoding="utf-8")
 
     with context("that the agent created a board for"):
-        with it("should keep the board's address beside the file, so the Files app opens the board"):
+        with before.each:
             Render().record_board(str(self.file), "https://claude.ai/artifact/StoryMapBoard")
-            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+
+        with it("should keep the board's address in the file, so the Files app opens the board"):
+            expect(Whiteboard.board_of(self.file)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+
+        with it("should keep the board the file holds as it was"):
+            expect(Whiteboard.from_text(self.file.read_text(encoding="utf-8")).title).to(equal("Story Map"))
+
+        with it("should write no record of boards beside the file"):
+            expect(sorted(path.name for path in self.folder.iterdir())).to(equal(["story-map.whiteboard"]))
 
     with context("that was published before"):
         with before.each:
             self.other = self.folder / "modules.whiteboard"
-            Whiteboard.links_beside(self.file).record(self.other.name, "https://claude.ai/artifact/ModulesBoard")
-            Whiteboard.links_beside(self.file).record(self.file.name, "https://claude.ai/artifact/OldBoard")
+            self.other.write_text(Whiteboard.published_to(Whiteboard("Modules").save(), "https://claude.ai/artifact/ModulesBoard"), encoding="utf-8")
+            Render().record_board(str(self.file), "https://claude.ai/artifact/OldBoard")
+            Render().record_board(str(self.file), "https://claude.ai/artifact/NewBoard")
 
         with it("should keep only the new address"):
-            Render().record_board(str(self.file), "https://claude.ai/artifact/NewBoard")
-            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal("https://claude.ai/artifact/NewBoard"))
+            expect(Whiteboard.board_of(self.file)).to(equal("https://claude.ai/artifact/NewBoard"))
 
         with it("should leave the other files' addresses as they were"):
-            Render().record_board(str(self.file), "https://claude.ai/artifact/NewBoard")
-            expect(Whiteboard.links_beside(self.other).of(self.other.name)).to(equal("https://claude.ai/artifact/ModulesBoard"))
+            expect(Whiteboard.board_of(self.other)).to(equal("https://claude.ai/artifact/ModulesBoard"))
+
+    with context("that holds text that is not a whiteboard file"):
+        with before.each:
+            self.file.write_text('{"title": "Story Map", "elem', encoding="utf-8")
+
+        with it("should refuse to record a board for it"):
+            expect(lambda: Render().record_board(str(self.file), "https://claude.ai/artifact/X")).to(raise_error(UnreadableBoard))
+
+        with it("should leave the file as it was, for a person to repair"):
+            try:
+                Render().record_board(str(self.file), "https://claude.ai/artifact/X")
+            except UnreadableBoard:
+                pass
+            expect(self.file.read_text(encoding="utf-8")).to(equal('{"title": "Story Map", "elem'))
 
     with context("that is not a whiteboard file"):
         with before.each:
@@ -320,13 +341,17 @@ with description("Render publishing a whiteboard file to its board in Claude") a
                 Render().record_board(str(self.drawio), "https://claude.ai/artifact/X")
             except ValueError:
                 pass
-            expect((self.folder / Whiteboard.LINKS).exists()).to(equal(False))
+            expect(self.drawio.read_text(encoding="utf-8")).to(equal("<mxfile/>"))
 
     with context("rendered to the whiteboard format"):
         with it("should tell the agent to publish the board after the conversion returns"):
             expect(Render.render.__doc__).to(contain("publish_board"))
 
-        with it("should tell the agent to create a Whiteboard artifact when no address is kept, and record its address"):
+        with it("should tell the agent publishing is part of creating the whiteboard"):
+            text = AgentInstructions.for_callable(Render.publish_board, Render()).expand({}).instructions
+            expect(text).to(contain("not finished until"))
+
+        with it("should tell the agent to create a Whiteboard artifact when the file keeps no address, and record its address"):
             text = AgentInstructions.for_callable(Render.publish_board, Render()).expand({}).instructions
             expect(text).to(contain("Whiteboard artifact"))
             expect(text).to(contain("record_board"))
@@ -484,11 +509,14 @@ with description("Render saving what it makes beside its source") as self:
         with it("should answer with no board, since none is kept for the file yet"):
             expect(self.results[0].board).to(equal(""))
 
+        with it("should tell the agent the render ends by creating the board in Claude and recording its address"):
+            expect(self.results[0].publish).to(contain("record_board"))
+
     with context("a story map whose board is kept and a person moved a card on"):
         with before.each:
             Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
             self.board_file = self.folder / "story-map.whiteboard"
-            Whiteboard.links_beside(self.board_file).record(self.board_file.name, "https://claude.ai/artifact/StoryMapBoard")
+            Render().record_board(str(self.board_file), "https://claude.ai/artifact/StoryMapBoard")
             board = json.loads(self.board_file.read_text(encoding="utf-8"))
             self.card = next(key for key, record in board["elements"].items() if "Browse Product Catalog" in str(record.get("text")))
             board["elements"][self.card]["x"] = 777
@@ -500,6 +528,12 @@ with description("Render saving what it makes beside its source") as self:
 
         with it("should answer with the board kept for the file"):
             expect(self.results[0].board).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+
+        with it("should still keep the board's address in the file it saved"):
+            expect(Whiteboard.board_of(self.board_file)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+
+        with it("should tell the agent to write the batches to that board"):
+            expect(self.results[0].publish).to(contain("write each batch to the store of the board"))
 
         with it("should write none of the elements the render left as they were"):
             expect(_written_ids(self.results[0])).to(equal(["meta"]))
@@ -1092,7 +1126,7 @@ with description("A comment a person left on a board in Claude") as self:
 
     with context("on the board the story map's whiteboard file was published to"):
         with before.each:
-            Whiteboard.links_beside(self.board_file).record(self.board_file.name, "https://claude.ai/artifact/StoryMapBoard")
+            self.action.record_board(str(self.board_file), "https://claude.ai/artifact/StoryMapBoard")
             answer = AgentInstructions.for_callable(Render.answer_board_comment, self.action)
             self.text = answer.expand({"board": "https://claude.ai/artifact/StoryMapBoard"}).instructions
 

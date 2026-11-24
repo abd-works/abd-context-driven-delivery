@@ -167,17 +167,19 @@ class RenderedFile:
 
     def save(self, rendered: Rendered) -> SavedFile:
         """Write the render into the file, and answer with the file rather than its text, so the agent has nothing to
-        place; a whiteboard also answers with its board and the writes that put it there. What only the file already
-        there held is put back first (*KeptDocument*), and named in the answer as ``migrate``, each with the file, for
-        whoever decides where it belongs."""
+        place; a whiteboard also answers with its board and the writes that put it there, and keeps in the file the
+        address of the board in Claude the file already there was published to, whatever the format's adapter drew.
+        What only the file already there held is put back first (*KeptDocument*), and named in the answer as
+        ``migrate``, each with the file, for whoever decides where it belongs."""
         kept = KeptDocument(self.format, rendered.layout_kept).onto(self._before, str(rendered.content))
+        board = Whiteboard.board_in(self._before) if self.format.name == WHITEBOARD else ""
+        text = Whiteboard.published_to(kept.text, board) if board else kept.text
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(kept.text, encoding="utf-8")
+        self.path.write_text(text, encoding="utf-8")
         migrate: list[Migration] = [KeptMember(self.path, each, kept.added) for each in kept.kept]
         if self.format.name != WHITEBOARD:
             return SavedFile(rendered, self.path, migrate)
-        board = Whiteboard.links_beside(self.path).of(self.path.name) or ""
-        return SavedBoard(rendered, self.path, migrate, board, self._board_writes(board, kept.text))
+        return SavedBoard(rendered, self.path, migrate, board, self._board_writes(board, text))
 
     def _board_writes(self, board: str, content: str) -> list:
         """The store writes that turn the board kept for the file into the board just saved: against the file as it was

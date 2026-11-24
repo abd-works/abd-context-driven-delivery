@@ -10,7 +10,6 @@ from pathlib import Path
 from harness.whiteboard import Arrow, BoardElement, Box, ElementId, KeepsDocumentOnBoard, Label, Section, Shape, UnreadableBoard, Whiteboard, WhiteboardNode
 from harness.markdown.format import Format, SourceDocument
 from harness.installation.data_class import data_of
-from harness.installation.published_links import PublishedLinksUnreadable
 from harness.whiteboard.whiteboard import StoreWrite
 from harness.whiteboard.whiteboard_file import WhiteboardFile
 
@@ -254,20 +253,33 @@ with description("a whiteboard file's board in Claude") as self:
 
     with context("that was published"):
         with before.each:
-            Whiteboard.links_beside(self.file).record(self.file.name, "https://claude.ai/artifact/StoryMapBoard")
+            self.file.write_text(Whiteboard.published_to(self.file.read_text(encoding="utf-8"), "https://claude.ai/artifact/StoryMapBoard"), encoding="utf-8")
 
-        with it("should answer the board's address, kept beside the file by its name"):
-            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+        with it("should answer the board's address, kept in the file itself"):
+            expect(Whiteboard.board_of(self.file)).to(equal("https://claude.ai/artifact/StoryMapBoard"))
+
+        with it("should keep the board the file holds"):
+            expect(Whiteboard.from_text(self.file.read_text(encoding="utf-8")).title).to(equal("Story Map"))
+
+        with it("should keep the address when the board is drawn over the file again"):
+            expect(Whiteboard.board_in(Whiteboard("Story Map").drawn_over(self.file.read_text(encoding="utf-8")))).to(
+                equal("https://claude.ai/artifact/StoryMapBoard"))
+
+        with it("should send the address to no record of the board's store"):
+            stored = [write for batch in Whiteboard.from_text(self.file.read_text(encoding="utf-8")).batches() for write in batch]
+            expect([write for write in stored if "StoryMapBoard" in json.dumps(write)]).to(equal([]))
 
     with context("that was never published"):
         with it("should answer no address"):
-            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal(None))
+            expect(Whiteboard.board_of(self.file)).to(equal(""))
 
-    with context("with a record in the folder that is not one"):
-        with it("should refuse to answer, naming the record a person has to repair"):
-            (self.folder / Whiteboard.LINKS).write_text("not json", encoding="utf-8")
-            expect(lambda: Whiteboard.links_beside(self.file).of(self.file.name)).to(
-                raise_error(PublishedLinksUnreadable, contain(Whiteboard.LINKS)))
+    with context("that is not on disk"):
+        with it("should answer no address"):
+            expect(Whiteboard.board_of(self.folder / "missing.whiteboard")).to(equal(""))
+
+    with context("that holds text that is not a whiteboard file"):
+        with it("should refuse to keep a board in it"):
+            expect(lambda: Whiteboard.published_to("not json", "https://claude.ai/artifact/X")).to(raise_error(UnreadableBoard))
 
 
 with description("an element's id"):

@@ -2,7 +2,8 @@
 
 A board in Claude is a Whiteboard artifact whose store holds ``board/meta`` (``{v, title, order}``) and one
 ``elements/<id>`` record per element. A practice draws its diagram as a *Whiteboard*, saves it as a ``.whiteboard``
-file beside its other formats, and an agent sends ``Whiteboard.batches(previous)`` to the artifact's store.
+file beside its other formats, and an agent sends ``Whiteboard.batches(previous)`` to the artifact's store. The file
+keeps the address of the board it was published to in its own ``board`` field, which the store never holds.
 """
 
 from __future__ import annotations
@@ -16,8 +17,6 @@ from dataclasses import dataclass, field, fields, replace
 from typing import ClassVar, Collection, Dict, Iterable, List, Optional
 
 from harness.installation.data_class import data_field, data_fields
-from harness.installation.json_file import JsonFile
-from harness.installation.published_links import PublishedLinks
 from harness.markdown.format import Format, SourceDocument
 
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_.~:@+-]{1,40}$")
@@ -387,18 +386,44 @@ class Whiteboard:
     data, which a page draws the board from (`WhiteboardFile`)."""
 
     SUFFIX = ".whiteboard"
-    # The record beside a folder's whiteboard files of the board in Claude each was published to, by the file's name.
-    LINKS = "whiteboards.json"
+    # The field of a ``.whiteboard`` file that keeps the address of the board in Claude the file was published to.
+    BOARD = "board"
 
     @classmethod
-    def links_beside(cls, file: Path) -> PublishedLinks:
-        """The addresses of the boards in Claude the whiteboard files in file's folder were published to, by each
-        file's name, kept in the folder's ``whiteboards.json``, as a design canvas keeps its versions' links in
-        ``versions.json``: the next render updates the same board, and a page opens the board instead of the file."""
-        return PublishedLinks(JsonFile(file.parent / cls.LINKS))
+    def board_in(cls, text: str) -> str:
+        """The address of the board in Claude the ``.whiteboard`` file text was published to; empty for a file not
+        published yet, and for text that is no whiteboard file, which no board was published from."""
+        try:
+            saved = json.loads(text)
+        except (TypeError, ValueError):
+            return ""
+        return str(saved.get(cls.BOARD) or "") if isinstance(saved, dict) else ""
+
+    @classmethod
+    def board_of(cls, file: Path) -> str:
+        """The address of the board in Claude the ``.whiteboard`` file at file was published to, kept in the file
+        itself: the next render updates that board, and a page opens it instead of the file. Empty for a file not
+        published yet, or not on disk."""
+        return cls.board_in(file.read_text(encoding="utf-8")) if file.is_file() else ""
+
+    @classmethod
+    def published_to(cls, text: str, board: str) -> str:
+        """The ``.whiteboard`` file text with board kept as the address it was published to, first in the file, and
+        everything else it holds as it was. Text that is no whiteboard file is refused as an *UnreadableBoard*, since
+        no board is published from it."""
+        try:
+            saved = json.loads(text)
+        except (TypeError, ValueError) as error:
+            raise UnreadableBoard(f"Not a whiteboard file: {error}") from error
+        if not isinstance(saved, dict) or not isinstance(saved.get("elements"), dict):
+            raise UnreadableBoard("Not a whiteboard file: it holds no elements")
+        rest = {key: value for key, value in saved.items() if key != cls.BOARD}
+        return json.dumps({cls.BOARD: board, **rest} if board else rest, indent=1, ensure_ascii=False)
 
     def __init__(self, title: str = "", elements: Iterable[BoardElement] = ()) -> None:
         self._title = title
+        # The address of the board in Claude the file was published to, kept in the file and never sent to the board.
+        self.board = ""
         # The document the board was drawn from, kept in its meta, where the board draws none of it.
         self.kept_document: Optional[SourceDocument] = None
         # The store version each record was read at, by element id and ``meta``; a board drawn by a practice has none.
@@ -492,8 +517,10 @@ class Whiteboard:
         return meta
 
     def save(self) -> str:
-        """The board as a ``.whiteboard`` file: its meta, every element's record, and the versions they were read at."""
-        board = dict(self._meta)
+        """The board as a ``.whiteboard`` file: the address of the board in Claude it was published to, when it was, its
+        meta, every element's record, and the versions they were read at."""
+        board: Dict[str, object] = {self.BOARD: self.board} if self.board else {}
+        board.update(self._meta)
         board["elements"] = {element.id: element.record for element in self.elements}
         if self._versions:
             board["versions"] = dict(self._versions)
@@ -512,6 +539,7 @@ class Whiteboard:
         order = [key for key in board.get("order", []) if key in records]
         order += [key for key in records if key not in order]
         loaded = cls(str(board.get("title", "")))
+        loaded.board = str(board.get(cls.BOARD) or "")
         kept = board.get("document")
         if isinstance(kept, dict) and isinstance(kept.get("text"), str):
             loaded.kept_document = SourceDocument(Format(str(kept.get("format", ""))), kept["text"])
@@ -531,8 +559,11 @@ class Whiteboard:
 
     def drawn_over(self, previous: str) -> str:
         """This board saved as a ``.whiteboard`` file, drawn over previous, the file's text before the render: every
-        element previous also held stays where people put it (``keep_places``); with no previous text, as drawn."""
-        return self.keep_places(Whiteboard.from_text(previous) if previous else None).save()
+        element previous also held stays where people put it (``keep_places``), and the board in Claude previous was
+        published to stays its board; with no previous text, as drawn."""
+        before = Whiteboard.from_text(previous) if previous else None
+        self.board = self.board or (before.board if before is not None else "")
+        return self.keep_places(before).save()
 
     def _writes(self, previous: Optional["Whiteboard"] = None) -> List[StoreWrite]:
         """The store writes that turn previous, the board as it is in Claude, into this board: its meta, then each

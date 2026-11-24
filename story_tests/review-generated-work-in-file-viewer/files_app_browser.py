@@ -36,6 +36,7 @@ if str(_REPO_ROOT) not in sys.path:
 from playwright.sync_api import Page, sync_playwright
 
 from harness.mcp.spec_support import SpecServer
+from harness.whiteboard import Whiteboard
 from space.kanban.graph_view_rule_examples import VIOLATING_MAP_TEXT
 from space.kanban.graph_view_examples import BOARD_CODE, BOARD_TEXT, CHECKOUT_FLOW, STEP_STORY, STEP_STORY_TEXT, TICKET_EXAMPLES, TICKET_EXAMPLES_TEXT
 
@@ -71,7 +72,7 @@ TICKET_TEXT = (
 CLOSE_LINES = "    def close(self) -> None:\n        return None"
 
 # Seed: design-review, a session working in the project's design folder with UX on, its design canvas's version-1
-# published at its link (versions.json) and its story map drawn on a whiteboard published to a board (whiteboards.json).
+# published at its link (versions.json) and its story map drawn on a whiteboard published to a board, whose address the file keeps.
 DESIGN_REVIEW = "design-review"
 CANVAS = "design/ux/design-canvas/version-1/project/canvas.json"
 CANVAS_LINK = "https://claude.ai/artifact/checkout-canvas"
@@ -155,8 +156,7 @@ def _seed_project(root: Path) -> None:
     _write(root, ".sessions/checkout-flow/session.log", "")
     _write(root, CANVAS, "{}\n")
     _write(root, "design/ux/design-canvas/versions.json", json.dumps({"version-1": CANVAS_LINK}))
-    _write(root, WHITEBOARD, WHITEBOARD_TEXT)
-    _write(root, "design/.context/whiteboards.json", json.dumps({"story-map.whiteboard": BOARD_LINK}))
+    _write(root, WHITEBOARD, Whiteboard.published_to(WHITEBOARD_TEXT, BOARD_LINK))
     _write(root, f".sessions/{DESIGN_REVIEW}/session.json", json.dumps({"name": DESIGN_REVIEW, "title": "Design review", "workpath": str(root / "design"), **EVERY_STAGE}))
     _write(root, f".sessions/{DESIGN_REVIEW}/session.log", "")
     _write(root, REVIEW_MAP, VIOLATING_MAP_TEXT)

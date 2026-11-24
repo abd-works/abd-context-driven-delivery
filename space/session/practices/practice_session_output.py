@@ -699,11 +699,11 @@ def latest_version(file: Path) -> Path:
 
 def publication_of(file: Path) -> Publication:
     """Where a file is published, which a page opens instead of the file: a ``.whiteboard`` file on the board in Claude
-    kept beside it (``whiteboards.json``), and a design canvas version's ``canvas.json``
+    the file keeps in its own ``board`` field, and a design canvas version's ``canvas.json``
     (``<design-canvas>/version-N/project/canvas.json``) at the link its versions record (``versions.json``); nowhere for
     any other file. A whiteboard or a canvas not yet published is still named as one, with no link."""
     if file.suffix == Whiteboard.SUFFIX:
-        return Publication(Whiteboard.links_beside(file).of(file.name) or "", WHITEBOARD_KIND)
+        return Publication(Whiteboard.board_of(file), WHITEBOARD_KIND)
     if file.name != "canvas.json" or file.parent.name != "project":
         return Publication()
     version = file.parent.parent

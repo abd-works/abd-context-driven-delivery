@@ -436,7 +436,7 @@ with description("Render saving what it makes beside its source, called through 
         with before.each:
             asyncio.run(_render(self.server, self.project.root, "whiteboard"))
             board_file = self.folder / "story-map.whiteboard"
-            Whiteboard.links_beside(board_file).record(board_file.name, _BOARD)
+            board_file.write_text(Whiteboard.published_to(board_file.read_text(encoding="utf-8"), _BOARD), encoding="utf-8")
             self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "whiteboard"))
 
         with it("should answer the chat with the board kept for the file"):
@@ -463,7 +463,7 @@ with description("A comment a person left on a board in Claude, answered through
         (folder / "story-map.md").write_text(_STORY_MAP, encoding="utf-8")
         asyncio.run(_render(self.server, self.project.root, "whiteboard"))
         board_file = folder / "story-map.whiteboard"
-        Whiteboard.links_beside(board_file).record(board_file.name, _BOARD)
+        board_file.write_text(Whiteboard.published_to(board_file.read_text(encoding="utf-8"), _BOARD), encoding="utf-8")
 
     with after.each:
         OPEN_PROJECTS.close_all()

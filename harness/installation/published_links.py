@@ -1,6 +1,6 @@
-"""The addresses in Claude that files in one folder were published to, kept beside them in a JSON record: a design
-canvas's versions in ``versions.json``, and each ``.whiteboard`` file's board in ``whiteboards.json``. The next
-publish updates the same artifact, and a page opens the artifact instead of the file."""
+"""The addresses in Claude that things in one folder were published to, kept beside them in a JSON record: a design
+canvas's versions in ``versions.json``. The next publish updates the same artifact, and a page opens the artifact
+instead of the file."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ class PublishedLinksUnreadable(JsonFileUnreadable):
 
 class PublishedLinks:
     """Each published thing's address in Claude, by its name, in the order they were published, as one record keeps
-    them: a design canvas's version folder, or a whiteboard file's name."""
+    them: a design canvas's version folder."""
 
     def __init__(self, record: JsonFile) -> None:
         self._record = record
@@ -38,10 +38,6 @@ class PublishedLinks:
     def of(self, name: str) -> Optional[str]:
         """The address name was published at; none while it was never published."""
         return self.all().get(name)
-
-    def named_at(self, url: str) -> Optional[str]:
-        """The name published at url; none when nothing this record keeps was published there."""
-        return next((name for name, kept in self.all().items() if kept == url), None)
 
     def record(self, name: str, url: str) -> None:
         """Keep url as the address name was published at."""

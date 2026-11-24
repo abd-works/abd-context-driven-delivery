@@ -1484,8 +1484,13 @@ with description("a session whose UX work has an information architecture, a pub
         expect(reviewed).not_to(contain("work/checkout/OrderView.tsx"))
 
 
-# A whiteboard file opens the board in Claude it was published to, whose address is kept beside it (whiteboards.json);
+# A whiteboard file opens the board in Claude it was published to, whose address the file keeps in its board field;
 # requested 2026-11-16: "whiteboard file entries don't open those files, they open the actual whiteboard".
+def _publish(file: Path, board: str) -> None:
+    """Keep board in the whiteboard file at file as the board it was published to, as render.record_board does."""
+    file.write_text(Whiteboard.published_to(file.read_text(encoding="utf-8"), board), encoding="utf-8")
+
+
 with description("a session whose story map is drawn on a whiteboard") as self:
     with before.each:
         self.home = ExampleHome()
@@ -1493,7 +1498,7 @@ with description("a session whose story map is drawn on a whiteboard") as self:
         (self.repo / ".git").mkdir()
         self.work = self.repo / "work"
         (self.work / ".context").mkdir(parents=True)
-        (self.work / ".context" / "story-map.whiteboard").write_text("{}", encoding="utf-8")
+        (self.work / ".context" / "story-map.whiteboard").write_text(Whiteboard("Story Map").save(), encoding="utf-8")
         Sessions(self.repo).switch("alpha", self.work, create=True)
         self.story_map = Sessions(self.repo).current().practice("stories").fidelities["story_map"]
 
@@ -1503,7 +1508,7 @@ with description("a session whose story map is drawn on a whiteboard") as self:
 
     with context("that was published to a board"):
         with before.each:
-            Whiteboard.links_beside(self.work / ".context" / "story-map.whiteboard").record("story-map.whiteboard", "https://claude.ai/artifact/story-board")
+            _publish(self.work / ".context" / "story-map.whiteboard", "https://claude.ai/artifact/story-board")
 
         with it("should list the whiteboard file at its board's address"):
             expect([(entry.path, entry.link) for entry in self.story_map.session_output.written.files()["whiteboard"]]).to(
@@ -1520,9 +1525,9 @@ with description("a session whose story map is drawn on a whiteboard") as self:
     with context("that was regenerated as a later version"):
         with before.each:
             first, second = self.work / ".context" / "story-map.whiteboard", self.work / ".context" / "story-map.version-2.whiteboard"
-            second.write_text("{}", encoding="utf-8")
-            Whiteboard.links_beside(first).record(first.name, "https://claude.ai/artifact/story-board")
-            Whiteboard.links_beside(second).record(second.name, "https://claude.ai/artifact/story-board-2")
+            second.write_text(Whiteboard("Story Map").save(), encoding="utf-8")
+            _publish(first, "https://claude.ai/artifact/story-board")
+            _publish(second, "https://claude.ai/artifact/story-board-2")
 
         with it("should list the latest version at its board's address"):
             expect([(entry.path, entry.link) for entry in self.story_map.session_output.written.files()["whiteboard"]]).to(

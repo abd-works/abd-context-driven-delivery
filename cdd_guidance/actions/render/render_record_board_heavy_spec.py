@@ -3,7 +3,6 @@
 publishing a board. Heavy: the spec starts a cdd server of its own, on its own port, from a throwaway ``~/.cdd``, and
 works on a throwaway project, so it runs beside any other spec and never reaches the person's server."""
 import asyncio
-import json
 import sys
 from pathlib import Path
 
@@ -52,11 +51,11 @@ with description("Render publishing a whiteboard file to its board in Claude") a
         with before.each:
             self.failed, self.answer = asyncio.run(_record_board(self.server, self.project.root, ".context/story-map.whiteboard", _BOARD))
 
-        with it("should keep the board's address beside the file, so the Files app opens the board"):
-            expect(Whiteboard.links_beside(self.file).of(self.file.name)).to(equal(_BOARD))
+        with it("should keep the board's address in the file, so the Files app opens the board"):
+            expect(Whiteboard.board_of(self.file)).to(equal(_BOARD))
 
-        with it("should write the address into the folder's whiteboards.json, by the file's name"):
-            expect(json.loads((self.folder / Whiteboard.LINKS).read_text(encoding="utf-8"))).to(equal({"story-map.whiteboard": _BOARD}))
+        with it("should write no record of boards beside the file"):
+            expect(sorted(path.name for path in self.folder.iterdir())).to(equal(["story-map.whiteboard"]))
 
         with it("should answer the chat with the address kept"):
             expect((self.failed, self.answer)).to(equal((False, _BOARD)))
@@ -70,4 +69,4 @@ with description("Render publishing a whiteboard file to its board in Claude") a
             expect((self.failed, ".whiteboard" in self.answer)).to(equal((True, True)))
 
         with it("should keep no address"):
-            expect((self.folder / Whiteboard.LINKS).exists()).to(equal(False))
+            expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(equal("<mxfile/>"))
