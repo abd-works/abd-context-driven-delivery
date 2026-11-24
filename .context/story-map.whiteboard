@@ -184,6 +184,7 @@
   "story.user.b9a352381a",
   "story.user.ebaf9cc1c7",
   "story.user.069c004757",
+  "story.user.3f2430fce1",
   "story.user.538df2706b",
   "story.user.6c03c20537",
   "story.user.87d077be15",
@@ -262,25 +263,40 @@
   "story.user.6679360d2e",
   "story.user.33fff5b170",
   "epic.f38c2cbace",
-  "story.user.b363061f9e",
-  "story.user.cb89d10fdb",
-  "story.user.03165e8fd9",
-  "story.user.47c1a1eb3c",
-  "story.user.3e3ab10b67",
-  "story.user.cbcd342d8b",
-  "story.user.da4b53bd2e",
-  "story.user.b8c82eb036",
-  "story.user.737408a5f2",
+  "subepic.0.8083b325ed",
+  "story.user.b82918a533",
+  "story.user.dcce064ebf",
+  "story.user.203f79d6ec",
+  "story.user.7b6a212fbf",
+  "story.user.fc7a6e9885",
+  "story.user.c1f6b989a5",
+  "story.user.db1bdd2f34",
+  "story.user.3452bdee3b",
   "subepic.0.6acd4a5851",
   "story.user.1908956f72",
   "story.system.487bab7e37",
   "story.user.fc5f818832",
+  "story.user.e2e27b6c8e",
+  "story.user.f43a6983aa",
+  "story.user.06fb3668ce",
+  "story.user.01be353bb7",
+  "story.user.817410c78e",
   "subepic.0.e8160f6d15",
   "story.user.013ca488a4",
   "story.user.513ff48d41",
   "story.system.455de791e2",
   "story.system.f28782b0b7",
+  "story.system.c87d6a16ba",
   "story.user.40c409218c",
+  "story.user.04a655eccd",
+  "story.user.6b850dddd4",
+  "story.user.e294169809",
+  "subepic.0.d4d0691137",
+  "story.user.a9d526b241",
+  "story.system.e95b4dece1",
+  "story.user.24254ae8ec",
+  "story.user.49dd8838dc",
+  "story.user.6e75c6323f",
   "epic.aca4c68578",
   "epic.aca4c68578~2",
   "subepic.0.6a1dc8c5b0",
@@ -477,15 +493,20 @@
   "story.user.34dc0db5fd",
   "story.user.668e415b71",
   "subepic.0.cc3c42760a",
-  "story.user.b3b45e41a5",
-  "story.user.749a4f468e",
-  "story.user.5465a6b326",
-  "story.user.c60678e205",
-  "story.user.7789c90b4c",
-  "story.user.724ce00540",
-  "story.user.299cefc553",
-  "story.user.b84e637f17",
-  "story.user.b69d77b902",
+  "subepic.1.506164fc85",
+  "story.user.622f17a689",
+  "story.user.da50e62c50",
+  "story.user.b61a3d9864",
+  "story.user.294c42c92b",
+  "story.user.d0f9eca8eb",
+  "story.user.6c75935913",
+  "story.user.b7bf93a0c9",
+  "story.user.995a355b71",
+  "story.user.5d0c3af337",
+  "subepic.1.49c6e037aa",
+  "story.user.a89c357dc9",
+  "story.user.61a365eedb",
+  "story.user.0587cc0649",
   "subepic.0.b888adb6d2",
   "story.user.b3bb25d5ec",
   "story.user.0592f17bc8",
@@ -2565,7 +2586,7 @@
    "size": "body",
    "x": 25570.0,
    "y": 120,
-   "w": 6156.0,
+   "w": 6244.0,
    "h": 60
   },
   "epic.665ee6b0fe~2": {
@@ -2573,9 +2594,9 @@
    "color": "purple",
    "kind": "rounded",
    "size": "body",
-   "x": 31726.0,
+   "x": 31814.0,
    "y": 120,
-   "w": 6156.0,
+   "w": 6244.0,
    "h": 60
   },
   "subepic.0.c6315539e7": {
@@ -2586,7 +2607,7 @@
    "size": "body",
    "x": 25570,
    "y": 195,
-   "w": 1576,
+   "w": 1752,
    "h": 60
   },
   "story.user.b9a352381a": {
@@ -2622,13 +2643,24 @@
    "w": 152,
    "h": 152
   },
+  "story.user.3f2430fce1": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nCreate Git Repository First",
+   "kind": "rounded",
+   "size": "small",
+   "x": 26110,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
   "story.user.538df2706b": {
    "type": "shape",
    "color": "yellow",
    "text": "*Person*\nReinstall CDD Tools",
    "kind": "rounded",
    "size": "small",
-   "x": 26110,
+   "x": 26286,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2639,7 +2671,7 @@
    "text": "*Chat Bar*\nDisplay CDD Version Badge",
    "kind": "rounded",
    "size": "small",
-   "x": 26286,
+   "x": 26462,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2650,7 +2682,7 @@
    "text": "*Person*\nSet Next CDD Version",
    "kind": "rounded",
    "size": "small",
-   "x": 26462,
+   "x": 26638,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2661,7 +2693,7 @@
    "text": "*Person*\nUpdate CDD From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 26638,
+   "x": 26814,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2672,7 +2704,7 @@
    "text": "*Person*\nOpen App From Health Panel",
    "kind": "rounded",
    "size": "small",
-   "x": 26814,
+   "x": 26990,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2683,7 +2715,7 @@
    "text": "*Person*\nRestart Parts From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 26990,
+   "x": 27166,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2694,7 +2726,7 @@
    "text": "See Work In Chat Bar",
    "kind": "rounded",
    "size": "body",
-   "x": 27154,
+   "x": 27330,
    "y": 195,
    "w": 1224,
    "h": 60
@@ -2705,7 +2737,7 @@
    "text": "*Person*\nOpen Board From Chat",
    "kind": "rounded",
    "size": "small",
-   "x": 27166,
+   "x": 27342,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2716,7 +2748,7 @@
    "text": "*Chat Bar*\nDisplay Stage Strip",
    "kind": "rounded",
    "size": "small",
-   "x": 27342,
+   "x": 27518,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2727,7 +2759,7 @@
    "text": "*Chat Bar*\nDisplay Session Fidelity Dots",
    "kind": "rounded",
    "size": "small",
-   "x": 27518,
+   "x": 27694,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2738,7 +2770,7 @@
    "text": "*Person*\nDisplay Stage Fidelities",
    "kind": "rounded",
    "size": "small",
-   "x": 27694,
+   "x": 27870,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2749,7 +2781,7 @@
    "text": "*Person*\nDisplay Session Card",
    "kind": "rounded",
    "size": "small",
-   "x": 27870,
+   "x": 28046,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2760,7 +2792,7 @@
    "text": "*Chat Bar*\nShow Active Session On Status Line",
    "kind": "rounded",
    "size": "small",
-   "x": 28046,
+   "x": 28222,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2771,7 +2803,7 @@
    "text": "*Claude Code*\nAdd Active Ticket To System Prompt",
    "kind": "rounded",
    "size": "small",
-   "x": 28222,
+   "x": 28398,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2782,7 +2814,7 @@
    "text": "Steer Sessions",
    "kind": "rounded",
    "size": "body",
-   "x": 28386,
+   "x": 28562,
    "y": 195,
    "w": 1928,
    "h": 60
@@ -2793,7 +2825,7 @@
    "text": "*Person*\nCreate New Session",
    "kind": "rounded",
    "size": "small",
-   "x": 28398,
+   "x": 28574,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2804,7 +2836,7 @@
    "text": "*Person*\nOpen Session",
    "kind": "rounded",
    "size": "small",
-   "x": 28574,
+   "x": 28750,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2815,7 +2847,7 @@
    "text": "*Person*\nWrite Session Handoff",
    "kind": "rounded",
    "size": "small",
-   "x": 28750,
+   "x": 28926,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2826,7 +2858,7 @@
    "text": "*Chat Bar*\nDisplay Latest Session Handoff",
    "kind": "rounded",
    "size": "small",
-   "x": 28926,
+   "x": 29102,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2837,7 +2869,7 @@
    "text": "*Person*\nClose Session From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 29102,
+   "x": 29278,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2848,7 +2880,7 @@
    "text": "*Person*\nAdd Backlog Item From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 29278,
+   "x": 29454,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2859,7 +2891,7 @@
    "text": "*Person*\nCommit Work From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 29454,
+   "x": 29630,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2870,7 +2902,7 @@
    "text": "*Person*\nPush Work From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 29630,
+   "x": 29806,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2881,7 +2913,7 @@
    "text": "*Person*\nPush Session To Main From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 29806,
+   "x": 29982,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2892,7 +2924,7 @@
    "text": "*Person*\nDebug A Failure From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 29982,
+   "x": 30158,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2903,7 +2935,7 @@
    "text": "*Person*\nPull Latest From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 30158,
+   "x": 30334,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2914,7 +2946,7 @@
    "text": "Guide Work Through Practices In Chat Bar",
    "kind": "rounded",
    "size": "body",
-   "x": 30322,
+   "x": 30498,
    "y": 195,
    "w": 1928,
    "h": 60
@@ -2925,7 +2957,7 @@
    "text": "*Person*\nMove Session To Next Stage",
    "kind": "rounded",
    "size": "small",
-   "x": 30334,
+   "x": 30510,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2936,7 +2968,7 @@
    "text": "*Person*\nInvoke Next Fidelity Action",
    "kind": "rounded",
    "size": "small",
-   "x": 30510,
+   "x": 30686,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2947,7 +2979,7 @@
    "text": "*Person*\nChoose Fidelity Action",
    "kind": "rounded",
    "size": "small",
-   "x": 30686,
+   "x": 30862,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2958,7 +2990,7 @@
    "text": "*Person*\nMove Session To Previous Stage",
    "kind": "rounded",
    "size": "small",
-   "x": 30862,
+   "x": 31038,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2969,7 +3001,7 @@
    "text": "*Person*\nMark Session Done In Stage",
    "kind": "rounded",
    "size": "small",
-   "x": 31038,
+   "x": 31214,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2980,7 +3012,7 @@
    "text": "*Person*\nChoose Session Practices",
    "kind": "rounded",
    "size": "small",
-   "x": 31214,
+   "x": 31390,
    "y": 339,
    "w": 152,
    "h": 152
@@ -2991,7 +3023,7 @@
    "text": "*Person*\nOpen Fidelity Help",
    "kind": "rounded",
    "size": "small",
-   "x": 31390,
+   "x": 31566,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3002,7 +3034,7 @@
    "text": "*Person*\nChoose Session Folders From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 31566,
+   "x": 31742,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3013,7 +3045,7 @@
    "text": "*Ticket*\nList Available Patterns",
    "kind": "rounded",
    "size": "small",
-   "x": 31742,
+   "x": 31918,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3024,7 +3056,7 @@
    "text": "*Person*\nChoose Graph Overlays",
    "kind": "rounded",
    "size": "small",
-   "x": 31918,
+   "x": 32094,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3035,7 +3067,7 @@
    "text": "*Chat Bar*\nDisplay Overlay Icons",
    "kind": "rounded",
    "size": "small",
-   "x": 32094,
+   "x": 32270,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3046,7 +3078,7 @@
    "text": "Work Fidelity Outputs In Chat Bar",
    "kind": "rounded",
    "size": "body",
-   "x": 32258,
+   "x": 32434,
    "y": 195,
    "w": 4216,
    "h": 60
@@ -3057,7 +3089,7 @@
    "text": "Generate Fidelity Outputs In Chat Bar",
    "kind": "rounded",
    "size": "body",
-   "x": 32258,
+   "x": 32434,
    "y": 263,
    "w": 1576,
    "h": 60
@@ -3068,7 +3100,7 @@
    "text": "*Person*\nSelect Fidelity",
    "kind": "rounded",
    "size": "small",
-   "x": 32270,
+   "x": 32446,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3079,7 +3111,7 @@
    "text": "*Chat Bar*\nDisplay Action Before Fidelity Dots",
    "kind": "rounded",
    "size": "small",
-   "x": 32446,
+   "x": 32622,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3090,7 +3122,7 @@
    "text": "*Person*\nSelect Several Fidelities",
    "kind": "rounded",
    "size": "small",
-   "x": 32622,
+   "x": 32798,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3101,7 +3133,7 @@
    "text": "*Person*\nChoose Action",
    "kind": "rounded",
    "size": "small",
-   "x": 32798,
+   "x": 32974,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3112,7 +3144,7 @@
    "text": "*Person*\nChoose Format",
    "kind": "rounded",
    "size": "small",
-   "x": 32974,
+   "x": 33150,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3123,7 +3155,7 @@
    "text": "*Person*\nGenerate Session Fidelity Output",
    "kind": "rounded",
    "size": "small",
-   "x": 33150,
+   "x": 33326,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3134,7 +3166,7 @@
    "text": "*Claude Code*\nResolve Session Fidelity Output Paths",
    "kind": "rounded",
    "size": "small",
-   "x": 33326,
+   "x": 33502,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3145,7 +3177,7 @@
    "text": "*Person*\nFill Prompt With Fidelity Action",
    "kind": "rounded",
    "size": "small",
-   "x": 33502,
+   "x": 33678,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3156,7 +3188,7 @@
    "text": "*Person*\nRun Fidelity Action With Overlays",
    "kind": "rounded",
    "size": "small",
-   "x": 33678,
+   "x": 33854,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3167,7 +3199,7 @@
    "text": "Review Fidelity Outputs In Chat Bar",
    "kind": "rounded",
    "size": "body",
-   "x": 33842,
+   "x": 34018,
    "y": 263,
    "w": 520,
    "h": 60
@@ -3178,7 +3210,7 @@
    "text": "*Person*\nList Session Files, View Session Files",
    "kind": "rounded",
    "size": "small",
-   "x": 33854,
+   "x": 34030,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3189,7 +3221,7 @@
    "text": "*Person*\nOpen Validation Report From Violation Count",
    "kind": "rounded",
    "size": "small",
-   "x": 34030,
+   "x": 34206,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3200,7 +3232,7 @@
    "text": "*Person*\nFix Violations From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 34206,
+   "x": 34382,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3211,7 +3243,7 @@
    "text": "Integrate Practice Content Editor Apps In Chat Bar",
    "kind": "rounded",
    "size": "body",
-   "x": 34370,
+   "x": 34546,
    "y": 263,
    "w": 1576,
    "h": 60
@@ -3222,7 +3254,7 @@
    "text": "*Person*\nOpen Editor App From App Status Row",
    "kind": "rounded",
    "size": "small",
-   "x": 34382,
+   "x": 34558,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3233,7 +3265,7 @@
    "text": "*Person*\nOpen Stories File In Story UI Editor",
    "kind": "rounded",
    "size": "small",
-   "x": 34558,
+   "x": 34734,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3244,7 +3276,7 @@
    "text": "*Graph App*\nLoad Session Folders In Graph",
    "kind": "rounded",
    "size": "small",
-   "x": 34734,
+   "x": 34910,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3255,7 +3287,7 @@
    "text": "*Graph App*\nFollow Last Activated Session",
    "kind": "rounded",
    "size": "small",
-   "x": 34910,
+   "x": 35086,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3266,7 +3298,7 @@
    "text": "*Person*\nInvoke Claude Design Story Explorer From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 35086,
+   "x": 35262,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3277,7 +3309,7 @@
    "text": "*Story UI App*\nShow Board's Active Ticket In Story UI",
    "kind": "rounded",
    "size": "small",
-   "x": 35262,
+   "x": 35438,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3288,7 +3320,7 @@
    "text": "*Story UI App*\nSave Story Map Edit Through Domain",
    "kind": "rounded",
    "size": "small",
-   "x": 35438,
+   "x": 35614,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3299,7 +3331,7 @@
    "text": "*Person*\nOpen UX Design In Claude Design",
    "kind": "rounded",
    "size": "small",
-   "x": 35614,
+   "x": 35790,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3310,7 +3342,7 @@
    "text": "*Person*\nTrace Story Through Artifacts",
    "kind": "rounded",
    "size": "small",
-   "x": 35790,
+   "x": 35966,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3321,7 +3353,7 @@
    "text": "Capture Session Knowledge",
    "kind": "rounded",
    "size": "body",
-   "x": 35954,
+   "x": 36130,
    "y": 263,
    "w": 520,
    "h": 60
@@ -3332,7 +3364,7 @@
    "text": "*Claude Code*\nWrite Handoff When Session Ends",
    "kind": "rounded",
    "size": "small",
-   "x": 35966,
+   "x": 36142,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3343,7 +3375,7 @@
    "text": "*Claude Code*\nOffer Correction Log Entry",
    "kind": "rounded",
    "size": "small",
-   "x": 36142,
+   "x": 36318,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3354,7 +3386,7 @@
    "text": "*Claude Code*\nOffer Decision Record",
    "kind": "rounded",
    "size": "small",
-   "x": 36318,
+   "x": 36494,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3365,7 +3397,7 @@
    "text": "Enter CDD Commands Faster",
    "kind": "rounded",
    "size": "body",
-   "x": 36482,
+   "x": 36658,
    "y": 195,
    "w": 696,
    "h": 60
@@ -3376,7 +3408,7 @@
    "text": "*Claude Code*\nAutocomplete CDD Commands",
    "kind": "rounded",
    "size": "small",
-   "x": 36494,
+   "x": 36670,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3387,7 +3419,7 @@
    "text": "*Claude Code*\nShow Command Argument Hints",
    "kind": "rounded",
    "size": "small",
-   "x": 36670,
+   "x": 36846,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3398,7 +3430,7 @@
    "text": "*Claude Code*\nSuggest Next Command",
    "kind": "rounded",
    "size": "small",
-   "x": 36846,
+   "x": 37022,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3409,7 +3441,7 @@
    "text": "*Claude Code*\nAnnounce CDD Tool Calls",
    "kind": "rounded",
    "size": "small",
-   "x": 37022,
+   "x": 37198,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3420,7 +3452,7 @@
    "text": "Guard Work Against Rules",
    "kind": "rounded",
    "size": "body",
-   "x": 37186,
+   "x": 37362,
    "y": 195,
    "w": 696,
    "h": 60
@@ -3431,7 +3463,7 @@
    "text": "*Claude Code*\nRefuse Forbidden Edits",
    "kind": "rounded",
    "size": "small",
-   "x": 37198,
+   "x": 37374,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3442,7 +3474,7 @@
    "text": "*Claude Code*\nWarn When Work Outruns Fidelity",
    "kind": "rounded",
    "size": "small",
-   "x": 37374,
+   "x": 37550,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3453,7 +3485,7 @@
    "text": "*Claude Code*\nCatch Banned Words In Markdown",
    "kind": "rounded",
    "size": "small",
-   "x": 37550,
+   "x": 37726,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3464,7 +3496,7 @@
    "text": "*Claude Code*\nWarn On Branch Mismatch",
    "kind": "rounded",
    "size": "small",
-   "x": 37726,
+   "x": 37902,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3475,26 +3507,26 @@
    "text": "Queue Prompts For Later",
    "kind": "rounded",
    "size": "body",
-   "x": 37900,
+   "x": 38076,
    "y": 120,
-   "w": 2984,
+   "w": 5272,
    "h": 60
   },
-  "story.user.b363061f9e": {
+  "subepic.0.8083b325ed": {
+   "type": "shape",
+   "color": "green",
+   "text": "Build Prompt Queue",
+   "kind": "rounded",
+   "size": "body",
+   "x": 38076,
+   "y": 195,
+   "w": 1400,
+   "h": 60
+  },
+  "story.user.b82918a533": {
    "type": "shape",
    "color": "yellow",
    "text": "*Person*\nQueue Draft Prompt",
-   "kind": "rounded",
-   "size": "small",
-   "x": 37912,
-   "y": 339,
-   "w": 152,
-   "h": 152
-  },
-  "story.user.cb89d10fdb": {
-   "type": "shape",
-   "color": "yellow",
-   "text": "*Person*\nOpen Prompt Queue",
    "kind": "rounded",
    "size": "small",
    "x": 38088,
@@ -3502,10 +3534,10 @@
    "w": 152,
    "h": 152
   },
-  "story.user.03165e8fd9": {
+  "story.user.dcce064ebf": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Person*\nEdit Queued Prompt",
+   "text": "*Person*\nPlace Draft Into Plan",
    "kind": "rounded",
    "size": "small",
    "x": 38264,
@@ -3513,10 +3545,10 @@
    "w": 152,
    "h": 152
   },
-  "story.user.47c1a1eb3c": {
+  "story.user.203f79d6ec": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Person*\nReorder Queued Prompts",
+   "text": "*Person*\nPlan Queue From Conversation",
    "kind": "rounded",
    "size": "small",
    "x": 38440,
@@ -3524,10 +3556,10 @@
    "w": 152,
    "h": 152
   },
-  "story.user.3e3ab10b67": {
+  "story.user.7b6a212fbf": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Person*\nRemove Queued Prompts",
+   "text": "*Person*\nAttach Images To Queued Prompt",
    "kind": "rounded",
    "size": "small",
    "x": 38616,
@@ -3535,10 +3567,10 @@
    "w": 152,
    "h": 152
   },
-  "story.user.cbcd342d8b": {
+  "story.user.fc7a6e9885": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Person*\nPlay Prompt Queue",
+   "text": "*Person*\nOpen Prompt Queue",
    "kind": "rounded",
    "size": "small",
    "x": 38792,
@@ -3546,10 +3578,10 @@
    "w": 152,
    "h": 152
   },
-  "story.user.da4b53bd2e": {
+  "story.user.c1f6b989a5": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Person*\nPause Prompt Queue",
+   "text": "*Person*\nEdit Queued Prompt",
    "kind": "rounded",
    "size": "small",
    "x": 38968,
@@ -3557,10 +3589,10 @@
    "w": 152,
    "h": 152
   },
-  "story.user.b8c82eb036": {
+  "story.user.db1bdd2f34": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Person*\nSend Queued Prompts To Sub-Agents",
+   "text": "*Person*\nReorder Queued Prompts",
    "kind": "rounded",
    "size": "small",
    "x": 39144,
@@ -3568,10 +3600,10 @@
    "w": 152,
    "h": 152
   },
-  "story.user.737408a5f2": {
+  "story.user.3452bdee3b": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Person*\nPlan Queue From Conversation",
+   "text": "*Person*\nRemove Queued Prompts",
    "kind": "rounded",
    "size": "small",
    "x": 39320,
@@ -3587,7 +3619,7 @@
    "size": "body",
    "x": 39484,
    "y": 195,
-   "w": 520,
+   "w": 1400,
    "h": 60
   },
   "story.user.1908956f72": {
@@ -3623,15 +3655,70 @@
    "w": 152,
    "h": 152
   },
+  "story.user.e2e27b6c8e": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nPlay Prompt Queue",
+   "kind": "rounded",
+   "size": "small",
+   "x": 40024,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.f43a6983aa": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nPause Prompt Queue",
+   "kind": "rounded",
+   "size": "small",
+   "x": 40200,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.06fb3668ce": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Prompt Queue*\nWait For Answer Before Moving On",
+   "kind": "rounded",
+   "size": "small",
+   "x": 40376,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.01be353bb7": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nSend Queued Prompt Now",
+   "kind": "rounded",
+   "size": "small",
+   "x": 40552,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.817410c78e": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nMove Queue Pointer",
+   "kind": "rounded",
+   "size": "small",
+   "x": 40728,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
   "subepic.0.e8160f6d15": {
    "type": "shape",
    "color": "green",
    "text": "Nest Prompt Steps In Queue",
    "kind": "rounded",
    "size": "body",
-   "x": 40012,
+   "x": 40892,
    "y": 195,
-   "w": 872,
+   "w": 1576,
    "h": 60
   },
   "story.user.013ca488a4": {
@@ -3640,7 +3727,7 @@
    "text": "*Agent*\nSet Steps Of Queued Prompt",
    "kind": "rounded",
    "size": "small",
-   "x": 40024,
+   "x": 40904,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3651,7 +3738,7 @@
    "text": "*Agent*\nTick Off Prompt Step",
    "kind": "rounded",
    "size": "small",
-   "x": 40200,
+   "x": 41080,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3662,7 +3749,7 @@
    "text": "*Prompt Queue*\nCopy Task List Onto Working Prompt",
    "kind": "rounded",
    "size": "small",
-   "x": 40376,
+   "x": 41256,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3673,7 +3760,18 @@
    "text": "*Prompt Queue*\nQueue Sent Prompt As Running",
    "kind": "rounded",
    "size": "small",
-   "x": 40552,
+   "x": 41432,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.system.c87d6a16ba": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Prompt Queue*\nAdd Interruption To Working Prompt",
+   "kind": "rounded",
+   "size": "small",
+   "x": 41608,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3684,7 +3782,106 @@
    "text": "*Person*\nShow Prompt Steps In Queue",
    "kind": "rounded",
    "size": "small",
-   "x": 40728,
+   "x": 41784,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.04a655eccd": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nEdit Prompt Steps",
+   "kind": "rounded",
+   "size": "small",
+   "x": 41960,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.6b850dddd4": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nSend Prompt Step Now",
+   "kind": "rounded",
+   "size": "small",
+   "x": 42136,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.e294169809": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nMove Step Pointer",
+   "kind": "rounded",
+   "size": "small",
+   "x": 42312,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "subepic.0.d4d0691137": {
+   "type": "shape",
+   "color": "green",
+   "text": "Share Queue Among Robots",
+   "kind": "rounded",
+   "size": "body",
+   "x": 42476,
+   "y": 195,
+   "w": 872,
+   "h": 60
+  },
+  "story.user.a9d526b241": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nGroup Queue Into Robots",
+   "kind": "rounded",
+   "size": "small",
+   "x": 42488,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.system.e95b4dece1": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Cdd Server*\nAssign Queued Prompt To Robot",
+   "kind": "rounded",
+   "size": "small",
+   "x": 42664,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.24254ae8ec": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nSend Queued Prompts To Sub-Agents",
+   "kind": "rounded",
+   "size": "small",
+   "x": 42840,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.49dd8838dc": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nRename Robot",
+   "kind": "rounded",
+   "size": "small",
+   "x": 43016,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.6e75c6323f": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Person*\nCollapse Robot Queue",
+   "kind": "rounded",
+   "size": "small",
+   "x": 43192,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3695,7 +3892,7 @@
    "text": "Review Generated Work In File Viewer",
    "kind": "rounded",
    "size": "body",
-   "x": 40902.0,
+   "x": 43366.0,
    "y": 120,
    "w": 4396.0,
    "h": 60
@@ -3705,7 +3902,7 @@
    "color": "purple",
    "kind": "rounded",
    "size": "body",
-   "x": 45298.0,
+   "x": 47762.0,
    "y": 120,
    "w": 4396.0,
    "h": 60
@@ -3716,7 +3913,7 @@
    "text": "Open Files In Files App",
    "kind": "rounded",
    "size": "body",
-   "x": 40902,
+   "x": 43366,
    "y": 195,
    "w": 1224,
    "h": 60
@@ -3727,7 +3924,7 @@
    "text": "*Person*\nOpen Stage Files From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 40914,
+   "x": 43378,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3738,7 +3935,7 @@
    "text": "*Person*\nOpen Session Folder From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 41090,
+   "x": 43554,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3749,7 +3946,7 @@
    "text": "*Story UI*\nOpen File From Another Page",
    "kind": "rounded",
    "size": "small",
-   "x": 41266,
+   "x": 43730,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3760,7 +3957,7 @@
    "text": "*Files App*\nList Files The Link Names",
    "kind": "rounded",
    "size": "small",
-   "x": 41442,
+   "x": 43906,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3771,7 +3968,7 @@
    "text": "*Person*\nOpen Diagram In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 41618,
+   "x": 44082,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3782,7 +3979,7 @@
    "text": "*Person*\nOpen File In File Browser",
    "kind": "rounded",
    "size": "small",
-   "x": 41794,
+   "x": 44258,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3793,7 +3990,7 @@
    "text": "*Person*\nSwitch File Bar Between Folders And List",
    "kind": "rounded",
    "size": "small",
-   "x": 41970,
+   "x": 44434,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3804,7 +4001,7 @@
    "text": "Filter Files In Files App",
    "kind": "rounded",
    "size": "body",
-   "x": 42134,
+   "x": 44598,
    "y": 195,
    "w": 1400,
    "h": 60
@@ -3815,7 +4012,7 @@
    "text": "*Person*\nResize File Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 42146,
+   "x": 44610,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3826,7 +4023,7 @@
    "text": "*Person*\nList Only The Files The Branch Changed",
    "kind": "rounded",
    "size": "small",
-   "x": 42322,
+   "x": 44786,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3837,7 +4034,7 @@
    "text": "*Person*\nFollow Chat Bar Selection In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 42498,
+   "x": 44962,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3848,7 +4045,7 @@
    "text": "*Person*\nSelect Guidance On The Session",
    "kind": "rounded",
    "size": "small",
-   "x": 42674,
+   "x": 45138,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3859,7 +4056,7 @@
    "text": "*Person*\nShow Stages In Files App And Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 42850,
+   "x": 45314,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3870,7 +4067,7 @@
    "text": "*Person*\nFilter Files By Format In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 43026,
+   "x": 45490,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3881,7 +4078,7 @@
    "text": "*Person*\nToggle Practice In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 43202,
+   "x": 45666,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3892,7 +4089,7 @@
    "text": "*Files App*\nKeep Chat Bar Practices In Sync",
    "kind": "rounded",
    "size": "small",
-   "x": 43378,
+   "x": 45842,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3903,7 +4100,7 @@
    "text": "View Files In Source View",
    "kind": "rounded",
    "size": "body",
-   "x": 43542,
+   "x": 46006,
    "y": 195,
    "w": 1224,
    "h": 60
@@ -3914,7 +4111,7 @@
    "text": "*Person*\nView File In Source View",
    "kind": "rounded",
    "size": "small",
-   "x": 43554,
+   "x": 46018,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3925,7 +4122,7 @@
    "text": "*Person*\nFold Classes And Operations",
    "kind": "rounded",
    "size": "small",
-   "x": 43730,
+   "x": 46194,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3936,7 +4133,7 @@
    "text": "*Person*\nFold With Keyboard Shortcuts",
    "kind": "rounded",
    "size": "small",
-   "x": 43906,
+   "x": 46370,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3947,7 +4144,7 @@
    "text": "*Person*\nOpen Calls And Classes In Place",
    "kind": "rounded",
    "size": "small",
-   "x": 44082,
+   "x": 46546,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3958,7 +4155,7 @@
    "text": "*Person*\nMark Lines A Broken Rule Names",
    "kind": "rounded",
    "size": "small",
-   "x": 44258,
+   "x": 46722,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3969,7 +4166,7 @@
    "text": "*Person*\nBrowse Files Without Reading Rules",
    "kind": "rounded",
    "size": "small",
-   "x": 44434,
+   "x": 46898,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3980,7 +4177,7 @@
    "text": "*Person*\nSave Edited File",
    "kind": "rounded",
    "size": "small",
-   "x": 44610,
+   "x": 47074,
    "y": 339,
    "w": 152,
    "h": 152
@@ -3991,7 +4188,7 @@
    "text": "Review Files With Comments",
    "kind": "rounded",
    "size": "body",
-   "x": 44774,
+   "x": 47238,
    "y": 195,
    "w": 1400,
    "h": 60
@@ -4002,7 +4199,7 @@
    "text": "*Person*\nAdd Comment To File Selection",
    "kind": "rounded",
    "size": "small",
-   "x": 44786,
+   "x": 47250,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4013,7 +4210,7 @@
    "text": "*Person*\nOpen Edit And Delete File Comment",
    "kind": "rounded",
    "size": "small",
-   "x": 44962,
+   "x": 47426,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4024,7 +4221,7 @@
    "text": "*Person*\nSend File Comments To Chat",
    "kind": "rounded",
    "size": "small",
-   "x": 45138,
+   "x": 47602,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4035,7 +4232,7 @@
    "text": "*Chat*\nMark File Comment Processed",
    "kind": "rounded",
    "size": "small",
-   "x": 45314,
+   "x": 47778,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4046,7 +4243,7 @@
    "text": "*Files App*\nShow Changed File After Comment",
    "kind": "rounded",
    "size": "small",
-   "x": 45490,
+   "x": 47954,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4057,7 +4254,7 @@
    "text": "*Person*\nClear Processed File Comments",
    "kind": "rounded",
    "size": "small",
-   "x": 45666,
+   "x": 48130,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4068,7 +4265,7 @@
    "text": "*Files App*\nShow AI Changes As Diff",
    "kind": "rounded",
    "size": "small",
-   "x": 45842,
+   "x": 48306,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4079,7 +4276,7 @@
    "text": "*Person*\nAdd File Or Selection To Chat Context",
    "kind": "rounded",
    "size": "small",
-   "x": 46018,
+   "x": 48482,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4090,7 +4287,7 @@
    "text": "Switch Files App Between Files And Graph",
    "kind": "rounded",
    "size": "body",
-   "x": 46182,
+   "x": 48646,
    "y": 195,
    "w": 1224,
    "h": 60
@@ -4101,7 +4298,7 @@
    "text": "*Person*\nSwitch Files App To Graph View",
    "kind": "rounded",
    "size": "small",
-   "x": 46194,
+   "x": 48658,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4112,7 +4309,7 @@
    "text": "*Files App*\nFilter Graph Like The File List",
    "kind": "rounded",
    "size": "small",
-   "x": 46370,
+   "x": 48834,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4123,7 +4320,7 @@
    "text": "*Person*\nOpen Several Files From Graph Nodes",
    "kind": "rounded",
    "size": "small",
-   "x": 46546,
+   "x": 49010,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4134,7 +4331,7 @@
    "text": "*Files App*\nFold Open Files To Selected Nodes",
    "kind": "rounded",
    "size": "small",
-   "x": 46722,
+   "x": 49186,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4145,7 +4342,7 @@
    "text": "*Person*\nOpen Story Scenarios Across Files",
    "kind": "rounded",
    "size": "small",
-   "x": 46898,
+   "x": 49362,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4156,7 +4353,7 @@
    "text": "*Person*\nOpen Linked Sections In Place",
    "kind": "rounded",
    "size": "small",
-   "x": 47074,
+   "x": 49538,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4167,7 +4364,7 @@
    "text": "*Person*\nFollow Story Steps To Code",
    "kind": "rounded",
    "size": "small",
-   "x": 47250,
+   "x": 49714,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4178,7 +4375,7 @@
    "text": "Explore Graph In Files App",
    "kind": "rounded",
    "size": "body",
-   "x": 47414,
+   "x": 49878,
    "y": 195,
    "w": 1048,
    "h": 60
@@ -4189,7 +4386,7 @@
    "text": "*Person*\nExpand Practice Tree In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 47426,
+   "x": 49890,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4200,7 +4397,7 @@
    "text": "*Person*\nFollow Relationships Under Node In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 47602,
+   "x": 50066,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4211,7 +4408,7 @@
    "text": "*Person*\nFilter Graph By Node Type And Connector In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 47778,
+   "x": 50242,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4222,7 +4419,7 @@
    "text": "*Person*\nApply Pattern Overlays In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 47954,
+   "x": 50418,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4233,7 +4430,7 @@
    "text": "*Files App*\nShow Graph Load Steps In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 48130,
+   "x": 50594,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4244,7 +4441,7 @@
    "text": "*Person*\nOpen Calls Across Files In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 48306,
+   "x": 50770,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4255,7 +4452,7 @@
    "text": "Review Graph Violations In Files App",
    "kind": "rounded",
    "size": "body",
-   "x": 48470,
+   "x": 50934,
    "y": 195,
    "w": 1224,
    "h": 60
@@ -4266,7 +4463,7 @@
    "text": "*Person*\nShow Only Violating Nodes In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 48482,
+   "x": 50946,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4277,7 +4474,7 @@
    "text": "*Person*\nSee Rules Under Node In Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 48658,
+   "x": 51122,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4288,7 +4485,7 @@
    "text": "*Person*\nOpen Violation In Files App Source",
    "kind": "rounded",
    "size": "small",
-   "x": 48834,
+   "x": 51298,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4299,7 +4496,7 @@
    "text": "*Person*\nFix Graph Violations From Files App",
    "kind": "rounded",
    "size": "small",
-   "x": 49010,
+   "x": 51474,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4310,7 +4507,7 @@
    "text": "*Person*\nFix Graph Violations From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 49186,
+   "x": 51650,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4321,7 +4518,7 @@
    "text": "*Chat Bar*\nCount Session Violations From Live Graph",
    "kind": "rounded",
    "size": "small",
-   "x": 49362,
+   "x": 51826,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4332,7 +4529,7 @@
    "text": "*Board App*\nCount Fidelity Violations From Live Graph",
    "kind": "rounded",
    "size": "small",
-   "x": 49538,
+   "x": 52002,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4343,7 +4540,7 @@
    "text": "Author Story Maps",
    "kind": "rounded",
    "size": "body",
-   "x": 49712,
+   "x": 52176,
    "y": 120,
    "w": 2984,
    "h": 60
@@ -4354,7 +4551,7 @@
    "text": "View Story Map",
    "kind": "rounded",
    "size": "body",
-   "x": 49712,
+   "x": 52176,
    "y": 195,
    "w": 344,
    "h": 60
@@ -4365,7 +4562,7 @@
    "text": "*Story Designer*\nBrowse Story Hierarchy",
    "kind": "rounded",
    "size": "small",
-   "x": 49724,
+   "x": 52188,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4376,7 +4573,7 @@
    "text": "*Story Designer*\nAdjust Workspace View",
    "kind": "rounded",
    "size": "small",
-   "x": 49900,
+   "x": 52364,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4387,7 +4584,7 @@
    "text": "Build, Expand, Rearrange And Plan Story Map",
    "kind": "rounded",
    "size": "body",
-   "x": 50064,
+   "x": 52528,
    "y": 195,
    "w": 872,
    "h": 60
@@ -4398,7 +4595,7 @@
    "text": "*Story Designer*\nExpand And Collapse Story Cards",
    "kind": "rounded",
    "size": "small",
-   "x": 50076,
+   "x": 52540,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4409,7 +4606,7 @@
    "text": "*Story Designer*\nAdd, Remove And Rename Map Nodes",
    "kind": "rounded",
    "size": "small",
-   "x": 50252,
+   "x": 52716,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4420,7 +4617,7 @@
    "text": "*Story Designer*\nRearrange Map Nodes By Dragging",
    "kind": "rounded",
    "size": "small",
-   "x": 50428,
+   "x": 52892,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4431,7 +4628,7 @@
    "text": "*Story Designer*\nManage Increments",
    "kind": "rounded",
    "size": "small",
-   "x": 50604,
+   "x": 53068,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4442,7 +4639,7 @@
    "text": "*Story Designer*\nManage Increment Stories",
    "kind": "rounded",
    "size": "small",
-   "x": 50780,
+   "x": 53244,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4453,7 +4650,7 @@
    "text": "Author Scenarios And Steps",
    "kind": "rounded",
    "size": "body",
-   "x": 50944,
+   "x": 53408,
    "y": 195,
    "w": 344,
    "h": 60
@@ -4464,7 +4661,7 @@
    "text": "*Story Designer*\nAdd, Rename, Remove And Reorder Scenarios",
    "kind": "rounded",
    "size": "small",
-   "x": 50956,
+   "x": 53420,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4475,7 +4672,7 @@
    "text": "*Story Designer*\nAdd, Edit, Remove And Reorder Steps",
    "kind": "rounded",
    "size": "small",
-   "x": 51132,
+   "x": 53596,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4486,7 +4683,7 @@
    "text": "Author Examples",
    "kind": "rounded",
    "size": "body",
-   "x": 51296,
+   "x": 53760,
    "y": 195,
    "w": 520,
    "h": 60
@@ -4497,7 +4694,7 @@
    "text": "*Story Designer*\nAdd And Remove Examples On Scenario",
    "kind": "rounded",
    "size": "small",
-   "x": 51308,
+   "x": 53772,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4508,7 +4705,7 @@
    "text": "*Story Designer*\nAdd And Remove Example Fields",
    "kind": "rounded",
    "size": "small",
-   "x": 51484,
+   "x": 53948,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4519,7 +4716,7 @@
    "text": "*Story Designer*\nAdd, Edit, Remove And Reorder Example Lines",
    "kind": "rounded",
    "size": "small",
-   "x": 51660,
+   "x": 54124,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4530,7 +4727,7 @@
    "text": "Save And Share Changes",
    "kind": "rounded",
    "size": "body",
-   "x": 51824,
+   "x": 54288,
    "y": 195,
    "w": 696,
    "h": 60
@@ -4541,7 +4738,7 @@
    "text": "*Story UI*\nSave Valid Edits And Keep Their History",
    "kind": "rounded",
    "size": "small",
-   "x": 51836,
+   "x": 54300,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4552,7 +4749,7 @@
    "text": "*Story Designer*\nRecover Workspace View State",
    "kind": "rounded",
    "size": "small",
-   "x": 52012,
+   "x": 54476,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4563,7 +4760,7 @@
    "text": "*Story Designer*\nShare Real-Time Story Map Session",
    "kind": "rounded",
    "size": "small",
-   "x": 52188,
+   "x": 54652,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4574,7 +4771,7 @@
    "text": "*Agent*\nTest Story UI Editor On Session Story Map",
    "kind": "rounded",
    "size": "small",
-   "x": 52364,
+   "x": 54828,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4585,7 +4782,7 @@
    "text": "Author Story Changes With AI",
    "kind": "rounded",
    "size": "body",
-   "x": 52528,
+   "x": 54992,
    "y": 195,
    "w": 168,
    "h": 60
@@ -4596,7 +4793,7 @@
    "text": "*Story Designer*\nChange Story Map With AI",
    "kind": "rounded",
    "size": "small",
-   "x": 52540,
+   "x": 55004,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4607,7 +4804,7 @@
    "text": "Explore Stories In Story UI",
    "kind": "rounded",
    "size": "body",
-   "x": 52714,
+   "x": 55178,
    "y": 120,
    "w": 3160,
    "h": 60
@@ -4618,7 +4815,7 @@
    "text": "Show Screen Frames In Story UI",
    "kind": "rounded",
    "size": "body",
-   "x": 52714,
+   "x": 55178,
    "y": 195,
    "w": 696,
    "h": 60
@@ -4629,7 +4826,7 @@
    "text": "*Person*\nSwitch Story Map To Screen Frames View",
    "kind": "rounded",
    "size": "small",
-   "x": 52726,
+   "x": 55190,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4640,7 +4837,7 @@
    "text": "*Story UI*\nShow Screen Frame Under Each Story",
    "kind": "rounded",
    "size": "small",
-   "x": 52902,
+   "x": 55366,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4651,7 +4848,7 @@
    "text": "*Story UI*\nMark Story Without A Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 53078,
+   "x": 55542,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4662,7 +4859,7 @@
    "text": "*Person*\nOpen Story Explorer From Screen Frame",
    "kind": "rounded",
    "size": "small",
-   "x": 53254,
+   "x": 55718,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4673,7 +4870,7 @@
    "text": "Navigate The Story Tree",
    "kind": "rounded",
    "size": "body",
-   "x": 53418,
+   "x": 55882,
    "y": 195,
    "w": 872,
    "h": 60
@@ -4684,7 +4881,7 @@
    "text": "*Person*\nOpen The Explorer At A Story, Scenario And Step",
    "kind": "rounded",
    "size": "small",
-   "x": 53430,
+   "x": 55894,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4695,7 +4892,7 @@
    "text": "*Person*\nCollapse And Reset The Story Tree",
    "kind": "rounded",
    "size": "small",
-   "x": 53606,
+   "x": 56070,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4706,7 +4903,7 @@
    "text": "*Story UI*\nKeep The Selected Story In View",
    "kind": "rounded",
    "size": "small",
-   "x": 53782,
+   "x": 56246,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4717,7 +4914,7 @@
    "text": "*Person*\nCopy A Request To Open A Story In Its File",
    "kind": "rounded",
    "size": "small",
-   "x": 53958,
+   "x": 56422,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4728,7 +4925,7 @@
    "text": "*Person*\nPick An Outline Scenario's Example",
    "kind": "rounded",
    "size": "small",
-   "x": 54134,
+   "x": 56598,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4739,7 +4936,7 @@
    "text": "Play Stories In The Explorer",
    "kind": "rounded",
    "size": "body",
-   "x": 54298,
+   "x": 56762,
    "y": 195,
    "w": 696,
    "h": 60
@@ -4750,7 +4947,7 @@
    "text": "*Person*\nPlay The Next Story",
    "kind": "rounded",
    "size": "small",
-   "x": 54310,
+   "x": 56774,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4761,7 +4958,7 @@
    "text": "*Person*\nHide And Show The Story Panel",
    "kind": "rounded",
    "size": "small",
-   "x": 54486,
+   "x": 56950,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4772,7 +4969,7 @@
    "text": "*Person*\nReturn To Story UI Map",
    "kind": "rounded",
    "size": "small",
-   "x": 54662,
+   "x": 57126,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4783,7 +4980,7 @@
    "text": "*Agent*\nTest Story Explorer On Session Story Map",
    "kind": "rounded",
    "size": "small",
-   "x": 54838,
+   "x": 57302,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4794,7 +4991,7 @@
    "text": "Frame Design Canvas Screens In Explorer",
    "kind": "rounded",
    "size": "body",
-   "x": 55002,
+   "x": 57466,
    "y": 195,
    "w": 872,
    "h": 60
@@ -4805,7 +5002,7 @@
    "text": "*Story UI*\nShow Design Canvas Screen As Explorer Frame",
    "kind": "rounded",
    "size": "small",
-   "x": 55014,
+   "x": 57478,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4816,7 +5013,7 @@
    "text": "*Story UI*\nChoose The Screen For A Step",
    "kind": "rounded",
    "size": "small",
-   "x": 55190,
+   "x": 57654,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4827,7 +5024,7 @@
    "text": "*Story UI*\nJoin A Step Without A Screen To The Next Step",
    "kind": "rounded",
    "size": "small",
-   "x": 55366,
+   "x": 57830,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4838,7 +5035,7 @@
    "text": "*Story UI*\nShow A Screenshot When No Screen Runs",
    "kind": "rounded",
    "size": "small",
-   "x": 55542,
+   "x": 58006,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4849,7 +5046,7 @@
    "text": "*Story UI*\nKeep Each Screen's Own Stylesheets",
    "kind": "rounded",
    "size": "small",
-   "x": 55718,
+   "x": 58182,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4860,7 +5057,7 @@
    "text": "Build Design Canvas Screens",
    "kind": "rounded",
    "size": "body",
-   "x": 55892.0,
+   "x": 58356.0,
    "y": 120,
    "w": 5540.0,
    "h": 60
@@ -4870,7 +5067,7 @@
    "color": "purple",
    "kind": "rounded",
    "size": "body",
-   "x": 61432.0,
+   "x": 63896.0,
    "y": 120,
    "w": 5540.0,
    "h": 60
@@ -4881,7 +5078,7 @@
    "text": "Lay Out The Canvas Files",
    "kind": "rounded",
    "size": "body",
-   "x": 55892,
+   "x": 58356,
    "y": 195,
    "w": 1048,
    "h": 60
@@ -4892,7 +5089,7 @@
    "text": "*Design Canvas*\nPlace Pages On The Canvas",
    "kind": "rounded",
    "size": "small",
-   "x": 55904,
+   "x": 58368,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4903,7 +5100,7 @@
    "text": "*Design Canvas*\nPlace Artboards On Their Pages",
    "kind": "rounded",
    "size": "small",
-   "x": 56080,
+   "x": 58544,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4914,7 +5111,7 @@
    "text": "*Design Canvas*\nWrite The Canvas Into A Project Folder",
    "kind": "rounded",
    "size": "small",
-   "x": 56256,
+   "x": 58720,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4925,7 +5122,7 @@
    "text": "*Design Canvas*\nName An Imported Screen After Its File",
    "kind": "rounded",
    "size": "small",
-   "x": 56432,
+   "x": 58896,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4936,7 +5133,7 @@
    "text": "*Design Canvas*\nGive Each Prototype Screen Its Own Page",
    "kind": "rounded",
    "size": "small",
-   "x": 56608,
+   "x": 59072,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4947,7 +5144,7 @@
    "text": "*Design Canvas*\nPlace A Read-Only Story Panel Beside A Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 56784,
+   "x": 59248,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4958,7 +5155,7 @@
    "text": "Load Scenario Fixtures With The Fixture Bar",
    "kind": "rounded",
    "size": "body",
-   "x": 56948,
+   "x": 59412,
    "y": 195,
    "w": 1224,
    "h": 60
@@ -4969,7 +5166,7 @@
    "text": "*Person*\nLoad A Scenario Into A Standalone Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 56960,
+   "x": 59424,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4980,7 +5177,7 @@
    "text": "*Design Canvas*\nLoad The Explorer's Scenario Into The Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 57136,
+   "x": 59600,
    "y": 339,
    "w": 152,
    "h": 152
@@ -4991,7 +5188,7 @@
    "text": "*Person*\nPick Another Scenario From Inside The Explorer",
    "kind": "rounded",
    "size": "small",
-   "x": 57312,
+   "x": 59776,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5002,7 +5199,7 @@
    "text": "*Person*\nPaste Dev Seed Data Into A Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 57488,
+   "x": 59952,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5013,7 +5210,7 @@
    "text": "*Person*\nFollow A Screen Link To The Next Story",
    "kind": "rounded",
    "size": "small",
-   "x": 57664,
+   "x": 60128,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5024,7 +5221,7 @@
    "text": "*Person*\nEdit A Screen On Its Own Artboard",
    "kind": "rounded",
    "size": "small",
-   "x": 57840,
+   "x": 60304,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5035,7 +5232,7 @@
    "text": "*Design Canvas*\nReport Where The Screen's Data Came From",
    "kind": "rounded",
    "size": "small",
-   "x": 58016,
+   "x": 60480,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5046,7 +5243,7 @@
    "text": "Browse The Story Map Artboard",
    "kind": "rounded",
    "size": "body",
-   "x": 58180,
+   "x": 60644,
    "y": 195,
    "w": 872,
    "h": 60
@@ -5057,7 +5254,7 @@
    "text": "*Design Canvas*\nDraw The Whole Story Map On One Artboard",
    "kind": "rounded",
    "size": "small",
-   "x": 58192,
+   "x": 60656,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5068,7 +5265,7 @@
    "text": "*Design Canvas*\nDraw Each Epic Bar Across Its Sub-Epics",
    "kind": "rounded",
    "size": "small",
-   "x": 58368,
+   "x": 60832,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5079,7 +5276,7 @@
    "text": "*Design Canvas*\nDraw The Map In The abd Engineering Look",
    "kind": "rounded",
    "size": "small",
-   "x": 58544,
+   "x": 61008,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5090,7 +5287,7 @@
    "text": "*Person*\nZoom The Story Map",
    "kind": "rounded",
    "size": "small",
-   "x": 58720,
+   "x": 61184,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5101,7 +5298,7 @@
    "text": "*Design Canvas*\nKeep A Clicked Link's Place For The Linked Artboard",
    "kind": "rounded",
    "size": "small",
-   "x": 58896,
+   "x": 61360,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5112,7 +5309,7 @@
    "text": "Start A Canvas Version",
    "kind": "rounded",
    "size": "body",
-   "x": 59060,
+   "x": 61524,
    "y": 195,
    "w": 696,
    "h": 60
@@ -5123,7 +5320,7 @@
    "text": "*Agent*\nStart The First Version",
    "kind": "rounded",
    "size": "small",
-   "x": 59072,
+   "x": 61536,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5134,7 +5331,7 @@
    "text": "*Agent*\nStart The Next Version As A Copy",
    "kind": "rounded",
    "size": "small",
-   "x": 59248,
+   "x": 61712,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5145,7 +5342,7 @@
    "text": "*Agent*\nWrite Into The Version Not Yet Published",
    "kind": "rounded",
    "size": "small",
-   "x": 59424,
+   "x": 61888,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5156,7 +5353,7 @@
    "text": "*Agent*\nRefuse To Add To A Published Version",
    "kind": "rounded",
    "size": "small",
-   "x": 59600,
+   "x": 62064,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5167,7 +5364,7 @@
    "text": "Publish And Release A Canvas Version",
    "kind": "rounded",
    "size": "body",
-   "x": 59764,
+   "x": 62228,
    "y": 195,
    "w": 1048,
    "h": 60
@@ -5178,7 +5375,7 @@
    "text": "*Agent*\nTitle A Published Canvas By Its Version",
    "kind": "rounded",
    "size": "small",
-   "x": 59776,
+   "x": 62240,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5189,7 +5386,7 @@
    "text": "*Agent*\nRecord Each Version's Published Link",
    "kind": "rounded",
    "size": "small",
-   "x": 59952,
+   "x": 62416,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5200,7 +5397,7 @@
    "text": "*Agent*\nKeep A Published Version As A Release",
    "kind": "rounded",
    "size": "small",
-   "x": 60128,
+   "x": 62592,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5211,7 +5408,7 @@
    "text": "*Agent*\nRemove Older Versions When Keeping A Release",
    "kind": "rounded",
    "size": "small",
-   "x": 60304,
+   "x": 62768,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5222,7 +5419,7 @@
    "text": "*Agent*\nStart Numbering Again From A Release",
    "kind": "rounded",
    "size": "small",
-   "x": 60480,
+   "x": 62944,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5233,7 +5430,7 @@
    "text": "*Agent*\nFind A Release's Canvas Folder",
    "kind": "rounded",
    "size": "small",
-   "x": 60656,
+   "x": 63120,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5244,7 +5441,7 @@
    "text": "Reuse Production Assets On The Canvas",
    "kind": "rounded",
    "size": "body",
-   "x": 60820,
+   "x": 63284,
    "y": 195,
    "w": 3688,
    "h": 60
@@ -5255,7 +5452,7 @@
    "text": "Trace Canvas Files To Production",
    "kind": "rounded",
    "size": "body",
-   "x": 60820,
+   "x": 63284,
    "y": 263,
    "w": 872,
    "h": 60
@@ -5266,7 +5463,7 @@
    "text": "*Design Canvas*\nRecord Packaged Files In Sources Manifest",
    "kind": "rounded",
    "size": "small",
-   "x": 60832,
+   "x": 63296,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5277,7 +5474,7 @@
    "text": "*Design Canvas*\nFail Check When A Packaged File Drifts",
    "kind": "rounded",
    "size": "small",
-   "x": 61008,
+   "x": 63472,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5288,7 +5485,7 @@
    "text": "*Design Canvas*\nReport Version Traceability Percentage",
    "kind": "rounded",
    "size": "small",
-   "x": 61184,
+   "x": 63648,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5299,7 +5496,7 @@
    "text": "*Design Canvas*\nStore Each Screenshot Once By Content Hash",
    "kind": "rounded",
    "size": "small",
-   "x": 61360,
+   "x": 63824,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5310,7 +5507,7 @@
    "text": "*Design Canvas*\nFind Screen Files Through The Manifest",
    "kind": "rounded",
    "size": "small",
-   "x": 61536,
+   "x": 64000,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5321,7 +5518,7 @@
    "text": "Install Production Design System On The Canvas",
    "kind": "rounded",
    "size": "body",
-   "x": 61700,
+   "x": 64164,
    "y": 263,
    "w": 872,
    "h": 60
@@ -5332,7 +5529,7 @@
    "text": "*Agent*\nPackage Product Styles And Assets In Their Production Layout",
    "kind": "rounded",
    "size": "small",
-   "x": 61712,
+   "x": 64176,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5343,7 +5540,7 @@
    "text": "*Agent*\nPublish Product Package As Design System Artifact",
    "kind": "rounded",
    "size": "small",
-   "x": 61888,
+   "x": 64352,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5354,7 +5551,7 @@
    "text": "*Design Canvas*\nRecord Installed Design Systems In Canvas File",
    "kind": "rounded",
    "size": "small",
-   "x": 62064,
+   "x": 64528,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5365,7 +5562,7 @@
    "text": "*Agent*\nDerive Publish List From Sources Manifest",
    "kind": "rounded",
    "size": "small",
-   "x": 62240,
+   "x": 64704,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5376,7 +5573,7 @@
    "text": "*Agent*\nPull Hosted Edits Back Before Next Version",
    "kind": "rounded",
    "size": "small",
-   "x": 62416,
+   "x": 64880,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5387,7 +5584,7 @@
    "text": "Mount Production Views As Screens",
    "kind": "rounded",
    "size": "body",
-   "x": 62580,
+   "x": 65044,
    "y": 263,
    "w": 1224,
    "h": 60
@@ -5398,7 +5595,7 @@
    "text": "*Agent*\nBundle Product Views For The Canvas",
    "kind": "rounded",
    "size": "small",
-   "x": 62592,
+   "x": 65056,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5409,7 +5606,7 @@
    "text": "*Design Canvas*\nMount Production View In A Thin Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 62768,
+   "x": 65232,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5420,7 +5617,7 @@
    "text": "*Design Canvas*\nAnswer Screen Requests From Fixture Routes",
    "kind": "rounded",
    "size": "small",
-   "x": 62944,
+   "x": 65408,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5431,7 +5628,7 @@
    "text": "*Design Canvas*\nKeep Explorer Navigation Inside The Artboard",
    "kind": "rounded",
    "size": "small",
-   "x": 63120,
+   "x": 65584,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5442,7 +5639,7 @@
    "text": "*Design Canvas*\nKeep Product Styles Inside The Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 63296,
+   "x": 65760,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5453,7 +5650,7 @@
    "text": "*Person*\nType Scenario Values Into A Mounted Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 63472,
+   "x": 65936,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5464,7 +5661,7 @@
    "text": "*Agent*\nGenerate Attached Screens Without Markup",
    "kind": "rounded",
    "size": "small",
-   "x": 63648,
+   "x": 66112,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5475,7 +5672,7 @@
    "text": "Redesign A Screen By Detaching It",
    "kind": "rounded",
    "size": "body",
-   "x": 63812,
+   "x": 66276,
    "y": 263,
    "w": 696,
    "h": 60
@@ -5486,7 +5683,7 @@
    "text": "*Person*\nDetach A Screen To Editable Markup",
    "kind": "rounded",
    "size": "small",
-   "x": 63824,
+   "x": 66288,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5497,7 +5694,7 @@
    "text": "*Design Canvas*\nKeep Leaf Components Mounted In A Detached Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 64000,
+   "x": 66464,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5508,7 +5705,7 @@
    "text": "*Design Canvas*\nMark Detached Screen As Diverged",
    "kind": "rounded",
    "size": "small",
-   "x": 64176,
+   "x": 66640,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5519,7 +5716,7 @@
    "text": "*Person*\nReattach A Screen Once Its Change Reaches Production",
    "kind": "rounded",
    "size": "small",
-   "x": 64352,
+   "x": 66816,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5530,7 +5727,7 @@
    "text": "Check Screens Against Their Scenarios",
    "kind": "rounded",
    "size": "body",
-   "x": 64516,
+   "x": 66980,
    "y": 195,
    "w": 1048,
    "h": 60
@@ -5541,7 +5738,7 @@
    "text": "*Agent*\nPackage End-To-End Results With The Canvas",
    "kind": "rounded",
    "size": "small",
-   "x": 64528,
+   "x": 66992,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5552,7 +5749,7 @@
    "text": "*Design Canvas*\nMark Each Explorer Scenario Passed Or Failed",
    "kind": "rounded",
    "size": "small",
-   "x": 64704,
+   "x": 67168,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5563,7 +5760,7 @@
    "text": "*Design Canvas*\nLabel Stale Test Results",
    "kind": "rounded",
    "size": "small",
-   "x": 64880,
+   "x": 67344,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5574,7 +5771,7 @@
    "text": "*Person*\nRun A Scenario's Thens On The Canvas",
    "kind": "rounded",
    "size": "small",
-   "x": 65056,
+   "x": 67520,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5585,7 +5782,7 @@
    "text": "*Person*\nPlay A Story's UI Steps On A Screen",
    "kind": "rounded",
    "size": "small",
-   "x": 65232,
+   "x": 67696,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5596,7 +5793,7 @@
    "text": "*Agent*\nCheck Screen Logic Against Scenarios From A Command",
    "kind": "rounded",
    "size": "small",
-   "x": 65408,
+   "x": 67872,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5607,7 +5804,7 @@
    "text": "Draw Linked Models On The Canvas",
    "kind": "rounded",
    "size": "body",
-   "x": 65572,
+   "x": 68036,
    "y": 195,
    "w": 1400,
    "h": 60
@@ -5618,7 +5815,7 @@
    "text": "*Design Canvas*\nDraw Arrows From Drawio Waypoints",
    "kind": "rounded",
    "size": "small",
-   "x": 65584,
+   "x": 68048,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5629,7 +5826,7 @@
    "text": "*Agent*\nDraw Bounded Context Map As An Artboard",
    "kind": "rounded",
    "size": "small",
-   "x": 65760,
+   "x": 68224,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5640,7 +5837,7 @@
    "text": "*Agent*\nDraw Domain Model As An Artboard",
    "kind": "rounded",
    "size": "small",
-   "x": 65936,
+   "x": 68400,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5651,7 +5848,7 @@
    "text": "*Agent*\nDraw Module Class Models As Artboards",
    "kind": "rounded",
    "size": "small",
-   "x": 66112,
+   "x": 68576,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5662,7 +5859,7 @@
    "text": "*Person*\nFollow Links From A Context To Its Models",
    "kind": "rounded",
    "size": "small",
-   "x": 66288,
+   "x": 68752,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5673,7 +5870,7 @@
    "text": "*Person*\nSee The Classes A Scenario Touches",
    "kind": "rounded",
    "size": "small",
-   "x": 66464,
+   "x": 68928,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5684,7 +5881,7 @@
    "text": "*Person*\nSee The Stories That Exercise A Class",
    "kind": "rounded",
    "size": "small",
-   "x": 66640,
+   "x": 69104,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5695,7 +5892,7 @@
    "text": "*Design Canvas*\nMark Model Nodes That Fail Rules",
    "kind": "rounded",
    "size": "small",
-   "x": 66816,
+   "x": 69280,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5706,9 +5903,9 @@
    "text": "Map Work Into Knowledge Graph",
    "kind": "rounded",
    "size": "body",
-   "x": 66990.0,
+   "x": 69454.0,
    "y": 120,
-   "w": 6156.0,
+   "w": 6420.0,
    "h": 60
   },
   "epic.d91d495970~2": {
@@ -5716,9 +5913,9 @@
    "color": "purple",
    "kind": "rounded",
    "size": "body",
-   "x": 73146.0,
+   "x": 75874.0,
    "y": 120,
-   "w": 6156.0,
+   "w": 6420.0,
    "h": 60
   },
   "subepic.0.3722320697": {
@@ -5727,7 +5924,7 @@
    "text": "Load And Save Graph",
    "kind": "rounded",
    "size": "body",
-   "x": 66990,
+   "x": 69454,
    "y": 195,
    "w": 1576,
    "h": 60
@@ -5738,7 +5935,7 @@
    "text": "*Agent*\nLoad Working Copy Into Graph",
    "kind": "rounded",
    "size": "small",
-   "x": 67002,
+   "x": 69466,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5749,7 +5946,7 @@
    "text": "*Knowledge Graph*\nReuse Saved Graph",
    "kind": "rounded",
    "size": "small",
-   "x": 67178,
+   "x": 69642,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5760,7 +5957,7 @@
    "text": "*Knowledge Graph*\nRebuild Graph After Source Or Rule Changes",
    "kind": "rounded",
    "size": "small",
-   "x": 67354,
+   "x": 69818,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5771,7 +5968,7 @@
    "text": "*Person*\nForce Graph Reload",
    "kind": "rounded",
    "size": "small",
-   "x": 67530,
+   "x": 69994,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5782,7 +5979,7 @@
    "text": "*Agent*\nLoad Only Edited Files",
    "kind": "rounded",
    "size": "small",
-   "x": 67706,
+   "x": 70170,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5793,7 +5990,7 @@
    "text": "*Knowledge Graph*\nSkip Build And Cache Folders",
    "kind": "rounded",
    "size": "small",
-   "x": 67882,
+   "x": 70346,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5804,7 +6001,7 @@
    "text": "*Knowledge Graph*\nReport Load Progress",
    "kind": "rounded",
    "size": "small",
-   "x": 68058,
+   "x": 70522,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5815,7 +6012,7 @@
    "text": "*Agent*\nSave Graph To Context Folder",
    "kind": "rounded",
    "size": "small",
-   "x": 68234,
+   "x": 70698,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5826,7 +6023,7 @@
    "text": "*Knowledge Graph*\nKeep Other Practices When Saving",
    "kind": "rounded",
    "size": "small",
-   "x": 68410,
+   "x": 70874,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5837,106 +6034,161 @@
    "text": "Build Practice Trees From Source",
    "kind": "rounded",
    "size": "body",
-   "x": 68574,
+   "x": 71038,
    "y": 195,
+   "w": 2104,
+   "h": 60
+  },
+  "subepic.1.506164fc85": {
+   "type": "shape",
+   "color": "green",
+   "text": "Read Practice Trees From Source",
+   "kind": "rounded",
+   "size": "body",
+   "x": 71038,
+   "y": 263,
    "w": 1576,
    "h": 60
   },
-  "story.user.b3b45e41a5": {
+  "story.user.622f17a689": {
    "type": "shape",
    "color": "yellow",
    "text": "*Knowledge Graph*\nRead Modules Classes And Operations",
    "kind": "rounded",
    "size": "small",
-   "x": 68586,
+   "x": 71050,
    "y": 339,
    "w": 152,
    "h": 152
   },
-  "story.user.749a4f468e": {
+  "story.user.da50e62c50": {
    "type": "shape",
    "color": "yellow",
    "text": "*Knowledge Graph*\nRead Clean Engineering Model Documents",
    "kind": "rounded",
    "size": "small",
-   "x": 68762,
+   "x": 71226,
    "y": 339,
    "w": 152,
    "h": 152
   },
-  "story.user.5465a6b326": {
+  "story.user.b61a3d9864": {
    "type": "shape",
    "color": "yellow",
    "text": "*Knowledge Graph*\nPlace DDD Building Blocks Under Aggregates",
    "kind": "rounded",
    "size": "small",
-   "x": 68938,
+   "x": 71402,
    "y": 339,
    "w": 152,
    "h": 152
   },
-  "story.user.c60678e205": {
+  "story.user.294c42c92b": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Knowledge Graph*\nRead Domain Documents And Code",
+   "kind": "rounded",
+   "size": "small",
+   "x": 71578,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.d0f9eca8eb": {
    "type": "shape",
    "color": "yellow",
    "text": "*Knowledge Graph*\nRead Story Maps And Story Tests",
    "kind": "rounded",
    "size": "small",
-   "x": 69114,
+   "x": 71754,
    "y": 339,
    "w": 152,
    "h": 152
   },
-  "story.user.7789c90b4c": {
+  "story.user.6c75935913": {
    "type": "shape",
    "color": "yellow",
    "text": "*Knowledge Graph*\nRead BDD Spec Trees",
    "kind": "rounded",
    "size": "small",
-   "x": 69290,
+   "x": 71930,
    "y": 339,
    "w": 152,
    "h": 152
   },
-  "story.user.724ce00540": {
+  "story.user.b7bf93a0c9": {
    "type": "shape",
    "color": "yellow",
-   "text": "*Knowledge Graph*\nLink Steps And Observations To Operations",
+   "text": "*Knowledge Graph*\nRead UX Maps",
    "kind": "rounded",
    "size": "small",
-   "x": 69466,
+   "x": 72106,
    "y": 339,
    "w": 152,
    "h": 152
   },
-  "story.user.299cefc553": {
-   "type": "shape",
-   "color": "yellow",
-   "text": "*Knowledge Graph*\nLink Examples To Classes And Steps",
-   "kind": "rounded",
-   "size": "small",
-   "x": 69642,
-   "y": 339,
-   "w": 152,
-   "h": 152
-  },
-  "story.user.b84e637f17": {
+  "story.user.995a355b71": {
    "type": "shape",
    "color": "yellow",
    "text": "*Knowledge Graph*\nPlace Story Nodes On Their Source Lines",
    "kind": "rounded",
    "size": "small",
-   "x": 69818,
+   "x": 72282,
    "y": 339,
    "w": 152,
    "h": 152
   },
-  "story.user.b69d77b902": {
+  "story.user.5d0c3af337": {
    "type": "shape",
    "color": "yellow",
    "text": "*Knowledge Graph*\nGive Each Node Its Fidelity",
    "kind": "rounded",
    "size": "small",
-   "x": 69994,
+   "x": 72458,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "subepic.1.49c6e037aa": {
+   "type": "shape",
+   "color": "green",
+   "text": "Link Practice Trees Across Practices",
+   "kind": "rounded",
+   "size": "body",
+   "x": 72622,
+   "y": 263,
+   "w": 520,
+   "h": 60
+  },
+  "story.user.a89c357dc9": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Knowledge Graph*\nLink Steps And Observations To Operations",
+   "kind": "rounded",
+   "size": "small",
+   "x": 72634,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.61a365eedb": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Knowledge Graph*\nLink Markdown Steps To Model Operations",
+   "kind": "rounded",
+   "size": "small",
+   "x": 72810,
+   "y": 339,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.0587cc0649": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Knowledge Graph*\nLink Examples To Classes And Steps",
+   "kind": "rounded",
+   "size": "small",
+   "x": 72986,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5947,7 +6199,7 @@
    "text": "Apply Pattern Overlays",
    "kind": "rounded",
    "size": "body",
-   "x": 70158,
+   "x": 73150,
    "y": 195,
    "w": 872,
    "h": 60
@@ -5958,7 +6210,7 @@
    "text": "*Person*\nAdd Named Overlay From Catalog",
    "kind": "rounded",
    "size": "small",
-   "x": 70170,
+   "x": 73162,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5969,7 +6221,7 @@
    "text": "*Person*\nAdd Overlay Folder",
    "kind": "rounded",
    "size": "small",
-   "x": 70346,
+   "x": 73338,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5980,7 +6232,7 @@
    "text": "*Person*\nRemove Overlay",
    "kind": "rounded",
    "size": "small",
-   "x": 70522,
+   "x": 73514,
    "y": 339,
    "w": 152,
    "h": 152
@@ -5991,7 +6243,7 @@
    "text": "*Agent*\nRebuild Graph With Overlay Nodes",
    "kind": "rounded",
    "size": "small",
-   "x": 70698,
+   "x": 73690,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6002,7 +6254,7 @@
    "text": "*Graph App*\nRemember Applied Overlays",
    "kind": "rounded",
    "size": "small",
-   "x": 70874,
+   "x": 73866,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6013,7 +6265,7 @@
    "text": "Explore Graph In Graph App",
    "kind": "rounded",
    "size": "body",
-   "x": 71038,
+   "x": 74030,
    "y": 195,
    "w": 1576,
    "h": 60
@@ -6024,7 +6276,7 @@
    "text": "*Person*\nChoose Repo Folder",
    "kind": "rounded",
    "size": "small",
-   "x": 71050,
+   "x": 74042,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6035,7 +6287,7 @@
    "text": "*Graph App*\nReopen Last Folder",
    "kind": "rounded",
    "size": "small",
-   "x": 71226,
+   "x": 74218,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6046,7 +6298,7 @@
    "text": "*Person*\nExpand Practice Tree",
    "kind": "rounded",
    "size": "small",
-   "x": 71402,
+   "x": 74394,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6057,7 +6309,7 @@
    "text": "*Person*\nFollow Relationships Under Node",
    "kind": "rounded",
    "size": "small",
-   "x": 71578,
+   "x": 74570,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6068,7 +6320,7 @@
    "text": "*Person*\nOpen Node Source",
    "kind": "rounded",
    "size": "small",
-   "x": 71754,
+   "x": 74746,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6079,7 +6331,7 @@
    "text": "*Person*\nUnfold Calls And Classes In Source",
    "kind": "rounded",
    "size": "small",
-   "x": 71930,
+   "x": 74922,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6090,7 +6342,7 @@
    "text": "*Graph App*\nShow Load Steps While Loading",
    "kind": "rounded",
    "size": "small",
-   "x": 72106,
+   "x": 75098,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6101,7 +6353,7 @@
    "text": "*Person*\nCopy Load Failure For Agent",
    "kind": "rounded",
    "size": "small",
-   "x": 72282,
+   "x": 75274,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6112,7 +6364,7 @@
    "text": "*Person*\nSwitch Display Theme",
    "kind": "rounded",
    "size": "small",
-   "x": 72458,
+   "x": 75450,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6123,7 +6375,7 @@
    "text": "Filter Graph In Graph App",
    "kind": "rounded",
    "size": "body",
-   "x": 72622,
+   "x": 75614,
    "y": 195,
    "w": 1048,
    "h": 60
@@ -6134,7 +6386,7 @@
    "text": "*Person*\nFilter By Practice",
    "kind": "rounded",
    "size": "small",
-   "x": 72634,
+   "x": 75626,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6145,7 +6397,7 @@
    "text": "*Person*\nFilter By Node Type",
    "kind": "rounded",
    "size": "small",
-   "x": 72810,
+   "x": 75802,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6156,7 +6408,7 @@
    "text": "*Person*\nFilter By Connector",
    "kind": "rounded",
    "size": "small",
-   "x": 72986,
+   "x": 75978,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6167,7 +6419,7 @@
    "text": "*Person*\nShow Only Violations",
    "kind": "rounded",
    "size": "small",
-   "x": 73162,
+   "x": 76154,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6178,7 +6430,7 @@
    "text": "*Person*\nFilter Violations By Rule",
    "kind": "rounded",
    "size": "small",
-   "x": 73338,
+   "x": 76330,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6189,7 +6441,7 @@
    "text": "*Person*\nSelect All Or No Filter Choices",
    "kind": "rounded",
    "size": "small",
-   "x": 73514,
+   "x": 76506,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6200,7 +6452,7 @@
    "text": "Find Nodes For Agent",
    "kind": "rounded",
    "size": "body",
-   "x": 73678,
+   "x": 76670,
    "y": 195,
    "w": 872,
    "h": 60
@@ -6211,7 +6463,7 @@
    "text": "*Agent*\nReturn Matching Nodes With Relationships",
    "kind": "rounded",
    "size": "small",
-   "x": 73690,
+   "x": 76682,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6222,7 +6474,7 @@
    "text": "*Agent*\nReturn Only Failing Nodes And Rules",
    "kind": "rounded",
    "size": "small",
-   "x": 73866,
+   "x": 76858,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6233,7 +6485,7 @@
    "text": "*Agent*\nList Practice Inventory",
    "kind": "rounded",
    "size": "small",
-   "x": 74042,
+   "x": 77034,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6244,7 +6496,7 @@
    "text": "*Agent*\nList Filter Choices",
    "kind": "rounded",
    "size": "small",
-   "x": 74218,
+   "x": 77210,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6255,7 +6507,7 @@
    "text": "*Agent*\nRead Node Source With Members",
    "kind": "rounded",
    "size": "small",
-   "x": 74394,
+   "x": 77386,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6266,7 +6518,7 @@
    "text": "Check Nodes Against Graph Rules",
    "kind": "rounded",
    "size": "body",
-   "x": 74558,
+   "x": 77550,
    "y": 195,
    "w": 2456,
    "h": 60
@@ -6277,7 +6529,7 @@
    "text": "*Knowledge Graph*\nAttach Schema Rules To Nodes",
    "kind": "rounded",
    "size": "small",
-   "x": 74570,
+   "x": 77562,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6288,7 +6540,7 @@
    "text": "*Knowledge Graph*\nCheck Nodes Against Practice Rules",
    "kind": "rounded",
    "size": "small",
-   "x": 74746,
+   "x": 77738,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6299,7 +6551,7 @@
    "text": "*Knowledge Graph*\nInherit Clean Engineering Rules On DDD Types",
    "kind": "rounded",
    "size": "small",
-   "x": 74922,
+   "x": 77914,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6310,7 +6562,7 @@
    "text": "*Knowledge Graph*\nAdd Overlay Rules",
    "kind": "rounded",
    "size": "small",
-   "x": 75098,
+   "x": 78090,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6321,7 +6573,7 @@
    "text": "*Knowledge Graph*\nMark Prose Rules As Prompts",
    "kind": "rounded",
    "size": "small",
-   "x": 75274,
+   "x": 78266,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6332,7 +6584,7 @@
    "text": "*Knowledge Graph*\nPlace Violation At Node Lines",
    "kind": "rounded",
    "size": "small",
-   "x": 75450,
+   "x": 78442,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6343,7 +6595,7 @@
    "text": "*Knowledge Graph*\nName Rules By Practice Node And Rule",
    "kind": "rounded",
    "size": "small",
-   "x": 75626,
+   "x": 78618,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6354,7 +6606,7 @@
    "text": "Check Clean Engineering Code Through The Graph",
    "kind": "rounded",
    "size": "body",
-   "x": 75790,
+   "x": 78782,
    "y": 263,
    "w": 1224,
    "h": 60
@@ -6365,7 +6617,7 @@
    "text": "*Knowledge Graph*\nRecord Code Metrics As Node Facts",
    "kind": "rounded",
    "size": "small",
-   "x": 75802,
+   "x": 78794,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6376,7 +6628,7 @@
    "text": "*Validate*\nCheck Code Metrics Against Clean Engineering Limits",
    "kind": "rounded",
    "size": "small",
-   "x": 75978,
+   "x": 78970,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6387,7 +6639,7 @@
    "text": "*Knowledge Graph*\nReport Unused Class For Deletion",
    "kind": "rounded",
    "size": "small",
-   "x": 76154,
+   "x": 79146,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6398,7 +6650,7 @@
    "text": "*Knowledge Graph*\nReport Runtime Dependency That Should Be Owned",
    "kind": "rounded",
    "size": "small",
-   "x": 76330,
+   "x": 79322,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6409,7 +6661,7 @@
    "text": "*Knowledge Graph*\nReport Disconnected Class",
    "kind": "rounded",
    "size": "small",
-   "x": 76506,
+   "x": 79498,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6420,7 +6672,7 @@
    "text": "*Knowledge Graph*\nReport One-Class Package",
    "kind": "rounded",
    "size": "small",
-   "x": 76682,
+   "x": 79674,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6431,7 +6683,7 @@
    "text": "*Validate*\nJudge Clean Engineering Rules Across Files",
    "kind": "rounded",
    "size": "small",
-   "x": 76858,
+   "x": 79850,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6442,7 +6694,7 @@
    "text": "Review Violations In Graph App",
    "kind": "rounded",
    "size": "body",
-   "x": 77022,
+   "x": 80014,
    "y": 195,
    "w": 1048,
    "h": 60
@@ -6453,7 +6705,7 @@
    "text": "*Person*\nSee Rules Under Node",
    "kind": "rounded",
    "size": "small",
-   "x": 77034,
+   "x": 80026,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6464,7 +6716,7 @@
    "text": "*Person*\nHover Violating Rule For Message",
    "kind": "rounded",
    "size": "small",
-   "x": 77210,
+   "x": 80202,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6475,7 +6727,7 @@
    "text": "*Person*\nOpen Violation In Source",
    "kind": "rounded",
    "size": "small",
-   "x": 77386,
+   "x": 80378,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6486,7 +6738,7 @@
    "text": "*Person*\nDisplay Drawio File As Diagram",
    "kind": "rounded",
    "size": "small",
-   "x": 77562,
+   "x": 80554,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6497,7 +6749,7 @@
    "text": "*Person*\nCopy Correct Prompt",
    "kind": "rounded",
    "size": "small",
-   "x": 77738,
+   "x": 80730,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6508,7 +6760,7 @@
    "text": "*Agent*\nTest Knowledge Graph Explorer On Session Files",
    "kind": "rounded",
    "size": "small",
-   "x": 77914,
+   "x": 80906,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6519,7 +6771,7 @@
    "text": "Report Graph Rules In Validate",
    "kind": "rounded",
    "size": "body",
-   "x": 78078,
+   "x": 81070,
    "y": 195,
    "w": 1224,
    "h": 60
@@ -6530,7 +6782,7 @@
    "text": "*Validate*\nBuild Graph From Edited Files",
    "kind": "rounded",
    "size": "small",
-   "x": 78090,
+   "x": 81082,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6541,7 +6793,7 @@
    "text": "*Validate*\nReport Own Practice Violations",
    "kind": "rounded",
    "size": "small",
-   "x": 78266,
+   "x": 81258,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6552,7 +6804,7 @@
    "text": "*Validate*\nReport Saved Graph Hits",
    "kind": "rounded",
    "size": "small",
-   "x": 78442,
+   "x": 81434,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6563,7 +6815,7 @@
    "text": "*Validate*\nLeave Unedited Files Out",
    "kind": "rounded",
    "size": "small",
-   "x": 78618,
+   "x": 81610,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6574,7 +6826,7 @@
    "text": "*Validate*\nRefuse Missing Path",
    "kind": "rounded",
    "size": "small",
-   "x": 78794,
+   "x": 81786,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6585,7 +6837,7 @@
    "text": "*Validate*\nSave Checked Graph Beside Report",
    "kind": "rounded",
    "size": "small",
-   "x": 78970,
+   "x": 81962,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6596,7 +6848,7 @@
    "text": "*Session Board*\nCount Graph Hits From Report",
    "kind": "rounded",
    "size": "small",
-   "x": 79146,
+   "x": 82138,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6607,7 +6859,7 @@
    "text": "Draw Practice Models On Claude Whiteboard",
    "kind": "rounded",
    "size": "body",
-   "x": 79320,
+   "x": 82312,
    "y": 120,
    "w": 3864,
    "h": 60
@@ -6618,7 +6870,7 @@
    "text": "Lay Out Shared Whiteboard Elements",
    "kind": "rounded",
    "size": "body",
-   "x": 79320,
+   "x": 82312,
    "y": 195,
    "w": 872,
    "h": 60
@@ -6629,7 +6881,7 @@
    "text": "*Whiteboard Node*\nPlace Element From Diagram Geometry",
    "kind": "rounded",
    "size": "small",
-   "x": 79332,
+   "x": 82324,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6640,7 +6892,7 @@
    "text": "*Whiteboard Node*\nWrite Node As Board Element",
    "kind": "rounded",
    "size": "small",
-   "x": 79508,
+   "x": 82500,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6651,7 +6903,7 @@
    "text": "*Whiteboard*\nOrder Board Elements Back To Front",
    "kind": "rounded",
    "size": "small",
-   "x": 79684,
+   "x": 82676,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6662,7 +6914,7 @@
    "text": "*Whiteboard*\nJoin Elements With Arrows",
    "kind": "rounded",
    "size": "small",
-   "x": 79860,
+   "x": 82852,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6673,7 +6925,7 @@
    "text": "*Whiteboard*\nKeep Element Ids Across Renders",
    "kind": "rounded",
    "size": "small",
-   "x": 80036,
+   "x": 83028,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6684,7 +6936,7 @@
    "text": "Render Practice Models To Whiteboard",
    "kind": "rounded",
    "size": "body",
-   "x": 80200,
+   "x": 83192,
    "y": 195,
    "w": 872,
    "h": 60
@@ -6695,7 +6947,7 @@
    "text": "*Agent*\nLay Out Story Map On Whiteboard",
    "kind": "rounded",
    "size": "small",
-   "x": 80212,
+   "x": 83204,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6706,7 +6958,7 @@
    "text": "*Agent*\nDraw Module Dependencies On Whiteboard",
    "kind": "rounded",
    "size": "small",
-   "x": 80388,
+   "x": 83380,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6717,7 +6969,7 @@
    "text": "*Agent*\nShow Class Members And Relationships On Whiteboard",
    "kind": "rounded",
    "size": "small",
-   "x": 80564,
+   "x": 83556,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6728,7 +6980,7 @@
    "text": "*Agent*\nGroup Aggregates In Bounded Context Sections",
    "kind": "rounded",
    "size": "small",
-   "x": 80740,
+   "x": 83732,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6739,7 +6991,7 @@
    "text": "*Agent*\nConnect Screens By Navigation Moves",
    "kind": "rounded",
    "size": "small",
-   "x": 80916,
+   "x": 83908,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6750,7 +7002,7 @@
    "text": "Publish Board To Claude",
    "kind": "rounded",
    "size": "body",
-   "x": 81080,
+   "x": 84072,
    "y": 195,
    "w": 696,
    "h": 60
@@ -6761,7 +7013,7 @@
    "text": "*Agent*\nCreate Whiteboard Artifact For Fidelity File",
    "kind": "rounded",
    "size": "small",
-   "x": 81092,
+   "x": 84084,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6772,7 +7024,7 @@
    "text": "*Agent*\nWrite Board Elements To Artifact Store",
    "kind": "rounded",
    "size": "small",
-   "x": 81268,
+   "x": 84260,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6783,7 +7035,7 @@
    "text": "*Agent*\nUpdate Changed Elements On Existing Board",
    "kind": "rounded",
    "size": "small",
-   "x": 81444,
+   "x": 84436,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6794,7 +7046,7 @@
    "text": "*Agent*\nLink Board From Fidelity Outputs",
    "kind": "rounded",
    "size": "small",
-   "x": 81620,
+   "x": 84612,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6805,7 +7057,7 @@
    "text": "Load Whiteboard Into Practice Model",
    "kind": "rounded",
    "size": "body",
-   "x": 81784,
+   "x": 84776,
    "y": 195,
    "w": 696,
    "h": 60
@@ -6816,7 +7068,7 @@
    "text": "*Agent*\nRead Board Into Whiteboard File",
    "kind": "rounded",
    "size": "small",
-   "x": 81796,
+   "x": 84788,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6827,7 +7079,7 @@
    "text": "*Whiteboard Story Model*\nParse Story Map From Board",
    "kind": "rounded",
    "size": "small",
-   "x": 81972,
+   "x": 84964,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6838,7 +7090,7 @@
    "text": "*Whiteboard Class Model*\nParse Classes And Modules From Board",
    "kind": "rounded",
    "size": "small",
-   "x": 82148,
+   "x": 85140,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6849,7 +7101,7 @@
    "text": "*Knowledge Graph*\nLoad Whiteboard File Into Graph",
    "kind": "rounded",
    "size": "small",
-   "x": 82324,
+   "x": 85316,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6860,7 +7112,7 @@
    "text": "Choose Whiteboard Format In Channels",
    "kind": "rounded",
    "size": "body",
-   "x": 82488,
+   "x": 85480,
    "y": 195,
    "w": 696,
    "h": 60
@@ -6871,7 +7123,7 @@
    "text": "*Person*\nPick Whiteboard Format Chip",
    "kind": "rounded",
    "size": "small",
-   "x": 82500,
+   "x": 85492,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6882,7 +7134,7 @@
    "text": "*Agent*\nGenerate Fidelity Into Whiteboard",
    "kind": "rounded",
    "size": "small",
-   "x": 82676,
+   "x": 85668,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6893,7 +7145,7 @@
    "text": "*Story Channel*\nRound Trip Story Map Through Whiteboard",
    "kind": "rounded",
    "size": "small",
-   "x": 82852,
+   "x": 85844,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6904,7 +7156,7 @@
    "text": "*Agent*\nScan Whiteboard Layout Rules",
    "kind": "rounded",
    "size": "small",
-   "x": 83028,
+   "x": 86020,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6915,7 +7167,7 @@
    "text": "Connect Sessions Across Channels And Apps",
    "kind": "rounded",
    "size": "body",
-   "x": 83202,
+   "x": 86194,
    "y": 120,
    "w": 3160,
    "h": 60
@@ -6926,7 +7178,7 @@
    "text": "Connect Chat Bar Board And Story UI",
    "kind": "rounded",
    "size": "body",
-   "x": 83202,
+   "x": 86194,
    "y": 195,
    "w": 872,
    "h": 60
@@ -6937,7 +7189,7 @@
    "text": "*Person*\nOpen Board Side Panel From Chat Bar",
    "kind": "rounded",
    "size": "small",
-   "x": 83214,
+   "x": 86206,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6948,7 +7200,7 @@
    "text": "*Chat Bar*\nSync Chat Bar With Board Selection",
    "kind": "rounded",
    "size": "small",
-   "x": 83390,
+   "x": 86382,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6959,7 +7211,7 @@
    "text": "*Chat Bar*\nKeep Chosen Formats Across Actions In A Fidelity",
    "kind": "rounded",
    "size": "small",
-   "x": 83566,
+   "x": 86558,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6970,7 +7222,7 @@
    "text": "*Person*\nStart Ticket Session From Increment",
    "kind": "rounded",
    "size": "small",
-   "x": 83742,
+   "x": 86734,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6981,7 +7233,7 @@
    "text": "*Board App*\nShow Increment Ticket In Story UI",
    "kind": "rounded",
    "size": "small",
-   "x": 83918,
+   "x": 86910,
    "y": 339,
    "w": 152,
    "h": 152
@@ -6992,7 +7244,7 @@
    "text": "Check Work In Generate",
    "kind": "rounded",
    "size": "body",
-   "x": 84082,
+   "x": 87074,
    "y": 195,
    "w": 1048,
    "h": 60
@@ -7003,7 +7255,7 @@
    "text": "*Generate*\nRefresh Graph After Generate",
    "kind": "rounded",
    "size": "small",
-   "x": 84094,
+   "x": 87086,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7014,7 +7266,7 @@
    "text": "*Knowledge Graph*\nAttach Violations To Latest Graph",
    "kind": "rounded",
    "size": "small",
-   "x": 84270,
+   "x": 87262,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7025,7 +7277,7 @@
    "text": "*Generate*\nJudge Rules During Generate",
    "kind": "rounded",
    "size": "small",
-   "x": 84446,
+   "x": 87438,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7036,7 +7288,7 @@
    "text": "*Agent*\nFix Graph Violations",
    "kind": "rounded",
    "size": "small",
-   "x": 84622,
+   "x": 87614,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7047,7 +7299,7 @@
    "text": "*Agent*\nValidate Fidelity On Demand",
    "kind": "rounded",
    "size": "small",
-   "x": 84798,
+   "x": 87790,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7058,7 +7310,7 @@
    "text": "*Claude Code*\nCheck Graph Rules When An Artifact Changes",
    "kind": "rounded",
    "size": "small",
-   "x": 84974,
+   "x": 87966,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7069,7 +7321,7 @@
    "text": "Change Stories From Canvas And Story UI",
    "kind": "rounded",
    "size": "body",
-   "x": 85138,
+   "x": 88130,
    "y": 195,
    "w": 1224,
    "h": 60
@@ -7080,7 +7332,7 @@
    "text": "*Design Canvas*\nGive Each Map Card A Stable Node Id",
    "kind": "rounded",
    "size": "small",
-   "x": 85150,
+   "x": 88142,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7091,7 +7343,7 @@
    "text": "*Person*\nComment On A Story Card",
    "kind": "rounded",
    "size": "small",
-   "x": 85326,
+   "x": 88318,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7102,7 +7354,7 @@
    "text": "*Agent*\nChange Story Code From A Canvas Comment",
    "kind": "rounded",
    "size": "small",
-   "x": 85502,
+   "x": 88494,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7113,7 +7365,7 @@
    "text": "*Agent*\nRefresh Map Artboard From A Data File",
    "kind": "rounded",
    "size": "small",
-   "x": 85678,
+   "x": 88670,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7124,7 +7376,7 @@
    "text": "*Story UI*\nSave Story Map To Story Files",
    "kind": "rounded",
    "size": "small",
-   "x": 85854,
+   "x": 88846,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7135,7 +7387,7 @@
    "text": "*Person*\nComment On A Story In Story UI",
    "kind": "rounded",
    "size": "small",
-   "x": 86030,
+   "x": 89022,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7146,7 +7398,7 @@
    "text": "*Person*\nRearrange Stories Inside The Canvas",
    "kind": "rounded",
    "size": "small",
-   "x": 86206,
+   "x": 89198,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7157,7 +7409,7 @@
    "text": "Review End-To-End Screens",
    "kind": "rounded",
    "size": "body",
-   "x": 86380,
+   "x": 89372,
    "y": 120,
    "w": 3336,
    "h": 60
@@ -7168,7 +7420,7 @@
    "text": "Walk Scenarios By Hand",
    "kind": "rounded",
    "size": "body",
-   "x": 86380,
+   "x": 89372,
    "y": 195,
    "w": 696,
    "h": 60
@@ -7179,7 +7431,7 @@
    "text": "*Agent*\nScreenshot Each Step Of A Walk",
    "kind": "rounded",
    "size": "small",
-   "x": 86392,
+   "x": 89384,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7190,7 +7442,7 @@
    "text": "*Agent*\nJudge A Step's Screen Against Its Step Text",
    "kind": "rounded",
    "size": "small",
-   "x": 86568,
+   "x": 89560,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7201,7 +7453,7 @@
    "text": "*Agent*\nWrite The Walk Report",
    "kind": "rounded",
    "size": "small",
-   "x": 86744,
+   "x": 89736,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7212,7 +7464,7 @@
    "text": "*Person*\nAccept A Walk As The Reference",
    "kind": "rounded",
    "size": "small",
-   "x": 86920,
+   "x": 89912,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7223,7 +7475,7 @@
    "text": "Capture End-To-End Steps",
    "kind": "rounded",
    "size": "body",
-   "x": 87084,
+   "x": 90076,
    "y": 195,
    "w": 696,
    "h": 60
@@ -7234,7 +7486,7 @@
    "text": "*Story Test*\nScreenshot Each Step Of An E2E Run",
    "kind": "rounded",
    "size": "small",
-   "x": 87096,
+   "x": 90088,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7245,7 +7497,7 @@
    "text": "*Agent*\nCompare An E2E Run With The Accepted Walk",
    "kind": "rounded",
    "size": "small",
-   "x": 87272,
+   "x": 90264,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7256,7 +7508,7 @@
    "text": "*Agent*\nWalk A Disputed Step Again",
    "kind": "rounded",
    "size": "small",
-   "x": 87448,
+   "x": 90440,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7267,7 +7519,7 @@
    "text": "*Person*\nAccept An E2E Run As The First Baseline",
    "kind": "rounded",
    "size": "small",
-   "x": 87624,
+   "x": 90616,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7278,7 +7530,7 @@
    "text": "Review E2E Runs For Regressions",
    "kind": "rounded",
    "size": "body",
-   "x": 87788,
+   "x": 90780,
    "y": 195,
    "w": 1048,
    "h": 60
@@ -7289,7 +7541,7 @@
    "text": "*E2E Review*\nChoose The Baseline Run",
    "kind": "rounded",
    "size": "small",
-   "x": 87800,
+   "x": 90792,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7300,7 +7552,7 @@
    "text": "*E2E Review*\nList Changed Step Pairs By Pixels",
    "kind": "rounded",
    "size": "small",
-   "x": 87976,
+   "x": 90968,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7311,7 +7563,7 @@
    "text": "*Agent*\nJudge A Changed Step Pair",
    "kind": "rounded",
    "size": "small",
-   "x": 88152,
+   "x": 91144,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7322,7 +7574,7 @@
    "text": "*Agent*\nAdd A Failing Test For A Missed Change",
    "kind": "rounded",
    "size": "small",
-   "x": 88328,
+   "x": 91320,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7333,7 +7585,7 @@
    "text": "*Person*\nAccept A Reviewed Run As The Baseline",
    "kind": "rounded",
    "size": "small",
-   "x": 88504,
+   "x": 91496,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7344,7 +7596,7 @@
    "text": "*CDD Server*\nReview The Daily E2E Run",
    "kind": "rounded",
    "size": "small",
-   "x": 88680,
+   "x": 91672,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7355,7 +7607,7 @@
    "text": "Read E2E Reports",
    "kind": "rounded",
    "size": "body",
-   "x": 88844,
+   "x": 91836,
    "y": 195,
    "w": 872,
    "h": 60
@@ -7366,7 +7618,7 @@
    "text": "*Person*\nOpen A Sub-Epic's Step Report",
    "kind": "rounded",
    "size": "small",
-   "x": 88856,
+   "x": 91848,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7377,7 +7629,7 @@
    "text": "*Person*\nFilter A Report To Changed Or Missed Steps",
    "kind": "rounded",
    "size": "small",
-   "x": 89032,
+   "x": 92024,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7388,7 +7640,7 @@
    "text": "*Person*\nOpen The E2E Story Map Report",
    "kind": "rounded",
    "size": "small",
-   "x": 89208,
+   "x": 92200,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7399,7 +7651,7 @@
    "text": "*Person*\nRead Earlier E2E Runs",
    "kind": "rounded",
    "size": "small",
-   "x": 89384,
+   "x": 92376,
    "y": 339,
    "w": 152,
    "h": 152
@@ -7410,7 +7662,7 @@
    "text": "*Chat Bar*\nShow The Latest E2E Review In Server Health",
    "kind": "rounded",
    "size": "small",
-   "x": 89560,
+   "x": 92552,
    "y": 339,
    "w": 152,
    "h": 152
