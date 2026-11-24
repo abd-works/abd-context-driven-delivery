@@ -643,6 +643,10 @@ with description("a limit on a code measure") as self:
         with before.all:
             self.method_count_pair = measured_example_pair("limit-class-methods", _READER_ALONE)
             self.sharing_data_pair = measured_example_pair("keep-class-methods-sharing-data", _READER_ALONE)
+            self.coupling_pair = measured_example_pair("limit-class-coupling", _READER_ALONE)
+            self.response_pair = measured_example_pair("limit-class-response", _READER_ALONE)
+            self.importing_pair = measured_module_example_pair("limit-modules-importing", _READER_ALONE)
+            self.copied_blocks_pair = measured_module_example_pair("limit-copied-code-blocks", _READER_ALONE)
 
         with it("should report a class with more methods than the limit, and pass the repaired one"):
             self.method_count_pair.check()
@@ -651,13 +655,13 @@ with description("a limit on a code measure") as self:
             self.sharing_data_pair.check()
 
         with it("should report a class that depends on more classes than the limit, and pass the repaired one"):
-            measured_example_pair("limit-class-coupling", _READER_ALONE).check()
+            self.coupling_pair.check()
 
         with it("should report a class one call into which can set off more methods than the limit, and pass the repaired one"):
-            measured_example_pair("limit-class-response", _READER_ALONE).check()
+            self.response_pair.check()
 
         with it("should report a module more modules import than its project's limit, and pass the repaired one"):
-            measured_module_example_pair("limit-modules-importing", _READER_ALONE).check()
+            self.importing_pair.check()
 
         with it("should report a module that repeats a block of code from another module's file, and pass the repaired one"):
-            measured_module_example_pair("limit-copied-code-blocks", _READER_ALONE).check()
+            self.copied_blocks_pair.check()

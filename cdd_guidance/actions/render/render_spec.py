@@ -695,46 +695,61 @@ with description("Render asked for a path, in a session") as self:
 
     # Exploratory testing, r3-bolt-06 and r3-sparky-07: a render to code answered its content and saved nothing. The
     # person's answer (2026-11-20): every render ends in a saved file.
+    # Each render here reads the domain model into a graph, so each context renders once, in a project of its own, and
+    # its examples only read what that left.
     with context("that is a domain model in markdown, rendered to Python"):
-        with before.each:
-            (self.folder / "domain-model.md").write_text(_DOMAIN_MODEL, encoding="utf-8")
-            self.results = self.action.render("ddd-model", format="python", paths=[".context/domain-model.md"])
-            self.cart = self.project.root / "ordering" / "cart" / "cart.py"
+        with before.all:
+            self.domain_project = ThrowawayProject()
+            (self.domain_project.root / ".context").mkdir()
+            (self.domain_project.root / ".context" / "domain-model.md").write_text(_DOMAIN_MODEL, encoding="utf-8")
+            self.domain_render = Render().for_call(ToolCall({}, self.domain_project.root))
+            self.domain_results = self.domain_render.render("ddd-model", format="python", paths=[".context/domain-model.md"])
+            self.cart = self.domain_project.root / "ordering" / "cart" / "cart.py"
+            self.cart_first_text = self.cart.read_text(encoding="utf-8")
+
+        with after.all:
+            self.domain_project.close()
 
         with it("should save a file for each aggregate where the fidelity declares it"):
-            saved = sorted(Path(path).relative_to(self.project.root).as_posix() for path in self.results[0].paths)
+            saved = sorted(Path(path).relative_to(self.domain_project.root).as_posix() for path in self.domain_results[0].paths)
             expect(saved).to(equal(["ordering/cart/cart.py", "ordering/order/order.py"]))
 
         with it("should write the aggregate's classes into its file"):
-            expect(self.cart.read_text(encoding="utf-8")).to(contain("class Cart"))
+            expect(self.cart_first_text).to(contain("class Cart"))
 
         with it("should answer no code for the agent to save"):
-            expect(data_of(self.results[0])).not_to(have_key("content"))
+            expect(data_of(self.domain_results[0])).not_to(have_key("content"))
 
         with context("whose code a person then changed, rendered again"):
-            with before.each:
+            with before.all:
                 self.cart.write_text("class Cart:" + chr(10) + "    def total(self):" + chr(10) + "        return 5" + chr(10), encoding="utf-8")
-                self.results = self.action.render("ddd-model", format="python", paths=[".context/domain-model.md"])
+                self.rerendered = self.domain_render.render("ddd-model", format="python", paths=[".context/domain-model.md"])
+                self.cart_kept_text = self.cart.read_text(encoding="utf-8")
 
             with it("should keep the code the person wrote"):
-                expect(self.cart.read_text(encoding="utf-8")).to(contain("return 5"))
+                expect(self.cart_kept_text).to(contain("return 5"))
 
             with it("should name the file among those that hold the render"):
-                expect("cart.py" in [Path(path).name for path in self.results[0].paths]).to(equal(True))
+                expect("cart.py" in [Path(path).name for path in self.rerendered[0].paths]).to(equal(True))
 
     # The person's answer (2026-11-21): a render reshapes an existing file and loses nothing. Their example: a class
     # that already has code, an operation added in the markdown model, rendered again.
     with context("that is a class model whose class already has code, with an operation added in the markdown, rendered again"):
-        with before.each:
-            self.model = self.project.root / "src" / "ordering" / ".context" / "ordering-model.md"
-            self.model.parent.mkdir(parents=True)
-            self.model.write_text(_CART_MODEL, encoding="utf-8")
-            self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
-            self.code = self.project.root / "src" / "ordering" / "ordering.py"
-            self.code.write_text(self.code.read_text(encoding="utf-8").replace(_EMPTY_TOTAL, _TOTAL_WITH_CODE), encoding="utf-8")
-            self.model.write_text(_CART_MODEL + "+ check_out(): int" + chr(10), encoding="utf-8")
-            self.results = self.action.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
-            self.written = self.code.read_text(encoding="utf-8")
+        with before.all:
+            self.added_project = ThrowawayProject()
+            rendering = Render().for_call(ToolCall({}, self.added_project.root))
+            model = self.added_project.root / "src" / "ordering" / ".context" / "ordering-model.md"
+            model.parent.mkdir(parents=True)
+            model.write_text(_CART_MODEL, encoding="utf-8")
+            rendering.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
+            code = self.added_project.root / "src" / "ordering" / "ordering.py"
+            code.write_text(code.read_text(encoding="utf-8").replace(_EMPTY_TOTAL, _TOTAL_WITH_CODE), encoding="utf-8")
+            model.write_text(_CART_MODEL + "+ check_out(): int" + chr(10), encoding="utf-8")
+            self.added_results = rendering.render("clean-engineering-model", format="python", paths=["src/ordering/.context/ordering-model.md"])
+            self.written = code.read_text(encoding="utf-8")
+
+        with after.all:
+            self.added_project.close()
 
         with it("should put the code back in the class"):
             expect(self.written).to(contain(_TOTAL_WITH_CODE))
@@ -743,7 +758,7 @@ with description("Render asked for a path, in a session") as self:
             expect(self.written).to(contain("    def check_out(self) -> int:" + chr(10) + "        raise NotImplementedError"))
 
         with it("should name the file as holding the render, with nothing to migrate"):
-            expect((len(self.results[0].paths), self.results[0].migrate)).to(equal((1, [])))
+            expect((len(self.added_results[0].paths), self.added_results[0].migrate)).to(equal((1, [])))
 
     # The same class model, its code written, then total renamed to subtotal in the markdown and rendered again: three
     # renders, made once in a project of their own so each example only reads what they left.
