@@ -37,7 +37,7 @@ from space.session import Sessions
 from space.work_state import WorkState
 
 
-def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":
+def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":  # noqa: F821
     """An operation whose return type names a class its module imports only for type checking, as a circular import
     needs, in a module whose annotations are text (`from __future__ import annotations`)."""
 

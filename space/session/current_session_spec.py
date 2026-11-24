@@ -13,6 +13,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 from harness.agent_tools.tool_call import ToolCall
 from space.repo.mock_repo import MockGit
 from space.session import Sessions

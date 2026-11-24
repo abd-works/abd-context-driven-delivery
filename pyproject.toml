@@ -41,6 +41,11 @@ dependencies = [
 measures = [
   "lizard>=1.26",
 ]
+# The checker that every name the code calls or imports still exists (scripts/names_exist) reads undefined Python
+# names with ruff: pip install -e ".[checks]"
+checks = [
+  "ruff>=0.6",
+]
 
 [tool.setuptools.packages.find]
 # Mirror import_path_entries() in the installer:

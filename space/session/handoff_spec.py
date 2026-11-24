@@ -16,6 +16,7 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 from expects import contain, equal, expect, match, raise_error
 from mamba import after, before, context, description, it
 
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 from harness.agent_tools.agent_tools import ToolsetReference, AgentToolSet, SubAgentAnnotation
 from space.session.handoffs import Handoffs
 from space.session.session import Session, SessionNotFoundError

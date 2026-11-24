@@ -30,7 +30,7 @@ const CHECKOUT_FLOW: StoryMapData = {
   refusal: '',
   scope: [],
   increments: [{ node: INCREMENT, name: 'Integrate Practice Content Editor Apps', description: '**Outcome:** the editor apps open on the ticket.', stories: [OPEN_STORY_UI] }],
-  formats: { session_file: '.sessions/checkout-flow/session.json', practice_name: 'stories', name: 'story_map', offered_formats: ['markdown', 'drawio'], chosen_formats: ['markdown', 'drawio'] },
+  formats: { session_file: '.sessions/checkout-flow/session.json', practice_name: 'stories', name: 'story_map', offered_formats: ['markdown', 'drawio'], chosen_formats: ['markdown', 'drawio'], root_paths: [] },
   epics: [
     {
       node: `${FILE}#move-work-forward-from-chat-bar`,

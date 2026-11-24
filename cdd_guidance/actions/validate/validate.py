@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from harness.guidance.guidance import Guidance
+from harness.guidance.guidance import FidelityGuidance, Guidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
 from harness.guidance.action_catalogue import CHECKS, STEP, on_stage
 from harness.agent_tools import agent_instructions, agent_toolset

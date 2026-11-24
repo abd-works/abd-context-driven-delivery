@@ -4,7 +4,8 @@
 set -e
 cd "$(dirname "$0")/.."
 python3 -m venv .venv
-.venv/bin/pip install -q -e .
+# The code measures (lizard) and the names-exist check (ruff) are extras the specs and Clean Engineering validate use.
+.venv/bin/pip install -q -e ".[measures,checks]"
 # Context Setup's scout_app captures pages in Chromium.
 .venv/bin/python -m playwright install chromium
 .venv/bin/python scripts/install.py --ide Claude

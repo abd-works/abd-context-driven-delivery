@@ -12,7 +12,7 @@ from harness.annotations.name import Name
 from harness.guidance.action_catalogue import ACTION_CATALOGUE, FidelityActions
 from harness.guidance.declared_outputs import DeclaredOutputs
 from harness.guidance.guidance_instructions import GuidanceInstructions
-from harness.guidance.practice_formats import PracticeFormats, RenderContent, RenderRequest
+from harness.guidance.practice_formats import PracticeFormats, RenderContent, Rendered, RenderRequest
 from harness.guidance.rule import Rule, RulesCollection
 from harness.guidance.schema import Schema
 from harness.guidance.stages import STAGES, ApproachStage

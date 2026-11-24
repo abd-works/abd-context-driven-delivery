@@ -973,7 +973,7 @@ class _BrokenLineAgent:
     @agent_instructions
     def branch_on_missing(self) -> str:
         """Branch on a flag the toolset does not have."""
-        if self.missing_flag:
+        if self.missing_flag:  # noqa: names-exist
             "TAKEN_MARKER"
         else:
             "ELSE_MARKER"
@@ -982,7 +982,7 @@ class _BrokenLineAgent:
     @agent_instructions
     def return_missing(self) -> str:
         """Return text the toolset does not have."""
-        return self.missing_text
+        return self.missing_text  # noqa: names-exist
 
 
 with description("an @agent_instructions body with a line that fails"):
