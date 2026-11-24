@@ -150,7 +150,9 @@ function promptQueueTools(prompts: Prompt[]) {
 /** The mod's stored values, kept in memory as the engine keeps them: each write raises the value's version; the queue
  * itself is the cdd server's, through prompt-queue's tools. */
 function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = QUEUED, isPlaying = false, editingId = '', askedAbout = '', servers = ['cdd']) {
-  const server = promptQueueTools(queued.map(prompt => ({ ...prompt })))
+  // A deep copy, as the cdd server reads its own file: a shallow one shared each prompt's steps with the test's
+  // examples, so a test that took a step off or moved the step pointer changed the examples the next test seeded.
+  const server = promptQueueTools(structuredClone(queued))
   on('session.id', () => ({ value: CHAT }))
   on('session.root', () => ({ value: 'C:/work' }))
   on('mcp.call', (_, e) => {
