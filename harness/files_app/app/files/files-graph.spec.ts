@@ -43,7 +43,8 @@ const BROKEN_RULE = { range: { path: TICKET_CODE, start_line: 460, end_line: 465
 
 // Seed: checkout-flow's nodes, each in its file at its lines, under its practice's root.
 // A node shown under a connector, such as the operation a step invokes, is its own node shown there: shows names it.
-type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string; shows?: string; rules?: GraphRuleData[] }
+// A label is what the graph shows for a node that another beside it shares a name with; any other shows its name.
+type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string; shows?: string; label?: string; rules?: GraphRuleData[] }
 
 // Seed: a rule a node carries, as the graph answers it in the node's rules group.
 const ruleOf = (name: string, status: string, violations: ViolationData[] = []): GraphRuleData => ({ slug: name, body: '', type: 'Rule', name, node_id: `ticket-activate:rules:${name}`, children: [], status, violations, scope: 'paths', requires_judge: false })
@@ -61,7 +62,7 @@ const CHECKOUT_FLOW_NODES: SeedNode[] = [
   { id: 'delete-ticket-when-invokes', name: 'invokes', type: 'invokes', file: STORY_MAP, start: 316, end: 318, parent: 'delete-ticket-when' },
   { id: 'delete-ticket-when-invokes-close', name: 'close', type: 'Operation', file: TICKET_CODE, start: 538, end: 555, parent: 'delete-ticket-when-invokes', shows: 'ticket-close' },
   { id: 'clean_engineering', name: 'Clean Engineering', type: 'Practice', file: '', start: 0, end: 0, parent: '' },
-  { id: 'ticket', name: 'Ticket', type: 'OoadClass', file: TICKET_CODE, start: 106, end: 670, parent: 'clean_engineering' },
+  { id: 'ticket', name: 'Ticket', type: 'OoadClass', file: TICKET_CODE, start: 106, end: 670, parent: 'clean_engineering', label: 'Ticket (ticket.py)' },
   { id: 'ticket-activate', name: 'activate', type: 'Operation', file: TICKET_CODE, start: 460, end: 465, parent: 'ticket', rules: ACTIVATE_RULES },
   { id: 'ticket-close', name: 'close', type: 'Operation', file: TICKET_CODE, start: 538, end: 555, parent: 'ticket' },
   { id: 'board', name: 'Board', type: 'OoadClass', file: BOARD_CODE, start: 104, end: 397, parent: 'clean_engineering' },
@@ -177,8 +178,9 @@ class FakeFilesServer implements CddApi {
     const node_id = node.shows ?? node.id
     // Every entry keeps its rules, open or closed, in a rules group the graph puts first.
     const rules = node.rules ? [{ type: 'rules', name: 'rules', node_id: `${node_id}:rules`, children: node.rules }] : []
-    if (!isOpened) return { node_id, name: node.name, type: node.type, children: rules as never[], children_left_out: below.length }
-    return { node_id, name: node.name, type: node.type, children: [...rules, ...below.map(child => this.entry(child, paths, false))] as never[], children_left_out: 0 }
+    const label = node.label ?? node.name
+    if (!isOpened) return { node_id, name: node.name, label, type: node.type, children: rules as never[], children_left_out: below.length } as ExplorerEntryData
+    return { node_id, name: node.name, label, type: node.type, children: [...rules, ...below.map(child => this.entry(child, paths, false))] as never[], children_left_out: 0 } as ExplorerEntryData
   }
 
   private trees(paths: string[]): ExplorerEntryData[] {
@@ -768,6 +770,22 @@ describe('See Rules Under Node', () => {
       const marked = view.getAllByTitle(/^Operation /).map(node => [node.querySelector('.node-name')?.textContent, node.className.includes('tree-violating')])
       expect(marked).toEqual([['activate', true], ['close', false]])
       view.unmount()
+    })
+
+    it('should show Ticket by the label the graph gives it', async () => {
+      const { page } = await ticketOpen()
+      const view = rulesView(page)
+      const shown = view.getByTitle(/^Class Ticket/).querySelector('.node-name')?.textContent
+      view.unmount()
+      expect(shown).toBe('Ticket (ticket.py)')
+    })
+
+    it("should name Ticket's label in the title a hover shows", async () => {
+      const { page } = await ticketOpen()
+      const view = rulesView(page)
+      const title = view.getByTitle(/^Class Ticket/).getAttribute('title')
+      view.unmount()
+      expect(title).toBe('Class Ticket (ticket.py)')
     })
 
     it("should show the broken rule's message when the Person hovers over it", async () => {

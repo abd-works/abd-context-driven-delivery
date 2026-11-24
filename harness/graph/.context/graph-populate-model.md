@@ -232,8 +232,9 @@ its `parent` and `children`; this part keeps whether its children are placed yet
 	// out of the tree, so the next populate places it again
 + rebuild(): None
 	// on a practice's root: every node of the practice leaves the tree, then the root places them again
-+ serialize(seen, via, stack): ExplorerEntry
++ serialize(seen, via, stack, label): ExplorerEntry
 	// the full child list only at the node's home parent; a relationship copy is empty; a node already on the path is a stub
+	// each entry carries the label PlaceLabels gives it at its place (via, else its home parent)
 
 ## ModelNode
 
@@ -517,7 +518,8 @@ practice, node id, and subject are that rule's, its node's, and its practice's. 
 
 `explorer.py`. Each is a `NodeAnswer`: it holds the node it describes and sends the node's `node_id`, `name`, and `type` from it.
 
-- `ExplorerEntry` — one node at one place in the explorer tree, with the entries below it there.
+- `ExplorerEntry` — one node at one place in the explorer tree, with the entries below it there and its `label`, what the tree shows for it there.
+- `PlaceLabels` — the labels of the entries one place holds, decided together: a folder by its path from the folder above, entries sharing a label with their file, a link by its words.
 - `FilteredNode` — a node `return_nodes` matched, with its practice, ancestors, children, and rules.
 - `NodeSource` — a node's file, text, lines, and owning class; the opened node also lists every class, operation, and property the loaded graph holds, each as its own `NodeSource`, so a call in it can be opened. The practices name those types in their `PracticeGuidance.class_types` and `member_types`.
 - `GraphLoaded`, `GraphSaved`, `Overlay` — the message, path, or overlay root a tool answers with.

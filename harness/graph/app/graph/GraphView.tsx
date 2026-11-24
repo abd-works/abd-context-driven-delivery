@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { KindMark } from '../labels/kind-mark';
-import { ExplorerTrees, isRule, leftOutOf, type TreeItem } from './explorer-trees';
+import { ExplorerTrees, isRule, labelOf, leftOutOf, type TreeItem } from './explorer-trees';
 import { ruleHits, selectionForRule, type GraphSelection } from './graph-selection';
 import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures } from './graph-page';
@@ -88,7 +88,7 @@ function TreeNode({
             className="tree-twist"
             data-testid={rulesHolder ? 'tree-expand-rules' : 'tree-expand'}
             aria-expanded={open}
-            aria-label={`${open ? 'Collapse' : 'Expand'} ${node.name}`}
+            aria-label={`${open ? 'Collapse' : 'Expand'} ${labelOf(node)}`}
             onClick={toggle}
           >
             {open ? '▼' : '▶'}
@@ -106,7 +106,7 @@ function TreeNode({
           onClick={() => onSelect(rule && isRule(node) ? selectionForRule(ownerId || node.node_id, node) : { nodeId: node.node_id })}
         >
           <KindMark kind={rule ? 'Rule' : rulesHolder ? 'Rules' : node.type} isFile={false} />
-          <span className="node-name">{node.name}</span>
+          <span className="node-name">{labelOf(node)}</span>
         </button>
       </div>
       {open && children.length > 0 ? (

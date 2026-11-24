@@ -3,6 +3,7 @@ import { useState, useSyncExternalStore, type MouseEvent } from 'react'
 import type { GraphRuleData } from '@cdd/harness/graph/graph'
 import type { ExplorerEntryData } from '@cdd/space/session/session'
 import { NodeFilterLists } from '@graph-app/filter/FilterView'
+import { labelOf } from '@graph-app/graph/explorer-trees'
 import { LoadProgressView } from '@graph-app/graph/LoadProgressView'
 import { KindMark, kindLabel } from '@graph-app/labels/kind-mark'
 import { FixButton } from '@source-view/FixButton'
@@ -18,7 +19,7 @@ function useFilesState(page: FilesPage) {
 // A press with Ctrl, Cmd or Shift selects a node beside those already selected, as a file manager selects several.
 const isAlso = (event: MouseEvent): boolean => event.ctrlKey || event.metaKey || event.shiftKey
 
-// A node's row as the Graph app draws it: a twist while it holds entries below it, then its kind's mark and its name,
+// A node's row as the Graph app draws it: a twist while it holds entries below it, then its kind's mark and its label,
 // which select it.
 function GraphRowView({ page, entry, hasBelow }: { page: FilesPage; entry: ExplorerEntryData; hasBelow: boolean }) {
   const isOpen = page.graph.isOpen(entry)
@@ -26,15 +27,15 @@ function GraphRowView({ page, entry, hasBelow }: { page: FilesPage; entry: Explo
   return (
     <div className="tree-row">
       {hasBelow ? (
-        <button className="tree-twist" aria-expanded={isOpen} aria-label={`${isOpen ? 'Close' : 'Open'} ${entry.name}`} onClick={() => void page.graph.toggle(entry)}>
+        <button className="tree-twist" aria-expanded={isOpen} aria-label={`${isOpen ? 'Close' : 'Open'} ${labelOf(entry)}`} onClick={() => void page.graph.toggle(entry)}>
           {isOpen ? '▼' : '▶'}
         </button>
       ) : (
         <span className="tree-twist-spacer" />
       )}
-      <button className={['graph-node', isSelected ? 'selected' : '', page.graph.breaksARule(entry) ? 'tree-violating' : ''].filter(Boolean).join(' ')} aria-pressed={isSelected} title={`${kindLabel(entry.type, false)} ${entry.name}`} onClick={event => void page.graph.select(entry, isAlso(event))}>
+      <button className={['graph-node', isSelected ? 'selected' : '', page.graph.breaksARule(entry) ? 'tree-violating' : ''].filter(Boolean).join(' ')} aria-pressed={isSelected} title={`${kindLabel(entry.type, false)} ${labelOf(entry)}`} onClick={event => void page.graph.select(entry, isAlso(event))}>
         <KindMark kind={entry.type} isFile={false} />
-        <span className="node-name">{entry.name}</span>
+        <span className="node-name">{labelOf(entry)}</span>
       </button>
     </div>
   )

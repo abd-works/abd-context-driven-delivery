@@ -13,6 +13,12 @@ export function leftOutOf(item: TreeItem): number {
   return 'children_left_out' in item ? item.children_left_out : 0;
 }
 
+// What a row shows for item: the label Python gave an entry, which tells it apart from the entries beside it, else the
+// name of a rules collection or a rule, which carry none.
+export function labelOf(item: { name: string; label?: string }): string {
+  return item.label ?? item.name;
+}
+
 // The practice trees the explorer shows, as Python answered them, with each branch read later in the place of the entry
 // that left it out. It answers what the page asks of the trees: the rules a node runs, whether an entry breaks one.
 export class ExplorerTrees {

@@ -33,7 +33,7 @@ from cdd_guidance.practices.clean_engineering.reading.code_file import CREATED_I
 from cdd_guidance.practices.clean_engineering.reading.code_read import PRODUCTION_FACT, CodeRead
 from cdd_guidance.practices.clean_engineering.measures.read_facts import DESCRIBED_FACT
 from cdd_guidance.practices.clean_engineering.reading.compared_facts import ComparedFacts
-from cdd_guidance.practices.clean_engineering.reading.folder_facts import folders_of
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES, folders_of
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.reading.node_evidence import CodeNodeTypes
 from cdd_guidance.practices.source_code import ClassReference, HoldsProjectTestCode
@@ -50,6 +50,7 @@ class GraphReading(HoldsProjectTestCode, PracticeReading):
     class_types = ("OoadClass",)
     member_types = ("Operation", "Property")
     class_node_type = "OoadClass"
+    folder_types = frozenset(FOLDER_TYPES)
     types = CodeNodeTypes()
     anchor_types = {
         "module": "Module",

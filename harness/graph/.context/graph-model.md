@@ -222,9 +222,10 @@ One node's place in its practice's explorer tree (`node.tree`): it puts the node
 + populate(parent: Node | None = None): None
 + leave(): None
 + rebuild(): None
-+ serialize(seen: set[str] | None = None, via: Node | None = None, stack: set[str] | None = None): ExplorerEntry
++ serialize(seen: set[str] | None = None, via: Node | None = None, stack: set[str] | None = None, label: str = ""): ExplorerEntry
 ---<<calls from_parent on>>--> GraphEdges
 ---<<creates>>--> ExplorerEntry
+---<<creates>>--> PlaceLabels
 
 ## ModelNode : Node
 

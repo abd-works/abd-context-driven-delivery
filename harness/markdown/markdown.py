@@ -100,8 +100,14 @@ LocationKind = Literal["file", "folder", "section"]
 FileFilter: TypeAlias = Callable[[str, Path], bool]
 
 
-# A markdown link, whose words are all of it a heading shows.
-_LINK_IN_HEADING = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+# A markdown link, whose words are all of it a reader sees.
+_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+
+
+def link_words(text: str) -> str:
+    """text as a reader sees it: each markdown link's words in place of the link (``has [Cart](model.md#cart) cart``
+    reads ``has Cart cart``)."""
+    return _LINK.sub(r"\1", text)
 
 
 def heading_anchor(heading: str) -> str:
@@ -109,7 +115,7 @@ def heading_anchor(heading: str) -> str:
     punctuation dropped, each space a hyphen (``Story: Delete Ticket`` is ``story-delete-ticket``,
     ``FilesPage (`files/files-page.ts`)`` is ``filespage-filesfiles-pagets``). A link the heading holds counts as its
     words alone (``(S) Person --> [Delete Ticket](x.md)`` is ``s-person----delete-ticket``)."""
-    shown = _LINK_IN_HEADING.sub(r"\1", heading)
+    shown = link_words(heading)
     return re.sub(r"[^\w\- ]", "", shown.strip().lower()).replace(" ", "-")
 
 

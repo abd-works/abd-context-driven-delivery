@@ -15,7 +15,7 @@ from harness.installation.data_class import data_field, language_adapter
 from harness.installation.files import command, skill
 from harness.mcp.mcp_annotations import long_call, mcp
 from harness.graph.edge import Display, Edge, EdgeFacts, EdgeIndex, EdgeType
-from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PracticeInventory
+from harness.graph.explorer import ExplorerEntry, FilteredNode, GraphLoaded, GraphSaved, NodeSource, Overlay, PlaceLabels, PracticeInventory
 from harness.graph.file_lines import FileLines, PathKind
 from harness.markdown.markdown import MarkdownText
 from harness.graph.graph_build import GraphBuild
@@ -497,21 +497,24 @@ class NodeTree:
             node.tree.leave()
         self.populate()
 
-    def serialize(self, seen: set[str] | None = None, via: Node | None = None, stack: set[str] | None = None) -> ExplorerEntry:
-        """Write the node's full child list once, on its home parent.
+    def serialize(self, seen: set[str] | None = None, via: Node | None = None, stack: set[str] | None = None, label: str = "") -> ExplorerEntry:
+        """Write the node's full child list once, on its home parent, under the label its place gives it (via, else
+        its home parent; its own name at the root).
 
         A relationship copy is empty. A node already on the path is a stub, so a call back to this step stops.
         """
         node = self._node
         seen = set() if seen is None else seen
         stack = set() if stack is None else stack
+        place = via if via is not None else node.parent
+        label = label or (PlaceLabels(place).of(node) if place is not None else node.name)
         if node.node_id in stack:
-            return ExplorerEntry(node)
+            return ExplorerEntry(node, label=label)
         first_home = (via is None or via is node.parent) and node.node_id not in seen
         if not first_home:
-            return ExplorerEntry(node, [])
+            return ExplorerEntry(node, [], label=label)
         seen.add(node.node_id)
-        return ExplorerEntry(node, self._written_at_home(seen, stack | {node.node_id}))
+        return ExplorerEntry(node, self._written_at_home(seen, stack | {node.node_id}), label=label)
 
     def _placed_under(self, parent: Node | None) -> bool:
         """Join parent's children, taking parent as the node's own unless it has a better one; whether the node's own
@@ -611,7 +614,8 @@ class NodeTree:
         """The entries the node writes under it at its home place: each child, then its rules when the filter shows
         them."""
         node = self._node
-        written = [child.tree.serialize(seen, node, path) for child in node.children]
+        labels = PlaceLabels(node).by_node_id()
+        written = [child.tree.serialize(seen, node, path, labels[child.node_id]) for child in node.children]
         category = self._rule_category()
         if category is not None:
             written.append(category)
@@ -762,8 +766,9 @@ class GraphExplorer:
         node = self.node(node_id)
         if node is None:
             return None
-        kept = node.tree.serialize(via=node.parent).kept_by(Filter(self, filter))
-        return kept.opened() if kept is not None else ExplorerEntry(node)
+        entry = node.tree.serialize(via=node.parent)
+        kept = entry.kept_by(Filter(self, filter))
+        return kept.opened() if kept is not None else ExplorerEntry(node, label=entry.label)
 
 
 class PracticeNodes:

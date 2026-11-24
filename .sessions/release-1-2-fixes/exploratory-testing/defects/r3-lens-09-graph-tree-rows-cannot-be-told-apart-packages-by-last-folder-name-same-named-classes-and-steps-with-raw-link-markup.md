@@ -31,3 +31,17 @@ Screenshots: `C:\dev\_et\round3\lens\shots\32-ce-off.png` (the seven package row
 Unit, in the page's spec (`harness/files_app/app/files/files-graph.spec.ts`) and the explorer's: their example project has one root, one language and no two nodes of a name.
 
 ## Also seen by
+
+## Status
+
+Fixed on release-1-2-fixes (2026-11-23). Python decides what each row shows, once, where the node is known: every explorer entry now sends a `label` beside its `name`, which `PlaceLabels` (`harness/graph/explorer.py`) decides for all the entries of one place together.
+
+- A package or module (Clean Engineering's `folder_types`) reads as its path from the folder it sits under, or its whole path at the practice's root: `src` and `bookshop/src`, `catalogue/book`, and `check-out/confirm-order` under `story_tests`.
+- Entries of one label read with their file after them, `Order (order.py)` and `Order (order.ts)`, or the file's path when two files share a name, `_module (catalogue/views.py)`.
+- A link in a name reads as its words (`link_words`, `harness/markdown/markdown.py`, which `heading_anchor` now uses too), so the step reads `given the Customer has Cart cart with Tiny Tales`. The `++Cart++` marks of a markdown step are left as they are: the defect's brief asked only for link markup.
+
+The Graph app (`app/graph/GraphView.tsx`) and the Files app (`files-graph-view.tsx`) show the label in the row, its tooltip and its open button (`labelOf`, `harness/graph/app/graph/explorer-trees.ts`).
+
+Specs: `harness/graph/explorer_tree_spec.py` (packages at the root and under a package, a branch read on its own, two classes of one name, two files of one name, a step with a link), `harness/graph/app/graph/explorer-trees.test.ts` (the label of a tree item), `harness/files_app/app/files/files-graph.spec.ts` (Ticket shown and titled by its label).
+
+The generated TypeScript type `ExplorerEntryData` declares `label` once the language adapters are installed again (`python scripts/install.py --ide Claude`); both apps compile and show the label before that, since `labelOf` reads it whether the type declares it or not.

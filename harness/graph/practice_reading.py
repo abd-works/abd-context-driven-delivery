@@ -48,6 +48,10 @@ class PracticeReading:
     source_ordered_types: frozenset[str] = frozenset()
     """Node types the explorer lists in the order they appear in their files, not the order they were read."""
 
+    folder_types: frozenset[str] = frozenset()
+    """Node types read from a folder, whose file is the folder's path; the explorer labels each by its path from the
+    folder above it, so two folders of one name, such as ``src`` and ``bookshop/src``, read apart."""
+
     anchor_types: dict[str, str] = {}
     """The ``is:`` words another practice's schema uses to say one of its types is a type of this practice
     (``class`` for a Clean Engineering class), each with the node type it names."""

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ExplorerEntryData, GraphRuleData } from '@cdd/harness/graph/graph';
 
-import { ExplorerTrees } from './explorer-trees';
+import { ExplorerTrees, labelOf } from './explorer-trees';
 
 const rule = (name: string, status: string): GraphRuleData => ({ type: 'Rule', name, node_id: '', slug: name, body: '', status, violations: [], children: [] }) as unknown as GraphRuleData;
 const entry = (nodeId: string, children: unknown[] = [], leftOut = 0): ExplorerEntryData =>
@@ -53,5 +53,17 @@ describe('the explorer trees', () => {
     it('should leave the trees it was made from as they were', () => {
       expect(trees.entries[0]!.children[1]!.children).toEqual([]);
     });
+  });
+});
+
+// What a row of the tree shows: the label Python gives an entry, which tells it apart from those beside it, and the
+// name of a rules collection or a rule, which carry no label.
+describe('the label of a tree item', () => {
+  it('should be the label the graph gives an entry', () => {
+    expect(labelOf({ ...entry('ordering/order.py:Order'), name: 'Order', label: 'Order (order.py)' } as ExplorerEntryData)).toBe('Order (order.py)');
+  });
+
+  it('should be the name of a rule', () => {
+    expect(labelOf(rule('verb-noun-format', 'passing'))).toBe('verb-noun-format');
   });
 });
