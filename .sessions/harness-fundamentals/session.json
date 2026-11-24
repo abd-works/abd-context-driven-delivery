@@ -1,5 +1,9 @@
 {
   "name": "harness-fundamentals",
   "title": "Harness Fundamentals",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "harness-fundamentals",
+  "worktree": "C:\\dev\\abd-cdd-harness-fundamentals",
+  "stage": "Specification",
+  "stage_mark": "in-progress"
 }
