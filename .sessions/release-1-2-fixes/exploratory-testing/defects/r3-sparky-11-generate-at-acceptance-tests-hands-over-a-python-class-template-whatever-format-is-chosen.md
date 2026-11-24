@@ -22,3 +22,9 @@ Smaller, in every Stories generate answer: the schema printed under "Guide this 
 
 ## Tier that should catch it
 Unit (`generate_spec.py`): no example asks for acceptance tests with TypeScript chosen and checks the template's language.
+
+## Status: fixed (2026-11-23)
+- The schema's scenario count was already fixed in `7447a2040` (`model/schema.yaml` says 0..7, as the rule does).
+- Acceptance tests now have their own template in each code format: `cdd_guidance/practices/stories/templates/py/acceptance_tests.py`, `templates/ts/acceptance-tests.ts` and `templates/js/acceptance-tests.js`. Each shows the shape of every file the save line names: the story test, the shared scenarios, the domain and server tier specs, the examples file, and (TypeScript) the browser spec whose steps run through `step`.
+- Clean Engineering keeps its reference template in TypeScript and JavaScript too (`clean_engineering/templates/ts/clean-engineering.ts`, `templates/js/clean-engineering.js`), so the companion's template follows the chosen language; Python keeps `templates/clean_engineering.py`.
+- Covered by `cdd_guidance/actions/generate/generate_spec.py`, contexts "that generates acceptance tests with TypeScript chosen" (the TypeScript acceptance tests template, Clean Engineering's TypeScript reference, no Python template) and "with Python chosen".

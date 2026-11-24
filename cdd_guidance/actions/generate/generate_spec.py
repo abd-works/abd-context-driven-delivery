@@ -162,6 +162,26 @@ with description("a generate action on practice guidance") as self:
             with it("should list record_board, which keeps the address of a board it created"):
                 expect("record_board" in self.expanded.tools).to(equal(True))
 
+        # Seen 2026-11-21 (r3-sparky-11): acceptance tests with TypeScript chosen were handed Clean Engineering's Python
+        # class template and no shape for the story test files the save line names.
+        with context("that generates acceptance tests with TypeScript chosen"):
+            with before.each:
+                self.prose = _expanded_generate(self.action, {"guidance": "stories-acceptance-tests format=typescript"}).instructions
+
+            with it("should hand over the TypeScript shape of the shared scenarios each tier replays"):
+                expect(self.prose).to(contain("Acceptance tests template (TypeScript)"))
+
+            with it("should hand over Clean Engineering's reference written in TypeScript"):
+                expect(self.prose).to(contain("Conceptual Clean Engineering Reference (TypeScript style)"))
+
+            with it("should hand over no Python template"):
+                expect(self.prose).not_to(contain("(Python style)"))
+
+        with context("that generates acceptance tests with Python chosen"):
+            with it("should hand over the Python shape of the shared scenarios each tier replays"):
+                prose = _expanded_generate(self.action, {"guidance": "stories-acceptance-tests format=python"}).instructions
+                expect(prose).to(contain("Acceptance tests template (Python)"))
+
         with context("that generates a fidelity that writes no whiteboard"):
             with it("should say nothing of publishing to a board"):
                 prose = _expanded_generate(self.action, {"guidance": "stories-scenarios"}).instructions

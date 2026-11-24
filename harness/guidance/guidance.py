@@ -964,8 +964,8 @@ class FidelityGuidance(Guidance):
         return self._templates_in(self.format)
 
     def _templates_in(self, format: Format) -> str:
-        """Its template in format, else in its default format: a companion writing TypeScript still shows Clean
-        Engineering's reference template when no TypeScript one exists."""
+        """Its template in format, else in its default format: a companion writing a language it keeps no template for
+        still shows its reference template in its default language."""
         located = self._template_markdown(format)
         return located.extract().strip() if located is not None else ""
 
