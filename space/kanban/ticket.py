@@ -186,7 +186,7 @@ class TicketCheckoutTools:
     @agent_tool
     @noSessionLog
     def work_branch(self) -> Branch:
-        """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, in the repository or in its own worktree, else the default branch while the repository has it checked out, as for a session with no branch of its own. Any other branch checked out is not ticket's, so its own branch comes back not checked out and leaving commits nothing."""
+        """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, in the repository or in its own worktree, else the default branch while the repository has it checked out, as for a session with no branch of its own. Any other branch checked out is not ticket's, and neither is the default branch while its own branch is checked out nowhere, such as after its worktree was deleted, so its own branch comes back not checked out and leaving commits nothing."""
         return self.checkout.work_branch
 
     @mcp
@@ -201,7 +201,7 @@ class TicketCheckoutTools:
     @agent_tool
     @noSessionLog
     def close_choices(self) -> LeaveChoices:
-        """Return what closing ticket can do with its work, none chosen at first, so closing does only what the person ticks: a handoff always; a commit and a push of the branch its work is on while a checkout has it, which branch names; and, for its own branch, which own_branch names, a merge into main, a delete of the branch, and a delete of its worktree while it has one."""
+        """Return what closing ticket can do with its work, none chosen at first, so closing does only what the person ticks: a handoff always; a commit and a push of the branch its work is on while a checkout has it, which branch names; and, for its own branch, which own_branch names, a merge into main, a delete of the branch, and a delete of its worktree while it has one. unsaved_work names the files in its worktree with changes nobody committed, and warning says deleting the worktree or branch without a commit loses them."""
         return self.checkout.close_choices
 
     @long_call
@@ -321,7 +321,7 @@ class TicketEnding:
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree; any other is refused with UnknownLeavingStepError, before anything changes), its work committed where it is and its branch merged before anything is removed or moved, so a merge git refuses, or a worktree a running program holds open, stops the close with ticket still open; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main, and what is uncommitted there is never committed for a ticket that has its own worktree: a merge that would run over it is refused with EditsInTheWayOfMergeError before anything changes."""
+        """Close ticket: leaving names what to do with its work first, and the close does only that (handoff, commit, push, merge, delete_branch, delete_worktree; any other is refused with UnknownLeavingStepError, before anything changes), its work committed where it is and its branch merged before anything is removed or moved, so a merge git refuses, or a worktree a running program holds open, stops the close with ticket still open; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete; a worktree deleted without a commit goes as it is, and the closed ticket's dropped_work names the files whose uncommitted work went with it. The repository's own folder stays on main, and what is uncommitted there is never committed for a ticket that has its own worktree: a merge that would run over it is refused with EditsInTheWayOfMergeError before anything changes."""
         self._refuse_main("close")
         chosen = Leaving(leaving or [])
         checkout = self.checkout

@@ -118,6 +118,8 @@ Named branch on a *Repo*: where it is checked out, and checking it out, saving i
 	-> Worktrees.open
 + save(commit_message: str, push: bool = True): None
 	// the one "commit everything in the checkout that has it, and push it when origin lacks some of it"
++ push(): None
+	// push its commits from the checkout that has it when origin lacks some of them, committing nothing
 + land_on_default(): None
 + merge_into_default(): Repo
 + delete(unmerged: bool = False): None

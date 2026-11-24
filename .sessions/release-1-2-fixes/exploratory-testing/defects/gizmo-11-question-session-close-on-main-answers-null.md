@@ -4,7 +4,7 @@
 - **Tester:** Gizmo
 - **Story:** Move Work Forward on Session Board / Steer Ticket Sessions / Close Active Session.
 - **Module and class:** `space/session/session.py` `Session.close`; compare `space/kanban/ticket.py` `Ticket._refuse_main`.
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 `session.close session=".sessions/main/session.json"`; then `ticket.close ticket="main"`.
@@ -19,3 +19,7 @@ One answer for both: `MainStaysOpenError: main is the default session and stays 
 Unit (`space/session/session_spec.py`).
 
 ## Also seen by
+
+## Answer (2026-11-23)
+
+session.close on main is refused with MainStaysOpenError, the one refusal ticket.close gives, now the session's (`Session.refuse_if_main`). Built in space/session/session.py and space/kanban/ticket.py; tested by space/session/session_spec.py 'that is main and is closed'; scenario "Refuse to close main" in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md.

@@ -162,6 +162,20 @@ section: body
 *Then* the session it opens is billing-report
 *And* when it named another session, it is told that its worktree belongs to billing-report
 
+#### Scenario: Refuse to switch a chat to a session nobody has
+
+> Test: unit: space/session/current_session_spec.py 'that a chat switches to a name no session has'.
+
+> Evidence: exploratory-testing question gizmo-10, answered 2026-11-23: a switch to an unknown name is refused unless the person asked for a new session.
+
+*Given* the repository has the sessions main and billing-report
+*When* a chat switches to billng-report
+*Then* the switch is refused, naming main and billing-report as the sessions there are
+*And* no session folder or card is made for billng-report
+*And* the chat keeps the session it had open
+*When* the chat switches to billng-report, asking for a new session
+*Then* billng-report is made and is the chat's open session
+
 #### Scenario: Find a branch and worktree made outside CDD
 
 *Given* checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree
@@ -200,6 +214,19 @@ section: body
 *But* that worktree's folder is no longer on disk
 *When* the Person activates billing-report
 *Then* billing-report has its own worktree again, on the branch billing-report
+
+#### Scenario: Reopen a closed ticket by activating it
+
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a closed ticket is activated'.
+
+> Evidence: exploratory-testing question gizmo-02, answered 2026-11-23: activating a closed ticket reopens it, as moving it back out of Complete does.
+
+*Given* the closed [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) billing-report is in Complete, its worktree deleted and its branch kept
+*When* the Person activates billing-report
+*Then* billing-report has its own worktree again, on the branch billing-report
+*And* its folder is back in .sessions/billing-report
+*And* billing-report is back on the stage it was closed from
+*And* a chat in its worktree works on billing-report's session
 
 #### Scenario: Give tickets whose names start alike their own worktrees
 
@@ -321,6 +348,22 @@ section: body
 *But* main on origin does not hold the edit to README.md
 *And* that edit is still uncommitted in the repository's own folder
 
+#### Scenario: Warn that deleting a worktree without a commit loses its work
+
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is closed with only its worktree deleted while that worktree holds work nobody committed'.
+
+> Evidence: exploratory-testing question gizmo-12, answered 2026-11-23: a close does only what was picked, and warns that uncommitted work will be lost.
+
+*Given* checkout-flow is open in its own worktree
+*And* that worktree holds a change to README.md and a new file notes.txt that nobody committed
+*When* the Person asks what closing checkout-flow can do
+*Then* closing warns that deleting the worktree without a commit loses the work in README.md and notes.txt
+*When* the Person closes checkout-flow, deleting only its worktree
+*Then* nothing is committed on the checkout-flow branch
+*And* nothing of checkout-flow is pushed to origin
+*And* the worktree folder is gone
+*And* the close's answer names README.md and notes.txt as the work that went with it
+
 #### Scenario: Keep the ticket open when its branch does not merge into main
 
 > Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is closed with its branch merged into a main it conflicts with'.
@@ -343,11 +386,22 @@ section: body
 
 *Given* checkout-flow is open in its own worktree
 *And* a running program works in that worktree's folder
-*When* the Person closes checkout-flow, deleting its worktree
+*When* the Person closes checkout-flow, committing, pushing, and deleting its worktree
 *Then* the board says the worktree could not be removed, naming its folder
 *And* checkout-flow's work is committed on its branch on origin
 *When* that program has ended and the Person activates checkout-flow
 *Then* checkout-flow has its own worktree again
+
+#### Scenario: Refuse to close main
+
+> Test: unit: space/session/session_spec.py 'that is main and is closed'.
+
+> Evidence: exploratory-testing question gizmo-11, answered 2026-11-23: session.close on main is refused as ticket.close is.
+
+*Given* main is the active session
+*When* the Person closes main's session
+*Then* the close is refused, saying main is the default session and stays open
+*And* main is still the active session
 
 ## Story: Move Ticket
 
@@ -568,6 +622,7 @@ section: body
   *But* that branch is not checked out  
 *When* the Person asks what closing checkout-flow can do  
 *Then* closing offers to delete checkout-flow's branch  
+  *But* closing offers no commit or push of main  
 *When* the Person closes checkout-flow, deleting its branch  
 *Then* the checkout-flow branch is gone  
   *And* checkout-flow shows in Complete

@@ -401,6 +401,10 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 + worktree: str
 	// data field: the folder of its own worktree, where its chat works; empty while it has none
 	-> TicketCheckout.worktree
++ dropped_work: list[str]
+	// data field: the files whose uncommitted work went with its worktree when it was last closed without a commit, kept in its session.json; none when nothing was lost
++ board_fields: OwnedFields
+	// the fields the board keeps for it in its session.json (`record.extra("ticket")`): its stage, mark, and dropped work
 + << association >> chat: Chat
 	// reference data field `working_chat`, sent by its id: the connected chat working in its worktree or a folder inside it, else one whose mod names no folder and that is titled by the ticket's name; none while no chat works on it
 	-> TicketCheckout.chat
@@ -433,7 +437,8 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// `ticket.choose_formats`, from *TicketChoices*: one press on a chip, in the chat bar or on the board, chooses or leaves out its formats in the session
 	-> FormatChoice.choose
 + activate(): Ticket
-	// `ticket.activate`: opens it in its own worktree, where its own chat works on it; the chat that asks keeps its session, and the repository's own folder stays on main
+	// `ticket.activate`: opens it in its own worktree, where its own chat works on it; a closed ticket reopens first, as a move out of Complete does; the chat that asks keeps its session, and the repository's own folder stays on main
+	-> TicketMoves.reopened
 	-> TicketCheckout.open
 + next_place: StagePlace
 	// where Move next puts it while it stays on a stage: its stage's Done, else the next stage's In progress; none when the move closes it, leaves it where it is, or is refused. The page shows the card there at once, and `move_next` goes where it says
@@ -456,6 +461,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> TicketCheckout.write_handoff
 	-> TicketCheckout.free_worktree
 	-> TicketCheckout.keep_landing_release
+	-> TicketCheckout.leave_branch
 	-> SessionFolder.move_to_closed
 	-> TicketCheckout.save_work
 + assign_chat(chat: str): Ticket
@@ -530,10 +536,14 @@ The moves a person makes with one ticket, made once with the ticket in `ticket.p
 	-> Ticket.close
 + move_previous(): Ticket | BacklogItem
 	-> StageMarks.place
-	-> SessionFolder.reopen
+	-> TicketMoves.reopened
 	-> Ticket.to_backlog
++ reopened(): Ticket
+	// the ticket on a stage: itself, or, out of Complete, reopened on the stage it was closed from
+	-> SessionFolder.reopen
 + move_to(stage: str, done: bool): Ticket | BacklogItem
 	-> StageMarks.place
+	-> TicketMoves.reopened
 	-> Ticket.to_backlog
 
 ## TicketWork
@@ -574,7 +584,7 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 	// its session's checkout's branch: the recorded branch, else the one named as the ticket, else the one branch holding its name as a whole word
 	-> SessionCheckout.branch
 + work_branch: Branch
-	// its own branch while it is checked out, else the default branch while the checkout is on it; any other checkout gives its own branch, not checked out
+	// its own branch while it is checked out, or while it exists checked out nowhere (so a close never commits main's edits for it), else the default branch while the checkout is on it; any other checkout gives its own branch, not checked out
 + worktree: str
 	// the folder of its own worktree; empty while it has none
 	-> Board.worktrees
@@ -592,6 +602,15 @@ A ticket's progress on each fidelity the board requires whose practice its sessi
 + keep_landing_release(leaving: Leaving)
 	// a ticket closed with its branch merged keeps its end-to-end results only
 	-> LatestRelease.keep
++ save_work(leaving: Leaving)
+	// commits, pushes, and merges only what leaving names
+	-> Branch.save
+	-> Branch.push
+	-> Branch.land_on_default
++ leave_branch(leaving: Leaving): list[str]
+	// removes its own worktree as it is, committing nothing, and deletes its branch when leaving names them; answers the files whose uncommitted work went with the worktree
+	-> Worktrees.remove
+	-> Branch.delete
 
 ## Leaving
 
@@ -607,8 +626,6 @@ What a person chose to do with a ticket's work as it closes, made by `Ticket.clo
 + deletes_worktree: bool
 + changes_branch: bool
 	// merges, deletes the branch, or deletes its worktree
-+ saves_work: bool
-	// commits, pushes, or changes the branch, which saves what a worktree about to go holds
 + removes_worktree: bool
 	// deletes the worktree, or the branch, which takes its worktree with it
 

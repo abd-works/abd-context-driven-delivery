@@ -457,9 +457,9 @@ with description("a ticket's work through the cdd server") as self:
     # among the closed sessions, so a chat in that worktree got a session kept under _complete.
     with context("that a closed ticket is activated"):
         with before.all:
-            self.activated_answer = self.chat.answer("ticket.activate", ticket="walk-drop")
+            self.chat.answer("ticket.activate", ticket="walk-drop")
             self.reopened_worktree = self.clone.worktree_of("walk-drop")
-            print("DEBUGWT", self.reopened_worktree, git(self.clone.work, "worktree", "list", "--porcelain"), self.activated_answer if hasattr(self, "activated_answer") else "")
+            self.reopened_in_worktree = self.reopened_worktree is not None and self.reopened_worktree.is_dir()
             self.reopened = next(ticket for column in self.chat.answer("board.show")["columns"] for key in ("in_progress", "done", "tickets") for ticket in column.get(key, []) if ticket["name"] == "walk-drop")
             self.reopened_session = SpecChat(self.server, self.reopened_worktree).answer("sessions.current")["name"]
             self.reopened_folder = (self.clone.work / ".sessions" / "walk-drop" / "session.json").is_file()
@@ -467,7 +467,7 @@ with description("a ticket's work through the cdd server") as self:
             self.chat.answer("ticket.close", ticket="walk-drop", leaving=["delete_branch"])
 
         with it("should open it in its own worktree"):
-            expect(self.reopened_worktree is not None and self.reopened_worktree.is_dir()).to(be_true)
+            expect(self.reopened_in_worktree).to(be_true)
 
         with it("should move its folder back among the open sessions"):
             expect((self.reopened_folder, self.left_closed)).to(equal((True, False)))

@@ -4,7 +4,7 @@
 - **Tester:** Gizmo
 - **Story:** Move Work Forward on Session Board / Steer Ticket Sessions / Move Ticket - "Reopen a ticket moved back out of Complete" says a reopened ticket's folder is back in `.sessions/<name>`; no scenario covers activate on a closed ticket.
 - **Module and class:** `space/kanban/ticket.py` `Ticket.activate`; `space/kanban/ticket_checkout.py` `TicketCheckout.open`.
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 1. `ticket.create title="Loyalty points"`, `ticket.activate ticket="loyalty-points"`.
@@ -18,9 +18,14 @@ Either activate refuses a closed ticket, or it reopens it (folder back in `.sess
 ## Actual
 Activate succeeds, makes `..\repo-loyalty-points` on branch `loyalty-points` again, and answers `session_file: .sessions/_complete/loyalty-points/session.json`. The board still shows the card in Complete while its worktree is open; a chat in that worktree gets a session kept under `_complete`.
 
-Second run, ticket kid-two closed with `leaving=["commit","push","merge","delete_branch","delete_worktree"]` then activated: branch `kid-two` and `..epo-kid-two` are made again, and `sessions.current` from a chat in that worktree answers `{"name": "main", "branch": "main", "repo_name": "repo-kid-two"}`: the chat in the ticket's worktree is told it is on main, though git has `kid-two` checked out there (the scenario "Switching a chat in a ticket's worktree always opens that ticket's session" promises the ticket's session).
+Second run, ticket kid-two closed with `leaving=["commit","push","merge","delete_branch","delete_worktree"]` then activated: branch `kid-two` and `..
+epo-kid-two` are made again, and `sessions.current` from a chat in that worktree answers `{"name": "main", "branch": "main", "repo_name": "repo-kid-two"}`: the chat in the ticket's worktree is told it is on main, though git has `kid-two` checked out there (the scenario "Switching a chat in a ticket's worktree always opens that ticket's session" promises the ticket's session).
 
 ## Tier that should catch it
 Heavy, once the intended behaviour is decided; today no spec activates a ticket after closing it.
 
 ## Also seen by
+
+## Answer (2026-11-23)
+
+Activating a closed ticket reopens it, its folder back in .sessions/<name> and its card back on the stage it was closed from, as moving it back out of Complete does. Built in space/kanban/ticket.py (`TicketMoves.reopened`, used by `activate`, `move_previous` and `move_to`); tested by space/kanban/ticket_work_heavy_spec.py 'that a closed ticket is activated'; scenario "Reopen a closed ticket by activating it" in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md.

@@ -837,7 +837,13 @@ def _(s):
 
     @s.then("closing offers to delete checkout-flow's branch")
     def _(world):
-        expect((world.closing["own_branch"], world.closing["choices"])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push", "merge", "delete_branch"])))
+        expect((world.closing["own_branch"], world.closing["choices"])).to(equal((CHECKOUT_FLOW.name, ["handoff", "merge", "delete_branch"])))
+
+    # Closing choice 3 of the exploratory testing: nothing checked out is checkout-flow's, so the main clone's edits are
+    # never committed under its name.
+    @s.but_("closing offers no commit or push of main")
+    def _(world):
+        expect(world.closing["branch"]).to(equal(""))
 
     @s.when("the Person closes checkout-flow, deleting its branch")
     def _(world):
