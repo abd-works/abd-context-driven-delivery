@@ -13,13 +13,13 @@ Agentic tools that bring agile product, delivery, and engineering practices to A
 - `harness/` imports nothing from `space/`, `tools/`, or `cdd_guidance/`. They register with the framework instead: `space/session` with `SESSION_OPENING.open_with`, the prompt notifier with `HOOK_TOASTS.show_with`, and the practices, actions, and patterns from their package `__init__.py` with `PRACTICE_CATALOGUE.register`, `ACTION_CATALOGUE.register`, and `REGISTERED_PATTERNS.register`, each an instance of one *ClassRegistry* mechanism the process holds once; a session makes the practices' instances once and gives its knowledge graph. Keep it that way, so the framework can change and be tested without the code built on it.
 - `space/` — the work: `session` (sessions, their log, their files and the file manager that reads them, handoffs, and decision records), `repo` (branches, commits, worktrees), and the CDD Kanban (`space/kanban`). `tools/` — one module of independent toolsets, one package each (sub-agent hand-off, echo, Granola, prompt log, prompt notify), sharing the card `tools/.context/module-context.md`.
 
-| Practice | Discovery | Specification | Implementation |
-|---|---|---|---|
-| Stories | story_map | scenarios | acceptance_tests |
-| DDD | bounded_context | model | tactics |
-| UX | ia | mockup | front_end_code |
-| Clean Engineering | modules | model | code |
-| BDD | behavior | realization | development |
+| Practice | Discovery | Specification | Implementation | Hardening |
+|---|---|---|---|---|
+| Stories | story_map | scenarios | acceptance_tests | hardening |
+| DDD | bounded_context | model | tactics | |
+| UX | ia | mockup | front_end_code | |
+| Clean Engineering | modules | model | code | |
+| BDD | behavior | realization | development | hardening |
 
 ## Where context lives
 
