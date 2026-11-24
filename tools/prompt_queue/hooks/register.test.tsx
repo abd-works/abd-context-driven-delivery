@@ -212,6 +212,18 @@ for (const surface of ['desktop', 'terminal'] as const) {
   })
 }
 
+// Reported 2026-11-19: after a repin and /reload-plugins neither the queue nor the chat bar showed above the prompt.
+// A queue an earlier version stored with no prompts makes the draw throw; the queue's row says so instead of vanishing.
+test('a queue whose draw throws shows why in red, in place of the queue', async ($, on) => {
+  const seeded = seedQueue(on, true)
+  seeded.stored.queue = { value: { chat: CHAT }, version: 2 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Text', text: /^prompt queue failed to draw: / }))?.text).toContain('flatMap')
+  await ui.unmount()
+})
+
 // Seen 2026-11-17: a long pasted list queued with Alt+Enter was still sent to the chat.
 test('the submission that follows Alt+Enter does not enter when the desktop sends its lines with other endings', async ($, on) => {
   seedQueue(on, false, ['1. Rules fix not checked live.  ', '2. No Go to file on a fold-out.'].join(String.fromCharCode(13, 10)))

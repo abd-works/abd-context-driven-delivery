@@ -187,13 +187,14 @@ export const register: Register = on => {
           return projectPageUrl($, url, query)
         }),
     }
-    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }
     const elements = $.ui.resolve(e)
-    const version = await currentCddVersion($)
     const versionActions = { askToUpdate: () => askToUpdate($), cancelUpdate: () => cancelUpdate($), updateToLatest: () => updateToLatest($) }
-    const repo = await currentRepo($)
     const pushActions = { pushWork: () => pushWork($), ask: () => askToPush($), cancel: () => cancelPush($), pushToMain: () => pushToMain($) }
+    // Every read of the draw sits inside the guard: a read that throws outside it skips the hook, leaving no bar and no reason.
     try {
+    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }
+    const version = await currentCddVersion($)
+    const repo = await currentRepo($)
     const chatBar = await currentChatBar($)
     return ChatBarView($, elements, {
       chatBar,

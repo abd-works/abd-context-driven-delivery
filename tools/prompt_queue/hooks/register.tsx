@@ -120,6 +120,13 @@ export const register: Register = on => {
       return next(e)
     }
 
-    return QueueView($, e, await currentQueue($))
+    try {
+      return QueueView($, e, await currentQueue($))
+    } catch (failure) {
+      // A draw that throws shows why, in red, as the chat bar's does, instead of leaving no queue at all.
+      const { Text } = $.ui.resolve(e)
+      const reason = failure instanceof Error ? `${failure.message}\n${failure.stack ?? ''}` : String(failure)
+      return <Text color="#EF4444">{`prompt queue failed to draw: ${reason}`}</Text>
+    }
   })
 }
