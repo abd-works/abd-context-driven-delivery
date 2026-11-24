@@ -230,12 +230,9 @@ class CodeReach:
         """The class that declares member: an operation hangs under its class, and a property is grouped under it."""
         if member.type != "Property":
             return self._graph.edges.direct_parent(member)
-        # Made once for each practice: setdefault's default would be built again on every call.
-        owners = self._property_owners.get(id(member.practice))
-        if owners is None:
-            owners = self._property_owners[id(member.practice)] = {
-                id(edge.child): edge.parent for edge in member.practice.reading.in_graph.edge_index.of("properties")
-            }
+        owners = self._property_owners.setdefault(id(member.practice), {
+            id(edge.child): edge.parent for edge in member.practice.reading.in_graph.edge_index.of("properties")
+        })
         return owners.get(id(member))
 
     def _decorators_of(self, node: Node) -> set[str]:

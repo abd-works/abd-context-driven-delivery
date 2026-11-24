@@ -993,6 +993,7 @@ function handOutOf(handed: { robot: string; card: QueuedPrompt }[], agents: Reco
     "Hand out the robots' next cards. Send each robot its card's words exactly as written below, followed by one line: " +
       `"Before you start, break card [<card id>] into a discrete task list of your own plan, and put it on the card with prompt-queue.set_steps(chat=\\"${chat}\\", prompt=\\"<card id>\\", steps=[...]); ` +
       'keep it as your own task list too, and as you finish each task tick it with prompt-queue.step_done(chat, prompt, step=N), so the queue shows your progress."',
+    'Tell each robot too: fix every failing test you meet, including one that failed before your change, and never report a failure as left because it was already there.',
     'When a robot tells you it finished, mark its card done with prompt-queue.done; its next card follows.',
     ...handed.map(({ robot, card }) => {
       const how = agents[robot]

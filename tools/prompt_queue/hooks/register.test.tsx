@@ -2164,3 +2164,10 @@ test("a card this chat sends a robot's sub-agent itself is that card handed out,
 
   expect(seeded.stored.sentCards?.value).toEqual({ Sparky: 'c' })
 })
+
+
+test('the hand-out tells each robot to fix every failing test it meets, including one that failed before its change', async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS)
+
+  expect(asked[0]).toContain('including one that failed before your change')
+})
