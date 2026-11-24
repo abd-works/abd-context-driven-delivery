@@ -110,6 +110,9 @@ class ProjectTestCode:
         self._root = Path(root)
         self._patterns = list(patterns)
         self._declares_tests: dict[str, bool] = {}
+        # Whether each file is test code, by the file as asked about, worked out once: a read of the whole working copy
+        # asks it hundreds of thousands of times of the same files.
+        self._test_code: dict[str, bool] = {}
 
     @property
     def root(self) -> Path:
@@ -129,8 +132,12 @@ class ProjectTestCode:
 
     def is_test_code(self, file: str | Path | None) -> bool:
         """A spec, a test, or test support: by its name, by the config, or by the test functions it declares."""
-        path = self._relative(file)
-        return TestFileName(path).is_test_code or self._names(path) or self._holds_tests(path)
+        asked = str(file or "")
+        found = self._test_code.get(asked)
+        if found is None:
+            path = self._relative(file)
+            found = self._test_code[asked] = TestFileName(path).is_test_code or self._names(path) or self._holds_tests(path)
+        return found
 
     def is_example_code(self, file: str | Path | None) -> bool:
         """Test code, or example code or a test double, which production rules judge but no seam holds."""

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import keyword
 import re
-from functools import cache
+from functools import cache, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, NamedTuple
 
@@ -193,8 +193,10 @@ class CodeSpan(NamedTuple):
     creates: str = CREATED_ON_EACH_CALL
 
     @staticmethod
+    @lru_cache(maxsize=8192)
     def code_of(text: str) -> str:
-        """The code of text: without the calls the source view marks, doc strings, or comments."""
+        """The code of text: without the calls the source view marks, doc strings, or comments. A read asks it of the
+        same spans many times over, so the latest answers are kept."""
         return _NOT_CODE.sub(_code_kept, _CALL_MARKER.sub("", text))
 
 
