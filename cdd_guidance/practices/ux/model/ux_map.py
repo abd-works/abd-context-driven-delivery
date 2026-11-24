@@ -160,15 +160,23 @@ class UxMap(UxNode, FormatAdapter):
         for transition in source.transitions:
             self.transitions.append(self._transition_copy(transition, screens, transition.sequential_order))
         for content_type in source.content_types:
-            copy = self.content_type_type(content_type.name, content_type.sequential_order)
-            copy.hierarchy = content_type.hierarchy
-            copy.key_actions = list(content_type.key_actions)
-            self.content_types.append(copy)
+            self.content_types.append(self._content_type_copy(content_type, content_type.sequential_order))
         for nav in source.nav_components:
-            copy = self.nav_component_type(nav.name, nav.sequential_order)
-            copy.ux_type = nav.ux_type
-            copy.destinations = [screens[id(screen)] for screen in nav.destinations if id(screen) in screens]
-            self.nav_components.append(copy)
+            self.nav_components.append(self._nav_component_copy(nav, screens, nav.sequential_order))
+
+    def _content_type_copy(self, content_type: ContentType, order: int) -> ContentType:
+        """content_type as one of this map's own, at order."""
+        copy = self.content_type_type(content_type.name, order)
+        copy.hierarchy = content_type.hierarchy
+        copy.key_actions = list(content_type.key_actions)
+        return copy
+
+    def _nav_component_copy(self, nav: NavComponent, screens: ScreenCopies, order: int) -> NavComponent:
+        """nav as one of this map's own, at order, reaching the copies of the screens it reaches."""
+        copy = self.nav_component_type(nav.name, order)
+        copy.ux_type = nav.ux_type
+        copy.destinations = [screens[id(screen)] for screen in nav.destinations if id(screen) in screens]
+        return copy
 
     def _transition_copy(self, transition: Transition, screens: ScreenCopies, order: int) -> Transition:
         """transition as one of this map's own, at order, joining the copies of the screens it joins."""
@@ -192,8 +200,8 @@ class UxMap(UxNode, FormatAdapter):
 
     def keep_what_only(self, held: "UxMap") -> None:
         """Take from held, the map a file already holds, everything only it holds, so drawing this map over that file
-        loses nothing: what its screens and controls serve (``keep_served_by``), and each screen, region, control, and
-        transition this map lacks, after this map's own."""
+        loses nothing: what its screens and controls serve (``keep_served_by``), and each screen, region, control,
+        transition, content type, and nav component this map lacks, after this map's own."""
         with self.batch_schema_sync():
             self.keep_served_by(held)
             screens: ScreenCopies = {id(theirs): mine for mine, theirs in self._screens_also_in(held)}
@@ -204,6 +212,7 @@ class UxMap(UxNode, FormatAdapter):
                 self.append_screen(screens[id(theirs)])
                 self._take_screen_parts(theirs, screens)
             self._keep_transitions_only(held, screens)
+            self._keep_components_only(held, screens)
 
     def _screens_also_in(self, held: "UxMap") -> list[tuple[Screen, Screen]]:
         """Each screen of this map with the screen of the same name held holds."""
@@ -229,6 +238,16 @@ class UxMap(UxNode, FormatAdapter):
         for transition in held.transitions:
             if (transition.trigger, transition.from_name, transition.to_name) not in own:
                 self.transitions.append(self._transition_copy(transition, screens, len(self.transitions)))
+
+    def _keep_components_only(self, held: "UxMap", screens: ScreenCopies) -> None:
+        """Give this map each content type and each nav component only held holds, by name, a nav component reaching
+        this map's own screens."""
+        own_types = {content_type.name for content_type in self.content_types}
+        for content_type in (content_type for content_type in held.content_types if content_type.name not in own_types):
+            self.content_types.append(self._content_type_copy(content_type, len(self.content_types)))
+        own_navs = {nav.name for nav in self.nav_components}
+        for nav in (nav for nav in held.nav_components if nav.name not in own_navs):
+            self.nav_components.append(self._nav_component_copy(nav, screens, len(self.nav_components)))
 
     @property
     def story_references(self) -> ReferencePaths:

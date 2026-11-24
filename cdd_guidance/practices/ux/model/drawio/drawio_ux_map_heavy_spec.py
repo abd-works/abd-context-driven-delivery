@@ -16,7 +16,7 @@ if str(_REPO) not in sys.path:
 from cdd_guidance.practices.ux.model.drawio import nodes as drawio_nodes
 from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliFailed, DrawioCliMissing, DrawioCliTimedOut, DrawioUxMap
 from harness.drawio import UnreadableDrawio
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, StoryStep, Transition
+from cdd_guidance.practices.ux.model.nodes import ContentType, Control, NavComponent, Region, Screen, StoryDemoControl, StoryStep, Transition
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
 from harness.guidance.practice_formats import Written
 
@@ -98,6 +98,41 @@ class SpecFixture:
         checkout.append_region(payment)
         ux_map.append_screen(checkout)
         return ux_map
+
+
+    def bookshop_shared(self) -> DrawioUxMap:
+        """The mockup with the Bookshop's content types, Book and Order, and its Main Nav and Checkout Steps nav
+        components, each reaching screens of the map."""
+        ux_map = self.mockup()
+        details, checkout = ux_map.screens
+        ux_map.content_types.append(made(ContentType, "Book", 0, hierarchy="Book List > Book", key_actions=["Add to cart", "Save for later"]))
+        ux_map.content_types.append(made(ContentType, "Order", 1, hierarchy="Orders > Order", key_actions=[]))
+        ux_map.nav_components.append(made(NavComponent, "Main Nav", 0, ux_type="top nav", destinations=[details, checkout]))
+        ux_map.nav_components.append(made(NavComponent, "Checkout Steps", 1, ux_type="breadcrumb", destinations=[checkout]))
+        return ux_map
+
+
+def shared_of(ux_map: DrawioUxMap) -> tuple[list, list]:
+    """Each content type and each nav component of ux_map, as what it holds."""
+    return (
+        [(kind.name, kind.hierarchy, kind.key_actions) for kind in ux_map.content_types],
+        [(nav.name, nav.ux_type, [screen.name for screen in nav.destinations]) for nav in ux_map.nav_components],
+    )
+
+
+def boxes_on(rendered: str, page: str) -> list[tuple[str, float, float, float, float]]:
+    """Each vertex cell drawn at the top of page, with its text and its box."""
+    found = ET.fromstring(rendered).find(f".//diagram[@name='{page}']")
+    return [
+        (cell.get("value", ""), *(float(cell.find("mxGeometry").get(side)) for side in ("x", "y", "width", "height")))
+        for cell in found.iter("mxCell") if cell.get("vertex") == "1" and cell.get("parent") == "1"
+    ]
+
+
+def overlap(first: tuple, second: tuple) -> bool:
+    _, x1, y1, w1, h1 = first
+    _, x2, y2, w2, h2 = second
+    return x1 < x2 + w2 and x2 < x1 + w1 and y1 < y2 + h2 and y2 < y1 + h1
 
 
 _STORY_FILE = "story_tests/shop/fill-cart/fill_cart_story.test.md"
@@ -225,6 +260,23 @@ with description("a UX map drawn as a draw.io information architecture"):
 
         with it("should read back the story the Story Demo control serves"):
             expect(self.controls[1].story_keys).to(equal(["Pay For Order"]))
+
+    with context("with content types and nav components, that is read back"):
+        with before.each:
+            self.source = fixture.bookshop_shared()
+            self.rendered = DrawioUxMap.create().render(self.source)
+            self.parsed = DrawioUxMap.create().parse(self.rendered)
+
+        with it("should read back the content types and nav components that went in"):
+            expect(shared_of(self.parsed)).to(equal(shared_of(self.source)))
+
+        with it("should still read back only the screens the map has"):
+            expect([screen.name for screen in self.parsed.screens]).to(equal(["Book Details", "Checkout"]))
+
+        with it("should draw no note over a screen or over another note on the Site Map"):
+            boxes = boxes_on(self.rendered, "Site Map")
+            crossing = [(a[0], b[0]) for index, a in enumerate(boxes) for b in boxes[index + 1:] if overlap(a, b)]
+            expect(crossing).to(equal([]))
 
     with context("of a mockup, drawn again over a drawing that shows what the mockup does not"):
         with before.each:

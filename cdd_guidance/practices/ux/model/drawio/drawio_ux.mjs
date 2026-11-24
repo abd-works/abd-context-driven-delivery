@@ -209,6 +209,9 @@ const S = {
     'whiteSpace=wrap;html=1;' +
     'fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;' +
     'fontStyle=1;fontSize=11;verticalAlign=top;align=left;',
+  sharedNote:
+    'text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=6;' +
+    'fillColor=#fafafa;strokeColor=#666666;fontSize=10;',
   formRow:
     'whiteSpace=wrap;html=1;' +
     'fillColor=#ffffff;strokeColor=none;strokeWidth=0;' +
@@ -665,6 +668,34 @@ function generateXml(state) {
   ].join('\n')
 }
 
+// ─── Shared notes ──────────────────────────────────────────────────────────────
+// The lines of the note drawn for each content type, then each nav component, the screens share: a heading line
+// naming it, then a line for each thing it holds, as `Heading: value`, several values joined by ' · '. The reader
+// takes each back by its heading, so a person can change a line in draw.io.
+
+const NOTE_W = 240
+const NOTE_LINE_H = 16
+const NOTE_PAD = 12
+const NOTE_GAP = 20
+
+function noteLine(heading, value) {
+  return value ? `<b>${heading}:</b> ${esc(value)}` : ''
+}
+
+function sharedNotes(state) {
+  const contentTypes = (state.contentTypes || []).map(kind => [
+    noteLine('Content type', kind.name),
+    noteLine('Hierarchy', kind.hierarchy),
+    noteLine('Key actions', (kind.keyActions || []).join(' · ')),
+  ])
+  const navComponents = (state.navComponents || []).map(nav => [
+    noteLine('Nav component', nav.name),
+    noteLine('Kind', nav.uxType),
+    noteLine('Destinations', (nav.destinations || []).join(' · ')),
+  ])
+  return [...contentTypes, ...navComponents].map(lines => lines.filter(Boolean))
+}
+
 // ─── Site map page ─────────────────────────────────────────────────────────────
 // Second diagram page: one titled box per screen, labeled connector arrows only.
 // Positioned using the same col/row grid as the detailed page (260px col, 90px row).
@@ -710,6 +741,20 @@ function generateSiteMapPage(state) {
         `                </mxCell>`
       )
     })
+  }
+
+  // A note for each content type and each nav component the screens share, stacked in a column of their own to the
+  // right of every screen, so no note lies over a screen or the lines between screens.
+  const lastCol = Math.max(-1, ...screens.map(s => (s.col !== undefined ? s.col : 0)))
+  let noteY = PAD_Y
+  for (const lines of sharedNotes(state)) {
+    const h = lines.length * NOTE_LINE_H + NOTE_PAD
+    cells.push(
+      `                <mxCell id="${++idCtr}" value="${esc(lines.join('<br>'))}" style="${S.sharedNote}" vertex="1" parent="1">`,
+      `                    <mxGeometry x="${PAD_X + (lastCol + 1) * COL_W}" y="${noteY}" width="${NOTE_W}" height="${h}" as="geometry"/>`,
+      `                </mxCell>`
+    )
+    noteY += h + NOTE_GAP
   }
 
   // Connector arrows — merge A→B + B→A into one bidirectional arrow

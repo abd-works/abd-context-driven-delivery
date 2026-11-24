@@ -15,7 +15,7 @@ if str(_REPO) not in sys.path:
 from harness.whiteboard.whiteboard import Box, Whiteboard  # noqa: E402
 
 from cdd_guidance.practices.ux.model.markdown.nodes import MarkdownUxMap  # noqa: E402
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Transition  # noqa: E402
+from cdd_guidance.practices.ux.model.nodes import ContentType, Control, NavComponent, Region, Screen, Transition  # noqa: E402
 from cdd_guidance.practices.ux.model.ux_map import UxMap  # noqa: E402
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made  # noqa: E402
 from cdd_guidance.practices.ux.model.whiteboard.nodes import WhiteboardUxMap  # noqa: E402
@@ -173,6 +173,8 @@ with description("a UX map that takes what only another map of the same screens 
         wish_list = Screen("Wish List", 2)
         held.append_screen(wish_list)
         held.transitions.append(made(Transition, "Save for later", 1, from_screen=details, to_screen=wish_list, trigger="Save for later", nav_type="action"))
+        held.content_types.append(made(ContentType, "Book", 0, hierarchy="Book List > Book", key_actions=["Add to cart"]))
+        held.nav_components.append(made(NavComponent, "Main Nav", 0, ux_type="top nav", destinations=[details, wish_list]))
         self.drawn.keep_what_only(held)
         self.details = self.drawn.find_screen("Book Details")
 
@@ -198,6 +200,13 @@ with description("a UX map that takes what only another map of the same screens 
         expect([(t.trigger, t.from_screen is self.details, t.to_screen.name) for t in self.drawn.transitions]).to(
             equal([("Check out", True, "Checkout"), ("Save for later", True, "Wish List")])
         )
+
+    with it("should hold the content type only the other map holds"):
+        expect([(kind.name, kind.hierarchy, kind.key_actions) for kind in self.drawn.content_types]).to(equal([("Book", "Book List > Book", ["Add to cart"])]))
+
+    with it("should hold the nav component only the other map holds, reaching its own screens"):
+        nav = self.drawn.nav_components[0]
+        expect((nav.name, nav.ux_type, [screen is self.drawn.find_screen(screen.name) for screen in nav.destinations])).to(equal(("Main Nav", "top nav", [True, True])))
 
     with it("should take nothing more when it takes from the same map again"):
         before_again = len(self.details.regions[0].controls), len(self.drawn.transitions)

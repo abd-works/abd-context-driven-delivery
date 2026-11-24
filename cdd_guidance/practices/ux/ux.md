@@ -76,7 +76,7 @@ outputs:
   json: ["{epic}/ux-map.json", "ux/ux.json"]
 example: "model/_examples/trip/ordering-ux-map.json"
 leaves_out:
-  drawio: "the map's name, scope, notes, invariants and references; a screen's description, image and prototype; a control's states, interactions, bound field and story steps, so a Story Demo control reads back as a plain control; content types and navigation components. They stay in ux-map.json"
+  drawio: "the map's name, scope, notes, invariants and references; a screen's description, image and prototype; a control's states, interactions, bound field and story steps, so a Story Demo control reads back as a plain control. They stay in ux-map.json"
   whiteboard: "a screen's layout, and the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in ux-map.json"
   markdown: "everything but the map's scope, notes and invariants. ux-context.md is the map's context, and the screens stay in ux-map.json and the drawing"
 ```
@@ -143,7 +143,7 @@ outputs:
   claude_design: "design-canvas/{version}/project/canvas.json"
 example: "model/_examples/trip/ordering-ux-map.json"
 leaves_out:
-  drawio: "the map's name, scope, notes, invariants and references; a screen's description, image and prototype; a control's states, interactions, bound field and story steps, so a Story Demo control reads back as a plain control; content types and navigation components. They stay in the mockup's HTML"
+  drawio: "the map's name, scope, notes, invariants and references; a screen's description, image and prototype; a control's states, interactions, bound field and story steps, so a Story Demo control reads back as a plain control. They stay in the mockup's HTML"
   whiteboard: "a screen's layout, and the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in the mockup's HTML"
 ```
 

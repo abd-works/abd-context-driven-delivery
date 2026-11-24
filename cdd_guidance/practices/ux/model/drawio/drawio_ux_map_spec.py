@@ -12,7 +12,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from cdd_guidance.practices.ux.model.drawio.nodes import DrawioRegion, DrawioUxMap
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, StoryStep
+from cdd_guidance.practices.ux.model.nodes import ContentType, Control, NavComponent, Region, Screen, StoryDemoControl, StoryStep
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
 
@@ -28,8 +28,9 @@ def cell(cell_id: str, value: str, style: str, parent: str = "1", x: int = 0, y:
     )
 
 
-def drawing(detailed: str, edge_style: str = "html=1;") -> str:
-    """A two-page drawing of Book Details and Checkout, with detailed as the cells of the Detailed IA page."""
+def drawing(detailed: str, edge_style: str = "html=1;", shared: str = "") -> str:
+    """A two-page drawing of Book Details and Checkout, with detailed as the cells of the Detailed IA page and shared
+    as the notes the Site Map page draws beside the screens."""
     return (
         '<mxfile host="drawio-ux">'
         '<diagram id="ia-diagram" name="Detailed IA"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
@@ -38,7 +39,7 @@ def drawing(detailed: str, edge_style: str = "html=1;") -> str:
         f'{cell("5001", "Book Details", "rounded=1;")}{cell("5002", "Checkout", "rounded=1;", x=300)}'
         f'<mxCell id="5003" value="Check out" style="{edge_style}" edge="1" source="5001" target="5002" parent="1">'
         '<mxGeometry relative="1" as="geometry"/></mxCell>'
-        "</root></mxGraphModel></diagram></mxfile>"
+        f"{shared}</root></mxGraphModel></diagram></mxfile>"
     )
 
 
@@ -109,6 +110,19 @@ _DRAWN_WITH_SERVED = drawing(
            f"&lt;br&gt;&lt;b&gt;Add To Cart › Add to cart serves stories:&lt;/b&gt; {anchor(_STORY_LINK)}"
            f"&lt;br&gt;&lt;b&gt;Add To Cart › Add to cart serves scenarios:&lt;/b&gt; {anchor(_SCENARIO_LINK)} · Add Book To Cart › Add a second book",
            "text;html=1;strokeColor=none;fillColor=none;", x=50, y=420),
+)
+
+
+_NOTE = "text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;strokeColor=#666666;fillColor=#fafafa;"
+
+# The Site Map page with the notes the command line draws beside the screens: a content type and a nav component
+# whose destinations name one screen the map has and one it does not.
+_DRAWN_WITH_SHARED = drawing(
+    cell("2", "Book Details", "strokeWidth=2;", x=50, y=200),
+    shared=cell("5010", "&lt;b&gt;Content type:&lt;/b&gt; Book&lt;br&gt;&lt;b&gt;Hierarchy:&lt;/b&gt; Book List &amp;gt; Book"
+                "&lt;br&gt;&lt;b&gt;Key actions:&lt;/b&gt; Add to cart · Save for later", _NOTE, x=560)
+    + cell("5011", "&lt;b&gt;Nav component:&lt;/b&gt; Main Nav&lt;br&gt;&lt;b&gt;Kind:&lt;/b&gt; top nav"
+                   "&lt;br&gt;&lt;b&gt;Destinations:&lt;/b&gt; Checkout · Wish List", _NOTE, x=560, y=120),
 )
 
 
@@ -213,6 +227,24 @@ with description("a UX map drawn as a draw.io information architecture"):
         with it("should give the control its callout names by its name what the line lists"):
             expect(control_named(self.parsed, "Book Details", "Add To Cart Button").story_keys).to(equal(["Add Book To Cart"]))
 
+    with context("with a content type and a nav component drawn beside its screens, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(_DRAWN_WITH_SHARED)
+
+        with it("should read back only the screens the Site Map draws"):
+            expect([screen.name for screen in self.parsed.screens]).to(equal(["Book Details", "Checkout"]))
+
+        with it("should read back the content type with its hierarchy and key actions"):
+            expect([(kind.name, kind.hierarchy, kind.key_actions) for kind in self.parsed.content_types]).to(
+                equal([("Book", "Book List > Book", ["Add to cart", "Save for later"])])
+            )
+
+        with it("should read back the nav component with its kind"):
+            expect([(nav.name, nav.ux_type) for nav in self.parsed.nav_components]).to(equal([("Main Nav", "top nav")]))
+
+        with it("should join the nav component to the screens it names that the map has"):
+            expect(self.parsed.nav_components[0].destinations).to(equal([self.parsed.find_screen("Checkout")]))
+
     with context("drawn without the types of its controls, that is read back"):
         with before.each:
             self.parsed = DrawioUxMap.create().parse(_DRAWN_WITHOUT_TYPES)
@@ -301,3 +333,20 @@ with description("a screen of a UX map drawn as draw.io"):
                 "by": "Add To Cart › Quantity", "kind": "steps",
                 "items": [f'<a href="{_STORY_FILE}#scenario-add-one-book">Add Book To Cart › Add one book › the Customer adds 2 copies</a>'],
             }]))
+
+
+with description("the content types and nav components of a UX map drawn as draw.io"):
+    with context("that holds a content type and a nav component"):
+        with before.each:
+            ux_map = UxMap.create()
+            cart = Screen("Cart", 0)
+            ux_map.append_screen(cart)
+            ux_map.content_types.append(made(ContentType, "Book", 0, hierarchy="Book List > Book", key_actions=["Add to cart"]))
+            ux_map.nav_components.append(made(NavComponent, "Main Nav", 0, ux_type="top nav", destinations=[cart]))
+            self.state = DrawioUxMap.create().copy_of(ux_map)._cli_state("out.drawio")
+
+        with it("should tell the command line the content type's name, hierarchy and key actions"):
+            expect(self.state["contentTypes"]).to(equal([{"name": "Book", "hierarchy": "Book List > Book", "keyActions": ["Add to cart"]}]))
+
+        with it("should tell the command line the nav component's name, kind and destinations"):
+            expect(self.state["navComponents"]).to(equal([{"name": "Main Nav", "uxType": "top nav", "destinations": ["Cart"]}]))

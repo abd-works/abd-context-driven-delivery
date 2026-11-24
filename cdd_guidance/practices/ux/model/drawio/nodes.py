@@ -6,11 +6,13 @@ Parse prefers the Site Map page for screens/transitions; each screen's layout, r
 domain terms come from the Detailed IA page when present. The diagram shows screens, their regions, the labels of the
 controls a region holds, transitions, and, in the callout under each screen, the stories, scenarios, and steps the
 screen and each of its controls serve, each a link to where it is written when it has one, with the screen's domain
-terms; beside what it shows it keeps, as
+terms, and, on the Site Map beside the screens, a note for each content type (its hierarchy and key actions) and each
+nav component (its kind and the screens it reaches), read back by the heading of each line; beside what it shows it
+keeps, as
 style keys on its cells (``uxLayout``, ``uxArea``, ``uxControls``, ``uxNames``, ``uxNav``), a screen's layout, a region's
 area, each control's type and, where it is not its label, its name, and a transition's kind of navigation, so a drawing
 reads back what was drawn. A Story Demo control is drawn as any other control. A control's states, interactions, bound
-field and story steps, descriptions, content types, nav components, and the map's name are not drawn; the fidelity's
+field and story steps, descriptions, and the map's name are not drawn; the fidelity's
 ``leaves_out`` says so.
 """
 
@@ -25,7 +27,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from harness.installation.json_file import JsonFile
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, ServesStories, StoryDemoControl, Transition
+from cdd_guidance.practices.ux.model.nodes import (
+    ContentType, Control, NavComponent, Region, Screen, ServesStories, StoryDemoControl, Transition,
+)
 from cdd_guidance.practices.ux.model.served import NavType, Served
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR
 from cdd_guidance.practices.ux.model.story_link import StoryLink
@@ -47,6 +51,10 @@ _BUTTON = "button"
 # The fill the command line gives a region's action strip.
 _ACTION_STRIP_FILL = "#f0f0f0"
 _TERMS = "domain terms:"
+# The headings of the notes the Site Map page draws beside the screens, one note for each content type and each nav
+# component the screens share, and of the lines under each.
+_CONTENT_TYPE, _HIERARCHY, _KEY_ACTIONS = "content type:", "hierarchy:", "key actions:"
+_NAV_COMPONENT, _NAV_KIND, _DESTINATIONS = "nav component:", "kind:", "destinations:"
 # A callout line that lists what one control serves: `Add To Cart › Quantity serves steps: ...`.
 _CONTROL_LINE = re.compile(r"^(?P<by>.+?) serves (?P<kind>stories|scenarios|steps):\s*(?P<items>.*)$", re.IGNORECASE)
 # A link as a cell's label draws it, which reads back as the markdown link the other formats write.
@@ -298,12 +306,26 @@ class DrawioScreen(Screen, DrawnServed):
         )
 
 
-class Callout:
-    """The note the Detailed IA page draws under a screen: the stories, scenarios, and steps the screen serves and the
-    domain terms it names, one line each, then a line for each kind of thing each of its controls serves."""
+class DrawnNote:
+    """A note the drawing shows as lines, each a heading and what it lists, `Domain terms: Book · Cart Line`; a link a
+    line draws reads back as the markdown link the other formats write."""
 
     def __init__(self, cell: ET.Element) -> None:
         self._lines = [_plain_text(_ANCHOR.sub(r"[\g<text>](\g<target>)", line)) for line in _LINE_BREAK.split(cell.get("value", ""))]
+
+    def listed(self, heading: str) -> str:
+        """What the line that starts with heading lists after it; nothing when the note has no such line."""
+        line = next((line for line in self._lines if line.lower().startswith(heading)), "")
+        return line[len(heading):].strip()
+
+    def listed_each(self, heading: str) -> list[str]:
+        """Each thing the line that starts with heading lists, in its order."""
+        return [item.strip() for item in self.listed(heading).split(Served.BESIDE) if item.strip()]
+
+
+class Callout(DrawnNote):
+    """The note the Detailed IA page draws under a screen: the stories, scenarios, and steps the screen serves and the
+    domain terms it names, one line each, then a line for each kind of thing each of its controls serves."""
 
     @classmethod
     def under(cls, box: ET.Element, detailed: ET.Element) -> Optional["Callout"]:
@@ -322,19 +344,60 @@ class Callout:
         """Give screen each story, scenario, and step the callout lists for it, attach each domain term it lists, and
         give each control of screen what its own lines list."""
         for heading, kind in Served.KINDS:
-            screen.served.serve(kind, self._listed(f"{heading.lower()}:"))
-        for term in self._listed(_TERMS).split(Served.BESIDE):
-            screen.attach_domain_term(term.strip())
+            screen.served.serve(kind, self.listed(f"{heading.lower()}:"))
+        for term in self.listed_each(_TERMS):
+            screen.attach_domain_term(term)
         for line in self._lines:
             served = _CONTROL_LINE.match(line)
             control = screen.control_at(served.group("by").strip()) if served is not None else None
             if control is not None:
                 control.served.serve(control.served.kind_headed(served.group("kind")), served.group("items"))
 
-    def _listed(self, heading: str) -> str:
-        """What the line that starts with heading lists after it; nothing when the callout has no such line."""
-        line = next((line for line in self._lines if line.lower().startswith(heading)), "")
-        return line[len(heading):]
+
+
+class SharedNote(DrawnNote):
+    """A note the Site Map page draws beside the screens for one content type, its hierarchy and key actions, or one
+    nav component, its kind and the screens it reaches. A person can change a line and the next read takes it."""
+
+    def read_into(self, ux_map: "DrawioUxMap", screens: dict[str, Screen]) -> None:
+        """Add to ux_map the content type or the nav component this note draws, a nav component reaching each of the
+        screens it names that screens, the map's screens by name, holds."""
+        if self.listed(_CONTENT_TYPE):
+            ux_map.content_types.append(ux_map.content_type_type.from_note(self, len(ux_map.content_types)))
+        elif self.listed(_NAV_COMPONENT):
+            ux_map.nav_components.append(ux_map.nav_component_type.from_note(self, len(ux_map.nav_components), screens))
+
+
+class DrawioContentType(ContentType):
+    """A content type as the Site Map page draws it: a note of its name, its hierarchy and its key actions."""
+
+    @classmethod
+    def from_note(cls, note: DrawnNote, index: int) -> "DrawioContentType":
+        content_type = cls(note.listed(_CONTENT_TYPE), index)
+        content_type.hierarchy = note.listed(_HIERARCHY)
+        content_type.key_actions = note.listed_each(_KEY_ACTIONS)
+        return content_type
+
+    def cli_record(self) -> Dict[str, Any]:
+        """This content type in the drawio-ux command line's state."""
+        return {"name": self.name, "hierarchy": self.hierarchy, "keyActions": list(self.key_actions)}
+
+
+class DrawioNavComponent(NavComponent):
+    """A nav component as the Site Map page draws it: a note of its name, its kind and the screens it reaches."""
+
+    @classmethod
+    def from_note(cls, note: DrawnNote, index: int, screens: dict[str, Screen]) -> "DrawioNavComponent":
+        """The nav component note draws, reaching each screen it names that screens holds; a name of no screen on the
+        map reaches none."""
+        nav = cls(note.listed(_NAV_COMPONENT), index)
+        nav.ux_type = note.listed(_NAV_KIND)
+        nav.destinations = [screens[name] for name in note.listed_each(_DESTINATIONS) if name in screens]
+        return nav
+
+    def cli_record(self) -> Dict[str, Any]:
+        """This nav component in the drawio-ux command line's state."""
+        return {"name": self.name, "uxType": self.ux_type, "destinations": [screen.name for screen in self.destinations]}
 
 
 class DrawioUxMap(KeepsDocumentInDrawing, UxMap):
@@ -342,6 +405,8 @@ class DrawioUxMap(KeepsDocumentInDrawing, UxMap):
     region_type = DrawioRegion
     control_type = DrawioControl
     story_demo_control_type = DrawioStoryDemoControl
+    content_type_type = DrawioContentType
+    nav_component_type = DrawioNavComponent
     cli_timeout_seconds: float = _CLI_TIMEOUT_SECONDS
     map_file_suffixes = (".drawio",)
     not_a_map_failures = (UnreadableDrawio,)
@@ -370,6 +435,7 @@ class DrawioUxMap(KeepsDocumentInDrawing, UxMap):
                 for screen in self.screens:
                     screen.read_detail(detailed.element, self)
             self._read_transitions(source, screens)
+            self._read_shared(source)
 
     def _read_screens(self, source: ET.Element) -> dict[str, Screen]:
         """Each screen the page draws, by the id of the cell that draws it."""
@@ -380,6 +446,14 @@ class DrawioUxMap(KeepsDocumentInDrawing, UxMap):
                 self.append_screen(screen)
                 screens[cell.get("id", "")] = screen
         return screens
+
+    def _read_shared(self, source: ET.Element) -> None:
+        """Each content type and nav component the page draws beside the screens, in the order it draws them."""
+        screens = {screen.name: screen for screen in self.screens}
+        for cell in source.iter("mxCell"):
+            text = _plain_text(cell.get("value", "")).lower()
+            if cell.get("vertex") == "1" and text.startswith((_CONTENT_TYPE, _NAV_COMPONENT)):
+                SharedNote(cell).read_into(self, screens)
 
     def _read_transitions(self, source: ET.Element, screens: dict[str, Screen]) -> None:
         """Each edge between two screens is a transition; an edge drawn both ways, `there / back`, is two."""
@@ -440,6 +514,8 @@ class DrawioUxMap(KeepsDocumentInDrawing, UxMap):
                 for transition in self.transitions
             ],
             "scope": self.scope,
+            "contentTypes": [content_type.cli_record() for content_type in self.content_types],
+            "navComponents": [nav.cli_record() for nav in self.nav_components],
         }
 
     def save(self) -> str:
@@ -465,11 +541,11 @@ class DrawioUxMap(KeepsDocumentInDrawing, UxMap):
 
 
 def _is_annotation(name: str) -> bool:
-    """Whether a cell's text is a callout's: it starts with what a screen serves, or lists domain terms or what a
-    control serves."""
+    """Whether a cell's text is a note's, not a screen's or a region's: it starts with what a screen serves or with a
+    content type or nav component the screens share, or lists domain terms or what a control serves."""
     lower = name.lower()
     headings = [heading.lower() for heading, _kind in Served.KINDS]
-    starts = any(lower.startswith(f"{heading}:") for heading in headings)
+    starts = any(lower.startswith(f"{heading}:") for heading in headings) or lower.startswith((_CONTENT_TYPE, _NAV_COMPONENT))
     return starts or _TERMS in lower or any(f" serves {heading}:" in lower for heading in headings)
 
 
