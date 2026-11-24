@@ -623,14 +623,17 @@ with description("a limit on a code measure") as self:
             expect(_module_hits_with("limit-modules-importing", {"modules_importing": 41})).to(contain(contain("Module 'shop' has 41 modules that import it, over the limit of 40.")))
 
     with context("on a module whose measure is at its limit"):
-        with it("should report nothing"):
-            at_limits = (
-                ("limit-module-file-lines", {"longest_file_lines": 800}),
-                ("keep-module-files-maintainable", {"least_maintainability": 20}),
-                ("limit-average-class-complexity", {"average_class_complexity": 15}),
-                ("limit-modules-importing", {"modules_importing": 40}),
-            )
-            expect([_module_hits_with(slug, facts) for slug, facts in at_limits]).to(equal([[]] * 4))
+        with it("should report no file at its longest lines"):
+            expect(_module_hits_with("limit-module-file-lines", {"longest_file_lines": 800})).to(equal([]))
+
+        with it("should report no file at its least maintainability"):
+            expect(_module_hits_with("keep-module-files-maintainable", {"least_maintainability": 20})).to(equal([]))
+
+        with it("should report no module at its average class complexity"):
+            expect(_module_hits_with("limit-average-class-complexity", {"average_class_complexity": 15})).to(equal([]))
+
+        with it("should report no module at the modules importing it"):
+            expect(_module_hits_with("limit-modules-importing", {"modules_importing": 40})).to(equal([]))
 
     with context("in a project that sets a limit of its own"):
         with it("should hold the measure to the project's limit"):
