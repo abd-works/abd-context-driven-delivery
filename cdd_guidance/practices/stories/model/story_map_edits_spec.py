@@ -20,6 +20,7 @@ RepositoryToolsets(Path(__file__).resolve().parents[4]).ensure_import_path()
 
 import cdd_guidance.practices  # noqa: E402,F401 - registers the practices with the practice catalogue
 from cdd_guidance.practices.stories.model.opened_story_map import StoryMapEditRefused  # noqa: E402
+from cdd_guidance.practices.stories.model.story_map import StoryNodeNotFound  # noqa: E402
 from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from space.session.practices.practice_session_output import FormatNotOfferedError  # noqa: E402
 from harness.guidance.practice_formats import RenderRequest  # noqa: E402
@@ -321,6 +322,14 @@ with description("a story map edited through its tools") as self:
 
             with it("should refuse to move a story before an epic"):
                 expect(lambda: _again(self.moving)).to(raise_error(StoryMapEditRefused, contain("not a Story")))
+
+        with context("that renames a story the map does not hold"):
+            with before.all:
+                project = StoryMapProject()
+                self.renaming = _failure(lambda: project.call("story.rename", node=_node(f"{SUB_EPIC}.no-such-story"), name="Anything"))
+
+            with it("should refuse, naming the node it could not find"):
+                expect(lambda: _again(self.renaming)).to(raise_error(StoryNodeNotFound, contain("no-such-story")))
 
         # A story map keeps its stories; their scenarios are kept in each story's scenario file.
         with context("that adds a scenario to a story"):
