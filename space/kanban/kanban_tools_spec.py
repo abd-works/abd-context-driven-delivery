@@ -26,14 +26,15 @@ from space.kanban.backlog_item import BacklogItem  # noqa: E402
 from space.kanban.board import Stage  # noqa: E402
 from space.kanban.card_name import NAME_LENGTH_LIMIT, BacklogItemTakenError, TicketNameTakenError, TitleNamesNothingError, TitleTooLongError  # noqa: E402
 from harness.graph.violation import Violation  # noqa: E402
-from space.kanban.report import ReportRule  # noqa: E402
+from space.kanban.report import ReportRule, ViolationNotInReportError  # noqa: E402
 from space.kanban.session_board_examples import saved_graph, saved_practice  # noqa: E402
 from harness.graph.edge import Edge  # noqa: E402
 from harness.graph.saved_graph import SavedGraph, SavedNode  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
-from space.kanban.ticket import Ticket  # noqa: E402
+from space.kanban.ticket import NoReportToAcceptInError, Ticket  # noqa: E402
 from space.session.session import MainStaysOpenError  # noqa: E402
 from space.kanban.board import FolderOutsideRepositoryError, NotAStageError  # noqa: E402
+from space.kanban.ticket_tree import NotAChildError, ParentMovesWithChildrenError  # noqa: E402
 from space.kanban.ticket_choices import FormatNotOfferedError as TicketFormatNotOfferedError  # noqa: E402
 from space.session.practices.practice_session_output import FidelityNotInPractice, FormatNotOfferedError as SessionFormatNotOfferedError  # noqa: E402
 from space.kanban.board_practices import PracticeNotFoundError  # noqa: E402
@@ -344,6 +345,13 @@ with description("the board tools") as self:
                 report = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")
                 expect(report["rules"][0]["rule"]["body"]).to(contain("verb"))
 
+            with it("should refuse to accept a violation the report does not list, naming it and the report"):
+                accepting = lambda: self.project.call(
+                    "fidelity-progress.accept_violation", ticket="pet-visits", fidelity="stories-story-map",
+                    rule="verb-noun-format", message="No such finding.", location="docs/elsewhere.md",
+                )
+                expect(accepting).to(raise_error(ViolationNotInReportError, contain("verb-noun-format", "stories-story-map-20261031T041200")))
+
             # The agent that ran validate adds its judgment to the report, and the report panel must agree with it.
             with context("with the judgment of the agent that validated it"):
                 with before.each:
@@ -395,6 +403,14 @@ with description("the board tools") as self:
                 with it("should give a finding that names no line its message"):
                     finding = self.project.call("fidelity-progress.report", ticket="pet-visits", fidelity="stories-story-map")["rules"][2]["violations"][0]
                     expect(finding["message"]).to(equal("`Do Stuff` does not say what it does."))
+
+        with context("with no validation report of the fidelity"):
+            with it("should refuse to accept a violation, naming the fidelity and the violation asked for"):
+                accepting = lambda: self.project.call(
+                    "fidelity-progress.accept_violation", ticket="pet-visits", fidelity="stories-story-map",
+                    rule="verb-noun-format", message="`Do Stuff` does not say what it does.", location="docs/map.md",
+                )
+                expect(accepting).to(raise_error(NoReportToAcceptInError, contain("stories-story-map", "verb-noun-format", "docs/map.md")))
 
         # A saved graph keeps the hits of a scanner deleted after it was saved.
         with context("with a validation report on a rule no scanner checks any more"):
@@ -482,6 +498,15 @@ with description("the board tools") as self:
 
             with it("should refuse a child whose title gives no name"):
                 expect(lambda: self.project.call("ticket.add_child", ticket="pet-visits", title="日本語")).to(raise_error(TitleNamesNothingError))
+
+        with context("that pulls out a ticket that has no parent"):
+            with it("should refuse it, naming the ticket"):
+                expect(lambda: self.project.call("ticket.pull_out", ticket="pet-visits")).to(raise_error(NotAChildError, contain("pet-visits")))
+
+        with context("that moves a ticket split into children on its own"):
+            with it("should refuse it, naming the parent"):
+                self.project.call("ticket.add_child", ticket="pet-visits", title="Pet photos")
+                expect(lambda: self.project.call("ticket.move_next", ticket="pet-visits")).to(raise_error(ParentMovesWithChildrenError, contain("pet-visits")))
 
         with context("that adds a child to a ticket"):
             with before.each:
