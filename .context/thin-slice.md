@@ -349,6 +349,13 @@ section: body
 - *Cache Practice Guidance By File And Change Time*
 - *Read Session File Once Per Board Build*
 
+**Backlog items fixed in this increment** (moved to `.sessions/_complete/` or removed from the backlog on 2026-11-23):
+
+- *Chat UI defects*: every defect on the list fixed (`.sessions/_complete/chat-ui-defects/`)
+- *Install failure themes*: the locked mod file, the missing project header and the held adapter folders (`.sessions/_complete/install-failure-themes/`)
+- *Break module dependency cycles*: no module import cycle left (`.sessions/_complete/break-module-dependency-cycles/`)
+- *Nov 18 demo fixes*: board comments carry the fidelity's rules, the debug button stays in view, file links use the whole path, a plain folder offers only to create the git repository, the Files view opens without Bypass permissions, render saves beside its source, logs roll over at 4 MB, the bar's buttons ask for a skill in plain words, story maps take their shape from the sources, a whiteboard opens as a canvas, a new repository needs no reload, and a chat installs CDD when its folder lacks it
+
 ### Increment 7: File Manager Complete
 
 **Outcome:** the Files app shows a session's generated work: files and folders or the graph, filtered like the files, opening and comparing several files, with comments sent to the chat.
