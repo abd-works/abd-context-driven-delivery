@@ -7,7 +7,10 @@ import json
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
+from harness.graph.rule_fixture import RuleFixture
+
 import cdd_guidance.practices  # noqa: F401 - registers the practices and TDD with the practice catalogue
+from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.tdd.rules import BY_SLUG
 from cdd_guidance.practices.tdd.tdd import Tdd
 from cdd_guidance.practices.tdd.rules.rule_examples import EXAMPLES, specs_fixture, tested_code_fixture
@@ -116,6 +119,13 @@ def _hits(slug: str, side: int) -> list[str]:
     return make(EXAMPLES[slug][side]).hits(BY_SLUG[slug])
 
 
+def _hits_without_bdd(slug: str, side: int) -> list[str]:
+    """What the rule finds in its failing example (side 1) or its repaired one (side 2), read by Clean Engineering alone,
+    with no BDD reading the specs beside the code."""
+    files = EXAMPLES[slug][side]
+    return RuleFixture(CleanEngineering, {name: text.strip() + "\n" for name, text in files.items()}).hits(BY_SLUG[slug])
+
+
 def _hits_with_no_test(slug: str) -> list[str]:
     """What the rule finds in its failing example's code alone, read with no spec beside it."""
     make, fault, _ = EXAMPLES[slug]
@@ -165,6 +175,8 @@ with description("an exception a class declares, which TDD checks for a test in 
         self.unnamed = _hits(_EXCEPTION, 1)
         self.raised = _hits(_EXCEPTION, 2)
         self.with_no_test_read = _hits_with_no_test(_EXCEPTION)
+        self.unnamed_without_bdd = _hits_without_bdd(_EXCEPTION, 1)
+        self.raised_without_bdd = _hits_without_bdd(_EXCEPTION, 2)
 
     with context("that no test file names"):
         with it("should be flagged by name"):
@@ -177,6 +189,13 @@ with description("an exception a class declares, which TDD checks for a test in 
     with context("in a graph that read no test"):
         with it("should not be judged"):
             expect(self.with_no_test_read).to(equal([]))
+
+    with context("in a graph that reads the code and its specs without BDD, as a validate of the code does"):
+        with it("should still flag one no spec names, since the specs are test code the code's own reading names"):
+            expect(self.unnamed_without_bdd).to(equal(self.unnamed))
+
+        with it("should pass one a spec expects"):
+            expect(self.raised_without_bdd).to(equal([]))
 
 
 with description("a boundary a unit spec stubs, which TDD checks for a heavy example in the graph") as self:

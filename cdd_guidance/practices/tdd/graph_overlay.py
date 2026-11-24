@@ -11,7 +11,7 @@ from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from cdd_guidance.practices.source_code.code_reach import CodeReach
 from cdd_guidance.practices.stories.stories import Stories
-from cdd_guidance.practices.tdd.tiers import is_code_file, real_resources_in, stubs_in, tier_of
+from cdd_guidance.practices.tdd.tiers import TEST_CODE_SUFFIXES, is_code_file, real_resources_in, stubs_in, tier_of
 from harness.graph.graph import Graph, Node
 from harness.graph.pattern_overlays import GraphOverlay
 
@@ -46,12 +46,25 @@ class TddOverlay(GraphOverlay):
             for node in practice.reading.in_graph.nodes(node_type):
                 if is_code_file(node.source.file or ""):
                     self._record(node, root / node.source.file, texts)
-        if not texts:
-            return
-        HeavyExamples(graph).record()
+        if texts:
+            HeavyExamples(graph).record()
         clean = graph.practices.loaded(CleanEngineering)
-        if clean is not None and clean.reading.in_graph is not None:
+        if clean is None or clean.reading.in_graph is None:
+            return
+        self._read_test_code(graph, clean, texts)
+        if texts:
             CodeUnderTest(graph, clean, texts).record()
+
+    def _read_test_code(self, graph: Graph, clean: CleanEngineering, texts: dict[str, str]) -> None:
+        """Add the text of each file of test code Clean Engineering's reading names under the graph's folder, which a
+        graph that holds no BDD, such as a validate of the code, reads as no spec: without them every exception only a
+        spec names would read as named by no test."""
+        root = Path(graph.folder)
+        test_code = clean.reading.test_code
+        for path in graph.scope.source_files(root, set(TEST_CODE_SUFFIXES)):
+            relative = path.relative_to(root).as_posix() if path.is_absolute() else path.as_posix()
+            if relative not in texts and test_code.is_test_code(relative):
+                texts[relative] = (root / relative).read_text(encoding="utf-8", errors="replace")
 
     def _record(self, node: Node, path: Path, texts: dict[str, str]) -> None:
         """The tier node's file is in, and what a unit test's text shows: the real resources it imports and the
