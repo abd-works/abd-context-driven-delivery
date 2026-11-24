@@ -7,7 +7,7 @@ section: body
 
 # Epic: Filter Files In Files App
 
-Map: [story-map.md](../../../.context/story-map.md#e-filter-files-in-files-app). Acceptance tests: `space/session/practice_session_output_spec.py` and `space/kanban/kanban_tools_spec.py` for what the session answers; `harness/files_app/app/files/file-bar.spec.ts` for what only the page shows. The other scenarios of this epic are in [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md).
+Map: [story-map.md](../../../.context/story-map.md#e-filter-files-in-files-app). Acceptance tests: `space/session/practices/practice_session_output_spec.py` and `space/kanban/kanban_tools_spec.py` for what the session answers; `harness/files_app/app/files/file-bar.spec.ts` for what only the page shows. The other scenarios of this epic are in [review_files_in_files_app_story.test.md](../review-files-in-files-app/review_files_in_files_app_story.test.md).
 
 ### Domain terms
 

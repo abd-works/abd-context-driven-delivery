@@ -40,6 +40,22 @@ section: body
 *Then* billing-report's [session](../../../space/kanban/.context/kanban-model.md#session) works in src/billing
 *And* the details show its workpath as src/billing
 
+#### Scenario: A press on a card only selects it
+
+*Given* checkout-flow has no worktree and no chat
+*When* the Person presses checkout-flow's card
+*Then* checkout-flow is selected
+*But* no worktree is created and no chat is opened; its card's chat button opens them
+
+#### Scenario: Ask for a chat rather than send to an unrelated one
+
+*Given* no chat works on checkout-flow and none is picked
+*When* the Person writes checkout-flow's handoff from its card
+*Then* nothing is sent
+*And* a toast asks to open checkout-flow's chat or pick one in the chat list
+
+## Story: Choose Ticket Workpath And Roots
+
 #### Scenario: Choose a ticket's workpath
 
 *Given* checkout-flow works on the whole [repository](../../../space/kanban/.context/kanban-model.md#repo)
@@ -59,20 +75,6 @@ section: body
 *When* the Person puts Stories back on its default root
 *Then* the Stories root is the default again
 
-#### Scenario: A press on a card only selects it
-
-*Given* checkout-flow has no worktree and no chat
-*When* the Person presses checkout-flow's card
-*Then* checkout-flow is selected
-*But* no worktree is created and no chat is opened; its card's chat button opens them
-
-#### Scenario: Ask for a chat rather than send to an unrelated one
-
-*Given* no chat works on checkout-flow and none is picked
-*When* the Person writes checkout-flow's handoff from its card
-*Then* nothing is sent
-*And* a toast asks to open checkout-flow's chat or pick one in the chat list
-
 #### Scenario: Choose a ticket's root
 
 > From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
@@ -84,6 +86,8 @@ section: body
 *When* the Person chooses src/visits as checkout-flow's root  
 *Then* checkout-flow's root reads src/visits  
   *And* each practice's default root sits under src/visits
+
+## Story: Refuse Unusable Ticket Title
 
 #### Scenario: Refuse a title that gives a ticket no name
 
@@ -142,25 +146,51 @@ section: body
 *When* the Person activates billing-report again
 *Then* billing-report keeps that worktree
 
-#### Scenario: Work on the ticket from a chat in its worktree
+#### Scenario: Open a ticket again after its worktree folder was deleted
+
+> Test: heavy: space/repo/worktree_heavy_spec.py 'whose folder was deleted outside CDD'; unit: space/repo/worktree_spec.py.
+
+> Evidence: exploratory-testing defect gizmo-01. space/kanban module-context: a ticket's own worktree is the only way it opens.
 
 *Given* billing-report is open in its own worktree
-*When* a chat in that worktree asks which session it works on
-*Then* the answer is billing-report
+*But* that worktree's folder is no longer on disk
+*When* the Person activates billing-report
+*Then* billing-report has its own worktree again, on the branch billing-report
 
-#### Scenario: Start the ticket's new chat on the ticket's session
+#### Scenario: Reopen a closed ticket by activating it
 
-*Given* billing-report is open in its own worktree and no chat works on it
-*When* the main chat starts a new chat for billing-report in that worktree
-*Then* the new chat's first step is to switch to the session billing-report
-*And* its chat bar shows billing-report, not main
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a closed ticket is activated'.
 
-#### Scenario: Switching a chat in a ticket's worktree always opens that ticket's session
+> Evidence: exploratory-testing question gizmo-02, answered 2026-11-23: activating a closed ticket reopens it, as moving it back out of Complete does.
 
-*Given* billing-report is open in its own worktree
-*When* a chat in that worktree switches session, naming no session, main, or another ticket
-*Then* the session it opens is billing-report
-*And* when it named another session, it is told that its worktree belongs to billing-report
+*Given* the closed [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) billing-report is in Complete, its worktree deleted and its branch kept
+*When* the Person activates billing-report
+*Then* billing-report has its own worktree again, on the branch billing-report
+*And* its folder is back in .sessions/billing-report
+*And* billing-report is back on the stage it was closed from
+*And* a chat in its worktree works on billing-report's session
+
+#### Scenario: Give tickets whose names start alike their own worktrees
+
+> Test: heavy: space/repo/worktree_heavy_spec.py 'with another branch whose name starts with the same 24 characters open in its worktree'; unit: space/repo/worktree_spec.py.
+
+> Evidence: exploratory-testing defect gizmo-03. A worktree folder is named for the branch's first 24 characters (`Worktrees.sibling_folder`).
+
+*Given* customer-order-history-export-monthly is open in its own worktree
+*When* the Person activates customer-order-history-export-weekly
+*Then* customer-order-history-export-weekly has a worktree of its own, in another folder
+
+#### Scenario: Answer every chat that activates a ticket at the same moment
+
+> Test: heavy: space/repo/worktree_heavy_spec.py 'that two callers open for one branch at the same moment'.
+
+> Evidence: exploratory-testing defect gizmo-08, for chats on one cdd server.
+
+*Given* billing-report has no worktree yet
+*When* three chats activate billing-report at the same moment
+*Then* each is answered billing-report, in the one worktree
+
+## Story: Find Ticket Branch And Worktree
 
 #### Scenario: Find a branch and worktree made outside CDD
 
@@ -190,27 +220,6 @@ section: body
 *When* the Person activates checkout-flow
 *Then* checkout-flow's session records its own branch checkout-flow
 
-#### Scenario: Open a ticket again after its worktree folder was deleted
-
-> Test: heavy: space/repo/worktree_heavy_spec.py 'whose folder was deleted outside CDD'; unit: space/repo/worktree_spec.py.
-
-> Evidence: exploratory-testing defect gizmo-01. space/kanban module-context: a ticket's own worktree is the only way it opens.
-
-*Given* billing-report is open in its own worktree
-*But* that worktree's folder is no longer on disk
-*When* the Person activates billing-report
-*Then* billing-report has its own worktree again, on the branch billing-report
-
-#### Scenario: Give tickets whose names start alike their own worktrees
-
-> Test: heavy: space/repo/worktree_heavy_spec.py 'with another branch whose name starts with the same 24 characters open in its worktree'; unit: space/repo/worktree_spec.py.
-
-> Evidence: exploratory-testing defect gizmo-03. A worktree folder is named for the branch's first 24 characters (`Worktrees.sibling_folder`).
-
-*Given* customer-order-history-export-monthly is open in its own worktree
-*When* the Person activates customer-order-history-export-weekly
-*Then* customer-order-history-export-weekly has a worktree of its own, in another folder
-
 #### Scenario: Refuse to open a ticket onto a folder that is not its checkout
 
 > Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is activated while a folder left on no branch is where its worktree goes'.
@@ -223,15 +232,53 @@ section: body
 *Then* the board says billing-report cannot open in a worktree, naming that folder
 *And* the folder's files are as they were
 
-#### Scenario: Answer every chat that activates a ticket at the same moment
+## Story: Switch Session
 
-> Test: heavy: space/repo/worktree_heavy_spec.py 'that two callers open for one branch at the same moment'.
+#### Scenario: Work on the ticket from a chat in its worktree
 
-> Evidence: exploratory-testing defect gizmo-08, for chats on one cdd server.
+*Given* billing-report is open in its own worktree
+*When* a chat in that worktree asks which session it works on
+*Then* the answer is billing-report
 
-*Given* billing-report has no worktree yet
-*When* three chats activate billing-report at the same moment
-*Then* each is answered billing-report, in the one worktree
+#### Scenario: Start the ticket's new chat on the ticket's session
+
+*Given* billing-report is open in its own worktree and no chat works on it
+*When* the main chat starts a new chat for billing-report in that worktree
+*Then* the new chat's first step is to switch to the session billing-report
+*And* its chat bar shows billing-report, not main
+
+#### Scenario: Switching a chat in a ticket's worktree always opens that ticket's session
+
+*Given* billing-report is open in its own worktree
+*When* a chat in that worktree switches session, naming no session, main, or another ticket
+*Then* the session it opens is billing-report
+*And* when it named another session, it is told that its worktree belongs to billing-report
+
+#### Scenario: Refuse to switch a chat to a session nobody has
+
+> Test: unit: space/session/current_session_spec.py 'that a chat switches to a name no session has'.
+
+> Evidence: exploratory-testing question gizmo-10, answered 2026-11-23: a switch to an unknown name is refused unless the person asked for a new session.
+
+*Given* the repository has the sessions main and billing-report
+*When* a chat switches to billng-report
+*Then* the switch is refused, naming main and billing-report as the sessions there are
+*And* no session folder or card is made for billng-report
+*And* the chat keeps the session it had open
+*When* the chat switches to billng-report, asking for a new session
+*Then* billng-report is made and is the chat's open session
+
+#### Scenario: Make a session asked for by a name nobody has
+
+> Test: unit: space/session/current_session_spec.py 'that asks for it to be made'.
+
+> Evidence: `OpenSessions.switch` (space/session/open_sessions.py): with create, a name no session has is made by `Sessions.create`, which writes its session.json, and opened for the chat; the board shows every work session as a ticket (Display Ticket Card).
+
+*Given* the [repository](../../../space/kanban/.context/kanban-model.md#repo) has the [sessions](../../../space/kanban/.context/kanban-model.md#session) main and billing-report
+*When* a chat switches to pet-visits, asking for a new session (sessions.switch name=pet-visits create=true)
+*Then* .sessions/pet-visits holds pet-visits' session.json
+*And* the board shows pet-visits as a [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card)
+*And* pet-visits is the chat's open session
 
 ## Story: Close Active Session
 
@@ -270,14 +317,6 @@ section: body
 *Then* nothing is left uncommitted  
   *And* the checkout is back on main
 
-#### Scenario: Offer to commit a branch open in its worktree
-
-> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
-
-*Given* checkout-flow is the active ticket, its branch open in its own worktree  
-*When* the Person closes checkout-flow  
-*Then* the close dialog offers a handoff, and to commit and push checkout-flow
-
 #### Scenario: Close a session whose work is on main
 
 > From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
@@ -308,6 +347,16 @@ section: body
 *Then* the checkout is back on main  
   *And* main is the active ticket
 
+## Story: Protect Work When Closing Session
+
+#### Scenario: Offer to commit a branch open in its worktree
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
+
+*Given* checkout-flow is the active ticket, its branch open in its own worktree  
+*When* the Person closes checkout-flow  
+*Then* the close dialog offers a handoff, and to commit and push checkout-flow
+
 #### Scenario: Leave what the repository's own folder holds uncommitted out of the close
 
 > Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is closed with its branch merged while the clone's own folder holds an edit nobody committed'.
@@ -320,6 +369,22 @@ section: body
 *Then* main on origin holds checkout-flow's work
 *But* main on origin does not hold the edit to README.md
 *And* that edit is still uncommitted in the repository's own folder
+
+#### Scenario: Warn that deleting a worktree without a commit loses its work
+
+> Test: heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is closed with only its worktree deleted while that worktree holds work nobody committed'.
+
+> Evidence: exploratory-testing question gizmo-12, answered 2026-11-23: a close does only what was picked, and warns that uncommitted work will be lost.
+
+*Given* checkout-flow is open in its own worktree
+*And* that worktree holds a change to README.md and a new file notes.txt that nobody committed
+*When* the Person asks what closing checkout-flow can do
+*Then* closing warns that deleting the worktree without a commit loses the work in README.md and notes.txt
+*When* the Person closes checkout-flow, deleting only its worktree
+*Then* nothing is committed on the checkout-flow branch
+*And* nothing of checkout-flow is pushed to origin
+*And* the worktree folder is gone
+*And* the close's answer names README.md and notes.txt as the work that went with it
 
 #### Scenario: Keep the ticket open when its branch does not merge into main
 
@@ -343,11 +408,22 @@ section: body
 
 *Given* checkout-flow is open in its own worktree
 *And* a running program works in that worktree's folder
-*When* the Person closes checkout-flow, deleting its worktree
+*When* the Person closes checkout-flow, committing, pushing, and deleting its worktree
 *Then* the board says the worktree could not be removed, naming its folder
 *And* checkout-flow's work is committed on its branch on origin
 *When* that program has ended and the Person activates checkout-flow
 *Then* checkout-flow has its own worktree again
+
+#### Scenario: Refuse to close main
+
+> Test: unit: space/session/session_spec.py 'that is main and is closed'.
+
+> Evidence: exploratory-testing question gizmo-11, answered 2026-11-23: session.close on main is refused as ticket.close is.
+
+*Given* main is the active session
+*When* the Person closes main's session
+*Then* the close is refused, saying main is the default session and stays open
+*And* main is still the active session
 
 ## Story: Move Ticket
 
@@ -433,7 +509,7 @@ section: body
 *When* the Person selects checkout-flow
 *Then* the details read Latest handoff: .sessions/checkout-flow/handoff-20261101T120000.md
 *When* the Person opens the handoff
-*Then* the files panel shows the handoff in a tab with its text # Handoff
+*Then* the Files app opens on the handoff, its text # Handoff
 
 #### Scenario: Say a ticket has no handoff
 
@@ -457,7 +533,7 @@ section: body
 *Given* Active session only is on
 *And* billing-report is not the active [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card)
 *When* the Person opens billing-report's files
-*Then* the files panel lists billing-report's files
+*Then* the Files app opens on billing-report's files
 *When* the Person moves billing-report to Specification
 *Then* billing-report moves to Specification
 *And* Activate stays on for billing-report
@@ -495,6 +571,18 @@ section: body
 *When* the Person adds the backlog item Gift cards with the text Sell gift cards.  
 *Then* the Backlog shows Gift cards with the text Sell gift cards.
 
+#### Scenario: Keep Add off with no title
+
+> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.py`, generated 2026-11-16 from the story test's code.
+
+*Given* the new backlog item form is open  
+  *But* the Person has typed no title  
+*When* the Person tries to add the item  
+*Then* Add stays off  
+  *And* no [backlog item](../../../.context/kanban-model.md#backlogitem--card) is written
+
+## Story: Start Backlog Item
+
 #### Scenario: Start a backlog item in a chosen folder
 
 > From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer-ticket-sessions.story.shared.py`, generated 2026-11-16 from the story test's code.
@@ -528,16 +616,6 @@ section: body
 *Then* sign-up is back on the board with its session log and session.json  
   *But* no new ticket is opened
 
-#### Scenario: Keep Add off with no title
-
-> From `story_tests/move-work-forward-on-session-board/steer-ticket-sessions/add-backlog-item/add_backlog_item_story.test.py`, generated 2026-11-16 from the story test's code.
-
-*Given* the new backlog item form is open  
-  *But* the Person has typed no title  
-*When* the Person tries to add the item  
-*Then* Add stays off  
-  *And* no [backlog item](../../../.context/kanban-model.md#backlogitem--card) is written
-
 ## Story: Delete Ticket Branch
 
 #### Scenario: Delete the branch on closing without merging it
@@ -568,6 +646,7 @@ section: body
   *But* that branch is not checked out  
 *When* the Person asks what closing checkout-flow can do  
 *Then* closing offers to delete checkout-flow's branch  
+  *But* closing offers no commit or push of main  
 *When* the Person closes checkout-flow, deleting its branch  
 *Then* the checkout-flow branch is gone  
   *And* checkout-flow shows in Complete

@@ -64,9 +64,11 @@ section: body
 
 #### Scenario: Opening a node shows one level of its children
 
+Changed on 2026-11-22: the graph now records each class another class's operations create, call, or read (a `dependsOn` edge between classes), so Ticket, whose Ticket.delete is handed Board and calls Board.reread, shows a dependsOn group beside its operations, as every node shows its relationship groups (Follow Relationships Under Node In Files App). The group is one level of Ticket's children like its operations, and what it holds stays hidden until it is opened.
+
 *Given* the Files app shows checkout-flow's graph with the Clean Engineering tree collapsed  
 *When* the Person opens Ticket  
-*Then* Ticket shows its operations, such as Ticket.activate and Ticket.close  
+*Then* Ticket shows its operations, such as Ticket.activate and Ticket.close, and its dependsOn group, for the Board it depends on  
   *But* their own children stay hidden until they are opened
 
 #### Scenario: Each node shows the mark of its kind
@@ -91,11 +93,23 @@ section: body
 *When* the Person opens Ticket.delete  
 *Then* Ticket.delete shows an invokes group holding Board.reread
 
-#### Scenario: Selecting a related node opens its file beside the open one
+#### Scenario: An operation lists its metrics, each with its value and its limit
+
+Decided by the person on 2026-11-22: under a function, a class or a module the tree shows one group named metrics, beside the relationship groups, holding each fact a limit rule of Clean Engineering reads there, with its plain-English name, its value and its limit. The group shows in a project whose `.context/config.json` has a `code_measures` section. Browser test: `explore-graph-in-files-app.story.ui_e2e_spec.py`; what the group holds for each node type: `cdd_guidance/practices/clean_engineering/measures/metrics_group_spec.py`.
+
+*Given* the Files app shows checkout-flow's graph with Ticket opened, in a project whose config has a `code_measures` section  
+*When* the Person opens Ticket.delete and its metrics group  
+*Then* the metrics group holds the lines of Ticket.delete, 5, with the limit 50  
+  *And* the parameters Ticket.delete takes, 1, with the limit 3
+
+#### Scenario: Selecting a related node opens the related node alone, in its own file
+
+Decided by the person on 2026-11-20 (round 3 of exploratory testing, r3-lens-08): selecting a parent shows the parent in its file, where its children can be opened in place; selecting a child, including a member under a relationship group such as invokes, shows only the child, in the child's own file. The page had opened the node that holds the group instead, so a relationship could not be followed. Browser test: `explore-graph-in-files-app.story.ui_e2e_spec.py`; the page: `harness/files_app/app/files/files-graph.spec.ts`.
 
 *Given* Ticket.delete is selected and ticket.py is open  
 *When* the Person selects Board.reread under Ticket.delete's invokes  
-*Then* board.py opens beside ticket.py, at Board.reread
+*Then* board.py opens at Board.reread  
+  *But* ticket.py, which holds Ticket.delete, is no longer open
 
 ## Story: Filter Graph By Node Type And Connector In Files App
 
@@ -246,7 +260,7 @@ Requested 2026-11-16 by the person: "I can't find a single instance of code fold
 
 #### Scenario: A call inside a folded method opens in place once the method is unfolded
 
-Requested 2026-11-16 by the person: "I can't find a single instance of code folding where it's supposed to happen". In harness/diagnostics/app.py, opened from the graph, AppServer.restart's line `if not self.stop():` opened AppServer.stop 0 px tall: opening the file folds every block, the `if` block's own body stayed folded once restart was unfolded, and Monaco gives no height to a view zone whose next line a fold hides. The page and Monaco's view zones: `harness/graph/app/app.test.tsx`; the real editor is checked by hand in the Files app.
+Requested 2026-11-16 by the person: "I can't find a single instance of code folding where it's supposed to happen". In harness/apps/app.py, opened from the graph, AppServer.restart's line `if not self.stop():` opened AppServer.stop 0 px tall: opening the file folds every block, the `if` block's own body stayed folded once restart was unfolded, and Monaco gives no height to a view zone whose next line a fold hides. The page and Monaco's view zones: `harness/graph/app/app.test.tsx`; the real editor is checked by hand in the Files app.
 
 *Given* the Files app shows ticket.py from the graph with Ticket.delete folded, and the graph is read  
 *When* the Person unfolds Ticket.delete and opens the call `self.close()`, whose `if` block is still folded  

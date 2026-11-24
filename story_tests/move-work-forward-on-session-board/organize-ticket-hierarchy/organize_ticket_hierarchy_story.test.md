@@ -285,7 +285,7 @@ enter-card-details.reassign_parent(None)
 *When* the Person starts Gift cards as a child of checkout-flow
 
 ```realization
-BoardReads.backlog_item("Gift cards")
+BoardReads.backlog_item_called("Gift cards")
   <- Gift cards
 CardPlacement.ticket("checkout-flow")
   <- checkout-flow

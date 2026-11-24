@@ -35,7 +35,7 @@ section: body
 | Source | Note |
 |--------|------|
 | `.sessions/chat-ui-defects/chat-ui-defects.md` | Observed 2026-11-07: the Files button read story-map.md and story-map.drawio into the chat, over a 96,711 character session.read_file answer; files open in a window of their own, as the board's do |
-| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/view-fidelity-files/view_fidelity_files_story.test.ts` | the story test that plays these scenarios |
+| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/view-fidelity-files/view_fidelity_files_story.test.ts` (removed in 8c56ab052) | the stubbed story test these scenarios were written for; no test plays them now |
 
 #### Scenario: Open the files beside the chat, never in it
 
@@ -191,3 +191,19 @@ Intended: the request names no refusal; a name that is no pattern would otherwis
 
 Evidence still missing: the chat bar's TypeScript story tests were removed in commit 8c56ab052, so this story's drawing is checked by eye on the live chat bar; its icons and choices come from the Ticket, whose answers the Python acceptance tests check.
 
+## Story: Choose Session Practices
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `harness/chat-ui/pane/hooks/chat-bar/session-card-view.tsx` `FidelityCellView` | observed: one button holds the fidelity's coloured square and its name, and its press calls `toggleGuidance` for the fidelity's practice (`session.toggle_guidance`, part practice) |
+| `.sessions/chat-ui-defects/chat-ui-defects.md` | Observed 2026-11-07: in the card's FIDELITY list only the fidelity's name could be pressed; the coloured square and the whole line, status text included, pick that fidelity too. Settled 2026-11-22: the press turns the fidelity's practice on or off, and Select Fidelity keeps picking a fidelity from the dots on the line |
+
+#### Scenario: Turn a fidelity's practice on or off from its square and name
+
+*Given* the session card for checkout-flow is open, with Clean Engineering on for the session  
+*When* the Person presses the square or the name of clean-engineering-model  
+*Then* Clean Engineering is turned off for checkout-flow, and a second press turns it on again  
+  *And* the press covers the square and the name, not the state after them  
+  *And* the state of a fidelity with violations is a button of its own, whose press opens the validation report

@@ -58,6 +58,30 @@ Seed state from `space/kanban/session_board_examples.py`, which the shared stori
 *Then* Add stays off
 *And* no [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) is written
 
+#### Scenario: Refuse an idea whose title another idea's file has
+
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-13. space/kanban module-context: a backlog item's file is the only copy of the idea.
+
+*Given* the Backlog keeps the idea Gift cards, with the text Sell gift cards.
+*When* the Person adds an idea titled Gift cards with another text
+*Then* the board says the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md
+*And* that file still says Sell gift cards.
+
+#### Scenario: Refuse an idea whose title gives its file no name
+
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-13.
+
+*Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows the Backlog
+*When* the Person adds an idea whose title is empty, or 日本語
+*Then* the board says the title gives no name
+*And* no file named .md is written in the Backlog
+
+## Story: Start Backlog Item
+
 #### Scenario: Start a backlog item in a chosen folder
 
 *Given* the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Gift cards is in the Backlog
@@ -86,28 +110,6 @@ Seed state from `space/kanban/session_board_examples.py`, which the shared stori
 *When* the Person starts Sign up
 *Then* sign-up is back on the board with its session log and session.json
 *But* no new ticket is opened
-
-#### Scenario: Refuse an idea whose title another idea's file has
-
-> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
-
-> Evidence: exploratory-testing defect gizmo-13. space/kanban module-context: a backlog item's file is the only copy of the idea.
-
-*Given* the Backlog keeps the idea Gift cards, with the text Sell gift cards.
-*When* the Person adds an idea titled Gift cards with another text
-*Then* the board says the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md
-*And* that file still says Sell gift cards.
-
-#### Scenario: Refuse an idea whose title gives its file no name
-
-> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
-
-> Evidence: exploratory-testing defect gizmo-13.
-
-*Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows the Backlog
-*When* the Person adds an idea whose title is empty, or 日本語
-*Then* the board says the title gives no name
-*And* no file named .md is written in the Backlog
 
 #### Scenario: Refuse to start an idea whose name a ticket already has
 
@@ -187,7 +189,7 @@ pet-visits.edit_text("Book a visit for a pet.")
 *When* the Person edits Gift cards' text to Sell gift cards at the till.
 
 ```realization
-BoardReads.backlog_item("Gift cards")
+BoardReads.backlog_item_called("Gift cards")
   <- Gift cards
 Gift cards.edit_text("Sell gift cards at the till.")
   <- Gift cards with the text Sell gift cards at the till.
@@ -196,6 +198,22 @@ Gift cards.edit_text("Sell gift cards at the till.")
 *Then* Gift cards' file, .sessions/_backlog/gift-cards.md, holds Sell gift cards at the till.
 *And* the Backlog shows Gift cards with the text Sell gift cards at the till.
 
+#### Scenario: Open a backlog item's text in the Files app
+
+> Test: browser: maintain-tickets.story.ui.spec.ts. The Files app reads every file through a session; a backlog item has none, so its file opens through main's, the board's default session, as a ticket's file opens through its own.
+
+> Evidence: requested 2026-11-23: a backlog item's text is shown in the Files app, as an in-progress ticket's is. Observed before it: the link under a backlog item's text opened the file in the app the computer opens markdown files with (`BacklogItem.open_file`).
+
+*Given* the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Gift cards has the text Sell gift cards.
+*When* the Person opens Gift cards' file from its card
+
+```realization
+EditorAppClient.openFilesOn(main, { folder: 'session', file: '.sessions/_backlog/gift-cards.md' })
+  -> App.open("Files")
+  <- the Files app, opened on .sessions/_backlog/gift-cards.md
+```
+
+*Then* the Files app opens .sessions/_backlog/gift-cards.md
 
 #### Scenario: Edit a child's text inside its parent
 
@@ -246,7 +264,7 @@ sign-up.move_before(pet-visits)
 *When* the Person moves Returns and refunds above Gift cards
 
 ```realization
-BoardReads.backlog_item("Returns and refunds")
+BoardReads.backlog_item_called("Returns and refunds")
   <- Returns and refunds
 Returns and refunds.move_before(Gift cards)
   <- the Backlog with Returns and refunds above Gift cards
@@ -291,6 +309,7 @@ Returns and refunds.move_before(Gift cards)
 |--------|------|
 | `.sessions/session-board/ticket-enhancements.md` (commit b08bfe47e) | "Delete a ticket"; Delete on a card removes the ticket and its session folder |
 | `space/kanban/ticket.py:352` | Observed: Archive is the nearest operation; there is no delete |
+| Request, 2026-11-23 | A selected Backlog card offers Delete, which removes the item (its markdown file, or its folder for a parent) after one confirmation and redraws the Backlog without it. Observed before it: no delete on `BacklogItem`, and a backlog card offers only Edit text and Start |
 
 The realizations name the operations these scenarios need; none of them exists yet, so each is Intended.
 
@@ -350,6 +369,38 @@ CardPlacement.ticket("no-such-ticket")
 *And* .sessions/pet-visits still holds its session.json and session.log
 *And* pet-visits is still on the board
 
+#### Scenario: Delete a backlog item and its file
+
+> Evidence: requested 2026-11-23, after the person had to delete share-read-only-projects-in-the-board-tools-spec from `.sessions/_backlog/` by hand: a selected Backlog card offers Delete, which removes the item after one confirmation.
+
+*Given* the Backlog [column](../../../space/kanban/.context/kanban-model.md#column) shows the [backlog items](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Gift cards and Returns and refunds
+*When* the Person deletes Gift cards
+
+```realization
+BoardReads.backlog_item_called("Gift cards")
+  <- Gift cards
+Gift cards.delete()
+  -> self._place.remove()
+  <- the Backlog without Gift cards
+```
+
+*Then* the Backlog shows Returns and refunds and not Gift cards
+*And* .sessions/_backlog/gift-cards.md is gone
+
+#### Scenario: Delete a parent backlog item with its children
+
+*Given* the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Gift cards holds its child Returns and refunds
+*When* the Person deletes Gift cards
+*Then* the Backlog shows neither Gift cards nor Returns and refunds
+*And* .sessions/_backlog/gift-cards is gone
+
+#### Scenario: Delete a child backlog item, keeping its parent
+
+*Given* the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Gift cards holds its child Returns and refunds
+*When* the Person deletes Returns and refunds
+*Then* the Backlog shows Gift cards with no children
+*And* .sessions/_backlog/gift-cards/gift-cards.md is still there
+
 ## Story: Tag Ticket Session
 
 ### Evidence
@@ -391,3 +442,60 @@ pet-visits.tag("urgent")
 ```
 
 *Then* pet-visits' card shows the tags billing and urgent
+
+## Story: Keep Every Change To Session Record
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| The person, 2026-11-22 | "one lock for every session.json update, so two chats or processes changing one session's record at once each keep their change" |
+| `space/session/session_record.py` `SessionRecord.update`, before the fix | it read the record, changed it and wrote it with nothing held, so the later of two writes dropped the earlier: four processes each recording twelve modules' test tiers left 12 of the 48 (`space/session/session_record_processes_heavy_spec.py`, run before the fix) |
+| `harness/installation/json_file.py` `JsonFile.held` | "a killed holder blocks nobody, and the lock file it leaves holds nothing" |
+
+#### Scenario: Keep the changes two chats make to one ticket at the same moment
+
+Observed (`space/session/session_record_processes_heavy_spec.py`, four real processes; `space/session/session_record_spec.py`, four callers in one process).
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits is tagged billing
+*When* one chat tags pet-visits' [session](../../../space/kanban/.context/kanban-model.md#session) with urgent and another tags it with legal at the same moment
+*Then* pet-visits' `session.json` holds the tags billing, urgent and legal
+  *And* neither chat's change is refused
+
+#### Scenario: Make a change wait for the change that holds the record
+
+Observed (`session_record_spec.py`).
+
+*Given* a change to pet-visits' title holds its `session.json`
+*When* another chat tags pet-visits with urgent before the first change is written
+*Then* the tag waits for the first change
+  *And* `session.json` holds the new title and the tag urgent
+
+#### Scenario: Take the next change at once after the holder is killed
+
+Observed (`session_record_processes_heavy_spec.py`).
+
+*Given* a process holding pet-visits' `session.json` for a change is killed before it writes
+*When* another chat tags pet-visits with urgent
+*Then* `session.json` held what it held before the killed change
+  *And* the tag is kept at once, not after the wait a held record allows
+
+#### Scenario: Refuse to change a session.json left half written
+
+Observed (`session_record_processes_heavy_spec.py`, `session_record_spec.py`).
+
+*Given* pet-visits' `session.json` ends partway through its title
+*When* a chat tags pet-visits with urgent
+*Then* the change is refused, naming `session.json` as not a readable JSON object
+  *And* the file is left as it is for a person to repair, never read as empty and written over
+
+#### Scenario: Change the record itself when a killed writer left its staged text beside it
+
+Observed (`session_record_spec.py`).
+
+*Given* a killed writer left `session.json.4242.1.tmp`, half written, beside pet-visits' `session.json`
+*When* a chat tags pet-visits with urgent
+*Then* `session.json` holds its title and the tag urgent
+
+- **A holder that never lets go:** a change that waits 30 seconds for a live holder is refused, naming the file as held by another caller (`JsonFile.held`, *JsonFileBusy*, covered for the mechanism in `harness/installation/json_file_spec.py`); the record is not changed.
+- **A session with no folder yet:** a session with no folder yet has its folder made by the first change, which holds the lock file made beside the new `session.json`.

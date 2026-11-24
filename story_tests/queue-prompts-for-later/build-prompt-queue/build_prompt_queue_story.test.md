@@ -15,7 +15,7 @@ The person puts work on the chat's prompt queue and shapes it before it runs. Th
 - ++queued prompt++ — one prompt on the queue, drawn as a card: its id, its text, and whether it is done.
 - ++draft++ — the text in the chat's prompt box, not yet sent.
 - ++goal++ — a queued prompt seen as the goal its tasks, the steps under it, work towards.
-- ++queue archive++ — the folder that keeps a JSON copy of every prompt clear or remove took off: the session's `queue-archive` folder, or beside the chat's queue file when the chat works in no session.
+- ++queue archive++ — the folder that keeps a JSON copy of every prompt clear, remove or flush took off, and of the whole queue file each time it was flushed: the session's `queue-archive` folder, or beside the chat's queue file when the chat works in no session.
 - ++attachment++ — an image or document pasted in a queued draft, kept as a file beside its prompt.
 - ++failure line++ — CDD's one failure line above the chat bar, with its Fix and ✕, which shows the queue's latest failure.
 
@@ -70,38 +70,6 @@ The person puts work on the chat's prompt queue and shapes it before it runs. Th
 | --- | --- |
 | ++missing prompt++ | z, an id the queue does not hold |
 
-### callers changing the queue at once
-
-| caller | process | change |
-| --- | --- | --- |
-| ++stable lane caller++ | the stable lane's cdd server | queues ++Run the heavy tier++ |
-| ++dev lane caller++ | the dev lane's cdd server | queues ++Run the e2e tier++ |
-| ++finishing caller++ | a third process | marks ++Write the scenarios++ (a) done |
-| ++reading caller++ | a fourth process | reads the queue while the others change it |
-| ++killed caller++ | a process ended while it held the queue's file for a change | none |
-
-### queue files a person must repair
-
-| queue file | holds |
-| --- | --- |
-| ++cut-off file++ | the first half of the file that held ++Write the scenarios++ and ++Run the unit tier++ |
-| ++empty file++ | nothing |
-| ++list file++ | `[1, 2]`, a list in place of a queue |
-| ++marked file++ | the queue of ++Write the scenarios++ and ++Run the unit tier++, saved by an editor with a byte-order mark at its start |
-| ++no-list file++ | `{"prompts": null}` |
-| ++no-id file++ | ++Write the scenarios++ (a), then a card with the text Run the unit tier and no id |
-| ++shared-id file++ | two cards with the id a |
-
-### chat ids
-
-| chat id | value |
-| --- | --- |
-| ++chat-1++ | chat-1, the id of the chat whose folder is C:/chats/chat-1 |
-| ++escaping chat id++ | `..\escape-chat`, a path to a folder beside the chats folder |
-| ++separated chat id++ | `chats/chat-2`, which holds a folder separator |
-| ++drive chat id++ | `C:chat-2`, which names a drive |
-| ++empty chat id++ | only spaces, from a call that came from no chat |
-
 ## Story: Queue Draft Prompt
 
 #### Scenario: Queue the draft as it is at the bottom of the queue
@@ -131,32 +99,6 @@ The person puts work on the chat's prompt queue and shapes it before it runs. Th
 *And* the prompt box holds only spaces
 *When* the person queues the draft as it is
 *Then* the queue still holds only ++Write the scenarios++
-
-#### Scenario: Keep every caller's change when several change the queue at the same moment
-
-*Given* the chat's prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
-*When* ++stable lane caller++, ++dev lane caller++ and ++finishing caller++ change the queue at the same moment
-*Then* every caller is answered without a refusal
-*And* the queue holds ++Write the scenarios++, done, then ++Run the unit tier++, then ++Run the heavy tier++ and ++Run the e2e tier++ in the order their callers took their turn
-
-#### Scenario: Show a reader the whole queue while another caller changes it
-
-*Given* the chat's prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
-*When* ++reading caller++ reads the queue while ++stable lane caller++ changes it
-*Then* ++reading caller++ is shown ++Write the scenarios++ and ++Run the unit tier++ at the front of the queue every time it reads
-
-#### Scenario: Take the next change after a caller holding the queue's file is killed
-
-*Given* ++killed caller++ held the queue's file for a change when its process ended
-*When* the agent queues ++Run the heavy tier++
-*Then* the queue holds ++Run the heavy tier++ at its bottom
-
-#### Scenario: Say the queue's file is held when a change waits for it in vain
-
-*Given* another caller holds the queue's file for a change and does not let go
-*When* the agent queues ++Run the heavy tier++
-*Then* the agent is told the queue's file is held for a change by another caller, with the file's path
-*And* the queue is as it was
 
 ## Story: Place Draft Into Plan
 
@@ -234,6 +176,15 @@ Intended: built (`planFromConversation`) but no test or run shows it; the eviden
 *Given* the chat's prompt queue holds ++Write the scenarios++
 *When* the queue attaches ++screenshot.png++ to ++missing prompt++
 *Then* it is told no prompt z is on the queue
+
+#### Scenario: Delete a prompt's files when it leaves the queue
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a), with ++screenshot.png++ attached
+*When* the person removes ++Write the scenarios++
+*Then* the file ++screenshot.png++ was saved as is deleted
+*And* the queue archive's copy of ++Write the scenarios++ names that file as deleted, no longer as attached
+
+Also when the person clears the queue with ++Write the scenarios++ done. A file the card names outside the chat's attachments folder is not the queue's, so it stays.
 
 #### Scenario: List each prompt's files for the agent to open
 
@@ -345,81 +296,36 @@ Intended: built (`movePrompt`, `prompt-queue.move`); the evidence missing is a t
 *Then* the queue holds only ++Run the unit tier++
 *And* the queue archive holds one copy, holding ++Write the scenarios++
 
-#### Scenario: Clear every prompt when none is done
+#### Scenario: Clear nothing when no prompt is done
+
+Answered 2026-11-23 (sparky-10): clear only ever takes off done prompts, so pressing it a second time never throws away work a robot may be doing.
 
 *Given* the chat's prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b), neither done
 *When* the person clears the queue
-*Then* the queue is empty
-*And* the queue archive holds one copy, holding ++Write the scenarios++ and ++Run the unit tier++
+*Then* the queue still holds ++Write the scenarios++, then ++Run the unit tier++
+*And* the queue archive holds no copy
 
 #### Scenario: Keep the archive in the session's work folder
 
 *Given* the chat works in the session simple-queue, whose work folder is .sessions/simple-queue in the ticket's worktree
 *And* its prompt queue holds ++Write the scenarios++
-*When* the person clears the queue
+*When* the person clears the queue once ++Write the scenarios++ is done
 *Then* .sessions/simple-queue/queue-archive in the ticket's worktree holds one copy
 
-## Story: Refuse Queue File That Holds No Queue
+## Story: Flush Prompt Queue
 
-The queue's file is a person's to repair once it is damaged: `JsonFileUnreadable` promises that nothing is written over such a file. Evidence: `tools/prompt_queue/prompt_queue_spec.py`, `harness/installation/json_file_spec.py`.
+Requested 2026-11-23 (the person): a flush button that keeps a timestamped copy of the queue file, then takes the finished cards off. Evidence: `tools/prompt_queue/prompt_queue_spec.py`, `prompt_queue_heavy_spec.py`, the plugin tests "flush keeps a copy of the queue as it stood, then takes the finished cards off" and "flush with nothing finished keeps the copy and every card", and `flush-prompt-queue/flush_prompt_queue_story.test.py`.
 
-#### Scenario: Read a queue file saved with a byte-order mark
+#### Scenario: Flush keeps a copy of the whole queue file, then takes the done prompts off
 
-*Given* the chat's queue file is ++marked file++
-*When* the agent queues ++Run the heavy tier++
-*Then* the queue holds ++Write the scenarios++, ++Run the unit tier++, then ++Run the heavy tier++
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a), done, then ++Run the unit tier++ (b)
+*When* the person flushes the queue
+*Then* the queue archive holds a copy of the whole queue file as it stood, named prompt-queue and the time it was flushed
+*And* the queue holds only ++Run the unit tier++
 
-#### Scenario: Refuse to show a queue whose file is damaged
+#### Scenario: Flush with no prompt done keeps the copy and takes nothing off
 
-*Given* the chat's queue file is ++cut-off file++
-*When* the agent asks for the queue
-*Then* the agent is told the prompt queue file does not hold a prompt queue, with the file's path
-*And* the agent is not shown an empty queue
-
-Also for ++empty file++ and ++list file++.
-
-#### Scenario: Write nothing over a queue file that is damaged
-
-*Given* the chat's queue file is ++cut-off file++
-*When* the agent queues ++Run the heavy tier++
-*Then* the agent is told the prompt queue file does not hold a prompt queue, with the file's path
-*And* the file still holds what it held, for a person to repair
-
-#### Scenario: Refuse a queue file whose prompts are not a list of cards
-
-*Given* the chat's queue file is ++no-list file++
-*When* the agent asks for the queue
-*Then* the agent is told the prompt queue file does not hold a prompt queue, with the file's path and what its prompts are
-
-#### Scenario: Refuse a queue file that holds a card with no id
-
-*Given* the chat's queue file is ++no-id file++
-*When* the agent marks a done
-*Then* the agent is told the prompt queue file does not hold a prompt queue, with the file's path and the card that has no id
-*And* ++Write the scenarios++ is not marked done
-
-#### Scenario: Refuse a queue file in which two cards share an id
-
-*Given* the chat's queue file is ++shared-id file++
-*When* the agent marks a done
-*Then* the agent is told the prompt queue file does not hold a prompt queue, with the file's path and the id the two cards share
-*And* neither card is marked done
-
-## Story: Name Queue By Chat Id
-
-A chat's queue is kept in that chat's own folder under the chats folder, so the chat a call names is an id, one folder's name. Evidence: `tools/prompt_queue/prompt_queue_spec.py`, `prompt_queue_heavy_spec.py`.
-
-#### Scenario: Keep a chat's queue in that chat's own folder
-
-*Given* no queue is kept for ++chat-1++
-*When* the agent queues ++Write the scenarios++ on the queue of ++chat-1++
-*Then* the queue's file is kept in the folder of ++chat-1++ under the chats folder
-
-#### Scenario: Refuse a chat id that is a path
-
-*Given* the chats folder holds no folder for ++escaping chat id++
-*When* the agent queues ++Write the scenarios++ on the queue of ++escaping chat id++
-*Then* the agent is told ++escaping chat id++ is not a chat id
-*And* no queue file is written outside the chats folder
-
-Also for ++separated chat id++, ++drive chat id++ and ++empty chat id++.
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b), neither done
+*When* the person flushes the queue
+*Then* the queue archive holds one copy of the whole queue file
+*And* the queue still holds ++Write the scenarios++, then ++Run the unit tier++

@@ -18,7 +18,7 @@ Consolidated on 2026-11-14 from the board's Review Files In Viewer scenarios (th
 - [chat](../../../space/kanban/.context/kanban-model.md#chat): a Claude Code chat whose cdd-board mod checks in. Its queue holds the messages sent to it. A message is done once the chat's turn that worked on it has ended.
 - [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets): the file viewer as an app of its own, on its own server and port, opened beside the chat by a link that names the files to show and the chat that opened it (`harness/files_app/files_app.py`). It never reads the board.
 - [practice](../../../harness/files_app/.context/files-app-model.md#session-practicesessionoutput-python-spacesession): a lens the session works through (Stories, DDD, UX, Clean Engineering, BDD), on or off for the session, with its own colour (`practice_session_output.py`).
-- file manager: the session's reader and writer of the files under its roots (`space/session/file_manager.py`).
+- file manager: the session's reader and writer of the files under its roots (`space/session/files/file_manager.py`).
 - [file comment](../../../harness/files_app/.context/files-app-model.md#filecommentsactions-filesfile-comments-actionsts): a comment a person writes on lines of a file, kept in the session's folder. It is not sent, then sent, then processed.
 
 ### Evidence
@@ -75,6 +75,29 @@ A chat working in a repository other than the CDD checkout opens the Files app o
 *When* the Person opens the session's folder from *checkout-chat*'s chat bar
 *Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens on *.sessions/checkout-flow*, listing *session.log* and the handoff
 
+#### Scenario: Leave out what a change to session.json leaves beside it
+
+Requested 2026-11-22. Observed (`space/session/files/session_files_spec.py`). The list is built by `SessionFiles.in_folder`, which asks the session's record which files a change leaves beside it (`SessionRecord.is_left_beside`).
+
+*Given* a change to checkout-flow's *session.json* left its lock file *session.json.lock* in *.sessions/checkout-flow*
+*And* a killed writer left its staged text *session.json.4242.1.tmp* there
+*When* the Person opens the session's folder from *checkout-chat*'s chat bar
+*Then* the Files app lists *session.json* and *session.log*
+*But* neither *session.json.lock* nor *session.json.4242.1.tmp* is listed
+*And* a person's own file *notes.lock* in the folder is listed
+
+#### Scenario: Leave out what a change to session.json leaves beside it from the folder tree
+
+Requested 2026-11-22. Observed (`space/session/files/file_manager_spec.py`). The folder tree is listed by `file-manager.list`, which asks the same `SessionRecord.is_left_beside`, so the folder's file list and its tree leave out the same files.
+
+*Given* checkout-flow's practice root holds its session folder *.sessions/checkout-flow*
+*And* a change to *session.json* left its lock file *session.json.lock* there
+*And* a killed writer left its staged text *session.json.4242.1.tmp* there
+*When* the Person opens *.sessions/checkout-flow* in the Files app's folder tree
+*Then* the tree lists *session.json*
+*But* neither *session.json.lock* nor *session.json.4242.1.tmp* is listed
+*And* a person's own file *notes.lock* in the folder is listed
+
 ## Story: Open File From Another Page
 
 #### Scenario: Open the file a page sent the chat
@@ -102,6 +125,24 @@ A chat working in a repository other than the CDD checkout opens the Files app o
 *When* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) opens
 *Then* it lists *story-map.md* as not generated yet
 *And* the Person cannot open it
+
+#### Scenario: List a file whose name holds letters outside ASCII
+
+Found on 2026-11-19 (exploratory testing, pixel-02): git writes such a name in quotes with octal escapes unless asked for NUL-ended entries, so the file was dropped from the list and from the branch's changed files, with no word that a file was left out. Acceptance tests: `harness/git/git_spec.py` for the reading of git's listing; `space/session/files/session_files_heavy_spec.py` and `space/repo/repo_heavy_spec.py` on a real git repository.
+
+*Given* checkout-flow's branch committed *src/ünïcödé_日本.py* in a git project
+*When* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) lists every file under the session's root
+*Then* it lists *src/ünïcödé_日本.py* by the name it has on disk
+*And* the files the session's branch changed name it the same way
+
+#### Scenario: Say so when the project folder the link names is not there
+
+Found on 2026-11-19 (exploratory testing, pixel-04): the page said the cdd server was not connected because `python.exe` was not found, which sent the person to repair a Python and a cdd server that were both fine. Acceptance tests: `harness/files_app/app/files-server.spec.ts` for the Files server and `harness/files_app/app/files/cdd-connection.spec.ts` for every other page's connection; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets)'s link names a project folder that is not there, such as a ticket's worktree removed while its Files tab stayed open
+*When* the Files app opens
+*Then* it says the files did not list because that project folder is not there, naming the folder
+*But* the page holds no word of Python or of the cdd server
 
 ## Story: Open Diagram In Files App
 
@@ -227,11 +268,21 @@ Requested (the person, 2026-11-15): two buttons. All session files lists every f
 *When* the Person lists This session
 *Then* the file bar lists *order.py* alone
 
+#### Scenario: List the files again on each press
+
+Found on 2026-11-19 (exploratory testing, pixel-01): the files were listed once as the page opened, so a file renamed on disk kept its old name in the list until the page was loaded again. Acceptance tests: `harness/files_app/app/files/files-page.spec.ts`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the file bar lists *src/order.py*, and *order.py* was renamed *basket.py* on disk since the page opened
+*When* the Person lists All session files again
+*Then* the file bar lists *src/basket.py*
+*And* lists *src/order.py* no longer as a file to open
+
 ##### Example: another project
 
 *Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) is opened on ++another project++, its link naming design-review's stories-story-map
 *When* the Person lists All session files
-*Then* the file bar lists that project's *story-map.drawio* as the one story map file on disk, not a file of the CDD checkout
+*Then* the file bar lists that project's *story-map.drawio* and *story-map.whiteboard* as the story map files on disk, not a file of the CDD checkout, since a diagram is drawn in draw.io and on a whiteboard
+*And* marks the story map files it does not hold, such as *thin-slice.whiteboard*, as not generated yet
 
 #### Scenario: List this session's own files in a folder with no git
 
@@ -294,6 +345,15 @@ Reported (Nov 18 demo, 2026-11-18): in a plain folder This session listed nothin
 *And* the Stories toggle shows as an outline
 *And* the Files app no longer lists *story-map.md*
 
+#### Scenario: Turn a practice off before any stage is selected
+
+Round 3 of exploratory testing (r3-lens-05): with no stage selected yet the page listed every fidelity its link names, whatever practices were on, so a practice turned off kept its files in the list and its tree in the graph view. The page: `harness/files_app/app/files/files-page.spec.ts`.
+
+*Given* the Files app's link names stories-story-map and ddd-bounded-context, and no stage was selected for checkout-flow yet
+*When* the Person turns DDD off
+*Then* the Files app lists *story-map.md*
+  *But* no longer *bounded-context-map.md*
+
 ## Story: Keep Chat Bar Practices In Sync
 
 #### Scenario: Show a practice turned on in the Files app on the chat bar
@@ -332,11 +392,151 @@ Reported (Nov 18 demo, 2026-11-18): in a plain folder This session listed nothin
 
 #### Scenario: Render a markdown file as the page it describes
 
-Intended: the Files app shows markdown as text today.
+Requested 2026-11-19: scenarios, story maps and domain models are read as pages, and their text is a press away. Markdown is rendered with the `marked` and `DOMPurify` the page already loads with Monaco, so nothing the file holds runs a script. Only the page draws it: `harness/files_app/app/files/file-rendering.spec.ts`.
 
 *Given* checkout-flow's session holds *README.md*, which starts *# Checkout*
 *When* the Person views *README.md*
 *Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *Checkout* rendered as a heading, not as *# Checkout*
+*And* its Rendered toggle is pressed and its Source toggle is not
+*And* a link to a file that is not there keeps the Files app where it is, *README.md* the one open file
+
+#### Scenario: Switch a rendered file to its source and back
+
+*Given* the Files app shows *README.md* rendered
+*When* the Person presses Source
+*Then* the source view shows *README.md*'s text, its first line reading *# Checkout*, with Wrap lines beside the toggle
+*When* the Person presses Rendered
+*Then* the Files app shows *Checkout* as a heading again
+
+#### Scenario: Open a rendered file as source at the lines asked for
+
+The lines of a node selected in the graph view, its comments and its broken rules are marked on the source view's lines, which a rendered page has none of.
+
+*Given* the Person selects, in the graph view, a story of *.context/story-map.md*
+*When* the Files app opens *story-map.md* at that story's lines
+*Then* it opens in the source view with those lines shown, and Rendered a press away
+
+#### Scenario: Render each format the page can draw
+
+*Given* checkout-flow's session holds <file>, reading <text>
+*When* the Person views <file>
+*Then* the Files app shows <rendered>, with Source a press away
+
+| file | text | rendered |
+| --- | --- | --- |
+| *notes/page.html* | `<h1>Checkout</h1><script>parent.hacked = 1</script>` | the page in a frame apart from the Files app, *Checkout* as its heading, its script reaching nothing outside the frame |
+| *design/cart.svg* | `<svg xmlns="http://www.w3.org/2000/svg"><circle r="4"/><script>alert(1)</script></svg>` | the drawing, its circle and no script |
+| *data/cart.json* | `{"items":[1,2]}` | the object laid out two spaces to a level, *"items": [* on its second line |
+| *data/broken.json* | `{"items":` | its text, and a note that it is not valid JSON |
+
+#### Scenario: Walk a generated UX mockup in its frame
+
+Answered by the person on 2026-11-23 (round 3 of exploratory testing, r3-pixel-08): a UX mockup is runnable greybox, so the Files app shows it as a person can walk it. Every HTML page runs its own scripts in a frame of its own, which gives it no origin, so nothing it runs reaches the Files app; the Files server serves the scripts it names from its own folder of the project, under a key the server made for the project, and the Story Demo scripts of the CDD install it names from */practices/ux/story-demo* (`harness/files_app/app/page-files.ts`, `files/page-frames.ts`).
+
+*Given* checkout-flow's session holds *ordering.html*, a mockup the UX mockup fidelity wrote, with its Catalog, Cart and Cart - Saved screens, its Browse button going to the Cart, and its story module *stories/place_order.js* beside it, whose story lists the Product *Tiny Tales*
+*When* the Person views *ordering.html*
+*Then* the Files app shows the mockup with its Site Map Explorer listing *catalog*, *cart* and *cart-saved*
+*When* the Person presses *Browse <all>*
+*Then* the mockup shows the Cart screen
+*When* the Person zooms the mockup in
+*Then* the mockup shows at 110%
+*When* the Person plays the next story step
+*Then* the Catalog's Products list *Tiny Tales*
+*But* nothing the mockup runs reaches the Files app
+
+#### Scenario: Show text in angle brackets that is no HTML tag
+
+Round 3 of exploratory testing (r3-pixel-01): a class model writes a class's stereotypes and what a collection holds in angle brackets, and the page dropped them as HTML tags it did not know. Only the page draws it: `harness/files_app/app/files/file-rendering.spec.ts`.
+
+*Given* checkout-flow's session holds *domain-model.md*, with the heading *#### Cart <<Aggregate Root>> <<Entity>>* and the line *+ carts: Collection<Cart>*
+*When* the Person views *domain-model.md*
+*Then* the Files app shows the heading *Cart <<Aggregate Root>> <<Entity>>* and the line *carts: Collection<Cart>*, as the file writes them
+*But* HTML the file holds in lower case, such as *<details>*, is still drawn as HTML
+
+#### Scenario: Show a file's front matter as its facts, under no heading
+
+Round 3 of exploratory testing (r3-pixel-02): every generated practice file starts with front matter, which the page drew as its biggest heading.
+
+*Given* *story-map.md* starts with the front matter *fidelity: [discovery]*, *artifact: [story-map]*, *format: md* between two *---* rules, then *# Story Map - Bookshop*
+*When* the Person views *story-map.md*
+*Then* the Files app shows the three lines of front matter small above the page
+*And* the page's only heading reads *Story Map - Bookshop*
+
+#### Scenario: Underline a scenario's domain terms and examples
+
+Round 3 of exploratory testing (r3-pixel-09): a scenario marks a domain term and an example with `++`, which the page printed.
+
+*Given* a scenario file's step reads *\*Given\* the Bookshop sells ++Book++ ++Tiny Tales++*
+*When* the Person views it
+*Then* the Files app shows *Book* and *Tiny Tales* underlined, and prints no plus sign
+
+#### Scenario: Keep the levels of an indented tree
+
+Round 3 of exploratory testing (r3-pixel-07): a BDD realization nests its states two spaces a level, each observation's call graph fenced under its state, and the page drew every line at the left edge.
+
+*Given* *bookshop-bdd-realization.md* reads *a shipment*, under it *that has been created for a paid order*, and under that a fenced call graph of two lines
+*When* the Person views it
+*Then* the Files app shows *that has been created for a paid order* indented two spaces under *a shipment*
+*And* the call graph as a block indented four spaces, each of its lines on a line of its own
+
+#### Scenario: Open a callout in place on a rendered page
+
+Answered by the person on 2026-11-20 (round 3 of exploratory testing, r3-pixel-03 to 05): the Rendered view and the Source view both show callouts, and a callout is traversable as the graph tree is. The session answers each file's callouts (`session.file`, Open Linked Sections In Place in `switch_files_app_between_files_and_graph_story.test.md`); the page draws them: `harness/files_app/app/files/rendered-callouts.spec.ts`.
+
+*Given* the Files app shows the story map rendered, its story *Add Book To Cart* linked to its scenario file, whose Given links the domain term *Book* to the domain model
+*When* the Person presses the mark at the end of *Add Book To Cart*'s line
+*Then* the scenario file shows under the story's line, rendered as a page and shaded once, headed by its file and lines
+*When* the Person presses the mark at the end of the Given's line, inside it
+*Then* the *Book* section of the domain model shows under the Given, one shade deeper
+*And* a second press on a mark closes what it opened
+
+#### Scenario: Open what a step observes, then an operation it calls, in place
+
+*Given* the Files app has read the session's graph, and shows the story map rendered with Cross-file on
+*When* the Person opens *Add Book To Cart*'s scenario in place, then the example its Given observes
+*Then* the example's code shows under the Given, with a mark on each line that calls an operation the graph holds
+*When* the Person presses one
+*Then* that operation's code shows under the line that calls it
+
+#### Scenario: Follow a link on a rendered page
+
+Changed by the person's answer on 2026-11-20: a link to another file was left where it was, with nothing to follow.
+
+*Given* the Files app shows the story map rendered
+*When* the Person presses the link *Add Book To Cart*
+*Then* the Files app opens the scenario file at the lines the link names
+*When* the Person presses a link to a web page
+*Then* the web page opens in a tab of its own and the Files app stays where it is
+
+#### Scenario: Say what is not there for a link to a heading or a file that is missing
+
+*Given* a scenario file links *Cart Line* to a heading the domain model does not have
+*When* the Person views it, rendered or as source
+*Then* the line's mark shows as missing, and opened it says *.context/domain-model.md has no heading #cartline-entity*
+*And* pressing the link opens no file
+
+#### Scenario: Show the callouts the file view's filters select
+
+Answered by the person on 2026-11-20: which callouts show follows the file view's filters, the practices chosen and the graph's connectors. Changed the same day, in the third wave: the session decides it, by the filter that narrows the graph view's trees, and the page sends its filters with the read of the file and draws what comes back. What the session answers for each filter: Filter Callouts Like The Graph in `../switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md`. What the page sends, and that it reads its open files again when a filter changes: `harness/files_app/app/files/file-callouts.spec.ts`, `files-page.spec.ts`.
+
+*Given* the Files app shows a scenario file whose Given links the domain model, a file of DDD, and observes an example
+*When* the Person turns DDD off
+*Then* the Given's line no longer carries the callout into the domain model, in the rendered view and the source view alike
+*When* the Person leaves *observes* out of the graph view's connectors
+*Then* the Given's line no longer carries the example it observes
+
+#### Scenario: Follow a link in the source view
+
+*Given* the Files app shows the story map in the source view, *Add Book To Cart*'s line carrying its callout
+*When* the Person presses the link's text with Ctrl held
+*Then* the Files app opens the scenario file at the lines the link names
+*And* Go to file on the open callout does the same
+
+#### Scenario: Show only the source view for a file with no rendered form
+
+*Given* checkout-flow's session holds *order.py*
+*When* the Person views *order.py*
+*Then* the Files app shows it in the source view, with no Rendered or Source toggle
 
 #### Scenario: Scroll a long line sideways
 
@@ -376,6 +576,24 @@ Found on 2026-11-16 (debug report `debug-20261116T225500.md`): a page reaching a
 *When* the Person views *order.py*
 *Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* in the source view, with no callout and no broken rule
 *And* a server answer that is no file at all, such as the text of a call it cannot run, is shown and told as *order.py* not opening, and the page keeps working
+
+#### Scenario: Say so when a listed file is gone
+
+Found on 2026-11-19 (exploratory testing, pixel-01): a file deleted or moved on disk after the page listed it opened as one empty line in a live editor, exactly as an empty file opens, so the next save would bring it back empty. Acceptance tests: `space/session/session_graph_spec.py` and `space/session/files/file_manager_spec.py` for what the session answers; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the file bar lists *src/order.py*, and *order.py* was deleted on disk since the page listed it
+*When* the Person views *order.py*
+*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) says *src/order.py* did not open because nothing is at that path, naming the path and the project it was read from
+*And* shows no editor for it, so nothing can be saved over it
+
+#### Scenario: Refuse a file longer than the viewer shows
+
+Found on 2026-11-19 (exploratory testing, pixel-03): the source view is as tall as its file and draws every line, so a file of 90,000 lines left the page answering after twelve seconds and one of 360,000 crashed its tab, with every open file and comment not yet sent. The viewer shows at most 30,000 lines (`VIEWER_SHOWS_LINES` in `space/session/files/session_file.py`). Acceptance tests: `space/session/session_graph_spec.py`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the file bar lists *src/big.py*, which has 90,000 lines
+*When* the Person views *big.py*
+*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) says *src/big.py* did not open, naming its lines and the most the viewer shows
+*And* the next file the Person views opens as before
 
 ## Story: Fold Classes And Operations
 
@@ -494,22 +712,55 @@ Requested (the person, 2026-11-15): Rules and Cross-file toggles at the top, off
 
 #### Scenario: Save the edited text to the file on disk
 
-Intended in the Files app: the board's files panel does it, the Files app is read-only today.
+Intended in the Files app: the board's files panel did it until 2026-11-21, when that panel was removed (design proposal 24); the Files app is read-only today, so no page saves an edited file.
 
-*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow
+*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow, read with its version
 *And* the Person has edited line 14 to read *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*
-*When* the Person saves the file
+*When* the Person saves the file with the version it was read with
 *Then* *order.py* on disk reads that line 14
 *And* the source view is read-only again, showing the saved text
 
 #### Scenario: Save a file into the session's own folder, naming the session by its name
 
-Requested 2026-11-16: a chat in checkout-flow's worktree ran the debug skill, which writes its report as *debug/debug-{time}.md* in the session's folder with session.write_file. The tool refused the session's name, which sessions.switch had opened it by, and then refused the session's folder, which sits in the main checkout's *.sessions*, outside the worktree and its practices' folders. Only the session's own folder is added: a path outside it and outside the session's roots is still refused. Realized by `space/session/session_files_spec.py`.
+Requested 2026-11-16: a chat in checkout-flow's worktree ran the debug skill, which writes its report as *debug/debug-{time}.md* in the session's folder with session.write_file. The tool refused the session's name, which sessions.switch had opened it by, and then refused the session's folder, which sits in the main checkout's *.sessions*, outside the worktree and its practices' folders. Only the session's own folder is added: a path outside it and outside the session's roots is still refused. Realized by `space/session/files/session_files_spec.py`.
 
 *Given* checkout-flow works in its ticket's worktree, its session folder *.sessions/checkout-flow* in the main checkout
 *When* an agent saves *debug/debug-20261116T225500.md* in checkout-flow's folder with session.write_file, naming the session *checkout-flow*
 *Then* the report is on disk in *.sessions/checkout-flow/debug*
 *But* a file named outside the session's folder and its roots is still refused
+
+#### Scenario: Refuse to save over the session's own session.json
+
+Requested 2026-11-22 (the person: the session's record has one writer). Observed (`space/session/files/session_files_spec.py`). Every change to *session.json* holds the file from its read to its write (Keep Every Change To Session Record), and a whole-file save would drop a change another chat made.
+
+*Given* checkout-flow's session folder *.sessions/checkout-flow* holds its *session.json*
+*When* an agent saves *.sessions/checkout-flow/session.json* with session.write_file
+*Then* the save is refused, naming *session.json* as the session's record and saying to change it with the session's tools
+*And* *session.json* is as it was
+*And* the same save is refused when the path is absolute, opens with *./*, goes through a folder and back (*debug/../session.json*), is written with backslashes, or is in another case where the file system reads that as the same file
+*But* session.read_file still reads *session.json*
+*And* a file named *session.json* in another folder, such as *.sessions/checkout-flow/debug/session.json*, is saved
+
+#### Scenario: Refuse to save over a file changed on disk since it was read
+
+Found on 2026-11-23 (exploratory testing, pixel-06; the person's answer: refuse it and say so). session.write_file replaced a file someone changed on disk between the read and the write, and the change was lost with no word. session.read_file now answers the file's *version*, a hash of its content, and session.write_file takes it back. Acceptance tests: `space/session/files/session_files_spec.py`.
+
+*Given* the viewer shows *order.py* of checkout-flow, read with its version
+*And* someone else has since changed *order.py* on disk
+*When* the Person saves the file with the version it was read with
+*Then* the save is refused, saying *order.py* changed on disk since it was read
+*And* *order.py* on disk keeps the change someone else made
+*But* a save of a file not there yet, with no version, is saved
+
+#### Scenario: Refuse to read or save a file inside the repository's .git folder
+
+Found on 2026-11-23 (exploratory testing, pixel-05; the person's answer: refuse it, naming the path). session.write_file wrote *.git/pixel-probe* and session.read_file answered the whole of *.git/config*; a hook written under *.git* runs on the person's next commit. Acceptance tests: `space/session/files/session_files_spec.py`.
+
+*Given* checkout-flow's repository holds *.git/config*
+*When* the Person reads *.git/config*, or saves *.git/hooks/pre-commit*
+*Then* each is refused, naming the path as inside a *.git* folder, which holds git's own record
+*And* nothing is written under *.git*
+*But* a file whose name only starts with *.git*, such as *.gitignore*, is read and saved as any other
 
 ---
 
@@ -632,7 +883,7 @@ session=.sessions/checkout-flow/session.json
 
 ## Story: Show AI Changes As Diff
 
-Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "change viewer from ai change like vscode / cursor"); the session answers the changes (`SessionFile.changes`, `space/session/session_file.py`) and the board's files panel draws them. What counts as the chat's change is the difference between the file as it read when the comment was sent and the file once the comment is processed.
+Intended in the Files app (`.sessions/_backlog/review-work-in-board-files.md`, "change viewer from ai change like vscode / cursor"); the session answers the changes (`SessionFile.changes`, `space/session/files/session_file.py`) and the board's files panel drew them until it was removed on 2026-11-21 (design proposal 24). What counts as the chat's change is the difference between the file as it read when the comment was sent and the file once the comment is processed.
 
 #### Scenario: Mark the line the chat changed, with the line it replaced
 

@@ -40,7 +40,7 @@ section: body
 | Source | Note |
 |--------|------|
 | `.sessions/chat-ui-defects/chat-ui-defects.md` | Observed 2026-11-07: closing a session on main should commit and push main, as switching a branch does, and not try to delete a worktree; the close and switch dialogs need a Create handoff checkbox, on by default; their checkboxes could not be clicked |
-| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/steer-sessions/close-active-session/close_active_session_story.test.ts` | the story test that plays these scenarios |
+| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/steer-sessions/close-active-session/close_active_session_story.test.ts` (removed in 8c56ab052) | the stubbed story test these scenarios were written for; no test plays them now |
 
 #### Scenario: Close the session with its work committed
 
@@ -94,3 +94,41 @@ section: body
 *Given* checkout-flow is the active ticket, its branch open in its own worktree  
 *When* the Person closes checkout-flow  
 *Then* the close dialog offers a handoff, and to commit and push checkout-flow
+
+## Story: Debug A Failure From Chat Bar
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `harness/chat-ui/pane/hooks/chat-bar/chat-bar-client.ts` `runDebug`, `shared/debug-command.ts` `debugCommandOf` | observed in the code, 2026-11-23 |
+| `harness/chat-ui/pane/hooks/error-display/failure-client.ts` `fixFailure`, `sentToChat` | observed in the code, 2026-11-23: a slash command runs with `$.command.run`, which the host allows, where `$.prompt.submit` refused it (reported 2026-11-16) |
+| `harness/chat-ui/pane/hooks/error-display/failure.test.tsx` | the plugin tests that play Fix on the prompt queue's failure |
+| `space/session/debug_spec.py` | the debug session's own spec: what the command writes and asks |
+
+#### Scenario: Put the debug command in the prompt box
+
+*Given* checkout-flow is the active session
+*When* the Person asks to debug from the chat bar
+*Then* the prompt box holds /space-session-debug-session session=.sessions/checkout-flow/session.json after what it held
+  *And* nothing is sent until the Person sends it
+
+#### Scenario: Send a failure to the debug command to fix it
+
+*Given* the failure line shows "The board did not load: connection closed" with Fix
+*When* the Person asks to fix the failure
+*Then* the chat runs /space-session-debug-session choice=fix with the failure and its context as details
+  *And* the failure line no longer shows it
+
+#### Scenario: Show the fix on its way so it is sent once
+
+*Given* the failure line shows "The board did not load: connection closed" with Fix
+*When* the Person asks to fix the failure
+*Then* until the command is in the chat the failure line shows Sending the fix to Claude in place of Fix
+
+#### Scenario: Say when the fix did not reach the chat
+
+*Given* the failure line shows "The board did not load: connection closed" with Fix
+  *But* the chat refuses the debug command
+*When* the Person asks to fix the failure
+*Then* the failure line says "The fix did not reach the chat" with the chat's reason
