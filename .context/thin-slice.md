@@ -569,26 +569,7 @@ section: body
 - *Share Real-Time Story Map Session*
 - *Change Story Map With AI*
 
-### Increment 15: More Repo Actions In Chat Bar
-
-**Outcome:** everything a person can do to one session on the board, they can do from the chat bar.
-
-**Slicing notes:** Requested on 2026-11-06: each channel does what the other does for one session.
-
-**Stories in this increment:**
-
-- *Move Session To Previous Stage*
-- *Mark Session Done In Stage*
-- *Choose Session Practices*
-- *Open Fidelity Help*
-- *Choose Session Folders From Chat Bar*
-- *Fix Violations From Chat Bar*
-- *Add Backlog Item From Chat Bar*
-- *Commit Work From Chat Bar*
-- *Push Work From Chat Bar*
-- *Pull Latest From Chat Bar*
-
-### Increment 16: Draw Linked Models On The Canvas
+### Increment 15: Draw Linked Models On The Canvas
 
 **Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
 
