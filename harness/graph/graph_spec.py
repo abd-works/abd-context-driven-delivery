@@ -7,12 +7,12 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 
-from expects import be, be_a, be_above, be_none, contain, equal, expect
+from expects import be, be_a, be_above, be_none, contain, equal, expect, raise_error
 from harness.installation.data_class import data_of  # noqa: E402
 from mamba import after, before, context, description, it
 
 from harness.graph.edge import EdgeType
-from harness.graph.graph import Graph, Node, Source
+from harness.graph.graph import Graph, GraphFailure, Node, Source
 from harness.graph.node_filter import Filter
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.location import Location
@@ -1538,3 +1538,14 @@ with description("the Graph app") as self:
         from harness.graph.graph_app import GRAPH_APP
 
         expect(GRAPH_APP in APPS.registered).to(equal(True))
+
+
+with description("a pattern overlay asked for in a folder that holds no practices") as self:
+    with before.each:
+        self.folder = Path(tempfile.mkdtemp())
+
+    with after.each:
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    with it("should refuse, naming the folder"):
+        expect(lambda: Graph().overlay_of(str(self.folder))).to(raise_error(GraphFailure, contain("missing practices/", str(self.folder))))
