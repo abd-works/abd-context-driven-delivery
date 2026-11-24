@@ -7,7 +7,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.annotations.annotation import Destination
-from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.installation.repository_toolsets import RepositoryToolsets, ToolsetUnloadable
 from harness.mcp.mcp_annotations import Mcp  # noqa: F401 - defining Mcp makes `mcp` a name install reads, as the installer's process does
 
 
@@ -79,6 +79,26 @@ with description("a repository's toolsets") as self:
 
         with it("should still collect the class, reading the byte it cannot decode as a replacement character"):
             expect(_texts(RepositoryToolsets(self.root).references())).to(contain("shop.cafe:Cafe"))
+
+    with context("with a toolset whose module fails when it is imported"):
+        with before.each:
+            (self.root / "broken_tills").mkdir()
+            (self.root / "broken_tills" / "broken_till.py").write_text(
+                "from harness.mcp.mcp_annotations import mcp\n\nraise RuntimeError('till is broken')\n\n\n"
+                "class BrokenTill:\n    @mcp\n    def open(self) -> None:\n        pass\n",
+                encoding="utf-8",
+            )
+            self.toolsets = RepositoryToolsets(self.root)
+            self.toolsets.ensure_import_path()
+            self.loaded = self.toolsets.classes()
+
+        with it("should keep it among the toolsets it could not load, naming the toolset and the failure"):
+            expect([str(unloadable) for unloadable in self.toolsets.unloadable if isinstance(unloadable, ToolsetUnloadable)]).to(
+                equal(["broken_tills.broken_till:BrokenTill: RuntimeError: till is broken"])
+            )
+
+        with it("should serve the rest without it"):
+            expect(self.loaded).to(equal([]))
 
     with context("with a class no annotation names"):
         with before.each:
