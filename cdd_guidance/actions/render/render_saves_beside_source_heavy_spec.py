@@ -305,6 +305,23 @@ with description("Render saving what it makes beside its source, called through 
         with it("should save no drawing in the first module's folder"):
             expect((self.project.root / "src" / "catalogue" / ".context" / "modules.drawio").exists()).to(equal(False))
 
+        # r3-widget-01, step 4: the drawing of every module rendered back to markdown was saved as one modules.md
+        # beside it, a name the modules fidelity never writes, holding every card a second time.
+        with context("then that drawing rendered back to markdown"):
+            with before.each:
+                self.failed, self.answer = asyncio.run(_render(self.server, self.project.root, "markdown", ".context/modules.drawio", None, "clean-engineering-modules"))
+
+            with it("should write each module's card back to its own module-context.md"):
+                saved = sorted(Path(path).relative_to(self.project.root).as_posix() for path in json.loads(self.answer)[0]["paths"])
+                expect((self.failed, saved)).to(equal((False, ["src/catalogue/.context/module-context.md", "src/ordering/.context/module-context.md"])))
+
+            with it("should keep each card's own words in its file"):
+                card = self.project.root / "src" / "ordering" / ".context" / "module-context.md"
+                expect(card.read_text(encoding="utf-8")).to(contain("let a customer work with the ordering"))
+
+            with it("should save no modules.md beside the drawing"):
+                expect((self.folder / "modules.md").exists()).to(equal(False))
+
     # Exploratory testing, r3-widget-05: a .md class model with no source named was read as Python by the worker.
     with context("a class model in markdown rendered to drawio with no source named"):
         with before.each:
