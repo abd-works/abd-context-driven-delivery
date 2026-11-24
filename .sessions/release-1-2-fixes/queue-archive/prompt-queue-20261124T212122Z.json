@@ -1,0 +1,153 @@
+{
+  "prompts": [
+    {
+      "id": "5fe4250169bb",
+      "text": "[for Widget] After the unit tier passes and the other robots have pushed, run the heavy tier once (scripts/test.ps1 -Suite heavy), fix what it finds, run it again, and report what it showed. Commit and push.",
+      "steps": [
+        {
+          "text": "Wait for the Hardening card to push and the unit tier to pass",
+          "state": "done"
+        },
+        {
+          "text": "Run scripts/test.ps1 -Suite heavy once",
+          "state": "done"
+        },
+        {
+          "text": "Fix what the heavy tier finds",
+          "state": "done"
+        },
+        {
+          "text": "Run the heavy tier again",
+          "state": "pending"
+        },
+        {
+          "text": "Commit and push; report what it showed",
+          "state": "pending"
+        }
+      ],
+      "robot": "Widget"
+    },
+    {
+      "id": "c19594c31eab",
+      "text": "[for Cog] Rewrite section 7 of the release report so it lists only what is still open after today, with each card on this queue that finished marked closed and the heavy and e2e results Widget and Pixel report. Commit and push.",
+      "steps": [
+        {
+          "text": "Rewrite section 7 to list only what is still open (279f63e72)",
+          "state": "done"
+        },
+        {
+          "text": "Mark finished cards closed",
+          "state": "done"
+        },
+        {
+          "text": "Add Widget's unit and heavy results",
+          "state": "pending"
+        },
+        {
+          "text": "Add Pixel's e2e results",
+          "state": "pending"
+        },
+        {
+          "text": "Commit and push",
+          "state": "pending"
+        }
+      ],
+      "robot": "Cog"
+    },
+    {
+      "id": "8f5ea5889f02",
+      "text": "Make the whiteboard spec's split-document examples fast (harness/whiteboard only): three examples in whiteboard_spec.py take 239 to 683 ms run alone, over the 100 ms unit budget, so the unit tier fails that file. Build the large document once before the examples, or move them to a heavy spec. Commit and push.",
+      "steps": [
+        {
+          "text": "Time the split-document examples alone and find what each spends its time on",
+          "state": "done"
+        },
+        {
+          "text": "Build the large document and its writes once, before the examples",
+          "state": "done"
+        },
+        {
+          "text": "Run the whiteboard spec alone and check every example is under 100 ms",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "e5b52b0be41d",
+      "text": "Add a repo.clear_worktrees agentic operation (space/repo, on release-1-2-fixes): it lists the repository's worktrees and the CDD folders beside it, then clears what is done: removes each worktree whose branch is merged into main or whose session is closed (.sessions/_complete), deletes leftover sibling folders that are no longer worktrees, and deletes git's records for worktrees whose folder is gone, taking ownership and clearing read-only flags when Windows refuses, as was done by hand on 2026-11-24. It keeps main, the current worktree, and every worktree whose branch has commits not on main. It answers what it removed and what it kept, with why. A @agent_tool and @mcp on the Repo toolset, a slash command, specs first (heavy spec on a throwaway repository with real worktrees), story map scenario, module docs. Commit, push and repin.",
+      "steps": [
+        {
+          "text": "Read space/repo: the Repo toolset, its worktree code, module docs and an existing heavy spec",
+          "state": "done"
+        },
+        {
+          "text": "Heavy spec first: a throwaway repository with merged, closed-session, unmerged, current and gone worktrees, a leftover sibling folder and a stale git record",
+          "state": "done"
+        },
+        {
+          "text": "Domain: list worktrees and sibling folders, decide clear or keep with the reason",
+          "state": "done"
+        },
+        {
+          "text": "Clear: remove worktrees, delete leftover folders and stale records, taking ownership and clearing read-only flags when Windows refuses",
+          "state": "done"
+        },
+        {
+          "text": "Publish repo.clear_worktrees as @agent_tool and @mcp on the Repo toolset, with a slash command",
+          "state": "done"
+        },
+        {
+          "text": "Story map scenario and module docs",
+          "state": "done"
+        },
+        {
+          "text": "Run the heavy spec and the repo unit specs",
+          "state": "done"
+        },
+        {
+          "text": "Commit, push, reinstall and repin the dev lane",
+          "state": "done"
+        }
+      ],
+      "robot": "Sparky"
+    },
+    {
+      "id": "030b8b0bb39a",
+      "text": "Bring back two dropped fixes if release-1-2-fixes lacks them (commits still in main's checkout): d54873650, the chat bar shows the server's own message when chat.check_in fails; e5e9063f5, ensuring the cdd server replaces a port holder that does not answer, and starts once. For each, check whether release-1-2-fixes already does it; if not, cherry-pick it (or port it by hand where the code has moved on), run only the specs and plugin tests that cover it, commit, push and repin.",
+      "steps": [
+        {
+          "text": "Read d54873650 and e5e9063f5 in main's checkout",
+          "state": "done"
+        },
+        {
+          "text": "Check whether release-1-2-fixes already shows the server's message when chat.check_in fails",
+          "state": "done"
+        },
+        {
+          "text": "Check whether release-1-2-fixes already replaces a silent port holder and starts once",
+          "state": "done"
+        },
+        {
+          "text": "Cherry-pick or port what is missing",
+          "state": "done"
+        },
+        {
+          "text": "Run the specs and plugin tests that cover each",
+          "state": "done"
+        },
+        {
+          "text": "Commit, push and repin the dev lane",
+          "state": "done"
+        }
+      ],
+      "robot": "Gizmo"
+    }
+  ],
+  "is_on": true
+}

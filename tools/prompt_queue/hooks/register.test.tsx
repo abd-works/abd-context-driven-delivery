@@ -2049,3 +2049,70 @@ test("a closed robot shows how many of its items are done beside it, such as 1/2
   expect((await ui.find({ type: 'Box', key: 'agent-robot-1' }))?.text).toContain('1/2')
   await ui.unmount()
 })
+
+
+/** A robot's sub-agent ends its turn while this chat plays in sub-agent mode: what this chat is asked, and the waits the
+ * queue set to check on the robot again. */
+async function robotStopped($: TestEngine, on: TestOn, prompts: Prompt[] = ROBOT_CARDS, agentId = 's1') {
+  const seeded = seedQueue(on, true, '', prompts)
+  seeded.stored.isSubAgentMode = { value: true, version: 1 }
+  seeded.stored.tasks = { value: GROUPED, version: 1 }
+  seeded.stored.isPlaying = { value: true, version: 1 }
+  seeded.stored.sentCards = { value: { Sparky: 'a', Bolt: 'b' }, version: 1 }
+  seeded.stored.robotAgents = { value: { Sparky: 's1', Bolt: 's2' }, version: 1 }
+  const waits = heldClock(on)
+  const asked: string[] = []
+  on('prompt.submit', (_, e) => {
+    asked.push(e.text)
+    return { text: e.text }
+  })
+  on('turn.start', (_, e) => e)
+  on('turn.complete', () => ({ text: 'Done.' }))
+  await $.turn.start({ text: 'Card [a]: Write the scenarios', turnId: 'r1', agentId } as never)
+  await $.turn.complete({ ...FINISHED_TURN, agentId } as never)
+  await unawaitedWorkSettled()
+  return { asked, waits }
+}
+
+test('a robot whose sub-agent stops with its card not done is checked on a minute later', async ($, on) => {
+  const { asked, waits } = await robotStopped($, on)
+
+  expect([asked, waits.map(wait => wait.ms)]).toEqual([[], [60_000]])
+})
+
+test("checking on a stopped robot asks this chat to read its report and resume it by its sub-agent's id when the card is not finished", async ($, on) => {
+  const { asked, waits } = await robotStopped($, on)
+
+  waits[0]!.pass()
+  await unawaitedWorkSettled()
+
+  expect([asked.length, asked[0]?.includes('Sparky'), asked[0]?.includes('[a]'), asked[0]?.includes('SendMessage to s1')]).toEqual([1, true, true, true])
+})
+
+test('a stopped robot whose card is still not done is checked on again every ten minutes', async ($, on) => {
+  const { waits } = await robotStopped($, on)
+
+  waits[0]!.pass()
+  await unawaitedWorkSettled()
+
+  expect(waits.map(wait => wait.ms)).toEqual([60_000, 600_000])
+})
+
+test('a robot whose card was marked done before the check is not checked on', async ($, on) => {
+  const { asked, waits } = await robotStopped($, on, ROBOT_CARDS.map(card => (card.robot === 'Bolt' ? { ...card, is_done: true } : card)), 's2')
+
+  waits[0]?.pass()
+  await unawaitedWorkSettled()
+
+  expect(asked).toEqual([])
+})
+
+test('a robot whose sub-agent started again before the check is not checked on', async ($, on) => {
+  const { asked, waits } = await robotStopped($, on)
+
+  await $.turn.start({ text: 'Carry on', turnId: 'r2', agentId: 's1' } as never)
+  waits[0]!.pass()
+  await unawaitedWorkSettled()
+
+  expect(asked).toEqual([])
+})

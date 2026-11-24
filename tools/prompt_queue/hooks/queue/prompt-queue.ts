@@ -30,6 +30,10 @@ const QUEUE_INSTRUCTIONS = [
 const DECISION_FLAG = '[decision required]'
 // How long play waits for the person to answer a question the agent ended its turn with, before it moves on.
 const DECISION_WAIT_MS = 60_000
+// How long after a robot's sub-agent stops the queue first checks its card, so this chat can mark a finished card done.
+const ROBOT_FIRST_CHECK_MS = 60_000
+// How often the queue checks again on a robot that stays stopped with its card not done.
+const ROBOT_CHECK_MS = 600_000
 // A notice the chat gives the agent, such as a background task finishing, which arrives as a prompt but is not the
 // person's: it is never queued.
 const SYSTEM_NOTICE = /^\s*<(task-notification|system-reminder)>/
@@ -57,6 +61,10 @@ const isPlaying = atom({ plugin: 'prompt-queue', key: 'isPlaying' } as const, fa
 const sentCards = atom({ plugin: 'prompt-queue', key: 'sentCards' } as const, {} as Record<string, string>)
 /** Each robot's sub-agent id, from this chat's Agent call that started it, so its next card is sent to that sub-agent. */
 const robotAgents = atom({ plugin: 'prompt-queue', key: 'robotAgents' } as const, {} as Record<string, string>)
+/** The sub-agents in a turn now, so a robot that stopped is told from one still working. */
+const workingAgents = atom({ plugin: 'prompt-queue', key: 'workingAgents' } as const, [] as string[])
+/** Which check on each sub-agent is the current one: each turn it starts or ends moves it on, so an older check ends quietly. */
+const robotChecks = atom({ plugin: 'prompt-queue', key: 'robotChecks' } as const, {} as Record<string, number>)
 /** Whether the main chat is in a turn, so play sends at once only when nothing is running. */
 const isTurnRunning = atom({ plugin: 'prompt-queue', key: 'isTurnRunning' } as const, false)
 /** The draft Alt+Enter just queued: the desktop still submits it after the key, so that submission is dropped. */
@@ -442,6 +450,67 @@ export async function finishTurn($: EngineInterface, isAnswered: boolean): Promi
     return
   }
   await sendNext($)
+}
+
+/** A robot's sub-agent started a turn: it is working, so no check on it is due. */
+export async function startAgentTurn($: EngineInterface, agentId: string): Promise<void> {
+  await update($, workingAgents, working => [...working.filter(id => id !== agentId), agentId])
+  await update($, robotChecks, checks => ({ ...checks, [agentId]: (checks[agentId] ?? 0) + 1 }))
+}
+
+/** A robot's sub-agent ended its turn: nothing it started runs any more, so the queue checks on its card a minute later,
+ * and every ten minutes after while the card stays not done, rather than trust a report that work is still running. */
+export async function finishAgentTurn($: EngineInterface, agentId: string): Promise<void> {
+  await update($, workingAgents, working => working.filter(id => id !== agentId))
+  await scheduleRobotCheck($, agentId, ROBOT_FIRST_CHECK_MS)
+}
+
+async function scheduleRobotCheck($: EngineInterface, agentId: string, ms: number): Promise<void> {
+  const check = ((await read($, robotChecks))[agentId] ?? 0) + 1
+  await update($, robotChecks, checks => ({ ...checks, [agentId]: check }))
+  $.clock.after(ms, () => void checkOnRobot($, agentId, check))
+}
+
+/** The check falls due: a robot still stopped with its card not done has this chat asked to look at it. While the main
+ * chat is in a turn the check waits for the next one, so it never breaks into the agent's work. */
+async function checkOnRobot($: EngineInterface, agentId: string, check: number): Promise<void> {
+  if (check !== ((await read($, robotChecks))[agentId] ?? 0)) {
+    return
+  }
+  const stopped = await stoppedRobotOf($, agentId)
+  if (!stopped) {
+    return
+  }
+  await scheduleRobotCheck($, agentId, ROBOT_CHECK_MS)
+  if (await read($, isTurnRunning)) {
+    return
+  }
+  $.prompt.submit({ text: checkOnRobotOf(stopped.robot, stopped.card, agentId, await $.session.id()), asUser: true }).catch(thrown =>
+    showFailure($, `Not sent: ${reasonOf(thrown)}`, `Checking on ${stopped.robot}, whose sub-agent stopped with card [${stopped.card.id}] not done`))
+}
+
+/** The robot a stopped sub-agent works for and its first card not done; none when the sub-agent works again, is no
+ * robot's, or its robot has finished every card. */
+async function stoppedRobotOf($: EngineInterface, agentId: string): Promise<{ robot: string; card: QueuedPrompt } | undefined> {
+  if (!(await read($, isSubAgentMode)) || !(await isQueueOn($)) || (await read($, workingAgents)).includes(agentId)) {
+    return undefined
+  }
+  const robot = Object.entries(await read($, robotAgents)).find(([, id]) => id === agentId)?.[0]
+  if (robot === undefined) {
+    return undefined
+  }
+  await refreshQueue($)
+  const card = (await read($, queue)).prompts.find(prompt => isSameRobot(prompt.robot, robot) && !prompt.is_done)
+  return card ? { robot, card } : undefined
+}
+
+/** What this chat is asked about a robot that stopped with its card not done. */
+function checkOnRobotOf(robot: string, card: QueuedPrompt, agentId: string, chat: string): string {
+  return [
+    `${robot}'s sub-agent ${agentId} has stopped, and its card [${card.id}] is not done. Nothing a sub-agent started runs once its turn ends, so do not take its word that work is still running.`,
+    `Read its last report. If it says the card is finished, check the result and mark it done with prompt-queue.done(chat="${chat}", prompt="${card.id}").`,
+    `If it waits on another robot's card that is not done, leave it and say so. Otherwise resume it with SendMessage to ${agentId}, telling it to finish card [${card.id}] in its own turn and report.`,
+  ].join(' ')
 }
 
 /** The agent's wrap-up asked the person something: play waits for the answer before it moves on. */

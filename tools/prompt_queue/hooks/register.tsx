@@ -14,6 +14,8 @@ import {
   noteDecisionAsked,
   refreshQueue,
   finishTurn,
+  finishAgentTurn,
+  startAgentTurn,
   startRobotAgent,
   startTurn,
   followQueueAnswer,
@@ -92,6 +94,8 @@ export const register: Register = on => {
   on('turn.start', async ($, e, next) => {
     if (e.agentId === undefined) {
       await startTurn($)
+    } else {
+      await startAgentTurn($, e.agentId)
     }
 
     return next(e)
@@ -102,6 +106,9 @@ export const register: Register = on => {
     const result = await next(e)
     if (e.agentId === undefined) {
       await finishTurn($, e.reason === 'answer')
+    } else {
+      // A robot that stops with its card not done is checked on, since nothing tells this chat it stopped short.
+      await finishAgentTurn($, e.agentId)
     }
 
     return result
