@@ -90,7 +90,7 @@ The durable model of the code is one class model per module, `{module}/.context/
 
 ## Still open
 
-1. Done 2026-11-24: lizard is installed (see the pass above). A whole-code validate has not been run again to count the findings it now measures.
+1. Done 2026-11-24: lizard is installed (see the pass above). The whole-code validate at `a34fa3501` ([clean-engineering-code-20261124T074203.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261124T074203.md)) measures with it: 1,058 violations in 27 rules, none saying lizard is not installed; compared rule by rule with 388 and 2,733 in section 6 of the release report.
 2. Closed 2026-11-24: the metrics gate is deleted. Validate holds its class and module measures as Clean Engineering code rules (`limit-class-coupling`, `limit-class-response`, `limit-module-file-lines`, `keep-module-files-maintainable`, `limit-average-class-complexity`, `limit-modules-importing`), beside the function and class limits it already held.
 3. The 76 module-card drift findings (`seam-names-current-code`). The 3 `one-way-deps` findings are the three files of one loop in `harness/installation`, ended by `52d22fe88` after that run; a whole-code validate has not confirmed it yet.
 4. The 163 declared exceptions no test raises ([test-every-declared-exception.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\_backlog\test-every-declared-exception.md)) and the 9 `refuse-unreadable-input` violations.
