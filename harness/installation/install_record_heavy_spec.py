@@ -70,8 +70,8 @@ with description("an install into an IDE folder") as self:
     with after.all:
         self.machine.leave()
 
-    # An install takes seconds, so each context installs into a project of its own once, before its examples, which only
-    # read what it left.
+    # An install takes seconds, so each context installs into a project of its own once, before its examples, which read
+    # what it left; an example that changes the project, as the clean of a stopped install does, comes last in its context.
     with context("with another IDE's folder installed into after it, in the same project"):
         with before.all:
             _new_project(self)

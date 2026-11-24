@@ -67,21 +67,27 @@ class RecordingGh:
         return f"https://github.com/owner/cdd/releases/tag/{args[2]}"
 
 
+def ready_to_release(spec) -> None:
+    """A throwaway repository of the context's own, both tiers passed on its head, and its release through a recorded gh."""
+    spec.root = Path(tempfile.mkdtemp(prefix="release-heavy-"))
+    spec.checkout = throwaway_repository(spec.root)
+    spec.record = TestRunRecord(spec.root / "home")
+    head = git(spec.checkout, "rev-parse", "HEAD")
+    for tier in (TestTier.E2E, TestTier.HEAVY):
+        spec.record.save(TestRun(tier, head, datetime.now(timezone.utc), RunOutcome.PASSED))
+    spec.gh = RecordingGh()
+    spec.release = CddRelease(Git(spec.checkout), spec.gh, spec.record)
+
+
+# A throwaway repository with its origin takes over a second to make, so each context makes one, once, before its examples.
 with description("a release of a throwaway repository") as self:
-    with before.each:
-        self.root = Path(tempfile.mkdtemp(prefix="release-heavy-"))
-        self.checkout = throwaway_repository(self.root)
-        self.record = TestRunRecord(self.root / "home")
-        head = git(self.checkout, "rev-parse", "HEAD")
-        for tier in (TestTier.E2E, TestTier.HEAVY):
-            self.record.save(TestRun(tier, head, datetime.now(timezone.utc), RunOutcome.PASSED))
-        self.gh = RecordingGh()
-        self.release = CddRelease(Git(self.checkout), self.gh, self.record)
-
-    with after.each:
-        shutil.rmtree(self.root, ignore_errors=True)
-
     with context("previewed"):
+        with before.all:
+            ready_to_release(self)
+
+        with after.all:
+            shutil.rmtree(self.root, ignore_errors=True)
+
         with it("should list the commits since v1.0.0 and not before"):
             expect(self.release.notes).to(contain("- Fix the board"))
             expect(self.release.notes).not_to(contain("First release"))
@@ -90,8 +96,12 @@ with description("a release of a throwaway repository") as self:
             expect(self.release.notes).to(contain("## Completed stories\n\n- release-cadence"))
 
     with context("published"):
-        with before.each:
+        with before.all:
+            ready_to_release(self)
             self.release.publish()
+
+        with after.all:
+            shutil.rmtree(self.root, ignore_errors=True)
 
         with it("should push the version /version set to origin main, unchanged"):
             expect(git(self.root / "origin.git", "show", "main:pyproject.toml")).to(contain('version = "1.4.0"'))
