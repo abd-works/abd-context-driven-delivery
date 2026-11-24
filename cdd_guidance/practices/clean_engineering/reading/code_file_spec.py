@@ -193,6 +193,9 @@ with description("a file of the code read"):
         self.called = lambda text, before="": _named(self.spec_file.members_called_in(CodeSpan(CodeSpan.code_of(text), before=before)))
         self.script = self.index.file("shop/cart.spec.ts", [ClassReference("shop/cart", "Cart")])
         self.script_called = lambda text, before="": _named(self.script.members_called_in(CodeSpan(CodeSpan.code_of(text), before=before)))
+        # A span handed `cart` as a parameter the code writes no type for, as a spec's fixture is.
+        self.untyped_span = lambda text: CodeSpan(CodeSpan.code_of(text), None, {"cart": ""})
+        self.called_on_untyped = lambda text: _named(self.spec_file.members_called_in(self.untyped_span(text)))
 
     with after.all:
         shutil.rmtree(self.folder, ignore_errors=True)
@@ -270,25 +273,39 @@ with description("a file of the code read"):
         with it("should reach the one member of that name its reach declares"):
             expect(self.called("basket = _Basket()\nbasket.wrap()")).to(equal(["GiftCart.wrap"]))
 
-    with context("whose span follows a chain of three or more parts from a local of no known class"):
+    with context("whose span follows a chain of three or more parts from a parameter the code writes no type for"):
         with it("should reach the member one class declares, then follow the chain through what it holds"):
-            expect(self.called("cart.till.open()")).to(equal(["Cart.till", "Till.open"]))
+            expect(self.called_on_untyped("cart.till.open()")).to(equal(["Cart.till", "Till.open"]))
 
         with it("should follow the chain through what that member answers when called"):
-            expect(self.called("cart.emptied().till.open()")).to(equal(["Cart.emptied", "Cart.till", "Till.open"]))
+            expect(self.called_on_untyped("cart.emptied().till.open()")).to(equal(["Cart.emptied", "Cart.till", "Till.open"]))
 
         with it("should reach nothing when two classes declare the member the chain opens with"):
-            expect(self.called("cart.add('a').quantity")).to(equal([]))
+            expect(self.called_on_untyped("cart.add('a').quantity")).to(equal([]))
 
-    with context("whose span assigns a local from a chain that opens with a local of no known class"):
+    with context("whose span follows a chain of three or more parts from a name the span is neither handed nor assigns"):
+        with it("should reach no member, since the name may be a module or an object of any class"):
+            expect(self.called("cart.till.open()")).to(equal([]))
+
+    with context("whose span follows a chain of three or more parts from a parameter whose hint names a class the read does not hold"):
+        with it("should reach no member, since the hint says the parameter is of another class"):
+            span = CodeSpan(CodeSpan.code_of("cart.till.open()"), None, {"cart": "UnreadCart"})
+            expect(_named(self.spec_file.members_called_in(span))).to(equal([]))
+
+    with context("written in a script that imports a Python class through its language adapter"):
+        with it("should guess no member of the Python code for a parameter the code writes no type for"):
+            page = self.index.file("shop/cart_page.ts", [ClassReference("@cdd/shop/cart", "CartData")])
+            expect(_named(page.members_called_in(CodeSpan(CodeSpan.code_of("line.parent.till.open()"), None, {"line": ""})))).to(equal([]))
+
+    with context("whose span assigns a local from a chain that opens with a parameter the code writes no type for"):
         with it("should type the local by what the chain ends on"):
-            expect(self.called("till = cart.emptied().till\ntill.open()")).to(equal(["Cart.emptied", "Cart.till", "Till.open"]))
+            expect(self.called_on_untyped("till = cart.emptied().till\ntill.open()")).to(equal(["Cart.emptied", "Cart.till", "Till.open"]))
 
         with it("should type the local by what the guessed member holds when it is the chain's only member"):
-            expect(self.called("till = cart.till\ntill.open()")).to(equal(["Cart.till", "Till.open"]))
+            expect(self.called_on_untyped("till = cart.till\ntill.open()")).to(equal(["Cart.till", "Till.open"]))
 
         with it("should join what the local reaches by the same guess"):
-            reach = self.spec_file.reach_of(CodeSpan(CodeSpan.code_of("till = cart.till\ntill.open()")))
+            reach = self.spec_file.reach_of(self.untyped_span("till = cart.till\ntill.open()"))
             expect(_named(reach.guessed)).to(equal(["Cart.till", "Till.open"]))
 
     with context("whose span follows a chain of three or more parts from an object from outside the code read"):

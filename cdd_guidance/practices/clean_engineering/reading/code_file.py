@@ -22,8 +22,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, NamedTuple
 
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES, MODULE_FUNCTION_HOLDER
+from cdd_guidance.practices.clean_engineering.reading.function_text import closing_bracket, python_function, script_function
 from cdd_guidance.practices.clean_engineering.reading.receiver_causes import (
     ON_OUTSIDE_OBJECTS,
+    ON_UNTYPED_VALUES,
     OTHERWISE,
     UNRESOLVED_CALLS_FACTS,
     ReceiverCauses,
@@ -93,9 +95,6 @@ _MODULE_DECLARATION = r"(?m)^(?:export\s+)?(?:let|var)\s+{name}\s*:\s*([^=\n;]+?
 # A field a class declares with the value it starts with: `readonly fileBar = new FileBar(this)`, `lines: list = []`.
 _INITIALIZED = r"(?<![\w$.]){name}[ \t]*[?!]?[ \t]*(?::[ \t]*([^=\n]+?))?[ \t]*=(?![=>])[ \t]*"
 # A function a file declares, the end of a Python signature with the return type it writes, and a script function.
-_PYTHON_DEF = r"(?m)^([ \t]*)(?:async[ \t]+)?def[ \t]+{name}[ \t]*\("
-_SCRIPT_FUNCTION = r"(?<![\w$.])(?:function\s*\*?\s*{name}\s*(?:<[^>()]*>)?\s*|(?:const|let|var)\s+{name}\s*=\s*(?:async\s*)?)\("
-_SIGNATURE_END = re.compile(r"[ \t]*(?:->[ \t]*([^:\n]+?))?[ \t]*:")
 _OPTIONAL = re.compile(r"^(?:Optional\[(.+)\]|(.+?)\s*\|\s*(?:None|null|undefined)|(?:None|null|undefined)\s*\|\s*(.+))$")
 _GENERIC = re.compile(r"^([A-Za-z_][\w.]*)\s*[\[<](.*)[\]>]$")
 _ARRAY = re.compile(r"^([A-Za-z_]\w*)\s*\[\]$")
@@ -134,7 +133,6 @@ _ALTERNATIVE = re.compile(r"(?:if|or|for|async\s+for)\b|\?\?|\|\|")
 _OBJECT_FIELD = re.compile(r"\s*([A-Za-z_$][\w$]*)\s*(:\s*)?")
 # The comma before a tuple's next part, when a part follows it on its line.
 _NEXT_PART = re.compile(r"[ \t]*,[ \t]*(?=[A-Za-z_$])")
-_QUOTES = frozenset("'\"`")
 # The space before a list's first item, and the comma, on any line, before its next.
 _SPACE = re.compile(r"\s*")
 _NEXT_ITEM = re.compile(r"\s*,\s*(?=[^\s\])])")
@@ -331,7 +329,7 @@ class _HintTypes:
         for relative in texts:
             text = self._answers.text_of(relative)
             match = declared.search(text)
-            closing = _closing(text, match.end() - 1) if match is not None else None
+            closing = closing_bracket(text, match.end() - 1) if match is not None else None
             if closing is not None:
                 self._reading.add(name)
                 try:
@@ -480,6 +478,7 @@ class CodeFile:
         members = [
             member for member in self._index.members_named(name)
             if member.get_fact("owner") != MODULE_FUNCTION_HOLDER and (member.type == "Operation") == called
+            and _language_of(member.source.file) == _language_of(self.relative)
         ]
         return self._read_as(self._only_in_reach(members))
 
@@ -708,7 +707,7 @@ class MemberAnswers:
     def _declared_function(self, relative: str, name: str) -> "Typed | None":
         text = self.text_of(relative)
         file = self._index.file(relative)
-        found = _script_function(text, name) if file.is_script else _python_function(text, name)
+        found = script_function(text, name) if file.is_script else python_function(text, name)
         if found is None:
             return None
         hint, body = found
@@ -965,7 +964,7 @@ class _Locals:
         self._types: dict[str, Typed] = {}
         self._reaches: dict[str, str] = {}
         # The locals typed only through a guessed member, whose members are joined by that guess too.
-        self._guessed: set[str] = set()
+        self._guessed: dict[str, bool] = {}
         # What a comprehension's own local is within its brackets, by where they open and close in the span's code.
         self._scoped: list[tuple[int, int, str, _Read]] = []
 
@@ -993,8 +992,7 @@ class _Locals:
             return
         self._types[name] = read.value
         self._reaches[name] = read.reach
-        if read.guessed:
-            self._guessed.add(name)
+        self._guessed[name] = read.guessed
 
     def narrow(self, name: str, read: _Read) -> None:
         """Keep what read says the local name is in place of what it was, as a check that it is of a class narrows it."""
@@ -1007,7 +1005,7 @@ class _Locals:
 
     def typed_by_a_guess(self, name: str) -> bool:
         """Whether the local name's class was found only through a guessed member, `till = fixture.till`."""
-        return name in self._guessed
+        return self._guessed.get(name, False)
 
     def reach(self, name: str) -> str:
         return self._reaches[name]
@@ -1102,7 +1100,7 @@ class _Expressions:
     def _copied_at(self, code: str, start: int) -> _Read:
         """What `list(...)`, `sorted(...)` and the other built-ins that copy a collection answer: a collection of the
         elements of the one they are handed, `list(self._parts.items())`."""
-        closing = _closing(code, start - 1)
+        closing = closing_bracket(code, start - 1)
         copied = self._typed_chain_at(code, _SPACE.match(code, start).end())
         element = self._members.element_of(copied.value)
         end = closing + 1 if closing is not None else copied.end
@@ -1112,7 +1110,7 @@ class _Expressions:
         """What a list or a tuple the code writes at opening holds, `(Brakes(), Lights())`: each item one of the classes
         its items are, typed as the nearest class they all are or extend; a parenthesised expression with no comma is
         that expression. A list whose items the read cannot all type is a built-in object."""
-        closing = _closing(code, opening)
+        closing = closing_bracket(code, opening)
         if closing is None:
             return _Read(None, opening, cause=ON_OUTSIDE_OBJECTS)
         first = _SPACE.match(code, opening + 1).end()
@@ -1160,7 +1158,7 @@ class _Expressions:
 
     def _object_at(self, code: str, opening: int) -> _Read:
         """What a script's object literal at opening holds, field by field: `{ page, opened: board.openedChats() }`."""
-        closing = _closing(code, opening)
+        closing = closing_bracket(code, opening)
         if closing is None:
             return _Read(None, opening)
         fields = []
@@ -1250,7 +1248,7 @@ class _Expressions:
         """Keep what a comprehension's loop takes as its local within the comprehension's brackets, when the loop at
         start is a comprehension's, inside a bracket of the span's own code."""
         opening = _opening_at(code, start) if code is self._span.code else None
-        closing = _closing(code, opening) if opening is not None and code[opening] in "([{" else None
+        closing = closing_bracket(code, opening) if opening is not None and code[opening] in "([{" else None
         if closing is not None:
             self._locals.scope(name, read, opening, closing)
 
@@ -1385,7 +1383,7 @@ class _ChainWalk:
             if not self._go_on_from(guessed):
                 return _Read(None, self._end, self._reach, self._cause)
             return self._walk_guessed()
-        if self._at == 0 and self._span.locals.typed_by_a_guess(self._head):
+        if self._span.locals.typed_by_a_guess(self._head):
             return self._walk_guessed()
         value = self._value
         if self._found is not None and value is not None and value.of is not None and self._reach in _CREATED:
@@ -1403,12 +1401,11 @@ class _ChainWalk:
         """Take each step left after a guessed member, the chain's first or the one a local typed by a guess was
         assigned: each member reached is joined by that guess too, no class is kept as reached, since the code never
         says which class the chain runs through, and what the chain ends on is known only through the guess."""
-        found = self._found
-        members, classes = (len(found.members), len(found.classes)) if found is not None else (0, 0)
+        found = self._found or SpanReach()
+        members, classes = len(found.members), len(found.classes)
         walked = self._walk()
-        if found is not None:
-            found.guessed.extend(found.members[members:])
-            del found.classes[classes:]
+        found.guessed.extend(found.members[members:])
+        del found.classes[classes:]
         return walked._replace(guessed=True)
 
     def _guessed(self) -> bool:
@@ -1424,9 +1421,10 @@ class _ChainWalk:
         return not (len(steps) > 1 and steps[1].kind == "member") and (value is None or self._lacks_member(value, steps[0].text))
 
     def _goes_on_past_a_guess(self) -> bool:
-        """Whether a chain of no known class goes on past its guessed first member: not when its first name is an
-        object from outside the code read, such as a path, which no class of the code is."""
-        return self._cause != ON_OUTSIDE_OBJECTS
+        """Whether a chain goes on past its guessed first member: from a local of a class that lacks the member, or
+        one the code writes no type for, such as a spec's fixture; not from an object from outside the code read, such
+        as a path, nor from a value whose hint names a class the read does not hold, which the code says is another."""
+        return self._value is not None or self._cause == ON_UNTYPED_VALUES
 
     def _go_on_from(self, guessed: "Node | None") -> bool:
         """Go on along the chain from the member its first name was guessed to reach, as what that member answers or
@@ -1670,7 +1668,7 @@ def _chain_at(code: str, start: int) -> "_Chain | None":
         elif character == "!" and code[position + 1:position + 2] in ("[", "("):
             position += 1
         elif character in "([":
-            closing = _closing(code, position)
+            closing = closing_bracket(code, position)
             if closing is None:
                 break
             steps.append(_Step("call" if character == "(" else "item", code[position + 1:closing]))
@@ -1678,30 +1676,6 @@ def _chain_at(code: str, start: int) -> "_Chain | None":
         else:
             break
     return _Chain(head.group(0), steps, position, start)
-
-
-def _closing(code: str, opening: int) -> "int | None":
-    """Where the bracket that opens at opening closes, skipping strings; none when it does not close."""
-    depth = 0
-    position = opening
-    quote = ""
-    while position < len(code):
-        character = code[position]
-        if quote:
-            if character == "\\":
-                position += 1
-            elif character == quote:
-                quote = ""
-        elif character in _QUOTES:
-            quote = character
-        elif character in "([{":
-            depth += 1
-        elif character in ")]}":
-            depth -= 1
-            if depth == 0:
-                return position
-        position += 1
-    return None
 
 
 def _top_level_parts(written: str, separators: str = ",") -> list[str]:
@@ -1841,66 +1815,6 @@ def _language_of(file: str) -> str:
     """The language family a file is written in, by its extension: every script extension is one family."""
     suffix = "." + file.rsplit(".", 1)[-1].lower()
     return "script" if suffix in _SCRIPT_SUFFIXES else suffix
-
-
-def _python_function(text: str, name: str) -> "tuple[str, str] | None":
-    """The return type a Python function's signature writes, and its body's lines."""
-    declared = re.search(_PYTHON_DEF.format(name=re.escape(name)), text)
-    closing = _closing(text, declared.end() - 1) if declared else None
-    signature = _SIGNATURE_END.match(text, closing + 1) if closing is not None else None
-    if signature is None:
-        return None
-    indent = len(declared.group(1))
-    body = []
-    for line in text[signature.end():].splitlines()[1:]:
-        if line.strip() and len(line) - len(line.lstrip()) <= indent:
-            break
-        body.append(line)
-    return (signature.group(1) or "").strip(), "\n".join(body)
-
-
-def _script_function(text: str, name: str) -> "tuple[str, str] | None":
-    """The return type a script function's signature writes, `function opened(): Promise<{ page: FilesPage }> {` or
-    `const opened = async (): Promise<Page> => {`, and its body's block."""
-    declared = re.search(_SCRIPT_FUNCTION.format(name=re.escape(name)), text)
-    closing = _closing(text, declared.end() - 1) if declared else None
-    if closing is None:
-        return None
-    position = closing + 1
-    while position < len(text) and text[position] in " \t":
-        position += 1
-    hint = ""
-    if text[position:position + 1] == ":":
-        hint, position = _script_return_type(text, position + 1)
-    arrow = re.match(r"\s*=>\s*", text[position:])
-    if arrow is not None:
-        position += arrow.end()
-    while position < len(text) and text[position] in " \t\n":
-        position += 1
-    if text[position:position + 1] != "{":
-        return hint, ("return " + text[position:text.find("\n", position)]) if arrow is not None else ""
-    body_end = _closing(text, position)
-    return hint, text[position + 1:body_end] if body_end is not None else ""
-
-
-def _script_return_type(text: str, start: int) -> "tuple[str, int]":
-    """The return type written from start, up to the body's brace or arrow: an object type's braces are part of it."""
-    depth = 0
-    position = start
-    while position < len(text):
-        character = text[position]
-        if depth == 0 and text.startswith("=>", position):
-            break
-        if depth == 0 and character == "{":
-            written = text[start:position].strip()
-            if written and not written.endswith(("|", "&", ":", "<", ",")):
-                break
-        if character in "<({[":
-            depth += 1
-        elif character in ")}]" or (character == ">" and text[position - 1] != "="):
-            depth -= 1
-        position += 1
-    return text[start:position].strip(), position
 
 
 def _is_class_name(name: str) -> bool:
