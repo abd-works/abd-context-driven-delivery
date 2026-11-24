@@ -157,7 +157,7 @@ with description("a generate action on practice guidance") as self:
                 self.expanded = _expanded_generate(self.action, {"guidance": "stories-story-map format=whiteboard"})
 
             with it("should say to publish each whiteboard file to its board in Claude"):
-                expect(self.expanded.instructions).to(contain("put each .whiteboard file on its board in Claude"))
+                expect(self.expanded.instructions).to(contain("is not finished until each .whiteboard file it saved is on its board in Claude"))
 
             with it("should list record_board, which keeps the address of a board it created"):
                 expect("record_board" in self.expanded.tools).to(equal(True))

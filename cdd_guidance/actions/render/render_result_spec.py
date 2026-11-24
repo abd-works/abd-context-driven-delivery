@@ -35,7 +35,7 @@ with description("a render's result") as self:
 
     with it("should answer a whiteboard it saved with its board and the writes that put it there"):
         result = SavedBoard(Rendered(Format("whiteboard"), "{}"), Path("map.whiteboard"), [], "https://claude.ai/artifact/Board", [[{"doc_id": "meta"}]])
-        expect(sorted(data_of(result))).to(equal(["batches", "board", "decide", "format", "migrate", "path"]))
+        expect(sorted(data_of(result))).to(equal(["batches", "board", "decide", "format", "migrate", "path", "publish"]))
 
     with it("should answer code it saved with each file, and each member waiting to be moved"):
         migrate = [KeptMember(Path("cart.py"), "Cart.total", ["Cart.subtotal"]), SignatureDiffers(Path("cart.py"), "Cart.add", "def add(self, book):")]
