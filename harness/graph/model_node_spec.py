@@ -7,11 +7,11 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import be, be_none, equal, expect, raise_error
+from expects import be, be_none, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.graph import model_node
-from harness.graph.model_node import ModelDetached, ModelReferences, schema_sync_paused
+from harness.graph.model_node import ModelDetached, ModelReferences, ModelWithoutPractice, schema_sync_paused
 from harness.graph.graph import Graph
 from harness.graph.spec_support import GraphsMade
 
@@ -154,3 +154,12 @@ with description("a model class asked which parameters its constructor takes"):
         import inspect
 
         expect(list(inspect.signature(Story).parameters)[:2]).to(equal(["name", "sequential_order"]))
+
+
+class _ModelOfNoPractice(model_node.ModelNode):
+    """A model class whose practice never named itself on it, as one whose practice's module was not imported."""
+
+
+with description("a model object whose class names no practice"):
+    with it("should refuse to say which practice it belongs to, naming its class"):
+        expect(lambda: _ModelOfNoPractice("orphan", 0).practice_kind).to(raise_error(ModelWithoutPractice, contain("_ModelOfNoPractice")))
