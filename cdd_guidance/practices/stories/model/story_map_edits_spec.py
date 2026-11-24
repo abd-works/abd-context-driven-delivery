@@ -19,7 +19,9 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 RepositoryToolsets(Path(__file__).resolve().parents[4]).ensure_import_path()
 
 import cdd_guidance.practices  # noqa: E402,F401 - registers the practices with the practice catalogue
+from cdd_guidance.practices.stories.model.opened_story_map import StoryMapEditRefused  # noqa: E402
 from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
+from space.session.practices.practice_session_output import FormatNotOfferedError  # noqa: E402
 from harness.guidance.practice_formats import RenderRequest  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 from harness.markdown.format import Format  # noqa: E402
@@ -318,7 +320,7 @@ with description("a story map edited through its tools") as self:
                 self.moving = _failure(lambda: project.call("story.move_before", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), other=_node(SUB_EPIC)))
 
             with it("should refuse to move a story before an epic"):
-                expect(lambda: _again(self.moving)).to(raise_error(Exception, contain("not a Story")))
+                expect(lambda: _again(self.moving)).to(raise_error(StoryMapEditRefused, contain("not a Story")))
 
         # A story map keeps its stories; their scenarios are kept in each story's scenario file.
         with context("that adds a scenario to a story"):
@@ -327,7 +329,7 @@ with description("a story map edited through its tools") as self:
                 self.adding = _failure(lambda: project.call("story.new_scenario", node=_node(f"{SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"), name="Press opens the editor"))
 
             with it("should refuse a scenario on a story map, which does not read one back"):
-                expect(lambda: _again(self.adding)).to(raise_error(Exception, contain("would not keep the edit")))
+                expect(lambda: _again(self.adding)).to(raise_error(StoryMapEditRefused, contain("would not keep the edit")))
 
     # (S) Refactor Story UI App To Web Domain Access: a story map laid out by hand is edited, not read only.
     with context("opened on a story map laid out by hand"):
@@ -498,14 +500,14 @@ with description("a story map edited through its tools") as self:
                 self.editing = _failure(lambda: self.project.call("example.edit_field", node=self.trace["examples"][0]["node"], field="owner", text="Person"))
 
             with it("should refuse a column the example's row does not have"):
-                expect(lambda: _again(self.editing)).to(raise_error(Exception, contain("has no owner column")))
+                expect(lambda: _again(self.editing)).to(raise_error(StoryMapEditRefused, contain("has no owner column")))
 
         with context("with an example moved before another"):
             with before.all:
                 self.moving = _failure(lambda: self.project.call("example.move_before", node=self.trace["examples"][1]["node"], other=self.trace["examples"][0]["node"]))
 
             with it("should refuse to move an example, which keeps the place its table gives it"):
-                expect(lambda: _again(self.moving)).to(raise_error(Exception, contain("keeps the place its table gives it")))
+                expect(lambda: _again(self.moving)).to(raise_error(StoryMapEditRefused, contain("keeps the place its table gives it")))
 
     # (S) Refactor Story UI App To Web Domain Access: an example named by its example column is renamed in that cell.
     with context("opened on a scenario file whose examples are named"):
@@ -565,4 +567,4 @@ with description("a story map edited through its tools") as self:
             self.choosing = _failure(lambda: project.choose("python", True))
 
         with it("should refuse a format the story map does not write"):
-            expect(lambda: _again(self.choosing)).to(raise_error(Exception, contain("does not write python")))
+            expect(lambda: _again(self.choosing)).to(raise_error(FormatNotOfferedError, contain("does not write python")))
