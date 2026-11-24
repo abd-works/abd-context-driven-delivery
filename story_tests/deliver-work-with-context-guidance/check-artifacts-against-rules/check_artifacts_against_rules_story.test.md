@@ -81,32 +81,6 @@ Observed.
 *When* Claude Code validates clean-engineering-code with graph ++no/such/graph.json++
 *Then* the call is refused, naming ++no/such/graph.json++ as not there, read from the project's root
 
-#### Scenario: Report two describes that share a subject however the spec quotes them
-
-Observed (`cdd_guidance/practices/bdd/rules/shared_describe_subject_spec.py`). Written after exploratory testing round 3 (defect r3-rivet-10): the rule saw only Python describes written in double quotes.
-
-*Given* a Mamba spec written in single quotes, and a Vitest spec, each hold the top-level describes `a bare agentic toolset registered for deploy` and `a bare agentic toolset with mcp-published operations registered for deploy`
-*When* Claude Code validates each spec at ++bdd-behavior++
-*Then* each spec carries a shared-describe-subject violation naming both describes
-
-#### Scenario: Give a story test validated alone the place its story map gives it
-
-Observed for the read (`cdd_guidance/practices/stories/stories_spec.py`). Written after exploratory testing round 3 (defect r3-sparky-10): a story test under `story_tests` named without its map was read as a map built from its folders, so validate counted one story in a sub-epic of two and read a flat epic as an epic holding a sub-epic of its own name.
-
-*Given* ++.context/story-map.md++ holds the sub-epic Take Orders with the stories Place Order and Cancel Order
-  *And* the story test of Place Order sits under `story_tests/sell-books/take-orders/place-order/` and names the map on a `# Map:` line
-*When* Claude Code validates the story test at ++stories-scenarios++, naming no story map
-*Then* Take Orders holds Place Order and Cancel Order, as the map does
-  *And* Place Order holds the story test's scenarios
-
-#### Scenario: Ask no examples file of an example a markdown scenarios file holds
-
-Observed (`cdd_guidance/practices/stories/rules/acceptance_tests_spec.py`). Written after exploratory testing round 3 (defect r3-sparky-04): each row of an examples table in a markdown scenarios file carried a domain-fixture-example-files violation it could never meet.
-
-*Given* a markdown scenarios file written after `templates/md/scenarios.md` holds its examples as rows of a table
-*When* Claude Code validates it at ++stories-scenarios++
-*Then* no example of it carries a domain-fixture-example-files violation
-
 #### Scenario: Name a path the graph read no node from
 
 Observed (`cdd_guidance/actions/validate/validate_spec.py`). Written after exploratory testing round 3 (defects r3-rivet-02, r3-widget-08): a sketch, a tree in markdown, or a class model in markdown gave the graph no node, and the report read "No graph rule violations. All scanned graph rules passed.", the words a file with checked nodes gets. Validate's description says a path's graph rules "run on" the files named; a file no rule ran on is named so.
@@ -134,3 +108,31 @@ Observed (`cdd_guidance/actions/validate/validate_spec.py`). Written after explo
 *When* Claude Code validates stories-story-map on ++.context/story-map.md++ and a path that is empty or only spaces
 *Then* the call is refused, saying an empty path names no file or folder
   *And* no validation report is saved
+
+## Story: Read Validated Files As Their Practice Writes Them
+
+#### Scenario: Report two describes that share a subject however the spec quotes them
+
+Observed (`cdd_guidance/practices/bdd/rules/shared_describe_subject_spec.py`). Written after exploratory testing round 3 (defect r3-rivet-10): the rule saw only Python describes written in double quotes.
+
+*Given* a Mamba spec written in single quotes, and a Vitest spec, each hold the top-level describes `a bare agentic toolset registered for deploy` and `a bare agentic toolset with mcp-published operations registered for deploy`
+*When* Claude Code validates each spec at ++bdd-behavior++
+*Then* each spec carries a shared-describe-subject violation naming both describes
+
+#### Scenario: Give a story test validated alone the place its story map gives it
+
+Observed for the read (`cdd_guidance/practices/stories/stories_spec.py`). Written after exploratory testing round 3 (defect r3-sparky-10): a story test under `story_tests` named without its map was read as a map built from its folders, so validate counted one story in a sub-epic of two and read a flat epic as an epic holding a sub-epic of its own name.
+
+*Given* ++.context/story-map.md++ holds the sub-epic Take Orders with the stories Place Order and Cancel Order
+  *And* the story test of Place Order sits under `story_tests/sell-books/take-orders/place-order/` and names the map on a `# Map:` line
+*When* Claude Code validates the story test at ++stories-scenarios++, naming no story map
+*Then* Take Orders holds Place Order and Cancel Order, as the map does
+  *And* Place Order holds the story test's scenarios
+
+#### Scenario: Ask no examples file of an example a markdown scenarios file holds
+
+Observed (`cdd_guidance/practices/stories/rules/acceptance_tests_spec.py`). Written after exploratory testing round 3 (defect r3-sparky-04): each row of an examples table in a markdown scenarios file carried a domain-fixture-example-files violation it could never meet.
+
+*Given* a markdown scenarios file written after `templates/md/scenarios.md` holds its examples as rows of a table
+*When* Claude Code validates it at ++stories-scenarios++
+*Then* no example of it carries a domain-fixture-example-files violation

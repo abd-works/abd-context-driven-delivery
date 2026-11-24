@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, background, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: See Work On Session Board
-# Map: ../../../.context/story-map.md#s-person----arrange-side-panel
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Arrange Board And Ticket Details
+# Map: ../../../../.context/story-map.md#s-person----arrange-side-panel
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Arrange Side Panel
 # Actor: Person
@@ -55,7 +55,7 @@ with story("Arrange Side Panel"):
             pass
     with scenario("Keep the columns' width when a panel opens"):
         # Evidence: observed: story-actions.spec 'should keep the columns' width and scroll them sideways when a panel opens'.
-        with given("the [board](../../../.context/kanban-model.md#board) shows its five [columns](../../../.context/kanban-model.md#column) at their own width"):
+        with given("the [board](../../../../.context/kanban-model.md#board) shows its five [columns](../../../../.context/kanban-model.md#column) at their own width"):
             pass
         with when("the Person opens checkout-flow's validation report"):
             # Person -> SidePanelClient.openReport('checkout-flow', its story map)

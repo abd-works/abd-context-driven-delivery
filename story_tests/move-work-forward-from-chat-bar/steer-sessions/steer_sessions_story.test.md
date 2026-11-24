@@ -64,6 +64,16 @@ section: body
 *When* the Person unchooses Create handoff and push, and confirms  
 *Then* the dialog showed only commit chosen, and ticket.close was asked only to commit
 
+#### Scenario: Warn in the chat bar before a close deletes work nobody committed
+
+*Given* the chat works in checkout-flow's own worktree, which holds a change to app/order.py and a new file notes.txt that nobody committed
+*When* the Person closes the session from the chat bar, choosing to delete its worktree
+*Then* the close dialog shows the warning that deleting the worktree without a commit loses the work, and lists app/order.py and notes.txt
+*When* the Person also chooses to commit
+*Then* the warning is gone
+*When* the Person closes the session with only the worktree deleted
+*Then* a toast names app/order.py and notes.txt as the uncommitted work lost
+
 ## Story: Open Session
 
 #### Scenario: Choose what switching does
@@ -132,3 +142,13 @@ section: body
   *But* the chat refuses the debug command
 *When* the Person asks to fix the failure
 *Then* the failure line says "The fix did not reach the chat" with the chat's reason
+
+## Story: Push Work From Chat Bar
+
+#### Scenario: Push a ticket's worktree part way through merging main
+
+*Given* the ticket checkout-flow's branch is checked out in a worktree of its own
+*And* a merge of main into that branch stopped on a conflict in `a.py`, which the Person has since resolved
+*When* the Person pushes the session's work
+*Then* the commit on checkout-flow's branch concludes the merge, with main as its second parent
+*And* the branch is pushed with the merge in it

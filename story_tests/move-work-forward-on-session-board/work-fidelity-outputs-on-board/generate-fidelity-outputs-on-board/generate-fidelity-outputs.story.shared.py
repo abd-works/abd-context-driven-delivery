@@ -7,7 +7,7 @@ Steps reach the board and the session only through the namespace a tier hands th
 `world.sessions`), so the domain spec and the cdd tools spec replay the same steps.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
-operation: Choose Action And Formats (all seven: the tile's action bar and its chips); Generate Fidelity Output "Send
+operation: Choose Action And Formats and Run Chosen Formats (all: the tile's action bar, its chips and its Run); Generate Fidelity Output "Send
 the generate command from a tile" (the board app writes the generate command); Render Fidelity Format (both: the board
 app writes the render command); Send Tile Action To Chat (both: the board app writes the sketch, iterate, and document
 commands and picks the chat). The Thens of the scenarios below that only the page shows (a bar's picks) are left to

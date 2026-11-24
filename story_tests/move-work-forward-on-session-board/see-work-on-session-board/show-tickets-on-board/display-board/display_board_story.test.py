@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, background, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: See Work On Session Board
-# Map: ../../../.context/story-map.md#s-board-app----display-board
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Show Tickets On Board
+# Map: ../../../../.context/story-map.md#s-board-app----display-board
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Display Board
 # Actor: Board App
@@ -18,30 +18,30 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 with story("Display Board"):
     with scenario("Draw the columns of the board"):
         # Evidence: observed: kanban_spec 'should have the columns Backlog, Discovery, Specification, Implementation, and Complete, in that order', 'should have story_map, bounded_context, and ia as Discovery's work required', 'should give every stage Generate and Validate, in that order'.
-        with given("a [board](../../../.context/kanban-model.md#board) with the Stories, DDD, and UX [practices](../../../.context/kanban-model.md#practiceguidance) chosen"):
+        with given("a [board](../../../../.context/kanban-model.md#board) with the Stories, DDD, and UX [practices](../../../../.context/kanban-model.md#practiceguidance) chosen"):
             pass
-        with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
+        with when("the session board reads the [board](../../../../.context/kanban-model.md#board)"):
             # Board page -> Board.show()
             # Board -> Board.columns
             # Board <- Backlog, Stage Discovery, Stage Specification, Stage Implementation, Column Complete
             # Stage -> Stage.work_required
             # Stage <- every chosen practice's fidelities of that stage
             pass
-        with then("the [columns](../../../.context/kanban-model.md#column) read Backlog, Discovery, Specification, Implementation, and Complete, in that order"):
+        with then("the [columns](../../../../.context/kanban-model.md#column) read Backlog, Discovery, Specification, Implementation, and Complete, in that order"):
             pass
-        with and_("each [stage](../../../.context/kanban-model.md#stage--column) shows an In progress list and a Done list"):
+        with and_("each [stage](../../../../.context/kanban-model.md#stage--column) shows an In progress list and a Done list"):
             pass
-        with and_("the Discovery [stage](../../../.context/kanban-model.md#stage--column) requires story_map, bounded_context, and ia, each through Generate and Validate"):
+        with and_("the Discovery [stage](../../../../.context/kanban-model.md#stage--column) requires story_map, bounded_context, and ia, each through Generate and Validate"):
             pass
     with scenario("Keep the newer board when an older read answers late"):
         # Evidence: observed: board-client.spec 'Refresh Board After Tool Calls' — 'should keep the newer board when an older read answers late'; board-reader.ts refresh.
-        with given("the [ticket](../../../.context/kanban-model.md#ticket--card) move-me is In progress in the Discovery [stage](../../../.context/kanban-model.md#stage--column)"):
+        with given("the [ticket](../../../../.context/kanban-model.md#ticket--card) move-me is In progress in the Discovery [stage](../../../../.context/kanban-model.md#stage--column)"):
             pass
-        with and_("a read of the [board](../../../.context/kanban-model.md#board) is still waiting for its answer"):
+        with and_("a read of the [board](../../../../.context/kanban-model.md#board) is still waiting for its answer"):
             pass
         with and_("another chat has moved move-me into Discovery's Done"):
             pass
-        with when("the session board reads the [board](../../../.context/kanban-model.md#board) again"):
+        with when("the session board reads the [board](../../../../.context/kanban-model.md#board) again"):
             # Board page -> Board.show()
             # Board <- move-me done in Discovery
             pass
@@ -49,7 +49,7 @@ with story("Display Board"):
             pass
     with scenario("Announce a ticket that moved"):
         # Evidence: observed: board-client.spec 'Announce Ticket Changes' — 'should name the new column of a ticket that moves', 'should raise nothing on the first read', 'should raise nothing on each read of a session open and closed under one name'.
-        with given("the session board shows the [ticket](../../../.context/kanban-model.md#ticket--card) move-me In progress in Discovery"):
+        with given("the session board shows the [ticket](../../../../.context/kanban-model.md#ticket--card) move-me In progress in Discovery"):
             pass
         with when("another chat moves move-me into Discovery's Done"):
             # Agent -> Ticket.move_to('Discovery', done=True)
@@ -61,9 +61,9 @@ with story("Display Board"):
             pass
     with scenario("Announce a fidelity done"):
         # Evidence: observed: board-client.spec 'should name a fidelity that is done'.
-        with given("the [ticket](../../../.context/kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../.context/kanban-model.md#fidelityguidance) generated and validated with no violations"):
+        with given("the [ticket](../../../../.context/kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../../.context/kanban-model.md#fidelityguidance) generated and validated with no violations"):
             pass
-        with when("a clean validate of stories-story-map is written to billing-report's [session log](../../../.context/kanban-model.md#session)"):
+        with when("a clean validate of stories-story-map is written to billing-report's [session log](../../../../.context/kanban-model.md#session)"):
             # Agent -> validate.validate(stories-story-map) writes a clean validate line
             # Board page -> Board.show()
             # Board <- stories-story-map done on billing-report
@@ -72,9 +72,9 @@ with story("Display Board"):
             pass
     with scenario("Show the other tickets when one ticket's session file does not read"):
         # Evidence: tested by see-work-on-session-board.story.shared.py, replayed by the domain spec; unit: space/kanban/kanban_tools_spec.py.
-        with given("the [session](../../../.context/kanban-model.md#session) folder .sessions/broken holds a session.json that is not JSON"):
+        with given("the [session](../../../../.context/kanban-model.md#session) folder .sessions/broken holds a session.json that is not JSON"):
             pass
-        with and_("the [ticket](../../../.context/kanban-model.md#ticket--card) pet-visits is on the [board](../../../.context/kanban-model.md#board)"):
+        with and_("the [ticket](../../../../.context/kanban-model.md#ticket--card) pet-visits is on the [board](../../../../.context/kanban-model.md#board)"):
             pass
         with when("the session board reads the board"):
             # Board page -> Board.show()

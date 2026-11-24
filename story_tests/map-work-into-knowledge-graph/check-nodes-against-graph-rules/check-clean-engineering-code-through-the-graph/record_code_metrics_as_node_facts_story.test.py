@@ -73,6 +73,16 @@ with story("Record Code Metrics As Node Facts"):
             self.shop.practice.reading.keep_code_measures(code_files(self.shop))
         with then("the node of the class Cart still holds unshared_method_groups 2"):
             expect(kept_on(self.shop, "OoadClass", "Cart", ["unshared_method_groups"])).to(equal({"unshared_method_groups": 2}))
+    with scenario("Measure only the files a read names"):
+        with given("the shop project's config has a `code_measures` section"):
+            pass
+        with when("the whole working copy of the shop project is loaded into the graph"):
+            self.shop = shop_project()
+        with then("no node holds a code measure"):
+            expect(any_measure_kept(self.shop)).to(be_false)
+
+
+with story("Measure Code With The Project's Chosen Tools"):
     with scenario("Take a measure with the tool chosen for its language"):
         # Outline: one run for each language the shipped table chooses lizard in.
         with given("the shop project's config has a `code_measures` section"):
@@ -121,13 +131,6 @@ with story("Record Code Metrics As Node Facts"):
             expect(node_of(self.shop, "Module", "shop").has_fact("copied_code_blocks")).to(be_false)
         with and_("no rule reports the measure as not taken"):
             expect(node_of(self.shop, "Module", "shop").has_fact("copied_code_blocks_not_taken")).to(be_false)
-    with scenario("Measure only the files a read names"):
-        with given("the shop project's config has a `code_measures` section"):
-            pass
-        with when("the whole working copy of the shop project is loaded into the graph"):
-            self.shop = shop_project()
-        with then("no node holds a code measure"):
-            expect(any_measure_kept(self.shop)).to(be_false)
     with scenario("Take no measure in a project that chose no tools"):
         with given("the shop project's config has no `code_measures` section"):
             self.shop = shop_project(config=NO_MEASURES_CHOSEN)

@@ -1,5 +1,5 @@
 // A Code File Opens With Its Classes Open And Their Members Folded, as story_tests/review-generated-work-in-file-viewer/
-// switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md writes it. Only the
+// open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md writes it. Only the
 // page folds: these are the lines whose folds close as a code file opens with no node selected.
 import { describe, expect, it } from 'vitest'
 

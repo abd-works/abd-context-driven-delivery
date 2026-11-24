@@ -1,5 +1,5 @@
 // A Selected Node Is Marked By One Orange Line Beside Its Lines, as story_tests/review-generated-work-in-file-viewer/
-// switch-files-app-between-files-and-graph/switch_files_app_between_files_and_graph_story.test.md writes it. Only the
+// open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md writes it. Only the
 // page marks lines, so the marks are read here as the decorations the source view is given.
 import { describe, expect, it } from 'vitest'
 

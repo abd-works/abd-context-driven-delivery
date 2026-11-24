@@ -137,7 +137,7 @@ The Files app shows the practice filters and then every file, both along the top
 
 ## Story: Open Session Files From Details
 
-The latest handoff opening from the details is Display Latest Handoff's (`steer_ticket_sessions_story.test.md`), so it is not repeated here.
+The latest handoff opening from the details is Display Latest Handoff's (`close_and_hand_off_ticket_sessions_story.test.md`), so it is not repeated here.
 
 Evidence: `space/kanban/app/src/kanban/ticket/details-view.tsx:37-55` (checked 2026-11-12) shows the session folder, the stage's files and the latest handoff, each opening from its link. The workpath link opens the root chooser. That it should open the workpath folder is intended, from `.sessions/_backlog/review-work-in-board-files.md` ("session information -> link to file or folders"), and was not observed.
 

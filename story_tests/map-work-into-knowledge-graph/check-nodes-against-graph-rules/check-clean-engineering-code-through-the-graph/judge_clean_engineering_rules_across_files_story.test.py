@@ -51,6 +51,42 @@ with story("Judge Clean Engineering Rules Across Files"):
             expect([violation.severity for violation in self.found]).to(equal(["error"]))
         with and_("it lists no group of the two beside it"):
             expect([said for said in self.listed if "do the same work" in said]).to(equal([]))
+    with scenario("List two verbs for one concept"):
+        with given("Cart has get_order and Till has fetch_order"):
+            self.project = practice_from_files(examples.TWO_VERBS_FOR_ORDER)
+        with when("the graph rules run"):
+            self.listed = self.project.hits(BY_SLUG["use-consistent-naming"])
+        with then("use-consistent-naming lists both operations, the target order, and the verbs fetch and get"):
+            expect([said.split(". Read")[0] for said in self.listed]).to(equal(["Operations 'store/cart.py: Cart.get_order', 'store/till.py: Till.fetch_order' name one concept, 'order', with the verbs fetch, get"]))
+    with scenario("Report a module card the code has moved on from"):
+        with given("the shop card names Basket in its seam and stock and `ledger/books` as dependencies, and the shop code imports tax"):
+            self.project = practice_from_files(examples.CARD_BEHIND_THE_CODE)
+        with when("the graph rules run"):
+            # InGraph.check -> SeamNamesCurrentCode.check_practice -> Node.get_fact(card_drift)
+            self.reported = self.project.hits(BY_SLUG["seam-names-current-code"])
+        with then("seam-names-current-code reports the seam term, the dependency not imported, the dependency that is no folder, and the import the card does not name"):
+            expect(len(self.reported)).to(equal(4))
+        with and_("each is a violation the graph decides, not a candidate"):
+            expect(BY_SLUG["seam-names-current-code"].requires_judge).to(equal(False))
+    with scenario("Report each rule's failing example and pass its repaired example"):
+        with given("the failing example and the repaired example of <rule>"):
+            self.pairs = [files_rule_pair(slug, faulty, repaired) for slug, faulty, repaired in _PAIRS]
+        with when("the graph rules run"):
+            self.results = [(bool(pair.faulty.hits(pair.rule)), pair.repaired.hits(pair.rule)) for pair in self.pairs]
+        with then("<rule> lists the failing example"):
+            expect([listed for listed, _repaired in self.results]).to(equal([True] * len(_PAIRS)))
+        with and_("it lists nothing in the repaired example"):
+            expect([repaired for _listed, repaired in self.results]).to(equal([[]] * len(_PAIRS)))
+    with scenario("Run each rule over the whole working copy"):
+        with given("the rules that compare files"):
+            self.rules = [BY_SLUG[slug] for slug, _faulty, _repaired in _PAIRS]
+        with when("validate is given paths"):
+            self.scopes = {rule.scope for rule in self.rules}
+        with then("each rule still runs over the whole working copy"):
+            expect(self.scopes).to(equal({"all"}))
+
+
+with story("Judge Passed Parameters And Second Registries"):
     with scenario("List a parameter handed down to two other classes"):
         with given("Desk.open hands its session to Clerk.file, which hands it to Archive.store"):
             self.project = practice_from_files(examples.SESSION_HANDED_DOWN)
@@ -89,36 +125,3 @@ with story("Judge Clean Engineering Rules Across Files"):
             self.listed = self.project.hits(BY_SLUG["do-not-invent-parallel-object-models"])
         with then("do-not-invent-parallel-object-models lists nothing"):
             expect(self.listed).to(equal([]))
-    with scenario("List two verbs for one concept"):
-        with given("Cart has get_order and Till has fetch_order"):
-            self.project = practice_from_files(examples.TWO_VERBS_FOR_ORDER)
-        with when("the graph rules run"):
-            self.listed = self.project.hits(BY_SLUG["use-consistent-naming"])
-        with then("use-consistent-naming lists both operations, the target order, and the verbs fetch and get"):
-            expect([said.split(". Read")[0] for said in self.listed]).to(equal(["Operations 'store/cart.py: Cart.get_order', 'store/till.py: Till.fetch_order' name one concept, 'order', with the verbs fetch, get"]))
-    with scenario("Report a module card the code has moved on from"):
-        with given("the shop card names Basket in its seam and stock and `ledger/books` as dependencies, and the shop code imports tax"):
-            self.project = practice_from_files(examples.CARD_BEHIND_THE_CODE)
-        with when("the graph rules run"):
-            # InGraph.check -> SeamNamesCurrentCode.check_practice -> Node.get_fact(card_drift)
-            self.reported = self.project.hits(BY_SLUG["seam-names-current-code"])
-        with then("seam-names-current-code reports the seam term, the dependency not imported, the dependency that is no folder, and the import the card does not name"):
-            expect(len(self.reported)).to(equal(4))
-        with and_("each is a violation the graph decides, not a candidate"):
-            expect(BY_SLUG["seam-names-current-code"].requires_judge).to(equal(False))
-    with scenario("Report each rule's failing example and pass its repaired example"):
-        with given("the failing example and the repaired example of <rule>"):
-            self.pairs = [files_rule_pair(slug, faulty, repaired) for slug, faulty, repaired in _PAIRS]
-        with when("the graph rules run"):
-            self.results = [(bool(pair.faulty.hits(pair.rule)), pair.repaired.hits(pair.rule)) for pair in self.pairs]
-        with then("<rule> lists the failing example"):
-            expect([listed for listed, _repaired in self.results]).to(equal([True] * len(_PAIRS)))
-        with and_("it lists nothing in the repaired example"):
-            expect([repaired for _listed, repaired in self.results]).to(equal([[]] * len(_PAIRS)))
-    with scenario("Run each rule over the whole working copy"):
-        with given("the rules that compare files"):
-            self.rules = [BY_SLUG[slug] for slug, _faulty, _repaired in _PAIRS]
-        with when("validate is given paths"):
-            self.scopes = {rule.scope for rule in self.rules}
-        with then("each rule still runs over the whole working copy"):
-            expect(self.scopes).to(equal({"all"}))

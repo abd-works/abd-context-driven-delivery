@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: Steer Ticket Sessions
-# Map: ../../../.context/story-map.md#s-person----switch-session
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Activate And Move Ticket Sessions
+# Map: ../../../../.context/story-map.md#s-person----switch-session
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Switch Session
 # Actor: Person

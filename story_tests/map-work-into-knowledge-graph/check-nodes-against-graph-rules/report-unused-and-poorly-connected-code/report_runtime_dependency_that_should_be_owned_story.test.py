@@ -19,8 +19,8 @@ from harness.installation.data_class import data_of
 from story_test import and_, given, scenario, story, then, when
 
 # Epic: Map Work Into Knowledge Graph
-# Sub-epic: Check Clean Engineering Code Through The Graph
-# Map: ../../../../.context/story-map.md#e-check-clean-engineering-code-through-the-graph
+# Sub-epic: Report Unused And Poorly Connected Code
+# Map: ../../../../.context/story-map.md#e-report-unused-and-poorly-connected-code
 
 _SLUG = "put-logic-on-the-owning-resource"
 _RULE = BY_SLUG[_SLUG]

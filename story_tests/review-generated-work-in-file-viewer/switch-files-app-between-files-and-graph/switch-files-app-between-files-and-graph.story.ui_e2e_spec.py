@@ -1,7 +1,8 @@
 """Switch Files App Between Files And Graph in a real browser: the scenarios only the page and Monaco show, on the Files
 app served for real (files_app_browser.FilesStack).
 
-Scenarios: switch_files_app_between_files_and_graph_story.test.md. The Python tiers replay the rest from
+Scenarios: switch_files_app_between_files_and_graph_story.test.md and
+../open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md. The Python tiers replay the rest from
 switch-files-app-between-files-and-graph.story.shared.py."""
 
 import sys
@@ -195,7 +196,7 @@ with description("Fold Open Files To Selected Nodes and Open Several Files From 
         with it("And the text of those lines is not shaded"):
             expect(self.page.locator(".view-overlays .file-selected-range").count()).to(equal(0))
 
-    with context("Story: Open Several Files From Graph Nodes, Scenario: Selecting a scenario opens only its own lines, not the examples module its example comes from"):
+    with context("Story: Open Story Test Lines From Graph Nodes, Scenario: Selecting a scenario opens only its own lines, not the examples module its example comes from"):
         with before.all:
             self.page = self.stack.open(CHECKOUT_FLOW.name, FIDELITIES)
             graph_view(self.page)

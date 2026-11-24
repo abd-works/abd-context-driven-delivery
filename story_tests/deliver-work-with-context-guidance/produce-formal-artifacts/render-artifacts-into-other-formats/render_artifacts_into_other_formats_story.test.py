@@ -4,7 +4,7 @@
 # format: py
 # ---
 #
-# Produce Formal Artifacts, as GWT structure only. Generated from the markdown beside it, which holds the domain
+# Render Artifacts Into Other Formats, as GWT structure only. Generated from the markdown beside it, which holds the domain
 # terms, the evidence and the examples. Each scenario is proven by the specs its story's evidence names.
 
 from __future__ import annotations
@@ -12,52 +12,7 @@ from __future__ import annotations
 from story_test import and_, given, scenario, story, then, when
 
 
-with story("Generate Fidelity Artifact"):
-    with scenario("Refuse a misspelt slug sent alone"):
-        with given('the bookshop session works on Stories'):
-            pass
-        with when('Claude Code generates with guidance stories_story_map'):
-            pass
-        with then('the call is refused, saying no practice or fidelity has the slug stories_story_map'):
-            pass
-        with and_('the refusal lists stories-story-map among the slugs there are'):
-            pass
-    with scenario("Run prose once as text"):
-        with given('the bookshop session works on Stories'):
-            pass
-        with when('Claude Code generates with guidance write the story map'):
-            pass
-        with then('the answer holds write the story map'):
-            pass
-    with scenario("Work on the practice a mapping names by its slug"):
-        with given('the bookshop session works on Stories'):
-            pass
-        with when('Claude Code generates with the guidance mapping {toolset: stories, fidelity: story_map}'):
-            pass
-        with then('the answer holds the rules of stories-story-map'):
-            pass
-    with scenario("Refuse a mapping that names no toolset"):
-        with given('the bookshop session works on Stories'):
-            pass
-        with when('Claude Code generates with the guidance mapping {foo: bar}'):
-            pass
-        with then('{foo: bar} is refused, saying a mapping names its practice in toolset'):
-            pass
-        with and_('the refusal lists stories-story-map among the slugs there are'):
-            pass
-
 with story("Render Artifact Into Another Format"):
-    with scenario("Save another file's drawing under that file's own name"):
-        with given(".context/story-map.drawio holds the story map's drawing, with Place Order moved by a person"):
-            pass
-        with and_('.context/returns.md holds another story map'):
-            pass
-        with when('Claude Code renders .context/returns.md to drawio at stories-story-map'):
-            pass
-        with then('the saved file is .context/returns.drawio, which draws Return Damaged Book'):
-            pass
-        with and_('.context/story-map.drawio is as the person left it'):
-            pass
     with scenario("Refuse to render an empty file"):
         with given(".context/story-map.drawio holds the story map's drawing"):
             pass
@@ -84,4 +39,17 @@ with story("Render Artifact Into Another Format"):
         with when('Claude Code renders .context/story-map.whiteboard to drawio at stories-story-map, naming no source'):
             pass
         with then('the saved file is .context/story-map.drawio, which draws Place Order'):
+            pass
+
+with story("Save Rendered Artifact Where Its Fidelity Declares It"):
+    with scenario("Save another file's drawing under that file's own name"):
+        with given(".context/story-map.drawio holds the story map's drawing, with Place Order moved by a person"):
+            pass
+        with and_('.context/returns.md holds another story map'):
+            pass
+        with when('Claude Code renders .context/returns.md to drawio at stories-story-map'):
+            pass
+        with then('the saved file is .context/returns.drawio, which draws Return Damaged Book'):
+            pass
+        with and_('.context/story-map.drawio is as the person left it'):
             pass

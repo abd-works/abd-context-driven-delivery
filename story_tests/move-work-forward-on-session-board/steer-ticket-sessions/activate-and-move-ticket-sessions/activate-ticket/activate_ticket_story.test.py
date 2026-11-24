@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: Steer Ticket Sessions
-# Map: ../../../.context/story-map.md#s-person----activate-ticket
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Activate And Move Ticket Sessions
+# Map: ../../../../.context/story-map.md#s-person----activate-ticket
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Activate Ticket
 # Actor: Person
@@ -17,7 +17,7 @@ from story_test import and_, but_, given, scenario, story, then, when
 with story("Activate Ticket"):
     with scenario("Open a ticket in its own worktree"):
         # Evidence: requested 2026-11-10: main is the only place sessions open; another ticket is another chat and worktree.
-        with given("the git [repository](../../../.context/kanban-model.md#repo) has no branch billing-report"):
+        with given("the git [repository](../../../../.context/kanban-model.md#repo) has no branch billing-report"):
             pass
         with when("the Person activates billing-report"):
             # Person -> Ticket.activate()

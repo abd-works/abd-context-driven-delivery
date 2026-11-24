@@ -38,36 +38,6 @@ Observed (`operation_checks.py` `EliminateDuplication`, `UseConsistentNaming`; `
 *Then* eliminate-duplication reports Parcel.total as a violation the graph decides
   *And* it lists no group of the two beside it
 
-#### Scenario: List a parameter handed down to two other classes
-
-*Given* Desk.open hands its session to Clerk.file, which hands it to Archive.store
-*When* the graph rules run
-*Then* hold-state-on-the-object-not-in-parameters lists Desk.open, naming the session and each operation it passes
-
-#### Scenario: Pass a parameter handed between one class's own operations, or to a constructor
-
-*Given* Desk.open hands its session only to Desk's own operations, or to the constructor of the Clerk made for it
-*When* the graph rules run
-*Then* hold-state-on-the-object-not-in-parameters lists nothing
-
-#### Scenario: List a class every operation of which takes the same parameter
-
-*Given* each of Board's three operations takes a ticket
-*When* the graph rules run
-*Then* hold-state-on-the-object-not-in-parameters lists Board
-
-#### Scenario: List a second registry of the same classes
-
-*Given* `report/listing.py` lists Alpha, Beta and Gamma, which `checks/registry.py` already holds
-*When* the graph rules run
-*Then* do-not-invent-parallel-object-models lists both collections and the classes they share
-
-#### Scenario: Pass a list of exported names, and one that spells the classes' names as labels
-
-*Given* `checks/__init__.py` exports Alpha, Beta and Gamma in `__all__`, and `report/listing.py` lists their names as strings
-*When* the graph rules run
-*Then* do-not-invent-parallel-object-models lists nothing
-
 #### Scenario: List two verbs for one concept
 
 *Given* Cart has get_order and Till has fetch_order
@@ -101,3 +71,35 @@ Observed (`operation_checks.py` `EliminateDuplication`, `UseConsistentNaming`; `
 *Given* the rules that compare files
 *When* validate is given paths
 *Then* each rule still runs over the whole working copy
+
+## Story: Judge Passed Parameters And Second Registries
+
+#### Scenario: List a parameter handed down to two other classes
+
+*Given* Desk.open hands its session to Clerk.file, which hands it to Archive.store
+*When* the graph rules run
+*Then* hold-state-on-the-object-not-in-parameters lists Desk.open, naming the session and each operation it passes
+
+#### Scenario: Pass a parameter handed between one class's own operations, or to a constructor
+
+*Given* Desk.open hands its session only to Desk's own operations, or to the constructor of the Clerk made for it
+*When* the graph rules run
+*Then* hold-state-on-the-object-not-in-parameters lists nothing
+
+#### Scenario: List a class every operation of which takes the same parameter
+
+*Given* each of Board's three operations takes a ticket
+*When* the graph rules run
+*Then* hold-state-on-the-object-not-in-parameters lists Board
+
+#### Scenario: List a second registry of the same classes
+
+*Given* `report/listing.py` lists Alpha, Beta and Gamma, which `checks/registry.py` already holds
+*When* the graph rules run
+*Then* do-not-invent-parallel-object-models lists both collections and the classes they share
+
+#### Scenario: Pass a list of exported names, and one that spells the classes' names as labels
+
+*Given* `checks/__init__.py` exports Alpha, Beta and Gamma in `__all__`, and `report/listing.py` lists their names as strings
+*When* the graph rules run
+*Then* do-not-invent-parallel-object-models lists nothing

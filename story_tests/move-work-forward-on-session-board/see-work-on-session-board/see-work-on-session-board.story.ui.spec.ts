@@ -1,7 +1,7 @@
 /**
  * See Work On Session Board at the browser tier: the scenarios whose behaviour lives only in the board app.
  *
- * Scenarios: story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md; Restrict Actions To Active Session is in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md. The Python tiers replay
+ * Scenarios: story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md and story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md; Restrict Actions To Active Session is in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md. The Python tiers replay
  * the rest from see-work-on-session-board.story.shared.py.
  *
  * Each scenario runs against the board app built and served on the throwaway fixture project
@@ -340,7 +340,7 @@ test.describe('Expand Ticket From Empty Area', () => {
     })
   })
 
-  // Scenarios: see_work_on_session_board_story.test.md, story Expand Ticket From Empty Area; one test per scenario.
+  // Scenarios: arrange_board_and_ticket_details_story.test.md, story Expand Ticket From Empty Area; one test per scenario.
   test('Expand a card from an empty area', async ({ page }) => {
     await openBoard(page)
     await expect(openCard(page, 'checkout-flow')).toHaveCount(0)

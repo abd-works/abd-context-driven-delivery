@@ -5,13 +5,13 @@ format: md
 section: body
 ---
 
-# Sub-epic: Produce Formal Artifacts
+# Sub-epic: Take UX Artifacts To Other Formats And Back
 
-Story map: [Produce Formal Artifacts](../../../.context/story-map.md#e-produce-formal-artifacts). Session release-1-2-fixes.
+Story map: [Take UX Artifacts To Other Formats And Back](../../../../.context/story-map.md#e-take-ux-artifacts-to-other-formats-and-back). Session release-1-2-fixes.
 
 **Evidence modes.** *Observed* scenarios hold for the UX format adapters today (`cdd_guidance/practices/ux/model`) and each names the spec that runs it. Every scenario here is Observed since the person's second answers of 2026-11-20 settled the two that were Intended: what a mockup's drawing and board hold, and that a view renders between typescript and javascript. They were written after round 3 of exploratory testing (defects r3-gizmo-01, 02, 04, 05) showed that no scenario covered a UX map's trip between the formats its fidelity offers.
 
-These scenarios belong to the story Take Artifact To Another Format And Back, whose other scenarios are in `take_artifact_to_another_format_and_back_story.test.md`; they are kept in a file of their own because they are about the UX map.
+These scenarios were headed under Take Artifact To Another Format And Back, whose other scenarios are in `../take-practice-artifacts-to-other-formats-and-back/take_artifact_to_another_format_and_back_story.test.md`; on 2026-11-24 they became the stories below, each named for the UX artifact it takes to another format and back, under the sub-epic Take UX Artifacts To Other Formats And Back.
 
 ### Domain terms
 
@@ -46,7 +46,7 @@ These scenarios belong to the story Take Artifact To Another Format And Back, wh
 | the control Add to cart in Add To Cart | scenario | the scenario link above, and `Add Book To Cart › Add a second book`, a name with no link |
 | the control Back to list in Add To Cart | | nothing |
 
-## Story: Take Artifact To Another Format And Back
+## Story: Take UX Map To Another Format And Back
 
 ### Evidence
 
@@ -104,6 +104,21 @@ Observed (`drawio_ux_map_spec.py`; `drawio_ux_map_heavy_spec.py`).
   *And* its regions fill the areas panel and body
   *And* the transition Check out is a top nav
 
+#### Scenario: Keep what only the UX context, the board or the drawing holds when a map is rendered onto it
+
+Observed (`cdd_guidance/practices/ux/model/render_onto_existing_spec.py`; the drawing through the command line in `drawio_ux_map_heavy_spec.py`).
+
+*Given* ++bookshop/.context/ux-context.md++ holds a line and a heading `Open questions` a person wrote
+  *And* the ++board++ holds a card, a screen and a note a person added, a story a person wrote on a control's card, and Checkout where a person moved it
+  *And* the drawing shows a screen and a control the mockup does not hold
+*When* Claude Code renders the map onto each of them
+*Then* ++bookshop/.context/ux-context.md++ keeps every line the person wrote, with the map's new invariant and note after its own
+  *And* the ++board++ keeps the person's card in its region, the screen, the note, the story on the card, and Checkout where it was moved
+  *And* the drawing still shows the screen and the control only it held
+  *And* rendering the same map again changes none of the three
+
+## Story: Take Mockup Drawing To Another Format And Back
+
 #### Scenario: Read back the controls a drawing shows, in their own regions
 
 Observed (`drawio_ux_map_spec.py`; `drawio_ux_map_heavy_spec.py`).
@@ -155,6 +170,8 @@ Observed (`drawio_ux_map_spec.py`; `drawio_ux_map_heavy_spec.py`, "of a mockup w
   *And* Back to list serves nothing
   *And* Book Details has the regions Book Summary and Add To Cart, and no other
 
+## Story: Take Mockup To Claude Whiteboard And Back
+
 #### Scenario: Show on the board what each screen and each control serves
 
 Observed (`cdd_guidance/practices/ux/model/whiteboard/whiteboard_ux_map_spec.py`).
@@ -195,6 +212,40 @@ Observed (`whiteboard_ux_map_spec.py`, "that is drawn again over a board on whic
 *Given* a person moved the section of Checkout on the ++board++
 *When* Claude Code renders the mockup to whiteboard again
 *Then* the section of Checkout is where the person put it
+
+## Story: Take Mockup To Claude Design Canvas And Back
+
+#### Scenario: Take a mockup to a Claude Design canvas and back
+
+Observed (`cdd_guidance/practices/ux/model/claude_design/claude_design_ux_map_spec.py`; the saving and the trip back through the Render action in `cdd_guidance/actions/render/render_spec.py`, "that is a mockup in html, rendered to claude_design", and through a real cdd server in `cdd_guidance/actions/render/render_saves_beside_source_heavy_spec.py`). Written after defect r3-gizmo-03: the render answered `{}`, saved nothing, and a canvas could not be read back. The person, 2026-11-23: a mockup render to claude_design works and renders back.
+
+*Given* ++bookshop/buy-a-book.html++ holds the mockup
+  *And* the canvas has no version yet
+*When* Claude Code renders ++bookshop/buy-a-book.html++ to claude_design
+*Then* the canvas's first version holds `design-canvas/version-1/project/canvas.json` and a prototype page for each screen, `screens/book-list.dc.html` and the rest
+  *And* each prototype page is a mockup page that opens on its own screen, with its regions and controls, the transitions and what it serves
+  *And* `canvas.json` places each page's board on a canvas page of its own, titled with its screen's name, in screen order
+*When* Claude Code renders `design-canvas/version-1/project/canvas.json` to html
+*Then* the render is ++bookshop/buy-a-book.html++ as it was
+
+#### Scenario: Refuse to read a canvas that is missing a screen's prototype page
+
+Observed (`claude_design_ux_map_spec.py`, "whose prototype page for a screen is missing").
+
+*Given* `design-canvas/version-1/project/canvas.json` places the board of `screens/cart.dc.html`, and the canvas holds no such page
+*When* Claude Code renders `design-canvas/version-1/project/canvas.json` to html
+*Then* the render is refused, naming `screens/cart.dc.html`
+
+#### Scenario: Leave a published canvas and a screen people ported as they are
+
+Observed (`render_spec.py`, "whose canvas's latest version is published" and "whose canvas holds a screen people ported where a prototype page goes"). Source: `harness/design_canvas/.context/cdr/0001-recipe-called-canvas-api.md`, people edit a published canvas, so only the person starts the version after it.
+
+*Given* the canvas's latest version is published, or holds at `screens/cart.dc.html` a screen the agent ported from the product
+*When* Claude Code renders ++bookshop/buy-a-book.html++ to claude_design
+*Then* the render is refused, naming the published version or the ported screen
+  *And* no file of the canvas is written
+
+## Story: Take View Code To Another Language And Back
 
 #### Scenario: Start the front-end code fidelity in a format it writes
 
@@ -247,19 +298,6 @@ Observed (`view_reshape_spec.py`).
 *When* Claude Code renders onto it a ++view++ whose component takes cart alone
 *Then* the component still takes onPaid, under a comment that says the prop is no longer in the model
 
-#### Scenario: Keep what only the UX context, the board or the drawing holds when a map is rendered onto it
-
-Observed (`cdd_guidance/practices/ux/model/render_onto_existing_spec.py`; the drawing through the command line in `drawio_ux_map_heavy_spec.py`).
-
-*Given* ++bookshop/.context/ux-context.md++ holds a line and a heading `Open questions` a person wrote
-  *And* the ++board++ holds a card, a screen and a note a person added, a story a person wrote on a control's card, and Checkout where a person moved it
-  *And* the drawing shows a screen and a control the mockup does not hold
-*When* Claude Code renders the map onto each of them
-*Then* ++bookshop/.context/ux-context.md++ keeps every line the person wrote, with the map's new invariant and note after its own
-  *And* the ++board++ keeps the person's card in its region, the screen, the note, the story on the card, and Checkout where it was moved
-  *And* the drawing still shows the screen and the control only it held
-  *And* rendering the same map again changes none of the three
-
 #### Scenario: Refuse to render a view that declares what JavaScript cannot hold without its type
 
 Observed (`front_end_view_spec.py`, "that declares an enum", "whose constructor declares a member in its parameters").
@@ -277,33 +315,3 @@ Observed (`ux_spec.py`, "a front-end view rendered to another format").
 *When* Claude Code renders ++bookshop/src/CheckoutView.tsx++ to drawio
 *Then* the render is refused: a front-end view is rendered between typescript and javascript only
   *And* ++bookshop/src/CheckoutView.tsx++ is not read as a mockup page
-
-#### Scenario: Take a mockup to a Claude Design canvas and back
-
-Observed (`cdd_guidance/practices/ux/model/claude_design/claude_design_ux_map_spec.py`; the saving and the trip back through the Render action in `cdd_guidance/actions/render/render_spec.py`, "that is a mockup in html, rendered to claude_design", and through a real cdd server in `cdd_guidance/actions/render/render_saves_beside_source_heavy_spec.py`). Written after defect r3-gizmo-03: the render answered `{}`, saved nothing, and a canvas could not be read back. The person, 2026-11-23: a mockup render to claude_design works and renders back.
-
-*Given* ++bookshop/buy-a-book.html++ holds the mockup
-  *And* the canvas has no version yet
-*When* Claude Code renders ++bookshop/buy-a-book.html++ to claude_design
-*Then* the canvas's first version holds `design-canvas/version-1/project/canvas.json` and a prototype page for each screen, `screens/book-list.dc.html` and the rest
-  *And* each prototype page is a mockup page that opens on its own screen, with its regions and controls, the transitions and what it serves
-  *And* `canvas.json` places each page's board on a canvas page of its own, titled with its screen's name, in screen order
-*When* Claude Code renders `design-canvas/version-1/project/canvas.json` to html
-*Then* the render is ++bookshop/buy-a-book.html++ as it was
-
-#### Scenario: Refuse to read a canvas that is missing a screen's prototype page
-
-Observed (`claude_design_ux_map_spec.py`, "whose prototype page for a screen is missing").
-
-*Given* `design-canvas/version-1/project/canvas.json` places the board of `screens/cart.dc.html`, and the canvas holds no such page
-*When* Claude Code renders `design-canvas/version-1/project/canvas.json` to html
-*Then* the render is refused, naming `screens/cart.dc.html`
-
-#### Scenario: Leave a published canvas and a screen people ported as they are
-
-Observed (`render_spec.py`, "whose canvas's latest version is published" and "whose canvas holds a screen people ported where a prototype page goes"). Source: `harness/design_canvas/.context/cdr/0001-recipe-called-canvas-api.md`, people edit a published canvas, so only the person starts the version after it.
-
-*Given* the canvas's latest version is published, or holds at `screens/cart.dc.html` a screen the agent ported from the product
-*When* Claude Code renders ++bookshop/buy-a-book.html++ to claude_design
-*Then* the render is refused, naming the published version or the ported screen
-  *And* no file of the canvas is written

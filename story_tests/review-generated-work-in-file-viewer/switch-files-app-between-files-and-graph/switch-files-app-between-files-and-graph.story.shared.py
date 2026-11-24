@@ -1,8 +1,9 @@
 """Switch Files App Between Files And Graph: the shared scenarios the Python tiers replay.
 
 Scenarios: story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/
-switch_files_app_between_files_and_graph_story.test.md. Map: .context/story-map.md, (E) Switch Files App
-Between Files And Graph.
+switch_files_app_between_files_and_graph_story.test.md and, for what a selected node opens, story_tests/
+review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/open_graph_nodes_in_files_app_story.test.md.
+Map: .context/story-map.md, (E) Switch Files App Between Files And Graph and (E) Open Graph Nodes In Files App.
 
 Steps reach the session only through the namespace a tier hands them (`world.Ticket`), so the domain spec and the cdd
 tools spec replay the same steps. A file is named from the project, as the Files app names it.
@@ -93,7 +94,10 @@ def _(s):
         expect(world.names).to(contain("stories", "clean_engineering", "Delete Ticket", "Ticket", "Board"))
 
 
-@shared_stories.scenario("Switch Files App To Graph View", "The Stories tree holds the project's story map")
+# --- Read Story Map Into Stories Tree -----------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Read Story Map Into Stories Tree", "The Stories tree holds the project's story map")
 def _(s):
     @s.given("the project's .context holds checkout-flow's story map, and an old story map is left in harness/.context/stories")
     def _(world):
@@ -108,7 +112,7 @@ def _(s):
         expect(("Delete Ticket" in world.names, "Run Old Layout" in world.names)).to(equal((True, False)))
 
 
-@shared_stories.scenario("Switch Files App To Graph View", "The Stories tree holds a story listed only by its story test in code")
+@shared_stories.scenario("Read Story Map Into Stories Tree", "The Stories tree holds a story listed only by its story test in code")
 def _(s):
     @s.given("the Files app lists only the code formats, so of the Stories files only Delete Ticket's and Restore Ticket's story tests")
     def _(world):
@@ -127,7 +131,7 @@ def _(s):
         expect("Restore Ticket" in world.names).to(equal(True))
 
 
-@shared_stories.scenario("Switch Files App To Graph View", "A story map listed with a code story test keeps every epic of the map")
+@shared_stories.scenario("Read Story Map Into Stories Tree", "A story map listed with a code story test keeps every epic of the map")
 def _(s):
     @s.given("checkout-flow's story map holds Manage Tickets and Plan Releases, with Plan Releases' story Cut Release")
     def _(world):
@@ -156,7 +160,7 @@ def _(s):
         expect((names_above(world, "Restore Ticket", world.listed), world.names.count("Restore Ticket"))).to(equal((["stories", "Manage Tickets", "Remove Tickets"], 1)))
 
 
-@shared_stories.scenario("Switch Files App To Graph View", "A story map listed in markdown and drawio is read once, from its markdown")
+@shared_stories.scenario("Read Story Map Into Stories Tree", "A story map listed in markdown and drawio is read once, from its markdown")
 def _(s):
     @s.given("the Files app lists checkout-flow's story map in markdown and in drawio")
     def _(world):
@@ -172,7 +176,7 @@ def _(s):
         expect((world.names.count("Delete Ticket"), "Manage Tickets In Drawio" in world.names)).to(equal((1, False)))
 
 
-@shared_stories.scenario("Switch Files App To Graph View", "The Stories tree holds a story's scenarios listed in markdown")
+@shared_stories.scenario("Read Story Map Into Stories Tree", "The Stories tree holds a story's scenarios listed in markdown")
 def _(s):
     @s.given("the Files app lists only the markdown formats: checkout-flow's story map and Delete Ticket's scenarios")
     def _(world):
@@ -187,7 +191,7 @@ def _(s):
         expect(world.names).to(contain("Delete Ticket", "a ticket is deleted", "given a ticket on the board"))
 
 
-@shared_stories.scenario("Switch Files App To Graph View", "A story listed only by its story map holds its scenarios")
+@shared_stories.scenario("Read Story Map Into Stories Tree", "A story listed only by its story map holds its scenarios")
 def _(s):
     @s.given("the Files app lists only checkout-flow's story map, .context/story-map.md")
     def _(world):
@@ -262,7 +266,10 @@ def shared_story_lines(world, name: str) -> list[tuple[str, int, int]]:
     return [(found["path"], found["start_line"], found["end_line"]) for found in ranges]
 
 
-@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a scenario in a Python story test spans its whole function")
+# --- Open Story Test Lines From Graph Nodes -----------------------------------------------------------------------
+
+
+@shared_stories.scenario("Open Story Test Lines From Graph Nodes", "Selecting a scenario in a Python story test spans its whole function")
 def _(s):
     @s.given("the Files app shows the Stories tree of Remove Tickets' shared story test")
     def _(world):
@@ -277,7 +284,7 @@ def _(s):
         expect(world.lines).to(equal([(SHARED_STORY, 7, 15)]))
 
 
-@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a step in a Python story test spans its whole function")
+@shared_stories.scenario("Open Story Test Lines From Graph Nodes", "Selecting a step in a Python story test spans its whole function")
 def _(s):
     @s.given("the Files app shows the Stories tree of Remove Tickets' shared story test")
     def _(world):
@@ -292,7 +299,7 @@ def _(s):
         expect(world.lines).to(equal([(SHARED_STORY, 9, 11)]))
 
 
-@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a scenario opens only its own lines, not the examples module its example comes from")
+@shared_stories.scenario("Open Story Test Lines From Graph Nodes", "Selecting a scenario opens only its own lines, not the examples module its example comes from")
 def _(s):
     @s.given("the Files app shows the Stories tree of Delete Ticket's story test, whose Then observes CHECKOUT_TICKET from the examples module")
     def _(world):
@@ -308,7 +315,7 @@ def _(s):
         expect(world.lines).to(equal([(STEP_STORY, 7, 19)]))
 
 
-@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a story in a Python story test spans its scenarios")
+@shared_stories.scenario("Open Story Test Lines From Graph Nodes", "Selecting a story in a Python story test spans its scenarios")
 def _(s):
     @s.given("the Files app shows the Stories tree of Remove Tickets' shared story test")
     def _(world):
@@ -323,7 +330,7 @@ def _(s):
         expect(world.lines).to(equal([(SHARED_STORY, 7, 22)]))
 
 
-@shared_stories.scenario("Open Several Files From Graph Nodes", "Selecting a step opens its scenarios file at the step's line")
+@shared_stories.scenario("Open Story Test Lines From Graph Nodes", "Selecting a step opens its scenarios file at the step's line")
 def _(s):
     @s.given("the Files app shows the Stories tree of checkout-flow's story map and Delete Ticket's scenarios")
     def _(world):
@@ -682,7 +689,10 @@ def _(s):
         expect([message for message in found if "'when the Person archives it'" in message]).to(equal([]))
 
 
-@shared_stories.scenario("Follow Story Steps To Code", "A markdown When is not asked to invoke code before a realization names it")
+# --- Show Rules Story Tests Break ---------------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Show Rules Story Tests Break", "A markdown When is not asked to invoke code before a realization names it")
 def _(s):
     @s.given("checkout-flow's Delete Ticket scenarios in markdown, whose When the Person deletes the ticket's card names no code, and Clean Engineering read")
     def _(world):
@@ -698,7 +708,7 @@ def _(s):
         expect(found).to(equal([]))
 
 
-@shared_stories.scenario("Follow Story Steps To Code", "A When in a story test that calls none of the code it tests is flagged")
+@shared_stories.scenario("Show Rules Story Tests Break", "A When in a story test that calls none of the code it tests is flagged")
 def _(s):
     @s.given("Delete Ticket's Python shared story test, whose When the Person looks up the deleted ticket calls only the file's own helper ticket_left")
     def _(world):
@@ -714,7 +724,7 @@ def _(s):
         expect((len(flagged), any(STEP_STORY_HELPER_WHEN in message for message in flagged))).to(equal((1, True)))
 
 
-@shared_stories.scenario("Follow Story Steps To Code", "A story test outside the session's folder shows the rules it breaks")
+@shared_stories.scenario("Show Rules Story Tests Break", "A story test outside the session's folder shows the rules it breaks")
 def _(s):
     @s.given("checkout-flow works in the folder space, and Delete Ticket's Python shared story test, under story_tests outside it, has a When that calls only the file's own helper ticket_left")
     def _(world):
@@ -856,7 +866,10 @@ def _(s):
         expect([callout["missing"] for callout in world.callouts]).to(equal(["nowhere/gone.md is not there"]))
 
 
-@shared_stories.scenario("Filter Callouts Like The Graph", "A connector left out of the node filter leaves out what a step reaches by it")
+# --- Filter Step Callouts By Node Filter --------------------------------------------------------------------------
+
+
+@shared_stories.scenario("Filter Step Callouts By Node Filter", "A connector left out of the node filter leaves out what a step reaches by it")
 def _(s):
     @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose When invokes Ticket.delete and whose Then observes CHECKOUT_TICKET")
     def _(world):
@@ -876,7 +889,7 @@ def _(s):
         expect(world.without_invokes).to(equal({STEP_STORY_THEN_LINE: ["CHECKOUT_TICKET"]}))
 
 
-@shared_stories.scenario("Filter Callouts Like The Graph", "A node type left out of the node filter leaves out the nodes of that type a step reaches")
+@shared_stories.scenario("Filter Step Callouts By Node Filter", "A node type left out of the node filter leaves out the nodes of that type a step reaches")
 def _(s):
     @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose When invokes Ticket.delete, an operation, and whose Then observes CHECKOUT_TICKET, an example")
     def _(world):
@@ -891,7 +904,7 @@ def _(s):
         expect(world.reached).to(equal({STEP_STORY_WHEN_LINE: ["delete"]}))
 
 
-@shared_stories.scenario("Filter Callouts Like The Graph", "A step keeps what it reaches in the files listed with it")
+@shared_stories.scenario("Filter Step Callouts By Node Filter", "A step keeps what it reaches in the files listed with it")
 def _(s):
     @s.given("the Files app shows checkout-flow's graph of Delete Ticket's Python shared story test, whose Then observes CHECKOUT_TICKET in ticket_story_examples.py, the examples file Stories declares")
     def _(world):

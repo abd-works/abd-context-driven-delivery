@@ -1,4 +1,4 @@
-"""Guide Work Through Practices In Chat Bar at the server tier: the shared scenarios through the cdd tools
+"""Choose Session Practices And Overlays In Chat Bar at the server tier: the shared scenarios through the cdd tools
 ticket.overlay_choices and ticket.choose_overlays, on a cdd server started on a throwaway project."""
 
 from space.kanban.session_board_tiers import ServerTier
@@ -15,4 +15,4 @@ WIRING = [
     "Choose a pattern as the session's overlay",
 ]
 
-globals().update(replay(load_shared(__file__, "guide-work-through-practices-in-chat-bar"), ServerTier(), LEFT_OUT, only=WIRING))
+globals().update(replay(load_shared(__file__, "choose-session-practices-and-overlays-in-chat-bar"), ServerTier(), LEFT_OUT, only=WIRING))

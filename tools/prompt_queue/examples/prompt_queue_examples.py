@@ -1,7 +1,7 @@
 """The examples the Nest Prompt Steps In Queue stories share: a chat's prompt queue in a throwaway folder, the prompts
 queued on it, and the steps the agent plans for one of them.
 
-Scenarios: story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/, one folder per story.
+Scenarios: story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/ and track-working-prompt-from-chat/, one folder per story.
 """
 from __future__ import annotations
 

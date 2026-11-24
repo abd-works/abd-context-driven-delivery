@@ -5,9 +5,9 @@ format: md
 section: body
 ---
 
-# Sub-epic: Check Clean Engineering Code Through The Graph
+# Sub-epic: Report Unused And Poorly Connected Code
 
-Story map: [Check Clean Engineering Code Through The Graph](../../../../.context/story-map.md#e-check-clean-engineering-code-through-the-graph). Session release-1-2-fixes.
+Story map: [Report Unused And Poorly Connected Code](../../../../.context/story-map.md#e-report-unused-and-poorly-connected-code). Session release-1-2-fixes.
 
 **Evidence mode.** Every scenario here is *Observed*: it holds today and names the code that runs it, `cdd_guidance/practices/clean_engineering/rules/code_use.py` and `code_use_rules.py`, with each rule's failing and repaired shop in `rules/code_use_examples.py`. Built on 2026-11-22 from the person's decisions in `.sessions/_backlog/check-clean-engineering-across-files.md`.
 
@@ -59,6 +59,8 @@ Observed (`code_fidelity_rules_spec.py`). The person's decisions of 2026-11-22 (
 *Given* count_twice is deleted, the cart's clear calls its own recount, and the till clears the cart once it has rung a line up, when the cart is not empty
 *When* the graph rules run
 *Then* delete-unused-operations reports nothing
+
+## Story: Count Indirect Uses Before Reporting Deletion
 
 #### Scenario: Count a use from example code only when production imports it
 

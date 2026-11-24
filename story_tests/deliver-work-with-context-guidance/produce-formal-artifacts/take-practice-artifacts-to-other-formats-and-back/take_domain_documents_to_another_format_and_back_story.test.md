@@ -5,13 +5,13 @@ format: md
 section: body
 ---
 
-# Sub-epic: Produce Formal Artifacts
+# Sub-epic: Take Practice Artifacts To Other Formats And Back
 
-Story map: [Produce Formal Artifacts](../../../.context/story-map.md#e-produce-formal-artifacts). Session release-1-2-fixes.
+Story map: [Take Practice Artifacts To Other Formats And Back](../../../../.context/story-map.md#e-take-practice-artifacts-to-other-formats-and-back). Session release-1-2-fixes.
 
 **Evidence modes.** *Observed* scenarios hold for DDD's format adapters today (`cdd_guidance/practices/ddd/model`) and each names the spec that runs it. The one *Intended* scenario says what a trip should keep where a drawing cannot hold it yet, and names the evidence still missing (`flagged-writes-intended-gwt`). They were written after exploratory testing (defects widget-20 and r3-bolt-03) showed that a bounded-context map and a domain model lost a person's sentences, notes, invariants, events and integration fields on a trip to a drawing and back, and that the arrows a drawing shows were dropped when it was read.
 
-The story below is not on the story map yet. It follows Take Artifact To Another Format And Back ([take_artifact_to_another_format_and_back_story.test.md](take_artifact_to_another_format_and_back_story.test.md)), whose scenario "Keep the prose a drawing cannot hold" was Intended; the scenarios here make it Observed for the case where the markdown file is still there when the drawing is written back.
+The stories below are on the story map under Take Practice Artifacts To Other Formats And Back (2026-11-24), with the two scenarios about domain models that were in Take Artifact To Another Format And Back. They follow Take Artifact To Another Format And Back ([take_artifact_to_another_format_and_back_story.test.md](take_artifact_to_another_format_and_back_story.test.md)), whose scenario "Keep the prose a drawing cannot hold" was Intended; the scenarios here make it Observed for the case where the markdown file is still there when the drawing is written back.
 
 ### Domain terms
 
@@ -76,6 +76,42 @@ Observed (`format_round_trip_spec.py`).
 | .context/domain-model.md | drawio |
 | .context/domain-model.md | whiteboard |
 
+#### Scenario: Keep the document's words when no markdown file is beside the drawing
+
+Intended. Evidence still missing: where a drawing keeps the ++document's words++ is the person's decision. A drawing holds no sentence, note, invariant, event, or field of an integration other than its pattern, and a domain model's drawing does not show the model's title, so a drawing rendered to markdown with no ++replaced file++ writes the file without them.
+
+*Given* ++.context/domain-model.md++ was rendered to drawio
+  *And* a person deleted ++.context/domain-model.md++
+*When* Claude Code renders the drawing to markdown
+*Then* ++.context/domain-model.md++ holds its title, its notes, its invariants and each integration's fields
+
+#### Scenario: Keep a domain model's title, and write no rule over operations a class does not have
+
+Observed (`cdd_guidance/practices/ddd/model/format_round_trip_spec.py`).
+
+*Given* ++.context/domain-model.md++ opens with `# Domain Model — Bookshop` and its value object OrderLine has no operations
+*When* Claude Code reads ++.context/domain-model.md++ and writes it again as markdown
+*Then* it opens with `# Domain Model — Bookshop`
+  *And* OrderLine has no `----` rule under its properties
+
+#### Scenario: Save a domain model rendered to code in each aggregate's own file
+
+Observed (`cdd_guidance/practices/ddd/model/domain_model_languages_spec.py`, `cdd_guidance/practices/ddd/domain_model_render_heavy_spec.py`). DDD writes JavaScript with the class model TypeScript is written with, its types left out.
+
+*Given* the Ordering bounded context, with its aggregates Cart and Order, is written as <source>
+*When* Claude Code renders it to <code format> at the DDD model fidelity
+*Then* each aggregate's classes are saved in `ordering/cart/cart` and `ordering/order/order` with that format's extension
+  *And* each file is one the fidelity declares for the format
+
+| source | code format |
+| --- | --- |
+| a markdown domain model | python, typescript, javascript |
+| Python code whose classes name their place | python, typescript, javascript |
+| TypeScript code whose classes name their place | python, typescript, javascript |
+| JavaScript code whose classes name their place | python, typescript, javascript |
+
+## Story: Keep Aggregate Links Through Another Format
+
 #### Scenario: Leave out an integration whose arrow a person removed from the drawing
 
 Observed (`format_round_trip_spec.py`).
@@ -108,15 +144,6 @@ Observed (`format_round_trip_spec.py`).
 *Given* ++.context/domain-model.md++ was rendered to drawio, and the drawing to markdown with no markdown file beside it
 *When* Claude Code renders that markdown to drawio again
 *Then* the drawing has the same fourteen arrows, between the same cards, with the same labels
-
-#### Scenario: Keep the document's words when no markdown file is beside the drawing
-
-Intended. Evidence still missing: where a drawing keeps the ++document's words++ is the person's decision. A drawing holds no sentence, note, invariant, event, or field of an integration other than its pattern, and a domain model's drawing does not show the model's title, so a drawing rendered to markdown with no ++replaced file++ writes the file without them.
-
-*Given* ++.context/domain-model.md++ was rendered to drawio
-  *And* a person deleted ++.context/domain-model.md++
-*When* Claude Code renders the drawing to markdown
-*Then* ++.context/domain-model.md++ holds its title, its notes, its invariants and each integration's fields
 
 #### Scenario Outline: Name each aggregate in a bounded context's file as a link to the domain model
 

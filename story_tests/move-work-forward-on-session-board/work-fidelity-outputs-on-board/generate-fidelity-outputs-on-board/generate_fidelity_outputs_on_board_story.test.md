@@ -58,6 +58,8 @@ section: body
 *Then* the choice is refused, saying ux is turned off for the session and to turn ux on first
 *And* billing-report's session.json keeps no format for ia
 
+## Story: Run Chosen Formats
+
 #### Scenario: Keep Run off on a render with nothing to render
 
 *Given* billing-report's story map has no file

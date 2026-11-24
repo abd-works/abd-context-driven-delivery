@@ -92,6 +92,8 @@ Story map: [Read Practice Trees From Source](../../../../.context/story-map.md#e
 *When* Claude Code loads the bookshop into the graph
 *Then* the mapping `Cart → Catalogue · Book` of ++ordering/.context/bounded-context.md++ has the aggregate `cart` as its local side and the aggregate `book` as its remote side
 
+## Story: Join Domain Blocks Across Documents And Code
+
 #### Scenario: Link a block to the block written in its own language
 
 *Given* the bookshop holds its code

@@ -390,16 +390,6 @@ Round 3 of exploratory testing (r3-lens-05): with no stage selected yet the page
 *When* the Person views *ticket.py*
 *Then* the source view shows that project's *ticket.py*, its first line reading *class Ticket:*, not the CDD checkout's
 
-#### Scenario: Render a markdown file as the page it describes
-
-Requested 2026-11-19: scenarios, story maps and domain models are read as pages, and their text is a press away. Markdown is rendered with the `marked` and `DOMPurify` the page already loads with Monaco, so nothing the file holds runs a script. Only the page draws it: `harness/files_app/app/files/file-rendering.spec.ts`.
-
-*Given* checkout-flow's session holds *README.md*, which starts *# Checkout*
-*When* the Person views *README.md*
-*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *Checkout* rendered as a heading, not as *# Checkout*
-*And* its Rendered toggle is pressed and its Source toggle is not
-*And* a link to a file that is not there keeps the Files app where it is, *README.md* the one open file
-
 #### Scenario: Switch a rendered file to its source and back
 
 *Given* the Files app shows *README.md* rendered
@@ -415,6 +405,51 @@ The lines of a node selected in the graph view, its comments and its broken rule
 *Given* the Person selects, in the graph view, a story of *.context/story-map.md*
 *When* the Files app opens *story-map.md* at that story's lines
 *Then* it opens in the source view with those lines shown, and Rendered a press away
+
+#### Scenario: Show only the source view for a file with no rendered form
+
+*Given* checkout-flow's session holds *order.py*
+*When* the Person views *order.py*
+*Then* the Files app shows it in the source view, with no Rendered or Source toggle
+
+#### Scenario: A file from an older server lane opens without callouts
+
+Found on 2026-11-16 (debug report `debug-20261116T225500.md`): a page reaching a cdd server lane older than the page (the pinned stable lane, whose `session.file` answers no callouts) stopped with "Cannot read properties of undefined (reading 'map')".
+
+*Given* checkout-flow's session holds *order.py*, and the cdd server the page reaches answers *order.py* with its text but without callouts, steps or violations
+*When* the Person views *order.py*
+*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* in the source view, with no callout and no broken rule
+*And* a server answer that is no file at all, such as the text of a call it cannot run, is shown and told as *order.py* not opening, and the page keeps working
+
+#### Scenario: Say so when a listed file is gone
+
+Found on 2026-11-19 (exploratory testing, pixel-01): a file deleted or moved on disk after the page listed it opened as one empty line in a live editor, exactly as an empty file opens, so the next save would bring it back empty. Acceptance tests: `space/session/session_graph_spec.py` and `space/session/files/file_manager_spec.py` for what the session answers; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the file bar lists *src/order.py*, and *order.py* was deleted on disk since the page listed it
+*When* the Person views *order.py*
+*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) says *src/order.py* did not open because nothing is at that path, naming the path and the project it was read from
+*And* shows no editor for it, so nothing can be saved over it
+
+#### Scenario: Refuse a file longer than the viewer shows
+
+Found on 2026-11-19 (exploratory testing, pixel-03): the source view is as tall as its file and draws every line, so a file of 90,000 lines left the page answering after twelve seconds and one of 360,000 crashed its tab, with every open file and comment not yet sent. The viewer shows at most 30,000 lines (`VIEWER_SHOWS_LINES` in `space/session/files/session_file.py`). Acceptance tests: `space/session/session_graph_spec.py`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
+
+*Given* the file bar lists *src/big.py*, which has 90,000 lines
+*When* the Person views *big.py*
+*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) says *src/big.py* did not open, naming its lines and the most the viewer shows
+*And* the next file the Person views opens as before
+
+## Story: Render File As A Page
+
+#### Scenario: Render a markdown file as the page it describes
+
+Requested 2026-11-19: scenarios, story maps and domain models are read as pages, and their text is a press away. Markdown is rendered with the `marked` and `DOMPurify` the page already loads with Monaco, so nothing the file holds runs a script. Only the page draws it: `harness/files_app/app/files/file-rendering.spec.ts`.
+
+*Given* checkout-flow's session holds *README.md*, which starts *# Checkout*
+*When* the Person views *README.md*
+*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *Checkout* rendered as a heading, not as *# Checkout*
+*And* its Rendered toggle is pressed and its Source toggle is not
+*And* a link to a file that is not there keeps the Files app where it is, *README.md* the one open file
 
 #### Scenario: Render each format the page can draw
 
@@ -479,6 +514,8 @@ Round 3 of exploratory testing (r3-pixel-07): a BDD realization nests its states
 *Then* the Files app shows *that has been created for a paid order* indented two spaces under *a shipment*
 *And* the call graph as a block indented four spaces, each of its lines on a line of its own
 
+## Story: Follow Links And Callouts In A File
+
 #### Scenario: Open a callout in place on a rendered page
 
 Answered by the person on 2026-11-20 (round 3 of exploratory testing, r3-pixel-03 to 05): the Rendered view and the Source view both show callouts, and a callout is traversable as the graph tree is. The session answers each file's callouts (`session.file`, Open Linked Sections In Place in `switch_files_app_between_files_and_graph_story.test.md`); the page draws them: `harness/files_app/app/files/rendered-callouts.spec.ts`.
@@ -532,11 +569,7 @@ Answered by the person on 2026-11-20: which callouts show follows the file view'
 *Then* the Files app opens the scenario file at the lines the link names
 *And* Go to file on the open callout does the same
 
-#### Scenario: Show only the source view for a file with no rendered form
-
-*Given* checkout-flow's session holds *order.py*
-*When* the Person views *order.py*
-*Then* the Files app shows it in the source view, with no Rendered or Source toggle
+## Story: Lay Out Lines In Source View
 
 #### Scenario: Scroll a long line sideways
 
@@ -567,33 +600,6 @@ Requested 2026-11-16 by the person: "Format the viewer using ABD branding", then
   *And* selected text sits on Cursor Dark's grey and folded lines carry no tint
 *When* the Person turns the dark look off
 *Then* the source view draws *order.py* in Cursor Light's colours, #FCFCFC behind #141414 text, with the same orange cursor and current line number
-
-#### Scenario: A file from an older server lane opens without callouts
-
-Found on 2026-11-16 (debug report `debug-20261116T225500.md`): a page reaching a cdd server lane older than the page (the pinned stable lane, whose `session.file` answers no callouts) stopped with "Cannot read properties of undefined (reading 'map')".
-
-*Given* checkout-flow's session holds *order.py*, and the cdd server the page reaches answers *order.py* with its text but without callouts, steps or violations
-*When* the Person views *order.py*
-*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* in the source view, with no callout and no broken rule
-*And* a server answer that is no file at all, such as the text of a call it cannot run, is shown and told as *order.py* not opening, and the page keeps working
-
-#### Scenario: Say so when a listed file is gone
-
-Found on 2026-11-19 (exploratory testing, pixel-01): a file deleted or moved on disk after the page listed it opened as one empty line in a live editor, exactly as an empty file opens, so the next save would bring it back empty. Acceptance tests: `space/session/session_graph_spec.py` and `space/session/files/file_manager_spec.py` for what the session answers; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
-
-*Given* the file bar lists *src/order.py*, and *order.py* was deleted on disk since the page listed it
-*When* the Person views *order.py*
-*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) says *src/order.py* did not open because nothing is at that path, naming the path and the project it was read from
-*And* shows no editor for it, so nothing can be saved over it
-
-#### Scenario: Refuse a file longer than the viewer shows
-
-Found on 2026-11-19 (exploratory testing, pixel-03): the source view is as tall as its file and draws every line, so a file of 90,000 lines left the page answering after twelve seconds and one of 360,000 crashed its tab, with every open file and comment not yet sent. The viewer shows at most 30,000 lines (`VIEWER_SHOWS_LINES` in `space/session/files/session_file.py`). Acceptance tests: `space/session/session_graph_spec.py`; `open-files-in-files-app.story.ui_e2e_spec.py` for the page.
-
-*Given* the file bar lists *src/big.py*, which has 90,000 lines
-*When* the Person views *big.py*
-*Then* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) says *src/big.py* did not open, naming its lines and the most the viewer shows
-*And* the next file the Person views opens as before
 
 ## Story: Fold Classes And Operations
 

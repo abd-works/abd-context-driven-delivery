@@ -3,17 +3,17 @@ from __future__ import annotations
 from story_test import and_, background, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: Steer Ticket Sessions
-# Map: ../../../.context/story-map.md#s-board-app----protect-work-when-closing-session
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Close And Hand Off Ticket Sessions
+# Map: ../../../../.context/story-map.md#s-board-app----protect-work-when-closing-session
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Protect Work When Closing Session
 # Actor: Board App
 with story("Protect Work When Closing Session"):
     with scenario("Offer to commit a branch open in its worktree"):
         # Evidence: observed: e2e-report B3 — the close dialog said "branch none yet" for a ticket whose branch exists in a worktree, and labelled the choices with the ticket title.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card), its branch open in its own worktree"):
+        with given("checkout-flow is the active [ticket](../../../../.context/kanban-model.md#ticket--card), its branch open in its own worktree"):
             pass
         with when("the Person closes checkout-flow"):
             # Person -> Ticket.close_choices() <- branch: checkout-flow, choices: handoff, commit, push

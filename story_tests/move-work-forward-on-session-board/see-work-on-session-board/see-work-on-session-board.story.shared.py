@@ -1,6 +1,6 @@
 """See Work On Session Board: the shared scenarios the Python tiers replay.
 
-Scenarios: story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md; Restrict Actions To Active Session is in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md.
+Scenarios: story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md and story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md; Restrict Actions To Active Session is in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md.
 Map: .context/story-map.md#e-see-work-on-session-board. Model: .context/kanban-model.md.
 
 Steps reach the board only through the namespace a tier hands them (`world.Board`, `world.Ticket`), so the domain spec

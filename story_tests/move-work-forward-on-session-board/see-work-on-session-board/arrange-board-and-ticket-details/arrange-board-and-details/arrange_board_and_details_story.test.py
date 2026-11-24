@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, background, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: See Work On Session Board
-# Map: ../../../.context/story-map.md#s-person----arrange-board-and-details
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Arrange Board And Ticket Details
+# Map: ../../../../.context/story-map.md#s-person----arrange-board-and-details
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Arrange Board And Details
 # Actor: Person
@@ -22,7 +22,7 @@ with story("Arrange Board And Details"):
         with when("the Person resizes the board to 300 pixels"):
             # Person -> BoardLayoutClient.setBoardHeight(300, 900)
             pass
-        with then("the [board](../../../.context/kanban-model.md#board) region is 300 pixels high and the details take the rest"):
+        with then("the [board](../../../../.context/kanban-model.md#board) region is 300 pixels high and the details take the rest"):
             pass
     with scenario("Keep both regions open"):
         # Evidence: observed: board-client.spec 'should not let a drag close the board', 'should not let a drag close the details'.
@@ -31,7 +31,7 @@ with story("Arrange Board And Details"):
         with when("the Person resizes the board to 10 pixels"):
             # Person -> BoardLayoutClient.setBoardHeight(10, 900)
             pass
-        with then("the [board](../../../.context/kanban-model.md#board) region stays 160 pixels high"):
+        with then("the [board](../../../../.context/kanban-model.md#board) region stays 160 pixels high"):
             pass
         with when("the Person resizes the board to 5000 pixels"):
             # Person -> BoardLayoutClient.setBoardHeight(5000, 900)
@@ -45,7 +45,7 @@ with story("Arrange Board And Details"):
         with when("the Person expands the board"):
             # Person -> BoardLayoutClient.toggleRegion('board')
             pass
-        with then("the [board](../../../.context/kanban-model.md#board) takes the whole page"):
+        with then("the [board](../../../../.context/kanban-model.md#board) takes the whole page"):
             pass
         with when("the Person collapses the board"):
             # Person -> BoardLayoutClient.toggleRegion('board')

@@ -1,9 +1,10 @@
-"""Guide Work Through Practices In Chat Bar: the shared scenarios the Python tiers replay for the pattern overlays a
-session chooses from the chat bar.
+"""Choose Session Practices And Overlays In Chat Bar: the shared scenarios the Python tiers replay for the
+pattern overlays a session chooses from the chat bar.
 
-Scenarios: story_tests/move-work-forward-from-chat-bar/guide-work-through-practices/
-guide_work_through_practices_story.test.md (List Available Patterns, Choose Graph Overlays, Display Overlay Icons).
-Map: .context/story-map.md#e-guide-work-through-practices-in-chat-bar.
+Scenarios: story_tests/move-work-forward-from-chat-bar/choose-session-practices-and-overlays-in-chat-bar/
+choose_session_practices_and_overlays_in_chat_bar_story.test.md (List Available Patterns, Choose Graph Overlays, Display
+Overlay Icons).
+Map: .context/story-map.md#e-choose-session-practices-and-overlays-in-chat-bar.
 
 Steps reach the ticket only through the namespace a tier hands them (`world.Ticket`), so the domain spec and the cdd tools
 spec replay the same steps. Display Overlay Icons is drawn by the chat bar's TypeScript, whose story tests were removed
@@ -20,7 +21,7 @@ from expects import contain, equal, expect
 from space.kanban.session_board_examples import CHECKOUT_FLOW
 from space.kanban.story_test import SharedStories, refusal_of
 
-shared_stories = SharedStories("Guide Work Through Practices In Chat Bar")
+shared_stories = SharedStories("Choose Session Practices And Overlays In Chat Bar")
 
 # Seed: the patterns folder. A folder defines a pattern when it holds the pattern's own guidance, {name}.md, and the chat
 # bar shows each pattern with the first and last letter of its name. They are read from the folder, so a pattern added

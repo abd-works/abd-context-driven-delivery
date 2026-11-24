@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, background, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: See Work On Session Board
-# Map: ../../../.context/story-map.md#s-board-app----display-ticket-details
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Arrange Board And Ticket Details
+# Map: ../../../../.context/story-map.md#s-board-app----display-ticket-details
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Display Ticket Details
 # Actor: Board App
@@ -18,7 +18,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 with story("Display Ticket Details"):
     with scenario("Show the ticket of a card pressed anywhere"):
         # Evidence: observed: story-actions.spec 'should show the ticket of a card pressed anywhere'; ticket-client.spec 'should name the ticket's stage and how far it has got there', 'should say what runs next'.
-        with given("the [ticket](../../../.context/kanban-model.md#ticket--card) billing-report is In progress in Discovery with nothing recorded"):
+        with given("the [ticket](../../../../.context/kanban-model.md#ticket--card) billing-report is In progress in Discovery with nothing recorded"):
             pass
         with when("the Person selects billing-report's card"):
             # Person -> TicketClient.select()
@@ -28,11 +28,11 @@ with story("Display Ticket Details"):
             pass
         with and_("the details say No handoff yet and Next: stories-story-map, generate"):
             pass
-        with and_("the details show a tile for each enabled [fidelity](../../../.context/kanban-model.md#fidelityguidance) with its [fidelity progress](../../../.context/kanban-model.md#fidelityprogress)"):
+        with and_("the details show a tile for each enabled [fidelity](../../../../.context/kanban-model.md#fidelityguidance) with its [fidelity progress](../../../../.context/kanban-model.md#fidelityprogress)"):
             pass
     with scenario("Show the active ticket with no card pressed"):
         # Evidence: observed: board-client.spec 'should show the active ticket with no card pressed'.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card)"):
+        with given("checkout-flow is the active [ticket](../../../../.context/kanban-model.md#ticket--card)"):
             pass
         with but_("no card is pressed"):
             pass
@@ -44,7 +44,7 @@ with story("Display Ticket Details"):
             pass
     with scenario("Show main when no other ticket is opened"):
         # Evidence: observed: board-client.spec 'should show main, the default session, with no other ticket opened'.
-        with given("no [ticket](../../../.context/kanban-model.md#ticket--card) is opened, so main, the default session, is the active ticket"):
+        with given("no [ticket](../../../../.context/kanban-model.md#ticket--card) is opened, so main, the default session, is the active ticket"):
             pass
         with but_("no card is pressed"):
             pass
@@ -56,7 +56,7 @@ with story("Display Ticket Details"):
             pass
     with scenario("Name a split ticket by the ticket it came from"):
         # Evidence: observed: ticket-client.spec 'should name a split ticket by its parent'.
-        with given("the [ticket](../../../.context/kanban-model.md#ticket--card) child has scope story and parent epic in its session.json"):
+        with given("the [ticket](../../../../.context/kanban-model.md#ticket--card) child has scope story and parent epic in its session.json"):
             pass
         with when("the Person selects child's card"):
             # Board page -> data_of(Ticket): scope, parent
@@ -67,7 +67,7 @@ with story("Display Ticket Details"):
         # Evidence: observed: ticket-client.spec 'should say another session must be activated to run it'.
         with given("Active session only is on"):
             pass
-        with and_("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card)"):
+        with and_("checkout-flow is the active [ticket](../../../../.context/kanban-model.md#ticket--card)"):
             pass
         with when("the Person selects billing-report's card"):
             # Person -> TicketClient.select()

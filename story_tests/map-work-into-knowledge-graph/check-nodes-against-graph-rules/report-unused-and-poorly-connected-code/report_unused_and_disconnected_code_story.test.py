@@ -17,8 +17,8 @@ from cdd_guidance.practices.clean_engineering.rules.code_use_examples import exa
 from story_test import and_, but_, given, scenario, story, then, when
 
 # Epic: Map Work Into Knowledge Graph
-# Sub-epic: Check Clean Engineering Code Through The Graph
-# Map: ../../../../.context/story-map.md#e-check-clean-engineering-code-through-the-graph
+# Sub-epic: Report Unused And Poorly Connected Code
+# Map: ../../../../.context/story-map.md#e-report-unused-and-poorly-connected-code
 # Scenarios: report_unused_and_disconnected_code_story.test.md
 
 
@@ -63,6 +63,9 @@ with story("Report Unused Class For Deletion"):
             self.reported = self.pair.repaired.hits(self.pair.rule)
         with then("delete-unused-operations reports nothing"):
             expect(self.reported).to(equal([]))
+
+
+with story("Count Indirect Uses Before Reporting Deletion"):
     with scenario("Count a use from example code only when production imports it"):
         with given("the class Printer, which only the receipt examples use, a file named as example code that nothing in production imports"):
             self.without, self.within = situation("example code nothing in production imports")

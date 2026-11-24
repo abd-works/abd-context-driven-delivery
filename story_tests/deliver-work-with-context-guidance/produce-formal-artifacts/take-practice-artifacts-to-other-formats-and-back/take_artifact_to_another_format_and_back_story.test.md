@@ -5,13 +5,13 @@ format: md
 section: body
 ---
 
-# Sub-epic: Produce Formal Artifacts
+# Sub-epic: Take Practice Artifacts To Other Formats And Back
 
-Story map: [Produce Formal Artifacts](../../../.context/story-map.md#e-produce-formal-artifacts). Session release-1-2-fixes.
+Story map: [Take Practice Artifacts To Other Formats And Back](../../../../.context/story-map.md#e-take-practice-artifacts-to-other-formats-and-back). Session release-1-2-fixes.
 
 **Evidence modes.** *Observed* scenarios hold for the practices' format adapters today (`cdd_guidance/practices/stories/model`, `clean_engineering/model`, `ddd/model`) and each names the spec that runs it. *Intended* scenarios say what a trip should keep where a format cannot hold it yet; each names the evidence still missing (`flagged-writes-intended-gwt`). They were written after exploratory testing (defects widget-04, 05, 08, 19, 20) showed that no scenario covered a trip from one format to another and back.
 
-The story below is on the story map under Produce Formal Artifacts: it was split from Render Artifact Into Another Format, which already holds four scenarios about where a render is saved.
+The stories below are on the story map under Take Practice Artifacts To Other Formats And Back, in Produce Formal Artifacts. Take Artifact To Another Format And Back was split from Render Artifact Into Another Format; on 2026-11-24 its scenarios about class models, module cards and BDD specs became stories of their own, and its two scenarios about domain models moved to Take Domain Documents To Another Format And Back.
 
 ### Domain terms
 
@@ -73,24 +73,6 @@ Observed for the Stories markdown adapter when it is handed the file it replaces
   *And* it holds no sources or scope lines the person did not write
   *And* a story added in the drawing is written under its sub-epic, beside the sentences the person wrote
 
-#### Scenario: Add no relationship nobody wrote to a class model
-
-Observed (`cdd_guidance/practices/clean_engineering/model/drawio/drawio_class_model_round_trip_spec.py`; `cdd_guidance/practices/ddd/model/format_round_trip_spec.py` for ++.context/domain-model.md++ through drawio and whiteboard).
-
-*Given* ++src/.context/src-model.md++ holds the class model
-*When* Claude Code renders ++src/.context/src-model.md++ to drawio, then the drawing back to markdown
-*Then* `history: list[OrderLine]`, `total: Money` and `seller: Seller` carry no ++written relationship++
-  *And* `lines` is still a composition and `bookId` still an association
-
-#### Scenario: Keep a domain model's title, and write no rule over operations a class does not have
-
-Observed (`cdd_guidance/practices/ddd/model/format_round_trip_spec.py`).
-
-*Given* ++.context/domain-model.md++ opens with `# Domain Model — Bookshop` and its value object OrderLine has no operations
-*When* Claude Code reads ++.context/domain-model.md++ and writes it again as markdown
-*Then* it opens with `# Domain Model — Bookshop`
-  *And* OrderLine has no `----` rule under its properties
-
 #### Scenario: Keep the prose a drawing cannot show through a trip to draw.io and back
 
 Observed for every practice and fidelity that draws its documents, as one shared behaviour (`cdd_guidance/practices/format_trip_spec.py` for the story map, the bounded-context map and the domain model; `format_trip_heavy_spec.py` for Clean Engineering's module cards and class model), and for the mechanism itself (`harness/drawio/drawio_spec.py`, `harness/whiteboard/whiteboard_spec.py`, `harness/guidance/format_adapter_spec.py`, "a drawing rendered from a document"). Source: the person's answer of 2026-11-23 to closing choice 10 of the exploratory testing session, "prose a drawing cannot hold is kept in the drawing's hidden metadata, so a trip through a drawing loses nothing". A draw.io file keeps the document on its page's root cell, which draw.io shows as the diagram's data and draws nowhere; a whiteboard keeps it in its board meta.
@@ -102,6 +84,53 @@ Observed for every practice and fidelity that draws its documents, as one shared
 *Then* ++.context/domain-model.md++ reads as the person wrote it, the invariant, the note, the call and the integration included
   *And* the same holds through whiteboard, and for ++.context/story-map.md++, ++.context/bounded-context-map.md++, the module cards and ++src/.context/src-model.md++
   *And* a card the person renamed or removed in the drawing is renamed or removed in the markdown, since what the drawing shows is the drawing's
+
+#### Scenario: Keep a scenario outline's table through code
+
+Observed for the Stories code adapters (`cdd_guidance/practices/stories/model/code_outline_examples_spec.py`), for Python and TypeScript, with the rows under an `#### Examples` heading as `templates/md/scenarios.md` writes them. Written after defects widget-19 and r3-sparky-06. Evidence still missing: a table written directly under the outline with no Examples heading, and the front matter, Story type, Domain terms and links to the domain model, which no code format holds.
+
+*Given* ++story_tests/sell-books/take-orders/place_order_story.test.md++ holds a Scenario Outline with a table of two rows
+*When* Claude Code renders it to python at ++stories-scenarios++, then the python back to markdown
+*Then* the python parses, and imports only examples whose names are names in Python
+  *And* the Scenario Outline holds its table of two rows, each named by its `scenario` column, under the columns it was written with
+  *And* a render to typescript writes no examples file holding data the scenarios file does not name
+
+#### Scenario Outline: Keep a story map's stories, scenarios and steps through another format and back
+
+Observed (`cdd_guidance/practices/stories/model/story_test_behaviours_spec.py`). The trip is created from the project written in one format, then checked by the same examples the project itself is checked by.
+
+*Given* the Pack Orders project is written as <format>
+*When* its story files are written as <other format> and written again as <format>
+*Then* the graph read from the files that come back holds the same stories, scenarios and steps
+  *And* each Then still observes the example its Given names in plain words
+
+| format | other format |
+| --- | --- |
+| Python story tests | markdown scenarios |
+| TypeScript story tests | markdown scenarios |
+| TypeScript story tests | JavaScript story tests |
+| JavaScript story tests | markdown scenarios |
+| JavaScript story tests | TypeScript story tests |
+
+#### Scenario: Offer JavaScript for specs and story tests wherever TypeScript is offered
+
+Observed (`cdd_guidance/practices/bdd/bdd_spec.py`, `cdd_guidance/practices/stories/javascript_story_tests_spec.py`). Written after the person's answer of 2026-11-20: "Java: remove for now; we can create when we need it; restrict to python and typescript or js".
+
+*Given* a fidelity of BDD or Stories offers typescript among the formats it writes
+*When* Claude Code generates at that fidelity
+*Then* the answer names a javascript path beside the typescript one
+  *And* no fidelity of BDD or Stories names java
+
+## Story: Take Class Model To Another Format And Back
+
+#### Scenario: Add no relationship nobody wrote to a class model
+
+Observed (`cdd_guidance/practices/clean_engineering/model/drawio/drawio_class_model_round_trip_spec.py`; `cdd_guidance/practices/ddd/model/format_round_trip_spec.py` for ++.context/domain-model.md++ through drawio and whiteboard).
+
+*Given* ++src/.context/src-model.md++ holds the class model
+*When* Claude Code renders ++src/.context/src-model.md++ to drawio, then the drawing back to markdown
+*Then* `history: list[OrderLine]`, `total: Money` and `seller: Seller` carry no ++written relationship++
+  *And* `lines` is still a composition and `bookId` still an association
 
 #### Scenario: Name a second class model's own classes in its markdown
 
@@ -150,6 +179,24 @@ Observed (`class_model_trip_spec.py`). Defects r3-widget-07, r3-bolt-07.
   *And* the call reads `Book.isInStock();`, the name the file gives the operation
   *And* the TypeScript rendered to python reads `-> bool` and `lines: list[CartLine]`
 
+#### Scenario: Save a class model rendered to code in each module's own file
+
+Observed (`cdd_guidance/practices/clean_engineering/model/class_model_languages_spec.py`, `cdd_guidance/practices/clean_engineering/class_model_render_heavy_spec.py`). Written after the person's answer of 2026-11-20: every render ends in a saved file. The model is created from the module written in one language, then checked by the same examples.
+
+*Given* the Ordering module's class model is written as <source>
+*When* Claude Code renders it to <code format> at the Clean Engineering model fidelity
+*Then* the module's classes are saved in `ordering/ordering` with that format's extension
+  *And* that file is one the fidelity declares for the format, `{module}/{module}` with the extension
+
+| source | code format |
+| --- | --- |
+| a markdown class model | python, typescript, javascript |
+| Python code | python, typescript, javascript |
+| TypeScript code | python, typescript, javascript |
+| JavaScript code | python, typescript, javascript |
+
+## Story: Take Module Cards To Another Format And Back
+
 #### Scenario: Write module cards back from their drawing as the person wrote them
 
 Observed for drawio and whiteboard (`cdd_guidance/practices/clean_engineering/model/module_card_trip_spec.py`). Source: rules `language-opens-the-card` and `named-seam-and-constraint`; defect r3-widget-02.
@@ -169,15 +216,7 @@ Observed (`module_card_trip_spec.py`). Source: the drawio modules view, where a 
   *And* no module depends on `src`
   *And* each module's purpose is written once
 
-#### Scenario: Keep a scenario outline's table through code
-
-Observed for the Stories code adapters (`cdd_guidance/practices/stories/model/code_outline_examples_spec.py`), for Python and TypeScript, with the rows under an `#### Examples` heading as `templates/md/scenarios.md` writes them. Written after defects widget-19 and r3-sparky-06. Evidence still missing: a table written directly under the outline with no Examples heading, and the front matter, Story type, Domain terms and links to the domain model, which no code format holds.
-
-*Given* ++story_tests/sell-books/take-orders/place_order_story.test.md++ holds a Scenario Outline with a table of two rows
-*When* Claude Code renders it to python at ++stories-scenarios++, then the python back to markdown
-*Then* the python parses, and imports only examples whose names are names in Python
-  *And* the Scenario Outline holds its table of two rows, each named by its `scenario` column, under the columns it was written with
-  *And* a render to typescript writes no examples file holding data the scenarios file does not name
+## Story: Take BDD Specs To Another Format And Back
 
 #### Scenario: Bring a finished spec back from another language as it was written
 
@@ -188,6 +227,14 @@ Observed (`cdd_guidance/practices/bdd/model/spec_trip_spec.py`). Written after e
 *Then* the typescript holds each python body, setup and import as comments under `// python body to translate:`
   *And* the python that comes back is `src/ordering/cart_spec.py` as it was written
   *And* a second trip holds the same lines as the first
+
+#### Scenario: Bring a JavaScript spec back from TypeScript as it was written
+
+Observed (`cdd_guidance/practices/bdd/model/code_spec_render_spec.py`).
+
+*Given* a finished JavaScript spec of a cart, with its imports, its `beforeEach` and one test body
+*When* Claude Code renders it to typescript and renders that back to javascript
+*Then* the spec comes back as it was written
 
 #### Scenario: Keep the order of observations and nested states through a render
 
@@ -234,69 +281,3 @@ Observed (`cdd_guidance/practices/bdd/bdd_spec.py`). Written after exploratory t
 *When* the answer names the formats to save
 *Then* it names python, typescript and javascript, each of which BDD has a format adapter for
   *And* it names no java path
-
-#### Scenario: Offer JavaScript for specs and story tests wherever TypeScript is offered
-
-Observed (`cdd_guidance/practices/bdd/bdd_spec.py`, `cdd_guidance/practices/stories/javascript_story_tests_spec.py`). Written after the person's answer of 2026-11-20: "Java: remove for now; we can create when we need it; restrict to python and typescript or js".
-
-*Given* a fidelity of BDD or Stories offers typescript among the formats it writes
-*When* Claude Code generates at that fidelity
-*Then* the answer names a javascript path beside the typescript one
-  *And* no fidelity of BDD or Stories names java
-
-#### Scenario Outline: Keep a story map's stories, scenarios and steps through another format and back
-
-Observed (`cdd_guidance/practices/stories/model/story_test_behaviours_spec.py`). The trip is created from the project written in one format, then checked by the same examples the project itself is checked by.
-
-*Given* the Pack Orders project is written as <format>
-*When* its story files are written as <other format> and written again as <format>
-*Then* the graph read from the files that come back holds the same stories, scenarios and steps
-  *And* each Then still observes the example its Given names in plain words
-
-| format | other format |
-| --- | --- |
-| Python story tests | markdown scenarios |
-| TypeScript story tests | markdown scenarios |
-| TypeScript story tests | JavaScript story tests |
-| JavaScript story tests | markdown scenarios |
-| JavaScript story tests | TypeScript story tests |
-
-#### Scenario: Bring a JavaScript spec back from TypeScript as it was written
-
-Observed (`cdd_guidance/practices/bdd/model/code_spec_render_spec.py`).
-
-*Given* a finished JavaScript spec of a cart, with its imports, its `beforeEach` and one test body
-*When* Claude Code renders it to typescript and renders that back to javascript
-*Then* the spec comes back as it was written
-
-#### Scenario: Save a class model rendered to code in each module's own file
-
-Observed (`cdd_guidance/practices/clean_engineering/model/class_model_languages_spec.py`, `cdd_guidance/practices/clean_engineering/class_model_render_heavy_spec.py`). Written after the person's answer of 2026-11-20: every render ends in a saved file. The model is created from the module written in one language, then checked by the same examples.
-
-*Given* the Ordering module's class model is written as <source>
-*When* Claude Code renders it to <code format> at the Clean Engineering model fidelity
-*Then* the module's classes are saved in `ordering/ordering` with that format's extension
-  *And* that file is one the fidelity declares for the format, `{module}/{module}` with the extension
-
-| source | code format |
-| --- | --- |
-| a markdown class model | python, typescript, javascript |
-| Python code | python, typescript, javascript |
-| TypeScript code | python, typescript, javascript |
-| JavaScript code | python, typescript, javascript |
-
-#### Scenario: Save a domain model rendered to code in each aggregate's own file
-
-Observed (`cdd_guidance/practices/ddd/model/domain_model_languages_spec.py`, `cdd_guidance/practices/ddd/domain_model_render_heavy_spec.py`). DDD writes JavaScript with the class model TypeScript is written with, its types left out.
-
-*Given* the Ordering bounded context, with its aggregates Cart and Order, is written as <source>
-*When* Claude Code renders it to <code format> at the DDD model fidelity
-*Then* each aggregate's classes are saved in `ordering/cart/cart` and `ordering/order/order` with that format's extension
-  *And* each file is one the fidelity declares for the format
-
-| source | code format |
-| --- | --- |
-| a markdown domain model | python, typescript, javascript |
-| Python code whose classes name their place | python, typescript, javascript |
-| TypeScript code whose classes name their place | python, typescript, javascript |
-| JavaScript code whose classes name their place | python, typescript, javascript |

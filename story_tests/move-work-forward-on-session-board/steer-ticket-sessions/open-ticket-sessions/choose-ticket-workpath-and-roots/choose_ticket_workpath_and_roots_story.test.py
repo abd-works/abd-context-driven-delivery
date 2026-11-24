@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, background, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: Steer Ticket Sessions
-# Map: ../../../.context/story-map.md#s-person----choose-ticket-workpath-and-roots
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Open Ticket Sessions
+# Map: ../../../../.context/story-map.md#s-person----choose-ticket-workpath-and-roots
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Choose Ticket Workpath And Roots
 # Actor: Person
@@ -16,7 +16,7 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 with story("Choose Ticket Workpath And Roots"):
     with scenario("Choose a ticket's workpath"):
         # Evidence: observed: root-choice-client.spec 'that a person browses into a folder for the session workpath' — 'should list the folders inside it', 'should make it the ticket's workpath'; kanban_tools_spec 'should keep the folder as the session's work folder'.
-        with given("checkout-flow works on the whole [repository](../../../.context/kanban-model.md#repo)"):
+        with given("checkout-flow works on the whole [repository](../../../../.context/kanban-model.md#repo)"):
             pass
         with and_("the repository has src/billing and src/visits under src"):
             pass
@@ -36,7 +36,7 @@ with story("Choose Ticket Workpath And Roots"):
             pass
     with scenario("Choose one practice's root and go back to its default"):
         # Evidence: observed: root-choice-client.spec 'that a person chooses a folder for one practice's root' — 'should show it as that practice's chosen root', 'and then goes back to its default'; kanban_tools_spec 'should leave every other practice on its default root'.
-        with given("checkout-flow's Stories [practice](../../../.context/kanban-model.md#practiceguidance) writes under its default root"):
+        with given("checkout-flow's Stories [practice](../../../../.context/kanban-model.md#practiceguidance) writes under its default root"):
             pass
         with when("the Person chooses src/billing for checkout-flow's Stories root"):
             # Person -> Ticket.choose_practice_root('stories', 'src/billing')

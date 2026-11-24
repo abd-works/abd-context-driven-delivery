@@ -3,10 +3,10 @@ from __future__ import annotations
 from story_test import and_, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: Steer Ticket Sessions
-# Map: ../../../.context/story-map.md#s-board-app----find-ticket-branch-and-worktree
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Activate And Move Ticket Sessions
+# Map: ../../../../.context/story-map.md#s-board-app----find-ticket-branch-and-worktree
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Find Ticket Branch And Worktree
 # Actor: Board App
@@ -56,7 +56,7 @@ with story("Find Ticket Branch And Worktree"):
         # Evidence: tested by heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is activated while a folder left on no branch is where its worktree goes'.
         with given("billing-report's worktree folder is still there, left on no branch"):
             pass
-        with and_("the git [repository](../../../.context/kanban-model.md#repo) no longer has the branch billing-report"):
+        with and_("the git [repository](../../../../.context/kanban-model.md#repo) no longer has the branch billing-report"):
             pass
         with when("the Person activates billing-report"):
             # Person -> Ticket.activate()

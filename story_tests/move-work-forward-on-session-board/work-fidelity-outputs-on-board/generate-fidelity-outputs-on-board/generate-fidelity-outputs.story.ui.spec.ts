@@ -105,6 +105,9 @@ test.describe('with no chat connected', () => {
       })
     })
 
+  })
+
+  test.describe('Run Chosen Formats', () => {
     test.describe('Keep Run off with no chat', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
@@ -157,6 +160,9 @@ test.describe('with a chat connected', () => {
       })
     })
 
+  })
+
+  test.describe('Run Chosen Formats', () => {
     test.describe('Keep Run off on a render with nothing to render', () => {
       test.beforeEach(async ({ page }) => {
         await openWithChat(page)

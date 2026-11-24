@@ -148,7 +148,7 @@ def _(s):
         expect((world.opened["language"], world.opened["text"].splitlines()[11])).to(equal(("python", PLACE_LINES[0])))
 
 
-@shared_stories.scenario("View File In Source View", "Render a markdown file as the page it describes")
+@shared_stories.scenario("Render File As A Page", "Render a markdown file as the page it describes")
 def _(s):
     @s.given("checkout-flow's session holds README.md, which starts # Checkout")
     def _(world):

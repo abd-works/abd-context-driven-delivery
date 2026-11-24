@@ -1,6 +1,6 @@
 """Steer Ticket Sessions: the shared scenarios the Python tiers replay.
 
-Scenarios: story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md and story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md.
+Scenarios: story_tests/move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-sessions/open_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md and story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md.
 Map: .context/story-map.md#e-steer-ticket-sessions. Model: .context/kanban-model.md.
 
 Steps reach the board only through the namespace a tier hands them (`world.Ticket`, `world.BacklogItem`, `world.Board`),

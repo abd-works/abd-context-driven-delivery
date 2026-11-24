@@ -188,7 +188,7 @@ with description("Open Files In Files App, with files that changed on disk since
 
 
 # Seed: one file of each form the page renders, beside board.py, and the text each reads
-# (review_files_in_files_app_story.test.md, View File In Source View).
+# (review_files_in_files_app_story.test.md, Render File As A Page).
 README = str(Path(BOARD_CODE).with_name("README.md").as_posix())
 README_TEXT = "# Checkout\n\nPlace an order from a [cart](cart.md).\n"
 RENDERED_FILES = {
@@ -239,7 +239,7 @@ def _pressed(page, name: str) -> str | None:
     return page.get_by_role("button", name=name, exact=True).get_attribute("aria-pressed")
 
 
-with description("Story: View File In Source View, files with a rendered form") as self:
+with description("Story: Render File As A Page and View File In Source View, files with a rendered form") as self:
     with before.all:
         self.stack = FilesStack()
         for path, text in RENDERED_FILES.items():
@@ -383,7 +383,7 @@ def _open_files(page) -> list[str]:
     return page.locator("section.open-file").evaluate_all("files => files.map(file => file.getAttribute('aria-label'))")
 
 
-with description("Story: View File In Source View, the callouts and links of a rendered page") as self:
+with description("Story: Follow Links And Callouts In A File, the callouts and links of a rendered page") as self:
     with before.all:
         self.stack = FilesStack()
         for path, text in LINKED_FILES.items():

@@ -3,17 +3,17 @@ from __future__ import annotations
 from story_test import and_, background, but_, given, scenario, story, then, when
 
 # Epic: Move Work Forward On Session Board
-# Sub-epic: Steer Ticket Sessions
-# Map: ../../../.context/story-map.md#s-person----write-ticket-handoff
-# Model: ../../../.context/kanban-model.md
-# Realizations: ../../../.context/session-board-scenario-realization.md
+# Sub-epic: Close And Hand Off Ticket Sessions
+# Map: ../../../../.context/story-map.md#s-person----write-ticket-handoff
+# Model: ../../../../.context/kanban-model.md
+# Realizations: ../../../../.context/session-board-scenario-realization.md
 
 # Story: Write Ticket Handoff
 # Actor: Person
 with story("Write Ticket Handoff"):
     with scenario("Ask the chat to write a handoff"):
         # Evidence: observed: ticket-client.spec 'Write Ticket Handoff' — 'should fill the prompt with the handoff command'.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card) and a chat is connected"):
+        with given("checkout-flow is the active [ticket](../../../../.context/kanban-model.md#ticket--card) and a chat is connected"):
             pass
         with when("the Person asks for a handoff on checkout-flow"):
             # Board page -> Chat.send('fill', 'Write a handoff for ticket checkout-flow with /space-session-handoff-session.')
@@ -38,7 +38,7 @@ with story("Write Ticket Handoff"):
             pass
     with scenario("Keep Handoff off with no chat"):
         # Evidence: observed: tests/board-surface.spec.ts 'with no chat connected' — 'should say to load the mod and turn off what sends to a chat'.
-        with given("checkout-flow is the active [ticket](../../../.context/kanban-model.md#ticket--card)"):
+        with given("checkout-flow is the active [ticket](../../../../.context/kanban-model.md#ticket--card)"):
             pass
         with but_("no chat is connected"):
             pass

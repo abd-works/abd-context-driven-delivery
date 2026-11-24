@@ -1,7 +1,7 @@
 """The examples the Record Test Tiers Of Module story and TDD's own spec share: a throwaway bookshop project whose
 module shop/orders has a module card, the session open in it, and the test files a generate or a render writes there.
 
-Scenarios: story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/record_test_tiers_of_module_story.test.md
+Scenarios: story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/generate-fidelity-artifacts/record_test_tiers_of_module_story.test.md
 """
 from __future__ import annotations
 

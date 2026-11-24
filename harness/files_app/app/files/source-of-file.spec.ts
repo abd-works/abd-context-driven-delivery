@@ -1,5 +1,5 @@
-// Follow Story Steps To Code, as story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/
-// switch_files_app_between_files_and_graph_story.test.md writes it. The session answers each step of a story test with
+// Follow Story Steps To Code, as story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/
+// open_graph_nodes_in_files_app_story.test.md writes it. The session answers each step of a story test with
 // a callout for what it invokes and observes, on the line of the step that names it and under its title
 // (space/session/files/file_steps.py, file_steps_spec.py); the page draws each where it is sent and opens no call of its own.
 import { describe, expect, it } from 'vitest'
