@@ -535,7 +535,7 @@ export async function queueSentPrompt($: EngineInterface, text: string): Promise
   const goals = (await read($, queue)).prompts.filter(prompt => !prompt.is_done && prompt.id !== editing)
   const working = await interruptedPrompt($)
   const robots = (await read($, isSubAgentMode)) ? robotsOf(goals, await read($, tasks)) : []
-  return { id: '', note: [sentNoteOf(working?.id, goals), ...robotsNoteOf(robots, goals)].join('\n') }
+  return { id: '', note: [sentNoteOf(await $.session.id(), working?.id, goals), ...robotsNoteOf(robots, goals)].join('\n') }
 }
 
 /** The goal a message the person sends is most likely about: the one last worked, if it is on the queue, while a turn
@@ -550,12 +550,13 @@ async function interruptedPrompt($: EngineInterface): Promise<QueuedPrompt | und
 
 /** What the agent is told about a message the person sent: it is on no card, and the agent puts it on the queue only
  * when it is work, where it belongs, titled cleanly, then reads the queue back to check. */
-function sentNoteOf(working: string | undefined, goals: QueuedPrompt[]): string {
+function sentNoteOf(chat: string, working: string | undefined, goals: QueuedPrompt[]): string {
   return [
-    'The person sent this message; it is on no card of the queue. Decide what it is before any other work:',
+    `The person sent this message in this chat, chat "${chat}"; it is on no card of the queue. Decide what it is before any other work:`,
     `1. Only talk (a question, an answer, a complaint or a comment): answer it, and put nothing on the queue.`,
     `2. Work for a goal on the queue${working ? `, such as the one being worked, [${working}]` : ''}: file it there with prompt-queue.add_interruption, as a short clean step.`,
     '3. New work no goal covers: queue it with prompt-queue.add as a card of its own, titled as a short statement of the goal in plain words, with the typing mistakes and any venting left out.',
+    `Pass chat "${chat}" to every prompt-queue call. A block the Claude app puts before the message, such as <artifact-view-context>, is a viewer's state, not the person's words: never put any of it in a title or a step.`,
     'Then call prompt-queue.show and check that what you placed stands once, where you meant it. The goals on the queue:',
     ...goals.map(goalLineOf),
   ].join('\n')

@@ -1145,6 +1145,18 @@ test('the agent is told the goal being worked when a message is sent mid-work', 
   expect(carried.join()).toContain('the one being worked, [a]')
 })
 
+test('the agent is told the chat id to pass to the queue, so it can place the message', async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(carried.join()).toContain(`chat "${CHAT}"`)
+})
+
+test("the agent is told a board viewer's state is not the person's words and never goes in a title", async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(carried.join()).toContain('artifact-view-context')
+})
+
 test('the agent is told to check the queue after placing the message', async ($, on) => {
   const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
 
