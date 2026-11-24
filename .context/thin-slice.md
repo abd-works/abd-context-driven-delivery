@@ -138,16 +138,10 @@ section: body
 - *Expand And Collapse Story Cards*
 - *Add, Remove And Rename Map Nodes*
 - *Rearrange Map Nodes By Dragging*
-- *Add, Rename, Reorder And Remove Increments*
-- *Assign Stories To Increments*
-- *Add Scenario To Story*
-- *Rename Scenario Inline*
-- *Remove Scenario From Story*
-- *Reorder Scenarios By Dragging*
-- *Add Step To Scenario*
-- *Edit Step Keyword And Text*
-- *Remove Step From Scenario*
-- *Reorder Steps By Dragging*
+- *Manage Increments*
+- *Manage Increment Stories*
+- *Add, Rename, Remove And Reorder Scenarios*
+- *Add, Edit, Remove And Reorder Steps*
 - *Add And Remove Examples On Scenario*
 - *Add And Remove Example Fields*
 - *Add, Edit, Remove And Reorder Example Lines*
@@ -316,13 +310,8 @@ section: body
 - *Fold Classes And Operations*
 - *Mark Lines A Broken Rule Names*
 - *Browse Files Without Reading Rules*
-- *Add Comment To File Selection*
 - *Open Edit And Delete File Comment*
-- *Send File Comments To Chat*
-- *Mark File Comment Processed*
 - *Show Changed File After Comment*
-- *Clear Processed File Comments*
-- *Show AI Changes As Diff*
 - *Add File Or Selection To Chat Context*
 - *Switch Files App To Graph View*
 - *Filter Graph Like The File List*
@@ -392,7 +381,7 @@ section: body
 - *Package End-To-End Results With The Canvas*
 - *Mark Each Explorer Scenario Passed Or Failed*
 - *Label Stale Test Results*
-- *Test A Scenario's Thens On The Canvas*
+- *Run A Scenario's Thens On The Canvas*
 - *Play A Story's UI Steps On A Screen*
 - *Check Screen Logic Against Scenarios From A Command*
 - *Give Each Map Card A Stable Node Id*
