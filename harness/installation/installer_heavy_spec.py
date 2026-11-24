@@ -40,7 +40,10 @@ class _ScriptedClaude(ClaudePlugins):
 
     def __init__(self, listed: str) -> None:
         self.claude_folder = Path(tempfile.mkdtemp(prefix="cdd-claude-settings-"))
-        super().__init__(claude_folder=self.claude_folder)
+        self.home_folder = Path(tempfile.mkdtemp(prefix="cdd-home-"))
+        super().__init__(CddHome(self.home_folder), claude_folder=self.claude_folder)
+        for plugin in (_BOARD, _CDD, _QUEUE):
+            plugin.folder.mkdir(parents=True, exist_ok=True)
         self.listed = listed
         self.calls: list[tuple[str, ...]] = []
         self.cli: str | None = "claude"
@@ -53,6 +56,9 @@ class _ScriptedClaude(ClaudePlugins):
         current = [f for f in named.get("env", {}).get("CLAUDE_CODE_PLUGIN_DIRS", "").split(os.pathsep) if f]
         named.setdefault("env", {})["CLAUDE_CODE_PLUGIN_DIRS"] = os.pathsep.join([*current, *folders])
         settings.write_text(json.dumps(named), encoding="utf-8")
+
+    def chat_folder(self, name: str) -> Path:
+        return self.home_folder / "chat-plugins" / name
 
     @property
     def watched_folders(self) -> list[str]:
@@ -1403,13 +1409,18 @@ with description("toolsets installed for Claude Code") as self:
 
         with after.each:
             shutil.rmtree(self.plugins.claude_folder, ignore_errors=True)
+            shutil.rmtree(self.plugins.home_folder, ignore_errors=True)
 
         with context("that Claude Code does not load yet"):
             with before.each:
                 self.answer = str(self.plugins.install(_QUEUE))
 
-            with it("should name its published folder in CLAUDE_CODE_PLUGIN_DIRS"):
-                expect(self.plugins.watched_folders).to(contain(str(_QUEUE.folder)))
+            # The folder Claude Code watches never changes, so a repin and a reload of the plugins reach every chat.
+            with it("should name the cdd home's fixed folder for it in CLAUDE_CODE_PLUGIN_DIRS"):
+                expect(self.plugins.watched_folders).to(contain(str(self.plugins.chat_folder("prompt-queue"))))
+
+            with it("should have the fixed folder lead to its published folder"):
+                expect(self.plugins.chat_folder("prompt-queue").resolve()).to(equal(_QUEUE.folder.resolve()))
 
             with it("should keep the folders the settings named already"):
                 expect(self.plugins.watched_folders).to(contain(_ScriptedClaude.OWN_FOLDER))
@@ -1430,7 +1441,22 @@ with description("toolsets installed for Claude Code") as self:
                 expect(self.answer).to(equal(PluginInstall.WATCHED))
 
             with it("should name its folder once"):
-                expect(self.plugins.watched_folders.count(str(_QUEUE.folder))).to(equal(1))
+                expect(self.plugins.watched_folders.count(str(self.plugins.chat_folder("prompt-queue")))).to(equal(1))
+
+        # A repin moves the plugin to the lane the person approved: the fixed folder follows, and the settings stay as they are.
+        with context("that the approved lane publishes from another folder"):
+            with before.each:
+                self.plugins.install(_QUEUE)
+                self.moved = _Published("prompt-queue", "0.1.0-dev")
+                self.moved.folder = Path(tempfile.gettempdir()) / "cdd-home" / "dev" / "claude-plugins" / "prompt-queue"
+                self.moved.folder.mkdir(parents=True, exist_ok=True)
+                self.answer = str(self.plugins.install(self.moved))
+
+            with it("should have the fixed folder lead to the approved lane's folder"):
+                expect(self.plugins.chat_folder("prompt-queue").resolve()).to(equal(self.moved.folder.resolve()))
+
+            with it("should say it is watched, so a reload of the plugins loads it"):
+                expect(self.answer).to(equal(PluginInstall.WATCHED))
 
         # A lane's or an older home's copy of the same plugin, named too, would load the plugin twice.
         with context("that the settings name from another published folder"):
@@ -1439,7 +1465,7 @@ with description("toolsets installed for Claude Code") as self:
                 self.plugins.install(_QUEUE)
 
             with it("should name only its own published folder"):
-                expect([f for f in self.plugins.watched_folders if f.endswith("prompt-queue")]).to(equal([str(_QUEUE.folder)]))
+                expect([f for f in self.plugins.watched_folders if f.endswith("prompt-queue")]).to(equal([str(self.plugins.chat_folder("prompt-queue"))]))
 
         with context("that Claude Code has a cached copy of"):
             with before.each:
@@ -1452,8 +1478,8 @@ with description("toolsets installed for Claude Code") as self:
             with it("should leave other plugins' copies alone"):
                 expect([c for c in self.plugins.calls if "cdd-board@cdd-home" in c]).to(equal([]))
 
-            with it("should still name its published folder"):
-                expect(self.plugins.watched_folders).to(contain(str(_QUEUE.folder)))
+            with it("should still name its fixed folder"):
+                expect(self.plugins.watched_folders).to(contain(str(self.plugins.chat_folder("prompt-queue"))))
 
         # A mod installed from a checkout's own marketplace runs that branch's code, not the server's.
         with context("that is installed from a checkout's own marketplace"):

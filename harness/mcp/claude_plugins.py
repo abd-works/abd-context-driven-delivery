@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import os
+if os.name == "nt":
+    import _winapi
 import re
 import shutil
 import subprocess
@@ -14,6 +16,8 @@ from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.claude_marketplace import PublishedPlugin
 
+# The cdd home's folder of fixed folders Claude Code loads the plugins from, each leading to the approved lane's copy.
+CHAT_PLUGINS = "chat-plugins"
 # Each claude plugin command clones or reads a marketplace; a slow disk or network can take this long.
 _CLAUDE_COMMAND_TIMEOUT_SECONDS = 120
 
@@ -58,10 +62,13 @@ class ClaudePlugins:
         self._claude_folder = claude_folder if claude_folder is not None else IdeLayout("Claude").user_settings_folder
 
     def install(self, plugin: PublishedPlugin) -> PluginInstall:
-        """Have Claude Code load plugin from its published folder: name the folder in its settings, in place of any
-        other published folder of the same plugin, and uninstall every cached copy of it. Claude Code reads the
-        settings when it starts, so a folder named just now loads after the app restarts."""
-        newly_watched = self._watch(plugin.marketplace.mod_folder(plugin), plugin.name)
+        """Have Claude Code load plugin from the lane the person approved, never a cached copy: the cdd home's fixed
+        folder for the plugin (``chat-plugins/{name}``) leads to the folder the plugin is published from, the settings
+        name that fixed folder in place of any other folder of the same plugin, and every cached copy is uninstalled.
+        The fixed folder never moves, so a repin onto another lane and a reload of the plugins reach every chat; only
+        the first time the settings name it does Claude Code need restarting, since it reads them when it starts."""
+        chat_folder = self._lead_to(plugin.marketplace.mod_folder(plugin), plugin.name)
+        newly_watched = self._watch(chat_folder, plugin.name)
         cached = [name for name in self.installed if name.split("@")[0] == plugin.name]
         if cached and not self._uninstall(cached):
             print(f"{plugin.name}: a cached copy is still installed and no claude command was found to uninstall it", file=sys.stderr)
@@ -89,7 +96,7 @@ class ClaudePlugins:
             named = {}
         env = named.setdefault("env", {})
         current = [entry.strip() for entry in str(env.get(self.WATCHED_FOLDERS, "")).split(os.pathsep) if entry.strip()]
-        wanted = str(Path(folder).resolve())
+        wanted = str(Path(folder))
         kept = [entry for entry in current if not self._another_copy(Path(entry), name, wanted)]
         if wanted not in kept:
             kept.append(wanted)
@@ -100,10 +107,27 @@ class ClaudePlugins:
         (self._claude_folder / "settings.json").write_text(json.dumps(named, indent=2), encoding="utf-8")
         return True
 
+    def _lead_to(self, published: Path, name: str) -> Path:
+        """The cdd home's fixed folder for the plugin called name, made to lead to published: a directory junction on
+        Windows, which needs no special rights, else a symbolic link. A link leading elsewhere is replaced."""
+        link = self._home.folder / CHAT_PLUGINS / name
+        target = Path(published).resolve()
+        if link.is_symlink() or link.is_junction():
+            if link.resolve() == target:
+                return link
+            os.unlink(link) if link.is_symlink() else os.rmdir(link)
+        link.parent.mkdir(parents=True, exist_ok=True)
+        if os.name == "nt":
+            _winapi.CreateJunction(str(target), str(link))
+        else:
+            link.symlink_to(target, target_is_directory=True)
+        return link
+
     @staticmethod
     def _another_copy(entry: Path, name: str, wanted: str) -> bool:
-        """Whether entry is another published folder of the plugin called name: one in a ``claude-plugins`` folder."""
-        return entry.name == name and entry.parent.name == "claude-plugins" and str(entry.resolve()) != wanted
+        """Whether entry is another folder of the plugin called name: a published one, in a ``claude-plugins`` folder,
+        or another home's fixed one, in a ``chat-plugins`` folder."""
+        return entry.name == name and entry.parent.name in ("claude-plugins", CHAT_PLUGINS) and str(entry) != wanted
 
     def _uninstall(self, cached: list[str]) -> bool:
         """Uninstall each cached copy, and the listing of a checkout's own marketplace with its copy; answer whether a
