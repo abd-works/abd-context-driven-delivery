@@ -143,6 +143,35 @@ section: body
 *When* the Person asks to fix the failure
 *Then* the failure line says "The fix did not reach the chat" with the chat's reason
 
+#### Scenario: Log the defect with a suggested fix and its status
+
+Requested 2026-11-24, the person: "suggested fix and status include - do on release-1-1-2 branch statsus == raised, resolved, ore to come later".
+
+*Given* the failure line shows "The queue did not change: no connected MCP tool prompt-queue.flush" with Fix
+*When* the Person asks to fix the failure
+*Then* the debug report and the defect's issue hold a suggested fix and the status raised
+
+#### Scenario: Fix the defect on another branch
+
+*Given* the defect's issue is raised
+  *And* the chat release-1-1-2 works the branch release-1-2-fixes
+*When* the Person chooses to fix it on release-1-2-fixes
+*Then* the fix is on release-1-1-2's prompt queue, with the report, the issue and the suggested fix
+  *And* the issue says the fix is queued on release-1-2-fixes, its status still raised
+
+#### Scenario: Resolve the defect once its fix is served
+
+*Given* the defect's fix is pushed and served on its lane
+*Then* the debug report and the issue say the status resolved
+  *And* the issue is closed
+
+#### Scenario: Leave the defect to come later
+
+*Given* the defect's issue is raised
+*When* the Person chooses to fix it later
+*Then* the debug report and the issue say the status to come later
+  *And* the issue stays open
+
 ## Story: Push Work From Chat Bar
 
 #### Scenario: Push a ticket's worktree part way through merging main

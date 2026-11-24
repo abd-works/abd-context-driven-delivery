@@ -37,7 +37,7 @@ from harness.installation.repository_toolsets import RUNNING_CHECKOUT, Repositor
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
 from harness.mcp.claude_plugins import ClaudePlugins
-from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, McpAddress, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
+from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, CHAT_HEADER, CHAT_PROCESS_HEADER, LANE_CALL_PATH, MCP_PATH, PING_PATH, PROJECT_HEADER
 from harness.mcp.mcp_daemon import McpDaemon
 from harness.mcp.server_lanes import LaneCall, ServerLane, ServerLanes
 from harness.mcp.server_hooks import CddServerHooks
@@ -315,10 +315,9 @@ class McpInstallation(ServerInstallation):
         return status
 
     def install_mods(self) -> dict[str, str]:
-        """Install the board and prompt queue mods of the code the served lane runs. Chats install mods from the stable
-        lane's marketplace, so a dev lane's mods are published there first."""
-        if self.served.home.is_dev_lane:
-            self.daemon.home.publish_mods_of(self.served.home)
+        """Install the board and prompt queue mods from the stable lane's marketplace, which every chat's plugins come
+        from. It holds the stable lane's own mods only: the stable server runs main, so a feature's mods published there
+        would give main's chats buttons their server cannot serve. A dev lane's mods stay in its own marketplace."""
         return {"board": self.claude_plugins.install_board(), "prompt queue": self.claude_plugins.install_queue()}
 
     def status(self) -> list[str]:
@@ -958,17 +957,10 @@ class McpHost:
         return {"is_restarted": True, "tools": len(tools) + len(self._checkout_server.prompts), "exceptions": self._checkout_server.skipped.as_data}
 
     def _publish_mods(self) -> None:
-        """Publish the chat bar and the prompt queue from the code the server now runs, so a chat watching the published
-        copy reloads it with the server's restart rather than at the next install."""
+        """Publish the chat bar and the prompt queue from the code the server now runs into its own lane's marketplace,
+        so a chat watching the published copy reloads it with the server's restart rather than at the next install."""
         if self._home is not None and self._home.is_installed:
-            self._home.publish_mods_for_chats(is_dev_lane_running=self._dev_lane_runs())
-
-    def _dev_lane_runs(self) -> bool:
-        """Whether the dev lane's server answers beside this stable one; a dev lane's own server never asks."""
-        if self._home.is_dev_lane:
-            return True
-        dev = self._home.dev_lane
-        return dev.is_installed and McpDaemon(dev, McpAddress.of_home(dev.folder)).is_running()
+            self._home.write_mod_plugins()
 
     def diagnose(self) -> dict[str, Any]:
         """What this host publishes: the ping's answer, every tool name, and what start-up skipped."""

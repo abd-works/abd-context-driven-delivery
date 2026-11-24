@@ -40,6 +40,23 @@ with description("a session's debug instructions, which the chat bar's debug but
     with it("should ask the person whether to fix the bug or log a defect"):
         expect([option in self.prompt for option in ('"Fix the bug"', '"Log a defect"', "AskUserQuestion")]).to(equal([True, True, True]))
 
+    with it("should suggest a fix in the debug report and in the issue"):
+        expect(self.prompt).to(contain("Suggested fix"))
+
+    with it("should give the defect a status of raised, resolved or to come later"):
+        expect([status in self.prompt for status in ("raised", "resolved", "to come later")]).to(equal([True, True, True]))
+
+    with it("should offer to fix it on another branch, such as a release branch, or to leave it to come later"):
+        expect([option in self.prompt for option in ('"Fix on another branch"', '"Fix later"')]).to(equal([True, True]))
+
+    with context("with the fix to be made on another branch"):
+        with it("should queue it on the prompt queue of the chat that works that branch"):
+            expect(self.prompt).to(contain("prompt-queue.add"))
+
+    with context("with the fix resolved"):
+        with it("should close the issue"):
+            expect(self.prompt).to(contain("gh issue close"))
+
     with it("should always log the defect as an issue on the CDD repository on GitHub, whichever the person chooses"):
         expect(self.prompt).to(contain("Always log the defect"))
 
