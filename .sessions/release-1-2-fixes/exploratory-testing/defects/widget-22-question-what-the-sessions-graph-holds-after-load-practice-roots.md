@@ -4,7 +4,7 @@
 - **Tester:** Widget
 - **Story:** epic "Map Work Into Knowledge Graph"; no scenario covers this.
 - **Module and class:** `harness/graph/graph.py` `Graph.load_practice_roots`, `graph_reads.py`, `saved_graph.py`; the DDD reading under `cdd_guidance/practices/ddd/model`.
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 Sandbox `repo` (`C:\dev\_et\widget\work\repo`), session `main`, throwaway cdd server (`C:\dev\_et\widget\work\drv\run.py`, calls in `drv\d2.json`, `drv\d5.json`, `drv\d6.json`). The project holds `.context/story-map.md`, scenarios under `story_tests/`, a package `shop/`, `src/order.py`, `.context/bounded-context-map.md` (contexts Ordering and Catalog) and `.context/domain-model.md`. The session's roots are the defaults (stories: `tests`, which does not exist; clean-engineering: `src`).
@@ -36,3 +36,7 @@ Once answered, heavy (`graph_build_heavy_spec.py`).
 ## Also seen by
 - Bolt, round 3: item 3 seen again with `graph.load_files` on a three-context Bookshop map and model; all four roots are EntityRoot nodes now. Reported with the missing integrations, events and dependencies as r3-bolt-01.
 - Cog, round 3 second pass: round 3, five practices with chosen roots: item 2 seen again (files named from each practice's root); code story tests and the DDD root's own code are left out (r3-cog-03).
+
+## Answer (2026-11-23)
+
+load_practice_roots includes the story map and the other folders each practice's fidelities write to, not only the files under a practice's root, and one thing read from two places is one node in the graph, with one id (the person, with section 7 item 9 of the release report, "one thing is one node in the graph"). It is built with item 9, by the robot working that item after the others are done; when this answer was written it had not landed, so items 1 to 4 above still hold on the branch.

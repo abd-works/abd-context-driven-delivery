@@ -114,29 +114,29 @@ A new Stories rule, `scenarios-name-a-story-on-the-map`, reports a scenario file
 
 ## Decisions for the person
 
-The 22 question files in [defects/](defects/) (those with `question` in their name), and these choices the closing robots made where no source said what should happen:
+Answered by the person on 2026-11-23 ("yes to all, agree to all recommendations"). Each question file in [defects/](defects/) now ends with its answer and what was built. The closing robots' fourteen choices below are agreed as built, except 3, 10, 12, 13 and 14, which the person changed; each says what was built.
 
 1. A ticket's name is at most 64 characters.
 2. Delete and archive of a ticket with a worktree save and push its work and keep its branch, unmerged.
-3. A close of a ticket whose worktree is already gone still offers to commit and push main, and would commit the main clone's edits: the one case where a close can still publish uncommitted edits. An existing heavy spec expects the offer.
+3. Changed: a close of a ticket whose worktree is already gone no longer offers to commit and push main, so it never commits the main clone's edits (`TicketCheckout.work_branch`; `kanban_tools_git_heavy_spec.py` and the story step "closing offers no commit or push of main" updated; `9b43a4189`).
 4. A close from a chat inside its own worktree, on Windows, now raises `WorktreeNotRemovedError`; the work is saved and merged by then.
 5. A folder in the way of a worktree is refused, not reused.
 6. A guidance word in another spelling of a real slug is refused, not matched; an empty guidance still answers with no rules.
 7. `validate` with no paths now builds the graph of every folder under the practice's root.
 8. A file over 30,000 lines is refused by the Files viewer.
 9. A root may still be a folder outside the project or one that is not there yet; five existing specs rely on it.
-10. Where prose is kept when a drawing cannot hold it (descriptions, notes, calls, invariants, an integration's details). Until then a trip through a drawing still loses them, and widget-19 needs the story model to hold an outline's examples.
+10. Changed: a drawing keeps the whole document it was drawn from hidden in it (the draw.io page's root cell, the whiteboard's meta), and a render back uses it, so the story map, the bounded-context map, the domain model, the module cards and the class model lose nothing through a drawing (`45752054f`). UX through a drawing, the thin slice drawing and drawings made from code still keep nothing. widget-19's outline examples already come back through code.
 11. An unknown but well-formed chat id still gets a new queue on `add`.
-12. Whether the test runner gets a story on the map.
-13. Splitting the stories that now hold more than seven scenarios (Activate Ticket, Close Active Session, Open Ticket Session, Display Board, Add Backlog Item), and moving the two new queue stories to a sub-epic of their own.
-14. One shared class in `harness/process` for the four places that claim a file between processes (`InstallLock`, `JsonFile.held`, the hook daemon's `_SpawnLock`, the test runner's claim file).
+12. Changed: the test runner has a story, Person --> Run Test Tier, in a new sub-epic Run Test Tiers One At A Time under Review End-To-End Screens, with six scenarios.
+13. Changed: the five stories, and Display Ticket Card, Display Ticket Details and Queue Draft Prompt in the same files, are split into stories of seven scenarios or fewer, and the queue's two new stories are in a sub-epic of their own, Keep Queue Files Safe. Twenty-two stories in other files still hold more than seven, and Steer Ticket Sessions (14 stories) and See Work On Session Board (10) now hold more than nine.
+14. Changed: the four places that claim a file between processes use one class, `harness/process` `LockFile` (three already did; the test runner's claim file now does too, with `try_claim`), and `TestRunRecord.save` holds it from read to write.
 
 ## Known loose ends
 
 - Every `validate` and `render` today ran on the pinned dev-lane runtime, which is the code from before these fixes. `validate` for `stories-scenarios` and `stories-acceptance-tests` often did not answer within its wait; where it did, it reported "Then has no observes relationship to Example" on every Then of every scenario file it was given, old and new.
-- The class model's whiteboard was not written; the story map's whiteboard is saved and its board in Claude is not published.
+- The class model's whiteboard was not written. The story map's whiteboard was drawn again on 2026-11-24 from that day's story map; its new board in Claude is not published yet (publishing it is an Artifact publish the person makes).
 - Delete Ticket and Add Child Ticket have scenarios without a story test file.
-- `TestRunRecord.save` has no lock across processes; `JsonFile.held` could give it one.
+- Done 2026-11-24: `TestRunRecord.save` holds the shared `LockFile` claim.
 - `partition_documents_flow_spec.py` fails 10 of 16 with `No module named 'faiss'`; not looked into.
 - The supervisor's own queue showed every step of its goal as done when a turn ended mid-work, and some `[defect]` cards may be missing from it, since robots queued them at the same moment (sparky-02). The files in the defect area are the full record.
 - Sandboxes are left in `C:\dev\_et`.
