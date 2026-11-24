@@ -13,7 +13,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
-from harness.graph.schema_edges import CHILD_LISTS, SchemaKey
+from harness.graph.practice_node_types import NODE_TYPE_TABLES
+from harness.graph.schema_edges import SchemaKey
 from harness.graph.violation import Finding
 from harness.guidance.rule import Rule
 
@@ -69,7 +70,7 @@ class RequiredRelationship:
         or, for a child list, when it holds a node of a target type under any kind its practice records it."""
         if self.field in (node.get_fact(EXEMPT_FACT) or []):
             return ""
-        linked = context.held_by(node) if self.field in CHILD_LISTS else context.targets(node, self.field)
+        linked = context.held_by(node) if NODE_TYPE_TABLES.is_child_list(self.field) else context.targets(node, self.field)
         if any(target.type in self.targets for target in linked):
             return ""
         return (

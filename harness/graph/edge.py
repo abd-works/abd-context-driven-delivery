@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Generic, NotRequired, TypedDict, TypeVar
 
+from harness.graph.practice_node_types import NODE_TYPE_TABLES
+
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
@@ -31,50 +33,8 @@ class EdgeRecord(TypedDict):
 # How an edge's nodes are shown under its parent: as children (``direct``) or under a child named for the kind.
 Display = str
 
-# Where each edge kind's group sits under a node in the explorer tree, lowest first. A practice orders its groups
-# by these numbers, and graph.json saves them on each edge, so every loader and model reads them through EdgeType.
-_EDGE_ORDER: dict[str, int] = {
-    "decomposedInto": 1,
-    "relative": 1,
-    "root": 1,
-    "descriptions": 1,
-    "participants": 1,
-    "screens": 1,
-    "owns": 2,
-    "background": 2,
-    "contexts": 2,
-    "parameters": 2,
-    "aggregates": 2,
-    "given": 2,
-    "scenarios": 3,
-    "properties": 3,
-    "observations": 3,
-    "steps": 4,
-    "demonstrates": 4,
-    "shownOn": 4,
-    "specifiedBy": 4,
-    "specifies": 4,
-    "examples": 5,
-    "belongsTo": 5,
-    "hasParameter": 6,
-    "increments": 6,
-    "accesses": 6,
-    "hasType": 7,
-    "returnType": 7,
-    "stories": 7,
-    "associates": 7,
-    "observes": 8,
-    "demonstratedThrough": 8,
-    "ands": 9,
-    "uses": 9,
-    "invokedBy": 9,
-    "returns": 10,
-    "retrievedUsing": 11,
-    "invokes": 12,
-    "dependsOn": 13,
-    "usedBy": 14,
-}
-# A kind only a pattern overlay's schema names: a child sits with the owned children, a relationship after them.
+# A kind no practice or pattern places (``NodeTypeTables.order_of``): a child sits with the owned children, a relationship
+# after them.
 _DIRECT_KIND_ORDER = 2
 _RELATIONSHIP_KIND_ORDER = 7
 # Kinds no one filters by: belongsTo is the back-edge of every child list, and scopes is left out of the explorer tree.
@@ -97,9 +57,13 @@ class EdgeType:
 
     @classmethod
     def from_kind(cls, kind: str, display: Display = "direct") -> EdgeType:
-        """The edge type of kind, at the place ``_EDGE_ORDER`` gives it, or after its display's other kinds."""
-        default = _DIRECT_KIND_ORDER if display == "direct" else _RELATIONSHIP_KIND_ORDER
-        return cls(kind, _EDGE_ORDER.get(kind, default), display)
+        """The edge type of kind, at the place the practice or pattern that names it gives it (``NODE_TYPE_TABLES``),
+        or after its display's other kinds. ``graph.json`` saves the place on each edge, so every loader and model reads
+        it through here."""
+        order = NODE_TYPE_TABLES.order_of(kind)
+        if order is None:
+            order = _DIRECT_KIND_ORDER if display == "direct" else _RELATIONSHIP_KIND_ORDER
+        return cls(kind, order, display)
 
 
 class Edge(Generic[End]):

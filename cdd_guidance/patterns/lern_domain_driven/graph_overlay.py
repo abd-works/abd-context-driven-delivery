@@ -12,6 +12,7 @@ from pathlib import Path
 from harness.graph.edge import EdgeType
 from harness.graph.graph import Graph, Node, PracticeNodes
 from harness.graph.pattern_overlays import GraphOverlay
+from harness.graph.practice_node_types import PracticeNodeTypes
 from harness.graph.skipped_folders import scanned_files
 
 from cdd_guidance.patterns.lern_domain_driven import fact_names
@@ -37,6 +38,16 @@ _BEHAVIOR_TIERS = {
 }
 
 
+class LernNodeTypes(PracticeNodeTypes):
+    """LERN's node types: the schema keys of its tiers and story test files, each read as the node type its reading
+    adds, such as ``share`` for a ``StoryShared`` file and ``view`` for a ``DomainView``."""
+
+    schema_node_types = {
+        "node": "NodeRoot", "client": "ClientRoot", "share": "StoryShared", "server": "ServerSpec", "domain": "DomainSpec",
+        "playwright": "PlaywrightSpec", "view": "DomainView",
+    }
+
+
 class LernOverlay(GraphOverlay):
     # The LERN and DDD schema kinds that place a node as a child in the explorer tree.
     direct_kinds = frozenset(
@@ -46,6 +57,8 @@ class LernOverlay(GraphOverlay):
             "writtenBy", "belongsTo",
         }
     )
+
+    types = LernNodeTypes()
 
     def adds_rules_to(self, node: Node) -> bool:
         """LERN is constrained to TypeScript: a node read from code in another language carries none of its rules."""

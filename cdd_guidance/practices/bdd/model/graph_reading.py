@@ -43,8 +43,11 @@ _SCRIPT_TEARDOWN = re.compile(r"^\s*after(?:Each|All)\s*\(")
 
 
 class BddNodeTypes(PracticeNodeTypes):
-    """BDD's node types: an observation ``invokes`` the members its source calls and ``demonstrates`` what it names."""
+    """BDD's node types: an observation ``invokes`` the members its source calls and ``demonstrates`` what it names. A
+    spec lists its descriptions, a description its contexts, and a context its observations and examples."""
 
+    child_lists = frozenset({"descriptions", "contexts", "observations", "examples"})
+    edge_order = {"descriptions": 1, "contexts": 2, "observations": 3, "demonstrates": 4, "specifies": 4, "examples": 5, "invokes": 12}
     evidence_kinds = frozenset({"invokes", "demonstrates"})
 
     def links(self, owner: ModelNode, kind: str, target: ModelNode) -> bool:

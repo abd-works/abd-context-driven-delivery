@@ -66,8 +66,15 @@ class NodeEvidence:
 class CodeNodeTypes(PracticeNodeTypes):
     """Clean Engineering's node types: an operation ``invokes`` what its source calls, a class ``dependsOn`` the
     collaborators and dependencies it names, and a property or operation ``hasType`` or ``returnType`` the class its
-    type hint or return type names."""
+    type hint or return type names. A schema's ``class`` is an ``OoadClass``; a class lists its members and an operation
+    its parameters."""
 
+    schema_node_types = {"class": "OoadClass"}
+    child_lists = frozenset({"participants", "parameters"})
+    edge_order = {
+        "participants": 1, "parameters": 2, "properties": 3, "hasParameter": 6, "hasType": 7, "returnType": 7,
+        "demonstratedThrough": 8, "invokedBy": 9, "returns": 10, "invokes": 12, "dependsOn": 13, "usedBy": 14,
+    }
     evidence_kinds = frozenset({"invokes", "dependsOn", "hasType", "returnType"})
 
     def links(self, owner: ModelNode, kind: str, target: ModelNode) -> bool:

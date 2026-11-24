@@ -52,11 +52,12 @@ class PracticeReading:
     (``class`` for a Clean Engineering class), each with the node type it names."""
 
     rule_types: dict[str, tuple[str, ...]] = {}
+    """Node types that also carry the rules the schema gives other types, such as every story node's rules on a story."""
 
     types: PracticeNodeTypes = PracticeNodeTypes()
-    """What the practice says of its node types to the graph's shared tables: the relationships its nodes' evidence
-    decides, and the types a session's stories scope."""
-    """Node types that also carry the rules the schema gives other types, such as every story node's rules on a story."""
+    """What the practice says of its node types to the graph's shared tables (``NODE_TYPE_TABLES``): its schema keys,
+    child lists and edge order, the relationships its nodes' evidence decides, and the types a session's stories
+    scope."""
 
     def __init__(self, practice: PracticeGuidance) -> None:
         self.practice = practice

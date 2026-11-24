@@ -19,6 +19,7 @@ from harness.graph.location import Location
 from harness.graph.model_node import schema_sync_paused
 from harness.graph.schema_conformance import EXEMPT_FACT
 from harness.graph.skipped_folders import skips_folder
+from harness.graph.practice_node_types import PracticeNodeTypes
 from harness.graph.practice_reading import PracticeReading
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ddd.ddd import Ddd
@@ -51,12 +52,21 @@ _SHOWN = (("Story", "shows", "story_keys"), ("Scenario", "showsScenarios", "scen
 _SERVING_TYPES = ("Screen", "Control", "StoryDemoControl")
 
 
+class UxNodeTypes(PracticeNodeTypes):
+    """UX's node types: a schema's ``map`` is a ``UxMap``, and a map lists its screens and a step its ``ands``."""
+
+    schema_node_types = {"map": "UxMap"}
+    child_lists = frozenset({"screens", "ands"})
+    edge_order = {"screens": 1, "ands": 9}
+
+
 class UxReading(PracticeReading):
     """How UX takes part in the graph: it reads each file a UX map is written in, after the practices its screens link
     to, adds the map's nodes to its graph, and links each screen and control to the stories, scenarios, and steps it
     serves and each screen to the domain classes its domain terms name. It checks its screen rules on those nodes."""
 
     reads_after = (Stories, CleanEngineering, Ddd)
+    types = UxNodeTypes()
     node_types = (
         "UxMap",
         "Screen",

@@ -1,8 +1,8 @@
 """SchemaEdges. The relationship edges every practice's ``schema.yaml`` names, recorded between the model objects on one
 graph.
 
-Child lists already record their own edge, and belongsTo is the back-edge for those lists. Every other relationship the
-schema names is recorded here when both nodes are on the graph: a field the owning object's practice reads from evidence
+Child lists already record their own edge, and belongsTo is the back-edge for those lists; each practice names its own
+(``PracticeNodeTypes.child_lists``). Every other relationship the schema names is recorded here when both nodes are on the graph: a field the owning object's practice reads from evidence
 (``invokes``, ``hasType``) when that practice says its source or names show it (``PracticeNodeTypes.links``), and any
 other field when the owner holds the target in the list attribute named for the field.
 """
@@ -15,6 +15,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from harness.graph.edge import EdgeType
+from harness.graph.practice_node_types import NODE_TYPE_TABLES
 from harness.guidance.schema import Schema
 from harness.annotations.name import Name
 
@@ -25,56 +26,23 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
 
 
-# Child-list edges. A model object's child list records these itself.
-CHILD_LISTS = frozenset(
-    {
-        "decomposedInto",
-        "background",
-        "scenarios",
-        "steps",
-        "examples",
-        "increments",
-        "stories",
-        "participants",
-        "parameters",
-        "screens",
-        "descriptions",
-        "contexts",
-        "observations",
-        "aggregates",
-        "ands",
-        "belongsTo",
-    }
-)
-
-# The explorer leaves scopes out of the serialized graph.
-_SKIPPED = CHILD_LISTS | {"scopes"}
-
-# Schema keys whose node type is not the key capitalised, in the order the reverse lookup reads them.
-_NODE_TYPES = {
-    "class": "OoadClass",
-    "subEpic": "Epic",
-    "given": "Step",
-    "when": "Step",
-    "then": "Step",
-    "map": "UxMap",
-    "node": "NodeRoot",
-    "client": "ClientRoot",
-    "share": "StoryShared",
-    "server": "ServerSpec",
-    "domain": "DomainSpec",
-    "playwright": "PlaywrightSpec",
-    "view": "DomainView",
-}
+# Kinds left out of the schema edges besides the child lists: the explorer leaves scopes out of the serialized graph.
+_NOT_RECORDED = frozenset({"scopes"})
 
 _PHASES = {"given": "given", "when": "when", "then": "then"}
 
 _DISPLAY = {"demonstrates": "grouped"}
 
 
+def records(kind: str) -> bool:
+    """Whether the schema edges record kind: not a child list, which its model object records itself and whose
+    back-edge is belongsTo, nor a kind the explorer leaves out."""
+    return not NODE_TYPE_TABLES.is_child_list(kind) and kind not in _NOT_RECORDED
+
+
 class SchemaKey:
-    """One type key in a ``schema.yaml`` and the explorer node type it names: ``class`` is ``OoadClass``; any other key
-    is capitalised."""
+    """One type key in a ``schema.yaml`` and the explorer node type it names: the node type the practice or pattern
+    whose schema names it gives (``NODE_TYPE_TABLES``), such as ``OoadClass`` for ``class``; any other key capitalised."""
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -82,12 +50,12 @@ class SchemaKey:
     @classmethod
     def from_node_type(cls, node_type: str) -> SchemaKey:
         """The schema key an explorer node type is written as, the reverse of ``node_type``."""
-        named = next((key for key, mapped in _NODE_TYPES.items() if mapped == node_type), None)
+        named = NODE_TYPE_TABLES.key_of(node_type)
         return cls(named if named is not None else node_type[:1].lower() + node_type[1:])
 
     @property
     def node_type(self) -> str:
-        return _NODE_TYPES.get(self.key) or self._capitalised
+        return NODE_TYPE_TABLES.node_type_of(self.key) or self._capitalised
 
     @property
     def node_types(self) -> tuple[str, ...]:
@@ -118,7 +86,7 @@ class SchemaField:
 
     def links_from(self, owner: ModelNode) -> bool:
         """True when this field is a relationship a node like owner records here."""
-        if self.owner != owner.semantic_type() or self.kind in _SKIPPED:
+        if self.owner != owner.semantic_type() or not records(self.kind):
             return False
         return not self.phase or owner.phase == self.phase
 
@@ -142,7 +110,7 @@ class SchemaFields:
         """The relationships owner_type names back to target_type, other than forward and the child lists."""
         found: list[str] = []
         for field in self.fields:
-            if field.owner != owner_type or field.kind == forward or field.kind in _SKIPPED:
+            if field.owner != owner_type or field.kind == forward or not records(field.kind):
                 continue
             if target_type in field.targets and field.kind not in found:
                 found.append(field.kind)

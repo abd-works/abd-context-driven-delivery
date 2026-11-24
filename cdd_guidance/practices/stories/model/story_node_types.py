@@ -17,8 +17,16 @@ class StoryNodeTypes(PracticeNodeTypes):
     """Stories' node types. A step ``invokes`` the operations its source calls, ``observes`` and ``demonstrates`` what it
     names, and is ``retrievedUsing`` a property it reads or calls; an epic ``uses`` a module whose classes its examples
     name or whose members its steps call; a story is ``specifiedBy`` what bears its name; and a scenario's ``given`` is
-    one of its own Given steps. A session that names its stories scopes every node of the story map itself."""
+    one of its own Given steps. A session that names its stories scopes every node of the story map itself. A schema's
+    ``subEpic`` is an ``Epic``, and its ``given``, ``when`` and ``then`` are each a ``Step``."""
 
+    schema_node_types = {"subEpic": "Epic", "given": "Step", "when": "Step", "then": "Step"}
+    child_lists = frozenset({"decomposedInto", "background", "scenarios", "steps", "examples", "increments", "stories", "ands"})
+    edge_order = {
+        "decomposedInto": 1, "background": 2, "given": 2, "scenarios": 3, "steps": 4, "demonstrates": 4, "shownOn": 4,
+        "specifiedBy": 4, "examples": 5, "increments": 6, "stories": 7, "observes": 8, "ands": 9, "uses": 9,
+        "retrievedUsing": 11, "invokes": 12,
+    }
     evidence_kinds = frozenset({"invokes", "observes", "demonstrates", "retrievedUsing", "uses", "specifiedBy", "given"})
     scope_types = STORY_MAP_TYPES
 

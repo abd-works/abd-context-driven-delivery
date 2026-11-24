@@ -19,6 +19,7 @@ from harness.graph.graph import Node, PracticeNodes
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import FactValue
 from harness.graph.location import Location
+from harness.graph.practice_node_types import PracticeNodeTypes
 from harness.graph.practice_reading import PracticeReading
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from harness.markdown.markdown import MarkdownText
@@ -160,6 +161,14 @@ class BuildingBlock(Node):
         return [op for op in self.ooad_class.operations if op.name and not op.name.startswith("_")]
 
 
+class DddNodeTypes(PracticeNodeTypes):
+    """DDD's node types: a domain model lists its bounded contexts and a context its aggregates; a repository
+    ``accesses`` the root it keeps, and an entity root ``associates`` with each other root it holds a reference to."""
+
+    child_lists = frozenset({"contexts", "aggregates"})
+    edge_order = {"contexts": 2, "aggregates": 2, "accesses": 6, "associates": 7}
+
+
 class DddReading(HoldsProjectTestCode, PracticeReading):
     """How DDD takes part in the graph: it reads, after the Clean Engineering practice it extends, the bounded contexts
     its folders mark, the aggregates its folders hold, a building block for each class Clean Engineering read from
@@ -167,6 +176,7 @@ class DddReading(HoldsProjectTestCode, PracticeReading):
     Engineering's."""
 
     reads_after = (CleanEngineering,)
+    types = DddNodeTypes()
     class_types = (*BUILDING_BLOCK_KINDS, "Aggregate", "DomainEvent")
 
     @property
