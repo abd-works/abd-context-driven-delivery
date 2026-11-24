@@ -356,11 +356,11 @@ section: body
 - *Break module dependency cycles*: no module import cycle left (`.sessions/_complete/break-module-dependency-cycles/`)
 - *Nov 18 demo fixes*: board comments carry the fidelity's rules, the debug button stays in view, file links use the whole path, a plain folder offers only to create the git repository, the Files view opens without Bypass permissions, render saves beside its source, logs roll over at 4 MB, the bar's buttons ask for a skill in plain words, story maps take their shape from the sources, a whiteboard opens as a canvas, a new repository needs no reload, and a chat installs CDD when its folder lacks it
 
-### Increment 7: File Manager Complete
+### Increment 7: Built - File Manager
 
-**Outcome:** the Files app shows a session's generated work: files and folders or the graph, filtered like the files, opening and comparing several files, with comments sent to the chat.
+**Outcome:** the Files app shows a session's generated work: files and folders filtered by stage, practice and format, a source view with folds, broken rules and the chat's changes, a graph view filtered like the file list that opens and folds files to the selected nodes, the draw.io editor, and comments and context sent to the chat.
 
-**Slicing notes:** the file-manager chat's work, the Review Generated Work In File Viewer epic.
+**Slicing notes:** the built part of File Manager Complete, split on 2026-11-23 after checking each story against the code on release-1-2-fixes. What is left is in Finish File Manager.
 
 **Stories in this increment:**
 
@@ -383,7 +383,6 @@ section: body
 - *Fold Classes And Operations*
 - *Mark Lines A Broken Rule Names*
 - *Browse Files Without Reading Rules*
-- *Save Edited File*
 - *Add Comment To File Selection*
 - *Open Edit And Delete File Comment*
 - *Send File Comments To Chat*
@@ -404,13 +403,23 @@ section: body
 - *Show Only Violating Nodes In Files App*
 - *See Rules Under Node In Files App*
 - *Open Violation In Files App Source*
+
+### Increment 8: Finish File Manager
+
+**Outcome:** the Files app shows a session's generated work: files and folders or the graph, filtered like the files, opening and comparing several files, with comments sent to the chat.
+
+**Slicing notes:** what File Manager Complete still lacks after its built stories moved to Built - File Manager on 2026-11-23: saving an edited file, Fix and the live violation counts in the chat bar and board, a spec on a session's files, and the draw.io Source tab and shape marks. the file-manager chat's work, the Review Generated Work In File Viewer epic.
+
+**Stories in this increment:**
+
+- *Save Edited File*
 - *Fix Graph Violations From Chat Bar*
 - *Count Session Violations From Live Graph*
 - *Count Fidelity Violations From Live Graph*
 - *Test Knowledge Graph Explorer On Session Files* (partly built: the Graph app opens on the session's folder and shows violations; no spec runs on a session's files)
 - *Display Drawio File As Diagram* (partly built: the Files app shows the draw.io editor; no Source tab, no red shape for a violation, and a pressed shape does not open its lines)
 
-### Increment 8: Sync Design Canvas With Production
+### Increment 9: Sync Design Canvas With Production
 
 **Outcome:** a design canvas shows production as it is: every file is proven against the product repo by hash, styles and assets come from one pinned Design System package, each screen mounts the real view, hosted edits come back before the next version, and a screen being redesigned is detached and marked diverged until its change reaches production.
 
@@ -441,7 +450,7 @@ section: body
 - *Reattach A Screen Once Its Change Reaches Production*
 - *Remove Older Versions When Keeping A Release*
 
-### Increment 9: Integrate Stories With The Canvas Explorer
+### Increment 10: Integrate Stories With The Canvas Explorer
 
 **Outcome:** a person tests a screen against its scenarios from the explorer, and changes stories from the canvas or story-ui with the map updating, both ending in the same story code.
 
@@ -478,7 +487,7 @@ section: body
 - *Keep Each Screen's Own Stylesheets* (built in the design canvas explorer only, not in the Story UI)
 - *Invoke Story Explorer In Session Context*
 
-### Increment 10: Repair Guidance From Mistakes
+### Increment 11: Repair Guidance From Mistakes
 
 **Outcome:** a violation is traced back to the guidance that let it happen and that guidance is fixed, a mistake and its correction are captured as a regression example, and a failed example becomes a new named rule, so each error makes every later run better.
 
@@ -490,7 +499,7 @@ section: body
 - *Improve Guidance From Mistake*
 - *Add Rule From Failed Example*
 
-### Increment 11: Enter Commands Faster
+### Increment 12: Enter Commands Faster
 
 **Outcome:** a person types a CDD command with the actions, practices, fidelities and formats offered as they go, and the chat proposes the next command and captures handoffs, corrections and decisions.
 
@@ -509,7 +518,7 @@ section: body
 - *Offer Correction Log Entry*
 - *Offer Decision Record*
 
-### Increment 12: Judge And Fix Work From Chat Bar And Board
+### Increment 13: Judge And Fix Work From Chat Bar And Board
 
 **Outcome:** generate refreshes the knowledge graph and judges the rules itself, Fix is an action of its own on a rule, a file or every violation, Validate runs on its own only as a slash command, and the chat bar opens the active ticket's card and tiles in a side panel.
 
@@ -523,7 +532,7 @@ section: body
 - *Validate Fidelity On Demand*
 - *Open Board Side Panel From Chat Bar* (partly built: the chat bar opens the whole board, not the ticket's card and tiles)
 
-### Increment 13: Customize Board Workflow
+### Increment 14: Customize Board Workflow
 
 **Outcome:** a team shapes the board's stages, policies, steps and test strategy to its own way of working.
 
@@ -544,7 +553,7 @@ section: body
 - *Choose Testing Strategy*
 - *Toggle Sub Agents*
 
-### Increment 14: Author Story Maps
+### Increment 15: Author Story Maps
 
 **Outcome:** the Story UI editor gets its own remaining stories: dashboard, nested lanes, the node inspector, save history, real-time sessions and AI story changes.
 
@@ -563,7 +572,7 @@ section: body
 - *Mark Story Without A Screen* (partly built: the design canvas says "No screenshot" for a screen without a picture; a story with no screen gets no frame)
 - *Open Story Explorer From Screen Frame* (built in the design canvas explorer only, not in the Story UI)
 
-### Increment 15: Draw Linked Models On The Canvas
+### Increment 16: Draw Linked Models On The Canvas
 
 **Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
 
