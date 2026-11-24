@@ -4,7 +4,7 @@ import type { AgentSpawnInput, AgentSpawnResult, EngineInterface, McpToolResult,
 import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
 import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
-import { goalTitleOf } from './goal-title'
+import { goalTitleOf, isOnlyTalk } from './goal-title'
 
 const GROUPING_MODEL = 'sonnet'
 const GROUPING_TOKENS = 4096
@@ -320,11 +320,25 @@ export async function toggleExpanded($: EngineInterface): Promise<void> {
   await update($, isExpanded, open => !open)
 }
 
+/** The sub-agents button: switching sub-agent mode on groups the work not done into robots; switching it off makes the
+ * work the chat's own again, so every robot comes off the queue with the sub-agents they went by. */
 export async function toggleSubAgentMode($: EngineInterface): Promise<void> {
   await update($, isSubAgentMode, on => !on)
   if (await read($, isSubAgentMode)) {
     await groupIntoTasks($)
+    return
   }
+  await takeRobotsOff($)
+}
+
+/** Every card given to a robot is given to none, and the robots, their sub-agents and their open queues are forgotten. */
+async function takeRobotsOff($: EngineInterface): Promise<void> {
+  for (const goal of (await read($, queue)).prompts.filter(prompt => prompt.robot)) {
+    await changeQueue($, 'assign', { prompt: goal.id, robot: '' })
+  }
+  await update($, tasks, () => [])
+  await update($, robotAgents, () => ({}))
+  await update($, expandedAgents, () => [])
 }
 
 /** The play and pause button: playing starts with the next prompt at once when no turn is running. */
@@ -477,13 +491,14 @@ async function workOn($: EngineInterface, id: string): Promise<void> {
 /** A prompt sent straight to the chat, as the queue holds it: its id, and what the agent is told about it. */
 export type SentPrompt = { id: string; note: string }
 
-/** A prompt the person sent straight to the chat interrupts the queue: while a turn works a goal, or when that goal's
+/** A prompt the person sent straight to the chat interrupts the queue, unless it is only talk (isOnlyTalk), which the
+ * chat just answers: while a turn works a goal, or when that goal's
  * turn ended asking the person something, it is about that goal and becomes its step; otherwise it is new work, a goal
  * of its own, which goes on the queue just above the next prompt to do, below the done ones, marked [interruption], as
  * the prompt being worked, so the steps the agent plans for it sit under it. Either way the queue holds the message's
  * title (goalTitleOf), never a paste. The agent is told its id, to mark it done when it is finished. */
 export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
-  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text)) {
+  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text) || isOnlyTalk(text)) {
     return undefined
   }
   // The queue as the server holds it now: the chat's start may have read it before the cdd server connected.
@@ -551,7 +566,7 @@ function filingNoteOf(filedUnder: string, goals: QueuedPrompt[]): string {
     '2. It is about another goal below: file it there with prompt-queue.add_interruption and take its step off this goal with prompt-queue.set_steps.',
     '3. It is new work no goal covers, even a small one: queue it as its own card with prompt-queue.add, written as a short title of the goal, and take its step off this goal.',
     'When a goal has gathered interruptions about other work, split them onto cards of their own with prompt-queue.split.',
-    'A question or a yes/no answer belongs to the goal it is about. The goals on the queue:',
+    'A question, an answer or a comment is not work: take its step off with prompt-queue.set_steps and just answer it. The goals on the queue:',
     ...goals.map(goalLineOf),
   ].join('\n')
 }

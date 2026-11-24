@@ -1137,9 +1137,35 @@ const VIEWER_STATE = '<artifact-view-context artifact="c9a2df8e">\n{"context":{"
   "(The JSON line above is this viewer's live state in the artifact, not typed by the user.)\n<artifact-content-authored-by-others/>\n</artifact-view-context>"
 
 test("a message sent mid-work from a board viewer becomes a step of the person's words, without the viewer's state", async ($, on) => {
-  const { seeded } = await messageSentMidWork($, on, `${VIEWER_STATE}\n\nwhy do the first 2 epics have no sub epics`)
+  const { seeded } = await messageSentMidWork($, on, `${VIEWER_STATE}\n\ngive the first 2 epics sub epics`)
 
-  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] why do the first 2 epics have no sub epics', state: 'pending' }])
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] give the first 2 epics sub epics', state: 'pending' }])
+})
+
+// A question, an answer or a comment is talk, not work: the chat answers it, and the queue keeps only work to do.
+for (const talk of ['why is there no flush button?', 'where is the flush button', 'yes', 'ok', '???', `${VIEWER_STATE}
+
+?`]) {
+  test(`a message that is only talk, such as ${JSON.stringify(talk.slice(-30))}, sent mid-work is not filed on the queue`, async ($, on) => {
+    const { seeded } = await messageSentMidWork($, on, talk)
+
+    expect(seeded.prompts[0]!.steps ?? []).toEqual([])
+  })
+
+  test(`a message that is only talk, such as ${JSON.stringify(talk.slice(-30))}, sent between turns is not queued`, async ($, on) => {
+    const seeded = seedQueue(on, false, '', [], true)
+    on('prompt.submit', (_, e) => ({ text: e.text }))
+
+    await $.prompt.submit({ text: talk, wait: false, origin: { kind: 'composer' } })
+
+    expect(seeded.prompts).toEqual([])
+  })
+}
+
+test('a question that asks for work, such as one that ends "please add it", is filed as work', async ($, on) => {
+  const { seeded } = await messageSentMidWork($, on, 'why is there no flush button? please add it to this branch')
+
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] why is there no flush button?', state: 'pending' }])
 })
 
 test('the agent is told a message sent mid-work joined the prompt it works on', async ($, on) => {
@@ -1172,6 +1198,28 @@ function groupedQueue(on: TestOn, tasks: { prompts: string[]; name: string }[] =
   seeded.stored.expandedAgents = { value: tasks.map((_, place) => place), version: 1 }
   return seeded
 }
+
+// Out of sub-agent mode the work is the chat's own again, so no card keeps a robot and no robot stays on the queue.
+test('switching sub-agent mode off takes every robot off the queue', async ($, on) => {
+  const seeded = groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-sub-agents' })
+  await ui.unmount()
+
+  expect(seeded.prompts.map(prompt => prompt.robot ?? '')).toEqual(seeded.prompts.map(() => ''))
+})
+
+test('switching sub-agent mode off forgets the robots and their sub-agents', async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.robotAgents = { value: { Sparky: 'agent-1' }, version: 1 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-sub-agents' })
+  await ui.unmount()
+
+  expect([seeded.stored.tasks!.value, seeded.stored.robotAgents!.value, seeded.stored.expandedAgents!.value]).toEqual([[], {}, []])
+})
 
 test("a robot's queue comes back after a reload, from the robot each card keeps on the queue", async ($, on) => {
   const seeded = groupedQueue(on)
