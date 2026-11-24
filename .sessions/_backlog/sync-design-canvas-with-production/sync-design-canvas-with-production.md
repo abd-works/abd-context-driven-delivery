@@ -287,3 +287,13 @@ This keeps a clear answer to "is this what production does?" for every screen. P
 ##### Story: Reattach A Screen Once Its Change Reaches Production
 
 - A detached screen shows as diverged until the change lands in the TSX, then it re-attaches and the mark clears.
+
+## From Fully Integrated App Flow
+
+Moved here on 2026-11-23: keeping a canvas version as a release.
+
+### Feature: Publish And Release A Canvas Version
+
+#### Story: Remove Older Versions When Keeping A Release
+
+*Agent*. Intended (`claude_design.md` release-a-version): when a version is kept as a release the older versions are removed; `release` in `versions.py` only renames.

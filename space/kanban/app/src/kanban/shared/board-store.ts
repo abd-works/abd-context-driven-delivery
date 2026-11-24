@@ -56,6 +56,8 @@ export type BoardState = {
   dragged: string | null
   tiles: Tile[]
   closing: Closing | null
+  // The ticket the Delete dialog asks about, until the person deletes it or cancels.
+  deleting: TicketClient | null
   rootChoice: RootChoice | null
   draft: BacklogDraft
   panels: SidePanel[]
@@ -99,6 +101,7 @@ const initialState = (): BoardState => ({
   dragged: null,
   tiles: [],
   closing: null,
+  deleting: null,
   rootChoice: null,
   draft: EMPTY_DRAFT,
   panels: [],

@@ -1,0 +1,68 @@
+{
+  "chat": "d524e9a6-f63a-49cf-aed9-616fc7f80f84",
+  "taken_off": "2026-11-24T17:01:14.960826+00:00",
+  "prompts": [
+    {
+      "id": "12c8ae18a1be",
+      "text": "[interruption] add 7 parallel racks of activitry to dmeontrate queie in bot mode",
+      "steps": [
+        {
+          "text": "Read this chat's prompt queue",
+          "state": "done"
+        },
+        {
+          "text": "Queue 7 demo activities",
+          "state": "done"
+        },
+        {
+          "text": "Assign each to its own robot",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] Not yet",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    },
+    {
+      "id": "ab084d56c458",
+      "text": "[interruption] Title this session \"harness-fundamentals\"."
+    },
+    {
+      "id": "17293f4e54bc",
+      "text": "Demo track 1: count the practices under cdd_guidance/practices and report each one's three fidelities. Read only, change no files.",
+      "robot": "robot-1"
+    },
+    {
+      "id": "de9f1492cc1b",
+      "text": "Demo track 2: list the actions under cdd_guidance/actions with one line on what each does. Read only, change no files.",
+      "robot": "robot-2"
+    },
+    {
+      "id": "0efe0a831a19",
+      "text": "Demo track 3: list the harness modules in import order, from harness/.context/module-context.md. Read only, change no files.",
+      "robot": "robot-3"
+    },
+    {
+      "id": "ea6c3106a38d",
+      "text": "Demo track 4: count the story test files under story_tests by epic. Read only, change no files.",
+      "robot": "robot-4"
+    },
+    {
+      "id": "40d509febca8",
+      "text": "Demo track 5: list the toolsets under tools/ and name each one's purpose from tools/.context/module-context.md. Read only, change no files.",
+      "robot": "robot-5"
+    },
+    {
+      "id": "9f86b9c25303",
+      "text": "Demo track 6: list the always-on rules under cdd_guidance/rules with one line each. Read only, change no files.",
+      "robot": "robot-6"
+    },
+    {
+      "id": "d431de2ed0c9",
+      "text": "Demo track 7: summarise the three test tiers of scripts/test.ps1 and count the spec files in each tier. Read only, change no files.",
+      "robot": "robot-7"
+    }
+  ]
+}

@@ -37,11 +37,34 @@ with description("a session's debug instructions, which the chat bar's debug but
     with it("should write what it captured to a debug report in the session's folder"):
         expect(self.prompt).to(contain("session.write_file"))
 
-    with it("should ask the person for more detail and whether to fix the bug or request help"):
-        expect(self.prompt).to(contain("AskUserQuestion"))
+    with it("should ask the person whether to fix the bug or log a defect"):
+        expect([option in self.prompt for option in ('"Fix the bug"', '"Log a defect"', "AskUserQuestion")]).to(equal([True, True, True]))
 
-    with it("should draft the request for help as an email to the CDD maintainer, for the person to send"):
-        expect(self.prompt).to(contain("mailto:jeff.anderson@abdworks.com"))
+    with it("should suggest a fix in the debug report and in the issue"):
+        expect(self.prompt).to(contain("Suggested fix"))
+
+    with it("should give the defect a status of raised, resolved or to come later"):
+        expect([status in self.prompt for status in ("raised", "resolved", "to come later")]).to(equal([True, True, True]))
+
+    with it("should offer to fix it on another branch, such as a release branch, or to leave it to come later"):
+        expect([option in self.prompt for option in ('"Fix on another branch"', '"Fix later"')]).to(equal([True, True]))
+
+    with context("with the fix to be made on another branch"):
+        with it("should queue it on the prompt queue of the chat that works that branch"):
+            expect(self.prompt).to(contain("prompt-queue.add"))
+
+    with context("with the fix resolved"):
+        with it("should close the issue"):
+            expect(self.prompt).to(contain("gh issue close"))
+
+    with it("should always log the defect as an issue on the CDD repository on GitHub, whichever the person chooses"):
+        expect(self.prompt).to(contain("Always log the defect"))
+
+    with it("should log the defect with gh issue create, so a person or an agent can fix it from there"):
+        expect(self.prompt).to(contain("gh issue create"))
+
+    with it("should no longer email the CDD maintainer"):
+        expect(self.prompt).not_to(contain("mailto:"))
 
     with it("should hand a fix to a background sub-agent"):
         expect(self.prompt).to(contain("run_in_background"))
@@ -72,3 +95,11 @@ with description("a session's debug instructions, which the chat bar's debug but
     with context("with CDD installed in another project"):
         with it("should open a pull request to the CDD repository from a fork"):
             expect(self.prompt).to(contain("gh pr create"))
+
+    with context("with no permission to push to the CDD repository"):
+        with it("should open a pull request instead of pushing"):
+            expect(self.prompt).to(contain("no permission to push"))
+
+    with context("with the fix pushed or its pull request opened"):
+        with it("should link the fix in the defect's issue"):
+            expect(self.prompt).to(contain("gh issue comment"))

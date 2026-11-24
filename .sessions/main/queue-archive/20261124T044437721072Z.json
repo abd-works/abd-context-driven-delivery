@@ -1,0 +1,29 @@
+{
+  "chat": "b670f8ce-cdf0-497a-87e0-59113fd9ca06",
+  "taken_off": "2026-11-24T04:44:37.721072+00:00",
+  "prompts": [
+    {
+      "id": "440828d70296",
+      "text": "[interruption] pin to stable server",
+      "steps": [
+        {
+          "text": "Check how pinning works",
+          "state": "done"
+        },
+        {
+          "text": "Pin stable runtime from main",
+          "state": "done"
+        },
+        {
+          "text": "Confirm the server is up",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] <cross-session-message from=\"local_ba3a8047-30ca-4280-a8a3-726026d8fa7a\" from-name=\"release-1-1-2\">\nHeads-up from release-1-2-fixes: the stable cdd lane (~/.cdd) is being repinned now from C:\\dev\\abd-context-driven-delivery to main's tip (f9f655e4a), which holds the test-runner fix d7b2ce0a2 merged in bff9051ea. The cdd server restarts under it; a tool call in flight may fail once, and a mod change needs /reload-plugins. No action needed otherwise.\n</cross-session-message>",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

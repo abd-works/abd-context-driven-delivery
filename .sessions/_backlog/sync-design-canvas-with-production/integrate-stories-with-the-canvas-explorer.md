@@ -191,3 +191,75 @@ The markup experience in the Story UI editor: notes on the map and comments sent
 #### Story: Place Notes On The Story Map
 
 - A person places notes anywhere on the Story UI editor's map, as on a canvas, beside the nodes they are about.
+
+## From Fully Integrated App Flow
+
+Moved here on 2026-11-23: the story explorer's playing, tree navigation and design canvas screen frames, to be built in the Story UI app.
+
+### Feature: Play Stories In The Explorer
+
+#### Story: Test Story Explorer On Session Story Map
+
+*Agent*. Requested on 2026-11-06: the browser story explorer plays a CDD session's story map on its design canvas screens, and its specs run against that map. Each gap a test finds becomes an Intended story in this app's map, fixed before the board or chat bar invokes the app.
+
+#### Story: Play The Next Story
+
+*Person*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the explorer's *Play next* button moves the selection to the next step or story (`explorer.dc.html`).
+
+#### Story: Hide And Show The Story Panel
+
+*Person*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the » and « buttons hide the story panel so the screen fills the frame, and bring it back (`explorer.dc.html`).
+
+#### Story: Return To Story UI Map
+
+*Person*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the panel's **← Story map** link opens `Main.dc.html` again (`explorer.dc.html`).
+
+### Feature: Navigate The Story Tree
+
+#### Story: Open The Explorer At A Story, Scenario And Step
+
+*Person*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, `explorer.dc.html` reads the story, scenario and step from the link, or from the place the map kept, and selects it in the tree.
+
+#### Story: Collapse And Reset The Story Tree
+
+*Person*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the explorer's *Collapse all* and *Reset* buttons close the epic → sub-epic → story → scenario → step tree or return it to the first story (`explorer.dc.html`).
+
+#### Story: Keep The Selected Story In View
+
+*Story UI*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, the explorer scrolls the selected entry into view when the selection changes (`explorer.dc.html`).
+
+#### Story: Copy A Request To Open A Story In Its File
+
+*Person*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, the explorer carries each story's and scenario's `path:line` and offers to copy an open-in-file-viewer request for it (`claude_design_story_model_spec.py`, `copyOpenRequest` in `explorer.dc.html`).
+
+#### Story: Pick An Outline Scenario's Example
+
+*Person*. Built in the design canvas explorer (checked 2026-11-10): `explorer.dc.html` lists an outline scenario's examples from the fixtures bundle and picking one calls `go(..., ex.name)` (`outlineRows`). Intended: the Story UI explorer does the same. Was: Intended (`claude_design.md` outline-rows): an outline scenario lists its examples from the fixtures bundle and picking one loads it on the screen; the explorer does not list them yet.
+
+### Feature: Frame Design Canvas Screens In Explorer
+
+#### Story: Show Design Canvas Screen As Explorer Frame
+
+*Story UI*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, `_imports` in `nodes.py` imports each prototype screen into the explorer with the story, scenario and a `go` call, so the selected scenario runs on the real screen (`claude_design_story_model_spec.py`).
+
+#### Story: Choose The Screen For A Step
+
+*Story UI*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where observed, a step shows the screen it is shown on, else its scenario's screen, else its story's screen (`_story_entry` and `_screen_of` in `nodes.py`, `claude_design_story_model_spec.py`).
+
+#### Story: Join A Step Without A Screen To The Next Step
+
+*Story UI*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, `_story_entry` in `nodes.py` groups a step with no screen of its own with the next step that has one, so every entry the person picks shows a screen.
+
+#### Story: Show A Screenshot When No Screen Runs
+
+*Story UI*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, when no prototype applies, the explorer shows the step's screenshot, skipping blank captures (`_blank` in `nodes.py`).
+
+#### Story: Keep Each Screen's Own Stylesheets
+
+*Story UI*. Requested (2026-11-06): new in the Story UI app; replaces what the design canvas does today, where inferred, `_stylesheets` in `nodes.py` links every stylesheet the prototype screens use, so a screen drawn inside the explorer keeps its own look.
+
+### Feature: Work Fidelity Outputs On Board → Integrate Practice Content Editor Apps On Board
+
+#### Story: Invoke Story Explorer In Session Context
+
+*Person*. Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "view story map / ux design canvas for a session", requested on 2026-11-06): the board opens the browser story explorer on the ticket's story map, framed by its design canvas screens.

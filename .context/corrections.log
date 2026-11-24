@@ -1,3 +1,8 @@
 2026-11-15 — Claude Whiteboard render of story-map.md + scenarios
 Mistake: merged each actor into its story card (to stay under the board's 800-element limit) and drew epic bars 10,000-15,000 units wide, which the whiteboard cut short, so epics looked missing.
 Correction: actors are their own blue boxes above the stories, as in story-map.drawio (one box per run of stories with the same actor); epic bars are split into pieces no wider than 6,000 units, later pieces marked "(continued)"; scenarios are listed once per sub-epic under its stories.
+
+## 2026-11-23: thin slice drawing rendered from thin-slice.md alone
+
+- **Mistake:** I rendered .context/thin-slice.md to drawio and copied the result over thin-slice.drawio without opening it. thin-slice.md lists only story names per increment, so the drawing came out with every story in one row and empty epic bars.
+- **Correction:** the person saw it ("WTH"); the previous thin-slice.drawio was put back (fa50d1eec). Open a rendered drawing in the draw.io viewer before replacing the one people use; a thin slice drawing needs the story map's epics with the thin slice's increments as lanes.

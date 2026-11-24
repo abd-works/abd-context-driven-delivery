@@ -224,10 +224,13 @@ class SessionListing:
         return folder.is_dir() and self.is_work_session(folder.name) and not self.is_left_behind(folder)
 
     def is_left_behind(self, folder: Path) -> bool:
-        """Whether folder, among the open sessions, is only what a closed session of its name left there, such as a
-        progress cache written before its move or a folder Windows would not let go of: it holds no session.json, and
-        the session is kept among the closed ones. The board would otherwise list that session twice."""
-        return not (folder / SESSION_FILE).is_file() and (self._sessions.closed_folder / folder.name).is_dir()
+        """Whether folder, among the open sessions, is only what a closed or deleted session of its name left there,
+        such as a progress cache written before its move or a folder Windows would not let go of: it holds no
+        session.json, and the session is kept among the closed ones or the folder holds no file at all. The board would
+        otherwise list that session twice, or a deleted one again."""
+        if (folder / SESSION_FILE).is_file():
+            return False
+        return (self._sessions.closed_folder / folder.name).is_dir() or not any(inner.is_file() for inner in folder.rglob("*"))
 
     def open_names(self) -> list[str]:
         """The names of the open work sessions in the repository's own .sessions."""

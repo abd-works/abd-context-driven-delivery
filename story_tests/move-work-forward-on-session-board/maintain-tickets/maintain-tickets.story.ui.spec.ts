@@ -283,8 +283,8 @@ test.describe('Delete Ticket', () => {
     })
     await step(page, 'When the Person deletes pet-visits', async () => {
       const opened = await openCardOf(page, 'pet-visits')
-      page.once('dialog', dialog => void dialog.accept())
       await opened.getByRole('button', { name: 'Delete' }).click()
+      await page.getByRole('dialog', { name: /^Delete / }).getByRole('button', { name: 'Delete', exact: true }).click()
     })
     await step(page, 'Then no column shows pet-visits', async () => {
       await expect(card(page, 'pet-visits')).toHaveCount(0)
@@ -306,8 +306,8 @@ test.describe('Delete Ticket', () => {
       rmSync(join(sessions, 'no-such-ticket'), { recursive: true, force: true })
     })
     await step(page, 'When the Person deletes no-such-ticket', async () => {
-      page.once('dialog', dialog => void dialog.accept())
       await opened.getByRole('button', { name: 'Delete' }).click()
+      await page.getByRole('dialog', { name: /^Delete / }).getByRole('button', { name: 'Delete', exact: true }).click()
     })
     await step(page, "Then the board says no ticket named 'no-such-ticket' on the board", async () => {
       await expect(toast(page, "no ticket named 'no-such-ticket' on the board").first()).toBeVisible()

@@ -2,8 +2,8 @@
 queue on a real cdd server.
 
 The plugin's own tests (hooks/register.test.tsx) stub the cdd server, the stored state and the clock; this spec runs the
-same hooks for real. A SpecServer serves the PromptQueue toolset; a scratch project's .mcp.json names it ``cdd``; the CLI
-at CLAUDE_CODE_EXECPATH, else claude on the PATH, loads the plugin from this checkout with ``--plugin-dir`` and takes each message through
+same hooks for real. A SpecServer serves the PromptQueue toolset; a scratch project's .mcp.json names it ``cdd``; the
+Claude Code CLI (the chat's own, else the desktop app's newest) loads the plugin from this checkout with ``--plugin-dir`` and takes each message through
 stream-json input, so the plugin's prompt.submit, tool.call and turn hooks run as they do in a chat. The queue is then
 read back through the server with prompt-queue.show.
 
@@ -33,6 +33,7 @@ from mamba import after, before, context, description, it
 
 from harness.mcp.mcp_address import CHAT_HEADER
 from harness.mcp.spec_support import SpecChat, SpecServer
+from harness.mcp.claude_plugins import ClaudePlugins
 
 TOOLSETS = ("tools.prompt_queue.prompt_queue:PromptQueue",)
 PLUGIN_FOLDER = _REPO_ROOT / "tools" / "prompt_queue"
@@ -78,8 +79,9 @@ class ClaudeCodeNotFoundError(RuntimeError):
 
 
 def claude_code() -> str:
-    """The Claude Code executable the headless chat runs: the one the running chat names, else claude on the PATH."""
-    found = os.environ.get("CLAUDE_CODE_EXECPATH") or shutil.which("claude")
+    """The Claude Code executable the headless chat runs: the one the running chat names; else the desktop app's newest,
+    as the cdd server finds it, since the cdd server's scheduled runs start outside any chat; else claude on the PATH."""
+    found = os.environ.get("CLAUDE_CODE_EXECPATH") or ClaudePlugins().claude_cli or shutil.which("claude")
     if not found:
         raise ClaudeCodeNotFoundError()
     return found

@@ -2,6 +2,7 @@ import { Component, useEffect } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 
 import { ActivationView } from '../ticket/activation-view'
+import { DeleteDialogView } from '../ticket/delete-view'
 import { RootChoiceView } from '../ticket/root-choice-view'
 import { DetailsView } from '../ticket/details-view'
 import type { TicketClient } from '../ticket/ticket-client'
@@ -150,6 +151,7 @@ function PageBodyView() {
         <SidePanelsView />
       </div>
       <ActivationView />
+      <DeleteDialogView />
       <RootChoiceView />
       <ToastsView />
     </div>

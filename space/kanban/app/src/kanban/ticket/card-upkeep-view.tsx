@@ -23,11 +23,12 @@ function TagView({ ticket }: { ticket: TicketClient }) {
   return <CardFieldView shape={TAG} isOff={!ticket.canEdit} onEnter={word => ticket.tag(word)} />
 }
 
-// Delete removes the ticket and its whole session folder, which cannot be undone, so the person confirms it first.
+// Delete removes the ticket and its whole session folder, which cannot be undone, so the board's Delete dialog asks first.
 function DeleteView({ ticket }: { ticket: TicketClient }) {
-  const deleted = () => window.confirm(`Delete ${ticket.title} and its session folder? This cannot be undone.`) && ticket.delete()
+  const { page } = useBoard()
+  const asked = () => page.store.change({ deleting: ticket })
   return (
-    <button className="file-view" aria-label="Delete" title="Delete this ticket and its session folder" disabled={ticket.isMain} onClick={withoutSelecting(deleted)}>
+    <button className="file-view" aria-label="Delete" title="Delete this ticket and its session folder" disabled={ticket.isMain} onClick={withoutSelecting(asked)}>
       <SessionActionIcon action="delete" />
     </button>
   )
