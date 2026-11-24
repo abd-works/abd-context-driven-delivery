@@ -12,6 +12,8 @@ from harness.installation.json_file import JsonFile
 from harness.mcp.cdd_home import CddHome
 
 SESSIONS_FOLDER = ".sessions"
+# The folder of the sessions folder that keeps the closed sessions.
+COMPLETE_FOLDER = "_complete"
 OPEN_SESSIONS_NAME = "open-sessions.json"
 E2E_RESULTS_FOLDER = "e2e-test-results"
 # A chat id the server could not name is not a chat of its own.

@@ -48,7 +48,8 @@ class ServerDaemon(ABC):
     """A server that keeps running past the command that started it, on the one port it may hold, with its output in a
     capped log file, such as the hook daemon of a checkout and the one cdd server. `running()` asks it who it is;
     `ensure()` starts it when none answers, one start at a time (a start lock beside its log lets one caller start it
-    while the others wait for that start), and waits until it answers or raises *ServerDidNotStart* with the log's last
+    while the others wait for that start), stopping first a process that holds the port without answering, and waits
+    until it answers or raises *ServerDidNotStart* with the log's last
     lines; `stop()` stops the process that answers, or, when none does, the one holding the port, since a server that
     holds its port without answering keeps every new one from claiming it. Each kind says how it is asked, run, and
     named."""
@@ -117,6 +118,11 @@ class ServerDaemon(ABC):
         return running.process if running is not None else self._port.holder()
 
     def _started(self) -> RunningServer:
+        """Start the server, holding the start lock, once nothing answers: a process still holding the port without
+        answering, such as a hung server, is stopped first, since the new server could never claim the port past it."""
+        holder = self._port.holder()
+        if holder is not None:
+            holder.stop(self.STOP_SECONDS)
         self.spawn()
         return self._wait_until_answering()
 

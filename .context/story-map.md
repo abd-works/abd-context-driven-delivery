@@ -473,6 +473,10 @@ Observed (exploratory-testing defects gizmo-14, 15, 17 and questions gizmo-11, 1
 
 Observed (requested 2026-11-09: deleting a branch only deletes the branch, and merging is its own choice): closing a ticket can delete its branch, here and on origin, without merging it into main; the worktree that has the branch goes with it, and a branch checked out nowhere is offered for deletion with no commit or push of main (`steer-ticket-sessions.story.shared.py`; `delete_ticket_branch_story.test.py`). Put on the story map on 2026-11-24, where its scenarios already were.
 
+#### (S) Person --> [Clear Done Worktrees](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md#story-clear-done-worktrees)
+
+Built (2026-11-24, the person: clear away what was cleared by hand that day): `/clear-worktrees` calls `repo.clear_worktrees` (`Repo.clear_worktrees`, *WorktreeClearing* in `space/repo/worktree_clearing.py`), which removes each worktree whose work is all on main and holds nothing uncommitted, its branch kept; deletes each folder beside the main clone named as its worktrees are that git no longer lists, keeping a repository of its own; and deletes git's record of each worktree whose folder is gone, clearing read-only flags and taking the folder over when Windows refuses (*FolderDeletion*). It keeps the main clone, the worktree the call works in, every worktree whose branch has commits not on main, even when its session is closed, and every worktree holding work not committed, and answers each folder removed and kept with why. Test: `space/repo/worktree_clearing_heavy_spec.py`.
+
 #### (S) Person --> [Write Ticket Handoff](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md#story-write-ticket-handoff)
 
 Observed: Handoff fills the prompt with `/space-handoff-handoff-session`.

@@ -199,6 +199,41 @@ section: body
 *Then* the checkout-flow branch is gone  
   *And* checkout-flow shows in Complete
 
+## Story: Clear Done Worktrees
+
+#### Scenario: Remove the worktrees whose work is on main and keep the rest
+
+> Test: `space/repo/worktree_clearing_heavy_spec.py`.
+
+*Given* the main clone has worktrees beside it for checkout-flow, merged into main; browse-pets, with 1 commit not on main; pet-visits, whose session is closed but whose branch has 1 commit not on main; and pet-photos, merged into main but holding a file nobody committed  
+*When* the Person clears the worktrees from a chat in the main clone  
+*Then* checkout-flow's worktree folder is gone, said to be removed because its branch is merged into main  
+  *But* the checkout-flow branch is still there  
+  *And* browse-pets' worktree is kept, said to have 1 commit not on main  
+  *And* pet-visits' worktree is kept, said to have its session closed but 1 commit not on main  
+  *And* pet-photos' worktree is kept, said to hold work not committed  
+  *And* the main clone is kept
+
+#### Scenario: Keep the worktree the call works in
+
+> Test: `space/repo/worktree_clearing_heavy_spec.py`.
+
+*Given* checkout-flow is merged into main and open in its own worktree  
+*When* the Person clears the worktrees from a chat in checkout-flow's worktree  
+*Then* checkout-flow's worktree is kept, said to be the worktree the call works in
+
+#### Scenario: Delete what removed worktrees left behind
+
+> Test: `space/repo/worktree_clearing_heavy_spec.py`.
+
+*Given* git still keeps a record of a worktree whose folder was deleted by hand  
+  *And* a folder beside the main clone, named as its worktrees are, is no longer a worktree and holds a read-only file  
+  *And* a repository of its own sits beside the main clone, named as its worktrees are  
+*When* the Person clears the worktrees  
+*Then* git's record of the deleted worktree is gone, said to be removed because its folder is gone  
+  *And* the leftover folder is gone, said to be no longer a worktree  
+  *But* the repository of its own is kept
+
 ## Story: Write Ticket Handoff
 
 #### Scenario: Ask the chat to write a handoff

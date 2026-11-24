@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import logging
-import os
 import re
-import shutil
-import subprocess
 import threading
 from collections.abc import Iterator
 from pathlib import Path
@@ -14,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from harness.hooks.hook_daemon import HookDaemon
 from harness.git.git import RepoConnectError
+from space.repo.folder_deletion import FolderDeletion
 
 if TYPE_CHECKING:
     from space.repo.repo import Branch, Repo, ServedCheckouts
@@ -135,7 +133,7 @@ class Worktrees:
         slug = branch.name.replace("/", "-")
         ticket = _TICKET_NUMBER.search(slug)
         short = ticket.group(1) if ticket else slug[:_FOLDER_BRANCH_LENGTH].rstrip("-")
-        first = primary.parent / f"{self._abbreviated(primary.name)}-{short}"
+        first = primary.parent / f"{self.sibling_prefix}{short}"
         of_other_branches = {path for path, name in self._on_disk() if name and name != branch.name}
         numbered = (first.with_name(f"{first.name}-{number}") for number in range(_SECOND_FOLDER_NUMBER, _SECOND_FOLDER_NUMBER + len(of_other_branches)))
         return next(folder for folder in (first, *numbered) if folder.resolve() not in of_other_branches)
@@ -174,9 +172,14 @@ class Worktrees:
         holds_files = dest.is_file() or any(entry.is_file() for entry in dest.rglob("*"))
         if holds_files or self.at(dest) is not None:
             raise WorktreeFolderTakenError(branch.name, dest)
-        self._rmtree_logged(dest)
-        if dest.exists():
+        if not FolderDeletion(dest).delete():
             raise WorktreeFolderTakenError(branch.name, dest)
+
+    @property
+    def sibling_prefix(self) -> str:
+        """What the name of every folder a branch gets beside the main clone starts with: the clone's abbreviated name
+        and a dash, such as ``abd-cdd-``."""
+        return f"{self._abbreviated(self.primary_root().name)}-"
 
     def remove(self, worktree: Repo) -> None:
         """Stop the checkout's hook daemon, then remove worktree's folder and forget it, forcing the folder away when git
@@ -191,11 +194,7 @@ class Worktrees:
             git.run("worktree", "remove", "--force", str(dest))
         except RepoConnectError as exc:
             logger.info("worktree remove failed; forcing directory delete: %s", exc)
-        if dest.exists():
-            self._rmtree_logged(dest)
-        if dest.exists():
-            self._force_remove_directory_windows(dest)
-        if dest.exists():
+        if not FolderDeletion(dest).delete():
             self._unregister_held(dest)
         git.run("worktree", "prune")
         if dest.exists():
@@ -208,53 +207,3 @@ class Worktrees:
         link = dest / ".git"
         if link.is_file():
             link.unlink()
-
-    def _force_remove_directory_windows(self, path: Path) -> bool:
-        """Last resort when git/shutil cannot delete a locked checkout (Windows only)."""
-        if os.name != "nt":
-            return False
-        target = path.resolve()
-        if not target.exists():
-            return True
-        user = os.environ.get("USERNAME", "").strip()
-        if not user:
-            return False
-        self._take_windows_ownership(target, user)
-        self._rmtree_logged(target)
-        if target.exists():
-            self._powershell_remove_item(target)
-        return not target.exists()
-
-    def _take_windows_ownership(self, target: Path, user: str) -> None:
-        for args in (
-            ("takeown", "/f", str(target), "/r", "/d", "y"),
-            ("icacls", str(target), "/grant", f"{user}:(F)", "/t"),
-        ):
-            try:
-                subprocess.run(list(args), capture_output=True, check=False)
-            except OSError as exc:
-                logger.info("windows ownership command failed: %s", exc)
-
-    def _rmtree_logged(self, target: Path) -> None:
-        try:
-            shutil.rmtree(self._long_path(target), ignore_errors=True)
-        except OSError as exc:
-            logger.info("rmtree failed for %s: %s", target, exc)
-
-    def _long_path(self, target: Path) -> str:
-        """Windows refuses paths past 260 characters unless they carry the \\\\?\\ prefix, and a checkout's retired
-        fixtures run past it, so their files would outlive the worktree."""
-        resolved = str(target.resolve())
-        if os.name != "nt" or resolved.startswith("\\\\?\\"):
-            return resolved
-        return "\\\\?\\" + resolved
-
-    def _powershell_remove_item(self, target: Path) -> None:
-        command = f'Remove-Item -LiteralPath "{target}" -Recurse -Force -ErrorAction SilentlyContinue'
-        try:
-            subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", command], capture_output=True, check=False)
-        except OSError as exc:
-            logger.info("powershell Remove-Item failed for %s: %s", target, exc)
-
-
-

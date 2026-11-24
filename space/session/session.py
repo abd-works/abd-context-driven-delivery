@@ -30,7 +30,7 @@ from space.session.practices.guidance_selection import GuidanceSelection, Select
 from space.session.practices.practice_session_output import PracticeSessionOutput
 from space.session.practices.session_practices import SessionPractices
 from space.session.session_checkout import SessionCheckout
-from space.session.session_folder import COMPLETE_FOLDER, SessionFolder
+from space.session.session_folder import SessionFolder
 from space.session.session_graph import SessionGraph
 from space.session.session_hierarchy import SessionHierarchy
 from space.session.session_log import SessionLog
@@ -39,7 +39,7 @@ from space.session.session_record import SESSION_FILE, SessionFields, SessionRec
 from space.session.test_tiers import TestTiers
 from space.session.validation.accepted_violations import ACCEPTED_VIOLATIONS_FILE, AcceptedViolations
 from space.session.validation.changed_artifact import ChangedArtifact
-from space.work_state import SESSIONS_FOLDER
+from space.work_state import COMPLETE_FOLDER, SESSIONS_FOLDER
 
 if TYPE_CHECKING:
     # Named only for typing: a toolset the module holds at run time would be published again as this toolset's tools.

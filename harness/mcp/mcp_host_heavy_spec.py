@@ -385,10 +385,11 @@ with description("an MCP host") as self:
                 project=str(_REPO_ROOT),
             )
 
-        # Tickets open and close their own branches and worktrees; the repo toolset only commits and pushes.
-        with it("should expose its commit, push, and merge tools alone"):
+        # Tickets open and close their own branches and worktrees; the repo toolset commits, pushes and merges, and clears
+        # away the worktrees whose work is done.
+        with it("should expose its commit, push, merge and clear tools alone"):
             tools = [name for name in self.host.diagnose()["tools"] if name.startswith("repo.")]
-            expect(tools).to(equal(["repo.make_repository", "repo.merge_to_main", "repo.push_commit", "repo.push_to_main", "repo.push_work"]))
+            expect(tools).to(equal(["repo.clear_worktrees", "repo.make_repository", "repo.merge_to_main", "repo.push_commit", "repo.push_to_main", "repo.push_work"]))
 
         with it("should resolve Cursor underscore aliases to enrolled names"):
             expect(self.host.checkout_toolsets.resolve_call_name("repo_push_commit")).to(

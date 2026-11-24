@@ -19,10 +19,9 @@ from space.session.session_saves import SERVED_SAVES, SessionSaves
 from harness.process.answer_reads import ServedAnswers
 from space.session.open_sessions import OpenSessions
 from space.session.session import MAIN_SESSION_NAME, Session, SessionNotFoundError
-from space.session.session_folder import COMPLETE_FOLDER
 from space.session.session_record import SESSION_FILE, SessionFields
 from space.session.checkout_worktrees import CheckoutWorktrees
-from space.work_state import SESSIONS_FOLDER
+from space.work_state import COMPLETE_FOLDER, SESSIONS_FOLDER
 
 BACKLOG_FOLDER = "_backlog"
 # Folders in `.sessions` whose names start with this are the ones the sessions share, such as the backlog.

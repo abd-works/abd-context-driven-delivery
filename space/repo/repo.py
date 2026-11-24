@@ -16,6 +16,7 @@ from harness.git.checkout import Checkout
 from harness.git.git import Git, RepoConnectError
 from space.repo.origin import Merges, Origin
 from space.repo.worktree import Worktrees
+from space.repo.worktree_clearing import ClearedWorktrees, WorktreeClearing
 from space.repo.new_repository import NewRepository
 
 logger = logging.getLogger(__name__)
@@ -299,6 +300,20 @@ class Repo:
         Its .gitignore first takes what CDD writes into a project (``CDD_WRITTEN_PATTERNS``) and nothing else. A repository already there is left as it is. Answer what
         was done."""
         return NewRepository(self).make_from_folder().sentence
+
+    @long_call
+    @mcp
+    @command(name="clear-worktrees")
+    @agent_tool
+    def clear_worktrees(self) -> ClearedWorktrees:
+        """Clear away the worktrees of this repository whose work is done, and what they left behind: remove each
+        worktree whose branch is merged into main, its branch kept; delete each folder beside the main clone named as its
+        worktrees are that is no longer a worktree; and delete git's record of each worktree whose folder is gone,
+        clearing read-only flags and taking the folder over when Windows refuses. Keep the main clone, the worktree of
+        the project the call names, every worktree whose branch has commits not on main, even when its session is closed,
+        and every worktree holding work not committed. Answer what was removed and what was kept, each with why: tell the
+        person the report."""
+        return WorktreeClearing(self.main_clone.worktrees, self.main_clone, self).clear()
 
     @command(name="push")
     @agent_instructions

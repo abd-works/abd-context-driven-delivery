@@ -3,7 +3,7 @@
 A *Repo* is one checkout of the local clone: the main clone or a linked worktree beside it. A *Branch* is a named branch on it and answers where it is checked out; its *Worktrees* are the repository's checkouts, each a *Repo*.
 
 - **Purpose:** Give every caller one object graph for the clone, its branches and worktrees, and its commits, so version control is never reimplemented with raw git output.
-- **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Commit, NewRepository, MadeRepository, WorktreeNotRemovedError, WorktreeFolderTakenError, MergeRefusedError
+- **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Commit, NewRepository, MadeRepository, WorktreeNotRemovedError, WorktreeFolderTakenError, MergeRefusedError, WorktreeClearing, ClearedWorktrees, ClearedFolder, FolderDeletion
 - **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/git, harness/hooks, harness/mcp, space/work_state
 
 ## Repo
@@ -55,10 +55,14 @@ One checkout of a git repository: its branches and its commits, what its git hol
 + push_to_main(): Commit
 + make_repository(): str
 	-> NewRepository.make_from_folder
++ clear_worktrees(): ClearedWorktrees
+	// the MCP tool repo.clear_worktrees and the command /clear-worktrees
+	-> WorktreeClearing.clear
 + push(hint: str = ''): str
 ---<<creates>>--> Branch
 ---<<creates>>--> Commit
 ---<<creates>>--> Worktrees
+---<<creates>>--> WorktreeClearing
 ---<<runs>>--> Git
 ---<<raises>>--> RepoConnectError
 ---<<annotated with>>--> AgentToolSetAnnotation
@@ -141,6 +145,8 @@ The checkouts of one repository, as `git worktree` lists them: the main clone an
 	-> Repo.catch_up_with_origin
 + primary_root(): Path
 	-> Checkout.main_folder
++ sibling_prefix: str
+	// what the name of every folder a branch gets beside the main clone starts with
 + sibling_folder(branch: Branch): Path
 + add(path: str | Path, branch: Branch): Repo
 	// a folder already at path that is not the branch's checkout raises WorktreeFolderTakenError, unless it is the empty folder a removed worktree left
@@ -149,8 +155,59 @@ The checkouts of one repository, as `git worktree` lists them: the main clone an
 ---<<lists>>--> Repo
 ---<<reads the listing through>>--> GitFacts
 ---<<stops>>--> HookDaemon
+---<<deletes folders through>>--> FolderDeletion
 ---<<raises>>--> WorktreeNotRemovedError
 ---<<raises>>--> WorktreeFolderTakenError
+
+## WorktreeClearing
+
+The clearing of one repository's checkouts once their work is done: a worktree whose work is all on main and holds nothing uncommitted is removed, its branch kept; a folder beside the main clone named as its worktrees are that git no longer lists is deleted; git's record of a worktree whose folder is gone is deleted.
+
++ WorktreeClearing(worktrees: Worktrees, main_clone: Repo, keeping: Repo)
+------
+----
++ clear(): ClearedWorktrees
+	// keeps the main clone, keeping, every worktree whose branch has commits not on main (even when its session is closed), every worktree holding work not committed, a repository of its own, and a worktree of another repository
+	-> Worktrees.remove
+	-> FolderDeletion.delete
+---<<removes worktrees through>>--> Worktrees
+---<<reads closed sessions and runs git in>>--> Repo
+---<<creates>>--> ClearedWorktrees
+---<<deletes folders through>>--> FolderDeletion
+
+## ClearedWorktrees
+
+What clearing a repository's worktrees did: the folders and records it removed and the folders it kept, each with why.
+
++ ClearedWorktrees()
+------
++ removed: list[ClearedFolder]
++ kept: list[ClearedFolder]
++ report: str
+----
++ remove(folder: Path, reason: str): None
++ keep(folder: Path, reason: str): None
+---<<holds>>--> ClearedFolder
+
+## ClearedFolder
+
+One folder a clearing looked at, and why it was removed or kept.
+
+------
++ folder: str
++ reason: str
++ line: str
+----
+
+## FolderDeletion
+
+The deletion of one folder a checkout or git left behind; when Windows refuses, read-only flags are cleared, the folder is taken over by the person's account and granted to it, and a long path is given its long-path prefix.
+
++ FolderDeletion(folder: Path)
+------
+----
++ delete(): bool
+	// whether the folder is gone; a folder a running program holds open stays
 
 ## NewRepository
 

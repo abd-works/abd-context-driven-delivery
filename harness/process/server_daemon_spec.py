@@ -113,6 +113,15 @@ with description("a long-running server") as self:
             self.daemon.stop()
             expect(self.holder.stopped).to(equal(True))
 
+        # A hung server keeps every new one from claiming the port, so a start waited its whole minute and failed.
+        with it("should stop the process holding the port when ensured"):
+            self.daemon.ensure()
+            expect(self.holder.stopped).to(equal(True))
+
+        with it("should start the server once the holder is stopped"):
+            self.daemon.ensure()
+            expect(self.daemon.spawned).to(equal(1))
+
     with context("that never answers once started"):
         with before.each:
             self.log.path.write_text("first line\nlast line\n", encoding="utf-8")
