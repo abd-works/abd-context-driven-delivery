@@ -5,7 +5,8 @@ import type { EngineInterface } from 'claude-code'
 import { commandOf, filledPrompt, REFUSED_WITHIN_MILLISECONDS } from '../shared/chat-command'
 import { showFailure, shownAsFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
-import { post } from '../board-chat/board'
+import { chatTool, post } from '../board-chat/board'
+import { CddToolFailed, replyOf } from '../shared/cdd-tool'
 import { currentChatName } from '../board-chat/chat-name'
 import { awaitTurn, chatWorked, finish, forgetTurn, isChatBusy, turnsSoFar } from '../board-chat/chat-turns'
 import { after } from '../shared/clock'
@@ -108,8 +109,14 @@ export async function keepInTouch($: EngineInterface, chat: string, isCheckIn: b
   } catch (failure) {
     await update($, failedCheckIns, failed => failed + 1)
     if ((await read($, failedCheckIns)) !== FAILED_CHECK_INS_SHOWN) return
-    await shownAsFailure($, `This chat has not reached cdd for ${FAILED_CHECK_INS_SHOWN} check-ins`, 'The check-in every second, calling chat.check_in')(failure)
+    await shownAsFailure($, `This chat has not reached cdd for ${FAILED_CHECK_INS_SHOWN} check-ins`, 'The check-in every second, calling chat.check_in')(namedFailure(failure))
   }
+}
+
+// A failed cdd tool shows the server's own text under the tool's name, such as "chat.check_in failed: LaneUnreachable:
+// ...", so the person reads why the server failed rather than what the bar made of its answer.
+function namedFailure(failure: unknown): unknown {
+  return failure instanceof CddToolFailed ? `${failure.tool} failed: ${failure.message}` : failure
 }
 
 // Checks in with cdd every second: whether a turn is running, what to call the chat, and the folder it works in, which
@@ -121,8 +128,9 @@ export async function checkIn($: EngineInterface, chat: string): Promise<void> {
   for (const command of commands) await run($, chat, command)
 }
 
-// The commands waiting for this chat, which chat.check_in answers once it has recorded the chat's state.
+// The commands waiting for this chat, which chat.check_in answers once it has recorded the chat's state. An answer that
+// is not the commands' JSON is the server's failure text, a CddToolFailed.
 async function waitingCommands($: EngineInterface, chat: string): Promise<ChatCommandData[]> {
   const answer = await post($, { chat, operation: 'check-in', body: { is_busy: await isChatBusy($), name: await currentChatName($), folder: await $.session.root() } })
-  return answer.ok ? (JSON.parse(answer.text) as ChatCommandData[]) : []
+  return replyOf<ChatCommandData[]>(chatTool('check-in'), answer)
 }

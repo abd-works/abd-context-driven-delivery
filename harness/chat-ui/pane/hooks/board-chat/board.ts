@@ -36,8 +36,13 @@ export async function projectPageUrl($: EngineInterface, url: string, query: Rec
 
 // A chat call goes to the cdd server every chat shares, as each chat tool does, so a chat checks in, confirms and
 // finishes whether or not any app, the Kanban board included, is running, and the selection it holds is the one state
-// the chat bar and its pages show. A failed call is the server's own text.
-export async function post($: EngineInterface, { chat, operation, body }: ChatRequest): Promise<{ ok: boolean; text: string }> {
-  const tool = `chat.${operation.replace('-', '_')}`
-  return { ok: true, text: await callToolText($, tool, { chat, ...body }) }
+// the chat bar and its pages show. Answers the tool's text; a call flagged failed is a CddToolFailed with the server's
+// own text.
+export async function post($: EngineInterface, { chat, operation, body }: ChatRequest): Promise<string> {
+  return callToolText($, chatTool(operation), { chat, ...body })
+}
+
+// The chat tool an operation calls, such as chat.check_in for check-in.
+export function chatTool(operation: ChatRequest['operation']): string {
+  return `chat.${operation.replace('-', '_')}`
 }
