@@ -25,6 +25,7 @@ from harness.mcp.mcp_server import McpHost
 from harness.git.git import Git, RepoConnectError
 from space.repo.latest_release import LatestRelease
 from space.repo.repo import Repo
+from space.repo.origin import MergeRefusedError
 
 
 # Seed: a file whose name git writes in quotes with octal escapes unless it is asked for NUL-ended entries.
@@ -120,8 +121,8 @@ with description("a Repo"):
                     _git(self.elsewhere, "commit", "-am", "conflicting turn")
                     _git(self.elsewhere, "push", "origin", "session/demo")
 
-                with it("should refuse the push, naming the conflict"):
-                    expect(lambda: self.repo.origin.push_upstream()).to(raise_error(RepoConnectError))
+                with it("should refuse the push, naming the branch that does not merge and the one it would merge into"):
+                    expect(lambda: self.repo.origin.push_upstream()).to(raise_error(MergeRefusedError, contain("origin/session/demo does not merge into session/demo")))
 
                 with it("should leave no merge half done"):
                     try:

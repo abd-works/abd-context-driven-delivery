@@ -3,6 +3,7 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
@@ -14,7 +15,7 @@ from mamba import after, before, context, description, it
 from harness.mcp.cdd_home import CddHome
 from harness.git.git import Git
 from space.repo.new_repository import FolderIsAWorktreeError
-from space.repo.repos import CddConfig, NotAReposFolderError, Repos, RepoNameRequiredError
+from space.repo.repos import CddConfig, NotAReposFolderError, PublishFailedError, Repos, RepoNameRequiredError, UnknownVisibilityError
 
 
 def _repository(folder: Path) -> Path:
@@ -112,3 +113,15 @@ with description("Repos") as self:
     with context("opening a repository without a name"):
         with it("should refuse"):
             expect(lambda: self.repos.open(" ", publish=False, install=False, start_chat=False)).to(raise_error(RepoNameRequiredError))
+
+    with context("opening a repository with a visibility GitHub does not offer"):
+        with it("should refuse, naming the visibility"):
+            expect(lambda: self.repos.open("shop", visibility="secret", publish=True, install=False, start_chat=False)).to(
+                raise_error(UnknownVisibilityError, contain("secret"))
+            )
+
+    with context("publishing a new repository on a machine without the GitHub CLI"):
+        with it("should refuse, saying to install gh or open it without publishing"):
+            with patch("space.repo.repos.shutil.which", return_value=None):
+                opening = lambda: self.repos.open("shop", publish=True, install=False, start_chat=False)
+                expect(opening).to(raise_error(PublishFailedError, contain("gh", "publish false")))

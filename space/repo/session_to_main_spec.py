@@ -5,10 +5,11 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from expects import equal, expect, have_key
+from expects import equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
 
 from space.repo.mock_repo import MockGit
+from space.repo.repo import CommitMessageRequiredError
 
 SESSION_BRANCH = "session/demo"
 
@@ -139,3 +140,20 @@ with description("a session's work pushed on its own branch") as self:
 
     with it("should leave main without the work"):
         expect(self.held.branches.trees["main"]).not_to(have_key("work.txt"))
+
+
+with description("a session's work committed with a message that says nothing") as self:
+    with before.each:
+        self.tmp = Path(tempfile.mkdtemp(prefix="session-commit-"))
+        self.clone = self.tmp / "clone"
+        self.clone.mkdir()
+        (self.clone / "seed.txt").write_text("seed\n", encoding="utf-8")
+        self.held = MockGit(self.clone)
+        self.held.make_clone()
+        (self.clone / "work.txt").write_text("work\n", encoding="utf-8")
+
+    with after.each:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    with it("should refuse the commit"):
+        expect(lambda: self.held.serve(self.clone).push_commit("   ", sync_remote=False)).to(raise_error(CommitMessageRequiredError))
