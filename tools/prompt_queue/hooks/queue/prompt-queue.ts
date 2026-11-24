@@ -862,9 +862,9 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
  * Agent tool, its description starting with the robot's name, so the queue learns which sub-agent is that robot. */
 function handOutOf(handed: { robot: string; card: QueuedPrompt }[], agents: Record<string, string>, chat: string): string {
   return [
-    "Hand out the robots' next cards. First give each card its steps, a short list of the discrete tasks its words ask for, with prompt-queue.set_steps, so the queue shows each robot's progress.",
-    "Then send each robot its card's words exactly as written below, followed by one line: " +
-      `"Mark each step of card [<card id>] with prompt-queue.step_done(chat=\"${chat}\", prompt=\"<card id>\", step=N) as you finish it."`,
+    "Hand out the robots' next cards. Send each robot its card's words exactly as written below, followed by one line: " +
+      `"Before you start, break card [<card id>] into a discrete task list of your own plan, and put it on the card with prompt-queue.set_steps(chat=\\"${chat}\\", prompt=\\"<card id>\\", steps=[...]); ` +
+      'keep it as your own task list too, and as you finish each task tick it with prompt-queue.step_done(chat, prompt, step=N), so the queue shows your progress."',
     'When a robot tells you it finished, mark its card done with prompt-queue.done; its next card follows.',
     ...handed.map(({ robot, card }) => {
       const how = agents[robot]

@@ -1321,10 +1321,10 @@ test("the hand-out says to send each robot the card's words exactly, and to mark
   expect(['exactly', 'Agent', 'prompt-queue.done'].map(word => asked[0]?.includes(word))).toEqual([true, true, true])
 })
 
-test('the hand-out says to give each card its steps on the queue before sending it', async ($, on) => {
+test("the hand-out tells each robot to put its own task list on its card with prompt-queue.set_steps before it starts", async ($, on) => {
   const { asked } = await handOut($, on, ROBOT_CARDS)
 
-  expect(asked[0]).toContain('prompt-queue.set_steps')
+  expect([asked[0]?.includes('task list of your own plan'), asked[0]?.includes('prompt-queue.set_steps')]).toEqual([true, true])
 })
 
 test("the hand-out tells each robot to tick its card's steps with prompt-queue.step_done, naming this chat", async ($, on) => {
