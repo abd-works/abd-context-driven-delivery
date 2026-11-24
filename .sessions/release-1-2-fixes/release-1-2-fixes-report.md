@@ -752,11 +752,11 @@ Closed:
 - The whiteboard spec within the unit tier's budget: slowest example 3 ms, 63 of 63 pass (Rivet, card `8f5ea5889f02`, `e4d619e11`).
 - Clean engineering of `harness/mcp`'s server and plugins (Gizmo, card `7f751b9958af`, `1c72ddbb8`).
 - AGENTS.md's practice table has the Hardening column, and the corrections rule says to fix an agent's behaviour in CDD guidance and agent tools (`1b7157051`).
+- Two dropped fixes brought back: the chat bar shows the server's message when `chat.check_in` fails (`4f4ec5966`), and a server's start stops a process that holds its port without answering (`be7b569fc`) (Gizmo, card `030b8b0bb39a`).
+- `repo.clear_worktrees` and the `/clear-worktrees` command, which clear away the worktrees whose work is done and what they left behind; its heavy spec passes 18 of 18, landed in `be7b569fc` (Sparky, card `e5b52b0be41d`). It has not yet been run against the real repository, so item 16's stale `.git\worktrees` entries are still there.
 
 Still open:
 - The heavy tier on the full head (Widget): the first run is done and what it found is fixed; the second run is still going.
-- `repo.clear_worktrees` (Sparky, card `e5b52b0be41d`), in the worktree and not yet committed.
-- Two dropped fixes brought back (Gizmo, card `030b8b0bb39a`).
 - Story map scenarios for today's queue and plugin work, on this branch and on main (Rivet), and main's stable lane check after a repin from main (Sparky).
 
 **Tests**
