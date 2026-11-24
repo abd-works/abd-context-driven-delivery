@@ -46,10 +46,10 @@ const BROKEN_RULE = { range: { path: TICKET_CODE, start_line: 460, end_line: 465
 type SeedNode = { id: string; name: string; type: string; file: string; start: number; end: number; parent: string; shows?: string; rules?: GraphRuleData[] }
 
 // Seed: a rule a node carries, as the graph answers it in the node's rules group.
-const ruleOf = (name: string, status: string, violations: ViolationData[] = []): GraphRuleData => ({ slug: name, body: '', type: 'Rule', name, node_id: `ticket-activate:rules:${name}`, children: [], status, violations })
+const ruleOf = (name: string, status: string, violations: ViolationData[] = []): GraphRuleData => ({ slug: name, body: '', type: 'Rule', name, node_id: `ticket-activate:rules:${name}`, children: [], status, violations, scope: 'paths', requires_judge: false })
 // Seed: Ticket.activate breaks keep-operations-small-focused on lines 460 to 465, passes use-intention-revealing-names,
 // and leaves hide-inner-details to the agent's judgement.
-const ACTIVATE_TOO_LONG: ViolationData = { rule: 'keep-operations-small-focused', practice: 'clean_engineering', node_id: 'ticket-activate', subject: 'activate', location: TICKET_CODE, line: 460, end_line: 465, message: 'activate runs 24 statements', severity: 'error', source: [] }
+const ACTIVATE_TOO_LONG: ViolationData = { rule: 'keep-operations-small-focused', practice: 'clean_engineering', node_id: 'ticket-activate', subject: 'activate', location: TICKET_CODE, line: 460, end_line: 465, message: 'activate runs 24 statements', severity: 'error', source: [], scope: 'paths' }
 // Seed: a rule that requires a judge listing lines 462 to 463 of Ticket.activate as a candidate for a reading.
 const ACTIVATE_CANDIDATE = ruleOf('use-intention-revealing-names', 'candidate', [{ ...ACTIVATE_TOO_LONG, rule: 'use-intention-revealing-names', line: 462, end_line: 463, message: 'activate may not say why it exists', severity: 'candidate' }])
 const ACTIVATE_RULES = [ruleOf('keep-operations-small-focused', 'violating', [ACTIVATE_TOO_LONG]), ruleOf('use-intention-revealing-names', 'passing'), ruleOf('hide-inner-details', 'prompt')]
@@ -68,6 +68,9 @@ const CHECKOUT_FLOW_NODES: SeedNode[] = [
   { id: 'board-reread', name: 'reread', type: 'Operation', file: BOARD_CODE, start: 286, end: 289, parent: 'board' },
 ]
 
+// What Python writes for a fix, which the page sends as it is; its words are pinned by Python's spec.
+const FIX_PROMPT = 'Fix this violation using the Clean Engineering practice guidelines and a test-driven approach.\n…\nRule: keep-operations-small-focused'
+
 // The Files app's page against a fake of its own server, which answers the session's graph as session.graph_trees,
 // graph_branch, graph_node_ranges and graph_members do: only the nodes read from the files a call names, each root opened
 // one level and every entry below it closed, its own entries left out; and the cdd server's progress reports while the
@@ -84,6 +87,8 @@ class FakeFilesServer implements CddApi {
   membersAnswer: unknown = undefined
   choicesAnswer: unknown = undefined
   isChoicesAnswered = false
+  // What graph_fix_prompt answers: the fix Python writes, or none when the view no longer shows the rule broken.
+  fixPrompt = FIX_PROMPT
   private readonly waiting: (() => void)[] = []
   private held: Promise<void> | null = null
   private release: () => void = () => {}
@@ -101,6 +106,7 @@ class FakeFilesServer implements CddApi {
   async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
     this.posts.push({ path, body })
     if (path.endsWith('/graph-trees') && this.treesAnswer !== undefined) return this.treesAnswer as Result
+    if (path.endsWith('/graph-fix-prompt')) return this.fixPrompt as Result
     if (path.endsWith('/guidance-selection')) return this.selection() as Result
     if (path.endsWith('/toggle-guidance')) return this.toggle(String(body.part), String(body.name)) as Result
     if (path.endsWith('/guidance-selection-after')) return (await this.after(Number(body.version))) as Result
@@ -806,6 +812,64 @@ describe('Open Violation In Files App Source', () => {
 
       it('should count as a rule that found something there', () => {
         expect(isFailing(ACTIVATE_CANDIDATE)).toBe(true)
+      })
+    })
+  })
+})
+
+describe('Fix Graph Violations From Files App', () => {
+  describe("with activate's broken rule shown in checkout-flow's graph, opened from chat-1", () => {
+    async function activateShown() {
+      const shown = await showingGraph()
+      await shown.page.graph.toggle(entryNamed(shown.page, 'Clean Engineering'))
+      await shown.page.graph.toggle(entryNamed(shown.page, 'Ticket'))
+      shown.stop()
+      return shown
+    }
+    const fixAsked = (server: FakeFilesServer) => server.posts.filter(post => post.path.endsWith('/graph-fix-prompt')).map(post => post.body)
+    const filledIn = (server: FakeFilesServer) => server.posts.filter(post => post.path === '/chat/chat-1/send' && post.body.kind === 'fill').map(post => post.body.text)
+
+    it('should ask Python for the fix of the rule on activate alone when the Person fixes this one', async () => {
+      const { page, server } = await activateShown()
+      await page.graph.fix({ rule: 'keep-operations-small-focused', nodeId: 'ticket-activate' })
+      expect(fixAsked(server)).toEqual([expect.objectContaining({ rule: 'keep-operations-small-focused', node_id: 'ticket-activate' })])
+    })
+
+    it('should ask Python for the fix of the rule on every node the view shows when the Person fixes the rule', async () => {
+      const { page, server } = await activateShown()
+      await page.graph.fix({ rule: 'keep-operations-small-focused' })
+      expect(fixAsked(server)).toEqual([expect.objectContaining({ rule: 'keep-operations-small-focused', node_id: '' })])
+    })
+
+    it('should ask Python for the fix of every rule the view shows broken, for the files listed, when the Person fixes all', async () => {
+      const { page, server } = await activateShown()
+      await page.graph.fix()
+      expect(fixAsked(server)).toEqual([expect.objectContaining({ paths: page.graph.paths, rule: '', node_id: '' })])
+    })
+
+    it("should fill chat-1's prompt with the fix Python wrote, and answer that it was sent", async () => {
+      const { page, server } = await activateShown()
+      const outcome = await page.graph.fix()
+      expect([filledIn(server), outcome]).toEqual([[FIX_PROMPT], { isSent: true, words: 'Sent to chat' }])
+    })
+
+    it('should offer Fix this one and Fix rule beside the broken rule, and Fix all on the view', async () => {
+      const { page } = await activateShown()
+      const view = render(createElement(FilesGraphView, { page }))
+      fireEvent.click(view.getByRole('button', { name: 'Open activate' }))
+      fireEvent.click(view.getByRole('button', { name: 'Open rules' }))
+      expect([view.getAllByTestId('graph-fix-one').length, view.getAllByTestId('graph-fix-rule').length, view.getAllByTestId('graph-fix-all').length]).toEqual([1, 1, 1])
+      view.unmount()
+    })
+
+    describe('with the rule no longer broken where the view shows it', () => {
+      it('should send nothing, answer that it was not sent, and say why', async () => {
+        const server = new FakeFilesServer()
+        server.fixPrompt = ''
+        const shown = await showingGraph(server)
+        const outcome = await shown.page.graph.fix({ rule: 'keep-operations-small-focused' })
+        shown.stop()
+        expect([filledIn(server), outcome, shown.page.state.toasts.some(toast => toast.includes('no longer shows keep-operations-small-focused broken'))]).toEqual([[], { isSent: false, words: 'Not sent' }, true])
       })
     })
   })

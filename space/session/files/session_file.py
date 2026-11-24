@@ -199,7 +199,7 @@ class FileViolation:
     @property
     @data_field
     def correction_comment(self) -> str:
-        """What Correct on the Files app's banner comments on the range: how to fix it test first, the rule, and what is
+        """What Fix this one on the Files app's banner comments on the range: how to fix it test first, the rule, and what is
         wrong; a sent comment already names and quotes the lines."""
         return ViolationCorrection(self._violation.rule, self._violation.message).comment
 

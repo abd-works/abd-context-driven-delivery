@@ -27,10 +27,8 @@
 .source-rule.is-active { border-color: var(--select); }
 
 .violation-banner {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-sm);
+  display: grid;
+  gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--error) 12%, var(--raised));
@@ -39,10 +37,18 @@
 .violation-banner.is-candidate { background: color-mix(in srgb, var(--warning) 12%, var(--raised)); }
 .violation-banner.is-candidate .violation-message { color: var(--warning); }
 
-.violation-banner-copy {
-  display: grid;
-  gap: var(--space-2xs);
+.violation-banner-head,
+.violation-place {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
   min-width: 0;
+}
+
+.violation-lines {
+  color: var(--muted, inherit);
+  font-weight: 600;
 }
 
 .violation-rule {

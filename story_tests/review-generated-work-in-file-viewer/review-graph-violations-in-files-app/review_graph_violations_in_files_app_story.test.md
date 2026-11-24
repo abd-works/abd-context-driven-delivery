@@ -130,6 +130,25 @@ section: body
 *Then* the chat receives one fix for Process Ticket Archive name and Handle Ticket Deletion name  
   *But* not for the Clean Engineering violation, which the graph view does not show
 
+#### Scenario: Fixing a rule in the file view comments on each place it breaks
+
+*Given* the Files app shows checkout-flow's story map with its rules, opened from checkout-chat, which has checked in  
+*When* the Person fixes the rule story-name-captures-system-mechanic in the file view  
+*Then* the checkout-chat queue holds one fill with a fix comment on Process Ticket Archive's line and one on Handle Ticket Deletion's line  
+  *And* both comments show on the story map as sent
+
+#### Scenario: Fixing one place in the file view sends it alone
+
+*Given* the Files app shows checkout-flow's story map with its rules, opened from checkout-chat, which has checked in  
+*When* the Person fixes story-name-captures-system-mechanic on Handle Ticket Deletion's line in the file view  
+*Then* the checkout-chat queue holds one fill with the fix comment on Handle Ticket Deletion's line alone
+
+#### Scenario: Fixing all in the file view sends every broken place
+
+*Given* the Files app shows checkout-flow's story map with its rules, opened from checkout-chat, which has checked in  
+*When* the Person fixes all in the file view  
+*Then* the checkout-chat queue holds one fill with a fix comment on every place a rule breaks the story map
+
 #### Scenario: A fixed violation leaves the graph view once its file is read again
 
 *Given* the chat has worked on the fix for Process Ticket Archive name  

@@ -1,7 +1,7 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { useLayoutEffect, useRef } from 'react';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { ExplorerTrees } from './graph/explorer-trees';
 import { GraphView } from './graph/GraphView';
@@ -1081,7 +1081,7 @@ it('should expose the violation message when hovering a violating rule', async (
   );
 });
 
-it('should show the violation banner, highlight the source, and say Correct was not sent with no chat to send it to', async () => {
+it('should show the violation banner, highlight the source, and say Fix this one was not sent with no chat to send it to', async () => {
   const user = userEvent.setup();
   await openFolder(user);
   await expand(user, 'clean_engineering');
@@ -1098,32 +1098,57 @@ it('should show the violation banner, highlight the source, and say Correct was 
   expect(listed.textContent).toContain('limit-operation-parameters');
   const editor = await screen.findByTestId('source-editor');
   await waitFor(() => expect(editor.querySelector('.violation-highlight')).toBeTruthy());
-  await user.click(screen.getByTestId('violation-correct'));
-  expect((await screen.findByTestId('violation-correct-outcome')).textContent).toBe('Not sent');
+  await user.click(screen.getByTestId('violation-fix-one'));
+  expect((await screen.findByTestId('violation-fix-one-outcome')).textContent).toBe('Not sent');
 });
 
-// Correct hands the page the broken rule to correct, which Python writes the words of, and shows on the banner what the
+// Fix this one hands the page the broken place to fix, which Python writes the words of, and shows on the banner what the
 // page answered.
-it('should hand Correct the violation, its node, and its lines, and show that it was sent', async () => {
-  const onCorrect = vi.fn().mockResolvedValue({ isSent: true, words: 'Sent to chat' });
+it('should hand Fix this one the rule, the place, its node, and its lines, and show that it was sent', async () => {
+  const one = vi.fn().mockResolvedValue({ isSent: true, words: 'Sent to chat' });
   const user = userEvent.setup();
-  const violation = { rule: 'limit-operation-parameters', message: "Operation 'failure' takes 4 parameters (maximum 2).", startLine: 2, endLine: 3 };
-  render(<SourceView source={longLine} violation={violation} rules={[]} activeRule="" onCorrect={onCorrect} />);
-  await user.click(screen.getByTestId('violation-correct'));
-  expect(onCorrect).toHaveBeenCalledWith({ violation, nodeId: longLine.node_id, startLine: 2, endLine: 3 });
-  const outcome = await screen.findByTestId('violation-correct-outcome');
+  const place = { message: "Operation 'failure' takes 4 parameters (maximum 2).", startLine: 2, endLine: 3 };
+  render(<SourceView source={longLine} violation={{ rule: 'limit-operation-parameters', places: [place] }} rules={[]} activeRule="" fixes={{ one }} />);
+  await user.click(screen.getByTestId('violation-fix-one'));
+  expect(one).toHaveBeenCalledWith({ rule: 'limit-operation-parameters', place, nodeId: longLine.node_id, startLine: 2, endLine: 3 });
+  const outcome = await screen.findByTestId('violation-fix-one-outcome');
   expect(outcome.textContent).toBe('Sent to chat');
   expect(outcome.className).toContain('is-sent');
 });
 
-it('should show that Correct was not sent when the page answers so', async () => {
+it('should show that Fix this one was not sent when the page answers so', async () => {
   const user = userEvent.setup();
-  const violation = { rule: 'limit-operation-parameters', message: 'Too many parameters.', startLine: 2, endLine: 3 };
-  render(<SourceView source={longLine} violation={violation} rules={[]} activeRule="" onCorrect={async () => ({ isSent: false, words: 'Not sent' })} />);
-  await user.click(screen.getByTestId('violation-correct'));
-  const outcome = await screen.findByTestId('violation-correct-outcome');
+  const violation = { rule: 'limit-operation-parameters', places: [{ message: 'Too many parameters.', startLine: 2, endLine: 3 }] };
+  render(<SourceView source={longLine} violation={violation} rules={[]} activeRule="" fixes={{ one: async () => ({ isSent: false, words: 'Not sent' }) }} />);
+  await user.click(screen.getByTestId('violation-fix-one'));
+  const outcome = await screen.findByTestId('violation-fix-one-outcome');
   expect(outcome.textContent).toBe('Not sent');
   expect(outcome.className).toContain('is-failed');
+});
+
+describe('a broken rule at two places, on a page that fixes a whole rule', () => {
+  const violation = { rule: 'limit-operation-parameters', places: [{ message: 'First.', startLine: 1, endLine: 1 }, { message: 'Second.', startLine: 2, endLine: 3 }] };
+
+  it('should offer Fix this one on each place', () => {
+    render(<SourceView source={longLine} violation={violation} rules={[]} activeRule="" fixes={{ one: vi.fn(), rule: vi.fn() }} />);
+    expect(screen.getAllByTestId('violation-fix-one')).toHaveLength(2);
+  });
+
+  it('should hand Fix this one the place it was pressed on', async () => {
+    const one = vi.fn().mockResolvedValue({ isSent: true, words: 'Sent to chat' });
+    const user = userEvent.setup();
+    render(<SourceView source={longLine} violation={violation} rules={[]} activeRule="" fixes={{ one, rule: vi.fn() }} />);
+    await user.click(screen.getAllByTestId('violation-fix-one')[1]!);
+    expect(one).toHaveBeenCalledWith(expect.objectContaining({ place: violation.places[1], startLine: 2, endLine: 3 }));
+  });
+
+  it('should hand Fix rule the rule', async () => {
+    const rule = vi.fn().mockResolvedValue({ isSent: true, words: 'Sent to chat' });
+    const user = userEvent.setup();
+    render(<SourceView source={longLine} violation={violation} rules={[]} activeRule="" fixes={{ one: vi.fn(), rule }} />);
+    await user.click(screen.getByTestId('violation-fix-rule'));
+    expect(rule).toHaveBeenCalledWith('limit-operation-parameters');
+  });
 });
 
 it('should show invokes, observes, and demonstrates on a step', async () => {

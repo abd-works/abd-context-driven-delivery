@@ -102,11 +102,12 @@ export function rulesOf(file: SessionFileData): SourceRule[] {
   return names.map(name => ({ name, status: VIOLATING, messages: file.violations.filter(found => found.violation.rule === name).map(found => found.violation.message) }))
 }
 
-// The first place the chosen rule is broken, which the source view marks and offers a Correct prompt for.
+// Every place the chosen rule is broken in the file, which the source view marks and offers Fix this one for, each with
+// the comment Python wrote for it.
 export function violationFocusOf(file: SessionFileData, rule: string): ViolationFocus | null {
-  const found: FileViolationData | undefined = file.violations.find(each => each.violation.rule === rule)
-  if (!found) return null
-  return { rule: found.violation.rule, message: found.violation.message, startLine: found.range.start_line, endLine: found.range.end_line, correctionComment: found.correction_comment }
+  const found: FileViolationData[] = file.violations.filter(each => each.violation.rule === rule)
+  if (!found.length) return null
+  return { rule, places: found.map(each => ({ message: each.violation.message, startLine: each.range.start_line, endLine: each.range.end_line, correctionComment: each.correction_comment })) }
 }
 
 // The language Monaco colours the file as, from the session's answer.

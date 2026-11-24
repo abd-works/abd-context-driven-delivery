@@ -5,8 +5,9 @@ import type { ExplorerEntryData } from '@cdd/space/session/session'
 import { NodeFilterLists } from '@graph-app/filter/FilterView'
 import { LoadProgressView } from '@graph-app/graph/LoadProgressView'
 import { KindMark, kindLabel } from '@graph-app/labels/kind-mark'
+import { FixButton } from '@source-view/FixButton'
 
-import { ruleTitleOf } from './files-graph'
+import { isFailing, ruleTitleOf } from './files-graph'
 import type { FilesPage } from './files-page'
 import type { FilesGraphState } from './files-state'
 
@@ -61,8 +62,9 @@ function GraphEntryView({ page, entry }: { page: FilesPage; entry: ExplorerEntry
 }
 
 // The rules a node is judged by, under it as the Graph app shows them: one closed rules group, then each rule marked
-// passing, broken or left to the agent's judgement. A broken rule's title carries its message, which a hover shows, and
-// selecting it opens the lines its violations name.
+// passing, broken or left to the agent's judgement. A broken rule's title carries its message, which a hover shows,
+// selecting it opens the lines its violations name, and it offers Fix this one, for the rule on this node, and Fix rule,
+// for the rule on every node the view shows.
 function RulesView({ page, entry, rules }: { page: FilesPage; entry: ExplorerEntryData; rules: GraphRuleData[] }) {
   const [isOpen, setOpen] = useState(false)
   return (
@@ -86,6 +88,12 @@ function RulesView({ page, entry, rules }: { page: FilesPage; entry: ExplorerEnt
                   <KindMark kind="Rule" isFile={false} />
                   <span className="node-name">{rule.name}</span>
                 </button>
+                {isFailing(rule) ? (
+                  <span className="graph-rule-fixes">
+                    <FixButton label="Fix this one" title={`Send the fix of ${rule.name} on ${entry.name} to the chat that opened the page`} testId="graph-fix-one" fix={() => page.graph.fix({ rule: rule.name, nodeId: entry.node_id })} />
+                    <FixButton label="Fix rule" title={`Send the fix of ${rule.name} on every node the graph view shows to the chat that opened the page`} testId="graph-fix-rule" fix={() => page.graph.fix({ rule: rule.name })} />
+                  </span>
+                ) : null}
               </div>
             </li>
           ))}
@@ -97,8 +105,9 @@ function RulesView({ page, entry, rules }: { page: FilesPage; entry: ExplorerEnt
 
 
 // The graph view's node filter, the Graph app's lists: node types, connectors, rules and the Violations switch, which
-// narrow the nodes of the files the bar lists. They sit closed behind one Filters toggle, so the trees get the space,
-// until the person opens them; this browser remembers the choice.
+// narrow the nodes of the files the bar lists, with Fix all beside them for every broken rule the view shows. They sit
+// closed behind one Filters toggle, so the trees get the space, until the person opens them; this browser remembers the
+// choice.
 function GraphNodeFilterView({ page }: { page: FilesPage }) {
   const { graph } = useFilesState(page)
   const [isShown, setShown] = useState(() => page.graph.areFiltersShown)
@@ -111,6 +120,7 @@ function GraphNodeFilterView({ page }: { page: FilesPage }) {
       <button className="graph-filters-toggle" aria-expanded={isShown} onClick={toggle}>
         <span aria-hidden="true">{isShown ? '▼' : '▶'}</span> Filters
       </button>
+      {graph.trees?.length ? <FixButton label="Fix all" title="Send the fix of every broken rule the graph view shows to the chat that opened the page" testId="graph-fix-all" fix={() => page.graph.fix()} /> : null}
       {isShown ? (
         <div className="filters graph-node-filter" aria-label="Node filter">
           <NodeFilterLists

@@ -45,12 +45,19 @@ class SessionExplorer:
     def graph_trees(self, paths: list[str], node_filter: FilterRequest | None = None, call: ToolCall | None = None) -> list[ExplorerEntry]:
         """Return the practice trees of this session's graph read from exactly the files at paths, each named from the project as the Files app lists them, and holding only the nodes read from them: each practice's root with the entries below it, closed, as graph.explorer_trees answers them. The files the page lists are the one filter: the graph reads them, its story tests in code and in markdown alike, and keeps what they hold. node_filter is a node filter as graph.explorer_trees takes it (types, relationships, violations, rules): it applies with the file list, narrowing the nodes of the files listed, and never widens the list, so any paths it names are the list's. No paths, or none in the project, answer no tree, and so does a session with every practice turned off, since no practice reads the files."""
         listed = self.paths.in_project(paths)
-        if not listed or not self.session_practices.working:
+        if not self._read_listed(listed, call):
             return []
+        return self.graph.explorer_trees(self._narrowed_to(listed, node_filter))
+
+    def _read_listed(self, listed: list[str], call: ToolCall | None = None) -> bool:
+        """Read the files listed into the session's graph, as they are now; answers whether anything was read, which
+        nothing is when none is listed or every practice is turned off."""
+        if not listed or not self.session_practices.working:
+            return False
         graph = self.graph
         graph.load_files(str(self.checkout.root.resolve()), self.session_practices.working, listed, graph.overlays, call)
         self.session_graph.listed([self.paths.path_named(path) for path in listed])
-        return graph.explorer_trees(self._narrowed_to(listed, node_filter))
+        return True
 
     @mcp
     @agent_tool
@@ -65,6 +72,19 @@ class SessionExplorer:
     def graph_filter_choices(self, practices: list[str], node_types: list[str], practices_before: list[str] | None = None) -> FilterChoices:
         """Return the node types the graph view's node filter offers and those it chooses, with the connectors and rules of the chosen ones, as graph.filter_choices answers them on this session's graph."""
         return self.graph.filter_choices(practices, node_types, practices_before)
+
+    @long_call
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def graph_fix_prompt(self, paths: list[str], node_filter: FilterRequest | None = None, rule: str = "", node_id: str = "", call: ToolCall | None = None) -> str:
+        """Return what the graph view's Fix buttons send the chat, read from the session's graph as graph_trees reads it for paths and node_filter, each file as it is now: Fix all, with no rule and no node_id, every rule broken on every node the view shows; Fix rule, with rule, every node the view shows breaking that rule; Fix this one, with rule and node_id, that rule on that node. Each names its node, file and lines, rule, code and what is wrong, asking for the fix test first. Empty when the view shows no such broken rule, such as one fixed since and read again."""
+        listed = self.paths.in_project(paths)
+        if not self._read_listed(listed, call):
+            return ""
+        narrowed = self._narrowed_to(listed, node_filter)
+        chosen: FilterRequest = {**narrowed, "rules": [rule]} if rule else narrowed
+        return self.graph.fix_prompt(chosen, node_id)
 
     def _narrowed_to(self, listed: list[str], node_filter: FilterRequest | None) -> FilterRequest:
         """The graph's filter request for a node filter applied with the file list: the node filter's choices, kept to

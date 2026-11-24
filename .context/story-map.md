@@ -1373,6 +1373,8 @@ Brings in the Graph app's Open Violation In Source: selecting a broken rule open
 
 Requested (2026-11-06, "board and chat ... fix"; "/fix is a first class action; fix rule; file; default across all rules / files"): Fix this one on a violation, Fix rule on a rule and Fix all on the view send the Fix action to the chat that opened the page, for that violation, rule, or every violation the graph view shows. Takes in the board's Fix Graph Violations From Board and the Graph app's Copy Correct Prompt, whose prompt names the node, file and lines, rule, excerpt and message (`source/violation-prompt.ts`).
 
+Built (2026-11-23): in the graph view, a broken rule under a node offers Fix this one, for the rule on that node, and Fix rule, for every node the view shows breaking it, and the view offers Fix all; each fills the prompt of the chat that opened the page with the fix Python writes for what the view shows (`session.graph_fix_prompt`, `Graph.fix_prompt`, `ViolationCorrections`). In the file view, the broken rule's banner lists every place the rule is broken, each with Fix this one, and offers Fix rule, and the file's bar offers Fix all; each puts the fix comment on the lines of each broken place and sends them to the chat in one prompt (`file_comments.fix`). The Graph app's banner says Fix this one in place of Correct.
+
 ### (S) Person --> [Fix Graph Violations From Chat Bar](../story_tests/review-generated-work-in-file-viewer/review-graph-violations-in-files-app/review_graph_violations_in_files_app_story.test.md#story-fix-graph-violations-from-chat-bar)
 
 Requested (2026-11-06, "board and chat ... fix"): Fix in the action picker sends the Fix action for the selected fidelities, every violation the live graph holds for them by default.

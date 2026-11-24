@@ -23,6 +23,7 @@ import harness.graph.graph_app  # noqa: F401 - registers the Graph app with App,
 from harness.graph.graph_practices import GraphPractices
 from harness.graph.graph_reads import GraphReads
 from harness.graph.node_filter import Filter, FilterChoices, FilterRequest
+from harness.graph.violation_correction import ViolationCorrections
 from harness.graph.node_metric import METRIC_TYPE, METRICS_GROUP
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.load_scope import LoadScope
@@ -736,6 +737,15 @@ class GraphExplorer:
         node = self.node(node_id)
         broken = node.rules.entries.get(rule) if node is not None else None
         return broken.correction.prompt if broken is not None and broken.is_failing else ""
+
+    def fix_prompt(self, filter: FilterRequest | None = None, node_id: str = "") -> str:
+        """What Fix rule and Fix all send the chat: one correction for each rule broken on each node the filter keeps,
+        with only violations kept, and of the node node_id alone when one is named, as Fix this one on a rule of it
+        sends. Empty when the filter keeps no broken rule."""
+        wanted = Filter(self, {**(filter or {}), "violations": True})
+        roots = (practice.reading.in_graph.root for practice in self.practices.opened.values())
+        kept = (self.node(found.node_id) for found in wanted.collect(roots) if not node_id or found.node_id == node_id)
+        return ViolationCorrections([rule.correction for node in kept if node is not None for rule in wanted.failing_rules(node)]).prompt
 
     def source_members(self) -> list[NodeSource]:
         """Every class, operation, and property the open practices hold, each with the class it belongs to."""

@@ -87,7 +87,7 @@ function ExplorerSplit({ status, filter, pane }: { status: LoadStatus; filter: E
         rules={pane.rulesIn(filter.trees)}
         activeRule={pane.activeRule}
         onSelectRule={(name) => pane.chooseRule(filter.trees, name)}
-        onCorrect={failures.correct}
+        fixes={{ one: failures.fixOne }}
       />
     </div>
   );

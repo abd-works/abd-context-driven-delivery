@@ -13,10 +13,11 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.chat.chat import DONE, FAILED, Chat
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
-from harness.mcp.mcp_annotations import mcp
+from harness.mcp.mcp_annotations import long_call, mcp
 from space.session.files.file_range import LineSpan, Range
 
 if TYPE_CHECKING:
+    from space.session.files.session_file import FileViolation
     from space.session.session import Session
 
 COMMENTS_FILE = "file-comments.json"
@@ -213,6 +214,21 @@ class FileComments:
         self._sent([self._held(anchor)], chat)
         return self
 
+    @long_call
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def fix(self, path: str, chat: str, rule: str = "", cross_file: bool = False) -> FileComments:
+        """Comment on each place in path, a file named from the project, that a rule breaks, in the words Fix this one comments with, then send those comments to chat, a chat's id, in one prompt for the person to review: only the places of rule when one is named, as the Files app's Fix rule does, else every broken place, as its Fix all does. Places on the same lines share one comment, since a comment on lines replaces the one there. With cross_file, the rules only the whole working copy finds count too, as the file view reads them with it on. Nothing is sent when no such place is broken. Returns every comment."""
+        broken = [found for found in self._session.file(path, rules=True, cross_file=cross_file).violations if not rule or found.violation.rule == rule]
+        fixes = _fixes_by_lines(broken)
+        if not fixes:
+            return self
+        anchors = {fix.anchor for fix in fixes}
+        self._save([*(comment for comment in self.comments if comment.anchor not in anchors), *fixes])
+        self._sent(fixes, chat)
+        return self
+
     @mcp
     @agent_tool
     @noSessionLog
@@ -253,3 +269,17 @@ class FileComments:
     @property
     def _file(self) -> JsonFile:
         return JsonFile(Path(self._session.work_folder) / COMMENTS_FILE)
+
+
+# What parts the fixes of two broken places on the same lines in their one comment.
+_BETWEEN_FIXES = "\n\n"
+
+
+def _fixes_by_lines(broken: list[FileViolation]) -> list[FileComment]:
+    """A comment for each run of lines the broken places are on, holding the fix of each place on those lines in turn,
+    in the order the places come."""
+    by_lines: dict[tuple[int, int], tuple[Range, list[str]]] = {}
+    for found in broken:
+        lines = (found.range.start_line, found.range.end_line)
+        by_lines.setdefault(lines, (found.range, []))[1].append(found.correction_comment)
+    return [FileComment(range, _BETWEEN_FIXES.join(words)) for range, words in by_lines.values()]

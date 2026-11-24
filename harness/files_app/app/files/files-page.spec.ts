@@ -635,14 +635,16 @@ describe('Open Whiteboard In Claude Desktop', () => {
   })
 })
 
-// Correct on a broken rule's banner reaches the chat the way a comment does: a comment on the rule's lines, saying what
-// to fix, sent to the chat that opened the page; requested 2026-11-20: Correct must work "the same as comments".
-describe('Correct Broken Rule As A Comment', () => {
+// Fix this one on a broken rule's banner reaches the chat the way a comment does: a comment on the place's lines,
+// saying what to fix, sent to the chat that opened the page; requested 2026-11-20: Correct, now Fix this one, must work
+// "the same as comments". Fix rule and Fix all ask Python to comment on each place and send them together.
+describe('Fix Broken Rule As A Comment', () => {
   // The words Python writes beside the file's violation; Python's spec pins them.
   const COMMENT = "Fix this violation using the Clean Engineering practice guidelines and a test-driven approach.\n…\nRule: limit-operation-parameters\nViolation: Operation 'place' takes 4 parameters (maximum 2)."
   const ORDER = 'class Order:\n    def place(self, cart, user, store, day):\n        return self'
   const CORRECTION = {
-    violation: { rule: 'limit-operation-parameters', message: "Operation 'place' takes 4 parameters (maximum 2).", startLine: 2, endLine: 3, correctionComment: COMMENT },
+    rule: 'limit-operation-parameters',
+    place: { message: "Operation 'place' takes 4 parameters (maximum 2).", startLine: 2, endLine: 3, correctionComment: COMMENT },
     nodeId: '',
     startLine: 2,
     endLine: 3,
@@ -667,7 +669,7 @@ describe('Correct Broken Rule As A Comment', () => {
   async function corrected(server = new CommentingServer(), link = STAGE_LINK) {
     const page = new FilesPage(server, new FilesLink(`${link}&file=src/order.py`))
     await started(page)
-    const outcome = await page.comments.correct(CORRECTION)
+    const outcome = await page.comments.fixOne(CORRECTION)
     return { page, server, outcome }
   }
 
@@ -709,6 +711,39 @@ describe('Correct Broken Rule As A Comment', () => {
   describe('with no chat that opened the page', () => {
     it('should answer that it was not sent', async () => {
       expect((await corrected(new CommentingServer(), STAGE_LINK.replace('&chat=chat-1', ''))).outcome).toEqual({ isSent: false, words: 'Not sent' })
+    })
+  })
+
+  async function fixed(fix: (page: FilesPage) => Promise<unknown>, link = STAGE_LINK) {
+    const server = new CommentingServer()
+    const page = new FilesPage(server, new FilesLink(`${link}&file=src/order.py`))
+    await started(page)
+    const outcome = await fix(page)
+    return { page, server, outcome }
+  }
+
+  describe('fixed by the rule', () => {
+    it('should ask Python to comment on every place of the rule in the open file and send them to the chat that opened the page', async () => {
+      const { server } = await fixed(page => page.comments.fixRule('limit-operation-parameters'))
+      expect(commentPosts(server, '/fix')).toEqual([{ path: 'src/order.py', chat: 'chat-1', rule: 'limit-operation-parameters', cross_file: false }])
+    })
+
+    it('should answer that it was sent to the chat', async () => {
+      expect((await fixed(page => page.comments.fixRule('limit-operation-parameters'))).outcome).toEqual({ isSent: true, words: 'Sent to chat' })
+    })
+  })
+
+  describe('fixed all at once', () => {
+    it('should ask Python to comment on every broken place in the open file, of any rule', async () => {
+      const { server } = await fixed(page => page.comments.fixAll())
+      expect(commentPosts(server, '/fix')).toEqual([{ path: 'src/order.py', chat: 'chat-1', rule: '', cross_file: false }])
+    })
+
+    describe('with no chat that opened the page', () => {
+      it('should send nothing and answer that it was not sent', async () => {
+        const { server, outcome } = await fixed(page => page.comments.fixAll(), STAGE_LINK.replace('&chat=chat-1', ''))
+        expect([commentPosts(server, '/fix'), outcome]).toEqual([[], { isSent: false, words: 'Not sent' }])
+      })
     })
   })
 })

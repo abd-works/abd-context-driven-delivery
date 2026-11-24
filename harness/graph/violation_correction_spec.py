@@ -1,5 +1,5 @@
-"""What Correct on a broken rule's banner sends the chat, in the Graph app and the Files app: the words are Python's,
-written word for word as the pages wrote them before they moved here (2026-11-22)."""
+"""What Fix this one, Fix rule and Fix all on a broken rule send the chat, in the Graph app and the Files app: the words
+are Python's, written word for word as the pages wrote them before they moved here (2026-11-22)."""
 
 import shutil
 import tempfile
@@ -14,7 +14,7 @@ from harness.graph.location import Location
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.violation import Finding
-from harness.graph.violation_correction import ViolationCorrection
+from harness.graph.violation_correction import CorrectedPlace, ViolationCorrection, ViolationCorrections
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
 _SLUG = "limit-operation-parameters"
@@ -80,3 +80,25 @@ with description("a correction of a broken rule"):
     with context("as a comment on the rule's lines"):
         with it("should ask the chat to fix it test first, naming the rule and what is wrong, and leave out the lines a sent comment quotes"):
             expect(ViolationCorrection(_SLUG, _MESSAGE).comment).to(equal(f"{_HOW_TO_FIX}\nRule: {_SLUG}\nViolation: {_MESSAGE}"))
+
+
+with description("the corrections Fix rule and Fix all send together"):
+    with before.all:
+        self.place = ViolationCorrection(_SLUG, _MESSAGE, CorrectedPlace("place", "Operation", "order.py", (2, 3), "def place"))
+        self.ship = ViolationCorrection(_SLUG, "Operation 'ship' takes 3 parameters (maximum 2).", CorrectedPlace("ship", "Operation", "order.py", (5, 6), "def ship"))
+
+    with context("of several broken rules"):
+        with it("should ask once to fix them all test first, then name each one, numbered"):
+            expect(ViolationCorrections([self.place, self.ship]).prompt).to(equal(
+                "Fix these 2 violations using the Clean Engineering practice guidelines and a test-driven approach.\n"
+                "Run or add tests that express the intended behavior before or alongside the fix.\n"
+                f"\nViolation 1:\n{self.place.described}\n\nViolation 2:\n{self.ship.described}"
+            ))
+
+    with context("of one broken rule"):
+        with it("should be that rule's own correction"):
+            expect(ViolationCorrections([self.place]).prompt).to(equal(self.place.prompt))
+
+    with context("of no broken rule"):
+        with it("should have nothing to send"):
+            expect(ViolationCorrections([]).prompt).to(equal(""))

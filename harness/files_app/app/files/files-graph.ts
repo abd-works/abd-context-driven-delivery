@@ -1,4 +1,6 @@
 import type { CddApi, CddProgress } from '@cdd/cdd-shared'
+import { ChatClientGenerated } from '@cdd/harness/chat/chat'
+import { NOT_SENT, SENT_TO_CHAT, type FixOutcome } from '@source-view/violation-prompt'
 import type { FilterChoicesData, GraphRuleData, GraphRulesCollectionData, NodeSourceData } from '@cdd/harness/graph/graph'
 import type { ExplorerEntryData, RangeData, SessionClientGenerated } from '@cdd/space/session/session'
 import { NO_CHOICES, chosen, nodeFilter, type FilterSelection } from '@graph-app/filter/filter-selection'
@@ -15,6 +17,11 @@ const STORED_FILTERS_SHOWN = 'cdd-files-graph-filters-shown'
 // How often a read under way asks the cdd server what it is doing, in milliseconds.
 const PROGRESS_EVERY = 400
 const pause = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
+
+const NO_CHAT = 'No chat opened this page, so the fix was not sent: open the Files app from the chat bar.'
+
+// Which Fix was pressed in the graph view: Fix all names neither, Fix rule the rule, Fix this one the rule and its node.
+export type GraphFix = { rule?: string; nodeId?: string }
 
 // The list a tool answered: none is an empty list, and anything else, such as the text or error a server lane answers
 // for a call it cannot run, is that tool's failure, so the page shows it rather than drawing it as a list.
@@ -58,7 +65,8 @@ export function ruleTitleOf(rule: GraphRuleData): string {
 // while it reads. Its node filter, the Graph app's, is a filter other than the file list that applies with it: it
 // narrows the nodes of the files listed and never widens the list, and a change of either reads the graph again with
 // both. Selecting a node opens its file at its lines, or each file below it when it is a folder; selecting more
-// opens each of their files. Everything it shows is the session's answer, held in the store.
+// opens each of their files. Fix this one, Fix rule and Fix all send the fix Python writes for what the view shows to
+// the chat that opened the page. Everything it shows is the session's answer, held in the store.
 export class FilesGraph {
   constructor(
     private readonly store: FilesStore,
@@ -67,6 +75,7 @@ export class FilesGraph {
     private readonly fileBar: FileBar,
     private readonly notices: FilesNotices,
     private readonly showNodes: (selected: SelectedNode[]) => Promise<void>,
+    private readonly chat: string,
   ) {}
 
   // The files the graph is read for: those the bar lists that are there to read.
@@ -258,6 +267,30 @@ export class FilesGraph {
       await this.showNodes(selected)
     } catch (failure) {
       this.notices.fail(`The Files app did not open ${entry.name}: ${reasonOf(failure)}`, 'Selecting a node in the graph view, calling session.graph_node_ranges', { kind: 'file_display' })
+    }
+  }
+
+  // Fix this one, Fix rule or Fix all: the fix Python writes for the broken rules the view shows, as the trees were read
+  // for the files listed and the node filter, fills the prompt of the chat that opened the page for the person to
+  // review and send. A page no chat opened, a view that no longer shows the rule broken, or a chat that does not take
+  // it, says why in a toast.
+  async fix({ rule = '', nodeId = '' }: GraphFix = {}): Promise<FixOutcome> {
+    const context = 'A Fix in the Files app graph view, calling session.graph_fix_prompt'
+    if (!this.chat) {
+      this.notices.fail(NO_CHAT, context)
+      return NOT_SENT
+    }
+    try {
+      const prompt = await this.session.graphFixPrompt(this.paths, this.nodeFilter, rule, nodeId)
+      if (!prompt) {
+        this.notices.fail(rule ? `The graph view no longer shows ${rule} broken there: read the files again if it should be.` : 'The graph view shows no broken rule to fix.', context)
+        return NOT_SENT
+      }
+      await ChatClientGenerated.named(this.api, this.chat).send('fill', prompt)
+      return SENT_TO_CHAT
+    } catch (failure) {
+      this.notices.fail(`The fix was not sent: ${reasonOf(failure)}`, context, { kind: 'graph_view' })
+      return NOT_SENT
     }
   }
 

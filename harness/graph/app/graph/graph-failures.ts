@@ -3,25 +3,25 @@ import type { CddApi } from '@cdd/cdd-shared';
 import { ChatClientGenerated } from '@cdd/harness/chat/chat';
 import { GraphClientGenerated } from '@cdd/harness/graph/graph';
 
-import { NOT_SENT, SENT_TO_CHAT, type CorrectionAsked, type CorrectionOutcome } from '../source/violation-prompt';
+import { NOT_SENT, SENT_TO_CHAT, type FixAsked, type FixOutcome } from '../source/violation-prompt';
 
 // How long a failure stays on the page as a toast.
 export const TOAST_MILLISECONDS = 8_000;
 
-const NO_CHAT = 'No chat opened this page, so the correction was not sent: open the Graph app from the chat bar.';
+const NO_CHAT = 'No chat opened this page, so the fix was not sent: open the Graph app from the chat bar.';
 
 type ToastsListener = (toasts: string[]) => void;
 
 // Every failure the Graph app meets: shown on the page as a toast and sent to the chat that opened the page, which shows
 // it on its chat bar as it shows its own, so the person can have the chat fix it. Each failure is shown and sent once,
-// however often the progress read every few hundred milliseconds meets it again. A correction of a broken rule goes to
+// however often the progress read every few hundred milliseconds meets it again. A fix of a broken rule goes to
 // the same chat.
 export class GraphFailures extends ChatToldFailures {
   private readonly shownOnce = new Set<string>();
   private toasts: string[] = [];
   private readonly listeners = new Set<ToastsListener>();
 
-  // api is the page's way to its server, which the chat is told through and a correction sent through.
+  // api is the page's way to its server, which the chat is told through and a fix sent through.
   constructor(
     private readonly api: CddApi,
     chat: string,
@@ -39,13 +39,13 @@ export class GraphFailures extends ChatToldFailures {
     return () => this.listeners.delete(listener);
   }
 
-  // Correct in the Graph app: the whole correction fills the prompt of the chat that opened the page, as a file comment
+  // Fix this one in the Graph app: the whole fix fills the prompt of the chat that opened the page, as a file comment
   // sent from the Files app does, for the person to review and send. The Graph app keeps no session's comments, so the
-  // correction goes to the chat directly; a page no chat opened, or a chat that does not take it, says why in a toast.
-  // Python writes the correction, from the node and the rule it breaks there; a node that no longer breaks it has none.
-  readonly correct = async (asked: CorrectionAsked): Promise<CorrectionOutcome> => {
-    const rule = asked.violation.rule;
-    const context = `Correct ${rule} in the Graph app`;
+  // fix goes to the chat directly; a page no chat opened, or a chat that does not take it, says why in a toast.
+  // Python writes the fix, from the node and the rule it breaks there; a node that no longer breaks it has none.
+  readonly fixOne = async (asked: FixAsked): Promise<FixOutcome> => {
+    const rule = asked.rule;
+    const context = `Fix this one, on ${rule} in the Graph app`;
     if (!this.chat) {
       this.fail(NO_CHAT, context);
       return NOT_SENT;
@@ -53,13 +53,13 @@ export class GraphFailures extends ChatToldFailures {
     try {
       const prompt = await new GraphClientGenerated(this.api).correctionPrompt(asked.nodeId, rule);
       if (!prompt) {
-        this.fail(`The graph holds no correction for ${rule} on this node: load the folder again if it should.`, context);
+        this.fail(`The graph holds no fix for ${rule} on this node: load the folder again if it should.`, context);
         return NOT_SENT;
       }
       await ChatClientGenerated.named(this.api, this.chat).send('fill', prompt);
       return SENT_TO_CHAT;
     } catch (cause) {
-      this.fail(`The correction for ${rule} was not sent: ${reasonOf(cause)}`, context);
+      this.fail(`The fix for ${rule} was not sent: ${reasonOf(cause)}`, context);
       return NOT_SENT;
     }
   };

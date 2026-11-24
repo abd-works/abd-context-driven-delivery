@@ -93,6 +93,10 @@ button:disabled { cursor: default; opacity: 0.5; }
 .graph-filters-toggle { display: inline-flex; align-items: center; gap: var(--space-2xs); margin-bottom: var(--space-2xs); padding: var(--space-2xs) 0; border: none; background: transparent; color: var(--muted); font-weight: 500; }
 .graph-filters-toggle > span { width: var(--space-md); color: var(--muted); font-size: var(--text-xs); text-align: center; }
 .graph-filters-toggle:hover, .graph-filters-toggle[aria-expanded='true'] { color: var(--text); }
+/* Fix all beside the Filters toggle, and Fix this one and Fix rule beside a broken rule: small, so the tree stays readable. */
+.graph-node-filter-bar > .violation-correct { float: right; }
+.graph-rule-fixes { display: inline-flex; gap: var(--space-2xs); margin-left: var(--space-xs); }
+.graph-rule-fixes .copy-prompt, .graph-node-filter-bar .copy-prompt { padding: 0 var(--space-xs); font-size: var(--text-xs); }
 .graph-node { display: inline-flex; align-items: center; gap: var(--space-2xs); min-width: 0; padding: var(--space-2xs) 0; border: none; background: transparent; font-weight: 500; text-align: left; }
 .graph-node .node-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .graph-node.selected { color: var(--select); font-weight: 600; }

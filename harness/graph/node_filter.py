@@ -13,6 +13,7 @@ from harness.installation.data_class import data_field
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph, Node, Source
+    from harness.graph.graph_rules_collection import GraphRule
 
 
 class FilterRequest(TypedDict, total=False):
@@ -212,6 +213,11 @@ class Filter:
         if not self.rules:
             return True
         return any(self._label_hits(node, label, hits) for label in self.rules)
+
+    def failing_rules(self, node: Node) -> list[GraphRule]:
+        """The rules node fails that this filter chooses, by slug or by ``practice.node.rule`` label; every one it fails
+        when it chooses none."""
+        return [rule for rule in node.rules.graph_rules if rule.is_failing and (not self.rules or any(self._label_hits(node, label, [rule.slug]) for label in self.rules))]
 
     def _label_hits(self, node: Node, label: str, hits: list[str]) -> bool:
         parts = label.split(".")

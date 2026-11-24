@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 import type { NodeSourceData } from '@cdd/harness/graph/graph'
 import type { SessionFileData } from '@cdd/space/session/session'
+import { FixButton } from '@source-view/FixButton'
 import { SourceView, type SourceEditorInstance } from '@source-view/SourceView'
 import type { GoToFile } from '@source-view/source-callouts'
 import type { SourceLines } from '@source-view/source-folding'
@@ -44,7 +45,8 @@ function useMembersFolded(editor: SourceEditorInstance | null, text: string, lan
 }
 
 // The open file in the graph explorer's source view, folding as Monaco folds its language, with the project's fold keys:
-// its broken rules as chips with the chosen one marked, and the comments on it: Add comment and Add to context on the
+// its broken rules as chips with the chosen one marked, each place it is broken offering Fix this one and the rule Fix
+// rule, Fix all on its bar for every broken place, and the comments on it: Add comment and Add to context on the
 // right-click menu, a marker beside each comment's first line, and the box a marker opens.
 // Lines asked to show, such as the nodes selected in the graph view, unfold and the page scrolls the first into view: the
 // editor is as tall as the file, so the page scrolls, not the editor. Every other fold closes; with none asked, a code
@@ -136,6 +138,7 @@ export function FileSourceView({
     }
   }, [editor, firstShown])
   const openedComment = file.comments.find(comment => comment.anchor === opened)
+  const fixes = useMemo(() => ({ one: actions.fixOne, rule: actions.fixRule }), [actions])
   return (
     <div className="file-source" ref={wrapper}>
       <div className="file-source-bar">
@@ -143,6 +146,7 @@ export function FileSourceView({
         <button type="button" className={wrap ? 'file-wrap is-on' : 'file-wrap'} aria-pressed={wrap} title="Wrap long lines instead of scrolling sideways (shift+wheel)" onClick={toggleWrap}>
           Wrap lines
         </button>
+        {file.violations.length ? <FixButton label="Fix all" title="Send the fix of every place a rule is broken in this file to the chat that opened the page" testId="file-fix-all" fix={() => actions.fixAll()} /> : null}
       </div>
       <SourceView
         source={source}
@@ -150,7 +154,7 @@ export function FileSourceView({
         rules={rules}
         activeRule={rule}
         onSelectRule={setChosenRule}
-        onCorrect={actions.correct}
+        fixes={fixes}
         openAround={shownAround}
         language={monacoLanguageOf(file)}
         keepGlyphMargin

@@ -5,8 +5,9 @@ import { CallCatalog } from './call-expansion';
 import { LINE_HEIGHT, useCallouts, type CalloutsWithin, type GoToFile, type SourceCallout } from './source-callouts';
 import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
-import type { CorrectionAsked, CorrectionOutcome, CorrectViolation } from './violation-prompt';
-import type { ViolationFocus } from '../graph/graph-selection';
+import { FixButton } from './FixButton';
+import type { ViolationFixes } from './violation-prompt';
+import type { ViolationFocus, ViolationPlace } from '../graph/graph-selection';
 import './source.css';
 
 // The room the editor keeps above and below its lines.
@@ -59,15 +60,15 @@ type SourceViewProps = SourceHostProps & {
   rules: SourceRule[];
   activeRule: string;
   onSelectRule?: (name: string) => void;
-  // What Correct on the broken rule's banner does; with none, the banner has no Correct.
-  onCorrect?: CorrectViolation;
+  // What Fix this one and Fix rule on the broken rule's banner do; with none, the banner offers no fix.
+  fixes?: ViolationFixes;
 };
 
-export function SourceView({ source, note = '', violation, rules = [], activeRule = '', onSelectRule = () => undefined, onCorrect, ...host }: SourceViewProps) {
+export function SourceView({ source, note = '', violation, rules = [], activeRule = '', onSelectRule = () => undefined, fixes, ...host }: SourceViewProps) {
   return (
     <div className="panel" data-testid="source-file">
       {source ? (
-        <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} onCorrect={onCorrect} {...host} />
+        <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} fixes={fixes} {...host} />
       ) : (
         <p className="empty-state">{note || 'Select a node'}</p>
       )}
@@ -81,10 +82,10 @@ type SourceEditorProps = SourceHostProps & {
   rules: SourceRule[];
   activeRule: string;
   onSelectRule?: (name: string) => void;
-  onCorrect?: CorrectViolation;
+  fixes?: ViolationFixes;
 };
 
-function SourceEditor({ source, violation, rules, activeRule, onSelectRule, onCorrect, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandLines = NO_LINE_NUMBERS, onGoToFile, opensCalls = true, onEditor }: SourceEditorProps) {
+function SourceEditor({ source, violation, rules, activeRule, onSelectRule, fixes, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandLines = NO_LINE_NUMBERS, onGoToFile, opensCalls = true, onEditor }: SourceEditorProps) {
   const file = source.file ?? '';
   const text = source.text ?? '';
   const origin = source.start_line || 1;
@@ -106,7 +107,7 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, onCo
   return (
     <section className="knowledge-graph-panel source-snippet" data-open="true" data-file={file}>
       <SourceRulesView rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} />
-      {violation ? <ViolationBannerView key={violationKeyOf(violation)} violation={violation} source={source} onCorrect={onCorrect} /> : null}
+      {violation ? <ViolationBannerView key={violationKeyOf(violation)} violation={violation} source={source} fixes={fixes} /> : null}
       <p className="source-path">{file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
@@ -152,12 +153,12 @@ function useSourceCallouts(source: NodeSourceData, language: string, callouts: S
   return { shown, within };
 }
 
-// The lines of the broken rule chosen and of the nodes the page asked to show, marked whole.
+// The lines of every place the broken rule chosen names and of the nodes the page asked to show, marked whole.
 function useLineMarks(editor: SourceEditorInstance | null, origin: number, text: string, violation: ViolationFocus | null, openAround: SourceLines[]): void {
   useEffect(() => {
     if (!editor) return;
     const lastLine = origin + text.split('\n').length - 1;
-    const violationLines = violation ? [{ start: violation.startLine ?? origin, end: violation.endLine ?? violation.startLine ?? lastLine }] : [];
+    const violationLines = (violation?.places ?? []).map((place) => ({ start: place.startLine ?? origin, end: place.endLine ?? place.startLine ?? lastLine }));
     const selected = openAround.filter((lines) => lines.start > origin || lines.end < lastLine);
     const marks = editor.createDecorationsCollection([...linesMarked(violationLines, origin, 'violation-highlight'), ...linesMarked(selected, origin, 'selected-lines')]);
     return () => marks.clear();
@@ -189,44 +190,37 @@ function SourceRulesView({ rules, activeRule, onSelectRule }: { rules: SourceRul
   );
 }
 
-// A banner shows one broken rule on its lines; another rule, or the same rule on other lines, starts a fresh banner.
-const violationKeyOf = (violation: ViolationFocus): string => `${violation.rule}:${violation.startLine ?? ''}-${violation.endLine ?? ''}`;
+// A banner shows one broken rule at its places; another rule, or the same rule at other places, starts a fresh banner.
+const violationKeyOf = (violation: ViolationFocus): string => `${violation.rule}:${violation.places.map((place) => `${place.startLine ?? ''}-${place.endLine ?? ''}`).join(',')}`;
 
-// The broken rule chosen and what it says is wrong, with Correct, which hands the page the correction and then shows
-// what came of it beside the button: sent to the chat, or not sent, the page's toast saying why.
-function ViolationBannerView({ violation, source, onCorrect }: { violation: ViolationFocus; source: NodeSourceData; onCorrect?: CorrectViolation }) {
-  const [isSending, setSending] = useState(false);
-  const [outcome, setOutcome] = useState<CorrectionOutcome | null>(null);
-  async function correct(send: CorrectViolation) {
-    setSending(true);
-    setOutcome(null);
-    const asked: CorrectionAsked = {
-      violation,
-      nodeId: source.node_id,
-      startLine: violation.startLine ?? source.start_line,
-      endLine: violation.endLine ?? source.end_line,
-    };
-    setOutcome(await send(asked));
-    setSending(false);
-  }
+// The broken rule chosen, with Fix rule where the page fixes a whole rule at once, then each place it is broken: what it
+// says is wrong there, its lines, and Fix this one, which hands the page that place to fix.
+function ViolationBannerView({ violation, source, fixes }: { violation: ViolationFocus; source: NodeSourceData; fixes?: ViolationFixes }) {
+  const fixRule = fixes?.rule;
   return (
     <div className={violation.isCandidate ? 'violation-banner is-candidate' : 'violation-banner'} data-testid="violation-banner">
-      <div className="violation-banner-copy">
+      <div className="violation-banner-head">
         <p className="violation-rule">{violation.isCandidate ? `${violation.rule} · candidate for a judge to read, not an error` : violation.rule}</p>
-        <p className="violation-message">{violation.message}</p>
+        {fixRule ? <FixButton label="Fix rule" title="Send the fix of every place this rule is broken to the chat that opened the page" testId="violation-fix-rule" fix={() => fixRule(violation.rule)} /> : null}
       </div>
-      {onCorrect ? (
-        <div className="violation-correct">
-          {outcome ? (
-            <span className={`violation-correct-outcome ${outcome.isSent ? 'is-sent' : 'is-failed'}`} data-testid="violation-correct-outcome" role="status">
-              {outcome.words}
-            </span>
-          ) : null}
-          <button type="button" className="copy-prompt" data-testid="violation-correct" disabled={isSending} title="Send the correction to the chat that opened the page" onClick={() => void correct(onCorrect)}>
-            {isSending ? 'Sending…' : 'Correct'}
-          </button>
-        </div>
-      ) : null}
+      {violation.places.map((place) => (
+        <ViolationPlaceView key={`${place.startLine ?? ''}-${place.endLine ?? ''}`} rule={violation.rule} place={place} source={source} fixes={fixes} />
+      ))}
+    </div>
+  );
+}
+
+function ViolationPlaceView({ rule, place, source, fixes }: { rule: string; place: ViolationPlace; source: NodeSourceData; fixes?: ViolationFixes }) {
+  const startLine = place.startLine ?? source.start_line;
+  const endLine = place.endLine ?? source.end_line;
+  const fixOne = fixes?.one;
+  return (
+    <div className="violation-place" data-testid="violation-place">
+      <p className="violation-message">
+        {place.startLine ? <span className="violation-lines">{startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`} </span> : null}
+        {place.message}
+      </p>
+      {fixOne ? <FixButton label="Fix this one" title="Send the fix of this place to the chat that opened the page" testId="violation-fix-one" fix={() => fixOne({ rule, place, nodeId: source.node_id, startLine, endLine })} /> : null}
     </div>
   );
 }

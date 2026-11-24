@@ -122,7 +122,7 @@ class GraphRule:
 
     @property
     def correction(self) -> ViolationCorrection:
-        """What Correct sends the chat about this rule broken on its node: every message it gives there, one to a line,
+        """What Fix this one sends the chat about this rule broken on its node: every message it gives there, one to a line,
         at the lines of its first violation, else at its node's lines, with the node's text."""
         source = self.node.source
         first = self._violations[0] if self._violations else None

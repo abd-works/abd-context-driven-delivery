@@ -58,7 +58,7 @@ export class FilesPage {
     this.chatContext = new ChatContext(this.session, link.chat, this.notices)
     this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
     this.comments = new FileCommentsActions(this)
-    this.graph = new FilesGraph(this.store, this.session, this.api, this.fileBar, this.notices, selected => this.showNodes(selected))
+    this.graph = new FilesGraph(this.store, this.session, this.api, this.fileBar, this.notices, selected => this.showNodes(selected), link.chat)
     this.guidance = new GuidanceSelector(this)
   }
 
