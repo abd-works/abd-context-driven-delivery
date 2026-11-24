@@ -11,6 +11,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import threading
@@ -379,7 +380,9 @@ class RunWorktree:
             yield self.folder
         finally:
             self._bring_back_captures()
-            self._remove()
+            # A file a process of the tier still holds keeps the folder; the next run removes it first, or fails naming it.
+            with contextlib.suppress(OSError):
+                self._remove()
 
     def _borrow_installed_packages(self) -> None:
         """Link each package.json's installed packages from the checkout, since git keeps none and a tier needs them."""
@@ -424,8 +427,23 @@ class RunWorktree:
         if self.folder.exists():
             self._return_installed_packages()
             if not self._git.succeeds("worktree", "remove", "--force", str(self.folder)):
-                shutil.rmtree(self.folder, ignore_errors=True)
+                shutil.rmtree(self._reachable_beyond_path_limit(), onexc=self._removed_once_writable)
         self._git.succeeds("worktree", "prune")
+
+    def _reachable_beyond_path_limit(self) -> Path:
+        """The folder as Windows opens paths past 260 characters, which git checks out under core.longpaths and
+        Windows otherwise refuses to remove."""
+        if sys.platform != "win32" or str(self.folder).startswith("\\\\?\\"):
+            return self.folder
+        return Path("\\\\?\\" + str(self.folder.resolve()))
+
+    def _removed_once_writable(self, remove: Callable[[str], None], path: str, error: BaseException) -> None:
+        """Remove path again once it is writable: the install marks the folders of its language adapters read-only,
+        and a copy keeps that, which Windows refuses to remove. A failure for another reason is raised as it was."""
+        if not isinstance(error, PermissionError):
+            raise error
+        os.chmod(path, stat.S_IWRITE)
+        remove(path)
 
 
 class TestRunner:

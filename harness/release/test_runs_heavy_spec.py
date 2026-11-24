@@ -45,6 +45,8 @@ exit 0
 SOON_SECONDS = 60
 # How long Windows has to end a killed run's processes.
 ENDED_SECONDS = 15
+# The longest path Windows opens without the long path prefix, unless long paths are turned on for the whole machine.
+WINDOWS_PATH_LIMIT = 260
 
 
 def git(folder: Path, *args: str) -> str:
@@ -228,6 +230,27 @@ with description("a tier run") as self:
         with it("should leave the checkout's installed folder whole once it ends, without what the tier wrote in its own"):
             expect(self.installed_files()).to(equal({"language-adapters/typescript/cdd-shared.ts": "export const installed = true\n",
                                                     "settings.json": "{}"}))
+
+    with context("that finds the worktree a run no longer running left, with a read-only folder and a file past the Windows path limit"):
+        with before.each:
+            left = self.home / "test-run-worktrees" / "heavy"
+            read_only = left / ".claude" / "language-adapters" / "typescript" / "harness"
+            read_only.mkdir(parents=True)
+            subprocess.run(["attrib", "+R", str(read_only)], check=True, capture_output=True)
+            # Git with core.longpaths checks out paths past 260 characters, which Windows refuses without this prefix.
+            deep = Path("\\\\?\\" + str(left))
+            while len(str(deep)) < WINDOWS_PATH_LIMIT + 40:
+                deep = deep / "a-folder-name-of-fifty-letters-a-git-checkout-made"
+            deep.mkdir(parents=True)
+            (deep / "a_story_test_with_a_long_name_story.test.py").write_text("left", encoding="utf-8")
+            self.left = left
+            self.output = self.ended(self.start())
+
+        with it("should run"):
+            expect(self.output).to(contain("heavy passed on"))
+
+        with it("should leave no worktree folder behind once it ends"):
+            expect(self.left.exists()).to(be_false)
 
     with context("whose tier captures screens under the scheduled release"):
         with it("should bring them back to the checkout, where they are reviewed"):
