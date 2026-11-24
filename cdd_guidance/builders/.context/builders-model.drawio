@@ -1,0 +1,42 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="cdd_guidance/builders" id="page-cdd-guidance-builders">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="860" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="harness-guidance--practiceguidance" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PracticeGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ sketch_lens: SketchLens&lt;br/&gt;+ SHORT_NAME: str&lt;br/&gt;+ COLOUR: str&lt;br/&gt;+ shows_every_fidelity: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="500" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-builders--builder" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Builder&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ default_workspace_folder: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#666666;module=cdd_guidance/builders;" vertex="1" parent="1">
+          <mxGeometry x="310" y="350" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-builders--createagenttoolset" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CreateAgentToolset&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#666666;module=cdd_guidance/builders;" vertex="1" parent="1">
+          <mxGeometry x="160" y="570" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-builders--createpracticeguidance" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CreatePracticeGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#666666;module=cdd_guidance/builders;" vertex="1" parent="1">
+          <mxGeometry x="460" y="570" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-builders--builder" target="harness-guidance--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="410" y="232" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-builders--createagenttoolset" target="cdd-guidance-builders--builder" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="410" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-builders--createpracticeguidance" target="cdd-guidance-builders--builder" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="410" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram></mxfile>

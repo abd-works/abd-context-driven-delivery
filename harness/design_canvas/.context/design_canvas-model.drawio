@@ -1,0 +1,12 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="harness/design_canvas" id="page-harness-design-canvas">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="620" pageHeight="498" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="harness-design-canvas--designcanvas" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DesignCanvas&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ title: str&lt;br/&gt;+ project: Path | None&lt;br/&gt;+ launch_page: str | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ DesignCanvas(title: str, project: Path | None)&lt;br/&gt;+ add_page(page_id: str, name: str): None&lt;br/&gt;+ add_board(name: str, board: dict, text: str | None): None&lt;br/&gt;+ artboards_in(folder: str): list[str]&lt;br/&gt;+ holds(name: str): bool&lt;br/&gt;+ size_of(name: str): int | None&lt;br/&gt;+ stylesheets_linked_by(names: list[str]): list[str]&lt;br/&gt;+ files(): dict[str, str]&lt;br/&gt;+ write(root: str | Path): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=harness/design_canvas;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="360" height="238" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram></mxfile>

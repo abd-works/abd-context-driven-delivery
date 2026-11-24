@@ -1,0 +1,321 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="cdd_guidance/practices/clean_engineering" id="page-cdd-guidance-practices-clean-engineering">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5460" pageHeight="3438" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="harness-guidance--practiceguidance" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PracticeGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ sketch_lens: SketchLens&lt;br/&gt;+ SHORT_NAME: str&lt;br/&gt;+ COLOUR: str&lt;br/&gt;+ shows_every_fidelity: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1620" y="60" width="500" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-guidance--practicereading" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PracticeReading&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ reads_after: tuple[str, ...]&lt;br/&gt;+ node_types: tuple[str, ...]&lt;br/&gt;+ class_types: tuple[str, ...]&lt;br/&gt;+ member_types: tuple[str, ...]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2680" y="60" width="280" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--cleanengineering" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CleanEngineering&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ reading_type: type&lt;br/&gt;+ model_document_format: type&lt;br/&gt;+ drawio: Drawio&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CleanEngineering(fidelity: str, format: str | None)&lt;br/&gt;+ generate_output(): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="2040" y="570" width="320" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--graphreading" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;GraphReading&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ class_types: tuple[str, ...]&lt;br/&gt;+ code_index: CodeIndex&lt;br/&gt;+ model_documents: ModelDocuments&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ GraphReading(practice: PracticeGuidance)&lt;br/&gt;+ read_working_copy(): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="2520" y="570" width="260" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--cleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ module_type: type&lt;br/&gt;+ modules: list[Module]&lt;br/&gt;+ is_modules_view: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CleanEngineeringModel(name: str | Graph, sequential_order: int, graph: Graph | None)&lt;br/&gt;+ described_member(owner: str, name: str): Operation | Property | None&lt;br/&gt;+ every_class(): list[OoadClass]&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ update_self(source: OoadNode): None&lt;br/&gt;+ clone(): CleanEngineeringModel&lt;br/&gt;+ save(): str&lt;br/&gt;+ parse(text: str): CleanEngineeringModel&lt;br/&gt;+ load_module(source: Module): Module&lt;br/&gt;+ reconcile_children(source: OoadNode): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="980" y="60" width="500" height="254" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--module" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Module&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ class_type: type&lt;br/&gt;+ description: str&lt;br/&gt;+ seam: str&lt;br/&gt;+ constraint: str&lt;br/&gt;+ seam_terms: list[str]&lt;br/&gt;+ dependencies: list[str]&lt;br/&gt;+ imported_classes: list[ClassReference]&lt;br/&gt;+ modules: list[Module]&lt;br/&gt;+ classes: list[OoadClass]&lt;br/&gt;+ path_parent: str | None&lt;br/&gt;+ documentation: str&lt;br/&gt;+ source_facts: ModuleSourceFacts&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Module(name: str, sequential_order: int, graph: Graph | None)&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ external_deps(): list[str]&lt;br/&gt;+ public_terms(): list[str]&lt;br/&gt;+ update_self(source: OoadNode): None&lt;br/&gt;+ clone(): Module&lt;br/&gt;+ load_module(source: Module): Module&lt;br/&gt;+ load_class(source: OoadClass): OoadClass&lt;br/&gt;+ import_targets(file: Path, root: Path): list[str]&lt;br/&gt;+ reconcile_children(source: OoadNode): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="920" y="570" width="380" height="398" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--ooadclass" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OoadClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ property_type: type&lt;br/&gt;+ operation_type: type&lt;br/&gt;+ intent: str&lt;br/&gt;+ stereotypes: list[str]&lt;br/&gt;+ module_path: list[str]&lt;br/&gt;+ bases: list[str]&lt;br/&gt;+ collaborators: list[str]&lt;br/&gt;+ dependencies: list[Relationship]&lt;br/&gt;+ properties: list[Property]&lt;br/&gt;+ operations: list[Operation]&lt;br/&gt;+ public_properties: list[Operation | Property]&lt;br/&gt;+ relationships: list[Relationship]&lt;br/&gt;+ composes_peers: bool&lt;br/&gt;+ held_fields: dict[str, str]&lt;br/&gt;+ source_facts: ClassSourceFacts&lt;br/&gt;+ arrows: ClassArrows&lt;br/&gt;+ folded: list[OoadClass]&lt;br/&gt;+ folded_into: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ OoadClass(name: str, sequential_order: int, intent: str)&lt;br/&gt;+ fold(other: OoadClass): None&lt;br/&gt;+ doc_comment(marked: bool): DocComment&lt;br/&gt;+ declared_bases(known_names: Iterable[str]): list[str]&lt;br/&gt;+ update_self(source: OoadNode): None&lt;br/&gt;+ clone(): OoadClass&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ load_property(source: Property): Property&lt;br/&gt;+ load_operation(source: Operation): Operation&lt;br/&gt;+ reconcile_children(source: OoadNode): None&lt;br/&gt;+ declares(member: OoadNode): bool&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="1560" y="1180" width="340" height="510" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--property" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Property&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ type_hint: str&lt;br/&gt;+ description: str&lt;br/&gt;+ value_type: str&lt;br/&gt;+ owner: str&lt;br/&gt;+ relationship: Relationship | None&lt;br/&gt;+ arrow: FieldArrow&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Property(name: str, sequential_order: int, type_hint: str)&lt;br/&gt;+ from_signature(text: str): Property | None&lt;br/&gt;+ keep_owner(): None&lt;br/&gt;+ clone(): Property&lt;br/&gt;+ take_note(text: str): None&lt;br/&gt;+ notes(): list[str]&lt;br/&gt;+ save(): str&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ update_self(source: OoadNode): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="1880" y="1830" width="360" height="286" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--operation" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Operation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ return_type: str&lt;br/&gt;+ callees: list[str]&lt;br/&gt;+ body: CodeBody&lt;br/&gt;+ body_text: str&lt;br/&gt;+ owner: str&lt;br/&gt;+ parameters: list[Parameter]&lt;br/&gt;+ is_constructor: bool&lt;br/&gt;+ is_property: bool&lt;br/&gt;+ value_type: str&lt;br/&gt;+ source_lines: tuple[int, int]&lt;br/&gt;+ source_facts: OperationSourceFacts&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Operation(name: str, sequential_order: int, return_type: str)&lt;br/&gt;+ from_signature(text: str): Operation | None&lt;br/&gt;+ attach(child, kind: str): None&lt;br/&gt;+ keep_owner(): None&lt;br/&gt;+ clone(): Operation&lt;br/&gt;+ save(): str&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ update_self(source: OoadNode): None&lt;br/&gt;+ reconcile_children(source: OoadNode): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="2600" y="1830" width="380" height="366" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--relationship" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Relationship&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ target: str&lt;br/&gt;+ kind: str&lt;br/&gt;+ cardinality: str&lt;br/&gt;+ description: str&lt;br/&gt;+ sequential_order: int&lt;br/&gt;+ label: str&lt;br/&gt;+ details: dict[str, str]&lt;br/&gt;+ name: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ read_line(line: str): Relationship | None&lt;br/&gt;+ split_off(lines: list[str]): tuple[list[str], list[Relationship]]&lt;br/&gt;+ read_lines(lines: list[str]): list[Relationship]&lt;br/&gt;+ line(): str&lt;br/&gt;+ lines(): list[str]&lt;br/&gt;+ as_record(): dict[str, Any]&lt;br/&gt;+ translate_from(source: Relationship): None&lt;br/&gt;+ update_self(source: Relationship): None&lt;br/&gt;+ clone(): Relationship&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="2160" y="2400" width="400" height="318" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--codecleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;+ suffixes: tuple&lt;br/&gt;+ class_type: type&lt;br/&gt;+ operation_type: type&lt;br/&gt;+ property_type: type&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ file_module(): Module&lt;br/&gt;+ render(canonical: CleanEngineeringModel, previous: str | None): str&lt;br/&gt;+ operation_body(class_name: str, operation_name: str): CodeBody&lt;br/&gt;+ render_class(oclass: CodeClass, known_names: list[str], kept: CodeCleanEngineeringModel): list[str]&lt;br/&gt;+ render_operation(oclass: CodeClass, operation: CodeOperation, previous: CodeBody): list[str]&lt;br/&gt;+ render_body(operation: Operation, previous: CodeBody): list[str]&lt;br/&gt;+ file_header(preamble: CodeBody): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="2960" y="570" width="580" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--pythoncleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PythonCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): PythonCleanEngineeringModel&lt;br/&gt;+ file_header(preamble: CodeBody): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="3480" y="1180" width="280" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--typescriptcleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TypeScriptCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="2400" y="60" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--codelanguage" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeLanguage&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ suffixes: tuple[str, ...]&lt;br/&gt;+ line_comment: str&lt;br/&gt;+ indent: str&lt;br/&gt;+ unfinished: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CodeLanguage(name: str, line_comment: str, indent: str, unfinished: str, spelling: CodeSpelling, type_names: dict[str, str], suffixes: tuple[str, ...])&lt;br/&gt;+ comment(text: str): str&lt;br/&gt;+ is_unfinished(text: str): bool&lt;br/&gt;+ identifier(name: str): str&lt;br/&gt;+ type_name(hint: str): str&lt;br/&gt;+ interaction(callee: str): str&lt;br/&gt;+ assignment(name: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="2230" y="2860" width="860" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--codebody" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeBody&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ text: str&lt;br/&gt;+ language: CodeLanguage | None&lt;br/&gt;+ is_empty: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CodeBody(text: str, language: CodeLanguage | None)&lt;br/&gt;+ mentions(word: str): bool&lt;br/&gt;+ lines_in(language: CodeLanguage, indent: str, unfinished: str): list[str]&lt;br/&gt;+ in_language_of(other: CodeBody, language: CodeLanguage): CodeBody&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="2720" y="2400" width="440" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--writtenblock" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;WrittenBlock&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;+ key: WrittenKey&lt;br/&gt;+ heading: list[str]&lt;br/&gt;+ lead: list[str]&lt;br/&gt;+ closing: list[str]&lt;br/&gt;+ inside: list[str]&lt;br/&gt;+ inline: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ WrittenBlock(language: CodeLanguage, key: WrittenKey, heading: list[str])&lt;br/&gt;+ is_in(language: CodeLanguage, key: WrittenKey): bool&lt;br/&gt;+ inside_for(body: CodeBody): list[str] | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="60" y="60" width="440" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--insidelines" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;InsideLines&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ split(children: list[tuple[int, int]]): tuple[list[str], list[list[str]], list[str]]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="60" y="3158" width="500" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--bracecall" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BraceCall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ text: str&lt;br/&gt;+ start: int&lt;br/&gt;+ name: str&lt;br/&gt;+ close: int&lt;br/&gt;+ brace: int&lt;br/&gt;+ inner_end: int&lt;br/&gt;+ end: int&lt;br/&gt;+ is_whole: bool&lt;br/&gt;+ body: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BraceCall(text: str, start: int, name: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="3040" y="60" width="280" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--bracketstructure" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BracketStructure&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BracketStructure(text: str)&lt;br/&gt;+ closing_bracket(open_at: int, opener: str): int | None&lt;br/&gt;+ opening_bracket(close_at: int, opener: str): int&lt;br/&gt;+ top_level_indexes(mark: str): list[int]&lt;br/&gt;+ top_level_index(mark: str): int&lt;br/&gt;+ braced(open_at: int): str | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="3460" y="60" width="340" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--callgraph" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CallGraph&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ read(text: str): CallGraph&lt;br/&gt;+ add_line(line: str, depth: int): None&lt;br/&gt;+ block(): str&lt;br/&gt;+ callees(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="4480" y="60" width="240" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--callgraphentry" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CallGraphEntry&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ depth: int&lt;br/&gt;+ kind: str&lt;br/&gt;+ text: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="3700" y="570" width="200" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--sourcetext" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SourceText&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ text: str&lt;br/&gt;+ failures: SpanFailures&lt;br/&gt;+ collaborators: SpanCollaborators&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ SourceText(text: str)&lt;br/&gt;+ control_flow_depth(): int&lt;br/&gt;+ unnamed_numbers(): list[str]&lt;br/&gt;+ mixes_io_and_domain(): bool&lt;br/&gt;+ calls_io_and_domain(): bool&lt;br/&gt;+ mutates_without_record(): bool&lt;br/&gt;+ has_prose_comment(hash_only: bool): bool&lt;br/&gt;+ prototype_swap(start_line: int): dict&lt;br/&gt;+ markdown_bullet_lines(): dict&lt;br/&gt;+ line_of(index: int): int&lt;br/&gt;+ hits(pattern: re.Pattern[str]): list[list]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="3860" y="60" width="260" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--drawio" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Drawio&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ module_dir: Path&lt;br/&gt;+ domain_slug: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Drawio()&lt;br/&gt;+ contexts(): str&lt;br/&gt;+ examples(): str&lt;br/&gt;+ create_diagram(content: str, path: str): str&lt;br/&gt;+ scan(paths: list[str]): str&lt;br/&gt;+ validate(): str&lt;br/&gt;+ repair(asset: str, violation: str): str&lt;br/&gt;+ render(content: str, path: str): str&lt;br/&gt;+ verify_regression(examples_root: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="3100" y="1180" width="280" height="222" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--drawiocleanengineeringmodel" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DrawIOCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ module_cell_types: tuple[type, ...]&lt;br/&gt;+ previous: str | None&lt;br/&gt;+ keep_positioning: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ DrawIOCleanEngineeringModel(name: str, sequential_order: int)&lt;br/&gt;+ save(): str&lt;br/&gt;+ load_module_cell(source: Module): DrawIOModule&lt;br/&gt;+ imported_class(source: OoadClass, from_module: str): DrawIOImportedClass&lt;br/&gt;+ parse(text: str): DrawIOCleanEngineeringModel&lt;br/&gt;+ render(canonical: CleanEngineeringModel, previous: str | None): str&lt;br/&gt;+ kept_previous(): str | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="4820" y="60" width="440" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-practices-clean-engineering--drawiomodule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DrawIOModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ dependency_labels: dict[str, str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ DrawIOModule(name: str, sequential_order: int, **kwargs)&lt;br/&gt;+ draws(style: str): bool&lt;br/&gt;+ html(): str&lt;br/&gt;+ style(): str&lt;br/&gt;+ from_cell(value: str, sequential_order: int): DrawIOModule | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d0ece7;strokeColor=#666666;module=cdd_guidance/practices/clean_engineering;" vertex="1" parent="1">
+          <mxGeometry x="4000" y="570" width="400" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="drawio «renders» «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--cleanengineering" target="cdd-guidance-practices-clean-engineering--drawio" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2200" y="1110" />
+              <mxPoint x="3240" y="1110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="2" value="drawio «renders» «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--cleanengineering" target="cdd-guidance-practices-clean-engineering--drawio" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2200" y="1110" />
+              <mxPoint x="3240" y="1110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="«reads the graph with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.4762;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.4762;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--cleanengineering" target="cdd-guidance-practices-clean-engineering--graphreading" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--cleanengineering" target="harness-guidance--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1970" y="232" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--graphreading" target="harness-guidance--practicereading" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2820" y="232" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6" value="modules «creates» «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.34;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--cleanengineeringmodel" target="cdd-guidance-practices-clean-engineering--module" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1150" y="530" />
+              <mxPoint x="1400" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6" value="modules «creates» «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.34;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--cleanengineeringmodel" target="cdd-guidance-practices-clean-engineering--module" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1150" y="530" />
+              <mxPoint x="1400" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.66;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3309;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--cleanengineeringmodel" target="cdd-guidance-practices-clean-engineering--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1310" y="510" />
+              <mxPoint x="2010" y="510" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8" value="classes «creates» «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6691;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--module" target="cdd-guidance-practices-clean-engineering--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1400" y="1130" />
+              <mxPoint x="2470" y="1130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8" value="classes «creates» «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6691;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--module" target="cdd-guidance-practices-clean-engineering--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1400" y="1130" />
+              <mxPoint x="2470" y="1130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="9" value="properties «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--ooadclass" target="cdd-guidance-practices-clean-engineering--property" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1900" y="1790" />
+              <mxPoint x="2170" y="1790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="10" value="operations «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--ooadclass" target="cdd-guidance-practices-clean-engineering--operation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2580" y="1790" />
+              <mxPoint x="3020" y="1790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="10" value="operations «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--ooadclass" target="cdd-guidance-practices-clean-engineering--operation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2580" y="1790" />
+              <mxPoint x="3020" y="1790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="9" value="properties «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--ooadclass" target="cdd-guidance-practices-clean-engineering--property" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1900" y="1790" />
+              <mxPoint x="2170" y="1790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="11" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.675;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--ooadclass" target="cdd-guidance-practices-clean-engineering--relationship" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2240" y="1800" />
+              <mxPoint x="2490" y="1800" />
+              <mxPoint x="2490" y="2360" />
+              <mxPoint x="2430" y="2360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="12" value="relationship «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.325;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--property" target="cdd-guidance-practices-clean-engineering--relationship" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2170" y="2360" />
+              <mxPoint x="2290" y="2360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="12" value="relationship «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.325;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--property" target="cdd-guidance-practices-clean-engineering--relationship" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2170" y="2360" />
+              <mxPoint x="2290" y="2360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="13" value="body «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3409;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--operation" target="cdd-guidance-practices-clean-engineering--codebody" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3020" y="2350" />
+              <mxPoint x="2870" y="2350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="13" value="body «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3409;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--operation" target="cdd-guidance-practices-clean-engineering--codebody" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3020" y="2350" />
+              <mxPoint x="2870" y="2350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="14" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3276;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.7558;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--codecleanengineeringmodel" target="cdd-guidance-practices-clean-engineering--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3150" y="830" />
+              <mxPoint x="2930" y="830" />
+              <mxPoint x="2930" y="520" />
+              <mxPoint x="3570" y="520" />
+              <mxPoint x="3570" y="1150" />
+              <mxPoint x="3430" y="1150" />
+              <mxPoint x="3430" y="1780" />
+              <mxPoint x="3490" y="1780" />
+              <mxPoint x="3490" y="2790" />
+              <mxPoint x="2880" y="2790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="15" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.6724;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6591;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--codecleanengineeringmodel" target="cdd-guidance-practices-clean-engineering--codebody" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3350" y="1150" />
+              <mxPoint x="3410" y="1150" />
+              <mxPoint x="3410" y="1800" />
+              <mxPoint x="3470" y="1800" />
+              <mxPoint x="3470" y="2360" />
+              <mxPoint x="3010" y="2360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="16" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--codecleanengineeringmodel" target="cdd-guidance-practices-clean-engineering--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1230" y="344" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--pythoncleanengineeringmodel" target="cdd-guidance-practices-clean-engineering--codecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3250" y="838" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="18" value="language «calls is_unfinished on» «calls comment on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--codebody" target="cdd-guidance-practices-clean-engineering--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2940" y="2770" />
+              <mxPoint x="2660" y="2770" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="18" value="language «calls is_unfinished on» «calls comment on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--codebody" target="cdd-guidance-practices-clean-engineering--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2940" y="2770" />
+              <mxPoint x="2660" y="2770" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="19" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2442;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--writtenblock" target="cdd-guidance-practices-clean-engineering--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="450" y="2830" />
+              <mxPoint x="2430" y="2830" />
+              <mxPoint x="2430" y="2820" />
+              <mxPoint x="2440" y="2820" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="20" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--callgraph" target="cdd-guidance-practices-clean-engineering--callgraphentry" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4600" y="740" />
+              <mxPoint x="3930" y="740" />
+              <mxPoint x="3930" y="530" />
+              <mxPoint x="3800" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-practices-clean-engineering--drawiocleanengineeringmodel" target="cdd-guidance-practices-clean-engineering--drawiomodule" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5040" y="290" />
+              <mxPoint x="4750" y="290" />
+              <mxPoint x="4750" y="30" />
+              <mxPoint x="4430" y="30" />
+              <mxPoint x="4430" y="500" />
+              <mxPoint x="4200" y="500" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram></mxfile>

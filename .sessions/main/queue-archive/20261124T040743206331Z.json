@@ -1,0 +1,10 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T04:07:43.206331+00:00",
+  "prompts": [
+    {
+      "id": "2b9d74d09824",
+      "text": "Split the whole-repository class model into per-module models so the Clean Engineering model fidelity finds them (the person, 2026-11-23). Today .context/model/repo-model.md and .context/model/repo-model.drawio hold every module's classes in one place, which does not match the model fidelity's outputs (\"{module}/.context/{module}-model.md\", \"{module}/.context/{module}-model.drawio\" in cdd_guidance/practices/clean_engineering/clean_engineering.md), so the Files app and board never show them as the model. Split them by module into each module's own folder, using the module boundaries the module cards and .context/modules.drawio already name: the harness sub-folders (harness/annotations, harness/markdown, harness/agent_tools, harness/installation, harness/hooks, harness/mcp, harness/guidance, harness/graph, harness/files_app, harness/chat, ...), space/session, space/kanban, space/repo, tools/<toolset>, cdd_guidance/actions/<action>, cdd_guidance/practices/<practice>, cdd_guidance/patterns/<pattern>. Each module gets {module}/.context/{module}-model.md and a drawio drawn from it; a relationship to another module's class names that class and links to its module's model rather than copying it. Merge with models already there (for example cdd_guidance/practices/clean_engineering/model/.context/ooad-model.md, the practices' model/.context/*-model.md files) instead of writing a second copy. Then remove repo-model.md and repo-model.drawio (repo-model2.drawio and repo-model-disconnected.md too if nothing reads them), turn on the Clean Engineering model fidelity in this session if it is off, validate the new model files with clean-engineering-model, open a few drawings in the draw.io viewer by their full path to check them, and commit and push the whole worktree."
+    }
+  ]
+}

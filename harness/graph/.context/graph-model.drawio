@@ -1,0 +1,753 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="harness/graph" id="page-harness-graph">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3380" pageHeight="5662" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="harness-agent-tools--toolcall" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ToolCall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ arguments: dict[str, Any]&lt;br/&gt;+ project: Path&lt;br/&gt;+ request: ToolRequest&lt;br/&gt;+ chat_id: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1280" width="580" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--sourcefile" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;SourceFile&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1890" y="3040" width="200" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-guidance--practiceguidance" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PracticeGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ sketch_lens: SketchLens&lt;br/&gt;+ SHORT_NAME: str&lt;br/&gt;+ COLOUR: str&lt;br/&gt;+ shows_every_fidelity: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2250" y="4460" width="500" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-guidance--fidelityguidance" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;FidelityGuidance&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ session_output: Any&lt;br/&gt;+ judged_on: str&lt;br/&gt;+ name: str&lt;br/&gt;+ stage: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="690" y="4460" width="540" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-guidance--practicereading" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PracticeReading&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ reads_after: tuple[str, ...]&lt;br/&gt;+ node_types: tuple[str, ...]&lt;br/&gt;+ class_types: tuple[str, ...]&lt;br/&gt;+ member_types: tuple[str, ...]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="290" y="4460" width="280" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-guidance--practicecatalogue" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PracticeCatalogue&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="1280" width="360" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-guidance--unknownpractice" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;UnknownPractice&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ key: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2150" y="1760" width="300" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--graph" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Graph&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ build: GraphBuild&lt;br/&gt;+ practices: GraphPractices&lt;br/&gt;+ scope: LoadScope&lt;br/&gt;+ applied_patterns: PatternOverlays&lt;br/&gt;+ schema_edges: SchemaEdges&lt;br/&gt;+ edges: GraphEdges&lt;br/&gt;+ explorer: GraphExplorer&lt;br/&gt;+ reads: GraphReads&lt;br/&gt;+ folder: str&lt;br/&gt;+ overlays: list[str]&lt;br/&gt;+ saved_file: SavedGraphFile&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Graph(practices: Iterable[PracticeGuidance] | None)&lt;br/&gt;+ for_call(call: ToolCall): Graph&lt;br/&gt;+ practice(key: str): PracticeGuidance&lt;br/&gt;+ node(node_id: str): Node | None&lt;br/&gt;+ restored_from(saved: SavedGraph): None&lt;br/&gt;+ load_working_copy(folder: str, practices: dict[str, str], database: str | None, overlays: list[str] | None, force: bool, call: ToolCall | None): GraphLoaded&lt;br/&gt;+ load_files(folder: str, practices: list[str], files: list[str], overlays: list[str] | None, call: ToolCall | None): GraphLoaded&lt;br/&gt;+ refresh(paths: list[str], call: ToolCall | None): GraphLoaded&lt;br/&gt;+ save_json(): GraphSaved&lt;br/&gt;+ set_overlays(overlays: list[str], call: ToolCall | None): AppliedOverlays&lt;br/&gt;+ overlay_of(folder: str): Overlay&lt;br/&gt;+ practice_names(): list[str]&lt;br/&gt;+ inventory(): Inventory&lt;br/&gt;+ filter_choices(practices: list[str], node_types: list[str], practices_before: list[str] | None): Filter&lt;br/&gt;+ source(node_id: str): NodeSource | None&lt;br/&gt;+ return_nodes(filter: dict | None): list[FilteredNode]&lt;br/&gt;+ explorer_trees(filter: dict | None): list[ExplorerEntry]&lt;br/&gt;+ explorer_branch(node_id: str, filter: dict | None): ExplorerEntry | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="550" width="900" height="510" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--graphpractices" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;GraphPractices&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ held: dict[str, PracticeGuidance]&lt;br/&gt;+ opened: dict[str, PracticeGuidance]&lt;br/&gt;+ chosen: list[PracticeGuidance]&lt;br/&gt;+ roots_by_key: dict[str, Path]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ GraphPractices(graph: Graph, held: Iterable[PracticeGuidance])&lt;br/&gt;+ named(key: str): PracticeGuidance&lt;br/&gt;+ of(kind: type): PracticeGuidance&lt;br/&gt;+ loaded(kind: type): PracticeGuidance | None&lt;br/&gt;+ part_of(practice: PracticeGuidance): PracticeNodes&lt;br/&gt;+ choose(roots: dict[PracticeGuidance, Path]): None&lt;br/&gt;+ open_chosen(): None&lt;br/&gt;+ reopen(saved: SavedGraph, folder: Path): None&lt;br/&gt;+ hold(saved: SavedGraph, folder: Path | None): None&lt;br/&gt;+ rebuild_trees(): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="2800" y="1280" width="380" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--graphreads" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;GraphReads&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ graph: Graph&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ GraphReads(graph: Graph)&lt;br/&gt;+ open(folder: Path): None&lt;br/&gt;+ open_saved(folder: Path): None&lt;br/&gt;+ working_copy(read: WorkingCopyRead, call: ToolCall | None): GraphLoaded&lt;br/&gt;+ practice_roots(call: ToolCall | None): GraphLoaded&lt;br/&gt;+ files(read: FilesRead, call: ToolCall | None): GraphLoaded&lt;br/&gt;+ refresh(paths: list[str], call: ToolCall | None): GraphLoaded&lt;br/&gt;+ hold_whole(call: ToolCall | None): None&lt;br/&gt;+ refreshed(paths: list[str], checked: Path, call: ToolCall | None): None&lt;br/&gt;+ apply_overlays(overlays: list[str], call: ToolCall | None): Graph&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="60" y="5240" width="420" height="222" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--practicenodes" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeNodes&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ graph: Graph&lt;br/&gt;+ practice: PracticeGuidance&lt;br/&gt;+ edge_index: EdgeIndex&lt;br/&gt;+ rule_run: PracticeRuleRun&lt;br/&gt;+ loading: PracticeLoading&lt;br/&gt;+ restore: PracticeRestore&lt;br/&gt;+ source_root_path: Path | None&lt;br/&gt;+ source_root: str&lt;br/&gt;+ root: Node&lt;br/&gt;+ node_types: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PracticeNodes(graph: Graph, practice: PracticeGuidance)&lt;br/&gt;+ nodes(type: str | None): list[Node]&lt;br/&gt;+ node(node_id: str): Node | None&lt;br/&gt;+ holds(node_id: str): bool&lt;br/&gt;+ offer_node_types(types: Iterable[str]): None&lt;br/&gt;+ add(node: Node, node_id: str, location: Location): Node&lt;br/&gt;+ add_file(type: str, relative: str, name: str): Node&lt;br/&gt;+ hold(node: Node): None&lt;br/&gt;+ unused_node_id(type: str, name: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="3040" width="360" height="350" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--practiceloading" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeLoading&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ part: PracticeNodes&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PracticeLoading(part: PracticeNodes, held: _HeldNodes)&lt;br/&gt;+ open(root: Path | None): None&lt;br/&gt;+ close(): None&lt;br/&gt;+ release(node: Node): None&lt;br/&gt;+ nodes_read_now(type: str | None): list[Node]&lt;br/&gt;+ forget_files(files: Iterable[Path]): set[int]&lt;br/&gt;+ forget(dropped: set[int]): set[int]&lt;br/&gt;+ put_in_source_order(): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="540" y="5240" width="340" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--loadscope" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;LoadScope&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path | None&lt;br/&gt;+ named: list[Path] | None&lt;br/&gt;+ edited_files: list[Path] | None&lt;br/&gt;+ folders: list[Path] | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ LoadScope(folder: Path | None, named: Iterable[Path] | None)&lt;br/&gt;+ of_paths(folder: Path, paths: Iterable[str], skipped: frozenset[str]): LoadScope&lt;br/&gt;+ refreshing(paths: Iterable[str]): LoadScope&lt;br/&gt;+ source_files(root: Path, suffixes: set[str]): list[Path]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="1280" width="480" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--node" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Node&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ practice: PracticeGuidance&lt;br/&gt;+ type: str&lt;br/&gt;+ node_id: str&lt;br/&gt;+ name: str&lt;br/&gt;+ source: Source&lt;br/&gt;+ stage: str&lt;br/&gt;+ data: dict&lt;br/&gt;+ children: list[Node]&lt;br/&gt;+ parent: Node | None&lt;br/&gt;+ tree: NodeTree&lt;br/&gt;+ graph_facts: tuple[str, ...]&lt;br/&gt;+ facts: dict&lt;br/&gt;+ graph: Graph&lt;br/&gt;+ schema: PracticeSchema&lt;br/&gt;+ fidelity: FidelityGuidance | None&lt;br/&gt;+ fidelities: list[FidelityGuidance]&lt;br/&gt;+ rules: GraphRulesCollection&lt;br/&gt;+ file_language: str | None&lt;br/&gt;+ failed_rules: list[str]&lt;br/&gt;+ passing_rules: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Node(practice: PracticeGuidance, identity: NodeIdentity, source: Source)&lt;br/&gt;+ set_fact(key: str, value): None&lt;br/&gt;+ get_fact(key: str, default = None): None&lt;br/&gt;+ merge_fact(key: str, values: list): None&lt;br/&gt;+ has_fact(key: str): bool&lt;br/&gt;+ forget_rules(): None&lt;br/&gt;+ place(file: str, start_line: int, end_line: int): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="3760" width="440" height="478" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--nodetree" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;NodeTree&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ node: Node&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ NodeTree(node: Node)&lt;br/&gt;+ populate(parent: Node | None): None&lt;br/&gt;+ leave(): None&lt;br/&gt;+ rebuild(): None&lt;br/&gt;+ serialize(seen: set[str] | None, via: Node | None, stack: set[str] | None): ExplorerEntry&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="940" y="5240" width="520" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--modelnode" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModelNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ sequential_order: int&lt;br/&gt;+ has_source_file: bool&lt;br/&gt;+ node: ModelNode&lt;br/&gt;+ graph: Graph&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ModelNode(name: str, sequential_order: int, graph: Graph | None)&lt;br/&gt;+ semantic_type(): str&lt;br/&gt;+ finish_building(): None&lt;br/&gt;+ keeps_list(listed: ModelChildren | ModelReferences): None&lt;br/&gt;+ attach(child, kind: str): None&lt;br/&gt;+ join(practice): None&lt;br/&gt;+ subtree(): list[ModelNode]&lt;br/&gt;+ batch_schema_sync(): Iterator[None]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1550" y="4460" width="400" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--modelchildren" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModelChildren&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ owner: ModelNode&lt;br/&gt;+ kind: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ModelChildren(owner: ModelNode, kind: str)&lt;br/&gt;+ append(item): None&lt;br/&gt;+ extend(items: Iterable): None&lt;br/&gt;+ insert(index: int, item): None&lt;br/&gt;+ pop(index: int): None&lt;br/&gt;+ refill(incoming: Iterable): None&lt;br/&gt;+ reconcile(sources: Iterable, load: Callable): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1550" y="4910" width="320" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--modelreferences" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModelReferences&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ owner: ModelNode&lt;br/&gt;+ kind: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ModelReferences(owner: ModelNode, kind: str)&lt;br/&gt;+ append(item): None&lt;br/&gt;+ extend(items: Iterable): None&lt;br/&gt;+ insert(index: int, item): None&lt;br/&gt;+ pop(index: int): None&lt;br/&gt;+ refill(incoming: Iterable): None&lt;br/&gt;+ record_all(): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="2010" y="4910" width="280" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--source" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Source&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ file: str&lt;br/&gt;+ start_line: int&lt;br/&gt;+ end_line: int&lt;br/&gt;+ root: str&lt;br/&gt;+ calls: list[Call]&lt;br/&gt;+ text: str&lt;br/&gt;+ contents: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Source(path: str, line_start: int, line_end: int, root: str)&lt;br/&gt;+ whole_file(relative: str, root: str): Source&lt;br/&gt;+ load_calls(raw: str): None&lt;br/&gt;+ insert_calls(raw: str): str&lt;br/&gt;+ align_to_label(label: str): None&lt;br/&gt;+ widen_to_call_close(): None&lt;br/&gt;+ align_to_example_export(root: str, name: str, files: Iterable[Path]): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="950" y="4910" width="440" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--graphoverlay" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;GraphOverlay&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ pattern: PracticeGuidance&lt;br/&gt;+ name: str&lt;br/&gt;+ direct_kinds: frozenset[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ GraphOverlay(pattern: Any)&lt;br/&gt;+ display_of(kind: str): str&lt;br/&gt;+ read(graph: Graph): None&lt;br/&gt;+ practice_file(practice_key: str, name: str): Path&lt;br/&gt;+ rules_for(practice: Any): dict[str, PracticeGraphRule]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="790" y="1760" width="340" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--patternoverlays" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PatternOverlays&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ paths: list[str]&lt;br/&gt;+ patterns: list[PracticeGuidance]&lt;br/&gt;+ graph_overlays: list[GraphOverlay]&lt;br/&gt;+ every_graph_overlay: list[GraphOverlay]&lt;br/&gt;+ available: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PatternOverlays(overlays: list[str] | tuple[str, ...])&lt;br/&gt;+ register(*pattern_classes): None&lt;br/&gt;+ apply(overlays: list[str] | tuple[str, ...]): None&lt;br/&gt;+ checks_of(practice: Any, overlays: list[str] | None): dict[str, PracticeGraphRule]&lt;br/&gt;+ root_of(overlay: str): Path&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="2080" y="1280" width="480" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--practicegraphrule" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PracticeGraphRule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ slug: str&lt;br/&gt;+ node_types: tuple[str, ...]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ check(node, context: RuleCheckContext): list[str]&lt;br/&gt;+ check_practice(context: RuleCheckContext): list[tuple[str, str]]&lt;br/&gt;+ applies_to(node_type: str): bool&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="400" y="2210" width="400" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--rulecheckcontext" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;RuleCheckContext&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ practice: PracticeGuidance&lt;br/&gt;+ graph: Graph&lt;br/&gt;+ source_root: Path | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ RuleCheckContext(practice, source_root: Path | None)&lt;br/&gt;+ index(kind: type): None&lt;br/&gt;+ targets(node, kind: str): list&lt;br/&gt;+ nodes(type: str | None): list&lt;br/&gt;+ edges(kind: str): list&lt;br/&gt;+ node(node_id: str): None&lt;br/&gt;+ child_count(node, edge_kinds: tuple[str, ...]): int&lt;br/&gt;+ children(node, edge_kind: str): list&lt;br/&gt;+ node_data(node): dict&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="430" y="2590" width="320" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--violation" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Violation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ rule: str&lt;br/&gt;+ practice: str&lt;br/&gt;+ node_id: str&lt;br/&gt;+ subject: str&lt;br/&gt;+ location: Annotated[str, SourceFile]&lt;br/&gt;+ line: int | None&lt;br/&gt;+ end_line: int | None&lt;br/&gt;+ message: str&lt;br/&gt;+ severity: str&lt;br/&gt;+ source: list[SourceLine]&lt;br/&gt;+ described: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Violation(found_by: FoundBy, message: str, location: Location)&lt;br/&gt;+ from_data(data: dict): Violation&lt;br/&gt;+ by_rule(violations: list[Violation]): dict[str, list[Violation]]&lt;br/&gt;+ is_under(prefixes: list[str]): bool&lt;br/&gt;+ in_file(location: str, file: Path): Violation&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="970" y="2590" width="400" height="302" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--savedgraph" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SavedGraph&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ overlays: list[str]&lt;br/&gt;+ practices: dict[str, SavedPractice]&lt;br/&gt;+ held_beside: list[str]&lt;br/&gt;+ document: dict&lt;br/&gt;+ text: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ SavedGraph(overlays: list[str], practices: dict[str, SavedPractice], held_beside: list[str] | None)&lt;br/&gt;+ from_graph(graph: Graph, files: list[str] | None): SavedGraph&lt;br/&gt;+ from_document(document: dict, source: str): SavedGraph&lt;br/&gt;+ from_text(text: str, source: str): SavedGraph&lt;br/&gt;+ from_file(path: Path): SavedGraph&lt;br/&gt;+ from_nodes(nodes: list[dict]): SavedGraph&lt;br/&gt;+ from_violations(violations: list[Violation], overlays: list[str] | None): SavedGraph&lt;br/&gt;+ of_practices(keys: list[str]): SavedGraph&lt;br/&gt;+ merged_over(older: SavedGraph | None): SavedGraph&lt;br/&gt;+ holds(practice_roots: dict[str, Path], overlays: list[str]): bool&lt;br/&gt;+ violations(practices: list[str] | None): list[Violation]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="1760" width="580" height="302" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--savedpractice" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SavedPractice&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ source_root: str&lt;br/&gt;+ root_facts: dict&lt;br/&gt;+ nodes: list[SavedNode]&lt;br/&gt;+ edges: list[SavedEdge]&lt;br/&gt;+ violations: list[Violation]&lt;br/&gt;+ violations_by_node: dict[str, list[Violation]]&lt;br/&gt;+ record: dict&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ SavedPractice(name: str, source_root: str, root_facts: dict, nodes: list[SavedNode], edges: list[SavedEdge], violations: list[Violation])&lt;br/&gt;+ from_practice(practice: PracticeGuidance, files: list[str] | None): SavedPractice&lt;br/&gt;+ from_record(name: str, record: dict): SavedPractice&lt;br/&gt;+ root_in(folder: Path | None): Path | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="2210" width="800" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--savednode" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SavedNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ node_id: str&lt;br/&gt;+ name: str&lt;br/&gt;+ type: str&lt;br/&gt;+ practice: str&lt;br/&gt;+ file: str&lt;br/&gt;+ line: int&lt;br/&gt;+ end_line: int&lt;br/&gt;+ stage: str&lt;br/&gt;+ facts: dict&lt;br/&gt;+ record: dict&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ SavedNode(node_id: str, name: str, type: str, practice: str, file: str, line: int, end_line: int, stage: str, facts: dict)&lt;br/&gt;+ from_record(record: dict): SavedNode&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="2110" y="2590" width="700" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--savedgraphoutdated" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SavedGraphOutdated&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ SavedGraphOutdated(source: str, version: object)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="2540" y="2210" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--rulefixture" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;RuleFixture&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ context: RuleCheckContext&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ RuleFixture(practice_class: type, files: dict[str, str])&lt;br/&gt;+ read_only(paths: list[str]): None&lt;br/&gt;+ hits(rule): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1450" y="300" width="340" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--rulepair" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;RulePair&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ RulePair(rule, faulty: RuleFixture, repaired: RuleFixture)&lt;br/&gt;+ check(): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1640" y="60" width="360" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-graph--schemarulerun" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SchemaRuleRun&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ SchemaRuleRun(rule, context: RuleCheckContext)&lt;br/&gt;+ hits(): list[str]&lt;br/&gt;+ node_hits(node): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#666666;module=harness/graph;" vertex="1" parent="1">
+          <mxGeometry x="1240" y="60" width="300" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-patterns--lernoverlay" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: cdd_guidance/patterns»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;LernOverlay&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ direct_kinds: frozenset[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="920" y="2210" width="200" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-patterns--webdomainaccessoverlay" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: cdd_guidance/patterns»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;WebDomainAccessOverlay&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2240" y="2210" width="200" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="practices «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.9333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-graph--graphpractices" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2010" y="1220" />
+              <mxPoint x="2990" y="1220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="scope «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.2889;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-graph--loadscope" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1430" y="1240" />
+              <mxPoint x="1240" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="applied_patterns «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.7889;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-graph--patternoverlays" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1880" y="1170" />
+              <mxPoint x="1920" y="1170" />
+              <mxPoint x="1920" y="1150" />
+              <mxPoint x="1960" y="1150" />
+              <mxPoint x="1960" y="1170" />
+              <mxPoint x="1990" y="1170" />
+              <mxPoint x="1990" y="1240" />
+              <mxPoint x="2320" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5" value="«makes its practices with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7111;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-guidance--practicecatalogue" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1810" y="1240" />
+              <mxPoint x="1760" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6" value="«gives each practice its part through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.0667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3214;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-guidance--practicereading" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1230" y="1170" />
+              <mxPoint x="1260" y="1170" />
+              <mxPoint x="1260" y="1270" />
+              <mxPoint x="1220" y="1270" />
+              <mxPoint x="1220" y="1250" />
+              <mxPoint x="950" y="1250" />
+              <mxPoint x="950" y="1620" />
+              <mxPoint x="310" y="1620" />
+              <mxPoint x="310" y="4420" />
+              <mxPoint x="380" y="4420" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3556;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3261;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-graph--practicenodes" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1490" y="1250" />
+              <mxPoint x="1510" y="1250" />
+              <mxPoint x="1510" y="1660" />
+              <mxPoint x="760" y="1660" />
+              <mxPoint x="760" y="2150" />
+              <mxPoint x="880" y="2150" />
+              <mxPoint x="880" y="2950" />
+              <mxPoint x="1300" y="2950" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="2" value="practices «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.9333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-graph--graphpractices" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2010" y="1220" />
+              <mxPoint x="2990" y="1220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="scope «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.2889;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-graph--loadscope" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1430" y="1240" />
+              <mxPoint x="1240" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="applied_patterns «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.7889;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-graph--patternoverlays" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1880" y="1170" />
+              <mxPoint x="1920" y="1170" />
+              <mxPoint x="1920" y="1150" />
+              <mxPoint x="1960" y="1150" />
+              <mxPoint x="1960" y="1170" />
+              <mxPoint x="1990" y="1170" />
+              <mxPoint x="1990" y="1240" />
+              <mxPoint x="2320" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8556;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-guidance--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1940" y="1220" />
+              <mxPoint x="1850" y="1220" />
+              <mxPoint x="1850" y="1270" />
+              <mxPoint x="1730" y="1270" />
+              <mxPoint x="1730" y="1230" />
+              <mxPoint x="1580" y="1230" />
+              <mxPoint x="1580" y="1150" />
+              <mxPoint x="1140" y="1150" />
+              <mxPoint x="1140" y="30" />
+              <mxPoint x="2600" y="30" />
+              <mxPoint x="2600" y="1180" />
+              <mxPoint x="3230" y="1180" />
+              <mxPoint x="3230" y="4430" />
+              <mxPoint x="2880" y="4430" />
+              <mxPoint x="2880" y="4450" />
+              <mxPoint x="2760" y="4450" />
+              <mxPoint x="2760" y="4410" />
+              <mxPoint x="2600" y="4410" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="9" value="«restores from»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2586;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-graph--savedgraph" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1680" y="1250" />
+              <mxPoint x="1540" y="1250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="10" value="«reads the call's session from»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1444;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-agent-tools--toolcall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="1220" />
+              <mxPoint x="480" y="1220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="11" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8421;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8714;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graphpractices" target="harness-guidance--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3120" y="4390" />
+              <mxPoint x="2860" y="4390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="12" value="«reads the part of a practice from»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1579;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8261;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graphpractices" target="harness-graph--practicenodes" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2860" y="1860" />
+              <mxPoint x="2890" y="1860" />
+              <mxPoint x="2890" y="3160" />
+              <mxPoint x="1640" y="3160" />
+              <mxPoint x="1640" y="3000" />
+              <mxPoint x="1530" y="3000" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="13" value="«restores each practice from»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3421;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.7414;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graphpractices" target="harness-graph--savedgraph" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2930" y="1700" />
+              <mxPoint x="1820" y="1700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="14" value="«raises»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.6579;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graphpractices" target="harness-guidance--unknownpractice" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3050" y="1720" />
+              <mxPoint x="2300" y="1720" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="15" value="graph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4333;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--practicenodes" target="harness-graph--graph" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1380" y="2920" />
+              <mxPoint x="920" y="2920" />
+              <mxPoint x="920" y="2330" />
+              <mxPoint x="1250" y="2330" />
+              <mxPoint x="1250" y="1700" />
+              <mxPoint x="1560" y="1700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="16" value="practice" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.8261;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3714;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--practicenodes" target="harness-guidance--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1530" y="3640" />
+              <mxPoint x="2510" y="3640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="root «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3261;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--practicenodes" target="harness-graph--node" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="3720" />
+              <mxPoint x="1490" y="3720" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="root «keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3261;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--practicenodes" target="harness-graph--node" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="3720" />
+              <mxPoint x="1490" y="3720" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="18" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1739;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--practicenodes" target="harness-graph--source" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1230" y="4320" />
+              <mxPoint x="260" y="4320" />
+              <mxPoint x="260" y="4840" />
+              <mxPoint x="1060" y="4840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="19" value="practice" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.8077;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6286;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--node" target="harness-guidance--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1780" y="4390" />
+              <mxPoint x="2690" y="4390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="20" value="source" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5962;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--node" target="harness-graph--source" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1670" y="4450" />
+              <mxPoint x="1630" y="4450" />
+              <mxPoint x="1630" y="4430" />
+              <mxPoint x="1580" y="4430" />
+              <mxPoint x="1580" y="4440" />
+              <mxPoint x="1340" y="4440" />
+              <mxPoint x="1340" y="4850" />
+              <mxPoint x="1170" y="4850" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="graph «calls edges_from on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.75;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--node" target="harness-graph--graph" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1750" y="3140" />
+              <mxPoint x="2840" y="3140" />
+              <mxPoint x="2840" y="2320" />
+              <mxPoint x="2870" y="2320" />
+              <mxPoint x="2870" y="1880" />
+              <mxPoint x="2000" y="1880" />
+              <mxPoint x="2000" y="1260" />
+              <mxPoint x="1950" y="1260" />
+              <mxPoint x="1950" y="1240" />
+              <mxPoint x="1830" y="1240" />
+              <mxPoint x="1830" y="1210" />
+              <mxPoint x="1620" y="1210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="22" value="fidelity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.4038;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--node" target="harness-guidance--fidelityguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1570" y="4420" />
+              <mxPoint x="1000" y="4420" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="23" value="«reads its part of the graph from»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1923;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6786;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--node" target="harness-guidance--practicereading" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1460" y="4340" />
+              <mxPoint x="480" y="4340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="24" value="«calls changed on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--node" target="harness-graph--practicenodes" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1620" y="3660" />
+              <mxPoint x="1380" y="3660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="25" value="«joins a practice through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.75;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelnode" target="harness-graph--graphpractices" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1850" y="4340" />
+              <mxPoint x="2490" y="4340" />
+              <mxPoint x="2490" y="3180" />
+              <mxPoint x="2990" y="3180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="26" value="«calls add on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.25;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6739;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelnode" target="harness-graph--practicenodes" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1650" y="4360" />
+              <mxPoint x="1330" y="4360" />
+              <mxPoint x="1330" y="3680" />
+              <mxPoint x="1460" y="3680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="27" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.325;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3438;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelnode" target="harness-graph--modelchildren" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1680" y="4870" />
+              <mxPoint x="1660" y="4870" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.675;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3214;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelnode" target="harness-graph--modelreferences" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1820" y="4870" />
+              <mxPoint x="2100" y="4870" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.175;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelnode" target="harness-graph--source" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1620" y="4870" />
+              <mxPoint x="1280" y="4870" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="30" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelnode" target="harness-graph--node" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1620" y="4348" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="31" value="owner «calls attach on» «calls detach on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6562;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelchildren" target="harness-graph--modelnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1760" y="4800" />
+              <mxPoint x="1750" y="4800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="31" value="owner «calls attach on» «calls detach on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6562;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelchildren" target="harness-graph--modelnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1760" y="4800" />
+              <mxPoint x="1750" y="4800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="32" value="owner «calls refer on» «calls detach on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6786;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.825;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelreferences" target="harness-graph--modelnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2200" y="4800" />
+              <mxPoint x="1880" y="4800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="32" value="owner «calls refer on» «calls detach on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6786;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.825;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--modelreferences" target="harness-graph--modelnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2200" y="4800" />
+              <mxPoint x="1880" y="4800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="33" value="pattern" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6765;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2429;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graphoverlay" target="harness-guidance--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1020" y="2110" />
+              <mxPoint x="1760" y="2110" />
+              <mxPoint x="1760" y="2180" />
+              <mxPoint x="2210" y="2180" />
+              <mxPoint x="2210" y="2530" />
+              <mxPoint x="2860" y="2530" />
+              <mxPoint x="2860" y="4360" />
+              <mxPoint x="2420" y="4360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="34" value="«loads»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3235;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graphoverlay" target="harness-graph--practicegraphrule" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="2170" />
+              <mxPoint x="600" y="2170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="35" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.6667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.7571;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--patternoverlays" target="harness-guidance--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2400" y="1510" />
+              <mxPoint x="2770" y="1510" />
+              <mxPoint x="2770" y="1200" />
+              <mxPoint x="3210" y="1200" />
+              <mxPoint x="3210" y="4410" />
+              <mxPoint x="2780" y="4410" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="36" value="«reads graph_overlay of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--patternoverlays" target="harness-graph--graphoverlay" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2240" y="1680" />
+              <mxPoint x="960" y="1680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="37" value="«checks a node within»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1875;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--practicegraphrule" target="harness-graph--rulecheckcontext" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="600" y="2540" />
+              <mxPoint x="490" y="2540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="38" value="practice" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6562;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1286;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--rulecheckcontext" target="harness-guidance--practiceguidance" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="640" y="4300" />
+              <mxPoint x="240" y="4300" />
+              <mxPoint x="240" y="5230" />
+              <mxPoint x="2340" y="5230" />
+              <mxPoint x="2340" y="4630" />
+              <mxPoint x="2200" y="4630" />
+              <mxPoint x="2200" y="4430" />
+              <mxPoint x="2330" y="4430" />
+              <mxPoint x="2330" y="4420" />
+              <mxPoint x="2340" y="4420" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="39" value="graph «calls edges_from on» «calls node on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5938;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2111;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--rulecheckcontext" target="harness-graph--graph" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="620" y="2380" />
+              <mxPoint x="350" y="2380" />
+              <mxPoint x="350" y="1450" />
+              <mxPoint x="30" y="1450" />
+              <mxPoint x="30" y="1170" />
+              <mxPoint x="1210" y="1170" />
+              <mxPoint x="1210" y="1190" />
+              <mxPoint x="1360" y="1190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="40" value="«calls nodes on» «calls edges on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3438;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1739;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--rulecheckcontext" target="harness-graph--practicenodes" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="540" y="2970" />
+              <mxPoint x="1230" y="2970" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="39" value="graph «calls edges_from on» «calls node on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5938;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2111;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--rulecheckcontext" target="harness-graph--graph" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="620" y="2380" />
+              <mxPoint x="350" y="2380" />
+              <mxPoint x="350" y="1450" />
+              <mxPoint x="30" y="1450" />
+              <mxPoint x="30" y="1170" />
+              <mxPoint x="1210" y="1170" />
+              <mxPoint x="1210" y="1190" />
+              <mxPoint x="1360" y="1190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="41" value="«annotated with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.951;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--violation" target="harness-installation--sourcefile" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="42" value="practices «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3276;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--savedgraph" target="harness-graph--savedpractice" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1580" y="2170" />
+              <mxPoint x="1680" y="2170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="43" value="«reads practices of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6444;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--savedgraph" target="harness-graph--graph" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1680" y="1380" />
+              <mxPoint x="1970" y="1380" />
+              <mxPoint x="1970" y="1190" />
+              <mxPoint x="1750" y="1190" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="42" value="practices «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3276;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--savedgraph" target="harness-graph--savedpractice" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1580" y="2170" />
+              <mxPoint x="1680" y="2170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="44" value="«raises»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.6724;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--savedgraph" target="harness-graph--savedgraphoutdated" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1780" y="2160" />
+              <mxPoint x="2690" y="2160" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="45" value="nodes «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--savedpractice" target="harness-graph--savednode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1880" y="2550" />
+              <mxPoint x="2460" y="2550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="46" value="«reads nodes and edges of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6739;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--savedpractice" target="harness-graph--practicenodes" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1480" y="2530" />
+              <mxPoint x="940" y="2530" />
+              <mxPoint x="940" y="2990" />
+              <mxPoint x="1460" y="2990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="45" value="nodes «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--savedpractice" target="harness-graph--savednode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1880" y="2550" />
+              <mxPoint x="2460" y="2550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="47" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--savedpractice" target="harness-graph--violation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1680" y="2550" />
+              <mxPoint x="1480" y="2550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="48" value="context «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3235;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8125;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--rulefixture" target="harness-graph--rulecheckcontext" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1560" y="520" />
+              <mxPoint x="10" y="520" />
+              <mxPoint x="10" y="2910" />
+              <mxPoint x="780" y="2910" />
+              <mxPoint x="780" y="2550" />
+              <mxPoint x="690" y="2550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="49" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.6765;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--rulefixture" target="harness-graph--graph" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1680" y="510" />
+              <mxPoint x="1620" y="510" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="48" value="context «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3235;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8125;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--rulefixture" target="harness-graph--rulecheckcontext" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1560" y="520" />
+              <mxPoint x="10" y="520" />
+              <mxPoint x="10" y="2910" />
+              <mxPoint x="780" y="2910" />
+              <mxPoint x="780" y="2550" />
+              <mxPoint x="690" y="2550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="50" value="«checks»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1944;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.7647;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--rulepair" target="harness-graph--rulefixture" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="51" value="«reads nodes through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4062;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--schemarulerun" target="harness-graph--rulecheckcontext" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1390" y="500" />
+              <mxPoint x="930" y="500" />
+              <mxPoint x="930" y="1640" />
+              <mxPoint x="330" y="1640" />
+              <mxPoint x="330" y="2520" />
+              <mxPoint x="560" y="2520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-patterns--lernoverlay" target="harness-graph--graphoverlay" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="960" y="1964" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="53" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-patterns--webdomainaccessoverlay" target="harness-graph--graphoverlay" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="960" y="1964" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="54" value="reads" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graph" target="harness-graph--graphreads" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1620" y="1130" />
+              <mxPoint x="670" y="1130" />
+              <mxPoint x="670" y="1580" />
+              <mxPoint x="180" y="1580" />
+              <mxPoint x="180" y="5210" />
+              <mxPoint x="30" y="5210" />
+              <mxPoint x="30" y="5490" />
+              <mxPoint x="510" y="5490" />
+              <mxPoint x="510" y="5200" />
+              <mxPoint x="340" y="5200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="55" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3333;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--graphreads" target="harness-graph--loadscope" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="1600" />
+              <mxPoint x="1240" y="1600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="56" value="loading «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--practicenodes" target="harness-graph--practiceloading" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1330" y="3660" />
+              <mxPoint x="660" y="3660" />
+              <mxPoint x="660" y="5200" />
+              <mxPoint x="710" y="5200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="57" value="tree «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.1136;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.9038;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-graph--node" target="harness-graph--nodetree" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1410" y="4880" />
+              <mxPoint x="1420" y="4880" />
+              <mxPoint x="1420" y="5200" />
+              <mxPoint x="1410" y="5200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram></mxfile>
