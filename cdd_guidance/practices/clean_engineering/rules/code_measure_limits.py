@@ -18,6 +18,7 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     AVERAGE_CLASS_COMPLEXITY,
     CLASSES_DEPENDED_ON,
     CODE_LINES,
+    COPIED_CODE_BLOCKS,
     LEAST_MAINTAINABILITY,
     LONGEST_FILE_LINES,
     METHOD_COUNT,
@@ -164,6 +165,12 @@ class LimitModulesImporting(ModuleMeasureLimit):
     advice = "Find what the importers each use and split the module by it, or keep in it only the stable seam they share."
 
 
+class LimitCopiedCodeBlocks(ModuleMeasureLimit):
+    slug = "limit-copied-code-blocks"
+    measure = COPIED_CODE_BLOCKS
+    advice = "Keep the block in one function, in the module that owns what it does, and call it from the other place."
+
+
 MEASURE_LIMIT_RULES: tuple[CodeMeasureLimit, ...] = (
     LimitPathsThroughAFunction(),
     KeepFunctionsReadable(),
@@ -177,4 +184,5 @@ MEASURE_LIMIT_RULES: tuple[CodeMeasureLimit, ...] = (
     KeepModuleFilesMaintainable(),
     LimitAverageClassComplexity(),
     LimitModulesImporting(),
+    LimitCopiedCodeBlocks(),
 )

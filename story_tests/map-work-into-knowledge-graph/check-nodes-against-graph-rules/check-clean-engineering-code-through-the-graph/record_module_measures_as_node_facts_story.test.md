@@ -40,9 +40,9 @@ Observed (`cdd_guidance/practices/clean_engineering/measures/code_measures_spec.
 
 #### Scenario: Show a module's measures in its metrics group
 
-Decided 2026-11-22: a module's metrics group shows its import loops, held to none, and the modules it imports, which has no limit and raises no violation. Decided 2026-11-24 ("we should add facts at the class and module level ... so that way we have no metrics gate, validate does it"): the modules that import it are held to 40, and the group shows three more measures taken over all its files, each with its limit: the lines of code in its longest file (800), the maintainability index of its least maintainable file (20 or higher), and the average total complexity of its classes (15).
+Decided 2026-11-22: a module's metrics group shows its import loops, held to none, and the modules it imports, which has no limit and raises no violation. Decided 2026-11-24 ("we should add facts at the class and module level ... so that way we have no metrics gate, validate does it"): the modules that import it are held to 40, and the group shows three more measures taken over all its files, each with its limit: the lines of code in its longest file (800), the maintainability index of its least maintainable file (20 or higher), the average total complexity of its classes (15), and the blocks of code it repeats from another file (0, counted as jscpd counts a clone: five or more lines and fifty or more tokens).
 
 *Given* the shop project's config has a `code_measures` section
 *When* the code measures of `shop/cart.py` are taken and the explorer tree is built again
-*Then* the metrics group under the module shop shows its import loops with the limit 0, the modules it imports with its value and no limit, then the modules that import it, its longest file, its least maintainable file and its average class complexity, each with its limit
+*Then* the metrics group under the module shop shows its import loops with the limit 0, the modules it imports with its value and no limit, then the modules that import it, its longest file, its least maintainable file, its average class complexity and its copied blocks, each with its limit
   *And* the measure with no limit is not marked as past a limit

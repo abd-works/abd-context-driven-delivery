@@ -195,7 +195,8 @@ SHIPPED_TOOLS: dict[str, dict[str, str]] = {
     # Radon takes the maintainability index of Python alone; no tool is shipped for it in the brace languages.
     LEAST_MAINTAINABILITY.name: {"python": "radon", "typescript": NOT_MEASURED, "javascript": NOT_MEASURED},
     AVERAGE_CLASS_COMPLEXITY.name: {"python": READER, "typescript": READER, "javascript": READER},
-    COPIED_CODE_BLOCKS.name: {"python": NOT_MEASURED, "typescript": NOT_MEASURED, "javascript": NOT_MEASURED},
+    # The reader compares the text of every production file, as jscpd did for the metrics gate.
+    COPIED_CODE_BLOCKS.name: {"python": READER, "typescript": READER, "javascript": READER},
     ABSTRACTNESS.name: {"python": READER, "typescript": READER, "javascript": READER},
     INSTABILITY.name: {"python": READER, "typescript": READER, "javascript": READER},
 }
@@ -216,6 +217,7 @@ SHIPPED_LIMITS: dict[str, float] = {
     LONGEST_FILE_LINES.name: 800,
     LEAST_MAINTAINABILITY.name: 20,
     AVERAGE_CLASS_COMPLEXITY.name: 15,
+    COPIED_CODE_BLOCKS.name: 0,
 }
 # The measures the explorer tree shows under a node for information, with their value and no limit: no rule reads
 # them, so none reports them.

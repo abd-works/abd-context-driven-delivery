@@ -10,6 +10,7 @@ from mamba import before, context, description, it
 from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     AVERAGE_CLASS_COMPLEXITY,
     CODE_LINES,
+    COPIED_CODE_BLOCKS,
     IMPORT_LOOPS,
     CLASSES_DEPENDED_ON,
     LEAST_MAINTAINABILITY,
@@ -106,6 +107,25 @@ _A_CHILD_MODULE = {
 _LOOP_THROUGH_A_PACKAGE = {
     **_MODULES_AND_A_PACKAGE,
     "catalogue/book.py": "from shop.cart import Cart\n\n\nclass Book:\n    def price(self, cart: Cart) -> int:\n        return 0\n",
+}
+
+
+# A block of six lines, over fifty tokens, that the shop's cart and the catalogue's book both write.
+_COPIED_BLOCK = (
+    "        subtotal = sum(line.price * line.quantity for line in lines)\n"
+    "        if subtotal > 100:\n"
+    "            subtotal = subtotal - subtotal * discount // 100\n"
+    "        taxed = subtotal + subtotal * tax_rate // 100\n"
+    "        rounded = round(taxed / 5) * 5\n"
+    "        return max(rounded, minimum_charge)\n"
+)
+_TOTAL_SIGNATURE = "    def total(self, lines: list, discount: int, tax_rate: int, minimum_charge: int) -> int:\n"
+_COPIED_ACROSS_MODULES = {
+    **MEASURES_CHOSEN,
+    **_SHOP_CARD,
+    "shop/cart.py": "class Cart:\n" + _TOTAL_SIGNATURE + _COPIED_BLOCK,
+    "catalogue/.context/module-context.md": _CARD.format(name="catalogue", title="Book"),
+    "catalogue/book.py": "class Book:\n    def price(self) -> int:\n        return 0\n\n" + _TOTAL_SIGNATURE + _COPIED_BLOCK,
 }
 
 
@@ -249,6 +269,10 @@ with description("the tools a project chooses for its code measures") as self:
             limits = [self.chosen.limit(measure) for measure in (MODULES_IMPORTING, LONGEST_FILE_LINES, LEAST_MAINTAINABILITY, AVERAGE_CLASS_COMPLEXITY)]
             expect(limits).to(equal([40, 800, 20, 15]))
 
+        with it("should count the blocks of code a module repeats from another file with the practice's own reader, in every language, and hold a module to none"):
+            chosen = [self.chosen.tool_name(COPIED_CODE_BLOCKS, language) for language in ("python", "typescript", "javascript")]
+            expect([*chosen, self.chosen.limit(COPIED_CODE_BLOCKS)]).to(equal(["reader", "reader", "reader", 0]))
+
         with it("should take in JavaScript each measure lizard gives, as it does in TypeScript"):
             chosen = [self.chosen.tool_name(measure, "javascript") for measure in (PATHS_THROUGH, READABILITY_SCORE, TOTAL_COMPLEXITY)]
             expect(chosen).to(equal(["lizard", "lizard", "lizard"]))
@@ -338,7 +362,11 @@ with description("the code measures the reader keeps of the files a read names")
             expect([IMPORT_LOOPS.value_on(shop), MODULES_IMPORTED.value_on(shop)]).to(equal([0, 0]))
 
         with it("should keep no measure the project says is not measured"):
-            expect(_node(self.fixture, "Module", "shop").has_fact("copied_code_blocks")).to(be_false)
+            fixture = measured(practice_from_files({
+                ".context/config.json": '{"code_measures": {"tools": {"copied_code_blocks": {"python": "not measured"}}}}',
+                **_SHOP_CARD, "shop/cart.py": _CART,
+            }), _STAND_INS)
+            expect(_node(fixture, "Module", "shop").has_fact("copied_code_blocks")).to(be_false)
 
         with it("should measure no spec"):
             spec_functions = [node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.source.file == "shop/cart_spec.py"]
@@ -479,6 +507,29 @@ with description("a module's average class complexity") as self:
             expect(_kept(fixture, "Module", "shop", ["average_class_complexity"])).to(equal({"average_class_complexity": round(sum(totals) / 2, 2)}))
 
 
+with description("the blocks of code a module repeats from another file") as self:
+    with context("with a block of six lines, over fifty tokens, written in a file of each of two modules"):
+        with before.all:
+            self.fixture = measured(practice_from_files(_COPIED_ACROSS_MODULES), _READER_ALONE)
+
+        with it("should count the block once on each module"):
+            counted = [_kept(self.fixture, "Module", name, ["copied_code_blocks"]) for name in ("shop", "catalogue")]
+            expect(counted).to(equal([{"copied_code_blocks": 1}, {"copied_code_blocks": 1}]))
+
+        with it("should keep on the module where the block is and where its copy is"):
+            expect(_node(self.fixture, "Module", "shop").get_fact("copied_code_blocks_file")).to(equal("shop/cart.py lines 2-8, also in catalogue/book.py lines 5-11"))
+
+    with context("with the block written once, and called from the other module"):
+        with it("should count no block"):
+            fixture = measured(practice_from_files({**_COPIED_ACROSS_MODULES, "catalogue/book.py": "class Book:\n    def price(self) -> int:\n        return 0\n"}), _READER_ALONE)
+            expect(_kept(fixture, "Module", "shop", ["copied_code_blocks"])).to(equal({"copied_code_blocks": 0}))
+
+    with context("with a copy shorter than five lines"):
+        with it("should count no block"):
+            short = {**_COPIED_ACROSS_MODULES, "catalogue/book.py": "class Book:\n" + _TOTAL_SIGNATURE + "".join(_COPIED_BLOCK.splitlines(keepends=True)[:3]) + "        return 0\n"}
+            expect(_kept(measured(practice_from_files(short), _READER_ALONE), "Module", "catalogue", ["copied_code_blocks"])).to(equal({"copied_code_blocks": 0}))
+
+
 with description("a measuring tool asked for a measure") as self:
     with context("that it does not take"):
         with it("should refuse, naming the tool, the measure and the measures it takes"):
@@ -564,6 +615,10 @@ with description("a limit on a code measure") as self:
             hits = _module_hits_with("limit-average-class-complexity", {"average_class_complexity": 15.5})
             expect(hits).to(contain(contain("Module 'shop' has classes whose total complexity averages 15.5 (the paths through all a class's methods, added up), over the limit of 15.")))
 
+        with it("should report a copied block over the limit, naming where it is and where its copy is"):
+            hits = _module_hits_with("limit-copied-code-blocks", {"copied_code_blocks": 1, "copied_code_blocks_file": "shop/cart.py lines 2-8, also in catalogue/book.py lines 5-11"})
+            expect(hits).to(contain(contain("Module 'shop' has 1 blocks of code repeated from another file, in shop/cart.py lines 2-8, also in catalogue/book.py lines 5-11, over the limit of 0.")))
+
         with it("should report more modules importing it than the limit"):
             expect(_module_hits_with("limit-modules-importing", {"modules_importing": 41})).to(contain(contain("Module 'shop' has 41 modules that import it, over the limit of 40.")))
 
@@ -603,3 +658,6 @@ with description("a limit on a code measure") as self:
 
         with it("should report a module more modules import than its project's limit, and pass the repaired one"):
             measured_module_example_pair("limit-modules-importing", _READER_ALONE).check()
+
+        with it("should report a module that repeats a block of code from another module's file, and pass the repaired one"):
+            measured_module_example_pair("limit-copied-code-blocks", _READER_ALONE).check()

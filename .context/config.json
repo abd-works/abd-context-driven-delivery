@@ -70,9 +70,9 @@
         "javascript": "reader"
       },
       "copied_code_blocks": {
-        "python": "not measured",
-        "typescript": "not measured",
-        "javascript": "not measured"
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
       },
       "abstractness": {
         "python": "reader",
@@ -99,7 +99,8 @@
       "modules_importing": 40,
       "longest_file_lines": 800,
       "least_maintainability": 20,
-      "average_class_complexity": 15
+      "average_class_complexity": 15,
+      "copied_code_blocks": 0
     }
   },
   "code_reach": {

@@ -23,7 +23,7 @@ _CODE_ONLY = (
     "limit-paths-through-a-function", "keep-functions-readable", "limit-function-lines",
     "limit-class-complexity", "limit-class-methods", "keep-class-methods-sharing-data", "limit-class-coupling",
     "limit-class-response", "limit-module-file-lines", "keep-module-files-maintainable", "limit-average-class-complexity",
-    "limit-modules-importing",
+    "limit-modules-importing", "limit-copied-code-blocks",
 )
 # The rules about use the practice's document states at the model fidelity, which judge a class at either fidelity.
 _USE = (

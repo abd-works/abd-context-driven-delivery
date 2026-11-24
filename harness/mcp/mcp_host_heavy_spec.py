@@ -635,6 +635,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with context("that is installed again from another checkout"):
             with before.each:
                 self.written = self.config.read_text(encoding="utf-8")
+                (self.root / "other").mkdir(exist_ok=True)
                 again = McpInstallation.into(InstallTarget(IdeLayout("Claude"), self.root / "other" / ".claude"), RepositoryToolsets(self.root / "other"))
                 again.is_temporary = False
                 for tool in SampleMcpOps().tools.values():

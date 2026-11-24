@@ -34,6 +34,9 @@ from cdd_guidance.practices.clean_engineering.measures.examples.code_measures_ex
 from harness.graph.saved_graph import SavedGraph
 from story_test import and_, given, scenario, story, then, when
 
+# Seed: a config that writes `not measured` for copied code blocks in Python.
+NOT_MEASURING_COPIES = {".context/config.json": '{"code_measures": {"tools": {"copied_code_blocks": {"python": "not measured"}}}}'}
+
 # Epic: Map Work Into Knowledge Graph
 # Sub-epic: Check Clean Engineering Code Through The Graph
 # Map: ../../../../.context/story-map.md#ssystem-knowledge-graph----record-code-metrics-as-node-facts
@@ -111,7 +114,7 @@ with story("Record Code Metrics As Node Facts"):
             expect(self.reported[0]).to(contain("Fix: install lizard, the tool .context/config.json names for this measure, with: pip install", 'pip install -e ".[measures]"'))
     with scenario("Leave out a measure the project says is not measured"):
         with given("the shop project's config writes `not measured` for copied code blocks in Python"):
-            self.shop = shop_project(files={CART_FILE: CART, **SHOP_CARD})  # the shipped table writes it
+            self.shop = shop_project(config=NOT_MEASURING_COPIES, files={CART_FILE: CART, **SHOP_CARD})
         with when("the code measures of `shop/cart.py` are taken"):
             self.shop.practice.reading.keep_code_measures(code_files(self.shop))
         with then("the node of the module shop holds no copied_code_blocks"):

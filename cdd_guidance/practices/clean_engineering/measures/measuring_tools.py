@@ -21,6 +21,7 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     ABSTRACTNESS,
     AVERAGE_CLASS_COMPLEXITY,
     CLASSES_DEPENDED_ON,
+    COPIED_CODE_BLOCKS,
     INSTABILITY,
     LEAST_MAINTAINABILITY,
     LONGEST_FILE_LINES,
@@ -34,6 +35,8 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     UNSHARED_METHOD_GROUPS,
     CodeMeasure,
 )
+from cdd_guidance.practices.clean_engineering.measures.copied_blocks import CopiedBlocks
+from cdd_guidance.practices.source_code import CODE_LANGUAGES
 from cdd_guidance.practices.clean_engineering.measures.read_facts import IMPORTED_MODULES_FACT, IMPORTING_MODULES_FACT, is_under
 
 if TYPE_CHECKING:
@@ -208,18 +211,22 @@ class RadonTool(MeasuringTool):
 
 class ReaderTool(MeasuringTool):
     """The practice's own reading of the code: the measures counted from the graph's nodes and edges that no fact
-    keeps yet, and the groups of a Python class's methods that share no data, read from the class's own text."""
+    keeps yet, the groups of a Python class's methods that share no data, read from the class's own text, and the
+    blocks of code a module repeats from another file, read from the text of every production file the graph holds."""
 
     name = READER
 
     def __init__(self) -> None:
         super().__init__()
+        # Every production file's lines, read when a module's copied blocks are first asked for, once for this taking.
+        self._copied: CopiedBlocks | None = None
         self._takes = {
             CLASSES_DEPENDED_ON.name: self._classes_depended_on,
             METHODS_SET_OFF.name: self._methods_set_off,
             UNSHARED_METHOD_GROUPS.name: self._unshared_method_groups,
             MODULES_IMPORTING.name: lambda measured: len(self._importing(measured)),
             AVERAGE_CLASS_COMPLEXITY.name: self._average_class_complexity,
+            COPIED_CODE_BLOCKS.name: self._copied_code_blocks,
             ABSTRACTNESS.name: self._abstractness,
             INSTABILITY.name: self._instability,
         }
@@ -272,6 +279,24 @@ class ReaderTool(MeasuringTool):
             node for node in measured.reading.in_graph.nodes("OoadClass")
             if is_under(node.source.file, folder) and not any(is_under(node.source.file, inner) for inner in nested) and not measured.reading.test_code.is_test_code(node.source.file)
         ]
+
+    def _copied_code_blocks(self, measured: MeasuredNode) -> int:
+        """The blocks of code the module's files repeat from another file, compared with every production file the
+        graph holds, since a copy shows only when files are compared; the module keeps where the first is."""
+        root = Path(measured.reading.in_graph.source_root).resolve()
+        if self._copied is None:
+            self._copied = CopiedBlocks(self._production_files(measured.reading, root))
+        named = [file.resolve().relative_to(root).as_posix() for file in measured.files if root in file.resolve().parents]
+        blocks = [block for name in named for block in self._copied.of(name)]
+        if blocks:
+            measured.node.set_fact(COPIED_CODE_BLOCKS.file_fact, blocks[0].said)
+        return len(blocks)
+
+    def _production_files(self, reading: "MeasuredReading", root: Path) -> dict[str, Path]:
+        """Each production code file the graph read a function or a class from, by its path from the source root."""
+        suffixes = {suffix for language in CODE_LANGUAGES for suffix in language.suffixes}
+        named = {node.source.file for kind in ("OoadClass", "Operation") for node in reading.in_graph.nodes(kind) if node.source.file}
+        return {name: root / name for name in sorted(named) if Path(name).suffix in suffixes and not reading.test_code.is_test_code(name)}
 
     def _abstractness(self, measured: MeasuredNode) -> float | None:
         """The share of the module's classes that are abstract."""

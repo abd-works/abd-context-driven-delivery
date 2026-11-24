@@ -46,6 +46,7 @@ module:
     - keep-module-files-maintainable
     - limit-average-class-complexity
     - limit-modules-importing
+    - limit-copied-code-blocks
 
 package:
   fidelity: modules

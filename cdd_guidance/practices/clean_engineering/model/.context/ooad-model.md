@@ -1287,7 +1287,7 @@ The tool a project chose for each measure in each language, and the limit of eac
 
 ## MeasuringTool
 
-One tool behind one question (`measures/measuring_tools.py`): this measure, of this node. *LizardTool* takes a function's paths and readability score, a class's total complexity, and the lines of code of a module's longest file; *RadonTool* takes the maintainability index of a module's least maintainable Python file; *ReaderTool* counts from the graph's nodes and edges what no fact keeps yet (the classes a class depends on, the methods one call into it can set off, the modules that import a module, the average total complexity of a module's classes), and the groups of a Python class's methods that share no data (*MethodGroups*). No tool repeats a fact the reader already keeps.
+One tool behind one question (`measures/measuring_tools.py`): this measure, of this node. *LizardTool* takes a function's paths and readability score, a class's total complexity, and the lines of code of a module's longest file; *RadonTool* takes the maintainability index of a module's least maintainable Python file; *ReaderTool* counts from the graph's nodes and edges what no fact keeps yet (the classes a class depends on, the methods one call into it can set off, the modules that import a module, the average total complexity of a module's classes, and a module's copied blocks through *CopiedBlocks*), and the groups of a Python class's methods that share no data (*MethodGroups*). No tool repeats a fact the reader already keeps.
 
 ------
 + name: str
@@ -1320,7 +1320,7 @@ The code measures the reader keeps of the files a read names, such as the files 
 
 ## CodeMeasureLimit : ProductionCodeRule
 
-One measure held to its limit on the nodes that carry it (`rules/code_measure_limits.py`): `limit-paths-through-a-function`, `keep-functions-readable`, `limit-function-lines`, `limit-class-complexity`, `limit-class-methods`, `keep-class-methods-sharing-data`, `limit-class-coupling`, `limit-class-response`; and on a module (*ModuleMeasureLimit*), `limit-module-file-lines`, `keep-module-files-maintainable`, `limit-average-class-complexity`, `limit-modules-importing`.
+One measure held to its limit on the nodes that carry it (`rules/code_measure_limits.py`): `limit-paths-through-a-function`, `keep-functions-readable`, `limit-function-lines`, `limit-class-complexity`, `limit-class-methods`, `keep-class-methods-sharing-data`, `limit-class-coupling`, `limit-class-response`; and on a module (*ModuleMeasureLimit*), `limit-module-file-lines`, `keep-module-files-maintainable`, `limit-average-class-complexity`, `limit-modules-importing`, `limit-copied-code-blocks`.
 
 ------
 + measure: CodeMeasure

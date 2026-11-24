@@ -97,7 +97,7 @@ with description("the metrics group of a node in the explorer tree") as self:
                 "groups of methods in a class that share no data with one another (lack of cohesion): 2, limit 1, past the limit",
             ]))
 
-        with it("should list, under a module, its import loops, the modules it imports with no limit, then the modules that import it, its longest file, its least maintainable file and its average class complexity, each with its limit"):
+        with it("should list, under a module, its import loops, the modules it imports with no limit, then the modules that import it, its longest file, its least maintainable file, its average class complexity and its copied blocks, each with its limit"):
             expect(_group_under(self.graph, _node(self.fixture, "Module", "shop"))).to(equal([
                 "loops of modules importing one another that a module is part of: 0, limit 0",
                 "modules a module imports (outgoing coupling): 0",
@@ -105,6 +105,7 @@ with description("the metrics group of a node in the explorer tree") as self:
                 "lines of code in a module's longest file: 120, limit 800",
                 "maintainability index of a module's least maintainable file (0 to 100; higher is easier to change): 12, limit 20 or higher, past the limit",
                 "average total complexity of a module's classes: 40, limit 15, past the limit",
+                "blocks of code a module repeats from another file: 0, limit 0",
             ]))
 
         with it("should mark no metric that has no limit as past it"):

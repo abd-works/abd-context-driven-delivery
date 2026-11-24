@@ -103,6 +103,9 @@ with description("the code measures the real tools take") as self:
         with it("should report a module more modules import than its project's limit, and pass the repaired one"):
             measured_module_example_pair("limit-modules-importing").check()
 
+        with it("should report a module that repeats a block of code from another module's file, and pass the repaired one"):
+            measured_module_example_pair("limit-copied-code-blocks").check()
+
     with context("of Python code"):
         with before.all:
             source = example_asset_paths(_PATHS)[0].read_text(encoding="utf-8")

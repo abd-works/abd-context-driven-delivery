@@ -58,7 +58,7 @@ with story("Record Module Measures As Node Facts"):
             self.shop.practice.reading.keep_code_measures(code_files(self.shop))
             # Graph.explorer_branch -> GraphReading.metrics_of
             self.shown = metrics_under(self.shop, "Module", "shop")
-        with then("the metrics group under the module shop shows its import loops with the limit 0, the modules it imports with its value and no limit, then the modules that import it, its longest file, its least maintainable file and its average class complexity, each with its limit"):
+        with then("the metrics group under the module shop shows its import loops with the limit 0, the modules it imports with its value and no limit, then the modules that import it, its longest file, its least maintainable file, its average class complexity and its copied blocks, each with its limit"):
             expect(self.shown).to(equal([
                 "loops of modules importing one another that a module is part of: 0, limit 0",
                 "modules a module imports (outgoing coupling): 0",
@@ -66,6 +66,7 @@ with story("Record Module Measures As Node Facts"):
                 "lines of code in a module's longest file: 120, limit 800",
                 "maintainability index of a module's least maintainable file (0 to 100; higher is easier to change): 65, limit 20 or higher",
                 "average total complexity of a module's classes: 40, limit 15, past the limit",
+                "blocks of code a module repeats from another file: 0, limit 0",
             ]))
         with and_("the measure with no limit is not marked as past a limit"):
             unlimited = [metric for metric in self.shop.practice.reading.metrics_of(node_of(self.shop, "Module", "shop")) if metric.limit is None]
