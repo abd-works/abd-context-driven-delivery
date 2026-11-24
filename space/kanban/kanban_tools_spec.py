@@ -33,6 +33,7 @@ from harness.graph.saved_graph import SavedGraph, SavedNode  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
 from space.kanban.ticket import NoReportToAcceptInError, Ticket  # noqa: E402
 from space.session.session import MainStaysOpenError  # noqa: E402
+from space.session.practices.practice_session_output import LastFormatLeftOut  # noqa: E402
 from space.kanban.board import FolderOutsideRepositoryError, NotAStageError  # noqa: E402
 from space.kanban.ticket_tree import NotAChildError, ParentMovesWithChildrenError  # noqa: E402
 from space.kanban.ticket_choices import FormatNotOfferedError as TicketFormatNotOfferedError  # noqa: E402
@@ -815,7 +816,7 @@ with description("the board tools") as self:
             # (S) Person --> View Fidelity Files
             with it("should return no text for a file that is gone, such as one deleted since the board listed it"):
                 opened = self.project.call("session.read_file", session=session_file_of("pet-visits"), path="docs/.context/gone.md")
-                expect(opened).to(equal({"path": "docs/.context/gone.md", "text": "", "language": "markdown"}))
+                expect((opened["path"], opened["text"], opened["version"], opened["language"])).to(equal(("docs/.context/gone.md", "", "", "markdown")))
 
             # A practice root is a folder of the project, which a page may name by its whole path.
             with it("should return the text of a file named by its whole path under a practice root"):
@@ -1057,10 +1058,11 @@ with description("the board tools") as self:
                         sign_up(project)
                         return project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="markdown", is_chosen=False)
 
-                    self.markdown_off = ProjectTools.answer_of(markdown_off)
+                    self.markdown_off = lambda: ProjectTools.answer_of(markdown_off)
 
-                with it("should show no chip chosen"):
-                    expect([chip["label"] for chip in self.markdown_off if chip["is_chosen"]]).to(equal([]))
+                # widget-13, answered 2026-11-23: a fidelity keeps at least one format chosen.
+                with it("should refuse it, markdown being the only format chosen"):
+                    expect(self.markdown_off).to(raise_error(LastFormatLeftOut, contain("markdown is the only format chosen")))
 
             with it("should refuse a chip label the story map does not offer, naming the labels it offers"):
                 expect(lambda: self.project.call("ticket.choose_formats", ticket="sign-up", fidelities=["stories-story-map"], label="drawio", is_chosen=True)).to(
