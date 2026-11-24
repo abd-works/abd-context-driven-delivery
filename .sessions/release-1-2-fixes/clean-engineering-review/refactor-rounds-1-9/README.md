@@ -1,6 +1,6 @@
-# Relationship review, checked against the code
+# Round 4: relationship review, checked against the code (2026-11-07)
 
-Five agents read the code behind every runtime relationship and every production class, area by area, and confirmed or overturned the first rule-based list in `../repo-model-disconnected.md`. Each line gives the verdict, `file:line` evidence, and for a W the owner, the relationship it should be, and the redesign.
+Five agents read the code behind every runtime relationship and every production class, area by area, and confirmed or overturned the first rule-based list in [repo-model-disconnected.md](repo-model-disconnected.md). Each line gives the verdict, `file:line` evidence, and for a W the owner, the relationship it should be, and the redesign.
 
 - **R** — right as a runtime dependency: two independent objects, one asks the other to act.
 - **W** — wrong shape: the caller builds the other per call from strings or dicts, re-reads what another object holds, or passes an owner's data into a helper; it should be a part or a held collaborator.
@@ -37,32 +37,6 @@ Five agents read the code behind every runtime relationship and every production
 - Two example toolsets in `tools/sub_agent/fixtures.py` are installed as real toolsets (the installer skips `fixtures/` folders, not files).
 - `cdd_guidance/patterns/source_text.py` duplicates `SourceText` in `clean_engineering/model/operation_metrics.py`.
 
-## Progress (updated 2026-11-07, branch and main at 4c6ebb8d)
+## What happened next
 
-Every pass below ran the quick suite (3,328 examples at the last pass, no failures) and the 40 story tests before it was pushed. The heavy specs run once, together, at the end (rule `cdd_guidance/rules/test-timing.md`); the last full heavy run, on the guidance merge, passed.
-
-| Area | Status |
-|---|---|
-| D — the 19 classes with no use | Done. Deleted, or kept with the use the review missed (design_canvas classes and `LernCanvasFixtures` are used by the UX canvas guidance; `OutputFolder` by the channel features; `MiroStoryModel` finished instead of removed) |
-| Option A — one graph and one practice object per session | Done. `GraphPractice`, `GraphPractices`, `PracticeGraph` deleted; `node.practice`, `node.fidelity`, `node.rules`; explicit `graph.refresh(paths)` |
-| Package moves | Done. health → diagnostics, installer → installation (mcp and hooks register with it), name → annotations, chat → harness, sub_agent and the toolsets → `tools` as one module, file_manager → space/session |
-| harness core (annotations, process, markdown, agent_tools) | Done |
-| installation, hooks, mcp | Done |
-| harness upper (diagnostics, catalog, design_canvas, chat) | Done |
-| guidance, guidance_actions | Done; each fidelity answers for its own text, `fidelity.actions` |
-| space/repo, tools | Done |
-| space/session | Done |
-| actions, patterns, context setup, builders | Done |
-| Practices round 1 (formats on one domain model) | Done |
-| Practices round 2: Clean Engineering + BDD, DDD + agent BDD + overlays | Done |
-| Practices round 2: Stories + UX | Done |
-| DDD draw.io on Clean Engineering's diagram classes | Done; about 850 lines of DDD layout code deleted |
-| space/kanban | Agent running, on top of the chat-defects branch |
-| Follow-up fixes (recipes read their held fidelity, one format lookup, sketch lenses held, toolset probes, clean-ups) | Agent running |
-
-What each agent skipped, and why, is in `.sessions/ensure-domain-orientation-refactor/pending-skipped-reshaping.md`; everything there is either assigned to a running agent or listed below.
-
-**Still open after the running agents:** the old `_skip_inactive_fidelity` and `_activate(stage=...)` hooks in `ddd.py` and `stories.py`; the format as a `Format` object (read as a string by practices and the board); one Clean Engineering companion per session (needs a design). **Last:** the heavy specs in one batch, reinstall and catalog regeneration, a final validation round, and the closing report.
-
-**Round 5 (cross-file validation, 2026-11-08):** see [round5-report.md](round5-report.md): 170 findings, 21 high. Nothing fixed yet.
-- [Trend across rounds 1–5](trend-rounds-1-5.md): findings and severity per round.
+What was fixed after this review, and every round after it, is in the review's index, [../README.md](../README.md), in date order.

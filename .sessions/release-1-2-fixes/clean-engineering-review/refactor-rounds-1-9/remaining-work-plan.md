@@ -2,7 +2,7 @@
 
 The fix-and-revalidate loop on `ensure-domain-orientation-refactor` ended after round 9 (2026-11-09), at commit a4440c7f. This plan records what is unfinished and how the code metrics can reach their targets without changing the intended architecture.
 
-The numbers come from `measure_revision.py` on a4440c7f. [code-metrics-trend.md](code-metrics-trend.md) has the full tables, and [trend-rounds-1-5.md](trend-rounds-1-5.md) has the AI findings.
+The numbers come from `measure_revision.py` on a4440c7f. [code-metrics-trend.md](code-metrics-trend.md) has the full tables, and [trend-rounds-1-9.md](trend-rounds-1-9.md) has the AI findings.
 
 ## Where the loop ended
 

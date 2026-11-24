@@ -11,4 +11,4 @@ On the merge, the metrics gate against 75f6825c failed on one measure: the avera
 
 **Decision.** Accept the rise. The added complexity is the behaviour the defects asked for, and it sits on its owner, `TicketCheckout` (`save_work`, `write_handoff`, `return_to_default_branch`), not on `Ticket`. Taking it back out would undo the fixes.
 
-**Consequence.** The next change to `space/kanban` should bring the average back below 16.03, for example by moving the remaining checkout branching in `TicketCheckout.save_work` into the `Branch` it acts on. See `.context/repo-review/remaining-work-plan.md`.
+**Consequence.** The next change to `space/kanban` should bring the average back below 16.03, for example by moving the remaining checkout branching in `TicketCheckout.save_work` into the `Branch` it acts on. See `.sessions/release-1-2-fixes/clean-engineering-review/refactor-rounds-1-9/remaining-work-plan.md`.

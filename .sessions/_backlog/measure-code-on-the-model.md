@@ -50,7 +50,7 @@ From the Clean Engineering metrics backlog:
 >
 > **Starting points.**
 > - The limits the removed rule used: a function over 10 paths, a readability score over 15, over 50 lines, or over 5 parameters; a class over 100 total complexity or 30 methods; a class that depends on more classes than before; a group of methods sharing no data with the rest of their class.
-> - `.context/repo-review/metrics_gate.py` and `.context/repo-review/code-metrics-trend.md` already measure these with radon, lizard, complexipy, cohesion and grimp. They need a metrics venv and Node tools, which a practice rule would have to install or check for.
+> - `.sessions/release-1-2-fixes/clean-engineering-review/scripts/metrics_gate.py` and `.sessions/release-1-2-fixes/clean-engineering-review/refactor-rounds-1-9/code-metrics-trend.md` already measure these with radon, lizard, complexipy, cohesion and grimp. They need a metrics venv and Node tools, which a practice rule would have to install or check for.
 > - The rules should report a metric in plain English, never by its abbreviation, and colour a trend as getting better or worse.
 >
 > **Open questions.** Does a rule fail on any regression against the base commit, as the gate did, or only past a fixed limit? Do the metrics run inside Validate's graph rules, or as a separate step that Validate reads?
@@ -65,14 +65,14 @@ Validate at Clean Engineering's modules, model and code fidelities checks what o
 
 - Each function, class and module node in the knowledge graph carries its measures as facts, so a measure is read like any other fact on the model.
 - The measures the removed gate used: paths through a function (cyclomatic complexity), readability score (cognitive complexity), lines, parameters; a class's total complexity, method count and the classes it depends on; a group of methods sharing no data with the rest of their class (cohesion).
-- Measured, as built, with lizard and the practice's own reader. The older scripts `.context/repo-review/metrics_gate.py` and `code-metrics-trend.md` used lizard, complexipy, cohesion and grimp. They need a metrics venv and Node tools, which the practice would have to install or check for.
+- Measured, as built, with lizard and the practice's own reader. The older scripts `.sessions/release-1-2-fixes/clean-engineering-review/scripts/metrics_gate.py` and `code-metrics-trend.md` used lizard, complexipy, cohesion and grimp. They need a metrics venv and Node tools, which the practice would have to install or check for.
 
 #### Story: Record Module Measures As Node Facts
 
 Requested on 2026-11-22: the item names functions, classes and modules, and listed no measure for a module. The exploratory testing of release 1.2 found that defects gather by module (see [code-metrics.md](../release-1-2-fixes/exploratory-testing/analysis/code-metrics.md)), so a module carries its own measures.
 
 - Each module node in the knowledge graph carries its measures as facts, beside the facts of its classes and functions.
-- Measures the older script `.context/model/repo-review/measure_revision.py` already took, which were not carried into this item:
+- Measures the older script `.sessions/release-1-2-fixes/clean-engineering-review/scripts/measure_revision.py` already took, which were not carried into this item:
   - the modules that import this one, and the modules it imports (grimp for Python, dependency-cruiser for TypeScript; the graph already holds the import edges, so the two counts can be read from it)
   - import loops, where modules import each other in a circle (networkx, from the import data)
   - copied code, as blocks repeated across files (jscpd) and as function bodies of the same shape under different names (the script's own count; an operation already keeps a fingerprint of its body)

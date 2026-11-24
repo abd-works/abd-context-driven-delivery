@@ -1,6 +1,6 @@
 # Shortcomings in the CDD guidance behind release 1.2's defects and rule findings (2026-11-22)
 
-Read-only research on branch `release-1-2-fixes`. Sources: `exploratory-testing/defect-themes-by-wave.md` (146 defects, 12 tags), `violation-history.jsonl` (2,744 lines), the 96 files in `validation-reports/`, `design-proposals.md`, `final-report.md`, `round-3-report.md`, the practice documents under `cdd_guidance/practices/`, the action documents under `cdd_guidance/actions/`, the agents under `cdd_guidance/agents/`, the always-on rules, `harness/guidance/guidance.py`, and `git log -S` for when each rule's text arrived. The pattern `oss_portal_domain_driven` is left out.
+Read-only research on branch `release-1-2-fixes`. Sources: `exploratory-testing/defect-themes-by-wave.md` (146 defects, 12 tags), `violation-history.jsonl` (2,744 lines), the 96 files in `validation-reports/`, `clean-engineering-review/judge-round/design-proposals.md`, `final-report.md`, `round-3-report.md`, the practice documents under `cdd_guidance/practices/`, the action documents under `cdd_guidance/actions/`, the agents under `cdd_guidance/agents/`, the always-on rules, `harness/guidance/guidance.py`, and `git log -S` for when each rule's text arrived. The pattern `oss_portal_domain_driven` is left out.
 
 Defect counts by tag are the defects of every theme that carries the tag, so a theme with several tags is counted under each and the tag counts add up to more than 146.
 
@@ -122,7 +122,7 @@ Counted from each practice document's rule names against the `slug` values in it
 | Does any practice own "every declared format has a tested trip"? | No. | Search of all practice, action, agent and builder documents. |
 | Does the implementation agent's brief demand heavy or server-tier tests? | No. It asks for red-green-refactor, "relevant automated tests", and "passing test suites". The TDD supplement reaches the agent through generate, not through the brief. | `agents/implementation.md`. |
 | Does validate check that tests exist? | Only `unit-tier-fakes-every-boundary`, on the tests that are there. | `tdd/rules/__init__.py`. |
-| Is a judged pass part of the normal flow? | Validate asks for a judgment per run, but the wide judged pass over whole modules ran once, at the end, and produced 1,092 findings and 25 design proposals. | `validation-reports/judgment-*.md`, `design-proposals.md`. |
+| Is a judged pass part of the normal flow? | Validate asks for a judgment per run, but the wide judged pass over whole modules ran once, at the end, and produced 1,092 findings and 25 design proposals. | `clean-engineering-review/judge-round/judgment-*.md`, `clean-engineering-review/judge-round/design-proposals.md`. |
 | Do the guidance documents agree with each other on testing? | No. Two testing procedures exist (`tdd.md` and the uninstalled `testing-approach.md`), and two references point to a section that is not there. | `stories.md` acceptance tests Guidance; `bdd.md` development Guidance. |
 
 ## What could not be established

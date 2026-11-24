@@ -28,7 +28,7 @@ From the codebase-wide checker backlog ("Checker that reads the whole codebase f
 >
 > ## Other cross-file checks the manual passes kept finding
 >
-> Second object models (a dict, `*_name` copy or helper class that copies an owner's data), the same behaviour written in several files, second registries of practices, actions or stages, global or ambient state, state passed as parameters the object already holds, legacy names and dead code, and swallowed failures. See `.sessions/ensure-domain-orientation-refactor/validation-reports/cross-file-round3.md` and `cross-file-round4.md` for what each looks like, and `.context/repo-runtime.md` and `.context/repo-model-disconnected.md` for the first full run of the relationship checks.
+> Second object models (a dict, `*_name` copy or helper class that copies an owner's data), the same behaviour written in several files, second registries of practices, actions or stages, global or ambient state, state passed as parameters the object already holds, legacy names and dead code, and swallowed failures. See `.sessions/ensure-domain-orientation-refactor/validation-reports/cross-file-round3.md` and `cross-file-round4.md` for what each looks like, and `.context/model/repo-runtime.md` and `.sessions/release-1-2-fixes/clean-engineering-review/refactor-rounds-1-9/repo-model-disconnected.md` for the first full run of the relationship checks.
 
 ## Epic: Map Work Into Knowledge Graph
 
@@ -63,13 +63,13 @@ Validate at Clean Engineering's modules, model and code fidelities checks what o
 
 - Validate judges one folder at a time today; this pass judges the whole codebase, as AI-judge rules where the graph cannot answer.
 - What it looks for: second object models (a dict, `*_name` copy or helper class that copies an owner's data), the same behaviour written in several files, second registries of practices, actions or stages, global or ambient state, state passed as parameters the object already holds, legacy names and dead code, and swallowed failures.
-- Examples of each: `.sessions/ensure-domain-orientation-refactor/validation-reports/cross-file-round3.md` and `cross-file-round4.md`; the first full run of the relationship checks: `.context/repo-runtime.md` and `.context/repo-model-disconnected.md`.
+- Examples of each: `.sessions/ensure-domain-orientation-refactor/validation-reports/cross-file-round3.md` and `cross-file-round4.md`; the first full run of the relationship checks: `.context/model/repo-runtime.md` and `.sessions/release-1-2-fixes/clean-engineering-review/refactor-rounds-1-9/repo-model-disconnected.md`.
 
 ## Implementation plan (2026-11-22)
 
 ### What it has to catch: what the judges found by hand
 
-The seven design judgments of release 1.2 (`.sessions/release-1-2-fixes/validation-reports/judgment-*.md`) read every production file against the Clean Engineering rules, under four themes: module boundaries, the same work in different shapes, resource orientation, and domain orientation. Their most frequent findings, and how this item takes each over so the next validate finds it without a judge reading every file:
+The seven design judgments of release 1.2 (`.sessions/release-1-2-fixes/clean-engineering-review/judge-round/judgment-*.md`) read every production file against the Clean Engineering rules, under four themes: module boundaries, the same work in different shapes, resource orientation, and domain orientation. Their most frequent findings, and how this item takes each over so the next validate finds it without a judge reading every file:
 
 | What the judges found | How often | Checked by the graph | Judged on the graph's candidates |
 |---|---|---|---|
@@ -89,7 +89,7 @@ The checked rules raise violations. The judged rules raise candidates, which the
 0. **A graph that can be counted on.** Every class-to-class edge from code (inheritance, composition, aggregation, association, dependency), with how a dependency is reached: created per call, created in the constructor, looked up by name, held, or handed in. Calls joined to the operation they really reach, not to every operation of that name (defect e1e1c23c67a2). Until one thing is one node, these rules run on the code fidelity only, so each class is counted once.
 1. **One shared list of the ways a project reaches code**, moved out of TDD's `called_by_name.py` so the coverage rule and the unused rules read the same list, and named for each project in `.context/config.json`.
 2. **The rules**, each as scenario, then a failing and a repaired example, then the rule: unused class and operation, dependency that should be owned, disconnected class, one-class package, duplicated behaviour, state passed down, second object model, two names for one concept, and the judged pass over what the graph cannot find.
-3. **Calibration on this repository:** run every rule and compare with the seven judgment reports and `.context/model/repo-model-disconnected.md`. Each finding the judges made by hand that no rule lists means the graph is still blind there, and becomes a defect.
+3. **Calibration on this repository:** run every rule and compare with the seven judgment reports and `.sessions/release-1-2-fixes/clean-engineering-review/refactor-rounds-1-9/repo-model-disconnected.md`. Each finding the judges made by hand that no rule lists means the graph is still blind there, and becomes a defect.
 4. **Where it runs:** validate given the whole graph, at the modules, model and code fidelities. The checked rules run every time; the judged pass runs on the candidates only.
 
 ### Decided by the person on 2026-11-22

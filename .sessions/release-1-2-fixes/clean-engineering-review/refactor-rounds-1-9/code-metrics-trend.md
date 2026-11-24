@@ -1,6 +1,6 @@
 # Code metrics trend, rounds 1–9
 
-How the production code of `ensure-domain-orientation-refactor` changed from the first validation round to now, measured with standard code-measuring tools rather than judged by AI. It sits beside [trend-rounds-1-5.md](trend-rounds-1-5.md), which counts the AI-judged findings, and gives objective numbers to read those findings against.
+How the production code of `ensure-domain-orientation-refactor` changed from the first validation round to now, measured with standard code-measuring tools rather than judged by AI. It sits beside [trend-rounds-1-9.md](trend-rounds-1-9.md), which counts the AI-judged findings, and gives objective numbers to read those findings against.
 
 **How to read the tables.** Each column is the code as it stood when a round began. Next to each number:
 - 🟢 means it got **better** since the round before
@@ -258,7 +258,7 @@ The measures of classes depending on others and of unrelated jobs are worked out
 Extract the commit with `git archive <sha>` into an empty folder. Then run:
 
 ```
-python .context/repo-review/measure_revision.py <folder> --label "round N" --node-tools <folder holding jscpd, dependency-cruiser and typescript> --out roundN.json
+python .sessions/release-1-2-fixes/clean-engineering-review/scripts/measure_revision.py <folder> --label "round N" --node-tools <folder holding jscpd, dependency-cruiser and typescript> --out roundN.json
 ```
 
 Run it with a Python that has radon, lizard, complexipy, cohesion, grimp and networkx installed. The gate, `metrics_gate.py`, uses the same measurement.

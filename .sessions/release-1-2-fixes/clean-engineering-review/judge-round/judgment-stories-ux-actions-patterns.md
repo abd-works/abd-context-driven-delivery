@@ -660,7 +660,7 @@ Theme tags: [1] module boundaries, [2] the same work in different shapes, [3] re
 
 ### cdd_guidance/patterns/lern_domain_driven/practices/stories/model/claude_design/fixtures.py
 
-- fixtures.py:23 `LernCanvasFixtures` — no-legacy-api-after-refactor — grep finds the class only in its own module and `fixtures_spec.py`; `.context/model/repo-review/README.md:46` records it as kept deliberately. It still has no production caller in this worktree, so it is code its spec keeps alive; the product owner's earlier decision stands unless a caller is named. [3]
+- fixtures.py:23 `LernCanvasFixtures` — no-legacy-api-after-refactor — grep finds the class only in its own module and `fixtures_spec.py`; `.sessions/release-1-2-fixes/clean-engineering-review/refactor-rounds-1-9/README.md:46` records it as kept deliberately. It still has no production caller in this worktree, so it is code its spec keeps alive; the product owner's earlier decision stands unless a caller is named. [3]
 
 ### cdd_guidance/desktop_walk/desktop_walk.py
 
@@ -1669,7 +1669,7 @@ DrawioUxMap(UxMap)     save() and the reading of its own pages; no parse/render/
 
 **Size.** About 9 production files and 8 specs in UX; 200 to 300 lines moved, few written. Larger if Stories follows.
 
-**What could go wrong.** It is a wide mechanical change for a gain that is mostly clarity; the present shape works and an earlier review accepted "every UX format adapter subclasses the domain class it represents" (`.context/model/repo-review/practices.md:73`). The proposal does not contradict that (the map subclasses stay); it separates the adapter from them. Do it only if Stories is changed the same way, or the two practices diverge.
+**What could go wrong.** It is a wide mechanical change for a gain that is mostly clarity; the present shape works and an earlier review accepted "every UX format adapter subclasses the domain class it represents" (`.sessions/release-1-2-fixes/clean-engineering-review/refactor-rounds-1-9/practices.md:73`). The proposal does not contradict that (the map subclasses stay); it separates the adapter from them. Do it only if Stories is changed the same way, or the two practices diverge.
 
 ### U7. A node's id on a board is made once, in the whiteboard framework (cross-practice, see also A2)
 

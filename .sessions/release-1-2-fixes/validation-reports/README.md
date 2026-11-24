@@ -13,12 +13,10 @@ Each run of the Validate action writes a report named for its guidance and the t
 | `stories-story-map-*`, `stories-scenarios-*`, `stories-acceptance-tests-*` | The story map, the scenario files and the story tests, as the fix waves of exploratory testing changed them. |
 | `ux-ia-*` | The UX information architecture, 2026-11-18. |
 
-Reports newer than 2026-11-23 may appear here while robots are still working; the final report reads only those named above.
+Two runs came after the final report, on 2026-11-24 (UTC): [clean-engineering-code-20261124T010849.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261124T010849.md), the whole production code again and the latest whole-code state (2,616 violations, 1,808 of them saying lizard is not installed, and 2,920 candidates), and [clean-engineering-code-20261124T013014.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261124T013014.md), only the files of the review pass that followed it (323 violations, 101 candidates).
 
-## The judges and the measures
+The second copy of the 2026-11-21 report, `clean-engineering-code-20261121T212842_2`, was byte for byte the same as the first and is removed; [violation-history.jsonl](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\violation-history.jsonl) still names its run.
 
-| File | What it is |
-|---|---|
-| `judgment-guidance-graph.md`, `judgment-harness-apps-tools.md`, `judgment-harness-lower.md`, `judgment-kanban-repo.md`, `judgment-practices-ce-ddd-bdd.md`, `judgment-space-session.md`, `judgment-stories-ux-actions-patterns.md` | 2026-11-21. Seven judges' reading of every production file, one area each, against the Clean Engineering rules and the refactor guardrails: findings, fixes that change no design, proposed design changes, and graph findings judged noise. The proposals were merged into [design-proposals.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\design-proposals.md). |
-| [code-measures-before-and-after-judge-fixes.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\code-measures-before-and-after-judge-fixes.md) | 2026-11-22. The code measured with lizard before the judge-led reshape (`33b3839e3`) and after it (`3c77725bc`): functions and classes past each limit, import loops and coupling. |
-| [measure_checkout.py](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\measure_checkout.py) | The script that made that report: it validates one checkout's production code and counts each limit rule's violations. |
+## The judges, the measures and the rounds
+
+The judges' reports, the design proposals, the code measures of the reshape, the measuring scripts, and every review round of the refactor before this release are in one folder, indexed in date order by [clean-engineering-review/README.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\README.md).

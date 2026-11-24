@@ -57,17 +57,7 @@ Rounds 1 and 2 wrote several findings to a bullet, so their counts are ranges. T
   - This is why the round-5 fix agents write the failing spec before each fix.
 - **The graph scanners missed real cycles in round 5.** Every cycle they reported came from spec or `_examples` imports. But the metrics run ([code-metrics-trend.md](code-metrics-trend.md)) found 11 real import cycles at `d71e0b20`, closed by imports written inside functions, which the folder-level scanner could not see. The round-5 fixes removed 9 of them and fixed the scanner.
 
-## Round 5 by area
-
-| Area | Findings | High | Medium | Low |
-|---|---|---|---|---|
-| harness core | 35 | 2 | 21 | 12 |
-| harness upper | 28 | 4 | 19 | 5 |
-| space and tools | 29 | 2 | 18 | 9 |
-| actions, patterns, context setup | 25 | 6 | 10 | 9 |
-| Clean Engineering, BDD | 29 | 4 | 17 | 8 |
-| Stories, UX, DDD | 22 | 2 | 13 | 7 |
-| end-to-end test (B10, B11) | 2 | 1 | 1 | 0 |
+The round-5 counts by area are in [round5-report.md](round5-report.md).
 
 Sources:
 - `.sessions/ensure-domain-orientation-refactor/clean-engineering-validation.md` (rounds 1–2)
