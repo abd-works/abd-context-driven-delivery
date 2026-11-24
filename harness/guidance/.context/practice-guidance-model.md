@@ -554,7 +554,7 @@ checking_step: Action
 producing: tuple[Action, ...]
 	// every one but those that check (CHECKS): every action but validate
 taking_formats: tuple[Action, ...]
-	// those placed with TAKES_FORMATS: generate, render
+	// those placed with TAKES_FORMATS: generate, iterate, sketch, render, document
 needing_output: tuple[Action, ...]
 	// those that check or convert (CHECKS, CONVERTS), which wait until a fidelity has output: validate, render
 ----

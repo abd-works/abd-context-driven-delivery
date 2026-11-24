@@ -1600,6 +1600,9 @@ with description("a session's guidance selection") as self:
             with it("should name the formats chosen for an action that takes them, the story map's markdown by default"):
                 expect(self.selected.command("generate")).to(end_with(" format=markdown"))
 
+            with it("should name the same chosen formats for sketch, iterate and document as for generate"):
+                expect([self.selected.command(action).rsplit(" ", 1)[-1] for action in ("sketch", "iterate", "document")]).to(equal(["format=markdown"] * 3))
+
             with it("should name no format once none is chosen"):
                 self.session.toggle_guidance("format", "markdown")
                 expect(self.session.guidance.command("generate")).not_to(contain("format="))

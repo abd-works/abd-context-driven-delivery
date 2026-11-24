@@ -68,8 +68,10 @@ with description("the action catalogue"):
                 equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"])
             )
 
-        with it("should name generate and render as the actions that take the formats a person picks"):
-            expect([action.name for action in ACTION_CATALOGUE.taking_formats]).to(equal(["generate", "render"]))
+        with it("should name every action that writes a fidelity's files from its guidance as taking the formats a person picks"):
+            expect([action.name for action in ACTION_CATALOGUE.taking_formats]).to(
+                equal(["generate", "iterate", "sketch", "render", "document"])
+            )
 
         with it("should leave validate out of the actions that write a fidelity's files"):
             expect([action.name for action in ACTION_CATALOGUE.producing]).to(

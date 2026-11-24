@@ -11,9 +11,10 @@ from harness.annotations.class_folder import class_folder
 from harness.annotations.class_registry import ClassRegistry
 
 # What an action does on a fidelity's stage, beside its place among the stage's actions: every fidelity goes through it
-# (``STEP``, as generate and validate do), it takes the formats a person picks (``TAKES_FORMATS``, as generate and render
-# do), it checks a fidelity's files rather than writing them (``CHECKS``, as validate does), or it converts a fidelity's
-# files into other formats (``CONVERTS``, as render does). An action that checks or converts waits until there is output.
+# (``STEP``, as generate and validate do), it takes the formats a person picks (``TAKES_FORMATS``, as every action that
+# writes or converts a fidelity's files from its guidance does), it checks a fidelity's files rather than writing them
+# (``CHECKS``, as validate does), or it converts a fidelity's files into other formats (``CONVERTS``, as render does). An
+# action that checks or converts waits until there is output.
 STEP: str = "step"
 TAKES_FORMATS: str = "takes_formats"
 CHECKS: str = "checks"
@@ -256,8 +257,9 @@ class ActionCatalogue:
 
     @property
     def taking_formats(self) -> tuple[Action, ...]:
-        """The actions whose command takes the formats a person picks: generate writes a fidelity in them and render
-        converts it into them; every other action writes or reads a fidelity's files in the formats they already have."""
+        """The actions whose command takes the formats a person picks: generate, iterate, sketch and document write a
+        fidelity in them and render converts it into them, so each writes the same formats once they are picked;
+        validate reads a fidelity's files in the formats they already have, and partition indexes a source."""
         return tuple(action for action in self.on_fidelities if action.place.takes_formats)
 
     @property

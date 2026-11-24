@@ -146,7 +146,7 @@ test.describe('Send Tile Action To Chat', () => {
     await tile.getByRole('combobox', { name: 'Action' }).selectOption('sketch')
     await tile.getByRole('button', { name: /^code|^diagram|^markdown/ }).first().click()
     await tile.getByRole('button', { name: 'Run' }).click()
-    await lastReceived('/actions-sketch stories-story-map session=.sessions/checkout-flow/session.json')
+    await receivedContaining('/actions-sketch stories-story-map session=.sessions/checkout-flow/session.json format=', 1)
   })
 })
 

@@ -238,7 +238,7 @@ describe('Send Action To Stage Practices', () => {
     await page.tiles.open(spot(page, STAGE.workRequired, HEAD), true)
     page.tileActions.chooseAction(barAt(page, HEAD)!, 'sketch')
     await page.tileActions.run(barAt(page, HEAD)!)
-    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-sketch stories-story-map ddd-bounded-context ux-ia clean-engineering-modules bdd-behavior session=.sessions/billing-report/session.json' }])
+    expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-sketch stories-story-map ddd-bounded-context ux-ia clean-engineering-modules bdd-behavior session=.sessions/billing-report/session.json format=python' }])
   })
 })
 

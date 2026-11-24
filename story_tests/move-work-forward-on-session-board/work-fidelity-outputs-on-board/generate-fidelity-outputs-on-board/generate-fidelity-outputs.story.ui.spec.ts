@@ -254,7 +254,7 @@ test.describe('with a chat connected', () => {
 
       // Each command also names the ticket's session.json, because a command runs in whichever chat it is sent to.
       test('Then the chat receives the command /actions-sketch stories-story-map', async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('/actions-sketch stories-story-map session=.sessions/billing-report/session.json')
+        await expect.poll(() => receivedBy(chat)).toContain('/actions-sketch stories-story-map session=.sessions/billing-report/session.json format=markdown')
       })
 
       test.describe('the Person runs iterate on story_map', () => {
@@ -263,7 +263,7 @@ test.describe('with a chat connected', () => {
         })
 
         test('Then the chat receives the command /actions-iterate stories-story-map', async () => {
-          await expect.poll(() => receivedBy(chat)).toContain('/actions-iterate stories-story-map session=.sessions/billing-report/session.json')
+          await expect.poll(() => receivedBy(chat)).toContain('/actions-iterate stories-story-map session=.sessions/billing-report/session.json format=markdown')
         })
 
         test.describe('the Person runs document on story_map', () => {
@@ -272,7 +272,7 @@ test.describe('with a chat connected', () => {
           })
 
           test('Then the chat receives the command /actions-document stories-story-map', async () => {
-            await expect.poll(() => receivedBy(chat)).toContain('/actions-document stories-story-map session=.sessions/billing-report/session.json')
+            await expect.poll(() => receivedBy(chat)).toContain('/actions-document stories-story-map session=.sessions/billing-report/session.json format=markdown')
           })
         })
       })
@@ -311,7 +311,7 @@ test.describe('with a chat connected', () => {
 
         // The toast names the chat and the whole command, the session it runs on included.
         test('Then a toast says Sent to the chat: /actions-sketch stories-story-map', async ({ page }) => {
-          await expect(toast(page, 'Sent to Generate chat: /actions-sketch stories-story-map session=.sessions/billing-report/session.json')).toBeVisible()
+          await expect(toast(page, 'Sent to Generate chat: /actions-sketch stories-story-map session=.sessions/billing-report/session.json format=markdown')).toBeVisible()
         })
       })
     })
