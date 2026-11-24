@@ -35,7 +35,7 @@ from harness.hooks.hooks import Hook, hook
 from harness.mcp.mcp_annotations import Mcp, mcp
 from harness.mcp.mcp_server import ProjectToolsets
 from harness.agent_tools.agent_tools import AgentInstructions, ToolSetCollectionAnnotation
-from harness.agent_tools.recipe import RecipeLineFailed, RecipePlaceholders
+from harness.agent_tools.recipe import RecipeCallsItself, RecipeLineFailed, RecipePlaceholders
 from harness.agent_tools.tool_call import ToolCall
 from cdd_guidance.actions._examples.car_story.car_story import CarStory
 from harness.agent_tools._examples.super_delegation.super_delegation_demo import (
@@ -1577,3 +1577,26 @@ with description("the members of a practice's class asked which of them hold col
 
     with it("should read which members can hold them once for the class"):
         expect(self.members.collection_names).to(be(ToolsetMembers.of(type(self.stories)).collection_names))
+
+
+@agent_toolset
+class _LoopingAgent:
+    """A recipe that names itself among the instructions it expands into."""
+
+    @agent_instructions
+    def loops(self) -> str:
+        """Expand into itself."""
+        instructions(self.loops)
+        return ""
+
+
+with description("an @agent_instructions body that expands into itself"):
+    with before.each:
+        ThrowawayProject()
+
+    with after.each:
+        OPEN_PROJECTS.close_all()
+
+    with it("should refuse the expansion, naming the toolset and the recipe, instead of expanding without end"):
+        body = AgentInstructions.for_callable(_LoopingAgent.loops, _LoopingAgent())
+        expect(lambda: body.expand({})).to(raise_error(RecipeCallsItself, contain("_LoopingAgent.loops")))
