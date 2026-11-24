@@ -20,9 +20,10 @@ from cdd_guidance.practices.clean_engineering.measures.code_measures import (
     TOTAL_COMPLEXITY,
     UNSHARED_METHOD_GROUPS,
     ChosenTools,
+    MeasureNotTaken,
     NoToolChosen,
 )
-from cdd_guidance.practices.clean_engineering.measures.measuring_tools import TOOLS, MeasuringTool
+from cdd_guidance.practices.clean_engineering.measures.measuring_tools import TOOLS, MeasuringTool, MeasuringToolNotInstalled, ToolDoesNotTakeMeasure
 from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 from cdd_guidance.practices.clean_engineering.rules.code_measure_limits import MEASURE_LIMIT_RULES
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import MEASURES_CHOSEN, measured, measured_example_pair, practice_from_files
@@ -380,6 +381,23 @@ with description("the code measures the reader keeps of the files a read names")
             saved = SavedGraph.from_file(self.checked).practices["clean_engineering"]
             total = next(node for node in saved.nodes if node.name == "total")
             expect(total.facts["paths_through"]).to(equal(14))
+
+
+with description("a measuring tool asked for a measure") as self:
+    with context("that it does not take"):
+        with it("should refuse, naming the tool, the measure and the measures it takes"):
+            expect(lambda: StandInLizard().value(CODE_LINES, None)).to(
+                raise_error(ToolDoesNotTakeMeasure, contain("'lizard'", "'code_lines'", "it takes paths_through, readability_score, total_complexity"))
+            )
+
+        with it("should be a measure not taken, which the read keeps on the node instead of stopping"):
+            expect(lambda: StandInLizard().value(CODE_LINES, None)).to(raise_error(MeasureNotTaken))
+
+    with context("that is not installed"):
+        with it("should refuse, naming the tool, the measure and how to install it"):
+            expect(lambda: NotInstalled().value(PATHS_THROUGH, None)).to(
+                raise_error(MeasuringToolNotInstalled, contain("'lizard'", "'paths_through'", "pip install"))
+            )
 
 
 with description("a limit on a code measure") as self:
