@@ -3,10 +3,10 @@
 
 *Stage* is how far the work has gone — `discovery`, `specification`, or `implementation` — written on each fidelity as **Stage:**, so the fidelities of different practices line up: story map, bounded context, IA, modules, and behavior are all discovery. The stage names are the constants `DISCOVERY`, `SPECIFICATION`, and `IMPLEMENTATION` in `harness.guidance.stages`, the framework's vocabulary that the graph, the catalog, and the CDD Kanban's *Stage* columns (space/kanban) all read.
 
-- **Purpose:** Name the stages every practice's fidelities line up on, so the board and the actions can move work through the same three stages whatever practice it uses.
+- **Purpose:** Name the stages every practice's fidelities line up on, so the board and the actions can move work through the same four stages whatever practice it uses.
 - **Seam (terms):** the stage names each fidelity's **Stage:** gives, from `harness.guidance.stages` — `DISCOVERY`, `SPECIFICATION`, `IMPLEMENTATION`
 - **Dependencies (one-way):** none
 
 ## Constraint
 
-A practice's fidelity names its stage with one of these three names; do not add stage names in a practice. Run lifecycle steps on a practice through the actions — `generate.generate(guidance=["stories-story-map"])` — rather than adding them as methods on the practice class.
+A practice's fidelity names its stage with one of these four names (discovery, specification, implementation, hardening); do not add stage names in a practice. Run lifecycle steps on a practice through the actions — `generate.generate(guidance=["stories-story-map"])` — rather than adding them as methods on the practice class.

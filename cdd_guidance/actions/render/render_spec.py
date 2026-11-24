@@ -617,22 +617,35 @@ with description("Render asked for a path, in a session") as self:
     # Exploratory testing, r3-gizmo-03: a mockup rendered to claude_design answered {} and saved nothing, and a canvas
     # could not be read back. The person's answer (2026-11-23): a mockup render to claude_design works and renders back.
     with context("that is a mockup in html, rendered to claude_design"):
-        with before.each:
+        # One render serves the examples that only read what it saved; an example that changes the canvas renders into
+        # the project made for it.
+        with before.all:
             self.mockup = HtmlUxMap.create().render(OrderingMap().build(UxMap.create()))
+            self.rendered = ThrowawayProject()
+            (self.rendered.root / "bookshop").mkdir()
+            (self.rendered.root / "bookshop" / "buy-a-book.html").write_text(self.mockup, encoding="utf-8")
+            self.rendered_action = Render().for_call(ToolCall({}, self.rendered.root))
+            self.rendered_action.render("ux-mockup", format="claude_design", paths=["bookshop/buy-a-book.html"], source="html")
+            self.rendered_canvas = self.rendered.root / "design-canvas"
+
+        with after.all:
+            self.rendered.close()
+
+        with before.each:
             (self.project.root / "bookshop").mkdir()
             (self.project.root / "bookshop" / "buy-a-book.html").write_text(self.mockup, encoding="utf-8")
             self.canvas = self.project.root / "design-canvas"
             self.to_canvas = lambda: self.action.render("ux-mockup", format="claude_design", paths=["bookshop/buy-a-book.html"], source="html")
 
         with it("should save canvas.json and a prototype page for each screen in the canvas's first version"):
-            self.to_canvas()
-            saved = sorted(path.relative_to(self.canvas).as_posix() for path in self.canvas.rglob("*") if path.is_file())
+            saved = sorted(path.relative_to(self.rendered_canvas).as_posix() for path in self.rendered_canvas.rglob("*") if path.is_file())
             expect(saved).to(equal(["version-1/project/canvas.json", "version-1/project/screens/cart-saved.dc.html",
                                     "version-1/project/screens/cart.dc.html", "version-1/project/screens/catalog.dc.html"]))
 
         with it("should render back to the same HTML mockup from its canvas.json"):
-            self.to_canvas()
-            back = self.action.render("ux-mockup", format="html", paths=["design-canvas/version-1/project/canvas.json"], source="claude_design")
+            back = self.rendered_action.render(
+                "ux-mockup", format="html", paths=["design-canvas/version-1/project/canvas.json"], source="claude_design"
+            )
             expect(back[0].content).to(equal(self.mockup))
 
         with context("whose canvas's latest version is published"):
@@ -707,13 +720,20 @@ with description("Render asked for a path, in a session") as self:
     # The person's decision (2026-11-22): nobody fills the record of a module's test tiers by hand; the render that
     # writes the module's tests fills it.
     with context("that is a TypeScript spec in a module's folder, rendered to the Python spec BDD development fills"):
-        with before.each:
-            module = self.project.root / "shop" / ".context"
+        # Both examples read what one render recorded, so it renders once, into a project made for it.
+        with before.all:
+            self.module_project = ThrowawayProject()
+            module = self.module_project.root / "shop" / ".context"
             module.mkdir(parents=True)
             (module / "module-context.md").write_text("# shop\n", encoding="utf-8")
-            (self.project.root / "shop" / "cart.spec.ts").write_text(_CART_SPEC_IN_TYPESCRIPT, encoding="utf-8")
-            self.results = self.action.render("bdd-development", format="python", paths=["shop/cart.spec.ts"])
-            self.session = Sessions(self.project.root).current()
+            (self.module_project.root / "shop" / "cart.spec.ts").write_text(_CART_SPEC_IN_TYPESCRIPT, encoding="utf-8")
+            self.results = Render().for_call(ToolCall({}, self.module_project.root)).render(
+                "bdd-development", format="python", paths=["shop/cart.spec.ts"]
+            )
+            self.session = Sessions(self.module_project.root).current()
+
+        with after.all:
+            self.module_project.close()
 
         with it("should record the unit tier, with its test tool, for the module the spec was saved in"):
             expect(self.session.test_tiers.recorded).to(equal({"shop": {"unit": "mamba"}}))

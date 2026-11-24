@@ -671,9 +671,9 @@ with description("the board tools") as self:
             # (S) Person --> Mark Ticket Done In Stage
             with context("with that stage's work not done"):
                 with context("and on to the column after"):
-                    with context("and past Implementation"):
+                    with context("and past Hardening, the last stage"):
                         with before.all:
-                            self.moved, self.moved_again = ProjectTools.answer_of(lambda project: moves(project, *["next"] * 7))[-2:]
+                            self.moved, self.moved_again = ProjectTools.answer_of(lambda project: moves(project, *["next"] * 9))[-2:]
 
                         with it("should close the ticket"):
                             expect(self.moved["column"]["name"]).to(equal("Complete"))
@@ -683,10 +683,10 @@ with description("the board tools") as self:
 
                         with context("and back again"):
                             with before.all:
-                                self.moved = ProjectTools.answer_of(lambda project: moves(project, *["next"] * 6, "previous"))[-1]
+                                self.moved = ProjectTools.answer_of(lambda project: moves(project, *["next"] * 8, "previous"))[-1]
 
-                            with it("should reopen the ticket in Implementation"):
-                                expect(self.moved["column"]["name"]).to(equal("Implementation"))
+                            with it("should reopen the ticket in Hardening"):
+                                expect(self.moved["column"]["name"]).to(equal("Hardening"))
 
                 with context("and back from Done"):
                     with before.all:

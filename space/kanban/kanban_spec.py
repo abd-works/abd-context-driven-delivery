@@ -96,14 +96,14 @@ with description("a board") as self:
             self.board = Board(Sessions.of_project(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
             self.discovery = self.board.column("Discovery")
 
-        with it("should have the columns Backlog, Discovery, Specification, Implementation, and Complete, in that order"):
-            expect(names(self.board.columns)).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
+        with it("should have the columns Backlog, Discovery, Specification, Implementation, Hardening, and Complete, in that order"):
+            expect(names(self.board.columns)).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Hardening", "Complete"]))
 
         with it("should have story_map, bounded_context, and ia as Discovery's work required"):
             expect([fidelity.name for fidelity in self.discovery.work_required]).to(equal(["story_map", "bounded_context", "ia"]))
 
         with it("should give every stage Generate, then Validate"):
-            expect([self.board.column(name).steps for name in ("Discovery", "Specification", "Implementation")]).to(equal([["generate", "validate"]] * 3))
+            expect([self.board.column(name).steps for name in ("Discovery", "Specification", "Implementation", "Hardening")]).to(equal([["generate", "validate"]] * 4))
 
     with context("with BDD chosen"):
         with before.each:
@@ -240,7 +240,7 @@ with description("a board") as self:
             expect([card.column.name for card in self.board.cards]).to(equal(["Discovery", "Discovery", "Discovery", "Complete", "Backlog"]))
 
         with it("should list every column with its tickets or items"):
-            expect([column["name"] for column in self.sent["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
+            expect([column["name"] for column in self.sent["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Hardening", "Complete"]))
 
         with it("should send each column's kind"):
             expect([column["kind"] for column in self.sent["columns"]]).to(equal(["backlog", "stage", "stage", "stage", "complete"]))

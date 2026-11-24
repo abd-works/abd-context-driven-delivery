@@ -227,14 +227,14 @@ class TicketMoveTools:
     @agent_tool
     @noSessionLog
     def move_next(self) -> Ticket:
-        """Move ticket on: from In progress to its stage's Done, from Done to the next column, whatever its work. Out of Implementation it closes, but main, the default session, stays in Implementation's Done. A ticket with children moves only with them, so it is refused."""
+        """Move ticket on: from In progress to its stage's Done, from Done to the next column, whatever its work. Out of Hardening, the last stage, it closes, but main, the default session, stays in Hardening's Done. A ticket with children moves only with them, so it is refused."""
         return self.moves.move_next()
 
     @mcp
     @agent_tool
     @noSessionLog
     def move_previous(self) -> Ticket | BacklogItem:
-        """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Implementation; out of Discovery it goes to the Backlog with its work, but main stays in Discovery. A ticket with children moves only with them, so it is refused."""
+        """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Hardening, the last stage; out of Discovery it goes to the Backlog with its work, but main stays in Discovery. A ticket with children moves only with them, so it is refused."""
         return self.moves.move_previous()
 
     @mcp
@@ -754,8 +754,8 @@ class TicketMoves:
         self._ticket = ticket
 
     def move_next(self) -> Ticket:
-        """From In progress to its stage's Done, from Done to the next column; out of Implementation it closes, but main
-        stays in Implementation's Done."""
+        """From In progress to its stage's Done, from Done to the next column; out of Hardening, the last stage, it closes, but
+        main stays in Hardening's Done."""
         ticket = self._ticket
         ticket.tree.refuse_moving_a_parent()
         column = ticket.column
@@ -781,7 +781,7 @@ class TicketMoves:
 
     def move_previous(self) -> Ticket | BacklogItem:
         """From Done to its stage's In progress, from In progress to the previous column's Done; out of Complete it
-        reopens in Implementation; out of Discovery it goes to the Backlog with its work, but main stays in Discovery."""
+        reopens in Hardening, the last stage; out of Discovery it goes to the Backlog with its work, but main stays in Discovery."""
         ticket = self._ticket
         ticket.tree.refuse_moving_a_parent()
         column = ticket.column

@@ -124,8 +124,8 @@ The one cdd server as an install handles it: stood up in the install's process o
 + stand_up(): StandUp
 + ensure_running(): list[str]
 	// returns the dev lane to main first when its served feature's worktree is gone, and says so on a `dev lane:` line
-+ install_mods(): list[str]
-	// one line for each mod, `{plugin name}: {state}`, from the marketplace of the lane the install serves: the dev lane's when it serves a feature there, else the stable lane's
++ install_plugins(): list[str]
+	// one line for each plugin, `{plugin name}: {state}`: the cdd plugin the stable lane publishes, then the mods of the marketplace of the lane the install serves: the dev lane's when it serves a feature there, else the stable lane's; a full install and every repin run it
 ---<<loads>>--> McpHost
 ---<<creates>>--> StandUp
 ---<<installs the plugins of>>--> ClaudeMarketplace
@@ -230,7 +230,7 @@ The plugins a cdd home's marketplace publishes, loaded by Claude Code from one f
 + claude_cli: str | None
 ----
 + install(plugin: PublishedPlugin): PluginInstall
-	// points chat-plugins/{name} at the plugin's published folder, names that fixed folder in CLAUDE_CODE_PLUGIN_DIRS in place of any other folder of the plugin, and uninstalls every cached copy
+	// points chat-plugins/{name} at the plugin's published folder, names that fixed folder in CLAUDE_CODE_PLUGIN_DIRS in place of any other folder of the plugin (a published copy, another home's fixed folder, or any folder whose manifest names the plugin, such as a checkout's own mod folder), and uninstalls every cached copy
 ---<<loads from its folder>>--> PublishedPlugin
 ---<<creates>>--> PluginInstall
 ---<<reads and writes Claude Code's settings through>>--> IdeLayout

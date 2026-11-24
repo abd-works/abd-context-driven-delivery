@@ -7,7 +7,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
 import { card, dragCard, openBoard, turnOffActiveSessionOnly } from '../../support'
 import type { MoveTicketDriver, TicketPlace } from './move_ticket.spec.shared'
 
-const STAGES = ['Discovery', 'Specification', 'Implementation']
+const STAGES = ['Discovery', 'Specification', 'Implementation', 'Hardening']
 
 // Read in one step on the page, because the card can leave the board between two separate reads.
 function placeOnPage(ticket: string): TicketPlace | null {
@@ -17,16 +17,16 @@ function placeOnPage(ticket: string): TicketPlace | null {
   return { column: shown.closest('[data-column]')?.getAttribute('data-column') ?? '', isDone: list === 'DONE' }
 }
 
-// One step on, as a person drags it: In progress to Done, then into the next stage, then past Implementation into Complete.
+// One step on, as a person drags it: In progress to Done, then into the next stage, then past Hardening into Complete.
 function nextPlace({ column, isDone }: TicketPlace): TicketPlace {
   if (!isDone) return { column, isDone: true }
   const following = STAGES[STAGES.indexOf(column) + 1]
   return following ? { column: following, isDone: false } : { column: 'Complete', isDone: false }
 }
 
-// One step back: Done to In progress, In progress to the previous stage's Done, Discovery to the Backlog, Complete to Implementation's Done.
+// One step back: Done to In progress, In progress to the previous stage's Done, Discovery to the Backlog, Complete to Hardening's Done.
 function previousPlace({ column, isDone }: TicketPlace): TicketPlace {
-  if (column === 'Complete') return { column: 'Implementation', isDone: true }
+  if (column === 'Complete') return { column: STAGES[STAGES.length - 1], isDone: true }
   if (isDone) return { column, isDone: false }
   const earlier = STAGES[STAGES.indexOf(column) - 1]
   return earlier ? { column: earlier, isDone: true } : { column: 'Backlog', isDone: false }

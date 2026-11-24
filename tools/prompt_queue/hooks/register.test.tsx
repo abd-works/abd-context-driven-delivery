@@ -1321,6 +1321,55 @@ test("the hand-out says to send each robot the card's words exactly, and to mark
   expect(['exactly', 'Agent', 'prompt-queue.done'].map(word => asked[0]?.includes(word))).toEqual([true, true, true])
 })
 
+test('the hand-out says to give each card its steps on the queue before sending it', async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS)
+
+  expect(asked[0]).toContain('prompt-queue.set_steps')
+})
+
+test("the hand-out tells each robot to tick its card's steps with prompt-queue.step_done, naming this chat", async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS)
+
+  expect([asked[0]?.includes('prompt-queue.step_done'), asked[0]?.includes(CHAT)]).toEqual([true, true])
+})
+
+/** A robot whose sub-agent is known, with the person's change to one of its cards: what this chat is then asked. */
+async function changeRobotCard($: TestEngine, on: TestOn, press: string, draft = '') {
+  const seeded = groupedQueue(on)
+  seeded.stored.robotAgents = { value: { Sparky: 'agent-1' }, version: 1 }
+  const asked: string[] = []
+  on('prompt.submit', (_, e) => {
+    asked.push(e.text)
+    return { text: e.text }
+  })
+  on('prompt.read', () => ({ value: { text: draft, cursor: draft.length } }))
+  on('prompt.fill', () => ({ isFilled: true }))
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: press })
+  await ui.unmount()
+  await unawaitedWorkSettled()
+  return asked.join('\n')
+}
+
+// A robot works only the words this chat sends it, so a card the person changes under it is news it must be sent.
+test("taking a robot's card off asks this chat to tell that robot, by its sub-agent", async ($, on) => {
+  const asked = await changeRobotCard($, on, 'remove-a')
+
+  expect([asked.includes('SendMessage to agent-1'), asked.includes('[a]')]).toEqual([true, true])
+})
+
+test("moving a robot's card asks this chat to tell that robot its cards' new order", async ($, on) => {
+  const asked = await changeRobotCard($, on, 'down-a')
+
+  expect(asked).toContain('SendMessage to agent-1')
+})
+
+test("a change to a card of a robot with no sub-agent yet asks this chat nothing, as the robot gets the card as it stands", async ($, on) => {
+  const asked = await changeRobotCard($, on, 'remove-b')
+
+  expect(asked).toBe('')
+})
+
 test('a robot still working the card it was handed is not handed another', async ($, on) => {
   const { asked } = await handOut($, on, ROBOT_CARDS, { Sparky: 'a' })
 

@@ -14,8 +14,8 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Acceptance criteria:
 # - Move Ticket To Next Column: the forward arrow moves it one column on from Done. Observed: `Ticket.move_next`.
 # - Move Ticket To Previous Column: the back arrow moves it one column back, into that column's Done. Observed: `Ticket.move_previous`.
-# - A ticket moved out of Implementation closes into Complete. Observed.
-# - A ticket moved back out of Complete reopens in Implementation. Observed.
+# - A ticket moved out of Hardening, the last stage, closes into Complete. Observed.
+# - A ticket moved back out of Complete reopens in Hardening, the last stage. Observed.
 # - A ticket moved back out of Discovery goes to the Backlog with its work. Observed: `Ticket.move_previous`, `BacklogItem.holding`.
 with story("Move Ticket"):
     with scenario("Move a ticket on to the next column"):
@@ -73,9 +73,9 @@ with story("Move Ticket"):
             pass
         with but_("no stage shows back-to-backlog"):
             pass
-    with scenario("Close a ticket moved on past Implementation"):
-        # Evidence: observed: kanban_tools_spec 'and past Implementation' — 'should close the ticket', 'should leave a ticket in Complete where it is on another move forward'; ticket-client.spec 'should let only the active ticket, or one done in Implementation, be dropped on Complete'.
-        with given("the [ticket](../../../../.context/kanban-model.md#ticket--card) almost-shipped is in Implementation's Done"):
+    with scenario("Close a ticket moved on past Hardening"):
+        # Evidence: observed: kanban_tools_spec 'and past Hardening' — 'should close the ticket', 'should leave a ticket in Complete where it is on another move forward'; ticket-client.spec 'should let only the active ticket, or one done in Hardening, be dropped on Complete'.
+        with given("the [ticket](../../../../.context/kanban-model.md#ticket--card) almost-shipped is in Hardening's Done"):
             pass
         with and_("almost-shipped is not the active ticket"):
             pass
@@ -91,21 +91,21 @@ with story("Move Ticket"):
         with and_("its folder is in .sessions/_complete/almost-shipped"):
             pass
     with scenario("Reopen a ticket moved back out of Complete"):
-        # Evidence: observed: kanban_tools_spec 'and back again' — 'should reopen the ticket in Implementation'; kanban_spec 'that a person has dragged out of Complete' — 'should be open again, in progress in that stage'.
+        # Evidence: observed: kanban_tools_spec 'and back again' — 'should reopen the ticket in Hardening'; kanban_spec 'that a person has dragged out of Complete' — 'should be open again, in progress in that stage'.
         with given("the closed [ticket](../../../../.context/kanban-model.md#ticket--card) shipped-work is in Complete"):
             pass
         with when("the Person moves shipped-work back"):
             # Person -> Ticket.move_previous()
             # Ticket -> SessionFolder.reopen()
-            # Ticket -> TicketWork.record('move Implementation')
-            # Ticket -> TicketWork.record('done Implementation')
+            # Ticket -> TicketWork.record('move Hardening')
+            # Ticket -> TicketWork.record('done Hardening')
             pass
-        with then("shipped-work shows in Implementation's Done"):
+        with then("shipped-work shows in Hardening's Done"):
             pass
         with and_("its folder is back in .sessions/shipped-work"):
             pass
     with scenario("Refuse a move into a column that is not a stage"):
-        # Evidence: observed: NotAStageError in Ticket.move_to; ticket-client.tsx canDropOn accepts Complete only for the active ticket or one done in Implementation. No spec moves a ticket into Complete through move_to.
+        # Evidence: observed: NotAStageError in Ticket.move_to; ticket-client.tsx canDropOn accepts Complete only for the active ticket or one done in Hardening. No spec moves a ticket into Complete through move_to.
         with given("the [ticket](../../../../.context/kanban-model.md#ticket--card) billing-report is In progress in Discovery"):
             pass
         with and_("billing-report is not the active ticket"):

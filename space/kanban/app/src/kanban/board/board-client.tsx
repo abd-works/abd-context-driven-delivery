@@ -105,7 +105,7 @@ export class BoardClient extends BoardClientGenerated {
     return this.backlogItems.find(item => item.address === this.page.store.state.selected)
   }
 
-  // The stage whose fidelities a ticket shows: Complete keeps showing Implementation's.
+  // The stage whose fidelities a ticket shows: Complete keeps showing the last stage's, Hardening's.
   stageOf(ticket: TicketClient): ColumnClient | undefined {
     return this.stageNamed(ticket.column.name) ?? this.stages.at(-1)
   }

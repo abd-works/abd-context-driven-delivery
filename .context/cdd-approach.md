@@ -48,6 +48,19 @@ Automate scenario specifications to cover user, system, and module connecting in
 
 Eval every error, both technical and functional to improve the ai delivery system. Feed results into AI's every growing knowledge repository
 
+- **Hardening**
+  - Exploration
+  - Regression
+  - Readiness
+
+Make the whole release ready for production. Implementation proved each story on its own; hardening looks at the release as one product, wide and deep.
+
+Explore the product for the defects no story's tests were written to find: propose test themes from the evidence, take them from the person, and run tester robots at once, each on its own theme, reporting every defect as it is found.
+
+Run every story's end-to-end tests and judge each screen against the last release's accepted run, so a change made for one story cannot break another unseen.
+
+The release is ready when every theme has its report, every confirmed defect has a test, and every changed screen is judged intended and accepted by the person.
+
 
 - **Validate**
   - Economics

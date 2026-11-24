@@ -4,6 +4,7 @@ Each fixture builds a graph, so every context builds its fixtures and pairs once
 the rule on them."""
 
 import sys
+import tempfile
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[4]
@@ -11,9 +12,12 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from expects import be_true, contain, equal, expect, have_len
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
+from harness.graph.graph import Graph, Node, Source
+from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import SchemaRuleRun
+from harness.graph.saved_graph import NodeIdentity
 
 from cdd_guidance.practices.clean_engineering.rules.fixtures.multi_language_examples import (
     _ELIMINATE_DUPLICATION_CLEAN,
@@ -32,6 +36,7 @@ from cdd_guidance.practices.clean_engineering.rules.fixtures.multi_language_exam
     _USE_EXCEPTIONS_PROPERLY_FAULT,
 )
 from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
+from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_rule_pair,
     files_rule_pair,
@@ -61,6 +66,16 @@ def _multilang_pairs(slug: str, fault: dict, clean: dict) -> list:
 def _check_all(pairs: list) -> None:
     for pair in pairs:
         pair.check()
+
+
+def _named_seam_hits(root: Path, card: str, text: str, identity: NodeIdentity, source: Source) -> list:
+    """What named-seam-and-constraint reports on the DDD node identity names, in a project at root holding only the card."""
+    (root / card).parent.mkdir(parents=True)
+    (root / card).write_text(text, encoding="utf-8")
+    graph = Graph()
+    graph.reads.open(root)
+    practice = graph.practices.named("ddd")
+    return SchemaRuleRun(NamedSeamAndConstraint(), RuleCheckContext(practice)).node_hits(Node(practice, identity, source))
 
 
 with description("Clean Engineering graph rules (python .examples pairs)"):
@@ -561,65 +576,32 @@ export class NumberExamples {
             self.extensions.check()
 
     with context("named-seam-and-constraint"):
-        with it("should accept a bounded context that only has bounded-context.md"):
-            import tempfile
-
-            from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
-            from harness.graph.graph import Graph, Node, Source
-            from harness.graph.saved_graph import NodeIdentity
-            from harness.graph.rule_context import RuleCheckContext
-
-            temp = tempfile.TemporaryDirectory()
-            root = Path(temp.name)
-            context_dir = root / "src" / "customer" / ".context"
-            context_dir.mkdir(parents=True)
-            (context_dir / "bounded-context.md").write_text(
+        # Each card is written and its project read once, before the examples, which only run the rule on its node.
+        with before.all:
+            self.cards = tempfile.TemporaryDirectory()
+            self.bounded_context_hits = _named_seam_hits(
+                Path(self.cards.name) / "bounded-context",
+                "src/customer/.context/bounded-context.md",
                 "# Customer\n\nAccount, Customer Profile, Identity verification\n",
-                encoding="utf-8",
-            )
-            graph = Graph()
-            graph.reads.open(Path(str(root)))
-            practice = graph.practices.named("ddd")
-            practice._temp_dir = temp  # type: ignore[attr-defined]
-            rel = "src/customer/.context/bounded-context.md"
-            node = Node(
-                practice,
                 NodeIdentity(type="BoundedContext", node_id="ddd:BoundedContext:src/customer:Customer", name="Customer"),
-                Source(rel, 1, 3),
+                Source("src/customer/.context/bounded-context.md", 1, 3),
             )
-            rule = NamedSeamAndConstraint()
-            context = RuleCheckContext(practice)
-            expect(SchemaRuleRun(rule, context).node_hits(node)).to(equal([]))
+            self.aggregate_hits = _named_seam_hits(
+                Path(self.cards.name) / "aggregate",
+                "src/inventory/numbers/.context/module-context.md",
+                "# numbers\n\n- **Seam (terms):** NumberInventory\n\n## Constraint\n\nUse search flows.\n",
+                NodeIdentity(type="Aggregate", node_id="ddd:Aggregate:src/inventory/numbers", name="numbers"),
+                Source("src/inventory/numbers", 1, 1),
+            )
+
+        with after.all:
+            self.cards.cleanup()
+
+        with it("should accept a bounded context that only has bounded-context.md"):
+            expect(self.bounded_context_hits).to(equal([]))
 
         with it("should accept a DDD aggregate folder with module-context.md"):
-            import tempfile
-
-            from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
-            from harness.graph.graph import Graph, Node, Source
-            from harness.graph.saved_graph import NodeIdentity
-            from harness.graph.rule_context import RuleCheckContext
-
-            temp = tempfile.TemporaryDirectory()
-            root = Path(temp.name)
-            context_dir = root / "src" / "inventory" / "numbers" / ".context"
-            context_dir.mkdir(parents=True)
-            (context_dir / "module-context.md").write_text(
-                "# numbers\n\n- **Seam (terms):** NumberInventory\n\n## Constraint\n\nUse search flows.\n",
-                encoding="utf-8",
-            )
-            graph = Graph()
-            graph.reads.open(Path(str(root)))
-            practice = graph.practices.named("ddd")
-            practice._temp_dir = temp  # type: ignore[attr-defined]
-            rel = "src/inventory/numbers"
-            node = Node(
-                practice,
-                NodeIdentity(type="Aggregate", node_id="ddd:Aggregate:src/inventory/numbers", name="numbers"),
-                Source(rel, 1, 1),
-            )
-            rule = NamedSeamAndConstraint()
-            context = RuleCheckContext(practice)
-            expect(SchemaRuleRun(rule, context).node_hits(node)).to(equal([]))
+            expect(self.aggregate_hits).to(equal([]))
 
 
 with description("Clean Engineering graph rules (multi-language scanner fixtures)"):

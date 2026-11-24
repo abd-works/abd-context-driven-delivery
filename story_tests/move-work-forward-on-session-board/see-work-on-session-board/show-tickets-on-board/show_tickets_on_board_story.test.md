@@ -30,7 +30,7 @@ section: body
 
 *Given* a [board](../../../../space/kanban/.context/kanban-model.md#board) with the Stories, DDD, and UX [practices](../../../../space/kanban/.context/kanban-model.md#practiceguidance) chosen
 *When* the session board reads the [board](../../../../space/kanban/.context/kanban-model.md#board)
-*Then* the [columns](../../../../space/kanban/.context/kanban-model.md#column) read Backlog, Discovery, Specification, Implementation, and Complete, in that order
+*Then* the [columns](../../../../space/kanban/.context/kanban-model.md#column) read Backlog, Discovery, Specification, Implementation, Hardening, and Complete, in that order
 *And* each [stage](../../../../space/kanban/.context/kanban-model.md#stage--column) shows an In progress list and a Done list
 *And* the Discovery [stage](../../../../space/kanban/.context/kanban-model.md#stage--column) requires story_map, bounded_context, and ia, each through Generate and Validate
 

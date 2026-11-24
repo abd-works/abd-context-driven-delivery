@@ -146,7 +146,7 @@ BACK_TO_BACKLOG = SessionSeed("back-to-backlog", "Back to backlog", (generated("
 PRICING_RULES = SessionSeed("pricing-rules", "Pricing rules", (MOVED_INTO_SPECIFICATION, generated("stories", "scenarios"), validated("Stories", "scenarios")))
 READY_TO_MOVE = SessionSeed("ready-to-move", "Ready to move", (f"{STAMP} done Discovery no-chat",))
 SECOND_SPEC = SessionSeed("second-spec", "Second spec", (MOVED_INTO_SPECIFICATION,))
-ALMOST_SHIPPED = SessionSeed("almost-shipped", "Almost shipped", (f"{STAMP} move Implementation no-chat", f"{STAMP} done Implementation no-chat"))
+ALMOST_SHIPPED = SessionSeed("almost-shipped", "Almost shipped", (f"{STAMP} move Hardening no-chat", f"{STAMP} done Hardening no-chat"))
 SHIPPED_WORK = SessionSeed("shipped-work", "Shipped work", folder="_complete")
 SEARCH_THE_CATALOG = BacklogFileSeed("search-the-catalog.md", "Search the catalog", "An idea.")
 SURFACE_FIXTURE_PROJECT = "cdd-board-surface-fixture"

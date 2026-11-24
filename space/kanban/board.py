@@ -109,7 +109,7 @@ class CardNotInColumnError(ValueError):
 @language_adapter(language="typescript")
 @agent_toolset
 class Board:
-    """Show every work session as a ticket on a kanban: Backlog, Discovery, Specification, Implementation, and Complete."""
+    """Show every work session as a ticket on a kanban: Backlog, Discovery, Specification, Implementation, Hardening, and Complete."""
 
     # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
     # Every ticket is in exactly one column; the board stores no ticket state.
@@ -205,7 +205,7 @@ class Board:
 
     @property
     def stages(self) -> list[Stage]:
-        """The columns work moves through, Discovery to Implementation, in order."""
+        """The columns work moves through, Discovery to Hardening, in order."""
         return list(self._stages)
 
     def stage(self, name: str) -> Stage:
@@ -270,7 +270,7 @@ class Board:
     @agent_tool
     @noSessionLog
     def show(self) -> Board:
-        """Return the session board: Backlog, Discovery, Specification, Implementation, and Complete, with every ticket's progress through Generate and Validate, and the active ticket."""
+        """Return the session board: Backlog, Discovery, Specification, Implementation, Hardening, and Complete, with every ticket's progress through Generate and Validate, and the active ticket."""
         return self
 
     @mcp

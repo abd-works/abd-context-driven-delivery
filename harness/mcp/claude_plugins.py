@@ -123,11 +123,21 @@ class ClaudePlugins:
             link.symlink_to(target, target_is_directory=True)
         return link
 
+    def _another_copy(self, entry: Path, name: str, wanted: str) -> bool:
+        """Whether entry is another folder of the plugin called name, which would load it twice: a published one, in a
+        ``claude-plugins`` folder, another home's fixed one, in a ``chat-plugins`` folder, or any folder whose manifest
+        names the plugin, such as a served checkout's own mod folder an older install named."""
+        if str(entry) == wanted:
+            return False
+        return (entry.name == name and entry.parent.name in ("claude-plugins", CHAT_PLUGINS)) or self._plugin_named(entry) == name
+
     @staticmethod
-    def _another_copy(entry: Path, name: str, wanted: str) -> bool:
-        """Whether entry is another folder of the plugin called name: a published one, in a ``claude-plugins`` folder,
-        or another home's fixed one, in a ``chat-plugins`` folder."""
-        return entry.name == name and entry.parent.name in ("claude-plugins", CHAT_PLUGINS) and str(entry) != wanted
+    def _plugin_named(folder: Path) -> str:
+        """The name the plugin in folder gives itself in its manifest; empty when folder holds no plugin it can read."""
+        try:
+            return str(JsonFile(folder / ".claude-plugin" / "plugin.json").read().get("name", ""))
+        except JsonFileUnreadable:
+            return ""
 
     def _uninstall(self, cached: list[str]) -> bool:
         """Uninstall each cached copy, and the listing of a checkout's own marketplace with its copy; answer whether a

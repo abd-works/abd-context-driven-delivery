@@ -5487,6 +5487,7 @@ a.approach-grid__label:hover {
 .approach-grid__shape--sprint,
 .approach-grid__shape--spec { width: 14px; }
 .approach-grid__shape--story { width: 8px; }
+.approach-grid__shape--release { width: 22px; }
 
 .approach-grid__cell {
   display: flex;

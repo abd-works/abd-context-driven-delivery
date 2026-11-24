@@ -89,7 +89,7 @@ export const moveTicketBehavior = shareBehavior<MoveTicketDriver>(({ describe, i
       })
     })
 
-    describe('that a person has moved past Implementation', () => {
+    describe('that a person has moved past Hardening', () => {
       before(() => driver().moveNext('almost-shipped'))
 
       it('should close the ticket', async () => {
@@ -99,8 +99,8 @@ export const moveTicketBehavior = shareBehavior<MoveTicketDriver>(({ describe, i
       describe('and back again', () => {
         before(() => driver().movePrevious('almost-shipped'))
 
-        it('should reopen the ticket in Implementation', async () => {
-          expect((await driver().placeOf('almost-shipped')).column).toEqual('Implementation')
+        it('should reopen the ticket in Hardening', async () => {
+          expect((await driver().placeOf('almost-shipped')).column).toEqual('Hardening')
         })
       })
     })

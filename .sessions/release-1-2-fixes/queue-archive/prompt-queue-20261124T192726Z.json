@@ -1,0 +1,281 @@
+{
+  "prompts": [
+    {
+      "id": "35c0fff2b371",
+      "text": "Queue checks itself: cards get clean titles, only real work is queued, and every placement is checked once made",
+      "is_done": true
+    },
+    {
+      "id": "12f1a2d1049b",
+      "text": "Leaving sub-agent (bot) mode removes the robots from the queue, and Flush or deleting items takes their robots off too (the person, 2026-11-24)",
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "77161d56919a",
+      "text": "A message the person sends goes to the chat and creates no card; the chat is told to create the card when the message is work",
+      "is_done": true
+    },
+    {
+      "id": "4d8b62d4711d",
+      "text": "Add a Hardening stage after Implementation, and TDD's hardening guidance (the person, 2026-11-24). Do it on release-1-2-fixes.\n\nThe person: \"add an additional stage to after implementation called Hardening - the goal is to ensure full readiness to production; i will be adding fidelities for the various practices in the future. for now I want to add guidance / rules on the tdd skill to overlay both bdd and stories (add 2 new fidelities with empty text for now called hardening for the two practices in their md files)\".\n\n1. **The stage.** Add HARDENING after IMPLEMENTATION in `harness/guidance/stages.py`, with its own ApproachStage and a StageScope. Its goal is full readiness for production, for example \"Release\", \"whole release / wide / deep\", covering \"exploration \u00b7 regression \u00b7 readiness\". Update every place that lists the three stages:\n   - the session board's and catalog's columns;\n   - `.context/cdd-approach.md`;\n   - the stage table in AGENTS.md is the person's, so don't edit it; say what needs changing;\n   - each spec that counts three stages.\n\n2. **The fidelities.** Add a `### hardening` fidelity, **Stage:** hardening, at the end of the Fidelities sections of `cdd_guidance/practices/stories/stories.md` and `cdd_guidance/practices/bdd/bdd.md`. Leave its text and rules empty for now, apart from what the fidelity parser requires. Make sure the empty fidelity loads, installs, and shows on the board without an error.\n\n3. **TDD supplements both.** In `cdd_guidance/practices/tdd/tdd.md`, add `stories: hardening` and `bdd: hardening` to `supplements:`. Add a `## stories-hardening, bdd-hardening` section with this guidance, written in plain English with each rule's reason:\n   - **Exploratory testing.** Follow the approach this release used: the exploratory-testing supervisor and tester agents (`.claude/agents`), and how `.sessions/release-1-2-fixes` and `exploratory-testing/` ran.\n     - Analyse the product to propose test themes. Take the themes from the person, who confirms or adds to them.\n     - Then run several queue robots at once, each on its own theme, through the prompt queue. Each robot reports its defects to the shared defect area as it finds them.\n   - **Regression.** Run the e2e tier for every story, and have an AI judge compare each story's screenshots with the last official release's accepted run. Every changed pair gets a verdict with its reason, under `every-run-reviewed` and `person-accepts-the-baseline`.\n   - Add rules under `### Rules` where a finished hardening pass can be checked, for example \"every theme has a robot's report\" and \"every story's e2e screens are judged against the last release\".\n\n4. **Check the supplement's guidance reaches the fidelity.** The prose of a supplement's section, not only its rules, should reach the fidelity it supplements (`PracticeFidelity.supplements` and `text_for` in `harness/guidance/guidance.py`). Check this holds for the new hardening fidelities.\n\n5. **Tests and finishing.** Write the specs first, Flow B. Run the unit tier, reinstall, and repin the dev lane. Commit and push the whole worktree. Report what changed and what the person must edit in AGENTS.md.",
+      "steps": [
+        {
+          "text": "Write the specs first: four stages, the hardening fidelities, TDD supplementing them",
+          "state": "done"
+        },
+        {
+          "text": "Add HARDENING after IMPLEMENTATION in stages.py, with its ApproachStage and StageScope",
+          "state": "done"
+        },
+        {
+          "text": "Show the stage on the session board and catalog, and in cdd-approach.md; update specs that count three stages",
+          "state": "pending"
+        },
+        {
+          "text": "Add an empty ### hardening fidelity to stories.md and bdd.md; it loads, installs and shows",
+          "state": "pending"
+        },
+        {
+          "text": "TDD supplements stories: hardening and bdd: hardening, with exploratory testing and regression guidance and checkable rules",
+          "state": "pending"
+        },
+        {
+          "text": "Check the supplement's prose reaches the hardening fidelities",
+          "state": "pending"
+        },
+        {
+          "text": "Unit tier, reinstall, repin the dev lane",
+          "state": "pending"
+        },
+        {
+          "text": "Commit and push; say what the stage table in AGENTS.md needs",
+          "state": "pending"
+        }
+      ],
+      "robot": "Bolt"
+    },
+    {
+      "id": "4eaa7ab698f4",
+      "text": "Record the fixed plugin folders in the MCP module's docs (release-1-2-fixes, harness/mcp/.context only): CDR 0003, module-context.md and mcp-model.md say that Claude Code watches one fixed folder per cdd plugin, ~/.cdd/chat-plugins/{name}, which every install and repin points at the approved lane's published folder (a junction on Windows), so a repin and /reload-plugins reach every chat with no cache and no app restart; and that main's chats now load whichever lane was pinned last. Commit and push.",
+      "is_done": true,
+      "robot": "Gizmo"
+    },
+    {
+      "id": "9dc3f1f914c2",
+      "text": "Story map scenarios for today's queue and plugin work (.context/story-map.md and story_tests/ only, on release-1-2-fixes and on main): talk (a question, an answer, a comment) is answered and never queued; the board viewer's state never becomes a card or step title; leaving sub-agent mode takes every robot off; a robot goes by its sub-agent's name and pressing it opens that agent's view in the background tasks panel; a repin and a reload of the plugins load the approved lane's mods from the fixed chat-plugins folder, never a cached copy. Mark each Built with its test. Commit and push.",
+      "steps": [
+        {
+          "text": "Scenario: talk is answered and never queued",
+          "state": "done"
+        },
+        {
+          "text": "Scenario: the board viewer's state never becomes a title",
+          "state": "done"
+        },
+        {
+          "text": "Scenario: leaving sub-agent mode takes every robot off",
+          "state": "done"
+        },
+        {
+          "text": "Scenario: a robot goes by its sub-agent's name and opens its view",
+          "state": "done"
+        },
+        {
+          "text": "Scenario: a repin and reload load the approved lane's mods from chat-plugins",
+          "state": "done"
+        },
+        {
+          "text": "Mark each Built with its test, on release-1-2-fixes and main; commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "42829a521ca5",
+      "text": "Prompt queue e2e (tools/prompt_queue/prompt_queue_plugin_e2e_spec.py only): a headless chat loading this worktree's queue mod sends a question, an answer and a work request mid-turn and between turns; only the work request is queued, and the viewer's state never reaches a title. Run it (e2e tier), commit and push.",
+      "steps": [
+        {
+          "text": "Write the e2e: question, answer and work request, mid-turn and between turns",
+          "state": "done"
+        },
+        {
+          "text": "Check only the work request is queued and no viewer state reaches a title",
+          "state": "pending"
+        },
+        {
+          "text": "Run it in the e2e tier",
+          "state": "pending"
+        },
+        {
+          "text": "Commit and push",
+          "state": "pending"
+        }
+      ],
+      "robot": "Pixel"
+    },
+    {
+      "id": "93530433f8e4",
+      "text": "Unit tier on release-1-2-fixes (spec files the other cards don't touch): run scripts/test.ps1 -Suite unit, fix what fails, and make the examples over the 100 ms budget fast (ce_rules_spec.py, render_spec.py and cross_file_rules_spec.py went over at 163, 113 and 101 ms) or move them to a heavy spec. Commit and push, and say what the tier showed.",
+      "steps": [
+        {
+          "text": "Run scripts/test.ps1 -Suite unit",
+          "state": "done"
+        },
+        {
+          "text": "Fix what fails",
+          "state": "done"
+        },
+        {
+          "text": "Make ce_rules_spec, render_spec and cross_file_rules_spec examples fast, or move them to heavy",
+          "state": "pending"
+        },
+        {
+          "text": "Run the unit tier again",
+          "state": "pending"
+        },
+        {
+          "text": "Commit and push; say what the tier showed",
+          "state": "pending"
+        }
+      ],
+      "robot": "Widget"
+    },
+    {
+      "id": "50e7424f9390",
+      "text": "Release report (.sessions/release-1-2-fixes/release-1-2-fixes-report.md only): add today's work in the found / fixed / open form: the whiteboard render creating its Claude board (4fd0c38d8), issue 105's lanes (6f23c41d6), plugins loaded from the fixed chat-plugins folder and never a cache (b123d6925 and the junction commit), the queue keeping only work and robots leaving with bot mode (3c5dbc74b). Commit and push.",
+      "is_done": true,
+      "robot": "Cog"
+    },
+    {
+      "id": "c4ca6c80f9e1",
+      "text": "[for Sparky] Thin slice on main (.context/thin-slice.md only): put today's release-1-2-fixes tickets in the Defect Fixing increment: the whiteboard render creating its Claude board, issue 105's lanes, plugins loaded from the fixed chat-plugins folder and never a cache, the queue keeping only work, robots leaving with bot mode, and the robots matching the Claude pane's background tasks. Commit and push on main.",
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "73657834896b",
+      "text": "[for Sparky] Main's own stories for the stable lane (.context/story-map.md on main is Rivet's; use story_tests/ on main only if Rivet has not, else report): after the stable lane is repinned from the main checkout, the fixed chat-plugins folders lead to the stable lane's mods; check this with an install into a throwaway CDD_HOME from a main worktree and report what the folders lead to.",
+      "steps": [
+        {
+          "text": "Install from a main worktree into a throwaway CDD_HOME",
+          "state": "done"
+        },
+        {
+          "text": "Read where the chat-plugins folders lead",
+          "state": "done"
+        },
+        {
+          "text": "Write the story test on main if Rivet has not",
+          "state": "done"
+        },
+        {
+          "text": "Report what the folders lead to",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "cb9522b6bcd9",
+      "text": "[for Gizmo] Have the cdd plugin itself load from the fixed folder too (harness/mcp only): today only the board and queue mods go through ~/.cdd/chat-plugins; make the cdd plugin's install (McpChannelServer.ensure_running and the installer path) use ClaudePlugins.install the same way, so CLAUDE_CODE_PLUGIN_DIRS names only chat-plugins folders. Heavy spec first (Flow B), commit and push.",
+      "steps": [
+        {
+          "text": "Heavy spec first: the cdd plugin loads from chat-plugins/cdd",
+          "state": "done"
+        },
+        {
+          "text": "ensure_running and the installer path install the cdd plugin through ClaudePlugins.install",
+          "state": "pending"
+        },
+        {
+          "text": "CLAUDE_CODE_PLUGIN_DIRS names only chat-plugins folders",
+          "state": "pending"
+        },
+        {
+          "text": "Run the heavy spec; commit and push",
+          "state": "pending"
+        }
+      ],
+      "robot": "Gizmo"
+    },
+    {
+      "id": "7f751b9958af",
+      "text": "[for Gizmo] Validate clean-engineering-code on harness/mcp/claude_plugins.py and harness/mcp/mcp_server.py and fix every violation in code, docs and specs (keep-operations-small-focused, limit-function-lines and the rest). Commit and push.",
+      "robot": "Gizmo"
+    },
+    {
+      "id": "2dfc808aa644",
+      "text": "[for Pixel] Flush and deleting a card take a robot off fully (tools/prompt_queue only): when no card on the queue names a robot any more, its sub-agent, its task and its open queue are forgotten too, as leaving sub-agent mode does. Plugin test first, commit and push.",
+      "robot": "Pixel"
+    },
+    {
+      "id": "a0eda5b18c36",
+      "text": "[for Pixel] Move the talk rule into the Python domain (tools/prompt_queue only, domain-lives-in-python): PromptQueue decides whether a message the person sent is only talk (a question that asks for no work, an answer, only marks), the hook asks it through the cdd server, and isOnlyTalk in hooks/queue/talk.ts goes. Specs first, commit and push.",
+      "robot": "Pixel"
+    },
+    {
+      "id": "5085b8932ed8",
+      "text": "[for Rivet] After the scenarios are in, render the story map to whiteboard and put it on its board in Claude (https://claude.ai/artifact/RBc7NrXtfghmJXbCTjvM6a, named in .context/story-map.whiteboard), following publish_board; if you cannot reach the Artifact tool, say the board is not updated. Commit and push.",
+      "steps": [
+        {
+          "text": "Render the story map to whiteboard",
+          "state": "in_progress"
+        },
+        {
+          "text": "Write its elements to the board in Claude, following publish_board",
+          "state": "pending"
+        },
+        {
+          "text": "Record the board in story-map.whiteboard",
+          "state": "pending"
+        },
+        {
+          "text": "Commit and push",
+          "state": "pending"
+        }
+      ],
+      "robot": "Rivet"
+    },
+    {
+      "id": "5fe4250169bb",
+      "text": "[for Widget] After the unit tier passes and the other robots have pushed, run the heavy tier once (scripts/test.ps1 -Suite heavy), fix what it finds, run it again, and report what it showed. Commit and push.",
+      "robot": "Widget"
+    },
+    {
+      "id": "c19594c31eab",
+      "text": "[for Cog] Rewrite section 7 of the release report so it lists only what is still open after today, with each card on this queue that finished marked closed and the heavy and e2e results Widget and Pixel report. Commit and push.",
+      "steps": [
+        {
+          "text": "Rewrite section 7 to list only what is still open (279f63e72)",
+          "state": "done"
+        },
+        {
+          "text": "Mark finished cards closed",
+          "state": "done"
+        },
+        {
+          "text": "Add Widget's unit and heavy results",
+          "state": "pending"
+        },
+        {
+          "text": "Add Pixel's e2e results",
+          "state": "pending"
+        },
+        {
+          "text": "Commit and push",
+          "state": "pending"
+        }
+      ],
+      "robot": "Cog"
+    },
+    {
+      "id": "a08c2666901f",
+      "text": "[for Bolt] After the Hardening stage is in, show it on the session board and the catalog: walk the board in the browser pane (Flow A) with a ticket moved into Hardening, report what shows, and put the walk's screens in the story map scenario for the stage. Commit and push.",
+      "robot": "Bolt"
+    }
+  ]
+}

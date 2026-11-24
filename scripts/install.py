@@ -209,7 +209,7 @@ def _switch_server_only(args: argparse.Namespace, installer: Installer, server: 
     print(f"cdd server: {_switch_server(args, server)}")
     if installer.layout.is_claude_code:
         server.cdd_entry.point_chats_at_served_lane()
-        for line in server.server.install_mods():
+        for line in server.server.install_plugins():
             print(line)
     print(f"language adapters: {len(installer.write_language_adapters())} written")
     _write_runtime_adapters(installer, server)

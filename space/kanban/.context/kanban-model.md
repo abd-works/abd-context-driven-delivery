@@ -1,6 +1,6 @@
 ## Language
 
-*Board* shows a repository's delivery. A repository has sessions, each session is represented on the board as a ticket, and each ticket is in a column: Backlog, a stage (Discovery, Specification, or Implementation), or Complete. A caller reads it to see what is in flight and what to do next. It stores no ticket state: tickets read their sessions each time they are asked, so the board can never disagree with the work.
+*Board* shows a repository's delivery. A repository has sessions, each session is represented on the board as a ticket, and each ticket is in a column: Backlog, a stage (Discovery, Specification, Implementation, or Hardening), or Complete. A caller reads it to see what is in flight and what to do next. It stores no ticket state: tickets read their sessions each time they are asked, so the board can never disagree with the work.
 
 ### board
 
@@ -20,7 +20,7 @@
 
 ### stage
 
-- A column where work is done, split into in progress and done. There are exactly three stages, one for each `ApproachStage` in `STAGES` (`harness/guidance/stages.py`): Discovery, Specification, and Implementation.
+- A column where work is done, split into in progress and done. There is one stage for each `ApproachStage` in `STAGES` (`harness/guidance/stages.py`): Discovery, Specification, Implementation, and Hardening.
 - Each fidelity section in a practice's markdown declares its stage in a `**Stage:**` line, so a stage needs no table of fidelities.
 
 ### ticket
@@ -95,7 +95,7 @@ A `@tool_subject` loader or class tool that takes `project` is handed the projec
 + << aggregation >> catalogued_practices: BoardPractices
 	// the catalog's view of each practice, held for the checkout by `BOARD_PRACTICES.of(sessions)` (`space/kanban/board_practices.py`), so the process makes it and its one skill install once however many boards the calls make; it answers a practice by its class (`of`, `works_through`), which the board's own instance and a ticket's session's share, or by the key a tool names (`keyed`), and every `Help` is handed the one it answers; raises `PracticeNotFoundError` for a practice the board does not have
 + << composition >> stages: list[Stage]
-	// its columns from Discovery to Implementation, made once with the board; `stage(name)` answers one and refuses any other column with `NotAStageError`, for `stage.*` tools and `ticket.move_to`
+	// its columns from Discovery to Hardening, made once with the board; `stage(name)` answers one and refuses any other column with `NotAStageError`, for `stage.*` tools and `ticket.move_to`
 + << composition >> fidelities: list[BoardFidelity]
 	// data field: every fidelity of its practices with its practice, its label, and its skill's slash command, as the catalog names them, so a tile shows them and works out none; the board sends each fidelity once, here
 	-> CatalogPractice.shown_fidelities
@@ -288,7 +288,7 @@ Made for one `ApproachStage` of `STAGES`, which gives its title as the column's 
 	// data field: every fidelity of every chosen practice whose stage is this stage, each with its slug, name, outputs by format, and default format
 	-> Board.practices
 + next_stage: Stage
-	// none after Implementation
+	// none after Hardening
 + previous_stage: Stage
 	// none before Discovery
 + wip_limit: int
@@ -390,7 +390,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// data field: open for work, in its own worktree or the active ticket, and not main; its card offers Close, which closes it through its Close dialog unless the chosen chat works on it
 	-> TicketCheckout.worktree
 + drop_targets: list[str]
-	// data field: the columns besides the stages it can be dropped on: the Backlog always, Complete from Implementation's Done or while it is open
+	// data field: the columns besides the stages it can be dropped on: the Backlog always, Complete from Hardening's Done or while it is open
 + parent_choices: list[str]
 	// data field: the tickets it can be dropped on to become their child: any on the board but its parent, itself, and the tickets under it, which would make a loop; none for main. `reassign_parent` refuses the same loop with `ParentLoopError`
 	-> TicketTree.parent_choices
@@ -447,7 +447,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	// where Move previous puts it while it stays on a stage: its stage's In progress, else the previous stage's Done; none when the move reopens it, sends it to the Backlog, leaves it where it is, or is refused
 	-> TicketMoves.previous_place
 + move_next(): Ticket
-	// `ticket.move_next`: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Implementation it closes; a parent raises `ParentMovesWithChildrenError`, as `move_previous` and `move_to` do
+	// `ticket.move_next`: from In progress it writes `done <stage>`, from Done it writes `move <next stage>`, and out of Hardening, the last stage, it closes; a parent raises `ParentMovesWithChildrenError`, as `move_previous` and `move_to` do
 	-> TicketMoves.move_next
 + move_previous(): Ticket | BacklogItem
 	// `ticket.move_previous`: from Done it writes `in-progress <stage>`, from In progress it writes `move <previous stage>` and `done <previous stage>`; out of Complete it reopens, and out of Discovery it returns to the Backlog

@@ -294,24 +294,23 @@ class McpChannelServer(ChannelServer):
 
     def ensure_running(self) -> list[str]:
         """Start the one cdd server when none answers, installing ``~/.cdd/`` on first use; an install that finds a
-        server already running leaves it, and the code it serves, alone. For Claude Code also install the cdd plugin
-        and the mods of the stable lane's marketplace, which every chat installs from. A dev lane whose served
-        feature's worktree is gone goes back to main first, and the install says so."""
+        server already running leaves it, and the code it serves, alone. For Claude Code also install its plugins
+        (``install_plugins``). A dev lane whose served feature's worktree is gone goes back to main first, and the
+        install says so."""
         returned = self._dev_lane.return_to_main_when_feature_gone()
         lines = [f"dev lane: {returned}"] if returned else []
         lines.append(f"mcp: {self.served.ensure()}")
         if self._layout.is_claude_code:
-            lines.append(f"cdd plugin: {self._claude_plugins.install(self._daemon.home.marketplace.cdd_plugin)}")
-            lines.extend(self.install_mods())
+            lines.extend(self.install_plugins())
         return lines
 
-    def install_mods(self) -> list[str]:
-        """Have Claude Code load the mods of the lane the person approved by serving it, such as the board and the
-        prompt queue, from that lane's own marketplace, one line for each: the dev lane's when the install serves a
-        feature there, else the stable lane's. Claude Code loads each from its published folder, never a cached copy,
-        so a mod the lane publishes reaches the chats; the stable lane's marketplace is never written with a feature's
-        mods."""
-        return [f"{plugin.name}: {self._claude_plugins.install(plugin)}" for plugin in self.served.home.marketplace.mods]
+    def install_plugins(self) -> list[str]:
+        """Have Claude Code load every cdd plugin from its fixed folder in the cdd home, never a cached copy, one line
+        for each: the cdd plugin the stable lane publishes, whose server every chat names, and the mods of the lane the
+        person approved by serving it, such as the board and the prompt queue: the dev lane's when the install serves a
+        feature there, else the stable lane's. The stable lane's marketplace is never written with a feature's mods."""
+        lines = [f"cdd plugin: {self._claude_plugins.install(self._daemon.home.marketplace.cdd_plugin)}"]
+        return lines + [f"{plugin.name}: {self._claude_plugins.install(plugin)}" for plugin in self.served.home.marketplace.mods]
 
 
 class McpInstallation(RegisteredChannel):

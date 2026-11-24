@@ -97,6 +97,8 @@ class HeadlessChat:
         self._allowed_tools = allowed_tools
         self._process: subprocess.Popen | None = None
         self._lines: queue.Queue[str] = queue.Queue()
+        # Each tool the agent called, with its input, so a failing example can say what the chat did.
+        self.calls: list[str] = []
 
     def queue_work(self, texts: list[str], done: int = 0) -> list[dict]:
         """Queue texts on this chat's queue through the server, the first done of them marked done."""
@@ -169,7 +171,16 @@ class HeadlessChat:
     def _read_output(self) -> None:
         for line in self._process.stdout:
             if line.strip():
+                self._note_calls(line)
                 self._lines.put(line)
+
+    def _note_calls(self, line: str) -> None:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            return
+        if _calls_a_tool(event):
+            self.calls += [f'{block["name"]} {json.dumps(block.get("input"))[:200]}' for block in event["message"]["content"] if block.get("type") == "tool_use"]
 
 
 def _calls_a_tool(event: dict) -> bool:
@@ -243,6 +254,7 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
                     with before.all:
                         self.chat.send(_WORK)
                         self.worked = self.chat.prompts()
+                        print(f"calls between turns: {self.chat.calls}")
 
                     with it("should put the work on the queue"):
                         expect([title for title in placed(self.answered, self.worked) if "flush" in title.lower()]).not_to(equal([]))
@@ -264,7 +276,7 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
                 self.chat.send_while_working(_LONG_TURN, [_QUESTION, _ANSWER, _WORK])
                 # The turn's own message asks for work too, so the agent may queue it; it is not one of the three.
                 self.placed = [title for title in placed(self.start, self.chat.prompts()) if "sleep" not in title.lower()]
-                print(f"placed while working: {self.placed}")
+                print(f"placed while working: {self.placed} calls: {self.chat.calls}")
 
             with it("should put the work request on the queue"):
                 expect([title for title in self.placed if "flush" in title.lower()]).not_to(equal([]))

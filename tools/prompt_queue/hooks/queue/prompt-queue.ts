@@ -174,6 +174,10 @@ export async function queuePrompt($: EngineInterface, text: string): Promise<boo
   const isEditing = (await read($, queue)).prompts.some(prompt => prompt.id === edited)
   const isChanged = await changeQueue($, isEditing ? 'edit' : 'add', isEditing ? { prompt: edited, text } : { text })
   await update($, editingId, () => '')
+  const editedCard = (await read($, queue)).prompts.find(prompt => prompt.id === edited)
+  if (isChanged && isEditing && editedCard) {
+    await tellRobotOfChange($, editedCard, `its words are now: ${text.trim()}`)
+  }
 
   return isChanged
 }
@@ -294,11 +298,35 @@ export async function movePrompt($: EngineInterface, from: number, to: number): 
   if (!moving || from === to) {
     return
   }
-  await changeQueue($, 'move', { prompt: moving.id, to })
+  if (await changeQueue($, 'move', { prompt: moving.id, to })) {
+    await tellRobotOfChange($, moving, `its cards were reordered; its cards still to do, in order: ${await robotOrderOf($, moving.robot)}`)
+  }
 }
 
 export async function removePrompt($: EngineInterface, id: string): Promise<void> {
-  await changeQueue($, 'remove', { prompt: id })
+  const removing = (await read($, queue)).prompts.find(prompt => prompt.id === id)
+  if ((await changeQueue($, 'remove', { prompt: id })) && removing) {
+    await tellRobotOfChange($, removing, 'the card was taken off the queue: stop its work, and keep what is done')
+  }
+}
+
+/** A robot works only the words this chat sends it, so a change the person makes to a card of a robot whose sub-agent
+ * is running is sent on: this chat is asked to tell that sub-agent what changed. A robot with no sub-agent yet gets the
+ * card as it then stands when it is handed out. */
+async function tellRobotOfChange($: EngineInterface, card: QueuedPrompt, change: string): Promise<void> {
+  const agentId = card.robot ? (await read($, robotAgents))[card.robot] : undefined
+  if (!agentId) {
+    return
+  }
+  const text = `The person changed ${card.robot}'s card [${card.id}]: ${change}. Tell ${card.robot} with SendMessage to ${agentId}, in those words, then carry on.`
+  $.prompt.submit({ text, asUser: true }).catch(thrown =>
+    showFailure($, `Not sent: ${reasonOf(thrown)}`, `Telling ${card.robot} that the person changed its card [${card.id}]`))
+}
+
+/** The ids of a robot's cards still to do, in queue order, as the robot is told them after a reorder. */
+async function robotOrderOf($: EngineInterface, robot: string | undefined): Promise<string> {
+  const cards = (await read($, queue)).prompts.filter(prompt => !prompt.is_done && prompt.robot && prompt.robot === robot)
+  return cards.map(prompt => `[${prompt.id}]`).join(', ')
 }
 
 /** The pencil on a card: the prompt goes to the prompt box to be changed, and keeps its place in the queue, shaded,
@@ -678,10 +706,11 @@ async function changeStepsBy($: EngineInterface, prompt: QueuedPrompt, operation
   if (!(await changeQueue($, operation, { prompt: prompt.id, ...args }))) {
     return
   }
+  const changed = (await read($, queue)).prompts.find(held => held.id === prompt.id)
   if (prompt.id === (await read($, askedAbout))) {
-    const changed = (await read($, queue)).prompts.find(held => held.id === prompt.id)
     await update($, plan, () => changed?.steps ?? [])
   }
+  await tellRobotOfSteps($, changed ?? prompt)
 }
 
 /** Gives a prompt its changed steps; for the prompt being worked the task list's next changes start from them. */
@@ -689,7 +718,15 @@ async function changeSteps($: EngineInterface, prompt: QueuedPrompt, steps: Prom
   if (prompt.id === (await read($, askedAbout))) {
     await update($, plan, () => steps)
   }
-  await changeQueue($, 'set_steps', { prompt: prompt.id, steps })
+  if (await changeQueue($, 'set_steps', { prompt: prompt.id, steps })) {
+    await tellRobotOfSteps($, { ...prompt, steps })
+  }
+}
+
+/** A robot is told the steps of its card the person changed, numbered as step_done counts them. */
+async function tellRobotOfSteps($: EngineInterface, card: QueuedPrompt): Promise<void> {
+  const steps = (card.steps ?? []).map((step, place) => `${place + 1}. ${step.text}${step.state === 'done' ? ' (done)' : ''}`).join('; ')
+  await tellRobotOfChange($, card, `its steps are now: ${steps || 'none'}`)
 }
 
 /** Pressing a robot opens its queue under it and closes the one that was open, so one queue shows at a time, and shows
@@ -816,16 +853,18 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
     return
   }
   await update($, sentCards, cards => ({ ...cards, ...Object.fromEntries(handed.map(({ robot, card }) => [robot, card.id])) }))
-  $.prompt.submit({ text: handOutOf(handed, await read($, robotAgents)), asUser: true })
+  $.prompt.submit({ text: handOutOf(handed, await read($, robotAgents), await $.session.id()), asUser: true })
     .catch(thrown => showFailure($, `Not sent: ${reasonOf(thrown)}`, 'Playing the queue in sub-agent mode, asking this chat to hand out the robots\' cards'))
 }
 
 /** What this chat is asked when robots are due their next card: who gets which words, and how to hand them over. A
  * robot whose sub-agent is known is sent its words by that sub-agent's id; one not started yet is started with the
  * Agent tool, its description starting with the robot's name, so the queue learns which sub-agent is that robot. */
-function handOutOf(handed: { robot: string; card: QueuedPrompt }[], agents: Record<string, string>): string {
+function handOutOf(handed: { robot: string; card: QueuedPrompt }[], agents: Record<string, string>, chat: string): string {
   return [
-    "Hand out the robots' next cards. Send each robot its card's words exactly as written below, and nothing else.",
+    "Hand out the robots' next cards. First give each card its steps, a short list of the discrete tasks its words ask for, with prompt-queue.set_steps, so the queue shows each robot's progress.",
+    "Then send each robot its card's words exactly as written below, followed by one line: " +
+      `"Mark each step of card [<card id>] with prompt-queue.step_done(chat=\"${chat}\", prompt=\"<card id>\", step=N) as you finish it."`,
     'When a robot tells you it finished, mark its card done with prompt-queue.done; its next card follows.',
     ...handed.map(({ robot, card }) => {
       const how = agents[robot]

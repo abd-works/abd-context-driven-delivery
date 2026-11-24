@@ -172,16 +172,18 @@ hold(practices: Mapping[str, PracticeGuidance], supplements: Sequence[PracticeSu
 
 ## PracticeSupplement : PracticeGuidance
 
-Guidance that adds to other practices at the fidelities it names, such as TDD on Clean Engineering code, Stories acceptance_tests, BDD development, and DDD tactics. It is a practice of its own (its folder sits with the practices), but it has no stage and no fidelities on the board: it never moves work forward, it only adds guidance and rules to the fidelities it supplements. Its markdown's front matter names them:
+Guidance that adds to other practices at the fidelities it names, such as TDD on Clean Engineering code, Stories acceptance_tests and hardening, BDD development and hardening, and DDD tactics. It is a practice of its own (its folder sits with the practices), but it has no stage and no fidelities on the board: it never moves work forward, it only adds guidance and rules to the fidelities it supplements. Its markdown's front matter names them:
 
 ```yaml
 always_apply: true
 supplements:
   clean_engineering: code
-  stories: acceptance_tests
-  bdd: development
+  stories: [acceptance_tests, hardening]
+  bdd: [development, hardening]
   ddd: tactics
 ```
+
+A practice with one supplemented fidelity names it; one with several names them as a list, since YAML holds each practice key once.
 
 Its markdown keeps the usual Overview and Guidance, then sections headed with the slugs of the fidelities they apply to (`## bdd-development`, or `## stories-acceptance-tests, bdd-development` for rules both share), each with its guidance and a `### Rules` list. It has no rules for every fidelity it supplements: each rule names the fidelities it is for. Its graph rules live in its own folder the way a pattern's do: `rules/` for one rule checked on several named practices (*SharedPracticeGraphRule*), and `practices/<practice>/rules` and `model/{schema,rules}.yaml` for those of one practice.
 
