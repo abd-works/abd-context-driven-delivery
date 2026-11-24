@@ -726,9 +726,21 @@ class _DescribedDomain:
         start = aggregate.source.start_line
         block = self._blocks.add(aggregate, tactical, kind, Location(document.relative, oclass.line or start, oclass.end_line or start))
         block.set_fact(DESCRIBED_FACT, True)
+        self._read_operations(document, block, oclass)
         self._described.append((block, key[1], self._named_in_card(oclass)))
         if kind == "EntityRoot":
             self._roots[key] = block
+
+    def _read_operations(self, document: _DomainDocument, block: Node, oclass: OoadClass) -> None:
+        """Each domain operation the card declares, under its block at the line that declares it, so a scenario's
+        realization that names the operation links its step to it, as a story test's step links to the code it calls."""
+        for operation in oclass.operations:
+            operation.keep_owner()
+            operation.source_facts.load()
+            line = operation.line or block.source.start_line
+            node = self._in_graph.add(operation, f"ddd:Operation:{document.relative}:{operation.name}:{oclass.name}", Location(document.relative, line, line))
+            node.read_at(MODEL_FIDELITY)
+            self._edges.link("owns", block, node)
 
     def _named_in_card(self, oclass: OoadClass) -> set[str]:
         """The class names a card relates its class to: each whole word of its properties' types, a collection's

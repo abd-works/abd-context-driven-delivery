@@ -594,7 +594,7 @@ class Increment(StoryNode):
 @agent_toolset
 class Step(CodeHeld):
     _semantic_type_name = "Step"
-    graph_facts = ("keyword", "text", "phase", "concepts", "values", "linked_terms", "actor", "continuation", "callees", "body_text")
+    graph_facts = ("keyword", "text", "phase", "concepts", "values", "linked_terms", "actor", "continuation", "callees", "body_text", "realization_calls")
 
     def __init__(self, text: str, step_type: "StepType | None" = None, sequential_order: int = 0) -> None:
         """A step saying text, of step_type, at sequential_order. What a format reads about the step beyond that, its
@@ -717,6 +717,17 @@ class Step(CodeHeld):
             token = concept.strip()
             if token and token[0].isupper() and token not in found:
                 found.append(token)
+        return found
+
+    @property
+    def realization_calls(self) -> List[str]:
+        """The calls its realization's call graph names, at every depth, each once and as written (``Cart.addBook(book,
+        1)``); a return line (``<- CartLine``) is no call. It saves with the graph, so the step is linked to the model
+        operations its realization names whichever process holds the graph."""
+        found: List[str] = []
+        for entry in self.call_graph:
+            if entry.kind in ("call", "out") and entry.text not in found:
+                found.append(entry.text)
         return found
 
     @property

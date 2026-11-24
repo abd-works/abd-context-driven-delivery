@@ -10,6 +10,7 @@ from harness.graph.violation import Finding
 from harness.markdown.format import Format
 
 from cdd_guidance.practices.stories.model.graph_reading import CALLS_REACH_NONE, CALLS_REACH_TEST
+from cdd_guidance.practices.stories.model.realization_links import REALIZATION_REACH_FACT, REALIZATION_REACHES_NONE
 from cdd_guidance.practices.stories.model.story_recording import example_source_file
 
 if TYPE_CHECKING:
@@ -89,21 +90,33 @@ class ExamplesExportDataNotRepository(PracticeGraphRule):
 
 
 class CodeStepsInvokeCode(PracticeGraphRule):
-    """A When of a story read at the acceptance tests fidelity invokes code it tests. The fidelity goes by what the
-    story holds, never by its format: a story whose steps have no bodies yet is at scenarios, in markdown or in code,
-    and is left out, since it calls nothing until its tests are written. The read records what the step's calls reach
-    (its calls_reach fact, cdd_guidance/practices/stories/model/graph_reading.py): a When that calls nothing, or only
-    the story test's own helpers and seeds, fails; one whose calls name code the graph has not read is left unjudged."""
+    """A When backed by code invokes what it tests: the code a story test's When calls, or the model operations a
+    markdown When's realization names. The fidelity goes by what the story holds, never by its format: a story whose
+    steps have bodies is at acceptance tests, and the read records what each step's calls reach (its calls_reach fact,
+    cdd_guidance/practices/stories/model/graph_reading.py): a When that calls nothing, or only the story test's own
+    helpers and seeds, fails; one whose calls name code the graph has not read is left unjudged. A story at scenarios is
+    asked only of a When with a realization, once a model is read beside it (its realization_reach fact,
+    cdd_guidance/practices/stories/model/realization_links.py): a realization that names no operation of the model the
+    step's domain terms link to fails; a When with no realization calls nothing yet and is left out."""
 
     slug = "code-steps-invoke-code"
     node_types = ("When",)
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.is_read_at(ACCEPTANCE_TESTS_FIDELITY):
-            return []
+            return self._check_realization(node)
         reach = node.get_fact("calls_reach")
         if reach == CALLS_REACH_NONE:
             return [Finding(node, f"When {node.name!r} calls nothing: call the domain operation it tests in the step.")]
         if reach == CALLS_REACH_TEST:
             return [Finding(node, f"When {node.name!r} calls only the story test's own helpers or seeds: call the domain operation it tests in the step.")]
         return []
+
+    def _check_realization(self, node: Node) -> list[Finding]:
+        if node.get_fact(REALIZATION_REACH_FACT) != REALIZATION_REACHES_NONE:
+            return []
+        return [Finding(node, (
+            f"When {node.name!r} has a realization that names no operation of the model its domain terms link to: link the "
+            "step's domain terms to the classes the realization calls, and name in the realization an operation the model "
+            "declares."
+        ))]

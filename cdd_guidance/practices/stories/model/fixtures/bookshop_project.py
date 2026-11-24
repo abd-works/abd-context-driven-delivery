@@ -58,16 +58,18 @@ class BookshopWorkingCopy(BookshopProject):
     """A copy of the Bookshop project whose graph loaded the whole working copy, as a session's graph does, so every
     rule validate runs is checked on it, the rule that content conforms to its schema among them. ``rewritten`` changes the copy before the load: each
     file named from the project's root, with the text to take out and the text to put in its place; ``removed`` names
-    the files the copy is to be without."""
+    the files the copy is to be without; ``written`` names each file to write, from the root, with its whole text."""
 
     def __init__(
         self,
         practices: tuple[str, ...] = PRACTICES,
         rewritten: dict[str, tuple[str, str]] | None = None,
         removed: tuple[str, ...] = (),
+        written: dict[str, str] | None = None,
     ) -> None:
         self._rewritten = rewritten or {}
         self._removed = removed
+        self._written = written or {}
         super().__init__(practices=practices)
 
     def _load(self, files: tuple[str, ...], practices: tuple[str, ...]) -> None:
@@ -76,6 +78,8 @@ class BookshopWorkingCopy(BookshopProject):
             path.write_text(path.read_text(encoding="utf-8").replace(old, new), encoding="utf-8")
         for file in self._removed:
             (self.root / file).unlink()
+        for file, text in self._written.items():
+            (self.root / file).write_text(text, encoding="utf-8")
         self.graph.load_working_copy(str(self.root), {key: str(self.root) for key in practices}, force=True)
 
     def findings(self, rule: str) -> list[str]:

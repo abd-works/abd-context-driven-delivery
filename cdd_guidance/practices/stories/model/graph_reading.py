@@ -21,6 +21,7 @@ from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservati
 from cdd_guidance.practices.stories.model.script_story_map import ScriptStoryMap
 from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
 from cdd_guidance.practices.stories.model.story_node_types import StoryNodeTypes
+from cdd_guidance.practices.stories.model.realization_links import RealizationLinks
 from cdd_guidance.practices.stories.model.term_links import TermLinks
 from cdd_guidance.practices.stories.model.story_tree import EXAMPLE_TYPE, STEP_TYPES, StoryTree
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, is_story_map_file
@@ -63,7 +64,8 @@ class StoriesReading(PracticeReading):
     touch; writes the story map onto its graph; links each Then to the examples it observes
     (*ExampleObservations*), each step to the
     Clean Engineering operations it calls and each example to the classes and properties it shows, and each step to
-    the DDD class each of its linked domain terms names (*TermLinks*), so it reads after Clean Engineering and DDD;
+    the DDD class each of its linked domain terms names (*TermLinks*), and each step with a realization to the model
+    operations it names (*RealizationLinks*), so it reads after Clean Engineering and DDD;
     and says which areas of the map a model is written for (*ModelledAreas*), where alone a Then must observe an
     Example."""
 
@@ -158,6 +160,9 @@ class StoriesReading(PracticeReading):
         domain = self.domain_model
         if domain is not None:
             TermLinks(self.story_tree, domain).link()
+        models = [model for model in (domain, clean) if model is not None]
+        if models:
+            RealizationLinks(self.story_tree, models).link()
         ModelledAreas(self.story_tree).record()
         self._record_read_fidelities()
 
