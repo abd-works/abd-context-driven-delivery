@@ -39,7 +39,7 @@ from space.kanban.ticket_choices import FormatNotOfferedError as TicketFormatNot
 from space.session.practices.practice_session_output import FidelityNotInPractice, FormatNotOfferedError as SessionFormatNotOfferedError  # noqa: E402
 from space.kanban.board_practices import PracticeNotFoundError  # noqa: E402
 from space.session import Sessions  # noqa: E402
-from space.session.session import UnknownPracticeError  # noqa: E402
+from space.session.session import NotAPatternError, UnknownPracticeError  # noqa: E402
 
 from space.kanban.board_tools_examples import CHECKED_GRAPH, DISCOVERY_DONE, JUDGED_REPORT, ProjectTools, STORY_MAP_GRAPH, WHOLE_STORIES_GRAPH, column_of, next_action_of, reports_of, session_file_of, ticket_names_in, ticket_of, violation_counts_of  # noqa: E402
 from space.session.spec_support.throwaway_project import OPEN_PROJECTS
@@ -498,6 +498,11 @@ with description("the board tools") as self:
 
             with it("should refuse a child whose title gives no name"):
                 expect(lambda: self.project.call("ticket.add_child", ticket="pet-visits", title="日本語")).to(raise_error(TitleNamesNothingError))
+
+        with context("that overlays a pattern nobody registered on a ticket's graph"):
+            with it("should refuse it, naming the pattern and the patterns there are"):
+                choosing = lambda: self.project.call("ticket.choose_overlays", ticket="pet-visits", overlays=["no_such_pattern"])
+                expect(choosing).to(raise_error(NotAPatternError, contain("no_such_pattern", "lern_domain_driven")))
 
         with context("that pulls out a ticket that has no parent"):
             with it("should refuse it, naming the ticket"):
