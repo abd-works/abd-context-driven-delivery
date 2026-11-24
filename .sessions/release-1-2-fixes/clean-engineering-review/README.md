@@ -14,7 +14,7 @@ Every round of the Clean Engineering review of this repository's code, in date o
 | [validation-reports](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\README.md) | The Validate action's own reports, left where the action writes them. |
 | [exploratory-testing/analysis/code-metrics.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\exploratory-testing\analysis\code-metrics.md) | 2026-11-22: which measures would have flagged the release's 146 defects; it reads the review's measures but belongs to the exploratory testing analysis. |
 
-The durable model of the code stays in `.context/model/`: `repo-model.md`, `repo-runtime.md`, `repo-model.drawio` and `repo-model.whiteboard`.
+The durable model of the code is one class model per module, `{module}/.context/{module}-model.md` and `.drawio` (such as [graph-model.md](C:\devbd-cdd-release-1-2-fixes\harness\graph\.context\graph-model.md); `space/work_state` is in `space/.context/space-model.md`, and the board keeps `space/kanban/.context/kanban-model.md`), split unchanged from the whole-repository `repo-model.md` and `.drawio`, which are gone with `repo-model.whiteboard`. The runtime relationships between the modules' classes stay in `.context/model/repo-runtime.md`.
 
 ## The rounds, in date order
 
@@ -85,7 +85,7 @@ The durable model of the code stays in `.context/model/`: `repo-model.md`, `repo
 
 1. Install lizard into the tests' and the dev lane's Python, so the 1,808 "not installed" findings become measures, then run the heavy tier once.
 2. Find why the metrics gate reported every measure unchanged after large changes ([metrics_gate.py](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\clean-engineering-review\scripts\metrics_gate.py)).
-3. The 76 module-card drift findings (`seam-names-current-code`) and the 3 import loops still reported (`one-way-deps`).
+3. The 76 module-card drift findings (`seam-names-current-code`). The 3 `one-way-deps` findings are the three files of one loop in `harness/installation`, ended by `52d22fe88` after that run; a whole-code validate has not confirmed it yet.
 4. The 163 declared exceptions no test raises ([test-every-declared-exception.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\_backlog\test-every-declared-exception.md)) and the 9 `refuse-unreadable-input` violations.
 5. The 2,920 judged candidates, which need a judge pass (`judge_all`); whether to run a second judge round is the person's decision.
 6. Bolt's chain walk for BDD observation links (`10c77ff64`, `5a7c43cc3`): measure the invokes edges before and after with `invokes_dump.py`.
