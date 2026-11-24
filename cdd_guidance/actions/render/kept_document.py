@@ -7,7 +7,9 @@ before it writes the file, whatever the adapter did:
 - **Markdown**: each line of the file that carried content and is nowhere in the rendered document is kept below the
   document, under a heading saying it is no longer in the model, in the order the file had it.
 - **A draw.io drawing**: each cell the file drew that the render does not is added back to the drawing as it was, and a
-  cell both draw keeps the place the file gave it, since people lay a drawing out by hand.
+  cell both draw keeps the place the file gave it, since people lay a drawing out by hand; unless the render placed the
+  file's cells itself (``Rendered.layout_kept``), such as a thin slice that moves columns over to make room for a new
+  one, when each stays where the render put it.
 - **A whiteboard**: the same, for its elements.
 
 A cell or element the render does not draw under the name the file gives it is kept, with one exception: a format
@@ -41,8 +43,10 @@ _PLACE = ("x", "y")
 class KeptDocument:
     """One format's way to keep, in a rendered document or drawing, what only the file already there held."""
 
-    def __init__(self, format: Format) -> None:
+    def __init__(self, format: Format, layout_kept: bool = False) -> None:
         self._format = format
+        # Whether the render placed the file's cells itself (``Rendered.layout_kept``), so each stays where it put it.
+        self._layout_kept = layout_kept
 
     def onto(self, existing: str, rendered: str) -> Reshaped:
         """rendered with what only existing held put back, and what was put back named; rendered itself, untouched,
@@ -76,7 +80,7 @@ class KeptDocument:
         said = {self._words_of(cell) for cell in drawn.values()}
         keeps_names = self._are_mostly_drawn(held, drawn)
         only_in_file = [cell for name, cell in held.items() if name not in drawn and self._is_kept(self._words_of(cell), said, keeps_names)]
-        moved = [self._placed_as(cell, drawn[name]) for name, cell in held.items() if name in drawn]
+        moved = [] if self._layout_kept else [self._placed_as(cell, drawn[name]) for name, cell in held.items() if name in drawn]
         if not only_in_file and not any(moved):
             return Reshaped(rendered, [], [])
         new_root.extend(copy.deepcopy(cell) for cell in only_in_file)
@@ -120,7 +124,7 @@ class KeptDocument:
             name for name in before.get("order", list(held))
             if name in held and name not in drawn and self._is_kept(str(held[name].get("text") or ""), said, keeps_names)
         ]
-        moved = [name for name in held if name in drawn and any(held[name].get(side) != drawn[name].get(side) for side in _PLACE if side in held[name])]
+        moved = [] if self._layout_kept else [name for name in held if name in drawn and any(held[name].get(side) != drawn[name].get(side) for side in _PLACE if side in held[name])]
         if not only_in_file and not moved:
             return Reshaped(rendered, [], [])
         for name in moved:

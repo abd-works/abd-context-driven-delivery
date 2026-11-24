@@ -95,11 +95,20 @@ PREVIEW_LENGTH = 40
 
 class Rendered:
     """What a format's adapter and a fidelity answer for a render: the content in the format written. It writes itself
-    as the two fields a render has always answered, ``format`` and ``content``."""
+    as the two fields a render has always answered, ``format`` and ``content``. A render that placed the cells of the
+    drawing it is saved onto itself says so (``layout_kept``); only a render drawn in the server does, so it is not
+    written with the two fields a worker process answers."""
 
-    def __init__(self, format: Format, content: Any) -> None:
+    def __init__(self, format: Format, content: Any, layout_kept: bool = False) -> None:
         self._format = Format(format)
         self._content = content
+        self._layout_kept = layout_kept
+
+    @property
+    def layout_kept(self) -> bool:
+        """Whether the render already placed each cell of the drawing it is saved onto, where that drawing had it or
+        moved over to make room for a cell it added, so the save leaves each where the render put it."""
+        return self._layout_kept
 
     @property
     @data_field

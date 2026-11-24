@@ -274,6 +274,10 @@ class DiagramStoryMap(StoryMap):
                 story.actors = [actor]
             owner.node.stories.append(story)
 
+    # Whether its thin slice places the cells of the file it is drawn over itself, so the save leaves each where it
+    # put it (``Rendered.layout_kept``); a format that draws it afresh leaves their places to the save.
+    keeps_thin_slice_layout = False
+
     def render_thin_slice(self, written: Written = Written()) -> str:
         """This map's increments drawn as the format's thin slice over the file written holds. A format that keeps no
         layout of its own draws it afresh, and the render puts back the places only the file held."""

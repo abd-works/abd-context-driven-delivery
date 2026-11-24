@@ -278,9 +278,9 @@ class _KeptPlaces:
             return None
         return Box(*(_measure(kept.get(side, 0)) for side in ("x", "y", "width", "height")))
 
-    def thin_slice_cards(self) -> List[Box]:
-        """The box of every story card a thin slice drawing held, in any lane, whether or not it is drawn again."""
-        return [self.box_of(name) for name in self._places if _is_thin_slice_card(name)]
+    def thin_slice_cards(self) -> Dict[str, Box]:
+        """The box of every story card a thin slice drawing held, in any lane, by its cell id."""
+        return {name: self.box_of(name) for name in self._places if _is_thin_slice_card(name)}
 
     def place(self, vertex: "DrawIOStoryMap.Vertex") -> None:
         """Put vertex where its cell stood before, at the size it had; a cell new to the map stays where it was laid out.
@@ -298,6 +298,8 @@ class _KeptPlaces:
 
 
 class DrawIOStoryMap(DiagramStoryMap):
+    # Its thin slice places the cells of the drawing it is drawn over itself (*_ThinSlicePlaces*).
+    keeps_thin_slice_layout = True
     suffixes = (".drawio",)
     epic_class = DrawIOEpic
     increment_class = DrawIOIncrement
@@ -461,23 +463,27 @@ class DrawIOStoryMap(DiagramStoryMap):
 
 
 class _ThinSlicePlaces:
-    """Where each lane, story card and column of a thin slice is drawn, over the thin slice drawing it replaces: a lane,
-    card or bar that drawing held stands where it stood, since a person may have laid it out by hand; a card new to a
-    lane takes the first free place in its sub-epic's column there, beside or below the cards already in it; and each
-    column is made as wide as the cards it holds, so every card stays under the bar of the sub-epic that holds it.
-    With no drawing before it, this is the layout's own: one row of cards in each lane, each column as wide as its
-    fullest lane."""
+    """Where each lane, story card and bar of a thin slice is drawn, over the thin slice drawing it replaces. A lane,
+    card or bar that drawing held stands where it stood, since a person may have laid it out by hand, moved right only
+    as far as a column added or widened to its left needs; a card new to a lane takes the first free place in its
+    sub-epic's column there, beside or below the cards already in it; and each column is as wide as the cards it holds,
+    so every card stays under the bar of the sub-epic that holds it and no bar is drawn over another. With no drawing
+    before it, this is the layout's own: one row of cards in each lane, each column as wide as its fullest lane."""
 
     def __init__(self, layout: ThinSliceLayout, kept: _KeptPlaces, lane_top: float) -> None:
         self._layout = layout
         self._kept = kept
         self._pitch = DiagramStory.size + DrawIOIncrement.card_gap
-        # Every place a card stands in: the drawing's own cards, which the render keeps even when it does not draw
-        # them again, and each card placed since.
-        self._taken: List[Box] = kept.thin_slice_cards()
         self._counted: Dict[str, Dict[str, int]] = {}
         self.lanes: List[Box] = self._laid_lanes(lane_top)
+        self._named = [self._named_cards(column) for column in range(len(layout.columns))]
+        drawn = {cell_id for named in self._named for _, cell_id, _ in named}
+        # Every place a card stands in: the drawing's cards that are not drawn again, which the save puts back where
+        # they stood, and each card placed since.
+        self._taken: List[Box] = [box for name, box in kept.thin_slice_cards().items() if name not in drawn]
         self.cards: List[List[Tuple[str, Story, Box]]] = [[] for _ in layout.lanes]
+        # How far each column moved right of where the drawing had it, to make room for what was added to its left.
+        self._moved: List[float] = []
         self.columns: List[Box] = self._laid_columns()
 
     @property
@@ -485,12 +491,16 @@ class _ThinSlicePlaces:
         """Where the last column ends."""
         return max((column.x + column.w for column in self.columns), default=DiagramEpic.left_margin)
 
-    def bar_of(self, cell_id: str, x: float, width: float) -> Box:
-        """The bar cell_id draws over the columns from x, width wide: where the drawing had it, at least that wide."""
-        kept = self._kept.box_of(cell_id)
+    def epic_bar(self, epic: Epic) -> Box:
+        """The epic's bar over every column it holds: where the drawing had it, moved with its first column, and at
+        least as wide as those columns."""
+        held = [(box, moved) for column, box, moved in zip(self._layout.columns, self.columns, self._moved) if column.epic is epic]
+        start, end = held[0][0].x, held[-1][0].x + held[-1][0].w - _HEADER_INSET
+        kept = self._kept.box_of(epic.slug)
         if kept is None:
-            return Box(x, DiagramEpic.row_y, width, DiagramEpic.bar_height)
-        return Box(kept.x, kept.y, max(kept.w, x + width - kept.x), kept.h)
+            return Box(start, DiagramEpic.row_y, end - start, DiagramEpic.bar_height)
+        x = kept.x + held[0][1]
+        return Box(x, kept.y, max(kept.w, end - x), kept.h)
 
     def _laid_lanes(self, top: float) -> List[Box]:
         """Each lane's box: where the drawing had its background, else below the lane before it."""
@@ -503,15 +513,23 @@ class _ThinSlicePlaces:
             top = box.y + box.h + DrawIOIncrement.lane_gap
         return lanes
 
+    def _named_cards(self, column: int) -> List[Tuple[int, str, Story]]:
+        """Each card the lanes put in the column: its lane's index, its cell id, and its story."""
+        return [(index, self._card_id(lane.increment.slug, story.slug), story)
+                for index, lane in enumerate(self._layout.lanes) for story in lane.stories.get(column, [])]
+
     def _laid_columns(self) -> List[Box]:
-        """Each column's box, left to right, with the cards of every lane placed in it."""
+        """Each column's box, left to right, with its cards placed: a column the drawing held where it stood, moved
+        right past the column before it when that one ends further right; a new one straight after the column before."""
         columns: List[Box] = []
-        start = DiagramEpic.left_margin
+        start, moved = DiagramEpic.left_margin, 0
         for index, column in enumerate(self._layout.columns):
             kept = self._kept.box_of(self._column_cell(column))
-            x, width = (kept.x, kept.w + _HEADER_INSET) if kept else (start, self._pitch + DrawIOIncrement.card_gap)
-            width = max(width, self._placed_cards(index, x, width) - x)
+            x, width = (max(kept.x + moved, start), kept.w + _HEADER_INSET) if kept else (start, self._pitch + DrawIOIncrement.card_gap)
+            moved = x - kept.x if kept else moved
+            width = max(width, self._placed_cards(index, x, width, moved) - x)
             columns.append(Box(x, DiagramEpic.nested_row_y, width, DiagramEpic.bar_height))
+            self._moved.append(moved)
             start = x + width
         return columns
 
@@ -519,18 +537,24 @@ class _ThinSlicePlaces:
         """The cell that heads column: its sub-epic's bar, or its epic's when the epic has no sub-epics."""
         return column.sub.cell_id if column.sub is not column.epic else column.epic.slug
 
-    def _placed_cards(self, column: int, x: float, width: float) -> float:
-        """Place the cards every lane puts in the column at x, width wide; answer where the column must end to hold
+    def _placed_cards(self, column: int, x: float, width: float, moved: float) -> float:
+        """Place the cards the lanes put in the column at x, width wide, which moved right by moved: the drawing's own
+        cards first, moved with it, then each new card in a free place; answer where the column must end to hold
         them."""
-        end = x + width
-        for lane_index, lane in enumerate(self._layout.lanes):
-            for story in lane.stories.get(column, []):
-                cell_id = self._card_id(lane.increment.slug, story.slug)
-                box = self._kept.box_of(cell_id) or self._free_place(x, width, self.lanes[lane_index])
-                self._taken.append(box)
-                self.cards[lane_index].append((cell_id, story, box))
-                end = max(end, box.x + box.w + DrawIOIncrement.card_gap)
-        return end
+        named = self._named[column]
+        placed = [(lane, cell_id, story, self._moved_by(self._kept.box_of(cell_id), moved))
+                  for lane, cell_id, story in named if self._kept.box_of(cell_id) is not None]
+        self._taken.extend(box for *_, box in placed)
+        for lane, cell_id, story in named:
+            if self._kept.box_of(cell_id) is None:
+                placed.append((lane, cell_id, story, self._free_place(x, width, self.lanes[lane])))
+                self._taken.append(placed[-1][3])
+        for lane, cell_id, story, box in placed:
+            self.cards[lane].append((cell_id, story, box))
+        return max([x + width] + [box.x + box.w + DrawIOIncrement.card_gap for *_, box in placed])
+
+    def _moved_by(self, box: Box, moved: float) -> Box:
+        return Box(box.x + moved, box.y, box.w, box.h)
 
     def _card_id(self, increment: str, story: str) -> str:
         """The id of a story's card in an increment's lane; a story the lane holds again takes the next number."""
@@ -579,8 +603,7 @@ class _ThinSliceDrawing(ThinSliceSurface):
 
     def epic_header(self, epic: Epic, x: float, width: float) -> None:
         """The epic's bar over every column it holds, where the places put those columns."""
-        held = [box for column, box in zip(self.layout.columns, self.places.columns) if column.epic is epic]
-        bar = self.places.bar_of(epic.slug, held[0].x, held[-1].x + held[-1].w - held[0].x - _HEADER_INSET)
+        bar = self.places.epic_bar(epic)
         self._draw(DrawIOStoryMap.Vertex.make(epic.slug, epic.name, bar.x, bar.y, bar.w, bar.h, epic.style))
 
     def sub_epic_header(self, column: ThinSliceColumn) -> None:

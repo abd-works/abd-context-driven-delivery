@@ -103,7 +103,7 @@ class RenderedFile:
         place; a whiteboard also answers with its board and the writes that put it there. What only the file already
         there held is put back first (*KeptDocument*), and named in the answer as ``migrate``, each with the file, for
         whoever decides where it belongs."""
-        kept = KeptDocument(self.format).onto(self._before, str(rendered.content))
+        kept = KeptDocument(self.format, rendered.layout_kept).onto(self._before, str(rendered.content))
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(kept.text, encoding="utf-8")
         migrate: list[Migration] = [KeptMember(self.path, each, kept.added) for each in kept.kept]

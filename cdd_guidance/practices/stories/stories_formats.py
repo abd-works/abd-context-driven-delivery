@@ -102,7 +102,8 @@ class StoriesFormats(PracticeFormats):
         tests in code rendered to markdown, at a fidelity that declares a scenarios file for each story, are
         written as those files, each by the path the fidelity declares for it."""
         if isinstance(request.content, ThinSlicedMap):
-            return Rendered(request.format, request.content.drawn_by(self.adapter_class(request.format), request.written))
+            diagram = self.adapter_class(request.format)
+            return Rendered(request.format, request.content.drawn_by(diagram, request.written), layout_kept=diagram.keeps_thin_slice_layout)
         if self._writes_scenarios_files(request):
             markdown = self.adapter(request.format).copy_of(self._object_model(request.content, request.source_format))
             return Rendered(request.format, markdown.scenarios_files(STORY_TESTS_FOLDER))

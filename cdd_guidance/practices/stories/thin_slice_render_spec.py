@@ -53,8 +53,18 @@ The Bookshop sells Books from a Cart.
 
 _NOTED_THIN_SLICE = _THIN_SLICE.replace("- *Submit Order*", "- *Submit Order* (partly built: one book per order,\n  never more)")
 
+# The story map with a sub-epic added between two the thin slice drawing already holds.
+_STORY_MAP_WITH_DISCOUNTS = _STORY_MAP.replace(
+    "# (E) Check Out", "## (E) Apply Discounts\n### (S) Customer --> Apply Discount Code\n# (E) Check Out"
+)
+
 # The sub-epic each story of the bookshop map sits under.
-_SUB_EPIC_OF = {"Add Book To Cart": "Add Books", "Change Cart Line Quantity": "Add Books", "Submit Order": "Place Order"}
+_SUB_EPIC_OF = {
+    "Add Book To Cart": "Add Books",
+    "Change Cart Line Quantity": "Add Books",
+    "Submit Order": "Place Order",
+    "Apply Discount Code": "Apply Discounts",
+}
 
 
 def _boxes(drawn: str) -> dict:
@@ -79,6 +89,12 @@ def _cards_outside_their_bars(drawn: str) -> list:
         if not bar.x <= box.x <= box.x + box.w <= bar.x + bar.w:
             outside.append(label)
     return outside
+
+
+def _overlapping_bars(drawn: str) -> list:
+    """Each pair of sub-epic bars that share any width."""
+    bars = sorted((box.x, box.x + box.w, label) for label, box in _boxes(drawn).values() if label in set(_SUB_EPIC_OF.values()))
+    return [(left[2], right[2]) for left, right in zip(bars, bars[1:]) if left[1] > right[0]]
 
 
 def _overlapping_cards(drawn: str) -> list:
@@ -166,6 +182,33 @@ with description("a thin slice written in thin-slice.md beside its story map") a
 
         with it("should keep every card under the bar of the sub-epic that holds it"):
             expect(_cards_outside_their_bars(self.drawn)).to(be_empty)
+
+        with it("should lay no card over another"):
+            expect(_overlapping_cards(self.drawn)).to(be_empty)
+
+    # Seen on main, 2026-11-23: a sub-epic the drawing did not hold was drawn over the bars to its right, since the save
+    # put each of them back where the drawing had it.
+    with context("whose story map gained a sub-epic between two the thin slice drawing a person laid out holds"):
+        with before.each:
+            first = self.fidelity.render_files("drawio", [str(self.context / "thin-slice.md")], "markdown").content
+            self.drawing = self.context / "thin-slice.drawio"
+            self.drawing.write_text(_laid_out_by_a_person(first), encoding="utf-8")
+            self.laid_out = self.drawing.read_text(encoding="utf-8")
+            (self.context / "story-map.md").write_text(_STORY_MAP_WITH_DISCOUNTS, encoding="utf-8")
+            (self.context / "thin-slice.md").write_text(_THIN_SLICE.replace("- *Change Cart Line Quantity*", "- *Change Cart Line Quantity*\n- *Apply Discount Code*"), encoding="utf-8")
+            saved = RenderedFile(self.drawing, Format("drawio"), Format("markdown"))
+            saved.save(self.fidelity.render_files("drawio", [str(self.context / "thin-slice.md")], "markdown", saved.previous))
+            self.drawn = self.drawing.read_text(encoding="utf-8")
+
+        with it("should draw the new sub-epic's bar over no other bar"):
+            expect(_overlapping_bars(self.drawn)).to(be_empty)
+
+        with it("should keep every card under the bar of the sub-epic that holds it"):
+            expect(_cards_outside_their_bars(self.drawn)).to(be_empty)
+
+        with it("should keep the card the person moved, left of the new sub-epic, where they put it"):
+            card = "inc-lane/quantities/change-cart-line-quantity"
+            expect(_boxes(self.drawn)[card][1]).to(equal(_boxes(self.laid_out)[card][1]))
 
         with it("should lay no card over another"):
             expect(_overlapping_cards(self.drawn)).to(be_empty)

@@ -87,6 +87,13 @@ with description("what a render answers") as self:
     with it("should read itself back from those fields"):
         expect(Rendered.from_data({"format": "markdown", "content": "# Cart\n"})).to(equal(self.rendered))
 
+    with it("should leave the layout of the file it is saved onto to the save"):
+        expect(self.rendered.layout_kept).to(be_false)
+
+    with context("that placed the cells of the drawing it is saved onto itself"):
+        with it("should say it kept that drawing's layout"):
+            expect(Rendered(Format("drawio"), "<mxfile/>", layout_kept=True).layout_kept).to(be_true)
+
 
 with description("a render request") as self:
     with context("that names the folder its links point into"):

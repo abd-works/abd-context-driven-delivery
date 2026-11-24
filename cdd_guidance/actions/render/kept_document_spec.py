@@ -96,6 +96,17 @@ with description("a document rendered onto one that is already there") as self:
                 twice = KeptDocument(Format("drawio")).onto(self.kept.text, _drawing("20", ORDER_CELL))
                 expect(twice.text).to(equal(self.kept.text))
 
+    # A thin slice drawn again places the file's cells itself, moving some over to make room for a new column.
+    with context("as a draw.io drawing whose render placed the file's cells itself, and moved the card the person moved"):
+        with before.each:
+            self.kept = KeptDocument(Format("drawio"), layout_kept=True).onto(_drawing("7777", NOTE_CELL), _drawing("20", ORDER_CELL))
+
+        with it("should leave the card where the render put it"):
+            expect(self.kept.text).not_to(contain('x="7777"'))
+
+        with it("should still keep the note only the file held"):
+            expect(self.kept.text).to(contain('id="person-note"', NOTE))
+
     with context("as a draw.io drawing, whose file holds nothing the render does not draw, where the render drew it"):
         with it("should write the drawing exactly as rendered"):
             rendered = _drawing("20", ORDER_CELL)
@@ -152,6 +163,17 @@ with description("a document rendered onto one that is already there") as self:
 
         with it("should name the card the render drew that the file did not hold, as what may have replaced the note"):
             expect(self.kept.added).to(equal(["order 'Order'"]))
+
+    with context("as a whiteboard whose render placed the file's elements itself, and moved the card the person moved"):
+        with before.each:
+            kept = KeptDocument(Format("whiteboard"), layout_kept=True).onto(_board(7777, note=NOTE_ELEMENT), _board(20))
+            self.board = json.loads(kept.text)
+
+        with it("should leave the card where the render put it"):
+            expect(self.board["elements"]["cart"]["x"]).to(equal(20))
+
+        with it("should still keep the note only the file held"):
+            expect(self.board["elements"]["note"]).to(equal(NOTE_ELEMENT))
 
     with context("as a whiteboard, whose file holds nothing the render does not draw, where the render drew it"):
         with it("should write the board exactly as rendered"):
