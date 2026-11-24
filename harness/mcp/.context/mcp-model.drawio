@@ -1,0 +1,562 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="harness/mcp" id="page-harness-mcp">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3640" pageHeight="3758" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="harness-annotations--annotation" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/annotations»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Annotation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ flag: str&lt;br/&gt;+ copied: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1970" y="60" width="280" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-annotations--destination" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/annotations»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Destination&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ channel: str&lt;br/&gt;+ enlists_member: bool&lt;br/&gt;+ marks_a_collection: bool&lt;br/&gt;+ answers_calls: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1630" y="60" width="220" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-process--pythoninterpreter" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/process»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;PythonInterpreter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ executable: Path&lt;br/&gt;+ windowless: str&lt;br/&gt;+ console: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2620" y="1390" width="300" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-git--git" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/git»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Git&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="3020" y="1390" width="420" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-agent-tools--agenttoolset" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;AgentToolSet&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ slug: str&lt;br/&gt;+ reference: ToolsetReference&lt;br/&gt;+ install_folder: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="1870" width="440" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-agent-tools--toolsetreference" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ToolsetReference&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ module_name: str&lt;br/&gt;+ toolset_class: type&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2676" width="480" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-agent-tools--agenttool" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;AgentTool&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ callable: Callable[..., Any]&lt;br/&gt;+ toolset: AgentToolSet&lt;br/&gt;+ slug: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2630" y="1870" width="440" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-agent-tools--toolcall" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ToolCall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ arguments: dict[str, Any]&lt;br/&gt;+ project: Path&lt;br/&gt;+ request: ToolRequest&lt;br/&gt;+ chat_id: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="430" y="1870" width="580" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-agent-tools--toolrequest" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ToolRequest&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ chat: ChatPointer | None&lt;br/&gt;+ tool: str&lt;br/&gt;+ mcp_host: AnsweringMcpHost | None&lt;br/&gt;+ answers_a_chat: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1500" y="2676" width="620" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-agent-tools--chatpointer" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ChatPointer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: str&lt;br/&gt;+ transcript: Path | None&lt;br/&gt;+ lines: str&lt;br/&gt;+ working_folder: Path | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2220" y="2676" width="560" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--installer" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Installer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ target: InstallTarget&lt;br/&gt;+ repo: Path&lt;br/&gt;+ ide: str&lt;br/&gt;+ layout: IdeLayout&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1850" y="880" width="580" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--installlock" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;InstallLock&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2072" width="300" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--registeredchannel" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;RegisteredChannel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ toolsets: tuple[type, ...]&lt;br/&gt;+ server: ChannelServer | None&lt;br/&gt;+ published: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="380" y="2226" width="640" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--channelserver" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ChannelServer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ stood_up: StandUp | None&lt;br/&gt;+ runs_this_process: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1620" y="2226" width="200" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--standup" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;StandUp&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ tools: list[str]&lt;br/&gt;+ skipped: SkippedTools&lt;br/&gt;+ notice: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1300" y="2966" width="300" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--skippedtools" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;SkippedTools&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ as_data: list[dict[str, str]]&lt;br/&gt;+ notice: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2230" y="1870" width="280" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--idelayout" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;IdeLayout&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ide: str&lt;br/&gt;+ folder_name: str&lt;br/&gt;+ is_claude_code: bool&lt;br/&gt;+ rule_suffix: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="3336" width="220" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--repositorytoolsets" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;RepositoryToolsets&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ GUIDANCE_FOLDER: str&lt;br/&gt;+ IMPORT_FOLDERS: tuple[str, ...]&lt;br/&gt;+ root: Path&lt;br/&gt;+ unloadable: list[ToolsetUnloadable]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="1390" width="240" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--jsonfile" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;JsonFile&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ path: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2080" y="1390" width="440" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--dataclass" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;DataClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ data_class: type&lt;br/&gt;+ fields: dict[str, property]&lt;br/&gt;+ identity: tuple[str, ...]&lt;br/&gt;+ languages: tuple[str, ...]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1390" width="260" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-hooks--hook" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/hooks»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Hook&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ EVENTS: frozenset[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="670" y="880" width="260" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--mcphost" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;McpHost&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ checkout_toolsets: ProjectToolsets&lt;br/&gt;+ projects: list[Path]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ McpHost(checkout_toolsets: ProjectToolsets, lanes: ServerLanes | None, home: CddHome | None)&lt;br/&gt;+ dispatch(name: str, arguments: dict[str, object] | None, project: Path | None): object&lt;br/&gt;+ answer(call: ToolCall): object&lt;br/&gt;+ tools_listed_for(project: Path | None): list[dict[str, Any]]&lt;br/&gt;+ serve(daemon: McpDaemon, listener: socket.socket): None&lt;br/&gt;+ restart(): dict[str, Any]&lt;br/&gt;+ diagnose(): dict[str, Any]&lt;br/&gt;+ from_repo(repo: Path | str, lanes: ServerLanes | None, home: CddHome | None): McpHost&lt;br/&gt;+ from_refs(toolset_refs: tuple[str, ...], repo: str | None, project: str | None, lanes: ServerLanes | None, home: CddHome | None): McpHost&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="880" width="800" height="222" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--chatrequest" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ChatRequest&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; process: ClaudeChatProcess | None&lt;br/&gt;+ chat: ChatPointer | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ChatRequest(headers: Mapping[str, str], client_port: int | None, claude_settings: Path)&lt;br/&gt;+ project_for(tool: str): Path | None&lt;br/&gt;+ tool_request(tool: str, host: McpHost): ToolRequest&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1940" y="2226" width="520" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--projecttoolsets" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ProjectToolsets&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ repo: Path | None&lt;br/&gt;+ project: Path | None&lt;br/&gt;+ started: bool&lt;br/&gt;+ tools: dict[str, AgentTool]&lt;br/&gt;+ prompts: dict[str, AgentTool]&lt;br/&gt;+ skipped: SkippedTools&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ProjectToolsets(repo: str | Path | None, project: str | Path | None)&lt;br/&gt;+ enroll(tool: AgentTool): None&lt;br/&gt;+ start(toolsets: Iterable[ToolsetReference]): None&lt;br/&gt;+ for_project(project: Path): ProjectToolsets&lt;br/&gt;+ restarted(): ProjectToolsets&lt;br/&gt;+ resolve_call_name(name: str): str&lt;br/&gt;+ enrolled(name: str): AgentTool | None&lt;br/&gt;+ call_seconds(name: str): float&lt;br/&gt;+ invoke(mcp_name: str, arguments: dict[str, object] | None): object&lt;br/&gt;+ answer(mcp_name: str, call: ToolCall): object&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="2226" width="420" height="302" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--mcpinstallation" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;McpInstallation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ destination: Mcp&lt;br/&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; served: ServedCheckout&lt;br/&gt;+ daemon: McpDaemon&lt;br/&gt;+ claude_plugins: ClaudePlugins&lt;br/&gt;+ server: McpChannelServer&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; cdd_entry: CddEntry&lt;br/&gt;+ mcp_operations: list[AgentTool]&lt;br/&gt;+ toolsets: tuple[type, ...]&lt;br/&gt;+ published: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ McpInstallation(target: InstallTarget, record: InstallRecord, served: ServedCheckout)&lt;br/&gt;+ create(target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None): McpInstallation&lt;br/&gt;+ write(tool: AgentTool): None&lt;br/&gt;+ write_once_recorded(): None&lt;br/&gt;+ status(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="310" width="640" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--mcpchannelserver" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;McpChannelServer&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ &amp;lt;&amp;lt; association &amp;gt;&amp;gt; served: ServedCheckout&lt;br/&gt;+ runs_this_process: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ McpChannelServer(served: ServedCheckout, daemon: McpDaemon, claude_plugins: ClaudePlugins, layout: IdeLayout)&lt;br/&gt;+ stand_up(): StandUp&lt;br/&gt;+ ensure_running(): list[str]&lt;br/&gt;+ install_mods(): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="700" y="2676" width="640" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--cddhome" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CddHome&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ state_path: Path&lt;br/&gt;+ log_path: Path&lt;br/&gt;+ connect_script: Path&lt;br/&gt;+ runtime_record: Path&lt;br/&gt;+ pinned_checkout: Path&lt;br/&gt;+ is_installed: bool&lt;br/&gt;+ is_dev_lane: bool&lt;br/&gt;+ stable_lane: CddHome&lt;br/&gt;+ dev_lane: CddHome&lt;br/&gt;+ source: Path&lt;br/&gt;+ mode: str&lt;br/&gt;+ served_branch: str&lt;br/&gt;+ served_worktree: Path | None&lt;br/&gt;+ interpreter: PythonInterpreter&lt;br/&gt;+ server_environment: dict[str, str]&lt;br/&gt;+ marketplace: ClaudeMarketplace&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CddHome(folder: Path | str | None)&lt;br/&gt;+ is_pinned_to(checkout: Path | str): bool&lt;br/&gt;+ install(checkout: Path | str, connect_script: Path | str): None&lt;br/&gt;+ pin(checkout: Path | str): str&lt;br/&gt;+ serve_current(checkout: Path | str): None&lt;br/&gt;+ serve_from(checkout: Path | str): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="2450" y="880" width="380" height="414" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--claudemarketplace" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClaudeMarketplace&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ INSTALL_COMMAND: str&lt;br/&gt;+ cdd_plugin: PublishedPlugin&lt;br/&gt;+ mods: list[PublishedPlugin]&lt;br/&gt;+ install_command: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ClaudeMarketplace(folder: Path, home: CddHome)&lt;br/&gt;+ plugin(name: str): PublishedPlugin&lt;br/&gt;+ mod_folder(plugin: PublishedPlugin): Path&lt;br/&gt;+ publish_cdd_plugin(server: dict[str, object]): list[Path]&lt;br/&gt;+ publish_mods(code: Path): None&lt;br/&gt;+ publish_mods_for_chats(is_dev_lane_running: bool): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="780" y="2966" width="360" height="222" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--publishedplugin" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PublishedPlugin&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ marketplace: ClaudeMarketplace&lt;br/&gt;+ name: str&lt;br/&gt;+ folder: Path&lt;br/&gt;+ is_published: bool&lt;br/&gt;+ manifest: dict[str, Any]&lt;br/&gt;+ version: str&lt;br/&gt;+ description: str&lt;br/&gt;+ installed_name: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PublishedPlugin(marketplace: ClaudeMarketplace, name: str)&lt;br/&gt;+ write_manifest(manifest: dict[str, Any]): Path&lt;br/&gt;+ publish_from(mod: PublishedMod): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="3336" width="360" height="222" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--publishedmods" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PublishedMods&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ code: Path&lt;br/&gt;+ every: list[PublishedMod]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PublishedMods(code: Path)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="740" y="3336" width="200" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--claudeplugins" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClaudePlugins&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ installed: dict[str, str]&lt;br/&gt;+ claude_cli: str | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ClaudePlugins(home: CddHome | None)&lt;br/&gt;+ install(plugin: PublishedPlugin): PluginInstall&lt;br/&gt;+ is_watched(plugin: PublishedPlugin): bool&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1760" y="2966" width="300" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--plugininstall" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PluginInstall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ state: str&lt;br/&gt;+ INSTALLED: str&lt;br/&gt;+ WATCHED: str&lt;br/&gt;+ MISSING: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ PluginInstall(state: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1900" y="3336" width="200" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--throttledreporter" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ThrottledReporter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ThrottledReporter(reporter: Reporter, seconds: float)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="420" y="1390" width="340" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--mcp" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Mcp&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="1890" y="310" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--longcall" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;LongCall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=harness/mcp;" vertex="1" parent="1">
+          <mxGeometry x="2250" y="310" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8269;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3462;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-installation--repositorytoolsets" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1560" y="1350" />
+              <mxPoint x="1790" y="1350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-agent-tools--toolcall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1390" y="1300" />
+              <mxPoint x="390" y="1300" />
+              <mxPoint x="390" y="1800" />
+              <mxPoint x="990" y="1800" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5" value="«reports progress through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3269;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--throttledreporter" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="1320" />
+              <mxPoint x="590" y="1320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6" value="«answers with the data of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1731;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-installation--dataclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1220" y="1280" />
+              <mxPoint x="190" y="1280" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="«publishes as a cdd MCP tool»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.093;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcp" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="16" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8276;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6591;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-agent-tools--agenttool" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1530" y="780" />
+              <mxPoint x="2220" y="780" />
+              <mxPoint x="2220" y="260" />
+              <mxPoint x="2970" y="260" />
+              <mxPoint x="2970" y="1310" />
+              <mxPoint x="3470" y="1310" />
+              <mxPoint x="3470" y="1830" />
+              <mxPoint x="2920" y="1830" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="«publishes as a cdd MCP tool»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=1.0;exitY=0.093;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcp" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="18" value="«publishes the server-starting hooks with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1724;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-hooks--hook" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1150" y="840" />
+              <mxPoint x="800" y="840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="19" value="«registers with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-installation--installer" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1340" y="820" />
+              <mxPoint x="2060" y="820" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="interpreter «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6053;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-process--pythoninterpreter" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2680" y="1350" />
+              <mxPoint x="2770" y="1350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="22" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7895;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-git--git" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2750" y="1330" />
+              <mxPoint x="3230" y="1330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="interpreter «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6053;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-process--pythoninterpreter" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2680" y="1350" />
+              <mxPoint x="2770" y="1350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="23" value="«takes the import path from»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2105;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6538;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-installation--repositorytoolsets" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2530" y="1330" />
+              <mxPoint x="1870" y="1330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="24" value="«reads and writes through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3947;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-installation--jsonfile" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2600" y="1350" />
+              <mxPoint x="2300" y="1350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="25" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcp" target="harness-annotations--destination" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1750" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="26" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--longcall" target="harness-annotations--annotation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2080" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="27" value="checkout_toolsets «keeps one per project» «resolves call name»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2381;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--projecttoolsets" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1610" y="1840" />
+              <mxPoint x="1200" y="1840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="«makes one for each request from the module as it is now»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--chatrequest" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1770" y="1310" />
+              <mxPoint x="2050" y="1310" />
+              <mxPoint x="2050" y="1840" />
+              <mxPoint x="2540" y="1840" />
+              <mxPoint x="2540" y="2180" />
+              <mxPoint x="2200" y="2180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="«publishes the mods on restart through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcphost" target="harness-mcp--claudemarketplace" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1290" y="1130" />
+              <mxPoint x="350" y="1130" />
+              <mxPoint x="350" y="2040" />
+              <mxPoint x="10" y="2040" />
+              <mxPoint x="10" y="2900" />
+              <mxPoint x="960" y="2900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="30" value="chat «names the chat with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6731;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--chatrequest" target="harness-agent-tools--chatpointer" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2290" y="2630" />
+              <mxPoint x="2500" y="2630" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="31" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3269;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--chatrequest" target="harness-agent-tools--toolrequest" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2110" y="2630" />
+              <mxPoint x="1810" y="2630" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="32" value="skipped" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.7619;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-installation--skippedtools" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1420" y="2070" />
+              <mxPoint x="2370" y="2070" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="33" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.881;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-agent-tools--agenttool" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1470" y="2090" />
+              <mxPoint x="2850" y="2090" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="34" value="«makes each toolset with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-agent-tools--toolsetreference" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1310" y="2620" />
+              <mxPoint x="300" y="2620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="35" value="«reads the tools published to Mcp of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.381;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-agent-tools--agenttoolset" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1260" y="2050" />
+              <mxPoint x="1610" y="2050" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="36" value="«reads arguments of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.119;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-agent-tools--toolcall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1150" y="2050" />
+              <mxPoint x="720" y="2050" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="37" value="«waits longer for operations annotated»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.619;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-mcp--longcall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1360" y="2190" />
+              <mxPoint x="1330" y="2190" />
+              <mxPoint x="1330" y="2210" />
+              <mxPoint x="1180" y="2210" />
+              <mxPoint x="1180" y="1170" />
+              <mxPoint x="1100" y="1170" />
+              <mxPoint x="1100" y="820" />
+              <mxPoint x="1330" y="820" />
+              <mxPoint x="1330" y="840" />
+              <mxPoint x="2350" y="840" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="38" value="«serves the operations annotated»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--projecttoolsets" target="harness-mcp--mcp" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1310" y="2170" />
+              <mxPoint x="1400" y="2170" />
+              <mxPoint x="1400" y="2210" />
+              <mxPoint x="1490" y="2210" />
+              <mxPoint x="1490" y="2190" />
+              <mxPoint x="1550" y="2190" />
+              <mxPoint x="1550" y="2640" />
+              <mxPoint x="1470" y="2640" />
+              <mxPoint x="1470" y="2840" />
+              <mxPoint x="3100" y="2840" />
+              <mxPoint x="3100" y="1510" />
+              <mxPoint x="2950" y="1510" />
+              <mxPoint x="2950" y="440" />
+              <mxPoint x="1990" y="440" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="39" value="claude_plugins" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--claudeplugins" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1530" y="610" />
+              <mxPoint x="1860" y="610" />
+              <mxPoint x="1860" y="280" />
+              <mxPoint x="2970" y="280" />
+              <mxPoint x="2970" y="1290" />
+              <mxPoint x="3490" y="1290" />
+              <mxPoint x="3490" y="2930" />
+              <mxPoint x="1970" y="2930" />
+              <mxPoint x="1970" y="2920" />
+              <mxPoint x="1960" y="2920" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="40" value="server «stands up and starts the server through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-mcp--mcpchannelserver" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1370" y="800" />
+              <mxPoint x="960" y="800" />
+              <mxPoint x="960" y="1780" />
+              <mxPoint x="370" y="1780" />
+              <mxPoint x="370" y="2080" />
+              <mxPoint x="390" y="2080" />
+              <mxPoint x="390" y="2190" />
+              <mxPoint x="350" y="2190" />
+              <mxPoint x="350" y="2600" />
+              <mxPoint x="860" y="2600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="41" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpinstallation" target="harness-installation--registeredchannel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="2196" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="42" value="«loads»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-mcp--mcphost" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1020" y="2380" />
+              <mxPoint x="1050" y="2380" />
+              <mxPoint x="1050" y="2070" />
+              <mxPoint x="400" y="2070" />
+              <mxPoint x="400" y="1810" />
+              <mxPoint x="980" y="1810" />
+              <mxPoint x="980" y="1150" />
+              <mxPoint x="1450" y="1150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="43" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-installation--standup" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1020" y="2900" />
+              <mxPoint x="1450" y="2900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="44" value="«installs the plugins of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-mcp--claudemarketplace" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="860" y="2920" />
+              <mxPoint x="900" y="2920" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="45" value="«installs each plugin through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.75;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-mcp--claudeplugins" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1180" y="2880" />
+              <mxPoint x="1860" y="2880" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="46" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.75;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--mcpchannelserver" target="harness-installation--channelserver" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1720" y="2366" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="47" value="marketplace «publishes the mods of the code it serves through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--cddhome" target="harness-mcp--claudemarketplace" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2640" y="1360" />
+              <mxPoint x="2610" y="1360" />
+              <mxPoint x="2610" y="1370" />
+              <mxPoint x="2570" y="1370" />
+              <mxPoint x="2570" y="2640" />
+              <mxPoint x="2810" y="2640" />
+              <mxPoint x="2810" y="2890" />
+              <mxPoint x="1880" y="2890" />
+              <mxPoint x="1880" y="2910" />
+              <mxPoint x="1630" y="2910" />
+              <mxPoint x="1630" y="3120" />
+              <mxPoint x="1170" y="3120" />
+              <mxPoint x="1170" y="2920" />
+              <mxPoint x="1080" y="2920" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="48" value="cdd_plugin «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=cdd_plugin;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1944;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-mcp--publishedplugin" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="960" y="3290" />
+              <mxPoint x="1150" y="3290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="49" value="«finds the mods to publish through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.25;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-mcp--publishedmods" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="870" y="3290" />
+              <mxPoint x="840" y="3290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="50" value="«publishes the mods one install at a time, holding»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1667;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-installation--installlock" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="840" y="2840" />
+              <mxPoint x="30" y="2840" />
+              <mxPoint x="30" y="2200" />
+              <mxPoint x="210" y="2200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="51" value="«reads and writes through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.6667;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3409;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudemarketplace" target="harness-installation--jsonfile" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1020" y="2920" />
+              <mxPoint x="1060" y="2920" />
+              <mxPoint x="1060" y="2860" />
+              <mxPoint x="3120" y="2860" />
+              <mxPoint x="3120" y="1540" />
+              <mxPoint x="2230" y="1540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52" value="marketplace" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.3889;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--publishedplugin" target="harness-mcp--claudemarketplace" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1220" y="3220" />
+              <mxPoint x="1050" y="3220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="53" value="«reads and writes its manifest through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8056;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6591;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--publishedplugin" target="harness-installation--jsonfile" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1370" y="3300" />
+              <mxPoint x="1550" y="3300" />
+              <mxPoint x="1550" y="3500" />
+              <mxPoint x="3140" y="3500" />
+              <mxPoint x="3140" y="1510" />
+              <mxPoint x="3470" y="1510" />
+              <mxPoint x="3470" y="1350" />
+              <mxPoint x="2780" y="1350" />
+              <mxPoint x="2780" y="1330" />
+              <mxPoint x="2760" y="1330" />
+              <mxPoint x="2760" y="1350" />
+              <mxPoint x="2690" y="1350" />
+              <mxPoint x="2690" y="1330" />
+              <mxPoint x="2660" y="1330" />
+              <mxPoint x="2660" y="1340" />
+              <mxPoint x="2610" y="1340" />
+              <mxPoint x="2610" y="1330" />
+              <mxPoint x="2550" y="1330" />
+              <mxPoint x="2550" y="1520" />
+              <mxPoint x="2370" y="1520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="54" value="«installs»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6111;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudeplugins" target="harness-mcp--publishedplugin" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1840" y="3270" />
+              <mxPoint x="1300" y="3270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="55" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudeplugins" target="harness-mcp--plugininstall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1980" y="3290" />
+              <mxPoint x="2000" y="3290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="56" value="«reads Claude Code's settings through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-mcp--claudeplugins" target="harness-installation--idelayout" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1910" y="3290" />
+              <mxPoint x="1690" y="3290" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram></mxfile>

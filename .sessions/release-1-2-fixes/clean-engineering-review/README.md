@@ -14,7 +14,7 @@ Every round of the Clean Engineering review of this repository's code, in date o
 | [validation-reports](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\README.md) | The Validate action's own reports, left where the action writes them. |
 | [exploratory-testing/analysis/code-metrics.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\exploratory-testing\analysis\code-metrics.md) | 2026-11-22: which measures would have flagged the release's 146 defects; it reads the review's measures but belongs to the exploratory testing analysis. |
 
-The durable model of the code is one class model per module, `{module}/.context/{module}-model.md` and `.drawio` (such as [graph-model.md](C:\devbd-cdd-release-1-2-fixes\harness\graph\.context\graph-model.md); `space/work_state` is in `space/.context/space-model.md`, and the board keeps `space/kanban/.context/kanban-model.md`), split unchanged from the whole-repository `repo-model.md` and `.drawio`, which are gone with `repo-model.whiteboard`. The runtime relationships between the modules' classes stay in `.context/model/repo-runtime.md`.
+The durable model of the code is one class model per module, `{module}/.context/{module}-model.md` and `.drawio` (such as [graph-model.md](C:\dev\abd-cdd-release-1-2-fixes\harness\graph\.context\graph-model.md); `space/work_state` is in `space/.context/space-model.md`, and the board keeps `space/kanban/.context/kanban-model.md`), split unchanged from the whole-repository `repo-model.md` and `.drawio`, which are gone with `repo-model.whiteboard`. The runtime relationships between the modules' classes stay in `.context/model/repo-runtime.md`.
 
 ## The rounds, in date order
 

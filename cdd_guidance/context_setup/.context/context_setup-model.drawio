@@ -1,0 +1,58 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="cdd_guidance/context_setup" id="page-cdd-guidance-context-setup">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1520" pageHeight="1042" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="harness-agent-tools--toolcall" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ToolCall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ arguments: dict[str, Any]&lt;br/&gt;+ project: Path&lt;br/&gt;+ request: ToolRequest&lt;br/&gt;+ chat_id: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="700" width="580" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-context-setup--contextsetup" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ContextSetup&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ context_index: ContextIndex&lt;br/&gt;+ session: Any&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ContextSetup(context_index: ContextIndex | None, session: Any)&lt;br/&gt;+ for_call(call: ToolCall): ContextSetup&lt;br/&gt;+ in_session(session: Any): ContextSetup&lt;br/&gt;+ convert(folder_path: str): ConversionResult&lt;br/&gt;+ smoke_test(repo_path: str, surface: str, capture_repo: str, base_url: str, entry_paths: list[str] | None): SmokeTestResult&lt;br/&gt;+ scout_app(repo_path: str, surface: str, capture_repo: str, base_url: str, entry_paths: list[str] | None): ScoutResult&lt;br/&gt;+ complete_capture(repo_path: str, missing_pages: list[str], surface: str, capture_repo: str, base_url: str): CaptureResult&lt;br/&gt;+ capture_from_live_app(repo_path: str, capture_repo: str, surface: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=cdd_guidance/context_setup;" vertex="1" parent="1">
+          <mxGeometry x="340" y="60" width="700" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-context-setup--contextindex" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ContextIndex&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ContextIndex(embedding_provider: EmbeddingProvider, session: Any)&lt;br/&gt;+ for_call(call: ToolCall): ContextIndex&lt;br/&gt;+ in_session(session: Any): ContextIndex&lt;br/&gt;+ embed(segments_paths: list[str], out_path: str): EmbedResult&lt;br/&gt;+ search(query: str, index_path: str, top_k: int): SearchResult&lt;br/&gt;+ ask(question: str, index_path: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=cdd_guidance/context_setup;" vertex="1" parent="1">
+          <mxGeometry x="880" y="430" width="400" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="cdd-guidance-context-setup--embeddingprovider" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;EmbeddingProvider&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ embed_texts(texts: list[str]): list[list[float]]&lt;br/&gt;+ embed_query(text: str): list[float]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=cdd_guidance/context_setup;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="700" width="300" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="context_index «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.7429;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-context-setup--contextsetup" target="cdd-guidance-context-setup--contextindex" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="860" y="390" />
+              <mxPoint x="1100" y="390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="context_index «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.7429;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-context-setup--contextsetup" target="cdd-guidance-context-setup--contextindex" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="860" y="390" />
+              <mxPoint x="1100" y="390" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="«reads session of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-context-setup--contextsetup" target="harness-agent-tools--toolcall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="690" y="400" />
+              <mxPoint x="770" y="400" />
+              <mxPoint x="770" y="610" />
+              <mxPoint x="340" y="610" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5" value="«embeds with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.6591;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-context-setup--contextindex" target="cdd-guidance-context-setup--embeddingprovider" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="«reads session of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3409;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cdd-guidance-context-setup--contextindex" target="harness-agent-tools--toolcall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1030" y="630" />
+              <mxPoint x="620" y="630" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram></mxfile>

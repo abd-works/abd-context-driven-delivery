@@ -655,6 +655,6 @@ The board's acceptance of a violation, the one browser story saved with its scre
 
 **Left to the person**
 18. Done: the AGENTS.md files name the current classes (`SESSION_OPENING`, `HOOK_TOASTS`, `StoryMap`), committed with `b93698350`.
-19. Done in part: `repo-model2.drawio` is removed (`62fe55b10`) and `repo-model.whiteboard` is drawn again from `repo-model.md` (`86fceac2c`). The whiteboard still holds `StoryModel` cards that `repo-model.md` no longer has, since a render keeps elements only the drawing held; remove them on the board or in the file. (`prototype_swap` is still in the code, `source_text.py`, so it is not stale.)
+19. Render a module's whiteboard from its own model when someone asks for one. The whole-repository model is gone: `repo-model2.drawio` (`62fe55b10`), `repo-model.md`, `repo-model.drawio` and `repo-model.whiteboard` are removed, and the class model is one model per module, `{module}/.context/{module}-model.md` and `.drawio` (`space/work_state` in `space/.context/space-model.md`; the board keeps `space/kanban/.context/kanban-model.md`), where the Clean Engineering model fidelity finds it. (`prototype_swap` is still in the code, `source_text.py`, so it is not stale.)
 20. Delete the empty folder `C:\g` a robot left, and the about 17 stale entries in the main checkout's `.git/worktrees` that `git worktree prune` could not clear.
 21. A live walk of this release's fixes in the Claude desktop app: the chat bar, the queue mod, Auto mode and Remote Control.

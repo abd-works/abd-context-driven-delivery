@@ -1,0 +1,69 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="harness/release" id="page-harness-release">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2460" pageHeight="1572" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="harness-process--runningprocess" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/process»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;RunningProcess&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ pid: int&lt;br/&gt;+ alive: bool&lt;br/&gt;+ started_at: datetime | None&lt;br/&gt;+ listening_ports: list[int]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="1230" width="200" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-git--git" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/git»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Git&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="740" width="420" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-release--projectversion" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ProjectVersion&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ version: Version&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ProjectVersion(pyproject: Path)&lt;br/&gt;+ of(project: Path): ProjectVersion&lt;br/&gt;+ read(): str&lt;br/&gt;+ write(version: str): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#666666;module=harness/release;" vertex="1" parent="1">
+          <mxGeometry x="150" y="60" width="220" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-release--testrun" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TestRun&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ tier: TestTier&lt;br/&gt;+ commit: str&lt;br/&gt;+ checkout: str&lt;br/&gt;+ started_at: datetime&lt;br/&gt;+ pid: int&lt;br/&gt;+ process_started: datetime | None&lt;br/&gt;+ is_live: bool&lt;br/&gt;+ name: str&lt;br/&gt;+ state: str&lt;br/&gt;+ run_id: str&lt;br/&gt;+ started: str&lt;br/&gt;+ summary: str&lt;br/&gt;+ is_new_failure: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ TestRun(tier: TestTier, commit: str, started_at: datetime, outcome: RunOutcome, checkout: str, pid: int, process_started: datetime | None, finished_at: datetime | None, summary: str, is_new_failure: bool)&lt;br/&gt;+ from_json(json_data: dict): TestRun&lt;br/&gt;+ to_json(): dict&lt;br/&gt;+ taken_by(process: RunningProcess): TestRun&lt;br/&gt;+ finished(exit_code: int, output: str, previous: TestRun | None, now: datetime): TestRun&lt;br/&gt;+ is_due(now: datetime): bool&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#666666;module=harness/release;" vertex="1" parent="1">
+          <mxGeometry x="600" y="740" width="1160" height="350" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-release--testrunrecord" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TestRunRecord&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ path: Path&lt;br/&gt;+ checkout: Path | None&lt;br/&gt;+ runs: list[TestRun]&lt;br/&gt;+ claim_wait: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ TestRunRecord(folder: Path | str, checkout: Path | str | None)&lt;br/&gt;+ latest(tier: TestTier): TestRun | None&lt;br/&gt;+ previous(tier: TestTier): TestRun | None&lt;br/&gt;+ new_run(tier: TestTier, commit: str, started_at: datetime): TestRun&lt;br/&gt;+ save(run: TestRun): None&lt;br/&gt;+ claimed(): Iterator[bool]&lt;br/&gt;+ log_path(tier: TestTier): Path&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#666666;module=harness/release;" vertex="1" parent="1">
+          <mxGeometry x="1190" y="360" width="400" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-release--testrunrecordunreadable" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TestRunRecordUnreadable&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ path: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ TestRunRecordUnreadable(path: Path, held: object, reason: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#666666;module=harness/release;" vertex="1" parent="1">
+          <mxGeometry x="1880" y="740" width="380" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-release--runworktree" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;RunWorktree&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ RunWorktree(record: TestRunRecord, run: TestRun)&lt;br/&gt;+ made(): Iterator[Path]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#666666;module=harness/release;" vertex="1" parent="1">
+          <mxGeometry x="730" y="360" width="300" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-release--testrunner" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TestRunner&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ TestRunner(record: TestRunRecord)&lt;br/&gt;+ start(run: TestRun): RunningProcess&lt;br/&gt;+ run(run: TestRun, env: dict[str, str] | None): tuple[int, str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#666666;module=harness/release;" vertex="1" parent="1">
+          <mxGeometry x="450" y="60" width="380" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-release--testcadence" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TestCadence&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ record: TestRunRecord&lt;br/&gt;+ checkout: Path | None&lt;br/&gt;+ latest_runs: list[TestRun]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ TestCadence(record: TestRunRecord, runner: TestRunner | None, git: Git | None, clock: Callable[[], datetime], review: Callable[[Path, str], list[str]] | None, wait: Callable[[float], None], say: Callable[[str], None])&lt;br/&gt;+ due(): list[TestTier]&lt;br/&gt;+ start_due(): TestRun | None&lt;br/&gt;+ run_now(tier: TestTier, recorded_start: datetime | None): TestRun&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e1d5e7;strokeColor=#666666;module=harness/release;" vertex="1" parent="1">
+          <mxGeometry x="930" y="60" width="1240" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="«names the process that runs it as»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.4828;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-release--testrun" target="harness-process--runningprocess" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="«keeps»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.325;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-release--testrunrecord" target="harness-release--testrun" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1320" y="700" />
+              <mxPoint x="1180" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="«raises»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.675;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-release--testrunrecord" target="harness-release--testrunrecordunreadable" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1460" y="700" />
+              <mxPoint x="2070" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5" value="«runs git worktree through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-release--runworktree" target="harness-git--git" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="880" y="700" />
+              <mxPoint x="270" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6" value="record" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.371;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-release--testcadence" target="harness-release--testrunrecord" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="run" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8684;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-release--testrunner" target="harness-release--runworktree" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram></mxfile>
