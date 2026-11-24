@@ -78,7 +78,10 @@ class TemplateCheck:
         return found
 
     def _read(self, fidelity: FidelityGuidance, format: Format) -> tuple[int, list[str]]:
-        """How many nodes the practice reads from the template, and what its rules report on it."""
+        """How many nodes the practice reads from the template, and what its rules report on it. A rule that runs over
+        the whole working copy, such as one asking whether anything uses a class, judges how the files of a whole design
+        use one another; a template read in a folder of its own is one file of a design, whose classes nothing else is
+        written to use, so what such a rule finds there says nothing about the template and is left out."""
         own = self._placed(fidelity, format)
         beside = {
             self._placed(other, Format(_MARKDOWN)): self._text(other, Format(_MARKDOWN))
@@ -89,7 +92,7 @@ class TemplateCheck:
         saved = SavedGraph.from_graph(fixture.practice.reading.graph).practices[self._practice.key]
         nodes = [node for node in saved.nodes if own in (node.file, node.facts.get(_DESCRIBED_IN))]
         at = {own, *(node.file for node in nodes)}
-        found = [f"{violation.rule}: {violation.message}" for violation in saved.violations if violation.location in at]
+        found = [f"{violation.rule}: {violation.message}" for violation in saved.violations if violation.location in at and not violation.runs_over_all]
         return len(nodes), sorted(found)
 
     def _text(self, fidelity: FidelityGuidance, format: Format) -> str:
