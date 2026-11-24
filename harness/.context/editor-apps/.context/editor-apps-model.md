@@ -129,7 +129,7 @@ Canonical: `harness/guidance/.context/practice-guidance-model.md`.
 
 + editor: App | None  <<class field>>
 	// the app that edits this practice's files: the Story UI editor for Stories, none for every other practice; space/kanban, which makes the Story UI editor's App, sets it on Stories (Stories.editor = STORY_UI_APP), so no practice imports space
-+ session_root: Path | None
++ session_roots: list[Path]
 	// derived: the folder the session this practice works in names for it (its PracticeSessionOutput.folder); none outside a session. work_in keeps the session output it is given so this reads it
 ----
 + work_in(session_output) -> None  (changed: also keeps session_output)
@@ -153,9 +153,9 @@ Canonical: `harness/guidance/.context/practice-guidance-model.md`.
 Canonical: `harness/graph/.context/module-context.md`.
 
 + load_practice_roots(call: ToolCall | None = None) -> GraphLoaded  <<mcp>> <<agent_tool>>
-	-> practice.session_root (each practice it holds)
+	-> practice.session_roots (each practice it holds)
 	-> self.build.load
-	// opens each practice it holds on the root its session names, applies the session's overlays, and builds: the Graph app's whole load, with no folder or practice key passed in. A practice with no session_root, or whose root folder is not written yet, is left out
+	// reads each practice it holds from the files under the roots its session names for it (the practice's folder and every folder added to one of its fidelities), each practice opened on the project's folder so every node's file is named from the project's root, as load_files reads the same files; applies the session's overlays: the Graph app's whole load, with no folder or practice key passed in. A practice with no session_roots, or whose folders are not written yet, is left out
 
 **Invariants**
 

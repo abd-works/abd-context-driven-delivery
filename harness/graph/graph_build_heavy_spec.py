@@ -13,9 +13,14 @@ of its own, in two ways chats build at once.
   each validate refreshes the session's graph and checks the nodes of its files, which the graph's worker writes.
 
 Meanwhile a crowd of other chats, as the Session Board's open pages are, keep asking a small graph tool, and one more
-chat calls ``cdd.ping`` and that tool every half second for as long as any build runs, timing every answer."""
+chat calls ``cdd.ping`` and that tool every half second for as long as any build runs, timing every answer.
+
+Last, the Graph app's whole load (``graph.load_practice_roots``) of a session whose Stories, DDD and Clean Engineering
+roots are three different folders, with a second folder added to DDD's tactics, holds the nodes a load of the same files
+(``graph.load_files``) holds."""
 
 import asyncio
+import json
 import shutil
 import statistics
 import sys
@@ -28,7 +33,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import anyio
-from expects import be_above, be_below, equal, expect
+from expects import be_above, be_below, contain, equal, expect
 from mamba import after, before, description, _it, it
 
 from harness.mcp.spec_support import SpecServer
@@ -60,6 +65,34 @@ _VALIDATED = (
 )
 # How many times each validator refreshes its files.
 _ROUNDS = 2
+# The Bookshop project the Stories specs read: a story map, story tests in markdown, Python and TypeScript, the DDD
+# tactics code of the Order aggregate under ordering/, and the Clean Engineering code under src/. Copied as files only.
+_BOOKSHOP = _REPO_ROOT / "cdd_guidance" / "practices" / "stories" / "model" / "fixtures" / "bookshop"
+# The folder each practice of the session works in, and the second folder a person added to DDD's tactics.
+_SESSION_ROOTS = {"stories": "story_tests", "ddd": "ordering", "clean_engineering": "src"}
+_TACTICS_ROOTS = ["ordering", "catalogue"]
+_TURNED_OFF = ("ux", "bdd")
+_CATALOGUE_BOOK = """from __future__ import annotations
+
+
+@aggregate_root
+@entity
+class Book:
+    \"\"\"Module: Catalogue | custom · Book\"\"\"
+
+    bookId: BookId
+
+    def __init__(self, bookId: BookId) -> None:
+        self.bookId = bookId
+
+
+@repository
+class BookRepository:
+    \"\"\"Module: Catalogue | custom · Book\"\"\"
+
+    def create(self, bookId: BookId) -> Book:
+        raise NotImplementedError
+"""
 # What the server answers a call that outlives the seconds it waits for it.
 _STILL_RUNNING = "is still running after"
 
@@ -201,6 +234,54 @@ class ValidatesWhilePinging(RefreshesWhilePinging):
                 return f"{' '.join(files)}: {'graph' in answer and not result.isError}"
 
 
+class PracticeRootsLoad:
+    """A session in a copy of the Bookshop project whose practices work in three different folders, its graph loaded
+    from those roots as the Graph app loads it, and then from the same files named to ``graph.load_files``: the node
+    ids each load saved, by practice."""
+
+    def __init__(self, server: SpecServer) -> None:
+        self.server = server
+        self.project = Path(tempfile.mkdtemp(prefix="cdd-practice-roots-")) / "bookshop"
+        shutil.copytree(_BOOKSHOP, self.project)
+        book = self.project / "catalogue" / "book" / "book.py"
+        book.parent.mkdir(parents=True)
+        book.write_text(_CATALOGUE_BOOK, encoding="utf-8")
+        record = self.project / ".sessions" / "main"
+        record.mkdir(parents=True)
+        outputs = {key: {"root": root} for key, root in _SESSION_ROOTS.items()}
+        outputs["ddd"]["tactics"] = {"roots": _TACTICS_ROOTS}
+        fields = {"name": "main", "outputs": outputs, "practices": {key: {"enabled": False} for key in _TURNED_OFF}}
+        (record / "session.json").write_text(json.dumps(fields), encoding="utf-8")
+        self.loaded = ""
+        self.from_roots: dict[str, set[str]] = {}
+        self.from_files: dict[str, set[str]] = {}
+
+    def run(self) -> None:
+        asyncio.run(self._run())
+
+    async def _run(self) -> None:
+        async with self.server.chat(self.project, _BUILD_SECONDS) as chat:
+            self.loaded = (await chat.call_tool("graph.load_practice_roots", arguments={})).content[0].text
+            self.from_roots = await self._saved_nodes(chat)
+            files = sorted({*_SESSION_ROOTS.values(), *_TACTICS_ROOTS})
+            arguments = {"folder": str(self.project), "practices": list(_SESSION_ROOTS), "files": files}
+            await chat.call_tool("graph.load_files", arguments=arguments)
+            self.from_files = await self._saved_nodes(chat)
+
+    async def _saved_nodes(self, chat) -> dict[str, set[str]]:
+        """The id of every node the session's graph holds now, by practice, read from the file ``graph.save_json``
+        names."""
+        saved = json.loads((await chat.call_tool("graph.save_json", arguments={})).content[0].text)["path"]
+        practices = json.loads(Path(saved).read_text(encoding="utf-8"))["practices"]
+        return {key: {node["node_id"] for node in practice["nodes"]} for key, practice in practices.items()}
+
+    def nodes_of(self, key: str, type: str, loaded: dict[str, set[str]]) -> list[str]:
+        return sorted(node for node in loaded.get(key, set()) if node.startswith(f"{key}:{type}:"))
+
+    def close(self) -> None:
+        shutil.rmtree(self.project.parent, ignore_errors=True)
+
+
 def _project(role: str) -> Path:
     return Path(tempfile.mkdtemp(prefix=f"cdd-{role}-"))
 
@@ -316,3 +397,38 @@ with description("the cdd server while several chats validate files of the one g
 
     with it("should answer every call within two seconds while the validates run"):
         expect(self.probe.pinging.slowest).to(be_below(_ANSWER_WITHIN_SECONDS))
+
+
+# Exploratory testing, r3-cog-03: the Graph app's load of a session with all five practices left out every story test
+# in code and the DDD root's own tactics code, read no root added to a fidelity, and named each node's file from its
+# practice's root.
+with description("the Graph app's whole load of a session whose practices work in different folders") as self:
+    with before.all:
+        self.server = SpecServer(_VALIDATE_TOOLSETS)
+        self.server.start()
+        self.load = PracticeRootsLoad(self.server)
+        self.load.run()
+
+    with after.all:
+        if getattr(self, "server", None) is not None:
+            self.server.stop()
+        if getattr(self, "load", None) is not None:
+            self.load.close()
+
+    with it("should hold, for each practice, the nodes a load of the same files holds"):
+        differing = {
+            key: (sorted(self.load.from_files[key] - nodes), sorted(nodes - self.load.from_files[key]))
+            for key, nodes in self.load.from_roots.items()
+            if nodes != self.load.from_files.get(key)
+        }
+        expect(differing).to(equal({}))
+
+    with it("should hold the scenarios of the story tests written in code"):
+        scenarios = self.load.nodes_of("stories", "Scenario", self.load.from_roots)
+        expect([node for node in scenarios if ".test.py:" in node or ".test.ts:" in node]).not_to(equal([]))
+
+    with it("should read the DDD root's own tactics code, naming each file from the project's root"):
+        expect(self.load.nodes_of("ddd", "EntityRoot", self.load.from_roots)).to(contain("ddd:EntityRoot:ordering/order/order.py:Order"))
+
+    with it("should read the folder added to DDD's tactics"):
+        expect(self.load.nodes_of("ddd", "EntityRoot", self.load.from_roots)).to(contain("ddd:EntityRoot:catalogue/book/book.py:Book"))

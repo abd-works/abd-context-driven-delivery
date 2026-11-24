@@ -878,6 +878,19 @@ with description("Render asked for a path, in a session") as self:
         with it("should save no drawing in the first module's folder"):
             expect((self.project.root / "src" / "catalogue" / ".context" / "modules.drawio").exists()).to(equal(False))
 
+        # r3-widget-01, step 4: the drawing of every module rendered back to markdown was saved as one modules.md
+        # beside it, a name the modules fidelity never writes, holding every card a second time.
+        with context("then that drawing rendered back to markdown"):
+            with before.each:
+                self.back = self.action.render("clean-engineering-modules", format="markdown", paths=[".context/modules.drawio"])
+
+            with it("should write each module's card back to its own module-context.md"):
+                saved = sorted(Path(path).relative_to(self.project.root).as_posix() for path in self.back[0].saved)
+                expect(saved).to(equal(["src/catalogue/.context/module-context.md", "src/ordering/.context/module-context.md"]))
+
+            with it("should save no modules.md beside the drawing"):
+                expect((self.folder / "modules.md").exists()).to(equal(False))
+
     # Exploratory testing, r3-widget-05 and widget-09: a .md file with no source named was read in the format the
     # fidelity works in, Python for a class model, and refused as Python that does not parse.
     with context("that is a class model in markdown, with no source named, at a fidelity that works in Python"):

@@ -1,7 +1,8 @@
 """Server health as the tool the band calls (cdd MCP), through the MCP server. Its servers reached over real sockets, and
 every report that checks the registered apps' ports, are in server_health_heavy_spec.py.
 
-Each signature here has a test of the same name in `harness/chat-ui/pane/hooks/register.test.ts`."""
+The chat bar draws this report as its server health mark, panel and toasts (`harness/chat-ui/pane/hooks/health/`), which
+have no plugin test yet: the TypeScript tests of the same names were removed in 8c56ab052."""
 import json
 import shutil
 import tempfile

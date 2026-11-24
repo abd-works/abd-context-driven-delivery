@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from cdd_guidance.actions.render.rendered_code import RenderedCode, RenderHasNoDeclaredPlace
-from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS, WHITEBOARD, RenderedFile
+from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS, WHITEBOARD, RenderedFile, RenderedSections
 from cdd_guidance.actions.render.render_order import WorkerRender
 from cdd_guidance.actions.render.render_result import AnsweredContent, RenderResult, SavedCode, SavedFile
 from cdd_guidance.actions.render.source_files import SAVED_GRAPH_SUFFIX, SourceFiles
@@ -109,6 +109,9 @@ class Render(GuidanceAction):
         if first.suffix == SAVED_GRAPH_SUFFIX and isinstance(worked, FidelityGuidance):
             saved = RenderedFile.from_graph(first, worked, format)
             return saved.save(worked.render_files(format.name, paths, source, saved.previous))
+        if isinstance(worked, FidelityGuidance) and worked.session_output.roots and worked.declared.placement.writes_by_section(first, format):
+            sections = RenderedSections(worked.session_output.root, worked.declared.placement, format, worked.session_output.written.every_file())
+            return sections.save(worked.render_files(format.name, paths, source, sections.previous))
         own = RenderedFile(self._placement_of(worked).beside_itself(first, Format(source), format), format, Format(source))
         is_itself = own.path in sources
         rendered = worked.render_files(format.name, paths, source, "" if is_itself else own.previous)

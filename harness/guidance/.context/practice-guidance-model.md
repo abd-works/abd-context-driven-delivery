@@ -128,6 +128,8 @@ answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
 	// itself for its slug, the fidelity whose slug it is, else none
 work_in(session_output: PracticeSessionOutput): None
 	// the practice works in that output's session; each fidelity is given its FidelitySessionOutput through FidelityGuidance.work_in
+session_roots: list[Path]
+	// the folders its session names for it: its own folder, then each folder added to one of its fidelities; none outside a session
 generate_output(): str
 	// instruction-only by default; a practice that owns generation overrides it
 render(format: str, content: RenderContent, source: str | None, previous: str): Rendered
@@ -421,6 +423,8 @@ RenderPlacement(declared: DeclaredOutputs)
 ----
 owns(first, source): bool
 name_beside(first, source, format): str
+writes_by_section(first, format): bool
+	// a file of its own rendered into a format declared only at paths with a named part, such as one card file for each module: saved one file for each section
 beside_itself(first, source, format): Path
 own_name_of(source): str | None
 declares(path, format): bool

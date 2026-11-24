@@ -15,8 +15,8 @@ class PracticeGuidance:
     editor: ClassVar[App | None] = None
 
     @property
-    def session_root(self) -> Path | None:
-        # -> self._session_output.folder; none outside a session
+    def session_roots(self) -> list[Path]:
+        # -> self._session_output.folder, then each fidelity's session_output.roots; none outside a session
         ...
 
     def work_in(self, session_output: Any) -> None:

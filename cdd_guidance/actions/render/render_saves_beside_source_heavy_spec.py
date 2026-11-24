@@ -22,6 +22,7 @@ from space.session.spec_support.throwaway_project import OPEN_PROJECTS, Throwawa
 
 _RENDER = "cdd_guidance.actions.render.render:Render"
 _SESSIONS = "space.session.sessions:Sessions"
+_GRAPH = "harness.graph.graph:Graph"
 _CALL_SECONDS = 120
 _BOARD = "https://claude.ai/artifact/StoryMapBoard"
 _STORY_MAP = """\
@@ -102,6 +103,13 @@ _MODULE_CARD = """# src/{module}
 - **Seam (terms):** Book
 - **Dependencies (one-way):** none
 """
+_CART_SPEC = """from mamba import description, it
+
+
+with description("a cart"):
+    with it("should total its lines"):
+        pass
+"""
 _CLASS_MODEL = """# Ordering
 
 **Module:** `src/ordering`
@@ -127,6 +135,24 @@ async def _render(
         return bool(result.isError), result.content[0].text
 
 
+async def _realization_steps(server: SpecServer, project: Path) -> tuple[str, str]:
+    """The BDD realization's steps as its guidance writes them, called through the server: load the specs and the code
+    with ``graph.load_files``, save the graph with ``graph.save_json``, and render the path the save answers to the
+    markdown realization. Answers the path the save named and the file the render saved."""
+    async with server.chat(project, _CALL_SECONDS) as chat:
+        loaded = {"folder": str(project), "practices": ["bdd", "clean_engineering"], "files": ["src"]}
+        await chat.call_tool("graph.load_files", arguments=loaded)
+        saved = json.loads((await chat.call_tool("graph.save_json", arguments={})).content[0].text)["path"]
+        arguments = {"guidance": "bdd-realization", "format": "markdown", "source": "graph", "paths": [saved]}
+        rendered = json.loads((await chat.call_tool("render.render", arguments=arguments)).content[0].text)
+        return saved, rendered[0]["path"]
+
+
+async def _description_of(server: SpecServer, project: Path, tool: str) -> str:
+    async with server.chat(project, _CALL_SECONDS) as chat:
+        return next(listed.description for listed in (await chat.list_tools()).tools if listed.name == tool)
+
+
 async def _answer_comment(server: SpecServer, project: Path, board: str) -> tuple[bool, str]:
     async with server.chat(project, _CALL_SECONDS) as chat:
         result = await chat.call_tool("render.answer_board_comment", arguments={"board": board})
@@ -143,7 +169,7 @@ def _card(drawio: str, name: str) -> ET.Element:
 
 with description("Render saving what it makes beside its source, called through a cdd server") as self:
     with before.all:
-        self.server = SpecServer((_RENDER, _SESSIONS))
+        self.server = SpecServer((_RENDER, _SESSIONS, _GRAPH))
         self.server.start()
 
     with after.all:
@@ -291,6 +317,29 @@ with description("Render saving what it makes beside its source, called through 
         with it("should draw the class the markdown holds, beside the model"):
             drawing = self.model.with_suffix(".drawio")
             expect((self.failed, drawing.is_file() and "Cart" in drawing.read_text(encoding="utf-8"))).to(equal((False, True)))
+
+    # Exploratory testing, r3-rivet-08: the realization's steps said graph.save_json writes .context/graph.json and to
+    # render that path, while the save writes the session's own folder, so the render drew an older graph a validate
+    # had left in .context.
+    with context("a spec rendered to its realization by the realization guidance's steps, with an older graph in .context"):
+        with before.each:
+            spec = self.project.root / "src" / "ordering" / "cart_spec.py"
+            spec.parent.mkdir(parents=True)
+            spec.write_text(_CART_SPEC, encoding="utf-8")
+            (self.folder / "graph.json").write_text("{}", encoding="utf-8")
+            self.saved, self.rendered = asyncio.run(_realization_steps(self.server, self.project.root))
+
+        with it("should save the graph in the session's own folder, not in the project's .context"):
+            expect(Path(self.saved).parent.parent.name).to(equal(".sessions"))
+
+        with it("should say so in the save's description the agent reads"):
+            expect(asyncio.run(_description_of(self.server, self.project.root, "graph.save_json"))).to(contain("session's own folder"))
+
+        with it("should save the realization of the loaded spec where the fidelity declares it"):
+            expect(Path(self.rendered).relative_to(self.project.root).as_posix()).to(equal(".context/cart-bdd-realization.md"))
+
+        with it("should draw the spec just loaded"):
+            expect(Path(self.rendered).read_text(encoding="utf-8")).to(contain("a cart"))
 
     # Exploratory testing, widget-07: render took ../outside.md and wrote story-map.drawio outside the project.
     with context("a story map outside the project, named from it"):

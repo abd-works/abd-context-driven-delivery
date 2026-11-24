@@ -665,7 +665,7 @@ Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "view story map / ux
 
 # (E) Move Work Forward From Chat Bar
 
-The Chat Bar is the line above the chat prompt for the one session the chat works in, so where the board says ticket it says session (CDR `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`). Acceptance tests are under `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/`.
+The Chat Bar is the line above the chat prompt for the one session the chat works in, so where the board says ticket it says session (CDR `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`). Its scenarios are under `story_tests/move-work-forward-from-chat-bar/`; the mod's plugin tests (`claude plugin test`) sit beside the code they test in `harness/chat-ui/pane/hooks/`. The stubbed story tests that played the scenarios were removed in 8c56ab052.
 
 ## (E) Check CDD Server Health In Chat Bar
 
@@ -717,13 +717,13 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "restart buttons n
 
 Observed: the `/board` command in `harness/chat-ui/pane/hooks/register.ts` opens the board, starting it when it is not running.
 
-### (S) Chat Bar --> Display Stage Strip
+### (S) Chat Bar --> [Display Stage Strip](../story_tests/move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-display-stage-strip)
 
-Observed: one line with the health mark, the session name, fidelity dots, action button, stage icons, then handoff, files and close (`chat-bar-view.tsx` `LineView`).
+Observed (read in `chat-bar-view.tsx` `LineView`, 2026-11-23): one line with the stage icons, a separator, the practice dots, the overlay and format chips, the action button, the files, handoff and debug buttons, then at the right the session name, the session buttons, the health mark and the version badge. A draw that throws shows "chat bar failed to draw" and why, in red, in place of the line (`register.ts`; plugin test `chat-bar-draw.test.ts`).
 
-### (S) Chat Bar --> Display Session Fidelity Dots
+### (S) Chat Bar --> [Display Session Fidelity Dots](../story_tests/move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-display-session-fidelity-dots)
 
-Observed: one square per fidelity of the shown stage in its practice's colour, fainter the less is done, with the violation count in red beside it and the fidelity's name above it on hover (`FidelityView`).
+Observed (read in `PracticeDotView` and `PracticeDotClient`, 2026-11-23): one square per practice with a fidelity in the shown stages, in its practice's colour shaded by its least advanced fidelity, faint while the practice is turned off for the session, with the practice's violation count in red beside it while it is on; the practice's fidelities show above it on hover, each opening its help. Pressing the square turns the practice on or off for the session.
 
 ### (S) Person --> Display Stage Fidelities
 
@@ -733,9 +733,9 @@ Observed: pressing a stage icon shows that stage's fidelities on the dots, tinte
 
 Observed: the pointer on the session name shows the card, with each fidelity's name and state over its dot and its folder as a chip that opens its files; pressing the name pins the card open and ✕ closes it (`session-card-view.tsx`). The folder chip covers `.sessions/_backlog/bring-chat-bar-level-with-board.md` "Click a practice to get its file list".
 
-### (S) Chat Bar --> Show Active Session On Status Line
+### (S) Chat Bar --> [Show Active Session On Status Line](../story_tests/move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-show-active-session-on-status-line)
 
-Observed (`register.ts` `showStatus`, `chat-bar-client.ts` `statusLine`): the status line below the chat, where the host draws a plugin's status, names the repository, the branch the session's chat works on, and the whole path of the folder the session works in. Requested on 2026-11-11 ("repo . session . root path of session . action selected", "below the actual chat edit like before"). Left aligned was also asked; the host places a plugin's status line itself, so a plugin cannot align it, and drawing the row in the chat bar or in the prompt hint line (tried in ce6b9157e and 066b2d3fc) lost it below the chat; the bar's own left-aligned row (c8abaf8d0) put it under the bar's menus, and it came back below the chat on 2026-11-13.
+Observed (`register.ts` `showStatus` and its `PromptHint` hook, `chat-bar-client.ts` `statusLine`): the hint line under the prompt, after what the engine writes there, and the status line below the chat, where the host draws a plugin's status, name the repository, the branch the session's chat works on, and the whole path of the folder the session works in. Requested on 2026-11-11 ("repo . session . root path of session . action selected", "below the actual chat edit like before"). Left aligned was also asked; the host places a plugin's status line itself, so a plugin cannot align it, and drawing the row in the chat bar or in the prompt hint line (tried in ce6b9157e and 066b2d3fc) lost it below the chat; the bar's own left-aligned row (c8abaf8d0) put it under the bar's menus, and it came back below the chat on 2026-11-13.
 
 ### (S) Claude Code --> [Add Active Ticket To System Prompt](../story_tests/move-work-forward-from-chat-bar/see-work-in-chat-bar/see_work_in_chat_bar_story.test.md#story-add-active-ticket-to-system-prompt)
 
@@ -779,7 +779,7 @@ Observed (2026-11-14): the ⤴ icon, first of the session buttons, calls `repo.p
 
 Observed (2026-11-14): the ⇪ icon after ⤴, "push & merge to origin/main", asks "Push <session> and merge it to origin/main?", and yes calls `repo.push_to_main` (`Repo.push_to_main`) for the folder the chat works in, whichever repository holds it: the checkout commits its work on its branch and pushes the branch, the main clone merges that branch into the repository's default branch (`Branch.merge_into_default`; `Repo.default_branch` is the branch origin's HEAD names, else main or master), pushes it, and goes back to the branch it had. On main itself it commits and pushes main. The version is not raised; `/version` does that when the person chooses. `repo.merge_to_main` does the same without pushing, for an agent; the chat bar has no button for it (2026-11-14: "we only need the other button").
 
-### (S) Person --> [Debug A Failure From Chat Bar](../space/session/debug_spec.py)
+### (S) Person --> [Debug A Failure From Chat Bar](../story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md#story-debug-a-failure-from-chat-bar)
 
 Requested (the person, 2026-11-15): a debug button right after handoff sends the agent to capture what went wrong as fully as it can, stack traces included, then asks for more detail and whether to fix the bug or request help; help emails jeff.anderson@abdworks.com, and a fix is made in a sub-agent and pushed to main, or sent as a pull request to the CDD repository where the person cannot push there. The chat bar's Fix buttons take the same fix. Built (2026-11-15): the 🐞 icon after ⇥ puts `/space-session-debug-session` in the prompt box (`Session.debug_session`); it writes `debug/debug-{time}.md` in the session's folder, asks with AskUserQuestion, opens the help email as a draft in the person's mail program for them to send, and checks `gh api repos/<owner>/<repo> --jq .permissions.push` before pushing or opening the pull request. Fix on a failure line starts it with `choice=fix` and the failure as its details; Fix on a board that did not answer adds it as a last step.
 

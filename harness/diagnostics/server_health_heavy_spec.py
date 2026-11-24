@@ -1,7 +1,8 @@
 """Server health as the tool the band calls (cdd MCP), for servers it reaches over real sockets. Heavy: each report
 checks every registered app's ports, and Windows waits out each check of a port nothing listens on.
 
-Each signature here has a test of the same name in `harness/chat-ui/pane/hooks/register.test.ts`."""
+The chat bar draws this report as its server health mark, panel and toasts (`harness/chat-ui/pane/hooks/health/`), which
+have no plugin test yet: the TypeScript tests of the same names were removed in 8c56ab052."""
 import json
 import shutil
 import socket

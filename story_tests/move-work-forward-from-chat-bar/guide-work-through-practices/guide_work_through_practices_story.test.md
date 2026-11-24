@@ -35,7 +35,7 @@ section: body
 | Source | Note |
 |--------|------|
 | `.sessions/chat-ui-defects/chat-ui-defects.md` | Observed 2026-11-07: the Files button read story-map.md and story-map.drawio into the chat, over a 96,711 character session.read_file answer; files open in a window of their own, as the board's do |
-| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/view-fidelity-files/view_fidelity_files_story.test.ts` | the story test that plays these scenarios |
+| `harness/chat-ui/pane/test/move-work-forward-from-chat-bar/guide-work-through-practices/view-fidelity-files/view_fidelity_files_story.test.ts` (removed in 8c56ab052) | the stubbed story test these scenarios were written for; no test plays them now |
 
 #### Scenario: Open the files beside the chat, never in it
 

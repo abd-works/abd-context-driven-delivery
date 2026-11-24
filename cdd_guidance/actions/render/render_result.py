@@ -183,8 +183,9 @@ class SavedBoard(SavedFile):
         return self._batches
 
 
-class SavedCode(RenderResult):
-    """A render to code, saved as one file for each piece of it at the paths the fidelity declares."""
+class SavedFiles(RenderResult):
+    """A render saved as one file for each piece of it at the paths the fidelity declares: code, or a document the
+    fidelity writes as one file for each named part, such as one card file for each module."""
 
     def __init__(self, rendered: Rendered, paths: list[Path], migrate: list[Migration]) -> None:
         super().__init__(rendered)
@@ -210,6 +211,10 @@ class SavedCode(RenderResult):
     @property
     def saved(self) -> list[Path]:
         return list(self._paths)
+
+
+class SavedCode(SavedFiles):
+    """A render to code, saved as one file for each piece of it at the paths the fidelity declares."""
 
     def with_test_tiers(self, test_tiers: str) -> SavedTests:
         """This render as one that saved tests, naming what the session records of their module's test tiers."""

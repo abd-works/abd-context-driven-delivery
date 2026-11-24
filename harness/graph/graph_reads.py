@@ -74,24 +74,25 @@ class GraphReads:
     def edited_files(self, apart: bool) -> GraphLoaded:
         """Build each chosen practice from only the files the graph's scope names, as they are now, and run its rules
         on them; the saved graph is never touched."""
-        graph = self._graph
         with self.changing:
-            report_progress("Reading the edited files")
-            graph.practices.open_chosen()
-            graph.build.run(BuildTask(BuildStep.READ, apart=apart))
-            return GraphLoaded(f"Loaded {len(graph.scope.edited_files or [])} edited files.")
+            return GraphLoaded(f"Loaded {self._read_named('Reading the edited files', apart)} edited files.")
 
     def practice_roots(self, apart: bool) -> GraphLoaded:
-        """Open each practice the graph holds on the folder its session names for it, and build; a practice with no
-        root, or whose folder is not written yet, is left out."""
+        """Read each practice the graph holds from the files under the folders its session names for it, as a load of
+        those same files does (``graph.load_files``): every practice is opened on the graph's folder, the session's
+        project, so each node's file is named from the project's root, and the files read are those under every
+        practice's roots, so a practice that reads what another practice read, as DDD reads Clean Engineering's
+        classes, sees the code under its own roots too. A practice with no root, or whose folders are not written yet,
+        is left out; nothing is saved, since the graph holds only the files under the roots."""
         graph = self._graph
         with self.changing:
-            roots = {practice: root for practice in graph.practices.held.values() if (root := practice.session_root) is not None and root.is_dir()}
-            if not roots:
+            folder = graph.scope.folder
+            roots = {practice: folders for practice in graph.practices.held.values() if (folders := [root for root in practice.session_roots if root.is_dir()])}
+            if folder is None or not roots:
                 return GraphLoaded("No practice root of a session is there to read, so nothing was loaded.")
-            graph.scope = LoadScope(graph.scope.folder)
-            graph.practices.choose(roots)
-            return self.load(False, apart)
+            graph.scope = LoadScope.of_paths(folder, [str(root) for folders in roots.values() for root in folders])
+            graph.practices.choose({practice: folder.resolve() for practice in roots})
+            return GraphLoaded(f"Loaded {self._read_named('Reading the practice roots', apart)} files under the practice roots.")
 
     def refresh(self, paths: list[str], apart: bool) -> GraphLoaded:
         """Read again exactly the files at paths into the graph held in memory."""
@@ -127,6 +128,15 @@ class GraphReads:
                 graph.scope = LoadScope(graph.scope.folder)
                 self.load(False, apart)
         return graph
+
+    def _read_named(self, progress: str, apart: bool) -> int:
+        """Build each chosen practice from only the files the graph's scope names, as they are now, and run its rules on
+        them, telling the caller progress first; answer how many files were read."""
+        graph = self._graph
+        report_progress(progress)
+        graph.practices.open_chosen()
+        graph.build.run(BuildTask(BuildStep.READ, apart=apart))
+        return len(graph.scope.edited_files or [])
 
     def _refresh(self, paths: list[str], task: BuildTask) -> GraphLoaded:
         """Read again the files at paths in the graph's folder, and the files a practice reads together with them; when

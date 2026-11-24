@@ -1342,11 +1342,12 @@ class Graph(GraphExplorer):
     @mcp
     @agent_tool
     def load_practice_roots(self, call: ToolCall | None = None) -> GraphLoaded:
-        """Open each practice this graph holds on the folder its session names for it (its session root), with the
-        overlays the graph applies, and build: the Graph app's whole load, with no folder or practice named by the
-        caller. A session's graph holds only the practices its session works on, so a practice turned off is never
-        read. A practice no session works in has no root, and one whose folder is not written yet has nothing to read:
-        both are left out."""
+        """Read each practice this graph holds from the files under the folders its session names for it (its session
+        roots: the practice's folder and every folder added to one of its fidelities), with the overlays the graph
+        applies: the Graph app's whole load, with no folder or practice named by the caller. It holds the nodes
+        ``load_files`` gives for the same files, each node's file named from the project's root. A session's graph holds
+        only the practices its session works on, so a practice turned off is never read. A practice no session works in
+        has no root, and one whose folders are not written yet has nothing to read: both are left out."""
         return self.reads.practice_roots(_builds_apart(call))
 
     @mcp
@@ -1387,7 +1388,7 @@ class Graph(GraphExplorer):
     @mcp
     @agent_tool
     def save_json(self) -> GraphSaved:
-        """Write the serialized graph into the loaded folder's ``.context``.
+        """Write the serialized graph and answer with the path written. A session's graph is written into the session's own folder (``.sessions/<session>/graph.json``), never the project's ``.context``; a graph no session holds is written into the loaded folder's ``.context``. Name the path it answers when you render from the graph, so the render draws this graph and not an older one saved elsewhere.
 
         Practices already on disk that are not part of this load stay in the file.
         """

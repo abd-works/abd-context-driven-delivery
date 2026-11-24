@@ -164,6 +164,18 @@ Reported 2026-11-13 ("frozen bar"), while the chat for `open-app-from-health-pan
 process running. Removing the stale lock let `ticket.activate` finish. Not yet diagnosed: whether the bar froze on the
 long cdd calls, on the lock, or on both, and why `ticket.create` left the lock.
 
+Diagnosed 2026-11-23 (release-1-2-fixes), from `~/.cdd/server.log.1`: the lock was left by the board's save on main,
+not by the bar. Creating the ticket queued the save `git commit -m "sessions: open-app-from-health-panel ..." --
+.sessions` in `C:\dev\abd-context-driven-delivery`; the pinned code gave every git command 10 seconds, the commit ran
+past them ("exceeded 10 seconds"), and stopping it with `taskkill` left `.git/index.lock`, on which the next save's
+`git add -A -- .sessions` and `ticket.activate` then failed. Fixed since 7ce200c9b (2026-11-14): `git add` and `git
+commit` get 180 seconds (`harness/git/git.py`, `_LONG_COMMANDS`; spec "a git command's time limit" in
+`harness/git/git_spec.py`). Nothing in the mod waits on git: its `tool.call` hook reads `board.overview` after each cdd
+tool call, which holds the agent's tool answer until the board answers, not the bar. Whether the bar itself stopped
+redrawing cannot be told from the code or the logs. Live walk: with the bar open in the main chat, have the chat create
+a ticket; while `ticket.create` runs, press the health mark and watch whether the card opens and the busy mark moves;
+afterwards look for "exceeded" in `~/.cdd/server.log` and for `.git/index.lock` in the main checkout.
+
 ## The status line under the prompt went missing after a cdd reinstall
 
 Reported 2026-11-13 ("what happened to footer put below chat input"), right after the cdd server was repinned to
@@ -171,6 +183,18 @@ Reported 2026-11-13 ("what happened to footer put below chat input"), right afte
 · folder) was gone. The `PromptHint` hook in `register.ts` draws it from the active session's ticket in the chat bar's
 last board read (`ChatBarClient.statusLine`), and draws nothing while that read holds no active ticket. Not yet
 diagnosed: whether the read after the restart or reload failed or had not happened yet, or whether the hook was skipped.
+
+Diagnosed as far as the code goes, 2026-11-23 (release-1-2-fixes): a board read that fails keeps the last board
+(`refreshChatBar` writes only the problem), and the stored board outlives a reload, so a failed read or a restart does
+not clear the line. It goes only when a read answers with no active ticket (`Board.active` is the ticket of the session
+`OpenSessions.name_for(chat)` names, main when the chat chose none, and is none when the board places no ticket for
+it), or when the `PromptHint` hook throws, which the engine skips, leaving the engine's hint alone. No change was made in
+code. Scenarios now say what the line shows (`see_work_in_chat_bar_story.test.md`, story Show Active Session On Status
+Line). Live walk, the next time it goes: look at the chat bar above the prompt; a bar showing no session (only the name,
+health mark and version) means the board answered no active ticket, so look up the chat's id in
+`~/.cdd/open-sessions.json` and the ticket of that session on the board; a bar showing the session means the hook was
+skipped, so look for "cdd-board: ui.render hook skipped" in the `claude --debug` log; then end a turn and see whether
+the line comes back.
 
 ## Fix on a chat bar failure did not reach the chat
 
@@ -180,7 +204,9 @@ Pressing Fix on that failure failed the same way. `FailureClient.fixPrompt` is t
 `/space-session-debug-session choice=fix details=...`, and `fixFailure` sent it with `$.prompt.submit`, which the host
 refuses for text that starts with `/`. Fixed on file-manager (2026-11-16): `fixFailure` runs a slash command with
 `$.command.run`, as the board's own commands do, and submits any other text. Not walked in a chat yet: needs main and a
-repin to reach the installed mod.
+repin to reach the installed mod. Checked 2026-11-23: the code is on release-1-2-fixes (`sentToChat` in
+`error-display/failure-client.ts`), and the plugin test "Fix on the queue's failure sends it to the debug command, and
+the line no longer shows it" passes; still not walked in a chat.
 
 ## The Files app could not open a story test in story_tests
 
@@ -191,7 +217,8 @@ story_tests/. The session's file manager read only each practice's folder and ou
 the Stories root's .context, not under it. Fixed on file-manager (2026-11-16): its roots also hold every folder a
 practice's fidelities write their declared outputs in, up to the first part a name fills in
 (`PracticeSessionOutput.output_folders`), which brings in story_tests. Not walked in the Files app yet: needs main and a
-repin.
+repin. Checked 2026-11-23: the code is on release-1-2-fixes (`PracticeSessionOutput.output_folders` in
+`space/session/practices/practice_session_output.py`); still not walked in the Files app.
 
 ## No chat bar and no queue above the prompt after a dev lane repin and /reload-plugins
 
@@ -203,6 +230,18 @@ the prompt, and no red "chat bar failed to draw" line shows. Not explained: harn
 old pin (302efe378) and the new one, the published mod's files equal the dev runtime's, and the queue mod's one change
 (e40748768) is a filter in robotPromptsOf. Open: whether the bars come back on the next prompt or a restart of the app,
 and whether a draw that throws in the queue mod, which has no try/catch as the chat bar's has, takes both bars away.
+
+Diagnosed and fixed 2026-11-23 (release-1-2-fixes): the engine gives each mod its own place in the band above the prompt, and
+another mod's failed draw does not blank it, so a throw in the queue mod alone takes only the queue away. The chat bar,
+though, read the server health, the CDD version and the push state before its try, and a read that threw there made
+the engine skip the whole hook: no bar and no red line, as seen. Now every read of the chat bar's draw is inside its
+guard (`register.ts`; plugin test `chat-bar/chat-bar-draw.test.ts`, "a chat bar whose stored CDD version cannot be read
+shows why in red, in place of the bar"), and the queue mod's draw has the same guard, drawing "prompt queue failed to
+draw:" and the reason in red (`tools/prompt_queue/hooks/register.tsx`; plugin test "a queue whose draw throws shows why
+in red, in place of the queue"). Both mods also step aside while the engine shows a survey above the prompt
+(`e.props.hasSurvey`), which takes both bars away together and leaves the hint line. Live walk, once the mods are
+republished: if the bars go again, look for a red failed-to-draw line, which now names the cause; with none, look for a
+survey above the prompt and for "ui.render hook skipped" in the `claude --debug` log.
 
 ## The chat bar's tests and scenarios named in documents are not there
 
@@ -218,6 +257,16 @@ Noticed 2026-11-21 while reading the chat bar's scenarios and tests (release-1-2
 - `harness/chat-ui/.context/` holds only `cdr/`: the mod has no `module-context.md`.
 - Display Stage Strip, Display Session Fidelity Dots, Show Active Session On Status Line, Debug A Failure From Chat Bar
   and the failure line's Fix button have no scenario in any `*_story.test.md`.
+
+Fixed 2026-11-23 (release-1-2-fixes): the story map's epic says the scenarios are under
+`story_tests/move-work-forward-from-chat-bar/` and the plugin tests beside the code in `harness/chat-ui/pane/hooks/`;
+the two server health specs say the band, panel and toasts have no plugin test since 8c56ab052; the scenario files'
+evidence names each stubbed story test as removed in 8c56ab052; `harness/chat-ui/.context/module-context.md` is
+written. Scenarios are written for Display Stage Strip, Display Session Fidelity Dots and Show Active Session On Status
+Line (`see_work_in_chat_bar_story.test.md`) and for Debug A Failure From Chat Bar with the Fix button
+(`steer_sessions_story.test.md`), and the map's text for the first three now says what the code draws: one dot per
+practice, not per fidelity, and the line's present order. Still open: the server health band, panel and toasts have no
+plugin test.
 
 ## The chat bar fails to draw on release-1-2-fixes: `selectedStages` is gone
 

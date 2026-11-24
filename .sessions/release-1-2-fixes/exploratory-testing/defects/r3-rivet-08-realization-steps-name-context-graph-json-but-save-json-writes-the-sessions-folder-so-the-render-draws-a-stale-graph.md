@@ -28,3 +28,8 @@ bdd.md: "Save it (`graph.save_json`, written to `.context/graph.json`). Render i
 Heavy: one example that runs the four steps of the realization guidance through the server on a project folder and reads the file it names. `graph_bdd_model_spec.py` renders from a graph in memory, so the path never comes up.
 
 ## Also seen by
+
+## Status: fixed (2026-11-23)
+- Fixed before this pass (`635b29c4f`, `66f410de3`): the realization guidance (`cdd_guidance/practices/bdd/bdd.md`, "Render it from the graph") says `graph.save_json` answers the path of the session's own `graph.json` and to render that path; a render of a saved graph to the markdown realization is saved at `.context/{scope}-bdd-realization.md`, its scope named for what the graph was read from (`render_spec.py`, "that is a saved graph read from one spec").
+- Fixed now: the tool still told the agent the opposite. `Graph.save_json`'s description, which the agent reads, said it writes "the loaded folder's `.context`"; it now says a session's graph is written into the session's own folder (`.sessions/<session>/graph.json`), never the project's `.context`, and to name the path it answers when rendering from the graph. The guidance and the tool now agree.
+- Covered by: `cdd_guidance/actions/render/render_saves_beside_source_heavy_spec.py`, "a spec rendered to its realization by the realization guidance's steps, with an older graph in .context": through a real cdd server, `graph.load_files`, `graph.save_json` and `render.render` on the path the save answers, with a stale `.context/graph.json` planted. The graph is saved under `.sessions`, the save's description says so, the realization is saved at `.context/cart-bdd-realization.md` and draws the spec just loaded.

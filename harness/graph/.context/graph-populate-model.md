@@ -89,7 +89,7 @@ worker process; the graph's tools work it out from the call they answer.
 + edited_files(apart): GraphLoaded
 	// build from only the edited files the scope names
 + practice_roots(apart): GraphLoaded
-	// each practice on its session root that is there to read, then -> load(False, apart)
+	// every practice on the project's folder, reading the files under each practice's session_roots that are there, as load_files reads them; nothing saved
 + refresh(paths, apart): GraphLoaded
 + hold_whole(apart=False): None
 	// load the whole working copy when the graph holds only some files

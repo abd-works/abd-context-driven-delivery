@@ -13,6 +13,6 @@ class Graph:
     @mcp
     @agent_tool
     def load_practice_roots(self, call: ToolCall | None = None) -> GraphLoaded:
-        # -> practice.session_root (each practice held; one with none, or whose folder is not written yet, is left out)
-        # -> self.build.load
+        # -> practice.session_roots (each practice held; one with none, or whose folders are not written yet, is left out)
+        # -> self.reads.practice_roots: the files under every practice's roots, each practice opened on the project
         ...

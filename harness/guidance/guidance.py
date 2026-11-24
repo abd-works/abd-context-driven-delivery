@@ -525,10 +525,14 @@ class PracticeGuidance(Guidance):
     _session_output: PracticeOutput | None = None
 
     @property
-    def session_root(self) -> Path | None:
-        """The folder the session this practice works in names for it, where it writes and the Graph app reads it from;
-        none outside a session."""
-        return None if self._session_output is None else self._session_output.folder
+    def session_roots(self) -> list[Path]:
+        """The folders the session this practice works in names for it, where it writes and the Graph app reads it
+        from: the practice's own folder, then each further folder a person added to one of its fidelities, such as a
+        second bounded context's folder added to DDD's tactics. None outside a session."""
+        if self._session_output is None:
+            return []
+        roots = [self._session_output.folder, *(root for fidelity in self.fidelities for root in fidelity.session_output.roots)]
+        return list(dict.fromkeys(Path(root).resolve() for root in roots))
 
     @agent_instructions
     def generate_output(self) -> str:

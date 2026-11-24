@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from cdd_guidance.actions.render.kept_document import KeptDocument
-from cdd_guidance.actions.render.render_result import KeptMember, Migration, SavedBoard, SavedFile
+from cdd_guidance.actions.render.render_result import KeptMember, Migration, SavedBoard, SavedFile, SavedFiles
 from harness.guidance.practice_formats import Rendered
 from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace
 from harness.graph.saved_graph import SavedGraph
@@ -34,6 +34,73 @@ class NothingToRender(ValueError):
     def __init__(self, source: Path) -> None:
         super().__init__(f"{source} is empty, so there is nothing to render from it; name the file that holds the content")
         self.source = source
+
+
+class RenderedSections:
+    """The files a render of one of a fidelity's own files saves when the fidelity writes the format as one file for
+    each named part (``RenderPlacement.writes_by_section``), such as the modules drawing rendered back to markdown, which
+    the modules fidelity writes as one ``{module}/.context/module-context.md`` for each module. The rendered document is
+    cut at its top-level headings, ``# src/catalogue``, each heading naming its piece, and each section is saved in the
+    file of the fidelity already there that holds that heading, since a folder that only groups modules is carded in its
+    parent's file, else at the declared path the heading fills, under the fidelity's root. What only a file already
+    there held is kept in it (*KeptDocument*)."""
+
+    def __init__(self, root: Path, placement: RenderPlacement, format: Format, written: list[Path]) -> None:
+        self._root = root
+        self._placement = placement
+        self._format = format
+        # The fidelity's files in format already there, each with its text, which the render is written onto.
+        self._before = {file: file.read_text(encoding="utf-8") for file in written if self._is_declared(file)}
+
+    @property
+    def previous(self) -> str:
+        """Every file already there, one after another, which the render keeps what people wrote of: a card's own words
+        that the drawing does not hold, such as each term's definition."""
+        return "\n\n".join(text.rstrip("\n") for text in self._before.values())
+
+    def save(self, rendered: Rendered) -> SavedFiles:
+        """Write each section of rendered into its file and answer the files, with what only a file already there held
+        kept in it and named as ``migrate``. Every section is placed before any is written, so a render with a section no
+        declared path places saves nothing (*RenderHasNoDeclaredPlace*)."""
+        placed: dict[Path, list[str]] = {}
+        for heading, text in self._sections(str(rendered.content)):
+            placed.setdefault(self._file_of(heading), []).append(text)
+        migrate: list[Migration] = []
+        for file, texts in placed.items():
+            kept = KeptDocument(self._format).onto(self._before.get(file, ""), "\n".join(texts))
+            file.parent.mkdir(parents=True, exist_ok=True)
+            file.write_text(kept.text, encoding="utf-8")
+            migrate += [KeptMember(file, each, kept.added) for each in kept.kept]
+        return SavedFiles(rendered, list(placed), migrate)
+
+    def _is_declared(self, file: Path) -> bool:
+        resolved = file.resolve()
+        root = self._root.resolve()
+        return root in resolved.parents and self._placement.declares(resolved.relative_to(root).as_posix(), self._format)
+
+    def _sections(self, text: str) -> list[tuple[str, str]]:
+        """Each top-level heading of text with its section, the lines before the first heading going with the first."""
+        lines = text.splitlines()
+        starts = [index for index, line in enumerate(lines) if line.startswith("# ")]
+        if not starts:
+            raise RenderHasNoDeclaredPlace("a document with no heading", self._format, self._placement.paths_in(self._format), "no heading names the piece it is")
+        starts[0] = 0
+        ends = [*starts[1:], len(lines)]
+        return [(self._heading_of(lines[start:end]), "\n".join(lines[start:end]).rstrip("\n") + "\n") for start, end in zip(starts, ends)]
+
+    def _heading_of(self, lines: list[str]) -> str:
+        return next(line[2:].strip() for line in lines if line.startswith("# "))
+
+    def _file_of(self, heading: str) -> Path:
+        """The file a section headed heading is saved in: the file already there that holds that heading, else the
+        declared path the heading fills, under the root."""
+        held = next((file for file, text in self._before.items() if f"# {heading}" in text.splitlines()), None)
+        if held is not None:
+            return held
+        place = self._placement.section_place([heading.strip("/")], self._format)
+        if place is None:
+            raise RenderHasNoDeclaredPlace(f"the section {heading}", self._format, self._placement.paths_in(self._format), "none of them has one named part for the heading to fill")
+        return place.under(self._root)
 
 
 class RenderedFile:

@@ -274,11 +274,24 @@ class RenderPlacement:
     def name_beside(self, first: Path, source: Format, format: Format) -> str:
         """The name of the file a render of first into format is saved under beside it: the name the fidelity writes
         format to for one of its own files, a sketch, or a folder; else first's own name in format, so a render of
-        another file never writes over the fidelity's file. Empty when neither names it: a folder lends no name, and a
-        source that is data, such as a saved graph, lends none."""
+        another file never writes over the fidelity's file. Empty when neither names it: a folder lends no name, a
+        source that is data, such as a saved graph, lends none, and neither does one of the fidelity's own files when
+        the fidelity writes format as one file for each named part (``writes_by_section``), such as one card file for
+        each module: those files are where it goes, never a file named after the source."""
         declared = self._declared.file_name_beside(first.as_posix(), format.name) if self.owns(first, source) else ""
+        if not declared and self.writes_by_section(first, format):
+            return ""
         own = f"{source.stem_of(first)}{format.extension}" if first.is_file() and (not source or source.is_offered) else ""
         return declared or own
+
+    def writes_by_section(self, first: Path, format: Format) -> bool:
+        """Whether a render of first, one of the fidelity's own files, into format is saved as one file for each
+        section of it: the fidelity declares format only at paths with a named part, such as the modules fidelity's
+        ``{module}/.context/module-context.md``, which nothing in the path of first, such as ``.context/modules.drawio``,
+        fills."""
+        declared = self._declared.declared_files(format.name)
+        own = first.is_file() and self._declared.includes(first.as_posix()) and not self._declared.includes(first.as_posix(), format.name)
+        return own and bool(declared) and all(file.is_named for file in declared) and not self._declared.file_name_beside(first.as_posix(), format.name)
 
     def beside_itself(self, first: Path, source: Format, format: Format) -> Path:
         """The file a render of a source no fidelity's file is named for saves: beside the source, under the source's
