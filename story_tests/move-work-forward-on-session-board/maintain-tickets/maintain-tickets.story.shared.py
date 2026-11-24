@@ -280,6 +280,72 @@ def _(s):
         expect(sorted(path.name for path in world.project.sessions.iterdir())).to(equal(world.folders))
 
 
+@shared_stories.scenario("Delete Ticket", "Delete a backlog item and its file")
+def _(s):
+    @s.given("the Backlog shows the backlog items Gift cards and Returns and refunds")
+    def _(world):
+        world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG)
+        world.project.seed_backlog_file(RETURNS_AND_REFUNDS)
+
+    @s.when("the Person deletes Gift cards")
+    def _(world):
+        # BoardReads.backlog_item_called("Gift cards")
+        #   <- Gift cards
+        # Gift cards.delete()
+        #   -> self._place.remove()
+        #   <- the Backlog without Gift cards
+        world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading).delete()
+
+    @s.then("the Backlog shows Returns and refunds and not Gift cards")
+    def _(world):
+        expect_backlog(board_of(world), [RETURNS_AND_REFUNDS.heading])
+
+    @s.and_(".sessions/_backlog/gift-cards.md is gone")
+    def _(world):
+        expect((world.project.sessions / "_backlog" / GIFT_CARDS_IN_BACKLOG.file_name).exists()).to(equal(False))
+
+
+@shared_stories.scenario("Delete Ticket", "Delete a parent backlog item with its children")
+def _(s):
+    @s.given("the backlog item Gift cards holds its child Returns and refunds")
+    def _(world):
+        world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG, folder="gift-cards")
+        world.project.seed_backlog_file(RETURNS_AND_REFUNDS, folder="gift-cards")
+
+    @s.when("the Person deletes Gift cards")
+    def _(world):
+        world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading).delete()
+
+    @s.then("the Backlog shows neither Gift cards nor Returns and refunds")
+    def _(world):
+        expect_backlog(board_of(world), [])
+
+    @s.and_(".sessions/_backlog/gift-cards is gone")
+    def _(world):
+        expect((world.project.sessions / "_backlog" / "gift-cards").exists()).to(equal(False))
+
+
+@shared_stories.scenario("Delete Ticket", "Delete a child backlog item, keeping its parent")
+def _(s):
+    @s.given("the backlog item Gift cards holds its child Returns and refunds")
+    def _(world):
+        world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG, folder="gift-cards")
+        world.project.seed_backlog_file(RETURNS_AND_REFUNDS, folder="gift-cards")
+
+    @s.when("the Person deletes Returns and refunds")
+    def _(world):
+        world.BacklogItem.load(RETURNS_AND_REFUNDS.heading).delete()
+
+    @s.then("the Backlog shows Gift cards with no children")
+    def _(world):
+        items = column_in(board_of(world), "Backlog")["items"]
+        expect([(item["title"], item["children"]) for item in items]).to(equal([(GIFT_CARDS_IN_BACKLOG.heading, [])]))
+
+    @s.and_(".sessions/_backlog/gift-cards/gift-cards.md is still there")
+    def _(world):
+        expect((world.project.sessions / "_backlog" / "gift-cards" / GIFT_CARDS_IN_BACKLOG.file_name).is_file()).to(equal(True))
+
+
 @shared_stories.scenario("Tag Ticket Session", "Tag a ticket's session")
 def _(s):
     @s.given('the ticket pet-visits has no tags')

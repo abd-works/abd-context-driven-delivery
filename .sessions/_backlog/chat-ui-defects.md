@@ -53,6 +53,9 @@ Fixed on branch `ticket-maintanance-defects`: it is a link, on every selected Ba
 the app the computer opens markdown with (`backlog-item.open_file`). Opening it in the Claude app's file viewer is not
 done: the board has no way to reach that viewer yet.
 
+Changed 2026-11-23, branch `release-1-2-fixes`: the link opens the item's file in the Files app, through main's session,
+as a ticket's text file opens there; `backlog-item.open_file` is gone.
+
 ## The roots dialog keeps showing the old root after Change
 
 Reported 2026-11-12, ticket `ticket-maintanance-defects`. In a ticket's Roots dialog, choosing a new folder for the

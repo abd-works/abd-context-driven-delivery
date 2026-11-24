@@ -19,9 +19,9 @@ section: body
 
 ### tickets
 
-| ticket | practices |
-| --- | --- |
-| ++checkout-flow++ | Stories, UX, Clean Engineering |
+| ticket |
+| --- |
+| ++checkout-flow++ |
 
 ### increments of checkout-flow's story map
 

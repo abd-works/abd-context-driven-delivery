@@ -3,9 +3,24 @@ its parent's folder, or a ticket moved back with its whole folder."""
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from space.session.session_record import SESSION_FILE
+
+# What an idea's file or folder is renamed to while it is deleted: the operating system renames it whole or not at all,
+# and refuses one a running program holds open, so the refusal comes before anything is deleted, and a delete never
+# stops halfway with a parent's folder left without its own file.
+_BEING_REMOVED = ".deleting-"
+
+
+class IdeaHeldError(PermissionError):
+    """Raised when an idea's file or folder cannot be deleted because a running program holds it open. It names the
+    path, which is left whole."""
+
+    def __init__(self, path: Path) -> None:
+        super().__init__(f"{path} could not be deleted: a running program holds it open; close it and delete again")
+        self.path = path
 
 
 class BacklogFolder:
@@ -76,6 +91,21 @@ class IdeaPlace:
     def move_out(self) -> None:
         """Move its file out of its parent's folder, back to the Backlog's own."""
         self._move_into(self._backlog.folder)
+
+    def remove(self) -> None:
+        """Delete the idea: a folder of its own name goes whole, with its children's files or a ticket's work kept in it;
+        a file of its own, or a child's file in its parent's folder, goes alone, and the parent keeps its folder. A file
+        or folder a running program holds open raises ``IdeaHeldError`` with everything still in place."""
+        kept = self.ticket_folder if self.is_in_own_folder else self.file
+        aside = kept.with_name(f"{_BEING_REMOVED}{kept.name}")
+        try:
+            kept.rename(aside)
+        except PermissionError as held:
+            raise IdeaHeldError(kept) from held
+        if aside.is_dir():
+            shutil.rmtree(aside)
+        else:
+            aside.unlink()
 
     def remove_emptied_folder(self) -> None:
         """Remove the folder of its own name once nothing is left in it, as when its file was taken into a ticket."""

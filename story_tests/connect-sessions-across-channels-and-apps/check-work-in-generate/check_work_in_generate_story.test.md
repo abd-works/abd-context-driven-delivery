@@ -153,3 +153,48 @@ section: body
 *When* the Agent runs `/actions-validate` on .context/story-map.md  
 *Then* a validation report is written for story-map.md  
   *And* the board and the chat bar offer no Validate of their own
+
+## Story: Check Graph Rules When An Artifact Changes
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save" | when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate |
+| `story_tests/connect-sessions-across-channels-and-apps/check-work-in-generate/check_graph_rules_when_an_artifact_changes_story.test.py` | each scenario below, run on the session's real graph through the cdd server's tools |
+| `harness/chat-ui/pane/hooks/chat-bar/changed-artifact.test.ts` | the chat bar calls session.check_changed_artifact after an edit that went through, and reads the board again |
+
+### Examples
+
+| story map | file | holds |
+| --- | --- | --- |
+| ++one sub-epic map++ | .context/story-map.md | the epic Manage Customer Orders holding the one sub-epic Place New Order, which breaks child-count-fits-layer |
+| ++place order map++ | .context/story-map.md | the epic Place New Order holding its four stories, which breaks no graph rule |
+
+#### Scenario: An edited story map's broken rule is counted on the chat bar
+
+*Given* checkout-flow works on Stories, its story map generated  
+  *But* no validate has run on it  
+*When* the Agent edits .context/story-map.md into the ++one sub-epic map++  
+*Then* the graph rules run on .context/story-map.md for stories-story-map, with no explicit validate  
+  *And* the chat bar counts 1 violation on stories-story-map
+
+#### Scenario: A fixed story map leaves the chat bar's count
+
+*Given* checkout-flow's story map is the ++one sub-epic map++, its 1 violation counted on the chat bar  
+*When* the Agent edits .context/story-map.md into the ++place order map++  
+*Then* the graph rules run on .context/story-map.md again  
+  *And* the chat bar counts no violation on stories-story-map
+
+#### Scenario: A file no fidelity the chat bar shows declares is not checked
+
+*Given* checkout-flow works on Stories  
+*When* the Agent edits README.md  
+*Then* no graph rule runs on README.md  
+  *And* no validation report is written
+
+#### Scenario: An edit that failed is not checked
+
+*Given* checkout-flow's story map is the ++one sub-epic map++  
+*When* the Agent's edit of .context/story-map.md fails  
+*Then* the chat bar asks for no check of .context/story-map.md

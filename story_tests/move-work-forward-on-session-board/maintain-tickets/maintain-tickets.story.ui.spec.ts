@@ -135,6 +135,21 @@ test.describe('Edit Ticket Text', () => {
     })
   })
 
+  test("Open a backlog item's text in the Files app", async ({ page }) => {
+    const links = await catchFilesAppLinks(page)
+    await step(page, 'Given the backlog item Gift cards has the text Sell gift cards.', async () => {
+      writeInto(backlogFile('gift-cards'), '# Gift cards\n\nSell gift cards.\n')
+      await openWholeBoard(page)
+    })
+    await step(page, "When the Person opens Gift cards' file from its card", async () => {
+      await backlogCard(page, 'Gift cards').getByRole('button', { name: 'Show Gift cards' }).click()
+      await backlogCard(page, 'Gift cards').getByRole('button', { name: '.sessions/_backlog/gift-cards.md' }).click()
+    })
+    await step(page, 'Then the Files app opens .sessions/_backlog/gift-cards.md', async () => {
+      await expect.poll(async () => (await links()).map(url => url.searchParams.get('file'))).toEqual(['.sessions/_backlog/gift-cards.md'])
+    })
+  })
+
   test("Edit a child's text inside its parent", async ({ page }) => {
     const row = card(page, 'checkout-flow').locator('[data-child="confirm-order"]').first()
     await step(page, 'Given the ticket checkout-flow holds its child ticket confirm-order', async () => {
@@ -299,6 +314,72 @@ test.describe('Delete Ticket', () => {
     })
     await step(page, "And deleting no-such-ticket removes no other ticket's session folder", () => {
       expect([existsSync(join(sessions, 'checkout-flow')), existsSync(join(sessions, 'billing-report'))]).toEqual([true, true])
+    })
+  })
+
+  const giftCardsFolder = join(sessions, '_backlog', 'gift-cards')
+  const seedGiftCardsWithChild = () => {
+    writeInto(join(giftCardsFolder, 'gift-cards.md'), '# Gift cards\n\nSell gift cards.\n')
+    writeInto(join(giftCardsFolder, 'returns-and-refunds.md'), '# Returns and refunds\n\nRefund an order.\n')
+  }
+
+  test('Delete a backlog item and its file', async ({ page }) => {
+    await step(page, 'Given the Backlog shows the backlog items Gift cards and Returns and refunds', async () => {
+      writeInto(backlogFile('gift-cards'), '# Gift cards\n\nSell gift cards.\n')
+      writeInto(backlogFile('returns-and-refunds'), '# Returns and refunds\n\nRefund an order.\n')
+      await openWholeBoard(page)
+    })
+    await step(page, 'When the Person deletes Gift cards', async () => {
+      await backlogCard(page, 'Gift cards').getByRole('button', { name: 'Show Gift cards' }).click()
+      page.once('dialog', dialog => void dialog.accept())
+      await backlogCard(page, 'Gift cards').getByRole('button', { name: 'Delete' }).click()
+    })
+    await step(page, 'Then the Backlog shows Returns and refunds and not Gift cards', async () => {
+      await expect(backlogCard(page, 'Gift cards')).toHaveCount(0)
+      await expect(backlogCard(page, 'Returns and refunds')).toBeVisible()
+    })
+    await step(page, 'And .sessions/_backlog/gift-cards.md is gone', async () => {
+      await expect.poll(() => existsSync(backlogFile('gift-cards'))).toBe(false)
+    })
+  })
+
+  test('Delete a parent backlog item with its children', async ({ page }) => {
+    await step(page, 'Given the backlog item Gift cards holds its child Returns and refunds', async () => {
+      seedGiftCardsWithChild()
+      await openWholeBoard(page)
+    })
+    await step(page, 'When the Person deletes Gift cards', async () => {
+      await backlogCard(page, 'Gift cards').getByRole('button', { name: 'Show Gift cards' }).click()
+      page.once('dialog', dialog => void dialog.accept())
+      await backlogCard(page, 'Gift cards').getByRole('button', { name: 'Delete' }).click()
+    })
+    await step(page, 'Then the Backlog shows neither Gift cards nor Returns and refunds', async () => {
+      await expect(backlogCard(page, 'Gift cards')).toHaveCount(0)
+      await expect(page.locator('[data-child-item="Returns and refunds"]')).toHaveCount(0)
+    })
+    await step(page, 'And .sessions/_backlog/gift-cards is gone', async () => {
+      await expect.poll(() => existsSync(giftCardsFolder)).toBe(false)
+    })
+  })
+
+  test('Delete a child backlog item, keeping its parent', async ({ page }) => {
+    await step(page, 'Given the backlog item Gift cards holds its child Returns and refunds', async () => {
+      seedGiftCardsWithChild()
+      await openWholeBoard(page)
+    })
+    await step(page, 'When the Person deletes Returns and refunds', async () => {
+      const childRow = backlogCard(page, 'Gift cards').locator('[data-child-item="Returns and refunds"]')
+      await childRow.click()
+      page.once('dialog', dialog => void dialog.accept())
+      await childRow.getByRole('button', { name: 'Delete' }).click()
+    })
+    await step(page, 'Then the Backlog shows Gift cards with no children', async () => {
+      await expect(backlogCard(page, 'Gift cards')).toBeVisible()
+      await expect(backlogCard(page, 'Gift cards').locator('[data-child-item]')).toHaveCount(0)
+    })
+    await step(page, 'And .sessions/_backlog/gift-cards/gift-cards.md is still there', async () => {
+      await expect.poll(() => existsSync(join(giftCardsFolder, 'returns-and-refunds.md'))).toBe(false)
+      expect(existsSync(join(giftCardsFolder, 'gift-cards.md'))).toBe(true)
     })
   })
 })

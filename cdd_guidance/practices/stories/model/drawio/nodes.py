@@ -7,6 +7,7 @@ Two views:
 
 from __future__ import annotations
 
+import itertools
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -237,6 +238,19 @@ class _PlacedCell(DiagramStoryCell):
         return None
 
 
+def _is_thin_slice_card(cell_id: str) -> bool:
+    """Whether cell_id names a story card in a thin slice's lane, `inc-lane/{increment}/{story}`, rather than a lane's
+    background or label."""
+    return cell_id.startswith("inc-lane/") and cell_id.count("/") == 2 and not cell_id.endswith("/bg")
+
+
+def _measure(written: object) -> float | int:
+    """A geometry value as the drawing wrote it, read as a number: whole numbers stay whole, so a cell drawn again is
+    written as it was, `928` and not `928.0`."""
+    value = float(written or 0)
+    return int(value) if value.is_integer() else value
+
+
 class _KeptPlaces:
     """Where each cell of a story map drawn before stands, by its cell id: the drawing a person may have moved cards on,
     which the next render keeps them where they put them."""
@@ -256,6 +270,17 @@ class _KeptPlaces:
             return kept
         kept._places = {cell.id: cell.geometry for cell in drawn.cells if cell.id and cell.geometry}
         return kept
+
+    def box_of(self, cell_id: str) -> Optional[Box]:
+        """The box the cell named cell_id stood in; none for a cell the drawing did not hold."""
+        kept = self._places.get(cell_id)
+        if kept is None:
+            return None
+        return Box(*(_measure(kept.get(side, 0)) for side in ("x", "y", "width", "height")))
+
+    def thin_slice_cards(self) -> List[Box]:
+        """The box of every story card a thin slice drawing held, in any lane, whether or not it is drawn again."""
+        return [self.box_of(name) for name in self._places if _is_thin_slice_card(name)]
 
     def place(self, vertex: "DrawIOStoryMap.Vertex") -> None:
         """Put vertex where its cell stood before, at the size it had; a cell new to the map stays where it was laid out.
@@ -400,7 +425,13 @@ class DrawIOStoryMap(DiagramStoryMap):
         Rows 3+: One horizontal lane per increment; story cells placed in their
                  epic-column position within the lane.
         """
-        return _ThinSliceDrawing(self, DrawioFile()).text()
+        return _ThinSliceDrawing(self, DrawioFile(), self.kept_places or _KeptPlaces()).text()
+
+    def render_thin_slice(self, written: Written = Written()) -> str:
+        """This map's increments drawn as its thin slice over the drawing written holds: each lane, card and bar stands
+        where that drawing had it, so the layout a person gave the thin slice stays."""
+        self.kept_places = _KeptPlaces.from_text(written.previous or None)
+        return self.save_thin_slice()
 
     def load_thin_slice(self, text: str) -> "DrawIOStoryMap":
         """Read a thin-slicing.drawio document into this map's increments, each delivering the map's own stories
@@ -429,16 +460,115 @@ class DrawIOStoryMap(DiagramStoryMap):
         return names, lanes
 
 
+class _ThinSlicePlaces:
+    """Where each lane, story card and column of a thin slice is drawn, over the thin slice drawing it replaces: a lane,
+    card or bar that drawing held stands where it stood, since a person may have laid it out by hand; a card new to a
+    lane takes the first free place in its sub-epic's column there, beside or below the cards already in it; and each
+    column is made as wide as the cards it holds, so every card stays under the bar of the sub-epic that holds it.
+    With no drawing before it, this is the layout's own: one row of cards in each lane, each column as wide as its
+    fullest lane."""
+
+    def __init__(self, layout: ThinSliceLayout, kept: _KeptPlaces, lane_top: float) -> None:
+        self._layout = layout
+        self._kept = kept
+        self._pitch = DiagramStory.size + DrawIOIncrement.card_gap
+        # Every place a card stands in: the drawing's own cards, which the render keeps even when it does not draw
+        # them again, and each card placed since.
+        self._taken: List[Box] = kept.thin_slice_cards()
+        self._counted: Dict[str, Dict[str, int]] = {}
+        self.lanes: List[Box] = self._laid_lanes(lane_top)
+        self.cards: List[List[Tuple[str, Story, Box]]] = [[] for _ in layout.lanes]
+        self.columns: List[Box] = self._laid_columns()
+
+    @property
+    def right(self) -> float:
+        """Where the last column ends."""
+        return max((column.x + column.w for column in self.columns), default=DiagramEpic.left_margin)
+
+    def bar_of(self, cell_id: str, x: float, width: float) -> Box:
+        """The bar cell_id draws over the columns from x, width wide: where the drawing had it, at least that wide."""
+        kept = self._kept.box_of(cell_id)
+        if kept is None:
+            return Box(x, DiagramEpic.row_y, width, DiagramEpic.bar_height)
+        return Box(kept.x, kept.y, max(kept.w, x + width - kept.x), kept.h)
+
+    def _laid_lanes(self, top: float) -> List[Box]:
+        """Each lane's box: where the drawing had its background, else below the lane before it."""
+        lanes: List[Box] = []
+        left = DiagramEpic.left_margin - DrawIOIncrement.label_width
+        for lane in self._layout.lanes:
+            kept = self._kept.box_of(f"inc-lane/{lane.increment.slug}/bg")
+            box = Box(left, kept.y, kept.w, kept.h) if kept else Box(left, top, 0, DrawIOIncrement.lane_height)
+            lanes.append(box)
+            top = box.y + box.h + DrawIOIncrement.lane_gap
+        return lanes
+
+    def _laid_columns(self) -> List[Box]:
+        """Each column's box, left to right, with the cards of every lane placed in it."""
+        columns: List[Box] = []
+        start = DiagramEpic.left_margin
+        for index, column in enumerate(self._layout.columns):
+            kept = self._kept.box_of(self._column_cell(column))
+            x, width = (kept.x, kept.w + _HEADER_INSET) if kept else (start, self._pitch + DrawIOIncrement.card_gap)
+            width = max(width, self._placed_cards(index, x, width) - x)
+            columns.append(Box(x, DiagramEpic.nested_row_y, width, DiagramEpic.bar_height))
+            start = x + width
+        return columns
+
+    def _column_cell(self, column: ThinSliceColumn) -> str:
+        """The cell that heads column: its sub-epic's bar, or its epic's when the epic has no sub-epics."""
+        return column.sub.cell_id if column.sub is not column.epic else column.epic.slug
+
+    def _placed_cards(self, column: int, x: float, width: float) -> float:
+        """Place the cards every lane puts in the column at x, width wide; answer where the column must end to hold
+        them."""
+        end = x + width
+        for lane_index, lane in enumerate(self._layout.lanes):
+            for story in lane.stories.get(column, []):
+                cell_id = self._card_id(lane.increment.slug, story.slug)
+                box = self._kept.box_of(cell_id) or self._free_place(x, width, self.lanes[lane_index])
+                self._taken.append(box)
+                self.cards[lane_index].append((cell_id, story, box))
+                end = max(end, box.x + box.w + DrawIOIncrement.card_gap)
+        return end
+
+    def _card_id(self, increment: str, story: str) -> str:
+        """The id of a story's card in an increment's lane; a story the lane holds again takes the next number."""
+        counted = self._counted.setdefault(increment, {})
+        count = counted[story] = counted.get(story, 0) + 1
+        return f"inc-lane/{increment}/{story}" + (f"-{count}" if count > 1 else "")
+
+    def _free_place(self, x: float, width: float, lane: Box) -> Box:
+        """The first place in the column at x, width wide, within lane, that no card stands in: along each row the lane
+        is tall enough for, then on along its first row past the column's right edge, which the column then grows to."""
+        top = lane.y + (DrawIOIncrement.lane_height - DiagramStory.size) // 2
+        rows = max(1, int((lane.y + lane.h - top - DiagramStory.size) // self._pitch) + 1)
+        across = max(1, int((width - DrawIOIncrement.card_gap - DiagramStory.size) // self._pitch) + 1)
+        inside = (self._place(x, top, row, slot) for row in range(rows) for slot in range(across))
+        beyond = (self._place(x, top, 0, slot) for slot in itertools.count(across))
+        return next(place for place in itertools.chain(inside, beyond) if not self._is_taken(place))
+
+    def _place(self, x: float, top: float, row: int, slot: int) -> Box:
+        """The card place slot steps along row of the column at x, its first row at top."""
+        return Box(x + DrawIOIncrement.card_gap + slot * self._pitch, top + row * self._pitch, DiagramStory.size, DiagramStory.size)
+
+    def _is_taken(self, place: Box) -> bool:
+        return any(place.x < card.x + card.w and card.x < place.x + place.w and place.y < card.y + card.h and card.y < place.y + place.h
+                   for card in self._taken)
+
+
 class _ThinSliceDrawing(ThinSliceSurface):
     """The draw.io page a story map's thin slice is drawn on: its epics and sub-epics as column headers, and one lane
-    per increment holding its stories under their sub-epics' columns, as the layout places them."""
+    per increment holding its stories under their sub-epics' columns, each where *_ThinSlicePlaces* puts it."""
 
-    def __init__(self, story_map: DrawIOStoryMap, drawing: DrawioFile) -> None:
+    def __init__(self, story_map: DrawIOStoryMap, drawing: DrawioFile, kept: _KeptPlaces) -> None:
         self.drawing = drawing
         self.page = drawing.add_page("Thin Slicing", "thin-slicing")
         self.layout = ThinSliceLayout(story_map, DiagramStory.size + DrawIOIncrement.card_gap, DrawIOIncrement.card_gap, DiagramEpic.left_margin)
-        self.width = DrawIOIncrement.label_width + self.layout.width
-        self._lane_y = DiagramEpic.nested_row_y + DiagramEpic.bar_height + DrawIOIncrement.header_gap
+        lane_top = DiagramEpic.nested_row_y + DiagramEpic.bar_height + DrawIOIncrement.header_gap
+        self.places = _ThinSlicePlaces(self.layout, kept, lane_top)
+        self.width = DrawIOIncrement.label_width + self.places.right - DiagramEpic.left_margin
+        self._lanes_drawn = 0
 
     def _draw(self, vertex: "DrawIOStoryMap.Vertex") -> None:
         vertex.draw_on(self.page)
@@ -448,27 +578,22 @@ class _ThinSliceDrawing(ThinSliceSurface):
         return self.drawing.save()
 
     def epic_header(self, epic: Epic, x: float, width: float) -> None:
-        self._draw(DrawIOStoryMap.Vertex.make(epic.slug, epic.name, x, DiagramEpic.row_y, width - _HEADER_INSET, DiagramEpic.bar_height, epic.style))
+        """The epic's bar over every column it holds, where the places put those columns."""
+        held = [box for column, box in zip(self.layout.columns, self.places.columns) if column.epic is epic]
+        bar = self.places.bar_of(epic.slug, held[0].x, held[-1].x + held[-1].w - held[0].x - _HEADER_INSET)
+        self._draw(DrawIOStoryMap.Vertex.make(epic.slug, epic.name, bar.x, bar.y, bar.w, bar.h, epic.style))
 
     def sub_epic_header(self, column: ThinSliceColumn) -> None:
         sub = column.sub
-        self._draw(DrawIOStoryMap.Vertex.make(sub.cell_id, sub.name, column.x, DiagramEpic.nested_row_y, column.width - _HEADER_INSET, DiagramEpic.bar_height, sub.style))
+        box = self.places.columns[self.layout.columns.index(column)]
+        self._draw(DrawIOStoryMap.Vertex.make(sub.cell_id, sub.name, box.x, DiagramEpic.nested_row_y, box.w - _HEADER_INSET, DiagramEpic.bar_height, sub.style))
 
     def lane(self, lane: ThinSliceLane, layout: ThinSliceLayout) -> None:
-        """One increment's lane: its label at the left and its stories in one row under their sub-epics."""
-        increment, lane_y = lane.increment, self._lane_y
-        self._lane_y += DrawIOIncrement.lane_height + DrawIOIncrement.lane_gap
-        left = DiagramEpic.left_margin - DrawIOIncrement.label_width
-        height = DrawIOIncrement.lane_height
-        self._draw(DrawIOStoryMap.Vertex.make(f"inc-lane/{increment.slug}/bg", "", left, lane_y, self.width, height, DrawIOIncrement.lane_style))
-        self._draw(DrawIOStoryMap.Vertex.make(f"inc-lane/{increment.slug}", increment.name, left, lane_y, DrawIOIncrement.label_width - _HEADER_INSET, height, DrawIOIncrement.label_style))
-        story_y = lane_y + (DrawIOIncrement.lane_height - DiagramStory.size) // 2
-        pitch = DiagramStory.size + DrawIOIncrement.card_gap
-        seen: Dict[str, int] = {}
-        for column, stories in lane.stories.items():
-            column_x = layout.columns[column].x
-            for place, story in enumerate(stories):
-                count = seen[story.slug] = seen.get(story.slug, 0) + 1
-                cell_id = f"inc-lane/{increment.slug}/{story.slug}" + (f"-{count}" if count > 1 else "")
-                story_x = column_x + DrawIOIncrement.card_gap + place * pitch
-                self._draw(DrawIOStoryMap.Vertex.make(cell_id, story.name, story_x, story_y, DiagramStory.size, DiagramStory.size, DrawIOIncrement.story_style))
+        """One increment's lane: its label at the left and its stories where the places put them."""
+        index = self._lanes_drawn
+        self._lanes_drawn += 1
+        increment, box = lane.increment, self.places.lanes[index]
+        self._draw(DrawIOStoryMap.Vertex.make(f"inc-lane/{increment.slug}/bg", "", box.x, box.y, max(box.w, self.width), box.h, DrawIOIncrement.lane_style))
+        self._draw(DrawIOStoryMap.Vertex.make(f"inc-lane/{increment.slug}", increment.name, box.x, box.y, DrawIOIncrement.label_width - _HEADER_INSET, box.h, DrawIOIncrement.label_style))
+        for cell_id, story, card in self.places.cards[index]:
+            self._draw(DrawIOStoryMap.Vertex.make(cell_id, story.name, card.x, card.y, card.w, card.h, DrawIOIncrement.story_style))

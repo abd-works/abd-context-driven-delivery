@@ -38,6 +38,7 @@ from space.session.session_paths import SessionPaths
 from space.session.session_record import SESSION_FILE, SessionFields, SessionRecord
 from space.session.test_tiers import TestTiers
 from space.session.validation.accepted_violations import ACCEPTED_VIOLATIONS_FILE, AcceptedViolations
+from space.session.validation.changed_artifact import ChangedArtifact
 from space.work_state import SESSIONS_FOLDER
 
 if TYPE_CHECKING:
@@ -111,6 +112,14 @@ class SessionFileTools:
     def write_file(self, path: str, text: str) -> FileText:
         """Save text as the whole of path, a file in this repository or under a folder this session's practices write to, named as read_file names it; the file as saved."""
         return self.session_files.write(path, text)
+
+    @long_call
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def check_changed_artifact(self, path: str) -> ChangedArtifact:
+        """Run the graph rules on path, a file just edited, named as read_file names it, with no explicit validate: Validate runs on the file alone for each fidelity the session's guidance selection shows, of a practice the session works on, that declares it, saving a report and logging its validate line, so the chat bar's violation count follows the edit. Returns the file and the slug of each fidelity checked; none for a file no such fidelity declares, or one outside the session's roots. The chat bar calls it after each edit the agent makes."""
+        return ChangedArtifact(self, path).check()
 
     @long_call
     @mcp

@@ -420,6 +420,10 @@ class BacklogItemHandle:
         """``backlog-item.start_under``, naming the parent as the tool names any ticket."""
         return _handle_of(self._cdd, self._cdd.call("backlog-item.start_under", backlog_item=self.title, parent=parent.name))
 
+    def delete(self) -> None:
+        """``backlog-item.delete``, naming the item by its title as the tool names any backlog item."""
+        self._cdd.call("backlog-item.delete", backlog_item=self.title)
+
     def move_before(self, other: BacklogItemHandle) -> BacklogItemHandle:
         """``backlog-item.move_before``, naming the other item by its title as the tool names any backlog item."""
         return _handle_of(self._cdd, self._cdd.call("backlog-item.move_before", backlog_item=self.title, other=other.title))

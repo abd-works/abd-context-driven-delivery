@@ -6,6 +6,7 @@ from functools import cached_property
 from typing import Dict, List, NamedTuple, Optional
 
 from cdd_guidance.practices.stories.model.story_map import Epic, Increment, Story, StoryMap, StoryType
+from harness.guidance.practice_formats import Written
 
 # A leaf epic with an estimate widens by a column for about this many characters of the estimate: wider for an epic
 # that has stories beside it, as its estimate shares their columns.
@@ -272,6 +273,11 @@ class DiagramStoryMap(StoryMap):
             if actor:
                 story.actors = [actor]
             owner.node.stories.append(story)
+
+    def render_thin_slice(self, written: Written = Written()) -> str:
+        """This map's increments drawn as the format's thin slice over the file written holds. A format that keeps no
+        layout of its own draws it afresh, and the render puts back the places only the file held."""
+        return self.save_thin_slice()
 
     def save_thin_slice(self) -> str:
         """This map's increments drawn as the format's thin slice: one lane for each increment, holding the stories it

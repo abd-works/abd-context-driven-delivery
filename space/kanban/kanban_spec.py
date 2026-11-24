@@ -26,7 +26,6 @@ from space.kanban.board_practices import BoardPractices  # noqa: E402
 from space.session.sessions import Sessions  # noqa: E402
 from harness.guidance.guidance import FidelityGuidance  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
-import space.kanban.backlog_item as backlog_item_module  # noqa: E402
 from space.kanban.backlog_item import BacklogNestingError  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help, RequiredFidelity  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
@@ -494,23 +493,6 @@ with description("a backlog item") as self:
 
             with it("should leave no folder behind in the Backlog"):
                 expect((self.backlog / "checkout").exists()).to(be_false)
-
-    # (S) Person --> Display Backlog Items As Tickets: the link under an item's text opens its file.
-    with context("whose file a person opens from its card"):
-        with before.each:
-            self.sessions = SessionsFolder()
-            self.path = self.sessions.backlog_item("checkout.md", "Checkout")
-            self.opened = []
-            self.system_opener = backlog_item_module.open_with_system
-            backlog_item_module.open_with_system = self.opened.append
-            board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
-            board.reads.backlog_item_called("Checkout").open_file()
-
-        with after.each:
-            backlog_item_module.open_with_system = self.system_opener
-
-        with it("should hand its file to the app the computer opens it with"):
-            expect([path.resolve() for path in self.opened]).to(equal([self.path.resolve()]))
 
     with context("that a person drops on a ticket moved back into the Backlog"):
         with before.each:

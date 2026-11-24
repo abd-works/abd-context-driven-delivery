@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -23,18 +20,6 @@ from space.session.idea_file import IdeaFile
 from harness.process.log_timestamp import LogTimestamp
 from space.session.session_log import LogLine
 from harness.mcp.mcp_annotations import mcp
-
-
-# How long the system may take to hand a file to the app it opens that kind of file with.
-OPEN_WITH_SYSTEM_SECONDS = 30
-
-
-def open_with_system(path: Path) -> None:
-    """Hand path to the app this computer opens its kind of file with, as a double-click in the file browser does."""
-    if sys.platform == "win32":
-        os.startfile(path)  # noqa: S606 - a file of the Backlog, opened as the person's own file browser would
-    else:
-        subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", str(path)], check=True, timeout=OPEN_WITH_SYSTEM_SECONDS)
 
 
 class BacklogNestingError(ValueError):
@@ -217,10 +202,11 @@ class BacklogItem(BacklogOrderTools, Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def open_file(self) -> BacklogItem:
-        """Open the backlog item titled backlog_item's file in the app this computer opens markdown files with, as the link under its text on the board does."""
-        open_with_system(self._path)
-        return self
+    def delete(self) -> None:
+        """Delete the backlog item titled backlog_item, as Delete on its selected card does: its markdown file goes, or, for an item kept in a folder of its own name (a parent with its children, or a ticket moved back with its work), that whole folder. A child's file goes alone, and its parent stays. A file or folder a running program holds open refuses the delete with everything still in place. Committed on main and pushed."""
+        title = self.title
+        self._place.remove()
+        self._moved(f"sessions: delete {title} from the Backlog")
 
     @mcp
     @agent_tool

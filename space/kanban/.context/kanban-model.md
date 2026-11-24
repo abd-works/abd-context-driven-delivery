@@ -824,7 +824,7 @@ The Backlog's folder, `.sessions/_backlog` (in `backlog_folder.py`): it answers 
 
 ## IdeaPlace
 
-Where one idea's file lies in the Backlog, and the only mover of it. An idea's file is its only copy, so a move never deletes it or writes over another file; a folder a move leaves empty goes. *BacklogItem* holds one and asks it, and refuses a nesting (`_nesting_refusal`) before a move could write over a file.
+Where one idea's file lies in the Backlog, and the only mover and remover of it. An idea's file is its only copy, so a move never deletes it or writes over another file; a folder a move leaves empty goes. Only `remove`, a person's delete, takes it away. *BacklogItem* holds one and asks it, and refuses a nesting (`_nesting_refusal`) before a move could write over a file.
 
 + IdeaPlace(file: Path, backlog_folder: BacklogFolder)
 ------
@@ -836,6 +836,8 @@ Where one idea's file lies in the Backlog, and the only mover of it. An idea's f
 ----
 + move_under(parent: IdeaPlace)
 + move_out()
++ remove()
+	// a folder of its own name goes whole, with its children's files or a ticket's work; a file of its own, or a child's file, goes alone and a parent keeps its folder; renamed aside first, so a file or folder a running program holds open raises `IdeaHeldError` with everything in place
 + remove_emptied_folder()
 
 ## BacklogItem : Card
@@ -896,6 +898,10 @@ Marked `@identity("title")`. Its two order tools, `move_before` and `move_after`
 + edit_text(text: str): BacklogItem
 	// `backlog-item.edit_text`: rewrites the text under its file's heading, which keeps its title; committed on main and pushed
 	-> IdeaFile.rewrite_text
++ delete()
+	// `backlog-item.delete`: Delete on its selected card, after one confirmation; its file goes, or its whole folder for a parent or a ticket moved back; committed on main and pushed. Its file opens in the Files app through main's session, since it has none of its own
+	-> IdeaPlace.remove
+	-> SessionSaves.later
 + move_before(other: BacklogItem): BacklogItem
 	// `backlog-item.move_before`: keeps it just above other in the Backlog; the tool names other by its title
 	-> Card.move_before

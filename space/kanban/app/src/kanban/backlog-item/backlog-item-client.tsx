@@ -69,6 +69,23 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
     await (drop === 'before' ? dragged.moveBefore(this.title) : dragged.moveAfter(this.title))
   }
 
+  // Its file in the Files app, as a ticket's text file opens there. The Files app reads every file through a session, and
+  // an item has none until it starts, so it opens through main's, the board's default session.
+  async openInFiles(): Promise<void> {
+    const main = this.page.board.mainTicket
+    if (!main) return this.page.failures.fail(`${this.path} did not open: the board has no main session for the Files app to read it through.`, `Opening ${this.title}'s file in the Files app`)
+    await this.page.editorApp.openFilesOn(main, { folder: 'session', file: this.path })
+  }
+
+  // Deleted, the item is no longer selected, and the board is read again to draw the Backlog without it.
+  override async delete(): Promise<null> {
+    await super.delete()
+    this.page.store.change({ selected: '' })
+    await this.page.reader.refresh()
+    this.page.store.toast(`${this.title} deleted from the Backlog`)
+    return null
+  }
+
   // Dropped on a ticket's card, the item starts as that ticket's child, and the board is read again to show it there.
   override async startUnder(parent: string): Promise<TicketData | null> {
     const child = await super.startUnder(parent)

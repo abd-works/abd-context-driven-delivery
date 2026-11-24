@@ -6,6 +6,7 @@ import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, readChatBarUntilAnswered, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
+import { changedArtifactOf, checkChangedArtifact } from './chat-bar/changed-artifact-client'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { currentFormatChips } from './chat-bar/format-choices-client'
@@ -121,12 +122,16 @@ export const register: Register = on => {
 
   // A cdd tool call names this chat for session.log. The agent changes the board through cdd's tools without telling
   // the mod, so a cdd tool call that finishes reads it again.
+  // An edit the agent made is checked against the graph rules without holding the agent up; the bar reads the board again
+  // once the check is done.
   on('tool.call', async ($, e, next) => {
     const ran = await next(await withChatNamed($, e))
     if (CDD_TOOL.test(e.tool)) {
       await refreshChatBar($)
       await showStatus($)
     }
+    const changed = changedArtifactOf(e, ran)
+    if (changed) void checkChangedArtifact($, await currentChatBar($), changed)
     return ran
   })
 

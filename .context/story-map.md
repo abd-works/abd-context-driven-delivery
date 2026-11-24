@@ -361,6 +361,8 @@ Intended (`.sessions/session-board/ticket-enhancements.md`; `harness/.context/ux
 
 Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/maintain-tickets/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
 
+Requested (2026-11-23); Built (2026-11-23): the link under a backlog item's text opens its file in the Files app, as a ticket's text file opens there, through main's session, since an item has no session until it starts (`BacklogItemClient.openInFiles`); it no longer opens the file in the app the computer opens markdown with, and `backlog-item.open_file` is gone.
+
 ### (S) Person --> [Reorder Tickets In Column](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-reorder-tickets-in-column)
 
 Intended (`.sessions/session-board/ticket-enhancements.md`): a ticket dragged up or down within its column keeps that place. Built today (checked 2026-11-11): a drag moves a ticket between columns only; the Backlog lists its items by file name (`board.py:328`) and no column keeps a place a person chose.
@@ -376,6 +378,8 @@ Observed as the `ticket.archive` tool (`Ticket.archive`). Intended (`.sessions/s
 Intended (`.sessions/session-board/ticket-enhancements.md`): Delete on a card removes the ticket and its session folder. Built today (checked 2026-11-11): no delete operation on `Ticket` or `BacklogItem` (`ticket.py`, `backlog_item.py`); Archive is the nearest (`Ticket.archive`, `ticket.py:352`).
 
 Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/maintain-tickets/maintain-tickets.story.ui.spec.ts`, and by the domain and server tiers.
+
+Requested (2026-11-23, after the person deleted share-read-only-projects-in-the-board-tools-spec from `.sessions/_backlog/` by hand); Built (2026-11-23): a selected Backlog card, or a selected child row inside its parent's card, offers Delete, which after one confirmation removes the item's markdown file, or its whole folder for a parent with its children or a ticket moved back, and redraws the Backlog without it; a child's file goes alone and its parent stays (`BacklogItem.delete`, `IdeaPlace.remove`, `backlog-item-view.tsx` `DeleteItemView`). Driven by the same three tiers.
 
 ### (S) Person --> [Tag Ticket Session](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-tag-ticket-session)
 
@@ -2378,9 +2382,9 @@ Requested (2026-11-06, "/fix is a first class action; fix rule; file; default ac
 
 Requested (2026-11-06, "validate still exists as independent action"; "validate is a slash command story only now"): Validate runs on its own on any files only as the `/actions-validate` slash command, and its report is saved as today; the board and the chat bar have no Validate, since generate judges the rules. Built today (checked 2026-11-10): `/actions-validate` runs and saves its report. Missing: validate is still on the board tiles (`action-bar-view.tsx:64-70`) and in the chat bar's stage actions.
 
-### (S:system) Claude Code --> Check Graph Rules When An Artifact Changes
+### (S:system) Claude Code --> [Check Graph Rules When An Artifact Changes](../story_tests/connect-sessions-across-channels-and-apps/check-work-in-generate/check_work_in_generate_story.test.md#story-check-graph-rules-when-an-artifact-changes)
 
-Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate. Built on release-2 (2026-11-15) for one file: with the Files app's Rules toggle on, `SessionGraph.alone`, a *DocumentGraph* reads the open file into the session's live graph when it changed, in under a second, and answers its broken rules.
+Intended (`.sessions/_backlog/fully-integrated-app-flow.md` "Validate on save"): when an artifact in a session changes, the graph rules run on it and the band's violation count updates, with no explicit validate. Built on release-2 (2026-11-15) for one file: with the Files app's Rules toggle on, `SessionGraph.alone`, a *DocumentGraph* reads the open file into the session's live graph when it changed, in under a second, and answers its broken rules. Built (2026-11-24): after each Edit or Write the agent makes that goes through, the chat bar calls `session.check_changed_artifact` without holding the agent up; the session runs Validate on that file alone for each fidelity the chat bar shows that declares it (`ChangedArtifact`, `space/session/validation/changed_artifact.py`), saving a report and logging its validate line, and the bar reads the board again, so its violation count follows the edit (`harness/chat-ui/pane/hooks/chat-bar/changed-artifact-client.ts`).
 
 ## (E) Change Stories From Canvas And Story UI
 

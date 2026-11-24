@@ -21,6 +21,8 @@ _KV_SLICING = re.compile(r"^\*\*Slicing\s+notes\s*:\*\*\s*(.+)$", re.IGNORECASE)
 _KV_STORIES = re.compile(r"^\*\*Stories(?:\s+in\s+this\s+increment)?\s*:?\*\*", re.IGNORECASE)
 _KV_DECISION = re.compile(r"^\*\*Decision\s+prompt\s*:\*\*\s*(.+)$", re.IGNORECASE)
 _BULLET = re.compile(r"^\s*[-*]\s+(.+)$")
+# A bullet that names its story in emphasis and says more after it: `*Submit Order* (partly built: ...)`.
+_NAMED_WITH_NOTE = re.compile(r"^(\*{1,2}|_)(?P<name>.+?)\1(?=\s|$)")
 _STORIES_LABEL = "**Stories in this increment:**"
 _NEW_THIN_SLICE = ["# Thin slicing", "", "## Increments", ""]
 
@@ -77,8 +79,11 @@ class MarkdownIncrement(Increment):
         return written + [self._bullet(story) for story in self.stories if id(story) not in shown]
 
     def _bullet_as_read(self, raw: str, story: Optional[Story], name: str) -> str:
-        """A bullet as it was written, while it names no story of the map or its story keeps the name it was read with."""
-        return raw if story is None or story.name == name else self._bullet(story)
+        """A bullet as it was written, while it names no story of the map or its story keeps the name it was read with;
+        a renamed story's bullet takes the new name and keeps what it said after the old one."""
+        if story is None or story.name == name:
+            return raw
+        return raw.replace(f"*{name}*", f"*{story.name}*", 1) if f"*{name}*" in raw else self._bullet(story)
 
     def _bullet(self, story: Story) -> str:
         return f"- *{story.name}*"
@@ -191,10 +196,15 @@ class _ThinSliceReading:
         """A story bullet: the increment delivers the map's story of that name; a name the map lacks is kept as written."""
         if self._stories_by_name is None:
             self._stories_by_name = self.story_map.descendants.stories_by_name()
-        story = self._stories_by_name.get(strip_markup(named))
+        story = self._stories_by_name.get(self._story_name(named))
         found = [story] if story is not None else []
         increment.lines.bullets.append((raw, found[0] if found else None, found[0].name if found else ""))
         increment.stories.extend(found)
+
+    def _story_name(self, named: str) -> str:
+        """The story a bullet names: its emphasized words when it says more after them, else the whole bullet."""
+        emphasized = _NAMED_WITH_NOTE.match(named.strip())
+        return strip_markup(emphasized.group("name")) if emphasized else strip_markup(named)
 
     def _read_field(self, stripped: str, increment: MarkdownIncrement) -> bool:
         """Keep the outcome, slicing notes or decision prompt the line gives increment; true when the line is the label

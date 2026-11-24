@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from harness.guidance.practice_formats import PracticeFormats, Rendered, RenderRequest
+from harness.guidance.practice_formats import PracticeFormats, Rendered, RenderRequest, Written
 
 
 from cdd_guidance.practices.stories.model.diagram_story_map import DiagramStoryMap
@@ -29,9 +29,10 @@ class ThinSlicedMap:
     def semantic_type(self) -> str:
         return "ThinSlice"
 
-    def drawn_by(self, diagram: type[DiagramStoryMap]) -> str:
-        """Its increments drawn in the format of diagram, a story model that draws thin slices."""
-        return diagram().copy_of(self.story_map).save_thin_slice()
+    def drawn_by(self, diagram: type[DiagramStoryMap], written: Written) -> str:
+        """Its increments drawn in the format of diagram, a story model that draws thin slices, over the drawing
+        written holds, whose layout it keeps."""
+        return diagram().copy_of(self.story_map).render_thin_slice(written)
 
 
 class SpecifiedStories:
@@ -101,7 +102,7 @@ class StoriesFormats(PracticeFormats):
         tests in code rendered to markdown, at a fidelity that declares a scenarios file for each story, are
         written as those files, each by the path the fidelity declares for it."""
         if isinstance(request.content, ThinSlicedMap):
-            return Rendered(request.format, request.content.drawn_by(self.adapter_class(request.format)))
+            return Rendered(request.format, request.content.drawn_by(self.adapter_class(request.format), request.written))
         if self._writes_scenarios_files(request):
             markdown = self.adapter(request.format).copy_of(self._object_model(request.content, request.source_format))
             return Rendered(request.format, markdown.scenarios_files(STORY_TESTS_FOLDER))
