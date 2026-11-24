@@ -68,4 +68,36 @@
 
 *Agent*. Intended (story_map.stories.md, Apply AI Mutation to Story Map; mern-story-map-ai-sketch.md "Direct auto-apply changes"): no ai-mutation module exists.
 
+## From Fully Integrated App Flow
+
+Moved here on 2026-11-23: the Story UI editor's screen frames view and its increment tickets are the editor's own stories.
+
+### Feature: Connect Chat Bar Board And Story UI
+
+#### Story: Start Ticket Session From Increment
+
+*Person*. Requested (2026-11-06, "increment could be a separate ticket/session in board"; "create a ticket on board on demand in backlog with proper naming reference to story map increment"): the Story UI editor's increments view offers Create ticket on each increment; pressing it adds a ticket to the board's backlog named after the story map and the increment, with its own session holding that increment's stories.
+
+#### Story: Show Increment Ticket In Story UI
+
+*Board App*. Requested (2026-11-06, "story UI -> board/chat integration"): an increment that has a ticket shows that ticket's stage and active state in the Story UI editor.
+
+### Feature: Show Screen Frames In Story UI
+
+#### Story: Switch Story Map To Screen Frames View
+
+*Person*. Requested (2026-11-06): the Story UI editor has a screen frames view beside its base view; in it, each story's card has its screen as a frame beneath it. The base view stays the plain story map.
+
+#### Story: Show Screen Frame Under Each Story
+
+*Story UI*. Requested (2026-11-06): each frame is the story's main design canvas screen, drawn small under its card. It replaces the design canvas, where today the story map artboard draws a thumbnail under each story (`thumbnail` in `canvas.py`, `claude_design_story_model_spec.py`).
+
+#### Story: Mark Story Without A Screen
+
+*Story UI*. Requested (2026-11-06): a story with no screen gets an empty frame saying so. It replaces the design canvas, where today the artboard shows "No screenshot" in place of the picture (`thumbnail` in `canvas.py`).
+
+#### Story: Open Story Explorer From Screen Frame
+
+*Person*. Requested (2026-11-06): pressing a frame opens the browser story explorer at that story, scenario and step. It replaces the design canvas, where today only the artboard's thumbnails link, each opening `explorer.dc.html` at its story (`claude_design_story_model_spec.py`).
+
 Analysis and planning: the stories here are not built yet, or only partly built where a story says so. This is one increment of the thin slice, which sets the order of the increments, [harness/.context/stories/thin-slice.md](../../harness/.context/stories/thin-slice.md); its epics, features and stories are on the story map, [harness/.context/stories/story-map.md](../../harness/.context/stories/story-map.md). Each requirement sits under the story it belongs to.

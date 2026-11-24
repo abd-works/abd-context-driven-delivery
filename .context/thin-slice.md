@@ -407,6 +407,8 @@ section: body
 - *Fix Graph Violations From Chat Bar*
 - *Count Session Violations From Live Graph*
 - *Count Fidelity Violations From Live Graph*
+- *Test Knowledge Graph Explorer On Session Files* (partly built: the Graph app opens on the session's folder and shows violations; no spec runs on a session's files)
+- *Display Drawio File As Diagram* (partly built: the Files app shows the draw.io editor; no Source tab, no red shape for a violation, and a pressed shape does not open its lines)
 
 ### Increment 8: Sync Design Canvas With Production
 
@@ -437,6 +439,7 @@ section: body
 - *Keep Leaf Components Mounted In A Detached Screen*
 - *Mark Detached Screen As Diverged*
 - *Reattach A Screen Once Its Change Reaches Production*
+- *Remove Older Versions When Keeping A Release*
 
 ### Increment 9: Integrate Stories With The Canvas Explorer
 
@@ -459,6 +462,21 @@ section: body
 - *Save Story Map To Story Files*
 - *Comment On A Story In Story UI*
 - *Rearrange Stories Inside The Canvas*
+- *Test Story Explorer On Session Story Map* (partly built: the explorer runs only on the design canvas, and its specs are scenario files with no tests)
+- *Play The Next Story* (built in the design canvas explorer only, not in the Story UI)
+- *Hide And Show The Story Panel* (built in the design canvas explorer only, not in the Story UI)
+- *Return To Story UI Map* (partly built: the design canvas explorer links back to the canvas map, not the Story UI)
+- *Open The Explorer At A Story, Scenario And Step* (built in the design canvas explorer only, not in the Story UI)
+- *Collapse And Reset The Story Tree* (built in the design canvas explorer only, not in the Story UI)
+- *Keep The Selected Story In View* (built in the design canvas explorer only, not in the Story UI)
+- *Copy A Request To Open A Story In Its File* (built in the design canvas explorer only, not in the Story UI)
+- *Pick An Outline Scenario's Example* (built in the design canvas explorer only, not in the Story UI)
+- *Show Design Canvas Screen As Explorer Frame* (built in the design canvas explorer only, not in the Story UI)
+- *Choose The Screen For A Step* (built in the design canvas explorer only, not in the Story UI)
+- *Join A Step Without A Screen To The Next Step* (built in the design canvas explorer only, not in the Story UI)
+- *Show A Screenshot When No Screen Runs* (built in the design canvas explorer only, not in the Story UI)
+- *Keep Each Screen's Own Stylesheets* (built in the design canvas explorer only, not in the Story UI)
+- *Invoke Story Explorer In Session Context*
 
 ### Increment 10: Repair Guidance From Mistakes
 
@@ -491,11 +509,11 @@ section: body
 - *Offer Correction Log Entry*
 - *Offer Decision Record*
 
-### Increment 12: Fully Integrated App Flow
+### Increment 12: Judge And Fix Work From Chat Bar And Board
 
-**Outcome:** the chat bar, the board, the Story UI editor with its story explorer, and the Graph app work on one ticket together, and violations are read from the latest graph that generate refreshes.
+**Outcome:** generate refreshes the knowledge graph and judges the rules itself, Fix is an action of its own on a rule, a file or every violation, Validate runs on its own only as a slash command, and the chat bar opens the active ticket's card and tiles in a side panel.
 
-**Slicing notes:** requested on 2026-11-06: validation inside generate, the chat bar and board joined with the Story UI editor, the story explorer in the Story UI app framed by design canvas screens, and each app tested on a real session. Checked against the release-1-2-fixes branch on 2026-11-23: none of these stories is done. Generate still hands over to a separate validate, Validate is still on the board tiles and in the chat bar, there is no Fix action, and the board and chat bar counts still come from the last validation report rather than the graph. Stories without a note are not built at all; the explorer stories work in the design canvas explorer and still have to be built in the Story UI.
+**Slicing notes:** what was unique to Fully Integrated App Flow, split on 2026-11-23 at the person's request. The Story UI editor's screen frames and increment tickets went to Author Story Maps, the story explorer's stories to Integrate Stories With The Canvas Explorer, Remove Older Versions When Keeping A Release to Sync Design Canvas With Production, and Test Knowledge Graph Explorer On Session Files and Display Drawio File As Diagram to File Manager Complete. The board and chat bar violation and fix stories were dropped as duplicates of File Manager Complete's Count Fidelity Violations From Live Graph, Count Session Violations From Live Graph, Fix Graph Violations From Files App and Fix Graph Violations From Chat Bar.
 
 **Stories in this increment:**
 
@@ -503,37 +521,7 @@ section: body
 - *Judge Rules During Generate*
 - *Fix Graph Violations*
 - *Validate Fidelity On Demand*
-- *Read Fidelity Violations From Latest Graph*
-- *Generate And Judge Fidelity From Board*
-- *Fix Graph Violations From Board*
-- *Read Session Violations From Latest Graph*
-- *Generate And Judge Fidelity From Chat Bar*
-- *Fix Graph Violations From Chat Bar*
 - *Open Board Side Panel From Chat Bar* (partly built: the chat bar opens the whole board, not the ticket's card and tiles)
-- *Start Ticket Session From Increment*
-- *Show Increment Ticket In Story UI*
-- *Test Story Explorer On Session Story Map* (partly built: the explorer runs only on the design canvas, and its specs are scenario files with no tests)
-- *Switch Story Map To Screen Frames View*
-- *Show Screen Frame Under Each Story* (built in the design canvas explorer only, not in the Story UI)
-- *Mark Story Without A Screen* (partly built: the design canvas says "No screenshot" for a screen without a picture; a story with no screen gets no frame)
-- *Open Story Explorer From Screen Frame* (built in the design canvas explorer only, not in the Story UI)
-- *Open The Explorer At A Story, Scenario And Step* (built in the design canvas explorer only, not in the Story UI)
-- *Collapse And Reset The Story Tree* (built in the design canvas explorer only, not in the Story UI)
-- *Play The Next Story* (built in the design canvas explorer only, not in the Story UI)
-- *Hide And Show The Story Panel* (built in the design canvas explorer only, not in the Story UI)
-- *Return To Story UI Map* (partly built: the design canvas explorer links back to the canvas map, not the Story UI)
-- *Keep The Selected Story In View* (built in the design canvas explorer only, not in the Story UI)
-- *Copy A Request To Open A Story In Its File* (built in the design canvas explorer only, not in the Story UI)
-- *Pick An Outline Scenario's Example* (built in the design canvas explorer only, not in the Story UI)
-- *Show Design Canvas Screen As Explorer Frame* (built in the design canvas explorer only, not in the Story UI)
-- *Choose The Screen For A Step* (built in the design canvas explorer only, not in the Story UI)
-- *Join A Step Without A Screen To The Next Step* (built in the design canvas explorer only, not in the Story UI)
-- *Show A Screenshot When No Screen Runs* (built in the design canvas explorer only, not in the Story UI)
-- *Keep Each Screen's Own Stylesheets* (built in the design canvas explorer only, not in the Story UI)
-- *Invoke Story Explorer In Session Context*
-- *Remove Older Versions When Keeping A Release*
-- *Test Knowledge Graph Explorer On Session Files* (partly built: the Graph app opens on the session's folder and shows violations; no spec runs on a session's files)
-- *Display Drawio File As Diagram* (partly built: the Files app shows the draw.io editor; no Source tab, no red shape for a violation, and a pressed shape does not open its lines)
 
 ### Increment 13: Customize Board Workflow
 
@@ -568,6 +556,12 @@ section: body
 - *Recover Workspace View State*
 - *Share Real-Time Story Map Session*
 - *Change Story Map With AI*
+- *Start Ticket Session From Increment*
+- *Show Increment Ticket In Story UI*
+- *Switch Story Map To Screen Frames View*
+- *Show Screen Frame Under Each Story* (built in the design canvas explorer only, not in the Story UI)
+- *Mark Story Without A Screen* (partly built: the design canvas says "No screenshot" for a screen without a picture; a story with no screen gets no frame)
+- *Open Story Explorer From Screen Frame* (built in the design canvas explorer only, not in the Story UI)
 
 ### Increment 15: Draw Linked Models On The Canvas
 
