@@ -732,10 +732,29 @@ The board's acceptance of a violation, the one browser story saved with its scre
 
 ## 7. What is still open
 
-What is left after wave 7, at `a34fa3501`, and wave 8, at `b3d0c6d56`. Everything the earlier version of this section listed as done is in wave 7 and section 6. Every question file and every one of the closing robots' choices is answered (item 13).
+Only what is still open at the end of 2026-11-24, at `6a6d507d4`. What was finished is in waves 7 and 8 and section 6; every question file and every one of the closing robots' choices is answered and built, and the story map's whiteboard is published at https://claude.ai/artifact/RBc7NrXtfghmJXbCTjvM6a.
+
+**Today's cards on this chat's prompt queue**
+
+Closed:
+- The queue checks itself: clean card titles, only real work queued, every placement read back (`140dba085`).
+- Leaving sub-agent mode takes the robots off the queue (Sparky, `3c5dbc74b`).
+- A message the person sends goes to the chat and creates no card; the agent files it only when it is work (`b3d0c6d56`).
+- The MCP module's docs record the fixed plugin folders (Gizmo, `be87250fe`).
+- The release report holds wave 8 (Cog, `6a6d507d4`).
+- The thin slice on main puts today's tickets in Increment 9, Defect Fixing (Sparky, `098ab71e2` on main).
+
+Still open:
+- The Hardening stage after Implementation, with empty `hardening` fidelities for Stories and BDD and TDD's hardening guidance over both (Bolt), then walking it on the session board and catalog (Bolt).
+- Story map scenarios for today's queue and plugin work, on this branch and on main (Rivet), then rendering the story map onto its board in Claude (Rivet).
+- The prompt queue e2e spec: only a work request is queued, and the viewer's state never reaches a title (Pixel). The spec is edited in the worktree and not yet committed.
+- Flush and deleting a card take a robot off fully (Pixel), and the talk rule moved into Python's `PromptQueue` (Pixel).
+- Main's stable lane: after a repin from main, the fixed chat-plugins folders lead to the stable lane's mods (Sparky).
+- The cdd plugin itself loaded from the fixed folder (Gizmo), and `claude_plugins.py` and `mcp_server.py` validated and fixed (Gizmo).
+- The unit tier with the three examples over budget made fast (Widget), then the heavy tier once (Widget). `installer_heavy_spec.py` and `cdd_home_lanes_heavy_spec.py` are edited in the worktree and not yet committed.
 
 **Tests**
-1. Done: the heavy tier passed 77 of 77 on the final code at `203eac4a6`, after every robot's commit. The e2e tier passes 12 of 12 files (Playwright 241 of 241) at `96d944ccf`.
+1. The tiers over waves 7 and 8 as a whole. Unit and heavy: Widget has not reported yet. E2E: Pixel has not reported yet. The last results are the unit tier's 476 of 476 at `a34fa3501`, the heavy tier's 77 of 77 at `203eac4a6` and the e2e tier's 12 of 12 (Playwright 241 of 241) at `96d944ccf`, all before wave 8. Each wave 8 commit ran only its own specs.
 2. Main's heavy tier: the fixes for its run worktree (`8762cff7a`, `89416dacb`) reach main with the next merge. A leftover run worktree held by a hook daemon that a heavy spec left serving it (`hook_daemon_heavy_spec.py`, `hook_heavy_spec.py` or `installer_heavy_spec.py`) is still to find.
 3. The server health band has no plugin test, and three of the prompt queue's step-button plugin tests fail, as they did before wave 7.
 
@@ -751,15 +770,10 @@ What is left after wave 7, at `a34fa3501`, and wave 8, at `b3d0c6d56`. Everythin
 
 **Defects**
 12. Fixed in part, with what is left of each in its defect file's Status ([defects](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\exploratory-testing\defects)): sparky-09, widget-12, widget-19, gizmo-17, r3-sparky-04, r3-sparky-11, r3-gizmo-02, r3-gizmo-04, r3-gizmo-05, r3-widget-01, r3-rivet-08, r3-cog-03, r3-bolt-07 and r3-widget-07.
-
-**The person's decisions: all answered**
-13. Answered on 2026-11-23 ("yes to all, agree to all recommendations") and built, each behaviour a scenario under its story; each question file in the [defect folder](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\exploratory-testing\defects) ends with its answer and what was built:
-    - **Answered:** bolt-07, bolt-08, bolt-09, bolt-10, bolt-15, gizmo-02, gizmo-10, gizmo-11, gizmo-12, pixel-05, pixel-06, r3-gizmo-03, r3-pixel-08, r3-rivet-11, rivet-11, rivet-12, sparky-06, sparky-10, sparky-11, widget-13, widget-14, widget-15, widget-16, widget-17, widget-22.
-    - **Answered:** the closing robots' fourteen choices ([final-report.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\exploratory-testing\final-report.md), "Decisions for the person"): 1, 2, 4 to 9 and 11 agreed as built; 3, 10, 12, 13 and 14 changed as the person asked and built.
-    - **Answered:** `99260068a` kept, with a finished call answering its result; a second judge round, run (item 5); the story map whiteboard drawn again and published (item 14).
-    - **Still open from them:** bolt-07's run-time routing still sends a plain folder's calls to a served feature ([CDR 0003](C:\dev\abd-cdd-release-1-2-fixes\harness\mcp\.context\cdr\0003-two-lanes-main-stable-features-dev.md)); widget-22 waits on item 8.
+13. From the person's answers: bolt-07's run-time routing still sends a plain folder's calls to a served feature ([CDR 0003](C:\dev\abd-cdd-release-1-2-fixes\harness\mcp\.context\cdr\0003-two-lanes-main-stable-features-dev.md)); widget-22 waits on item 8.
+14. From wave 8: a robot or sub-agent that cannot reach the Artifact tool leaves a whiteboard's board unpublished for the person; the first install that names a fixed chat-plugins folder still needs the Claude app restarted; and a feature's changed mods reach main's chats only once it is merged and the stable lane repinned.
 
 **Left to the person**
-14. Done in wave 8: the story map's whiteboard ([story-map.whiteboard](C:\dev\abd-cdd-release-1-2-fixes\.context\story-map.whiteboard)) is published at https://claude.ai/artifact/RBc7NrXtfghmJXbCTjvM6a, and a whiteboard render now creates its board itself (`4fd0c38d8`). Still to run: the unit, heavy and e2e tiers over wave 8's commits as a whole.
-15. Walk the chat bar, the queue mod, Auto mode and Remote Control in the Claude desktop app, which a robot cannot be given control of; what to look at is in [chat-ui-defects.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\_backlog\chat-ui-defects.md).
+15. Walk the chat bar, the queue mod (talk left off the queue, robots leaving with sub-agent mode), Auto mode and Remote Control in the Claude desktop app, which a robot cannot be given control of; what to look at is in [chat-ui-defects.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\_backlog\chat-ui-defects.md).
 16. Delete `C:\g` (five `gate-*` folders the deleted metrics gate left) and `C:\t` (an empty folder the gate used on 2026-11-23), and the 20 stale entries in the main checkout's `.git\worktrees`, each holding only logs, refs and `ORIG_HEAD`.
+17. Edit the stage table in AGENTS.md for the Hardening stage, once Bolt's card says what it needs.
