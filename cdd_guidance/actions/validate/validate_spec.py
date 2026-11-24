@@ -286,8 +286,15 @@ with description("a validate action on practice guidance") as self:
             expect(self.edited_report).to(contain("limit-operation-parameters"))
             expect(self.edited_report).to(contain("[src/orders/order.ts]("))
 
-        with it("should leave files outside the edited paths out of the report"):
-            expect(self.edited_report).not_to(contain("src/billing/invoice.ts"))
+        # A rule of scope all runs over the whole working copy whatever paths are given, and what it finds outside them is
+        # reported, marked: Invoice, which nothing uses, is reported by delete-unused-classes, which judges the model
+        # fidelity too since one thing is one node. Every other finding in a file outside the paths is left out.
+        with it("should leave each finding in files outside the edited paths out, but a whole working copy rule's"):
+            outside = [line for line in self.edited_report.splitlines() if "src/billing/invoice.ts" in line]
+            expect([line for line in outside if "*(outside the paths this validate was given)*" not in line]).to(equal([]))
+
+        with it("should mark a whole working copy rule's finding outside the edited paths as outside them"):
+            expect(self.edited_report).to(contain("delete it with its specs. No class uses it or is used by it, nothing calls into it, and none of the `code_reach` ways its `.context/config.json` names reaches it. *(outside the paths this validate was given)*"))
 
         with it("should not write the workspace graph"):
             expect((self.edited / ".context" / "graph.json").exists()).to(equal(False))
