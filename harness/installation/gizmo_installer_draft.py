@@ -527,8 +527,7 @@ with description("an agent toolset") as self:
                         )
                         self.stale.parent.mkdir(parents=True, exist_ok=True)
                         self.stale.write_text(
-                            "Use MCP tool: `branch.create(name: 'str')`
-",
+                            "Use MCP tool: `branch.create(name: 'str')`\n",
                             encoding="utf-8",
                         )
                         self.installer.install(

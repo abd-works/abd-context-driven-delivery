@@ -37,7 +37,7 @@ Report a defect when you see it, before trying the next thing, in short notes: a
    - **Steps** - the exact commands or calls, so someone else can run them from the report alone.
    - **Expected**, with where it is promised, and **Actual**, with the output or error text.
    - **Tier that should catch it** - unit, heavy, or e2e, and why no test there caught it.
-3. **Queue it** with `prompt-queue.add` on the supervisor's chat: `[defect] <title> - <file name>`.
+3. **Queue it** with `prompt-queue.add` on the supervisor's chat: `[defect] <title> - <file name>`. The supervisor gives the card to the defect-fixing robot that owns that area of the code, so keep testing; the fix is not yours to make.
 
 When you cannot tell whether a behaviour is intended, report it as a question in the same form, with Severity `question`, so the supervisor answers it once for every tester.
 

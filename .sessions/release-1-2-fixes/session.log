@@ -3759,3 +3759,33 @@
 2026-11-24T21:38:17Z tool sample-tool.instructions
 2026-11-24T21:38:27Z tool prompt-queue.show fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-21976
 2026-11-24T21:39:25Z tool prompt-queue.step_done fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-21993
+2026-11-24T21:40:47Z tool prompt-queue.set_steps fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22024
+2026-11-24T21:40:54Z tool sample-tool.instructions
+2026-11-24T21:40:59Z tool prompt-queue.done fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22039
+2026-11-24T21:41:07Z tool prompt-queue.show fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22057
+2026-11-24T21:41:27Z tool sample-tool-sketch
+2026-11-24T21:41:32Z tool stories-scenarios
+2026-11-24T21:41:44Z tool generate.generate
+2026-11-24T21:41:44Z generate C:\dev\abd-cdd-release-1-2-fixes no-chat
+2026-11-24T21:43:07Z tool sample-mcp.generate
+2026-11-24T21:43:10Z tool sample-tool.instructions
+2026-11-24T21:44:20Z tool sample-tool.instructions
+2026-11-24T21:44:25Z tool sample-tool-sketch
+2026-11-24T21:44:26Z tool stories-scenarios
+2026-11-24T21:44:31Z tool generate.generate
+2026-11-24T21:44:31Z generate C:\dev\abd-cdd-release-1-2-fixes no-chat
+2026-11-24T21:44:38Z tool prompt-queue.show 64d22c70-e9da-4a00-8e4a-103f157099fd unknown 1
+2026-11-24T21:45:43Z tool prompt-queue.show 64d22c70-e9da-4a00-8e4a-103f157099fd C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\64d22c70-e9da-4a00-8e4a-103f157099fd.jsonl 1-129
+2026-11-24T21:45:52Z tool prompt-queue.show 64d22c70-e9da-4a00-8e4a-103f157099fd C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\64d22c70-e9da-4a00-8e4a-103f157099fd.jsonl 1-130
+2026-11-24T21:46:25Z tool prompt-queue.step_done fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22133
+2026-11-24T21:46:25Z tool prompt-queue.show 64d22c70-e9da-4a00-8e4a-103f157099fd C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\64d22c70-e9da-4a00-8e4a-103f157099fd.jsonl 1-171
+2026-11-24T21:46:32Z tool prompt-queue.set_steps fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22134
+2026-11-24T21:47:37Z tool prompt-queue.show 64d22c70-e9da-4a00-8e4a-103f157099fd C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\64d22c70-e9da-4a00-8e4a-103f157099fd.jsonl 1-171
+2026-11-24T21:48:48Z tool prompt-queue.show 64d22c70-e9da-4a00-8e4a-103f157099fd C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\64d22c70-e9da-4a00-8e4a-103f157099fd.jsonl 1-262
+2026-11-24T21:49:13Z tool prompt-queue.show 64d22c70-e9da-4a00-8e4a-103f157099fd C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\64d22c70-e9da-4a00-8e4a-103f157099fd.jsonl 1-263
+2026-11-24T21:49:51Z tool prompt-queue.show 64d22c70-e9da-4a00-8e4a-103f157099fd C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\64d22c70-e9da-4a00-8e4a-103f157099fd.jsonl 1-314
+2026-11-24T21:50:18Z tool prompt-queue.show fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22158
+2026-11-24T21:50:19Z tool prompt-queue.is_only_talk fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22158
+2026-11-24T21:50:26Z tool prompt-queue.show fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22191
+2026-11-24T21:50:55Z tool prompt-queue.show fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22195
+2026-11-24T21:50:56Z tool prompt-queue.is_only_talk fd34eb9a-88d6-42c4-b249-8c48b8272606 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-release-1-2-fixes\fd34eb9a-88d6-42c4-b249-8c48b8272606.jsonl 1-22195
