@@ -17,7 +17,7 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import contain, end_with, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
 
-from cdd_guidance.actions.render.render import FormatNotDeclared, Render
+from cdd_guidance.actions.render.render import BoardNotKept, FormatNotDeclared, Render
 from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import NothingToRender
 from cdd_guidance.actions.render.source_files import SourceFormatRefused
@@ -25,6 +25,7 @@ from cdd_guidance.actions.render.render_order import RenderFailed
 from cdd_guidance.practices.bdd.model.bdd_model import SpecBodiesNotKept
 from cdd_guidance.practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
+from harness.agent_tools.recipe import RecipeLineFailed
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
 from harness.installation.data_class import data_of
@@ -1058,4 +1059,4 @@ with description("A comment a person left on a board in Claude") as self:
         with it("should refuse, naming the board, rather than let the agent answer without the guidance"):
             answer = AgentInstructions.for_callable(Render.answer_board_comment, self.action)
             expanded = lambda: answer.expand({"board": "https://claude.ai/artifact/Elsewhere"})
-            expect(expanded).to(raise_error(Exception, contain("keeps the board https://claude.ai/artifact/Elsewhere")))
+            expect(expanded).to(raise_error(RecipeLineFailed, contain(BoardNotKept.__name__, "keeps the board https://claude.ai/artifact/Elsewhere")))
