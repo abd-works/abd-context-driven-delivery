@@ -457,8 +457,9 @@ with description("a ticket's work through the cdd server") as self:
     # among the closed sessions, so a chat in that worktree got a session kept under _complete.
     with context("that a closed ticket is activated"):
         with before.all:
-            self.chat.answer("ticket.activate", ticket="walk-drop")
+            self.activated_answer = self.chat.answer("ticket.activate", ticket="walk-drop")
             self.reopened_worktree = self.clone.worktree_of("walk-drop")
+            print("DEBUGWT", self.reopened_worktree, git(self.clone.work, "worktree", "list", "--porcelain"), self.activated_answer if hasattr(self, "activated_answer") else "")
             self.reopened = next(ticket for column in self.chat.answer("board.show")["columns"] for key in ("in_progress", "done", "tickets") for ticket in column.get(key, []) if ticket["name"] == "walk-drop")
             self.reopened_session = SpecChat(self.server, self.reopened_worktree).answer("sessions.current")["name"]
             self.reopened_folder = (self.clone.work / ".sessions" / "walk-drop" / "session.json").is_file()

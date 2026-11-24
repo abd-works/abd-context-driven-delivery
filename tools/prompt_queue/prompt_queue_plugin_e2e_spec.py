@@ -28,7 +28,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_false, contain, equal, expect
+from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.mcp.spec_support import SpecChat, SpecServer
@@ -217,19 +217,16 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
         with after.all:
             self.chat.stop()
 
-        with context("that the person then sends a message"):
+        with context("that the person then sends a message after that turn, which asked nothing"):
             with before.all:
                 self.chat.send("cut the text with an ellipsis")
-                self.filed = next(prompt for prompt in self.chat.prompts() if prompt["id"] == self.goal["id"])
+                self.worked = next(prompt for prompt in self.chat.prompts() if prompt["id"] == self.goal["id"])
 
-            with it("should file it under the prompt the agent gave steps to, as a step not started marked as the person's interruption"):
-                expect(self.filed["steps"]).to(equal([
-                    {"text": "Read the epic", "state": "done"},
-                    {"text": "[interruption] cut the text with an ellipsis", "state": "pending"},
-                ]))
+            with it("should give the message a goal of its own"):
+                expect([text for text in texts(self.chat.prompts()) if "cut the text" in text]).to(equal(["[interruption] cut the text with an ellipsis"]))
 
-            with it("should open that goal again"):
-                expect(self.filed.get("is_done", False)).to(be_false)
+            with it("should leave the goal the agent gave steps to with only those steps"):
+                expect(self.worked["steps"]).to(equal([{"text": "Read the epic", "state": "done"}]))
 
-            with it("should give the message no card of its own"):
-                expect([text for text in texts(self.chat.prompts()) if "cut the text" in text]).to(equal([]))
+            with it("should leave that goal done"):
+                expect(self.worked.get("is_done", False)).to(be_true)
