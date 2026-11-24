@@ -74,6 +74,8 @@ const plan = atom({ plugin: 'prompt-queue', key: 'plan' } as const, [] as Prompt
 const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, false)
 /** The cards whose steps are shown under them. */
 const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
+/** The cards whose finished steps are shown rather than folded into one line. */
+const shownDoneSteps = atom({ plugin: 'prompt-queue', key: 'shownDoneSteps' } as const, [] as string[])
 /** The places of the robots whose queues are collapsed to the robot alone, so the other queues take the room. */
 const expandedAgents = atom({ plugin: 'prompt-queue', key: 'expandedAgents' } as const, [] as number[])
 
@@ -84,6 +86,7 @@ export type QueueState = {
   isPlaying: boolean
   editingId: string
   openSteps: string[]
+  shownDoneSteps: string[]
   expandedAgents: number[]
   tasks: SubAgentTask[]
   notice: string
@@ -97,6 +100,7 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     isPlaying: await read($, isPlaying),
     editingId: await read($, editingId),
     openSteps: await read($, openSteps),
+    shownDoneSteps: await read($, shownDoneSteps),
     expandedAgents: await read($, expandedAgents),
     tasks: robotsOf((await read($, queue)).prompts, await read($, tasks)),
     notice: await read($, notice),
@@ -546,6 +550,7 @@ function filingNoteOf(filedUnder: string, goals: QueuedPrompt[]): string {
     `1. It is about [${filedUnder}]: leave it there and do it as part of that goal.`,
     '2. It is about another goal below: file it there with prompt-queue.add_interruption and take its step off this goal with prompt-queue.set_steps.',
     '3. It is new work no goal covers, even a small one: queue it as its own card with prompt-queue.add, written as a short title of the goal, and take its step off this goal.',
+    'When a goal has gathered interruptions about other work, split them onto cards of their own with prompt-queue.split.',
     'A question or a yes/no answer belongs to the goal it is about. The goals on the queue:',
     ...goals.map(goalLineOf),
   ].join('\n')
@@ -717,6 +722,22 @@ export async function toggleAgentQueue($: EngineInterface, place: number): Promi
 
 export async function toggleSteps($: EngineInterface, id: string): Promise<void> {
   await update($, openSteps, open => (open.includes(id) ? open.filter(shown => shown !== id) : [...open, id]))
+}
+
+/** The folded line of a card's finished steps: they show, or fold into the line again. */
+export async function toggleDoneSteps($: EngineInterface, id: string): Promise<void> {
+  await update($, shownDoneSteps, shown => (shown.includes(id) ? shown.filter(card => card !== id) : [...shown, id]))
+}
+
+/** Split on a card: the cdd server puts each interruption the goal holds and has not done on a card of its own, right
+ * after the goal, as prompt-queue.split does for the agent. */
+export async function splitGoal($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
+  await changeQueue($, 'split', { prompt: prompt.id })
+}
+
+/** Whether a goal holds an interruption not done yet, which split would put on a card of its own. */
+export function hasInterruptionsToDo(prompt: QueuedPrompt): boolean {
+  return (prompt.steps ?? []).some(step => step.text.startsWith(INTERRUPTION_MARK) && step.state !== 'done')
 }
 
 /** What a finished turn sends: the next prompt, or every task to its own sub-agent. */

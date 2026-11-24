@@ -117,6 +117,19 @@ with description("a chat's prompt queue through the cdd server") as self:
         with it("should make no folder for that chat"):
             expect((CHATS_FOLDER.path / "some-other-chat").exists()).to(equal(False))
 
+    with context("that an agent splits a goal that gathered the person's interruptions"):
+        with before.all:
+            self.split_chat = SpecChat(self.server, self.project)
+            goal = self.split_chat.answer("prompt-queue.add_all", chat="", texts=["Write the scenarios", "Run the unit tier"])["prompts"][0]["id"]
+            self.split_chat.answer("prompt-queue.add_interruption", chat="", prompt=goal, text="Fix the Files app")
+            self.split = self.split_chat.answer("prompt-queue.split", chat="", prompt=goal)
+
+        with it("should put the interruption on a card of its own right after the goal"):
+            expect(texts(self.split)).to(equal(["Write the scenarios", "[interruption] Fix the Files app", "Run the unit tier"]))
+
+        with it("should leave the goal no step from it"):
+            expect(self.split["prompts"][0]["steps"]).to(equal([]))
+
     with context("that an agent gives a step a state a step does not have"):
         with before.all:
             self.steps_chat = SpecChat(self.server, self.project)

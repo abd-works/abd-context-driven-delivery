@@ -58,6 +58,17 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 | ++background notice++ | <task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification> |
 | ++pasted notes++ | <pasted_content id="7250"> ## Notes from the backlog From `board-enhancements` the board needs a filter. </pasted_content> |
 
+### gathered steps
+
+| step | state |
+| --- | --- |
+| ++Read the epic++ | done |
+| [interruption] cut the text with an ellipsis | done |
+| ++Write the stories++ | done |
+| [interruption] Fix the Files app | pending |
+| ++Validate the scenarios++ | being worked |
+| [interruption] Run the heavy tier | pending |
+
 ### robots
 
 | robot | cards |
@@ -296,6 +307,60 @@ Not yet known: whether a mod's tool-call hook sees the desktop app's `update_pla
 *Given* the steps of ++Write the scenarios++ show under its card
 *When* the person closes them
 *Then* only the card of ++Write the scenarios++ shows, with 1/3
+
+#### Scenario: Fold a goal's finished steps into one line once there are three
+
+*Given* the open prompt queue holds ++Write the scenarios++ (a) with ++gathered steps++, three of them finished
+*When* the person opens the steps of ++Write the scenarios++
+*Then* one line, "▸ ✓ 3 done", shows in place of its three finished steps
+*And* its steps still to do show under it, from "[interruption] Fix the Files app" on
+
+#### Scenario: Show the finished steps a line folds
+
+*Given* the steps of ++Write the scenarios++ show, its three finished steps folded into one line
+*When* the person opens that line
+*Then* the three finished steps show under it, ticked and dim, and the line reads "▾ ✓ 3 done"
+
+#### Scenario: Leave fewer than three finished steps unfolded
+
+*Given* the open prompt queue holds ++Write the scenarios++ (a) with ++Read the epic++ done, ++Write the stories++ being worked, ++Validate the scenarios++ pending
+*When* the person opens the steps of ++Write the scenarios++
+*Then* ++Read the epic++ shows ticked, with no folded line
+
+## Story: Split Goal Of Interruptions
+
+#### Scenario: Put each interruption still to do on a card of its own
+
+*Given* the prompt queue holds ++Write the scenarios++ (a) with ++gathered steps++, then ++Run the unit tier++ (b)
+*When* the person splits ++Write the scenarios++
+*Then* the queue holds ++Write the scenarios++, "[interruption] Fix the Files app", "[interruption] Run the heavy tier", then ++Run the unit tier++
+*And* ++Write the scenarios++ keeps ++Read the epic++, "[interruption] cut the text with an ellipsis", ++Write the stories++ and ++Validate the scenarios++
+
+#### Scenario: Keep the split cards in the goal's robot's queue
+
+*Given* sub-agent mode is on and ++Bolt++ holds ++Write the scenarios++ (a) with ++gathered steps++
+*When* the agent splits ++Write the scenarios++ with prompt-queue.split
+*Then* "[interruption] Fix the Files app" and "[interruption] Run the heavy tier" are each given to ++Bolt++
+
+#### Scenario: Offer no split for a goal with no interruption still to do
+
+*Given* the open prompt queue holds ++Run the unit tier++ (b) with no steps
+*When* the person points at its card
+*Then* its card shows no split among its buttons
+*And* the cdd server, asked to split it, changes nothing
+
+#### Scenario: Refuse to split a goal the queue does not hold
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a)
+*But* it holds no prompt with id z
+*When* the agent splits z
+*Then* it is told no prompt z is on the queue
+
+#### Scenario: Tell the agent it can split a goal that gathered other work
+
+*Given* a turn runs on ++Write the scenarios++, the working prompt
+*When* the person sends ++cut the text++
+*Then* the agent is told, beside the message, to split a goal's interruptions about other work onto cards of their own with prompt-queue.split
 
 ## Story: Edit Prompt Steps
 

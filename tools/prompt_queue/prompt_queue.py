@@ -155,6 +155,13 @@ class PromptSteps:
         """Add text as the last step, not started."""
         self._steps.append({"text": text, "state": "pending"})
 
+    def take_off_interruptions(self) -> list[str]:
+        """Take off the person's interruptions not done yet and answer their texts, in order; the agent's own steps and
+        the interruptions already done stay."""
+        taken = [step for step in self._steps if step["text"].startswith(INTERRUPTION_MARK) and step["state"] != "done"]
+        self._steps = [step for step in self._steps if step not in taken]
+        return [step["text"] for step in taken]
+
     def _step(self, number: int) -> dict:
         if not 1 <= number <= len(self._steps):
             raise StepNotPlanned(self._prompt, number, len(self._steps))
@@ -260,6 +267,13 @@ class QueuedPrompt:
         self.steps.add(f"{INTERRUPTION_MARK} {text.strip()}")
         self._has_steps = True
         self._is_done = False
+
+    def split_off(self) -> list[QueuedPrompt]:
+        """Each interruption filed under it and not done yet, taken off its steps as a card of its own, given its robot."""
+        split = [QueuedPrompt.new(text) for text in self.steps.take_off_interruptions()]
+        for card in split:
+            card.assign(self._robot)
+        return split
 
     def attach(self, file: Path) -> None:
         """List file among the files queued with it."""
@@ -510,6 +524,16 @@ class PromptQueue:
     def add_interruption(self, prompt: str, text: str) -> PromptQueue:
         """File a message the person sent under the goal whose id is prompt: it becomes that goal's last step, not started, its text starting [interruption], and a done goal opens again, since it has work again. The agent moves it to a card of its own with add when it is separate work. A message that is only spaces files nothing and opens nothing."""
         return self._changing(prompt, lambda found: found.interrupt(text))
+
+    @mcp
+    @agent_tool
+    def split(self, prompt: str) -> PromptQueue:
+        """Split the goal whose id is prompt when it has gathered the person's interruptions: each [interruption] step not done yet becomes a card of its own, in order, right after the goal and given the goal's robot, and comes off the goal's steps. The goal keeps its own steps and the interruptions already done. A goal with no interruption still to do changes nothing."""
+        with self._file.held():
+            held = self.prompts
+            goal = self._found(held, prompt)
+            place = held.index(goal) + 1
+            return self._keep([*held[:place], *goal.split_off(), *held[place:]])
 
     @mcp
     @agent_tool

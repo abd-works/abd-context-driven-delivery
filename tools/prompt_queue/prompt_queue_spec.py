@@ -219,6 +219,41 @@ with describe(PromptQueue):
             self.queue.step_back(self.goal)
             expect([state for _, state in self.steps()]).to(equal(["in_progress", "pending", "pending"]))
 
+    with context("whose first goal gathered the person's interruptions, one of them done"):
+        with before.each:
+            self.goal = self.queue.prompts[0].id
+            self.queue.assign(self.goal, "Bolt")
+            self.queue.set_steps(self.goal, [
+                {"text": "Read the epic", "state": "done"},
+                {"text": "[interruption] cut the text with an ellipsis", "state": "done"},
+                {"text": "[interruption] Fix the Files app", "state": "pending"},
+                {"text": "Write the stories", "state": "in_progress"},
+                {"text": "[interruption] Run the heavy tier", "state": "pending"},
+            ])
+
+        with context("that the goal is split"):
+            with before.each:
+                self.queue.split(self.goal)
+
+            with it("puts each interruption not done on a card of its own, in order, right after the goal"):
+                expect([prompt.text for prompt in self.queue.prompts]).to(equal([
+                    "Write the scenarios", "[interruption] Fix the Files app", "[interruption] Run the heavy tier", "Run the unit tier"]))
+
+            with it("leaves the goal its own steps and the interruptions already done"):
+                expect([step["text"] for step in self.queue.prompt(self.goal).listed_steps]).to(equal([
+                    "Read the epic", "[interruption] cut the text with an ellipsis", "Write the stories"]))
+
+            with it("gives each card split off the goal's robot, so it stays in that robot's queue"):
+                expect([prompt.robot for prompt in self.queue.prompts[1:3]]).to(equal(["Bolt", "Bolt"]))
+
+        with it("changes nothing when the goal holds no interruption still to do"):
+            other = self.queue.prompts[1].id
+            self.queue.split(other)
+            expect([prompt.text for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
+
+        with it("refuses to split a goal the queue does not hold"):
+            expect(lambda: self.queue.split("gone")).to(raise_error(PromptNotQueued))
+
     with context("whose first prompt has a file attached"):
         with before.each:
             self.goal = self.queue.prompts[0].id

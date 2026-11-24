@@ -91,6 +91,14 @@ function promptQueueTools(prompts: Prompt[]) {
       goal.is_done = false
       return answer()
     },
+    split: args => {
+      const goal = prompts[at(args.prompt)]!
+      const isSplit = (step: Step) => step.text.startsWith('[interruption]') && step.state !== 'done'
+      const cards = (goal.steps ?? []).filter(isSplit).map(step => ({ id: `added-${++added}`, text: step.text, ...(goal.robot ? { robot: goal.robot } : {}) }))
+      goal.steps = (goal.steps ?? []).filter(step => !isSplit(step))
+      prompts.splice(at(args.prompt) + 1, 0, ...cards)
+      return answer()
+    },
     reopen: args => {
       const prompt = prompts[at(args.prompt)]!
       prompt.is_done = false
@@ -1442,6 +1450,83 @@ test("the note on a filed message tells the agent to decide first where it belon
   expect(carried.join()).toContain('Before any other work, decide where this message belongs')
   expect(carried.join()).toContain('[b] Run the unit tier')
   expect(carried.join()).toContain('prompt-queue.add_interruption')
+})
+
+test('the note on a filed message tells the agent to split a goal that gathered interruptions about other work', async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'take the Alt hint off the queue')
+
+  expect(carried.join()).toContain('prompt-queue.split')
+})
+
+
+// A goal that gathered the person's messages as interruptions, one of them done, beside the agent's own steps.
+const GATHERED = [
+  { id: 'a', text: 'Write the scenarios', steps: [
+    { text: 'Read the epic', state: 'done' },
+    { text: '[interruption] cut the text with an ellipsis', state: 'done' },
+    { text: 'Write the stories', state: 'done' },
+    { text: '[interruption] Fix the Files app', state: 'pending' },
+    { text: 'Validate the scenarios', state: 'in_progress' },
+    { text: '[interruption] Run the heavy tier', state: 'pending' },
+  ] },
+  { id: 'b', text: 'Run the unit tier' },
+] as Prompt[]
+
+test('split on a card puts each interruption still to do on a card of its own, right after it', async ($, on) => {
+  const seeded = await pressedQueue($, on, GATHERED, ['split-a'])
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(
+    ['Write the scenarios', '[interruption] Fix the Files app', '[interruption] Run the heavy tier', 'Run the unit tier'])
+})
+
+test('split leaves the goal its own steps and the interruptions already done', async ($, on) => {
+  const seeded = await pressedQueue($, on, GATHERED, ['split-a'])
+
+  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toEqual(
+    ['Read the epic', '[interruption] cut the text with an ellipsis', 'Write the stories', 'Validate the scenarios'])
+})
+
+test('a card with no interruption still to do has no split', async ($, on) => {
+  seedQueue(on, true, '', GATHERED)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(await ui.find({ type: 'Button', key: 'split-b' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test("a card's finished steps fold into one line under it once there are three, the steps still to do shown", async ($, on) => {
+  const seeded = seedQueue(on, true, '', GATHERED)
+  seeded.stored.openSteps = { value: ['a'], version: 1 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Button', key: 'done-steps-a' }))?.props.label).toBe('▸ ✓ 3 done')
+  expect(await ui.find({ type: 'Box', key: 'step-row-a-1' })).toBeUndefined()
+  expect(await ui.find({ type: 'Box', key: 'step-row-a-4' })).toBeDefined()
+  await ui.unmount()
+})
+
+test("pressing a card's folded finished steps shows them again", async ($, on) => {
+  const seeded = await pressedQueue($, on, GATHERED, ['done-steps-a'])
+  void seeded
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(await ui.find({ type: 'Box', key: 'step-row-a-1' })).toBeDefined()
+  expect((await ui.find({ type: 'Button', key: 'done-steps-a' }))?.props.label).toBe('▾ ✓ 3 done')
+  await ui.unmount()
+})
+
+test('fewer than three finished steps stay shown, with nothing folded', async ($, on) => {
+  const seeded = seedQueue(on, true, '', WITH_STEPS)
+  seeded.stored.openSteps = { value: ['a'], version: 1 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(await ui.find({ type: 'Box', key: 'step-row-a-1' })).toBeDefined()
+  expect(await ui.find({ type: 'Button', key: 'done-steps-a' })).toBeUndefined()
+  await ui.unmount()
 })
 
 

@@ -1093,7 +1093,11 @@ Observed (2026-11-17): after /reload-plugins, the person's message "heavy test a
 
 ### (S) Person --> [Show Prompt Steps In Queue](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-show-prompt-steps-in-queue)
 
-Built (2026-11-17), not seen: each card shows how many of its steps are done (3/7) as a button that opens its steps under it, done ones ticked and dim and the one being worked marked; the card being worked is bright and a card whose steps are all done dim.
+Built (2026-11-17), not seen: each card shows how many of its steps are done (3/7) as a button that opens its steps under it, done ones ticked and dim and the one being worked marked; the card being worked is bright and a card whose steps are all done dim. Built (2026-11-24), not seen (main's chat-ui-defects, a goal with 77 interruption steps: "its finished steps folded away"; `register.test.tsx` "a card's finished steps fold into one line under it once there are three, the steps still to do shown"): once a card holds three or more finished steps, every step above its step pointer folds into one line, "▸ ✓ 3 done", which shows them again when pressed ("▾ ✓ 3 done") (`toggleDoneSteps`, `shownDoneSteps`).
+
+### (S) Person --> [Split Goal Of Interruptions](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-split-goal-of-interruptions)
+
+Built (2026-11-24), not seen (main's chat-ui-defects: "a goal holding many unrelated interruptions is split"; `prompt_queue_spec.py` "that the goal is split", `register.test.tsx` "split on a card puts each interruption still to do on a card of its own, right after it"): the cdd server splits a goal (`prompt-queue.split`, `PromptQueue.split`): each [interruption] step not done becomes a card of its own, in order, right after the goal and given the goal's robot, and comes off the goal's steps; the goal keeps its own steps and the interruptions already done, and a goal with no interruption still to do changes nothing. A card whose goal holds an interruption still to do shows split, ⑂, among its buttons (`splitGoal`); the note beside a filed message tells the agent to split a goal's interruptions about other work with `prompt-queue.split`.
 
 ### (S) Person --> [Edit Prompt Steps](../story_tests/queue-prompts-for-later/nest-prompt-steps-in-queue/nest_prompt_steps_in_queue_story.test.md#story-edit-prompt-steps)
 

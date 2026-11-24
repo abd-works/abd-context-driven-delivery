@@ -156,6 +156,8 @@ The prompts one chat has queued, in the order they will be done, kept in a file 
 + set_steps(prompt: str, steps: list[PromptStep]): PromptQueue
 	// a step's state is one of STEP_STATES; any other raises StepStateUnknown
 + add_interruption(prompt: str, text: str): PromptQueue
++ split(prompt: str): PromptQueue
+	// each [interruption] step not done becomes a card of its own right after the goal, given the goal's robot
 + step_done(prompt: str, step: int): PromptQueue
 + move_step(prompt: str, step: int, place: int): PromptQueue
 + remove_step(prompt: str, step: int): PromptQueue
@@ -196,6 +198,7 @@ One prompt on a chat's queue. It changes itself; `record` is what the queue's fi
 + assign(robot: str)
 + plan(steps: list[PromptStep])
 + interrupt(text: str)
++ split_off(): list[QueuedPrompt]
 + attach(file: Path)
 + delete_attachments(folder: Path)
 	// as it leaves the queue: deletes its files in the chat's attachments folder, and its record names them as deleted_attachments
@@ -217,6 +220,7 @@ The steps planned for one queued prompt, numbered from 1, and their pointer, the
 + restarted()
 + plan(steps: list[PromptStep])
 + add(text: str)
++ take_off_interruptions(): list[str]
 ---<<raises>>--> StepNotPlanned
 ---<<raises>>--> StepStateUnknown
 

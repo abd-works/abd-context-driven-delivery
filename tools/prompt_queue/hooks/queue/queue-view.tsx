@@ -25,6 +25,9 @@ import {
   movePointerDown,
   moveStepPointerUp,
   moveStepPointerDown,
+  splitGoal,
+  hasInterruptionsToDo,
+  toggleDoneSteps,
   type QueueState,
 } from './prompt-queue'
 import type { PromptStep, QueuedPrompt, SubAgentTask } from '../../types'
@@ -71,6 +74,12 @@ const TASK_PRESS_AREA = NO_BREAK_SPACE.repeat(TASK_BUTTON_COLUMNS)
 
 /** The columns the card's ↵ ✎ ↑ ↓ ✕ bar takes: it floats over the card's right end, this far left of its right edge. */
 const CARD_BAR_COLUMNS = 23
+
+/** The columns split adds to the card's bar, on a card whose goal holds an interruption still to do. */
+const SPLIT_BUTTON_COLUMNS = 4
+
+/** How many finished steps a card holds before they fold into one line, so a goal that gathered many shows its work to do. */
+const FOLD_DONE_STEPS_FROM = 3
 
 /** The mark before a step for where it stands: done, being worked, or not started. */
 const STEP_MARK = { done: '✓', in_progress: '▸', pending: '○' } as const
@@ -161,7 +170,7 @@ function CardsView($: EngineInterface, e: AbovePromptEvent, state: QueueState, p
       {prompts.map((prompt, place) => (
         <Box key={`card-${prompt.id}`} flexDirection="column">
           {CardView($, e, state, prompt, all.indexOf(prompt), place === current ? arrowsOf(prompt) : null)}
-          {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt)}
+          {state.openSteps.includes(prompt.id) && (prompt.steps ?? []).length > 0 && StepsView($, e, prompt, state.shownDoneSteps.includes(prompt.id))}
         </Box>
       ))}
     </Box>
@@ -219,7 +228,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           <Box position="absolute" top={0} bottom={0} left={1} flexDirection="row" alignItems="center">{pointer}</Box>
         )}
         <Box position="relative" width={0} height={0} flexShrink={0} alignSelf="center">
-          <Box position="absolute" top={0} bottom={0} left={-CARD_BAR_COLUMNS} flexDirection="row" alignItems="center">
+          <Box position="absolute" top={0} bottom={0} left={-(CARD_BAR_COLUMNS + (hasInterruptionsToDo(prompt) ? SPLIT_BUTTON_COLUMNS : 0))} flexDirection="row" alignItems="center">
             <Box flexDirection="row" alignItems="center" gap={1}
               display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.popover} borderStyle="round" borderColor={LOOK.popover} paddingX="xs">
               {CardButtonsView($, e, prompt, index)}
@@ -270,6 +279,9 @@ function CardButtonsView($: EngineInterface, e: AbovePromptEvent, prompt: Queued
     TipView(elements, `up-${prompt.id}`, 'Move up', '', <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />),
     TipView(elements, `down-${prompt.id}`, 'Move down', '', <Button key={`down-${prompt.id}`} label="↓" onPress={() => movePrompt($, index, index + 1)} />),
     TipView(elements, `remove-${prompt.id}`, 'Remove', 'takes it off the queue', <Button key={`remove-${prompt.id}`} label="✕" onPress={() => removePrompt($, prompt.id)} />),
+    ...(hasInterruptionsToDo(prompt)
+      ? [TipView(elements, `split-${prompt.id}`, 'Split', 'puts each interruption not done on a card of its own', <Button key={`split-${prompt.id}`} label="⑂" onPress={() => splitGoal($, prompt)} />)]
+      : []),
   ]
 }
 
@@ -339,8 +351,9 @@ function AgentRobotView($: EngineInterface, e: AbovePromptEvent, state: QueueSta
 /** About two lines tall, in the desktop's pixels: a robot stands out over its column. */
 const ROBOT_PIXELS = 28
 
-/** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. */
-function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt) {
+/** A card's steps under it, in order: done ones ticked and dim, the one being worked marked and bright. Once three or
+ * more are finished, the finished ones, every step above the step pointer, fold into one line that shows them again. */
+function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, isDoneShown: boolean) {
   const elements = $.ui.resolve(e)
   const { Box, Button } = elements
   const steps = prompt.steps ?? []
@@ -348,15 +361,32 @@ function StepsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt
   const pointer = prompt.step_pointer ?? steps.length
   const up = () => moveStepPointerUp($, prompt)
   const down = () => moveStepPointerDown($, prompt)
+  const isFolding = pointer >= FOLD_DONE_STEPS_FROM
 
   return (
     <Box key={`steps-of-${prompt.id}`} flexDirection="column" paddingLeft={TASK_BUTTON_COLUMNS + 1}>
-      {steps.map((step, index) => StepView($, e, prompt, step, index,
-        index === pointer ? PointerArrowsView($, e, `step-pointer-up-${prompt.id}`, `step-pointer-down-${prompt.id}`, up, down) : null))}
+      {isFolding && DoneStepsLineView($, e, prompt, pointer, isDoneShown)}
+      {steps.map((step, index) => (isFolding && !isDoneShown && index < pointer ? null : StepView($, e, prompt, step, index,
+        index === pointer ? PointerArrowsView($, e, `step-pointer-up-${prompt.id}`, `step-pointer-down-${prompt.id}`, up, down) : null)))}
       <Box flexDirection="row" gap={1}>
         {PointerColumnView($, e, pointer === steps.length ? PointerArrowsView($, e, `step-pointer-up-${prompt.id}`, '', up) : null)}
         {TipView(elements, `add-step-${prompt.id}`, 'Add task', 'from the draft in the prompt box', <Button key={`add-step-${prompt.id}`} label="+" onPress={() => addStep($, prompt)} />)}
       </Box>
+    </Box>
+  )
+}
+
+/** The line a card's finished steps fold into, ▸ ✓ 3 done, which shows them under it, ▾ while they show. */
+function DoneStepsLineView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, finished: number, isShown: boolean) {
+  const elements = $.ui.resolve(e)
+  const { Box, Button } = elements
+  const label = `${isShown ? '▾' : '▸'} ✓ ${finished} done`
+
+  return (
+    <Box key={`done-steps-row-${prompt.id}`} flexDirection="row" gap={1}>
+      {PointerColumnView($, e, null)}
+      {TipView(elements, `done-steps-${prompt.id}`, isShown ? 'Fold' : 'Show', isShown ? 'folds the finished tasks into this line' : 'shows the finished tasks',
+        <Button key={`done-steps-${prompt.id}`} label={label} onPress={() => toggleDoneSteps($, prompt.id)} />)}
     </Box>
   )
 }
