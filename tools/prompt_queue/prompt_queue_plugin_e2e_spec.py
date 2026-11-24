@@ -109,6 +109,11 @@ class HeadlessChat:
             self._queue.answer("prompt-queue.done", chat=self.id, prompt=prompt["id"])
         return self.prompts()
 
+    def switch_queue_on(self) -> None:
+        """Switch this chat's queue on, as the person does with the queue bar's on/off button: a chat's queue is off until
+        then, and off, the plugin leaves the chat's messages alone."""
+        self._queue.answer("prompt-queue.switch_on", chat=self.id)
+
     def prompts(self) -> list[dict]:
         return self._queue.answer("prompt-queue.show", chat=self.id)["prompts"]
 
@@ -232,9 +237,10 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
             os.environ["CDD_CHATS_FOLDER"] = self.prior_chats
         shutil.rmtree(self.chats, ignore_errors=True)
 
-    with context("that the queue holds a done goal and one to do, and no turn is working"):
+    with context("that the queue is switched on, holds a done goal and one to do, and no turn is working"):
         with before.all:
             self.chat = HeadlessChat(self.server, allowed_tools=_QUEUE_TOOLS)
+            self.chat.switch_queue_on()
             self.start = self.chat.queue_work(["Write the scenarios", "Run the unit tier"], done=1)
             self.chat.start()
 
@@ -268,9 +274,10 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
                     with it("should keep the viewer's state out of every title"):
                         expect([title for title in entries(self.worked) if _holds_viewer_state(title)]).to(equal([]))
 
-    with context("that a turn is working"):
+    with context("that the queue is switched on and a turn is working"):
         with before.all:
             self.chat = HeadlessChat(self.server, allowed_tools=_QUEUE_TOOLS)
+            self.chat.switch_queue_on()
             self.start = self.chat.queue_work(["Write the scenarios", "Run the unit tier"], done=1)
             self.chat.start()
 

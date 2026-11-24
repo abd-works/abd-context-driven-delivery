@@ -9,6 +9,7 @@ import {
   sendNow,
   queueDraft,
   togglePlaying,
+  toggleQueueOn,
   toggleExpanded,
   toggleSubAgentMode,
   toggleSteps,
@@ -42,6 +43,7 @@ import {
   LOOK,
   PAUSE_SVG,
   PLAY_SVG,
+  POWER_SVG,
   stackSvgOf,
   SUB_AGENTS_SVG,
   type Icon,
@@ -94,6 +96,13 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
   const elements = $.ui.resolve(e)
   const { Box, Text } = elements
   const { queue } = state
+  if (!state.isOn) {
+    return (
+      <Box key="prompt-queue" flexDirection="row" alignSelf="flex-start" paddingX={1}>
+        {IconButtonView(elements, powerIcon(state), () => toggleQueueOn($))}
+      </Box>
+    )
+  }
 
   return (
     <Box key="prompt-queue" flexDirection="column" rowGap="sm" alignSelf="flex-start"
@@ -101,6 +110,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
       {state.isExpanded && (state.isSubAgentMode && state.tasks.length > 0 ? AgentColumnsView($, e, state) : QueueListView($, e, state))}
       {state.notice !== '' && <Text color="warning">{state.notice}</Text>}
       <Box flexDirection="row" gap={1}>
+        {IconButtonView(elements, powerIcon(state), () => toggleQueueOn($))}
         {IconButtonView(elements, stackIcon(state), () => toggleExpanded($))}
         <Box width={ADD_COLUMNS}>
           {state.isExpanded
@@ -114,6 +124,13 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
       </Box>
     </Box>
   )
+}
+
+/** On while the queue is on: the icon says what a press does next. */
+function powerIcon(state: QueueState): Icon {
+  return state.isOn
+    ? { key: 'queue-power', svg: POWER_SVG, glyph: '⏻', tip: "Queue on: switch it off, so this chat's messages, hand-outs and robots are left alone", isOn: true }
+    : { key: 'queue-power', svg: POWER_SVG, glyph: '⏻', tip: 'Queue off: switch the prompt queue on for this chat' }
 }
 
 function stackIcon(state: QueueState): Icon {

@@ -42,6 +42,8 @@ INTERRUPTION_MARK = "[interruption]"
 _VIEWER_STATE = re.compile(r"\s*<artifact-view-context\b[^>]*>.*?(?:</artifact-view-context>\s*|$)", re.DOTALL)
 # What marks a prompt that waits for the person's answer to a decision: the queue's pointer passes over it.
 DECISION_MARK = "[decision required]"
+# The key under which the queue's file keeps whether the person switched the queue on for the chat.
+_IS_ON = "is_on"
 # The key under which the queue's file lists each source, such as a handoff, whose prompts were queued once.
 _QUEUED_SOURCES = "handoffs"
 # What a chat that opened a session is told once its latest handoff's next steps are on its queue.
@@ -484,6 +486,14 @@ class PromptQueue:
         return [QueuedPrompt(card) for card in cards]
 
     @property
+    @data_field
+    def is_on(self) -> bool:
+        """Whether the person switched the queue on for this chat. A chat's queue is off until switched on, so its
+        messages, hand-outs and robots stay out of the way of a chat that does not use it; the queue's file keeps the
+        choice, so the chat finds it as it left it."""
+        return self._file.read().get(_IS_ON, False) is True
+
+    @property
     @data_field(reference=True)
     def next(self) -> QueuedPrompt | None:
         """The prompt to do next, where the queue's pointer stands: the first that waits, neither done nor asking a
@@ -539,6 +549,18 @@ class PromptQueue:
             removed = self._found(held, prompt)
             self._take_off([removed])
             return self._keep([item for item in held if item is not removed])
+
+    @mcp
+    @agent_tool
+    def switch_on(self) -> PromptQueue:
+        """Switch this chat's prompt queue on: its mod notes the queue beside each message the person sends, plays the queue and hands work to its robots. Answers the queue."""
+        return self._switched(True)
+
+    @mcp
+    @agent_tool
+    def switch_off(self) -> PromptQueue:
+        """Switch this chat's prompt queue off: its mod leaves the chat's messages alone and plays and hands out nothing, keeping every prompt queued until it is switched on again. Answers the queue."""
+        return self._switched(False)
 
     @mcp
     @agent_tool
@@ -730,6 +752,12 @@ class PromptQueue:
             return ""
         archived = (json.loads(saved.read_text(encoding="utf-8")) for saved in sorted(self._archive_folder.glob("*.json"), reverse=True) if not saved.name.startswith(WHOLE_FILE_COPY))
         return next((record.get("taken_off", "") for record in archived if any(item.get("id") == prompt for item in record.get("prompts", []))), "")
+
+    def _switched(self, is_on: bool) -> PromptQueue:
+        """Keep whether the queue is on in its file, beside the prompts, holding the file from its read to its write."""
+        with self._file.held():
+            self._file.write({**self._file.read(), _IS_ON: is_on})
+            return self
 
     def _keep(self, prompts: list[QueuedPrompt]) -> PromptQueue:
         """Write prompts as the queue, beside whatever else the queue's file holds. Its caller holds the file from the

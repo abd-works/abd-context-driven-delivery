@@ -103,6 +103,9 @@ function digitPath(digit: number, x: number): string {
 
 export const ADD_SVG = (colour: string) => svgOf(colour, '<circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8h6"/>')
 
+/** The on/off switch: a power mark, a circle open at the top with a bar through the gap. */
+export const POWER_SVG = (colour: string) => svgOf(colour, '<path d="M8 2v6M4.8 4.2a5 5 0 1 0 6.4 0"/>')
+
 export const PLAY_SVG = (colour: string) => svgOf(colour, '<path d="M5 3.5v9l7.5-4.5z"/>')
 
 export const PAUSE_SVG = (colour: string) => svgOf(colour, '<path d="M5.5 3.5v9M10.5 3.5v9"/>')

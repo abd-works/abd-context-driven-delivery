@@ -82,6 +82,7 @@ const expandedAgents = atom({ plugin: 'prompt-queue', key: 'expandedAgents' } as
 
 export type QueueState = {
   queue: PromptQueue
+  isOn: boolean
   isExpanded: boolean
   isSubAgentMode: boolean
   isPlaying: boolean
@@ -96,6 +97,7 @@ export type QueueState = {
 export async function currentQueue($: EngineInterface): Promise<QueueState> {
   return {
     queue: new PromptQueue((await read($, queue)).prompts),
+    isOn: await isQueueOn($),
     isExpanded: await read($, isExpanded),
     isSubAgentMode: await read($, isSubAgentMode),
     isPlaying: await read($, isPlaying),
@@ -105,6 +107,24 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     expandedAgents: await read($, expandedAgents),
     tasks: robotsOf((await read($, queue)).prompts, await read($, tasks)),
     notice: await read($, notice),
+  }
+}
+
+/** Whether the person switched this chat's queue on, as the cdd server last answered: a chat's queue is off until
+ * switched on, and off, the mod adds no note to a message, plays nothing and hands nothing to robots. */
+export async function isQueueOn($: EngineInterface): Promise<boolean> {
+  return (await read($, queue)).is_on === true
+}
+
+/** The on/off button: switches the chat's queue on, or off; off, the queue is paused too, so nothing is sent when it
+ * is switched on again until the person plays it. */
+export async function toggleQueueOn($: EngineInterface): Promise<void> {
+  if (!(await isQueueOn($))) {
+    await changeQueue($, 'switch_on')
+    return
+  }
+  if (await changeQueue($, 'switch_off')) {
+    await update($, isPlaying, () => false)
   }
 }
 
@@ -414,7 +434,7 @@ export async function startTurn($: EngineInterface): Promise<void> {
 export async function finishTurn($: EngineInterface, isAnswered: boolean): Promise<void> {
   await update($, isTurnRunning, () => false)
   await refreshQueue($)
-  if (!isAnswered || !(await read($, isPlaying))) {
+  if (!isAnswered || !(await read($, isPlaying)) || !(await isQueueOn($))) {
     return
   }
   if (await read($, isAwaitingDecision)) {
@@ -483,7 +503,7 @@ async function nextToDo($: EngineInterface): Promise<QueuedPrompt | undefined> {
 /** What the agent reads beside each prompt while the queue plays: the queue, in order, and how to work through it; none
  * while paused or empty, so a paused queue never pulls the agent away from what the person asked. */
 export async function queueContext($: EngineInterface, sentId = ''): Promise<string | undefined> {
-  if (!(await read($, isPlaying))) {
+  if (!(await read($, isPlaying)) || !(await isQueueOn($))) {
     return undefined
   }
   const prompts = (await promptsToDo($)).filter(prompt => prompt.id !== sentId)
@@ -560,11 +580,14 @@ export type SentPrompt = { id: string; note: string }
  * belongs to or a card of its own with a clean title. A message the cdd server reads as only talk
  * (prompt-queue.is_only_talk) carries no note, since the chat just answers it. */
 export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
-  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text) || (await isOnlyTalk($, text))) {
+  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text)) {
     return undefined
   }
   // The queue as the server holds it now: the chat's start may have read it before the cdd server connected.
   await refreshQueue($)
+  if (!(await isQueueOn($)) || (await isOnlyTalk($, text))) {
+    return undefined
+  }
   const editing = await read($, editingId)
   const goals = (await read($, queue)).prompts.filter(prompt => !prompt.is_done && prompt.id !== editing)
   const working = await interruptedPrompt($)
@@ -920,7 +943,7 @@ const NAMED_DESCRIPTION = /^\s*([^:\n]{1,40}):\s*/
  * sub-agent's id, so the robot's cards and the Claude pane's background task always name the same work. A sub-agent
  * for no robot starts as it was asked. */
 export async function startRobotAgent($: EngineInterface, spawn: AgentSpawnInput, next: (spawn: AgentSpawnInput) => Promise<AgentSpawnResult>): Promise<AgentSpawnResult> {
-  const robot = await robotOfSpawn($, spawn)
+  const robot = (await isQueueOn($)) ? await robotOfSpawn($, spawn) : undefined
   if (robot === undefined) {
     return next(spawn)
   }

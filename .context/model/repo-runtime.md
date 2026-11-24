@@ -52,10 +52,10 @@ Read `annotation_kinds` as the one registry of annotation kinds in harness/annot
 
 ## A chat's tool call: McpHost to ToolCall to the toolset's operation
 
-- `McpHost.dispatch` `-> ProjectToolsets.resolve_call_name` maps the chat's tool id to `toolset.operation` · harness/mcp/mcp_server.py:694
-- `McpHost.dispatch` `-> ToolCall.sent(arguments, project, request)` creates the call; a chat's call takes its project and *ToolRequest* from its *ChatRequest* (`project_for`, `tool_request`) · harness/mcp/mcp_server.py:782, :856
-- `McpHost.answer` `-> McpHost._answer_between_restarts` · harness/mcp/mcp_server.py:767
-- `McpHost._answer_between_restarts` `-> McpHost._server_for(call.project)` finds the project's ProjectToolsets · harness/mcp/mcp_server.py:885
+- `McpHost.dispatch` `-> ProjectToolsets.resolve_call_name` maps the chat's tool id to `toolset.operation` · harness/mcp/mcp_server.py:744
+- `McpHost.dispatch` `-> ToolCall.sent(arguments, project, request)` creates the call; a chat's call takes its project and *ToolRequest* from its *ChatRequest* (`project_for`, `tool_request`) · harness/mcp/mcp_server.py:720, :992
+- `McpHost.answer` `-> McpHost._answer_between_restarts` · harness/mcp/mcp_server.py:759
+- `McpHost._answer_between_restarts` `-> McpHost._server_for(call.project)` finds the project's ProjectToolsets · harness/mcp/mcp_server.py:773
 - `ProjectToolsets.answer` `-> AgentTool.answer(call)` · harness/mcp/mcp_server.py:497
 - `AgentTool.answer` `-> AgentToolSet.for_call(call)` the toolset as the call works on it · harness/agent_tools/agent_tools.py:801
 - `AgentTool.answer` `-> AgentTool.log_session_invocation(call) -> ToolCall.session` logs the call in the session open in its project · harness/agent_tools/agent_tools.py:802
@@ -459,69 +459,84 @@ The one way the code runs git, with a timeout and no stdin.
 ## McpHost
 
 - `McpHost.__init__`
-  - `-> ProjectToolsets.project` reads project of · harness/mcp/mcp_server.py:607
+  - `-> ProjectToolsets.project` reads project of · harness/mcp/mcp_server.py:670
+  - `-> ChatProtocol()` creates the protocol it speaks to chats · harness/mcp/mcp_server.py:673
+  - `-> HttpEndpoints()` creates where it answers over HTTP · harness/mcp/mcp_server.py:674
 - `McpHost._server_for`
-  - `-> ProjectToolsets.for_project` loads · harness/mcp/mcp_server.py:652
+  - `-> ProjectToolsets.for_project` loads · harness/mcp/mcp_server.py:701
   - `<- ProjectToolsets`
-- `McpHost._register_handlers`
-  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:653
-- `McpHost.handle_get_prompt`
-  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:653
-- `McpHost._tool_list`
-  - `-> ProjectToolsets.tools` reads tools of · harness/mcp/mcp_server.py:673
-  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:673
-- `McpHost._call_from_chat`
-  - `-> ProjectToolsets.resolve_call_name` resolves call name · harness/mcp/mcp_server.py:780
-  - `-> McpHost._chat_request` the request being answered · harness/mcp/mcp_server.py:781
-  - `-> ChatRequest.project_for` the project the call works on · harness/mcp/mcp_server.py:782
-  - `-> ChatRequest.tool_request` the request the call answers · harness/mcp/mcp_server.py:782
-  - `-> McpHost._call_sent` creates the call · harness/mcp/mcp_server.py:782
-- `McpHost._call_sent`
-  - `-> ToolCall.sent` loads, from `tool_call` as it is now · harness/mcp/mcp_server.py:788
-- `McpHost._chat_request`
-  - `-> ChatRequest()` creates, from this module as it is now · harness/mcp/mcp_server.py:802
-  - `<- ChatRequest`
-- `McpHost._answer_off_loop`
-  - `-> ProjectToolsets.call_seconds` calls seconds · harness/mcp/mcp_server.py:700
-  - `-> ToolCall.tool` reads tool of · harness/mcp/mcp_server.py:700
+- `McpHost.tools_listed_for`
+  - `-> ServerLane.tools_for` the other lane's tools, when it answers the project · harness/mcp/mcp_server.py:711
+  - `-> ProjectToolsets.tools` reads tools of · harness/mcp/mcp_server.py:712
+  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:712
+- `McpHost.call_sent`
+  - `-> ToolCall.sent` loads, from `tool_call` as it is now · harness/mcp/mcp_server.py:720
+- `McpHost.tool_request`
+  - `-> ToolRequest()` creates, from `tool_call` as it is now · harness/mcp/mcp_server.py:725
+- `McpHost.answer_for_chat`
+  - `-> McpHost.answer` answers while the call is the one being answered · harness/mcp/mcp_server.py:738
 - `McpHost.dispatch`
-  - `-> ProjectToolsets.resolve_call_name` resolves call name · harness/mcp/mcp_server.py:855
-  - `-> McpHost._call_sent` creates the call · harness/mcp/mcp_server.py:856
+  - `-> ProjectToolsets.resolve_call_name` resolves call name · harness/mcp/mcp_server.py:744
+  - `-> McpHost.call_sent` creates the call · harness/mcp/mcp_server.py:745
 - `McpHost.answer`
-  - `-> ToolCall.tool` reads tool of · harness/mcp/mcp_server.py:762
+  - `-> ToolCall.tool` reads tool of · harness/mcp/mcp_server.py:749
+  - `-> McpHost._answer_between_restarts` · harness/mcp/mcp_server.py:759
 - `McpHost._answer_between_restarts`
-  - `-> ToolCall.project` reads project of · harness/mcp/mcp_server.py:776
-  - `-> ToolCall.arguments` reads arguments of · harness/mcp/mcp_server.py:778
-  - `-> ToolCall.tool` reads tool of · harness/mcp/mcp_server.py:779
+  - `-> McpHost._server_for(call.project)` finds the project's ProjectToolsets · harness/mcp/mcp_server.py:773
+  - `-> ToolCall.arguments` reads arguments of · harness/mcp/mcp_server.py:775
+  - `-> ProjectToolsets.answer` · harness/mcp/mcp_server.py:777
 - `McpHost._ping_tool`
-  - `-> ProjectToolsets.enrolled` calls enrolled on · harness/mcp/mcp_server.py:788
+  - `-> ProjectToolsets.enrolled` calls enrolled on · harness/mcp/mcp_server.py:783
 - `McpHost._log_failure`
-  - `-> ToolCall.session` reads session of · harness/mcp/mcp_server.py:793
-  - `-> ToolCall.tool` reads tool of · harness/mcp/mcp_server.py:795
+  - `-> ToolCall.session` reads session of · harness/mcp/mcp_server.py:788
 - `McpHost.serve`
-  - `-> ProjectToolsets.repo` reads repo of · harness/mcp/mcp_server.py:807
-- `McpHost.http_app`
-  - `-> ProjectToolsets.repo` reads repo of · harness/mcp/mcp_server.py:830
-- `McpHost.ping`
-  - `-> ProjectToolsets.repo` reads repo of · harness/mcp/mcp_server.py:830
+  - `-> HttpEndpoints.serve` · harness/mcp/mcp_server.py:794
 - `McpHost.restart`
-  - `-> ProjectToolsets.restarted` calls restarted on · harness/mcp/mcp_server.py:846
-  - `-> ProjectToolsets.project` reads project of · harness/mcp/mcp_server.py:848
-  - `-> ProjectToolsets.tools` reads tools of · harness/mcp/mcp_server.py:849
-  - `-> ProjectToolsets.skipped` reads skipped of · harness/mcp/mcp_server.py:850
-  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:850
-- `McpHost.notice`
-  - `-> ProjectToolsets.skipped` reads skipped of · harness/mcp/mcp_server.py:864
+  - `-> ProjectToolsets.restarted` calls restarted on · harness/mcp/mcp_server.py:801
+  - `-> ProjectToolsets.skipped` reads skipped of · harness/mcp/mcp_server.py:806
 - `McpHost._publish_mods`
-  - `-> ClaudeMarketplace.publish_mods` publishes the mods of the code the server now runs into its own lane's marketplace · harness/mcp/mcp_server.py:992
+  - `-> ClaudeMarketplace.publish_mods` publishes the mods of the code the server now runs into its own lane's marketplace · harness/mcp/mcp_server.py:812
 - `McpHost.from_repo`
-  - `-> RepositoryToolsets()` creates · harness/mcp/mcp_server.py:1017
-  - `-> ProjectToolsets()` creates · harness/mcp/mcp_server.py:1019
+  - `-> ProjectToolsets.of_repo` · harness/mcp/mcp_server.py:829
   - `<- McpHost` made with its lanes and cdd home
 - `McpHost.from_refs`
-  - `-> ProjectToolsets()` creates · harness/mcp/mcp_server.py:1039
-  - `-> ProjectToolsets.start` starts · harness/mcp/mcp_server.py:1041
+  - `-> ProjectToolsets.of_refs` · harness/mcp/mcp_server.py:842
   - `<- McpHost` made with its lanes and cdd home
+
+## ChatProtocol
+
+- `ChatProtocol.__init__`
+  - `-> _ToolCalls()` creates, answering each call through `McpHost.answer_for_chat` · harness/mcp/mcp_server.py:873
+- `ChatProtocol.handle_list_tools`
+  - `-> McpHost.tools_listed_for` · harness/mcp/mcp_server.py:930
+- `ChatProtocol.handle_get_prompt`
+  - `-> ProjectToolsets.prompts` reads prompts of · harness/mcp/mcp_server.py:957
+- `ChatProtocol._call_from_chat`
+  - `-> ProjectToolsets.resolve_call_name` resolves call name · harness/mcp/mcp_server.py:990
+  - `-> ChatProtocol._chat_request` the request being answered · harness/mcp/mcp_server.py:991
+  - `-> ChatRequest.project_for` the project the call works on · harness/mcp/mcp_server.py:992
+  - `-> ChatRequest.tool_request` the request the call answers · harness/mcp/mcp_server.py:992
+  - `-> McpHost.call_sent` creates the call · harness/mcp/mcp_server.py:992
+- `ChatProtocol._chat_request`
+  - `-> ChatRequest()` creates, from this module as it is now · harness/mcp/mcp_server.py:1001
+  - `<- ChatRequest`
+- `ChatProtocol._answer_off_loop`
+  - `-> ProjectToolsets.call_seconds` calls seconds · harness/mcp/mcp_server.py:1010
+- `ChatProtocol._progress_reporter`
+  - `-> ThrottledReporter()` creates · harness/mcp/mcp_server.py:1036
+
+## HttpEndpoints
+
+- `HttpEndpoints.serve`
+  - `-> ProjectToolsets.repo` reads repo of · harness/mcp/mcp_server.py:1054
+- `HttpEndpoints.app`
+  - `-> ChatProtocol.protocol` serves MCP through · harness/mcp/mcp_server.py:1071
+- `HttpEndpoints._answer_lane_call`
+  - `-> ToolCall.from_sent` reads the handed-over call back, from `tool_call` as it is now · harness/mcp/mcp_server.py:1092
+  - `-> LaneReply.failed` replies with the failure by kind and message · harness/mcp/mcp_server.py:1096
+- `HttpEndpoints._answer_off_loop`
+  - `-> McpHost.answer_for_chat` · harness/mcp/mcp_server.py:1103
+  - `-> raise _LaneCallFailed` carrying the failure back · harness/mcp/mcp_server.py:1105
 
 ## ChatRequest
 
@@ -555,14 +570,24 @@ The one way the code runs git, with a timeout and no stdin.
   - `-> LongCall.annotates` reads the annotation · harness/mcp/mcp_server.py:518
 - `ProjectToolsets.invoke`
   - `-> ToolCall()` creates · harness/mcp/mcp_server.py:489
+- `ProjectToolsets.of_repo`
+  - `-> RepositoryToolsets()` creates · harness/mcp/mcp_server.py:524
+  - `-> ProjectToolsets.start` starts every toolset class of the checkout · harness/mcp/mcp_server.py:527
+  - `-> raise McpStandupFailed` when it cannot stand up · harness/mcp/mcp_server.py:532
+- `ProjectToolsets.of_refs`
+  - `-> ProjectToolsets.start` starts the toolsets the references name · harness/mcp/mcp_server.py:540
 - `ProjectToolsets` `-> Mcp` serves the operations annotated · harness/mcp/mcp_server.py:450
 
 ## McpInstallation : RegisteredChannel
 
 - `McpInstallation.__init__`
-  - `-> McpChannelServer()` creates its server · harness/mcp/mcp_server.py:312
+  - `-> McpChannelServer()` creates its server · harness/mcp/mcp_server.py:336
 - `McpInstallation.write`
-  - `-> AgentTool.is_published_to(Mcp)` reads the MCP annotation · harness/mcp/mcp_server.py:327
+  - `-> AgentTool.is_published_to(Mcp)` reads the MCP annotation · harness/mcp/mcp_server.py:351
+- `McpInstallation.write_once_recorded`
+  - `-> CddEntry.write` once an MCP operation is recorded · harness/mcp/mcp_server.py:357
+- `McpInstallation.status`
+  - `-> CddEntry.names_running_server` whether the server the entry names runs · harness/mcp/mcp_server.py:365
 - `McpInstallation` `-> Mcp` publishes as a cdd MCP tool · harness/mcp/mcp_server.py:327
 
 ## McpChannelServer : ChannelServer

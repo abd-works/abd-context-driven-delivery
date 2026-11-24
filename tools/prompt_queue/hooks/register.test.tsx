@@ -51,11 +51,21 @@ function promptQueueTools(prompts: Prompt[]) {
   let added = 0
   // The queue as each flush found it, the copy the cdd server keeps in the queue archive.
   const flushes: string[] = []
-  const answer = () => ({ chat: CHAT, prompts: prompts.map(answered) })
+  // Whether the person switched the queue on for the chat; most tests work a queue that is on.
+  const switched = { isOn: true }
+  const answer = () => ({ chat: CHAT, prompts: prompts.map(answered), is_on: switched.isOn })
   const stepsOf = (args: Record<string, unknown>) => prompts[at(args.prompt)]!.steps ?? []
   const at = (id: unknown) => prompts.findIndex(prompt => prompt.id === id)
   const operations: Record<string, (args: Record<string, unknown>) => unknown> = {
     show: () => answer(),
+    switch_on: () => {
+      switched.isOn = true
+      return answer()
+    },
+    switch_off: () => {
+      switched.isOn = false
+      return answer()
+    },
     is_only_talk: args => ({ is_only_talk: TALK.includes(String(args.message)) }),
     add: args => operations.add_all!({ texts: [args.text] }),
     add_all: args => {
@@ -148,7 +158,7 @@ function promptQueueTools(prompts: Prompt[]) {
       return answer()
     },
   }
-  return { prompts, flushes, call: (tool: string, args: Record<string, unknown>) => operations[tool.replace('prompt-queue.', '')]!(args) }
+  return { prompts, flushes, switched, call: (tool: string, args: Record<string, unknown>) => operations[tool.replace('prompt-queue.', '')]!(args) }
 }
 
 /** The mod's stored values, kept in memory as the engine keeps them: each write raises the value's version; the queue
@@ -174,7 +184,7 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
     return { value: { content: [{ type: 'text', text: JSON.stringify(server.call(tool, args)) }], isError: false } }
   })
   const stored: Record<string, { value: unknown; version: number }> = {
-    queue: { value: { chat: CHAT, prompts: server.prompts.map(answered) }, version: 1 },
+    queue: { value: { chat: CHAT, prompts: server.prompts.map(answered), is_on: server.switched.isOn }, version: 1 },
     isExpanded: { value: isExpanded, version: 1 },
     queuedByKey: { value: queuedByKey, version: 1 },
     isPlaying: { value: isPlaying, version: 1 },
@@ -192,7 +202,13 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
     return { value: { isSet: true, version } }
   })
 
-  return { get prompts() { return server.prompts }, flushes: server.flushes, stored, calls, refuse: (tool: string) => refused.add(tool) }
+  /** The queue switched off for the chat, on the server and as the mod last read it. */
+  const switchOff = () => {
+    server.switched.isOn = false
+    stored.queue = { value: { chat: CHAT, prompts: server.prompts.map(answered), is_on: false }, version: stored.queue!.version + 1 }
+  }
+
+  return { get prompts() { return server.prompts }, get isOn() { return server.switched.isOn }, flushes: server.flushes, stored, calls, refuse: (tool: string) => refused.add(tool), switchOff }
 }
 
 for (const surface of ['desktop', 'terminal'] as const) {
@@ -389,6 +405,79 @@ for (const isPlaying of [true, false]) {
     expect(submitted).toEqual(isPlaying ? [ASK_FOR_NEXT] : [])
   })
 }
+
+// A chat's queue is off until the person switches it on, so a chat that does not use it is left alone.
+test('a queue switched off shows only its on/off button on the queue bar', async ($, on) => {
+  const seeded = seedQueue(on, true)
+  seeded.switchOff()
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const shown = [await ui.find({ type: 'Button', key: 'queue-power' }), await ui.find({ type: 'Button', key: 'queue-stack' })]
+  await ui.unmount()
+
+  expect(shown.map(button => button !== undefined)).toEqual([true, false])
+})
+
+test('pressing the on/off button of a queue switched off switches it on for the chat', async ($, on) => {
+  const seeded = seedQueue(on, false)
+  seeded.switchOff()
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-power' })
+  await ui.unmount()
+
+  expect(seeded.isOn).toBe(true)
+})
+
+test('pressing the on/off button of a queue switched on switches it off for the chat', async ($, on) => {
+  const seeded = seedQueue(on, false)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-power' })
+  await ui.unmount()
+
+  expect(seeded.isOn).toBe(false)
+})
+
+test('switching the queue off pauses it, so no finished turn asks for the next prompt', async ($, on) => {
+  const seeded = seedQueue(on, false, '', QUEUED, true)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-power' })
+  await ui.unmount()
+
+  expect(seeded.stored.isPlaying?.value).toBe(false)
+})
+
+test('a finished turn asks for no next prompt while the queue is switched off, even playing', async ($, on) => {
+  const seeded = seedQueue(on, false, '', QUEUED, true)
+  seeded.switchOff()
+  const submitted: string[] = []
+  on('prompt.submit', (_, e) => {
+    submitted.push(e.text)
+    return { text: e.text }
+  })
+  on('turn.complete', () => ({ text: 'Done.' }))
+
+  await $.turn.complete(FINISHED_TURN)
+  await unawaitedWorkSettled()
+
+  expect(submitted).toEqual([])
+})
+
+test('a message the person sends carries no note while the queue is switched off', async ($, on) => {
+  const seeded = seedQueue(on, false, '', QUEUED, true)
+  seeded.switchOff()
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried).toEqual([])
+})
 
 test('the pencil on a card puts its prompt in the prompt box to be edited', async ($, on) => {
   seedQueue(on, true)
@@ -1656,7 +1745,7 @@ test("the first message of a chat is answered with the queue as the server holds
     { id: 'a', text: 'Write the scenarios', is_done: true },
     { id: 'b', text: 'Run the unit tier' },
   ] as Prompt[], true)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: [] }, version: 1 }
+  seeded.stored.queue = { value: { chat: CHAT, is_on: true, prompts: [] }, version: 1 }
   const carried: string[] = []
   on('prompt.submit', (_, e) => {
     carried.push(...(e.context ?? []))
@@ -1745,7 +1834,7 @@ test("grouping leaves the person's interruptions out, as this chat decides where
 
 test("in sub-agent mode the cards no robot has show under the robots at the queue's full width, as in the single queue", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...QUEUED.map(prompt => ({ ...prompt, robot: prompt.id === 'a' ? 'Sparky' : 'Bolt' })), { id: 'm', text: '[interruption] is it started' }]).map(answered) }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, is_on: true, prompts: ([...QUEUED.map(prompt => ({ ...prompt, robot: prompt.id === 'a' ? 'Sparky' : 'Bolt' })), { id: 'm', text: '[interruption] is it started' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const loose = await ui.find({ type: 'Box', key: 'agent-loose-cards' })
@@ -1758,7 +1847,7 @@ test("in sub-agent mode the cards no robot has show under the robots at the queu
 // A card queued for a robot by name stands in that robot's queue, so it is not drawn again among the cards no robot has.
 test("in sub-agent mode a card queued for a robot by name shows only in that robot's queue, not again under the robots", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...QUEUED.map(prompt => ({ ...prompt, robot: prompt.id === 'a' ? 'Sparky' : 'Bolt' })), { id: 'n', text: '[for Bolt] Run the heavy tier' }]).map(answered) }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, is_on: true, prompts: ([...QUEUED.map(prompt => ({ ...prompt, robot: prompt.id === 'a' ? 'Sparky' : 'Bolt' })), { id: 'n', text: '[for Bolt] Run the heavy tier' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const loose = await ui.find({ type: 'Box', key: 'agent-loose-cards' })
@@ -1805,7 +1894,7 @@ test("the robots sit one under another on the left, the open queue taking the ro
 test("work a robot finishes stays in that robot's queue, dimmed", async ($, on) => {
   const seeded = groupedQueue(on)
   seeded.prompts[0]!.is_done = true
-  seeded.stored.queue = { value: { chat: CHAT, prompts: (seeded.prompts.map(prompt => ({ ...prompt }))).map(answered) }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, is_on: true, prompts: (seeded.prompts.map(prompt => ({ ...prompt }))).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const card = await ui.find({ type: 'Button', key: 'card-text-a' })
@@ -1834,7 +1923,7 @@ test("in sub-agent mode the note on a new message shows the robots' queues and l
 
 test("a card queued for a robot by name shows in that robot's queue", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier' }]).map(answered) }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, is_on: true, prompts: ([...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
@@ -1845,7 +1934,7 @@ test("a card queued for a robot by name shows in that robot's queue", async ($, 
 // Answered 2026-11-23 (sparky-06): an agent types a robot's name by hand, so case and outer spaces do not make another robot.
 test("a card queued for a robot by name in another case and with spaces shows in that robot's queue", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...seeded.prompts, { id: 'c', text: '[for  bolt ] Run the heavy tier' }]).map(answered) }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, is_on: true, prompts: ([...seeded.prompts, { id: 'c', text: '[for  bolt ] Run the heavy tier' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
@@ -1855,7 +1944,7 @@ test("a card queued for a robot by name in another case and with spaces shows in
 
 test("a card given to a robot spelled in another case stands in that robot's queue, not in a second robot's", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...seeded.prompts, { id: 'c', text: 'Run the heavy tier', robot: 'bOLT' }]).map(answered) }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, is_on: true, prompts: ([...seeded.prompts, { id: 'c', text: 'Run the heavy tier', robot: 'bOLT' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const bolt = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))
@@ -1867,7 +1956,7 @@ test("a card given to a robot spelled in another case stands in that robot's que
 
 test("a card given to one robot and named for another stands only in the queue of the robot it was given to", async ($, on) => {
   const seeded = groupedQueue(on)
-  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier', robot: 'Sparky' }]).map(answered) }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, is_on: true, prompts: ([...seeded.prompts, { id: 'c', text: '[for Bolt] Run the heavy tier', robot: 'Sparky' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const sparky = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-1' }))
@@ -1953,7 +2042,7 @@ test("a robot's queue is closed until the robot is pressed, the robot listed wit
 test("a closed robot shows how many of its items are done beside it, such as 1/2", async ($, on) => {
   const seeded = groupedQueue(on, [{ description: 'Write the story map', prompts: ['Write the scenarios', 'Run the unit tier'], name: 'Sparky' }])
   seeded.stored.expandedAgents = { value: [], version: 1 }
-  seeded.stored.queue = { value: { chat: CHAT, prompts: ([{ ...QUEUED[0], is_done: true, robot: 'Sparky' }, { ...QUEUED[1], robot: 'Sparky' }]).map(answered) }, version: 2 }
+  seeded.stored.queue = { value: { chat: CHAT, is_on: true, prompts: ([{ ...QUEUED[0], is_done: true, robot: 'Sparky' }, { ...QUEUED[1], robot: 'Sparky' }]).map(answered) }, version: 2 }
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 

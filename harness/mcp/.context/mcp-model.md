@@ -1,23 +1,30 @@
 # harness/mcp
 
-The *McpHost* is the one cdd server every chat talks to; it keeps one *ProjectToolsets* per project and makes one *ChatRequest* for each request a chat sends. *McpInstallation* is the MCP channel's *RegisteredChannel*: it writes each IDE's `cdd` entry, and its *McpChannelServer* stands the server up, starts it from *CddHome*, and installs the plugins of the home's *ClaudeMarketplace* through *ClaudePlugins*.
+The *McpHost* is the one cdd server every chat talks to; it keeps one *ProjectToolsets* per project, speaks MCP to chats through its *ChatProtocol*, which makes one *ChatRequest* for each request a chat sends, and answers over HTTP through its *HttpEndpoints*. *McpInstallation* is the MCP channel's *RegisteredChannel*: it writes each IDE's `cdd` entry, and its *McpChannelServer* stands the server up, starts it from *CddHome*, and installs the plugins of the home's *ClaudeMarketplace* through *ClaudePlugins*.
 
 - **Purpose:** Let any chat, in any project, call the operations authors annotate `@mcp`, through one long-running server that keeps each project's toolsets apart.
-- **Seam (terms):** Mcp, LongCall, McpHost, ProjectToolsets, ChatRequest, McpInstallation, McpChannelServer, CddHome, ClaudeMarketplace, PublishedPlugin, PublishedMods, ClaudePlugins, PluginInstall, ThrottledReporter
+- **Seam (terms):** Mcp, LongCall, McpHost, ChatProtocol, HttpEndpoints, ProjectToolsets, ChatRequest, McpInstallation, McpChannelServer, CddHome, ClaudeMarketplace, PublishedPlugin, PublishedMods, ClaudePlugins, PluginInstall, ThrottledReporter
 - **Dependencies (one-way):** harness/annotations, harness/agent_tools, harness/installation, harness/hooks, harness/process, harness/git
 
 ## McpHost
 
-The cdd server's MCP side: one *ProjectToolsets* for each project a chat works on, answering every chat. A host serving chats is made with the two lanes and its cdd home, so it hands a call whose project runs on the other lane to that lane; one made in process for a probe or a spec has neither.
+The cdd server's MCP side: one *ProjectToolsets* for each project a chat works on, answering every chat. It speaks MCP to chats through its *ChatProtocol* and answers over HTTP through its *HttpEndpoints*. A host serving chats is made with the two lanes and its cdd home, so it hands a call whose project runs on the other lane to that lane; one made in process for a probe or a spec has neither.
 
 + McpHost(checkout_toolsets: ProjectToolsets, lanes: ServerLanes | None = None, home: CddHome | None = None)
 ------
 + << composition >> checkout_toolsets: ProjectToolsets
++ << composition >> chat_protocol: ChatProtocol
++ << composition >> http_endpoints: HttpEndpoints
 + projects: list[Path]
 ----
 + dispatch(name: str, arguments: dict[str, object] | None = None, project: Path | None = None): object
 + answer(call: ToolCall): object
++ answer_for_chat(call: ToolCall, reporter: Callable[[str], None] | None): object
+	// on a chat's worker thread: reporter listens to its progress, and the answer is read into data while the call is still the one being answered
 + tools_listed_for(project: Path | None): list[dict[str, Any]]
+	// as data, with no MCP SDK: the built-in ping and restart, then the toolsets' own; the other lane's when that lane answers project
++ call_sent(arguments: dict[str, object] | None, project: Path | None, request: ToolRequest): ToolCall
++ tool_request(tool: str): ToolRequest
 + serve(daemon: McpDaemon, listener: socket.socket): None
 + restart(): dict[str, Any]
 	// publishes the mods of the code it now runs, so a chat watching them reloads with the restart
@@ -26,12 +33,43 @@ The cdd server's MCP side: one *ProjectToolsets* for each project a chat works o
 + from_refs(toolset_refs: tuple[str, ...], repo: str | None = None, project: str | None = None, lanes: ServerLanes | None = None, home: CddHome | None = None): McpHost
 ---<<keeps one per project>>--> ProjectToolsets
 ---<<resolves call name>>--> ProjectToolsets
----<<makes one for each request from the module as it is now>>--> ChatRequest
----<<creates>>--> RepositoryToolsets
+---<<speaks MCP to chats through>>--> ChatProtocol
+---<<answers over HTTP through>>--> HttpEndpoints
 ---<<creates>>--> ToolCall
----<<reports progress through>>--> ThrottledReporter
 ---<<answers with the data of>>--> DataClass
 ---<<publishes the mods on restart through>>--> ClaudeMarketplace
+
+## ChatProtocol
+
+The MCP protocol a host speaks to chats: the SDK's protocol server with the host's handlers, made the first time it is asked for, so a call dispatched in process (a probe, a script, a spec) never loads the SDK. Each call a chat sends runs on a worker thread, and one still running at its time limit is answered as still running.
+
++ ChatProtocol(host: McpHost)
+------
++ << association >> host: McpHost
++ protocol: Any
+	// the MCP SDK's protocol server
+----
++ content_blocks(answer: SentValue): list[TextContent]
+	// the answer as the chat reads it: text, or its data as JSON
+---<<answers each call through>>--> McpHost
+---<<makes one for each request from the module as it is now>>--> ChatRequest
+---<<reports progress through>>--> ThrottledReporter
+
+## HttpEndpoints
+
+Where a host answers over HTTP: MCP at `/mcp`, `/ping`, which says which pid and checkout serve, and `/lane-call`, where the other lane's server hands over a chat's call and hears back its answer or its failure by kind and message. Only this machine's own clients get in.
+
++ HttpEndpoints(host: McpHost, chat_protocol: ChatProtocol)
+------
++ << association >> host: McpHost
++ << association >> chat_protocol: ChatProtocol
+----
++ serve(daemon: McpDaemon, listener: socket.socket): None
++ app(port: int): Any
+	// the web app answering on port
+---<<answers handed-over calls through>>--> McpHost
+---<<serves MCP through>>--> ChatProtocol
+---<<replies to the other lane with>>--> LaneReply
 
 ## ChatRequest
 
@@ -73,6 +111,10 @@ The toolsets one project's calls are answered by: every `@mcp` operation of the 
 + invoke(mcp_name: str, arguments: dict[str, object] | None = None): object
 + answer(mcp_name: str, call: ToolCall): object
 	-> AgentTool.answer
++ of_repo(repo: Path | str): ProjectToolsets
+	// every annotated toolset class in repo; raises McpStandupFailed when it cannot stand up
++ of_refs(toolset_refs: tuple[str, ...], repo: str | None = None, project: str | None = None): ProjectToolsets
+---<<creates>>--> RepositoryToolsets
 ---<<keeps>>--> AgentTool
 ---<<makes each toolset with>>--> ToolsetReference
 ---<<reads the tools published to Mcp of>>--> AgentToolSet
@@ -92,7 +134,6 @@ Record `@mcp` operations and write each IDE's `cdd` entry once every tool is rec
 	// both lanes as the served checkout's sees them; a project pointed at the dev lane names the dev lane's server
 + daemon: McpDaemon
 	// the stable lane's server, which every chat's cdd plugin names
-+ << composition >> claude_plugins: ClaudePlugins
 + << composition >> server: McpChannelServer
 + << composition >> cdd_entry: CddEntry
 + mcp_operations: list[AgentTool]
@@ -103,8 +144,9 @@ Record `@mcp` operations and write each IDE's `cdd` entry once every tool is rec
 	// serving repository, else the running checkout, on the lane its folder runs on
 + write(tool: AgentTool): None
 + write_once_recorded(): None
-	// writes the IDE's cdd entry, or for Claude Code the cdd plugin, once
+	// writes the IDE's cdd entry, or for Claude Code the cdd plugin, once; nothing when no MCP operation was recorded
 + status(): list[str]
+	// whether the server the cdd entry names is running
 ---<<keeps>>--> AgentTool
 ---<<is handed>>--> ServedCheckout
 ---<<stands up and starts the server through>>--> McpChannelServer
@@ -116,7 +158,8 @@ Record `@mcp` operations and write each IDE's `cdd` entry once every tool is rec
 
 The one cdd server as an install handles it: stood up in the install's process over every toolset of the served checkout, to check it loads, then started from `~/.cdd`, and, for Claude Code, the `cdd` plugin and every mod the served code declares installed. Inside the cdd server, as an install through MCP runs, it stands up nothing.
 
-+ McpChannelServer(served: ServedCheckout, lanes: ServerLanes, claude_plugins: ClaudePlugins, layout: IdeLayout)
++ McpChannelServer(served: ServedCheckout, lanes: ServerLanes, claude_plugins: ClaudePlugins | None)
+	// claude_plugins for Claude Code; none for any other IDE, which installs no plugins
 ------
 + << association >> served: ServedCheckout
 + runs_this_process: bool

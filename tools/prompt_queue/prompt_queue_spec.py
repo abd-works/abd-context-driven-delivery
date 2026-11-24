@@ -491,3 +491,31 @@ with describe(PromptQueue):
 
         with it("reads a request for work sent from a board viewer as work"):
             expect(self.queue.is_only_talk(f"{VIEWER_STATE}\n\nPlease add a flush button")).to(equal({"is_only_talk": False}))
+
+    with context("of a chat whose queue was never switched on"):
+        with it("is off, so the chat's messages, hand-outs and robots stay out of the way"):
+            expect(self.queue.is_on).to(equal(False))
+
+        with context("that the person switches the queue on"):
+            with before.each:
+                self.queue.switch_on()
+
+            with it("is on"):
+                expect(self.queue.is_on).to(equal(True))
+
+            with it("remembers it is on for the chat, read again from its file"):
+                expect(PromptQueue("chat-1", self.folder / "prompt-queue.json").is_on).to(equal(True))
+
+            with it("keeps the prompts queued"):
+                expect([prompt.text for prompt in self.queue.prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
+
+            with it("stays on when a prompt is queued after"):
+                self.queue.add("Fix the Files app")
+                expect(self.queue.is_on).to(equal(True))
+
+            with context("that the person then switches it off"):
+                with before.each:
+                    self.queue.switch_off()
+
+                with it("is off"):
+                    expect(self.queue.is_on).to(equal(False))
