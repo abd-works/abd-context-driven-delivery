@@ -1,0 +1,5 @@
+# Bots integrated with the Claude pane's background tasks
+
+bots are integrated with background tasks claude pane ; click bot to open panel expand agent; investigate why the tasks dont match the pane;Z
+
+Seen 2026-11-23: the queue mod's robot list shows Robot 20 with two cards (c87e1c628275, the 353 BDD observations, and 397a514b2582, section 7), while the Claude pane's background task "Robot 20: fix all open review items" is the agent working card 67a98bcf7e54. The robot names on the queue (set by prompt-queue.assign from the hand-out lists) and the names in the agents' descriptions (set when the coordinator starts each agent) drift apart: the coordinator named agents in start order (Robot 20 = 67a98bcf7e54, Robot 21 = c87e1c628275, Robot 22 = 397a514b2582, Robot 24 = 64bb6e0dd1a9), the queue in hand-out order (Robot 19 = 67a98bcf7e54, Robot 20 = c87e1c628275 and 397a514b2582 and 5ebb9d7e87f6, Robot 21 = 64bb6e0dd1a9). Wanted: clicking a robot opens the pane's panel for that agent with it expanded, and the robot's cards and the agent's tasks always name the same work, from one name per agent.
