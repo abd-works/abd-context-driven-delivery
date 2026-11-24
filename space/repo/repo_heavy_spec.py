@@ -23,6 +23,8 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.mcp.mcp_server import ChatProtocol, McpHost
 from harness.git.git import Git, RepoConnectError
+from space.repo.built_once import BuiltOnce
+from space.repo.folder_deletion import FolderDeletion
 from space.repo.latest_release import LatestRelease
 from space.repo.repo import Repo
 from space.repo.origin import MergeRefusedError
@@ -37,12 +39,12 @@ NOT_COMMITTED = "café.md"
 with description("a Repo"):
     with context("on a clone whose origin has a main branch"):
         with before.each:
-            self.tmp = tempfile.TemporaryDirectory()
-            self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
+            self.top = _CLONES.copy()
+            self.origin, self.clone = self.top / "origin.git", self.top / "clone"
             self.repo = Repo(self.clone)
 
         with after.each:
-            _remove_tree(self.tmp)
+            shutil.rmtree(self.top, ignore_errors=True)
 
         # (S) Repo --> Commit Branch
         with it("should commit work on the branch checked out"):
@@ -79,7 +81,7 @@ with description("a Repo"):
 
         with context("with a branch checked out in a worktree of its own, a file committed there and one not yet"):
             with before.each:
-                self.tree = Path(self.tmp.name) / "ticket-tree"
+                self.tree = self.top / "ticket-tree"
                 _git(self.clone, "worktree", "add", "-b", "session/ticket", str(self.tree), "main")
                 (self.tree / "done.py").write_text("work", encoding="utf-8")
                 _git(self.tree, "add", "done.py")
@@ -95,7 +97,7 @@ with description("a Repo"):
         # A linked worktree's .git is a file naming its own git folder, which holds the merge going on there.
         with context("with a ticket's branch in a worktree of its own, stopped part way through merging main"):
             with before.each:
-                self.tree = Path(self.tmp.name) / "ticket-tree"
+                self.tree = self.top / "ticket-tree"
                 _git(self.clone, "worktree", "add", "-b", "session/ticket", str(self.tree), "main")
                 (self.tree / "a.py").write_text("ticket\n", encoding="utf-8")
                 _git(self.tree, "add", "a.py")
@@ -121,7 +123,7 @@ with description("a Repo"):
                 (self.clone / "a.py").write_text("work\n", encoding="utf-8")
                 self.repo.working_tree.commit([str(self.clone)], "first turn", untracked=True)
                 self.repo.origin.push_upstream()
-                self.elsewhere = _clone_of(self.origin, Path(self.tmp.name) / "elsewhere", "session/demo")
+                self.elsewhere = _clone_of(self.origin, self.top / "elsewhere", "session/demo")
                 (self.elsewhere / "b.py").write_text("from elsewhere\n", encoding="utf-8")
                 _git(self.elsewhere, "add", "-A")
                 _git(self.elsewhere, "commit", "-m", "elsewhere turn")
@@ -207,13 +209,13 @@ with description("a Repo"):
 with description("a Repo's worktrees"):
     with context("on a clone whose origin has a main branch"):
         with before.each:
-            self.tmp = tempfile.TemporaryDirectory()
-            self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
+            self.top = _CLONES.copy()
+            self.origin, self.clone = self.top / "origin.git", self.top / "clone"
             self.repo = Repo(self.clone)
-            self.folder = Path(self.tmp.name) / "wt-demo"
+            self.folder = self.top / "wt-demo"
 
         with after.each:
-            _remove_tree(self.tmp)
+            shutil.rmtree(self.top, ignore_errors=True)
 
         # (S) Repo --> List Worktree
         with it("should list the main clone with the branch it has checked out"):
@@ -227,7 +229,7 @@ with description("a Repo's worktrees"):
         # (S) Repo --> Reuse Worktree
         with it("should reuse the worktree a branch already has"):
             first = self.repo.worktrees.add(self.folder, self.repo.branch_named("session/demo"))
-            second = self.repo.worktrees.add(Path(self.tmp.name) / "wt-demo-2", self.repo.branch_named("session/demo"))
+            second = self.repo.worktrees.add(self.top / "wt-demo-2", self.repo.branch_named("session/demo"))
             expect(second.root).to(equal(first.root))
 
         # (S) Repo --> Remove Worktree
@@ -240,7 +242,7 @@ with description("a Repo's worktrees"):
         with it("should run Windows takeown icacls and Remove-Item as last resort"):
             from unittest.mock import patch
 
-            target = Path(self.tmp.name) / "locked-wt"
+            target = self.top / "locked-wt"
             target.mkdir()
             calls: list[tuple[str, ...]] = []
 
@@ -248,12 +250,13 @@ with description("a Repo's worktrees"):
                 calls.append(tuple(args))
                 return subprocess.CompletedProcess(args, 0)
 
-            with patch("space.repo.worktree.os.name", "nt"):
+            with patch("space.repo.folder_deletion.os.name", "nt"):
                 with patch.dict(os.environ, {"USERNAME": "tester"}):
-                    with patch("space.repo.worktree.shutil.rmtree"):
-                        with patch("space.repo.worktree.subprocess.run", side_effect=fake_run):
-                            self.repo.worktrees._force_remove_directory_windows(target)
-            expect([calls[0][0], calls[1][0], any("Remove-Item" in " ".join(call) for call in calls)]).to(equal(["takeown", "icacls", True]))
+                    with patch("space.repo.folder_deletion.shutil.rmtree"):
+                        with patch("space.repo.folder_deletion.subprocess.run", side_effect=fake_run):
+                            FolderDeletion(target).delete()
+            taken_over = [call[0] for call in calls if call[0] in ("takeown", "icacls")]
+            expect([taken_over, any("Remove-Item" in " ".join(call) for call in calls)]).to(equal([["takeown", "icacls"], True]))
 
         with it("should name a branch's sibling folder by the clone and the branch"):
             expect(self.repo.worktrees.sibling_folder(self.repo.branch_named("feature/a")).name).to(equal("clone-feature-a"))
@@ -286,10 +289,11 @@ with description("Repo dirty detection"):
 # (S) Repo --> Keep Latest Release
 # A ticket that closes with its branch merged lands its release; its end-to-end results are the only ones kept.
 with description("a release that lands on the default branch"):
+    # Keeping the release changes the clone and origin once; every example only reads what it left.
     with context("with end-to-end results from it and from older releases"):
-        with before.each:
-            self.tmp = tempfile.TemporaryDirectory()
-            self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
+        with before.all:
+            self.top = _CLONES.copy()
+            self.origin, self.clone = self.top / "origin.git", self.top / "clone"
             (self.clone / ".gitignore").write_text(".sessions/*/e2e-test-results/**/*.png\n", encoding="utf-8")
             self.latest = _release_screenshot(self.clone, "new-release", finished=True)
             self.older = _release_screenshot(self.clone, "old-release", finished=True)
@@ -299,8 +303,8 @@ with description("a release that lands on the default branch"):
             _git(self.clone, "push", "origin", "main")
             LatestRelease(Repo(self.clone), "new-release").keep()
 
-        with after.each:
-            _remove_tree(self.tmp)
+        with after.all:
+            shutil.rmtree(self.top, ignore_errors=True)
 
         with it("should push the landed release's screenshots to e2e-latest"):
             expect(_git(self.origin, "ls-tree", "-r", "--name-only", "e2e-latest")).to(
@@ -336,18 +340,21 @@ with description("a release that lands on the default branch"):
 with description("a commit pushed through the repo toolset"):
     with context("on a clone whose origin has a main branch"):
         with before.each:
-            self.tmp = tempfile.TemporaryDirectory()
-            self.origin, self.clone = _clone_with_origin(Path(self.tmp.name))
+            self.top = _CLONES.copy()
+            self.origin, self.clone = self.top / "origin.git", self.top / "clone"
 
         with after.each:
-            _remove_tree(self.tmp)
+            shutil.rmtree(self.top, ignore_errors=True)
 
         with context("for the project a call names, beside another project"):
             with before.each:
-                (Path(self.tmp.name) / "other").mkdir()
-                self.other_origin, self.other = _clone_with_origin(Path(self.tmp.name) / "other")
+                self.other_top = _CLONES.copy()
+                self.other_origin, self.other = self.other_top / "origin.git", self.other_top / "clone"
                 (self.clone / "work.txt").write_text("work\n", encoding="utf-8")
                 Repo.of_project(self.clone).push_commit("work")
+
+            with after.each:
+                shutil.rmtree(self.other_top, ignore_errors=True)
 
             with it("should commit and push in that project's clone"):
                 expect(_git(self.origin, "ls-tree", "--name-only", "main")).to(contain("work.txt"))
@@ -357,7 +364,7 @@ with description("a commit pushed through the repo toolset"):
 
         with context("from a linked worktree of the clone"):
             with before.each:
-                self.tree = Path(self.tmp.name) / "clone-feature"
+                self.tree = self.top / "clone-feature"
                 _git(self.clone, "worktree", "add", "-q", "-b", "feature/a", str(self.tree))
                 (self.tree / "tree.txt").write_text("worktree work\n", encoding="utf-8")
                 Repo.of_project(self.tree).push_commit("worktree work")
@@ -425,7 +432,8 @@ def _release_screenshot(clone: Path, release: str, *, finished: bool) -> Path:
     return shot
 
 
-def _clone_with_origin(root: Path) -> tuple[Path, Path]:
+def _clone_with_origin(root: Path) -> None:
+    """A bare origin with main, and a clone of it whose main carries one commit more, pushed."""
     origin = root / "origin.git"
     seed = root / "seed"
     clone = root / "clone"
@@ -442,7 +450,6 @@ def _clone_with_origin(root: Path) -> tuple[Path, Path]:
     _git(clone, "add", ".gitignore")
     _git(clone, "commit", "-m", "ignore session state")
     _git(clone, "push", "origin", "main")
-    return origin, clone
 
 
 def _clone_of(origin: Path, folder: Path, branch: str) -> Path:
@@ -450,10 +457,6 @@ def _clone_of(origin: Path, folder: Path, branch: str) -> Path:
     subprocess.run(["git", "clone", "-b", branch, str(origin), str(folder)], check=True, capture_output=True)
     _init_repository(folder)
     return folder
-
-
-def _remove_tree(tmp: tempfile.TemporaryDirectory) -> None:
-    shutil.rmtree(tmp.name, ignore_errors=True)
 
 
 def _init_repository(root: Path) -> None:
@@ -472,35 +475,35 @@ def _init_repository(root: Path) -> None:
     )
 
 
+def _work_with_empty_origin(root: Path) -> None:
+    """A repository with no commit yet whose origin is a bare repository with none either."""
+    origin = root / "origin.git"
+    subprocess.run(["git", "init", "--bare", str(origin)], check=True, capture_output=True)
+    work = root / "work"
+    work.mkdir()
+    _init_repository(work)
+    subprocess.run(["git", "remote", "add", "origin", str(origin)], cwd=work, check=True, capture_output=True)
+
+
+# Each example gets a copy of repositories built once for the run, rather than starting git a dozen times to build them.
+_CLONES = BuiltOnce("repo-spec-clone-", _clone_with_origin)
+_EMPTY_WORK = BuiltOnce("repo-spec-work-", _work_with_empty_origin)
+
+
 # (E) Open Work Session
 # (E) Work With Repo Branch
 # (S) Repo --> Commit Branch
 with description("the repo push toolset"):
     with context("that is in a git repository"):
         with before.each:
-            self.tmp = tempfile.TemporaryDirectory()
+            self.top = _EMPTY_WORK.copy()
             self._cwd = Path.cwd()
-            root = Path(self.tmp.name)
-            origin = root / "origin.git"
-            subprocess.run(
-                ["git", "init", "--bare", str(origin)],
-                check=True,
-                capture_output=True,
-            )
-            self.repo_root = root / "work"
-            self.repo_root.mkdir()
-            _init_repository(self.repo_root)
-            subprocess.run(
-                ["git", "remote", "add", "origin", str(origin)],
-                cwd=self.repo_root,
-                check=True,
-                capture_output=True,
-            )
+            self.repo_root = self.top / "work"
             os.chdir(self.repo_root)
 
         with after.each:
             os.chdir(self._cwd)
-            self.tmp.cleanup()
+            shutil.rmtree(self.top, ignore_errors=True)
 
         with it("should commit when push_commit is called"):
             (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")

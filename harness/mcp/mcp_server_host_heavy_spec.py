@@ -251,14 +251,15 @@ with description("the cdd server") as self:
                 result = self.chat.run(lambda session: session.call_tool("render.render", arguments=arguments), folder, 10)
                 expect((_text(result).count("cart.py"), (folder / "cart" / "cart.py").read_text(encoding="utf-8").count("class Cart"))).to(equal((1, 1)))
 
+    # Two worktrees and a chat connected in each take seconds to make, so they are made once, before the examples.
     with context("that two chats in different worktrees have connected"):
-        with before.each:
+        with before.all:
             self.worktrees = TwoWorktrees()
             self.worktrees.create()
             self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "alpha", "create": True}), self.worktrees.first)
             self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "beta", "create": True}), self.worktrees.second)
 
-        with after.each:
+        with after.all:
             self.worktrees.remove()
 
         with it("should answer both chats from the one server process"):
@@ -309,18 +310,19 @@ with description("the cdd server") as self:
             expect(self.server.daemon.running().pid).to(equal(self.started.pid))
 
 
+# A server started by the connect script takes seconds to start, so the script runs once, before the examples.
 with description("the cdd connect script") as self:
-    with before.each:
+    with before.all:
         self.server = SpecServer((_HOSTING_DEMO,))
         self.server.install()
         self.project = Path(tempfile.mkdtemp(prefix="cdd-connect-")).resolve()
 
-    with after.each:
+    with after.all:
         self.server.stop()
         shutil.rmtree(self.project, ignore_errors=True)
 
     with context("that an IDE runs in a chat's folder while no server answers"):
-        with before.each:
+        with before.all:
             done = subprocess.run(
                 [sys.executable, str(self.server.home.connect_script)],
                 cwd=self.project,

@@ -33,35 +33,51 @@ SAVE_WAIT_SECONDS = 20
 SAVE_POLL_SECONDS = 0.2
 
 
+def repository_with_two_tickets(project: ProjectTools) -> ProjectTools:
+    """The project made a git repository with one commit, holding two tickets."""
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=project.root, check=False)
+    # A CDD project ignores the board's progress cache, which it writes beside each ticket's records after a read.
+    (project.root / ".gitignore").write_text(f".sessions/**/{PROGRESS_CACHE_FILE}\n", encoding="utf-8")
+    subprocess.run(["git", "add", ".gitignore"], cwd=project.root, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "start"], cwd=project.root, check=True)
+    project.ticket("pet-visits", title="Pet visits")
+    project.ticket("sign-up", title="Sign up")
+    return project
+
+
 with description("the board tools") as self:
+    # A context whose examples only read what one action left makes its project once, in a before.all, as
+    # shared_project; every other example gets a project of its own.
+    with before.all:
+        self.shared_project = None
+
     with before.each:
-        self.project = ProjectTools()
+        self.project = self.shared_project or ProjectTools()
 
     with after.each:
-        OPEN_PROJECTS.close_all()
-        patch.stopall()
+        if self.shared_project is None:
+            OPEN_PROJECTS.close_all()
+            patch.stopall()
 
     # (E) See Work On Session Board
     # (S) Person --> Activate Ticket
     with context("with a git repository and two tickets"):
         with before.each:
-            subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-            # A CDD project ignores the board's progress cache, which it writes beside each ticket's records after a read.
-            (self.project.root / ".gitignore").write_text(f".sessions/**/{PROGRESS_CACHE_FILE}\n", encoding="utf-8")
-            subprocess.run(["git", "add", ".gitignore"], cwd=self.project.root, check=True)
-            subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "start"], cwd=self.project.root, check=True)
-            self.project.ticket("pet-visits", title="Pet visits")
-            self.project.ticket("sign-up", title="Sign up")
+            if self.project is not self.shared_project:
+                repository_with_two_tickets(self.project)
 
         # (S) Person --> Open Ticket Session
         # A ticket opens from main in its own worktree, where its own chat works; the chat that opened it stays on main.
+        # Opening it is the one action here: every example reads what it left, so it opens once for them all.
         with context("that opens a ticket from the repository's own folder"):
-            with before.each:
-                self.project.call("ticket.activate", ticket="sign-up")
-                self.opened = Path(self.project.ticket_json("sign-up")["worktree"])
+            with before.all:
+                self.shared_project = repository_with_two_tickets(ProjectTools())
+                self.shared_project.call("ticket.activate", ticket="sign-up")
+                self.opened = Path(self.shared_project.ticket_json("sign-up")["worktree"])
 
-            with after.each:
-                subprocess.run(["git", "worktree", "remove", "--force", str(self.opened)], cwd=self.project.root, check=False)
+            with after.all:
+                subprocess.run(["git", "worktree", "remove", "--force", str(self.opened)], cwd=self.shared_project.root, check=False)
+                self.shared_project.close()
 
             with it("should open the ticket's own worktree on its branch"):
                 branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.opened, check=True, capture_output=True, text=True)
@@ -100,8 +116,8 @@ with description("the board tools") as self:
             with it("should offer to delete its worktree when closing it"):
                 expect(self.project.call("ticket.close_choices", ticket="sign-up")["choices"]).to(contain("delete_worktree"))
             with context("that is opened again"):
-                with before.each:
-                    self.project.call("ticket.activate", ticket="sign-up")
+                with before.all:
+                    self.shared_project.call("ticket.activate", ticket="sign-up")
 
                 with it("should keep the worktree it has"):
                     expect(Path(self.project.ticket_json("sign-up")["worktree"]).resolve()).to(equal(self.opened.resolve()))

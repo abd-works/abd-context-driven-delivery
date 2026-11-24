@@ -25,31 +25,45 @@ def ended_within(server: SpecServer, seconds: float) -> bool:
     return True
 
 
+def start_owned_server(spec) -> None:
+    """A cdd server started on a port of its own, owned by a process that lives until it is ended."""
+    spec.owner = subprocess.Popen(OWNER_COMMAND)
+    spec.server = SpecServer(("tools.echo.echo:Echo",))
+    spec.server.install()
+    os.environ[SERVER_OWNER_ENV] = str(spec.owner.pid)
+    spec.server.daemon.ensure()
+
+
+def stop_owned_server(spec) -> None:
+    spec.owner.kill()
+    spec.server.stop()
+
+
+# A server takes seconds to start and to end, so each context starts one, once, before its examples.
 with description("a throwaway cdd server") as self:
-    with before.each:
-        self.owner = subprocess.Popen(OWNER_COMMAND)
-        self.server = SpecServer(("tools.echo.echo:Echo",))
-        self.server.install()
-        os.environ[SERVER_OWNER_ENV] = str(self.owner.pid)
-        self.server.daemon.ensure()
-
-    with after.each:
-        self.owner.kill()
-        self.server.stop()
-
     with context("whose owning process still runs"):
+        with before.all:
+            start_owned_server(self)
+
+        with after.all:
+            stop_owned_server(self)
+
         with it("should keep answering"):
             time.sleep(3)
             expect(self.server.daemon.running()).not_to(be_none)
 
     with context("whose owning process has ended"):
-        with before.each:
+        with before.all:
+            start_owned_server(self)
             self.owner.kill()
             self.owner.wait()
+            self.ended = ended_within(self.server, ENDED_WITHIN_SECONDS)
+
+        with after.all:
+            stop_owned_server(self)
 
         with it("should end, freeing its port"):
-            expect(ended_within(self.server, ENDED_WITHIN_SECONDS)).to(be_true)
+            expect(self.ended).to(be_true)
 
         with it("should withdraw the address it published"):
-            ended_within(self.server, ENDED_WITHIN_SECONDS)
             expect(self.server.home.state_path.exists()).to(be_false)

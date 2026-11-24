@@ -50,6 +50,13 @@ def _recorded(folder: Path) -> list[str]:
     return json.loads((folder / InstallRecord.NAME).read_text(encoding="utf-8"))["installed_files"]
 
 
+def _new_project(spec) -> None:
+    """A project folder of the spec's own, with an installer for its Claude Code and its Cursor folder."""
+    spec.project = Path(tempfile.mkdtemp(prefix="install-record-"))
+    spec.claude = Installer.create(ide="Claude", path=spec.project / ".claude", repo=_REPO_ROOT)
+    spec.cursor = Installer.create(ide="Cursor", path=spec.project / ".cursor", repo=_REPO_ROOT)
+
+
 def _start_install(folder: Path) -> subprocess.Popen:
     command = [sys.executable, "-c", _INSTALL_IN_ITS_OWN_PROCESS, str(_REPO_ROOT), str(folder)]
     return subprocess.Popen(command, cwd=_REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
@@ -63,19 +70,17 @@ with description("an install into an IDE folder") as self:
     with after.all:
         self.machine.leave()
 
-    with before.each:
-        self.project = Path(tempfile.mkdtemp(prefix="install-record-"))
-        self.claude = Installer.create(ide="Claude", path=self.project / ".claude", repo=_REPO_ROOT)
-        self.cursor = Installer.create(ide="Cursor", path=self.project / ".cursor", repo=_REPO_ROOT)
-
-    with after.each:
-        shutil.rmtree(self.project, ignore_errors=True)
-
+    # An install takes seconds, so each context installs into a project of its own once, before its examples, which read
+    # what it left; an example that changes the project, as the clean of a stopped install does, comes last in its context.
     with context("with another IDE's folder installed into after it, in the same project"):
-        with before.each:
+        with before.all:
+            _new_project(self)
             self.cursor.install([SampleAgenticOps()])
             self.claude.install([SampleAgenticOps()])
             self.removed = Installer.create(ide="Cursor", path=self.project / ".cursor", repo=_REPO_ROOT).clean()
+
+        with after.all:
+            shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should still remove its own files on clean"):
             expect(_skills(self.project / ".cursor")).to(equal([]))
@@ -87,11 +92,15 @@ with description("an install into an IDE folder") as self:
             expect(len(_generate_skills(_skills(self.project / ".claude")))).to(equal(1))
 
     with context("that stops at a toolset it cannot publish"):
-        with before.each:
+        with before.all:
+            _new_project(self)
             try:
                 self.cursor.install([SampleAgenticOps(), ToolsetReference.parsed("no.such.module:Nope")])
             except ToolsetInstallFailed:
                 pass
+
+        with after.all:
+            shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should have recorded the files it wrote before it stopped"):
             expect(len(_generate_skills(_recorded(self.project / ".cursor")))).to(equal(1))
@@ -102,9 +111,13 @@ with description("an install into an IDE folder") as self:
                 expect(_skills(self.project / ".cursor")).to(equal([]))
 
     with context("that is finished, then refreshed with the Installer's own commands alone"):
-        with before.each:
+        with before.all:
+            _new_project(self)
             self.cursor.install([SampleAgenticOps()])
             Installer.create(ide="Cursor", path=self.project / ".cursor", repo=_REPO_ROOT).install_self()
+
+        with after.all:
+            shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should keep the skills the install wrote"):
             expect(len(_generate_skills(_skills(self.project / ".cursor")))).to(equal(1))
@@ -113,12 +126,16 @@ with description("an install into an IDE folder") as self:
             expect(len(_generate_skills(_recorded(self.project / ".cursor")))).to(equal(1))
 
     with context("that is finished, with two more started at the same moment into the same folder"):
-        with before.each:
+        with before.all:
+            _new_project(self)
             folder = self.project / ".cursor"
             first = _start_install(folder)
             first.communicate(timeout=_INSTALL_SECONDS)
             together = [_start_install(folder), _start_install(folder)]
             self.outcomes = [(install.communicate(timeout=_INSTALL_SECONDS)[1], install.returncode) for install in together]
+
+        with after.all:
+            shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should finish both"):
             expect([(code, errors[-600:] if code else "") for errors, code in self.outcomes]).to(equal([(0, ""), (0, "")]))
