@@ -146,7 +146,7 @@ UxMap
  JsonUxMap : UxMap
   ----
  ClaudeDesignUxMap : UxMap
-      // screen boards on the canvas; never parsed back
+      // a prototype page per screen and canvas.json placing them; parse joins the pages back into one map
   ----
  Ux
       fidelity

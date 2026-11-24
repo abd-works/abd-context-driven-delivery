@@ -20,3 +20,9 @@ The fixture screens are the UX practice's now: `FixtureScreen` and `ScenarioSour
 `cdd_guidance/practices/ux/model/claude_design/fixture_screen.py` beside the recipe, with the bar and its methods private
 to them, and `CanvasVersions` answers each version as a *CanvasVersion* (`working()`, `unpublished()`, and the version's
 `release(name)` and `publish_at(url)`).
+
+Since 2026-11-23 (defect r3-gizmo-03), the Render action saves a mockup rendered to `claude_design` itself
+(*RenderedCanvas*, `cdd_guidance/actions/render/rendered_canvas.py`), within this decision: it writes into
+`CanvasVersions.unpublished()`, starts the first version only when the canvas has none, and refuses a published latest
+version with *PublishedVersion*, so starting the version after a published one stays the person's choice and the
+recipe's step. The story canvas is still rendered by the recipe.

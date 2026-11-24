@@ -18,7 +18,12 @@ from expects import contain, end_with, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.render.render import BoardNotKept, FormatNotDeclared, Render
+from cdd_guidance.actions.render.rendered_canvas import CanvasFileNotRendered
 from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace
+from cdd_guidance.practices.ux.model.html.nodes import HtmlUxMap
+from cdd_guidance.practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap
+from harness.design_canvas.versions import CanvasVersions, PublishedVersion
 from cdd_guidance.actions.render.rendered_file import NothingToRender
 from cdd_guidance.actions.render.source_files import SourceFormatRefused
 from cdd_guidance.actions.render.render_order import RenderFailed
@@ -574,6 +579,39 @@ with description("Render asked for a path, in a session") as self:
             story_file.write_text("## Story: Browse Product Catalog\n", encoding="utf-8")
             self.action.render("stories-story-map", format="drawio", paths=[".context/story-map.md"], source="markdown")
             expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(contain('link="orders/browse_product_catalog_story.test.md"'))
+
+    # Exploratory testing, r3-gizmo-03: a mockup rendered to claude_design answered {} and saved nothing, and a canvas
+    # could not be read back. The person's answer (2026-11-23): a mockup render to claude_design works and renders back.
+    with context("that is a mockup in html, rendered to claude_design"):
+        with before.each:
+            self.mockup = HtmlUxMap.create().render(OrderingMap().build(UxMap.create()))
+            (self.project.root / "bookshop").mkdir()
+            (self.project.root / "bookshop" / "buy-a-book.html").write_text(self.mockup, encoding="utf-8")
+            self.canvas = self.project.root / "design-canvas"
+            self.to_canvas = lambda: self.action.render("ux-mockup", format="claude_design", paths=["bookshop/buy-a-book.html"], source="html")
+
+        with it("should save canvas.json and a prototype page for each screen in the canvas's first version"):
+            self.to_canvas()
+            saved = sorted(path.relative_to(self.canvas).as_posix() for path in self.canvas.rglob("*") if path.is_file())
+            expect(saved).to(equal(["version-1/project/canvas.json", "version-1/project/screens/cart-saved.dc.html",
+                                    "version-1/project/screens/cart.dc.html", "version-1/project/screens/catalog.dc.html"]))
+
+        with it("should render back to the same HTML mockup from its canvas.json"):
+            self.to_canvas()
+            back = self.action.render("ux-mockup", format="html", paths=["design-canvas/version-1/project/canvas.json"], source="claude_design")
+            expect(back[0].content).to(equal(self.mockup))
+
+        with context("whose canvas's latest version is published"):
+            with it("should refuse to write into it"):
+                self.to_canvas()
+                CanvasVersions.in_practice_root(self.project.root).latest.publish_at("https://claude.ai/artifact/canvas")
+                expect(self.to_canvas).to(raise_error(PublishedVersion))
+
+        with context("whose canvas holds a screen people ported where a prototype page goes"):
+            with it("should refuse to write over it"):
+                self.to_canvas()
+                (self.canvas / "version-1" / "project" / "screens" / "cart.dc.html").write_text("<html>ported cart</html>", encoding="utf-8")
+                expect(self.to_canvas).to(raise_error(CanvasFileNotRendered, contain("cart.dc.html")))
 
     # Exploratory testing, r3-rivet-08: a realization rendered from a saved graph was saved as graph.md beside the graph,
     # a name no fidelity writes, while the fidelity declares .context/{scope}-bdd-realization.md. The person's answer

@@ -186,13 +186,16 @@ class HtmlUxMap(JsonUxMap):
     story_demo_control_type = HtmlStoryDemoControl
 
     def parse(self, text: str, file: str = "") -> UxMap:
-        content = text
-        start = content.find(_MODEL_MARKER)
+        return type(self).from_document(self.carried_document(text))
 
-        end = content.find(_COMMENT_END, start + len(_MODEL_MARKER)) if start >= 0 else -1
+    def carried_document(self, text: str) -> JsonDocument:
+        """The map's JSON document the page carries in its ux-map-json comment; a page with none is refused as
+        *UxMapNotEmbedded*."""
+        start = text.find(_MODEL_MARKER)
+        end = text.find(_COMMENT_END, start + len(_MODEL_MARKER)) if start >= 0 else -1
         if end < 0:
             raise UxMapNotEmbedded("This HTML has no ux-map-json comment; render the map to HTML to read it back.")
-        return super().parse(content[start + len(_MODEL_MARKER):end].strip())
+        return json.loads(text[start + len(_MODEL_MARKER):end].strip())
 
     def save(self) -> str:
         shell = _SHELL_PATH.read_text(encoding="utf-8")

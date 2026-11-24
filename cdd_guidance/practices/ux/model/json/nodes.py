@@ -234,8 +234,13 @@ class JsonUxMap(UxMap):
     def parse(self, text: str | dict, file: str = "") -> UxMap:
         """A new map of this format read from a JSON document: its own fields, then each screen, each transition,
         content type, and navigation component reading its own record."""
-        document = self._document_of(text)
-        ux_map = type(self).create(name=document.get("name", "UxMap"))
+        return type(self).from_document(self._document_of(text))
+
+    @classmethod
+    def from_document(cls, document: dict[str, Any]) -> "JsonUxMap":
+        """A new map of this format read from a decoded JSON document: its own fields, then each screen, each
+        transition, content type, and navigation component reading its own record."""
+        ux_map = cls.create(name=document.get("name", "UxMap"))
         ux_map._read_record(document)
         return ux_map
 
@@ -271,9 +276,9 @@ class JsonUxMap(UxMap):
         return self.copy_of(canonical).save()
 
     def save(self) -> str:
-        return json.dumps(self._map_record(), indent=2) + "\n"
+        return json.dumps(self.document(), indent=2) + "\n"
 
-    def _map_record(self) -> dict[str, Any]:
+    def document(self) -> dict[str, Any]:
         """This map as the JSON document it reads back: each screen, transition, content type, and navigation
         component writes its own record."""
         return {

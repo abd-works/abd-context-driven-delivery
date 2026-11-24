@@ -2,7 +2,7 @@
 
 *UxMap* is one information architecture: screens, then each screen's regions, controls, and interactions, then the transitions between screens, the content types and nav components the screens share, and one context of notes and invariants. Every node is a graph node (*ModelNode*), so a map is also the UX practice's part of the knowledge graph.
 
-Each format is a *UxMap* subclass, listed by `Ux` under `formats`: drawio, html, markdown, json, claude_design. A format names the node types that write it its own way, and reads with `parse(content)` into a new map of its class and writes with `render(canonical)`. The UX practice registers itself on *UxNode*, so the model never imports its practice. JSON and HTML carry the whole map. Draw.io carries screens, their regions, and transitions. Markdown carries the scope and the context. Claude Design places the prototype screens on a canvas and is never read back.
+Each format is a *UxMap* subclass, listed by `Ux` under `formats`: drawio, html, markdown, json, claude_design. A format names the node types that write it its own way, and reads with `parse(content)` into a new map of its class and writes with `render(canonical)`. The UX practice registers itself on *UxNode*, so the model never imports its practice. JSON and HTML carry the whole map. Draw.io carries screens, their regions, and transitions. Markdown carries the scope and the context. Claude Design writes a prototype page per screen and the canvas.json that places them, and reads the whole map back from them.
 
 ```
 ux_map = JsonUxMap.create().parse(text)         # the text of ux-map.json or ux.json
@@ -50,7 +50,9 @@ Every node of the map. Each child belongs to its owner on the graph: a screen, t
 + create(name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None): UxMap
 	// class operation: a new map; given a graph in place of a name, a map whose nodes live on that graph
 + reads_file(file: Path, text: str): bool
-	// each format: whether file, which holds text, is a UX map in this format
+	// each format: whether file, which holds text, is a UX map in this format (FormatAdapter's, which reads none)
++ content_beside(file: Path): TextOrData
+	// what a render reads of the map from file when the format writes it as several files; none for a format whose file alone holds it
 + parse(content: str): UxMap
 	// each format: a new map of this class read from content
 + render(canonical: UxMap): str
@@ -290,6 +292,9 @@ The `json` format: the whole map as one JSON document; every other format can ro
 
 ----
 + parse(content: str | dict): UxMap
+	-> from_document(document)
++ from_document(document: dict): JsonUxMap
+	// class operation: a new map of this class read from a decoded document
 	-> _read_record(data)
 - _read_record(data: dict): None
 	// its own fields, then each part reading its own record
@@ -298,7 +303,7 @@ The `json` format: the whole map as one JSON document; every other format can ro
 + screen_named(name: str): Screen | None
 + render(canonical: UxMap): str
 	-> copy_of(canonical).save
-- _map_record(): dict
++ document(): dict
 	// this map: each screen, transition, content type, and navigation component writes its own record; a link to a screen is written as that screen's name
 
 Its nodes are JsonScreen, JsonRegion, JsonControl, JsonStoryDemoControl, JsonTransition, JsonContentType, and
@@ -311,8 +316,9 @@ The `html` format: the mockup review page, product screens on the left and the s
 
 ----
 + parse(content: str): UxMap
-	// raises UxMapNotEmbedded when the page carries no ux-map-json comment
-	-> JsonUxMap.parse
+	-> carried_document(content), from_document
++ carried_document(content: str): dict
+	// the JSON document the page carries; raises UxMapNotEmbedded when the page carries no ux-map-json comment
 + save(): str
 	// fills templates/html/mockup_shell.html; each HtmlControl writes its own markup and the data attributes the Story Demo runner reads
 	-> ExplorerTree(screens).as_json()
@@ -382,7 +388,7 @@ The `markdown` format: the scope, then the invariants and notes as bullet lists 
 
 ## ClaudeDesignUxMap : UxMap
 
-The `claude_design` format: one board per prototype screen, each on its own canvas page.
+The `claude_design` format: one prototype page per screen (`screens/<slug>.dc.html`, the HTML mockup of that screen, opening on it, with every other screen by name so its links read back), and `canvas.json` placing one board per page, each on its own canvas page. Read back, it joins each page's screen into one map, so a mockup goes to the canvas and back whole.
 
 ------
 + folder: str
@@ -390,10 +396,22 @@ The `claude_design` format: one board per prototype screen, each on its own canv
 + width: int
 + height: int
 ----
-+ render(canonical: UxMap): str
-	// the boards as JSON
-+ parse(content: str): UxMap
-	// raises ClaudeDesignScreensNotReadable: screens are placed from the UX map and edited on the canvas
++ render(canonical: UxMap): CanvasFiles
+	// the canvas's files by path in the version's folder: project/canvas.json and project/screens/<slug>.dc.html
++ files(): CanvasFiles
+	-> DesignCanvas.add_page, DesignCanvas.place, DesignCanvas.files
+	-> HtmlUxMap.from_document, HtmlUxMap.save
+- _page_name(screen: Screen): str
++ parse(content: CanvasFiles | str): UxMap
+	-> HtmlUxMap.carried_document
+	-> JsonUxMap.from_document
+	// raises NotAClaudeDesignCanvas for JSON that places no boards
+	// raises ClaudeDesignScreenMissing for a placed screen whose page the canvas does not hold
++ content_beside(canvas_json: Path): CanvasFiles
+	// canvas.json and each prototype page in its project folder, which a render reads
++ reads_file(file: Path, text: str): bool
+	// a prototype page HTML reads, or a canvas.json placing only screen pages
+- _board_of(name: str, title: str): CanvasBoard
 + prototype_names(): list[str]
 + names(files = ()): list[str]
 + title(name: str): str

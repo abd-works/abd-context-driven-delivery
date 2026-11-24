@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from cdd_guidance.actions.render.rendered_canvas import RenderedCanvas
 from cdd_guidance.actions.render.rendered_code import RenderedCode, RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS, WHITEBOARD, RenderedFile, RenderedSections
 from cdd_guidance.actions.render.render_order import WorkerRender
@@ -21,6 +22,8 @@ from harness.mcp.mcp_annotations import mcp
 from harness.whiteboard import Whiteboard
 
 
+# The group of formats a canvas is written in, which a render saves into the version of the canvas being prepared.
+CANVAS = "canvas"
 # The declarations of guidance that is no fidelity: none.
 _DECLARES_NOTHING = DeclaredOutputs({})
 
@@ -57,11 +60,11 @@ class Render(GuidanceAction):
     def render(
         self, guidance: GuidanceArg, format: str, paths: list[str] | str, content: str = "", source: str | None = None,
     ) -> list[RenderResult | str]:
-        """Convert already-generated content into format. Returns one result per guidance. Every render of paths ends in saved files, which its result names. A drawio, whiteboard, or markdown render is saved beside the first path, under the name the fidelity writes that format to when the path is one of the fidelity's own files or a sketch, else under the path's own name, keeping the layout people gave a drawing already there and everything else only the file held: lines of a markdown document the render does not write stay below it under a heading saying so, and a cell or element only the drawing held stays in it; its result names the saved file as path, and what was kept that way as migrate, each line, cell, or element with what the render added that may have replaced it. A render to python, typescript, or javascript is saved as one file for each piece of the code, at the paths the fidelity declares for that format, such as one file for each aggregate; its result names the files that now hold the render as paths. A code file already there is never replaced: it takes the new shape, a member the source gained arriving empty, and keeps every line it held; a member the model no longer holds stays in the file, marked, and the result lists it as migrate, with its file and the added members that may have replaced it; a member both hold keeps the file's own opening line, and when the model writes that line otherwise the result lists it as migrate too, with the model's line. A render that would lose a line a file holds fails by name and leaves the file as it was. Code from one sketch or file that is not the fidelity's own is saved beside it, named for it. A document rendered from a saved graph is saved at the path the fidelity declares, its {name} filled from what the graph was read from: the one spec's name, else the folder holding every file. A document or drawing of a file that is not one of the fidelity's own is saved beside that file under the file's own name in format, and a render into the format the file is already in keeps the file and names it. Only code that no declared path can place is refused by name, and saves nothing. Only a render into a data format a program reads, such as json, answers its content. A result that lists migrate also carries decide: the agent goes through each entry and decides, by reading it against what the source now holds, whether it moved, was merged, is no longer needed, or is still wanted with the source behind; who added or removed it plays no part, and an entry stays where it is until decided. After the conversion returns, follow place_rendered; for format whiteboard, then follow publish_board.
+        """Convert already-generated content into format. Returns one result per guidance. Every render of paths ends in saved files, which its result names. A drawio, whiteboard, or markdown render is saved beside the first path, under the name the fidelity writes that format to when the path is one of the fidelity's own files or a sketch, else under the path's own name, keeping the layout people gave a drawing already there and everything else only the file held: lines of a markdown document the render does not write stay below it under a heading saying so, and a cell or element only the drawing held stays in it; its result names the saved file as path, and what was kept that way as migrate, each line, cell, or element with what the render added that may have replaced it. A render to python, typescript, or javascript is saved as one file for each piece of the code, at the paths the fidelity declares for that format, such as one file for each aggregate; its result names the files that now hold the render as paths. A code file already there is never replaced: it takes the new shape, a member the source gained arriving empty, and keeps every line it held; a member the model no longer holds stays in the file, marked, and the result lists it as migrate, with its file and the added members that may have replaced it; a member both hold keeps the file's own opening line, and when the model writes that line otherwise the result lists it as migrate too, with the model's line. A render that would lose a line a file holds fails by name and leaves the file as it was. Code from one sketch or file that is not the fidelity's own is saved beside it, named for it. A document rendered from a saved graph is saved at the path the fidelity declares, its {name} filled from what the graph was read from: the one spec's name, else the folder holding every file. A document or drawing of a file that is not one of the fidelity's own is saved beside that file under the file's own name in format, and a render into the format the file is already in keeps the file and names it. A render to claude_design is saved into the version of the Claude Design canvas being prepared, design-canvas/version-N/project/ in the fidelity's root: canvas.json and one prototype page for each screen; its result names them as paths. It refuses a published version, which people edit, and a file there it did not write, such as a ported screen: ask the person, then start the next version. Only code that no declared path can place is refused by name, and saves nothing. Only a render into a data format a program reads, such as json, answers its content. A result that lists migrate also carries decide: the agent goes through each entry and decides, by reading it against what the source now holds, whether it moved, was merged, is no longer needed, or is still wanted with the source behind; who added or removed it plays no part, and an entry stays where it is until decided. After the conversion returns, follow place_rendered; for format whiteboard, then follow publish_board.
         format: the target channel, such as python, markdown, or drawio.
         paths: a file, a list of files, or a folder, named from the project's root or absolute. Required on every call. Pass paths so this action reads locally. Do not pass the document body in content on MCP. A path that is not there, or not under the session's root, is refused, and so is an empty file.
         content: in-process text when paths is empty. Leave this empty on an MCP call.
-        source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, javascript, json, or drawio. md is markdown. Omit source when content is already the current format, or for a file whose extension says its format, such as .drawio, .whiteboard, or .py."""
+        source: the format content is already in. Use sketch for a sketch file. Otherwise markdown, python, typescript, javascript, json, drawio, or claude_design for a canvas's canvas.json. md is markdown. Omit source when content is already the current format, or for a file whose extension says its format, such as .drawio, .whiteboard, or .py."""
         self._work_on(guidance)
 
         def on(worked: WorkedGuidance) -> RenderResult | str:
@@ -94,13 +97,15 @@ class Render(GuidanceAction):
             raise FormatNotDeclared(worked.slug, format.name, sorted(label for label in worked.declared.outputs if Format(label).is_offered))
 
     def _render_files(self, worked: WorkedGuidance, format: str, paths: list[str] | str, source: str | None) -> RenderResult:
-        """The render of the files at paths, saved: a diagram or a document beside them, code at the paths the fidelity
-        declares, and a document from a saved graph at the declared path its scope names. Only a render into a data
+        """The render of the files at paths, saved: a diagram or a document beside them, a canvas into the version of
+        the canvas being prepared (*RenderedCanvas*), code at the paths the fidelity declares, and a document from a saved graph at the declared path its scope names. Only a render into a data
         format, such as json, which a program reads and no one saves as a file, answers its content. Only code that no
         declared path places is refused."""
         sources = self.files.paths_to_read(paths)
         source = SourceFiles(sources, worked).format_read_in(source)
         written = worked.session_output.written if isinstance(worked, FidelityGuidance) else None
+        if Format(format).group == CANVAS and isinstance(worked, FidelityGuidance) and worked.session_output.roots:
+            return RenderedCanvas.of(worked, format).save(self._drawn(RenderRequest.from_files(worked, format, paths, source)))
         saved = RenderedFile.from_sources(sources, Format(source), Format(format), self._placement_of(worked), written)
         if saved is None and (Format(format).is_code or Format(format).group in SAVED_GROUPS):
             return self._saved_by_declared_paths(worked, Format(format), sources, paths, source)

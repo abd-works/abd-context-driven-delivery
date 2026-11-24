@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Iterable
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
-from harness.guidance.practice_formats import FormatAdapter
+from harness.guidance.practice_formats import FormatAdapter, TextOrData
 
 from .collections import ContentTypes, NavComponents, Transitions
 from .nodes import ContentType, Control, Interaction, NavComponent, Region, Screen, StoryDemoControl, Transition, UxContext
@@ -56,10 +56,10 @@ class UxMap(UxNode, FormatAdapter):
     """What reading a file fails with when the file is not this format's map after all, such as text that is not its
     format. The graph reading keeps such a file, with the reason, among the files it could not read."""
 
-    def reads_file(self, file: Path, text: str) -> bool:
-        """Whether file, which holds text, is a UX map in this format: many files share an ending, so each format says
-        which of them are its own. A format no file is read back from reads none."""
-        return False
+    def content_beside(self, file: Path) -> TextOrData:
+        """What a render reads of this format's map from file when the map is written as several files beside it; none
+        for a format whose file alone holds its map, which a render reads as the file's text."""
+        return None
 
     def __init__(self, name: str = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> None:
         # A map is the root of its screens, their parts and the stories they show. One made on no graph is detached, as

@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.guidance import SketchLens
-from harness.guidance.practice_formats import PracticeFormats, Rendered, RenderRequest, TextOrData
+from harness.guidance.practice_formats import PracticeFormats, Rendered, RenderContent, RenderRequest, TextOrData
+from harness.guidance.worked_session import NamedPaths
 from harness.markdown.format import Format
 
 from cdd_guidance.practices.ux.model.graph_reading import UxReading
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_node import UxNode
 
 
@@ -46,6 +50,20 @@ class UxFormats(PracticeFormats):
         if (request.format in views) != (source in views):
             raise ViewNotRendered(request.format, source)
         return super().render(request)
+
+    def read(self, paths: NamedPaths, request: RenderRequest) -> RenderContent:
+        """What request converts from the files at paths: what the map's format reads beside the first of them when it
+        is written as several files, such as a Claude Design canvas's prototype pages beside its canvas.json; else
+        their text."""
+        source = self.adapter(request.source_format) if request.source_format in self else None
+        beside = source.content_beside(self._first_path(paths)) if isinstance(source, UxMap) and paths else None
+        return super().read(paths, request) if beside is None else beside
+
+    def _first_path(self, paths: NamedPaths) -> Path:
+        """The first of paths, read from the project of the session the practice works in."""
+        first = paths if isinstance(paths, str) else paths[0]
+        session = self._practice.session
+        return session.paths.path_named(first) if session is not None else Path(first)
 
     def _incoming(self, format: Format, content: TextOrData) -> TextOrData:
         """content as format's adapter reads it: a view is its text as it is, though it start with a brace as a JSON

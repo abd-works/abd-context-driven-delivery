@@ -22,7 +22,9 @@ from cdd_guidance.practices.ux.ux import Ux, UxOutsideSession, ViewNotRendered
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from space.session.sessions import Sessions
+from harness.drawio import DrawioFile
 from harness.guidance.practice_formats import Rendered
+from harness.markdown.format import Format, SourceDocument
 
 # A story map small enough to render in an example: one epic holding one story.
 _STORY_MAP = "# Story Map\n\n## Epic: Sign Up\n\n- Story: Enter Email\n"
@@ -238,6 +240,11 @@ _IA_DRAWING = (
 )
 
 
+def _cells_of(drawing: str) -> list:
+    """Each cell a drawing draws, by its id, words and style."""
+    return [(cell.id, cell.label, cell.style.text) for cell in DrawioFile.from_text(drawing).whole.cells if cell.is_vertex or cell.is_edge]
+
+
 with description("a UX map rendered over the other file its fidelity keeps"):
     with before.each:
         self.ux = Ux(fidelity="ia")
@@ -254,7 +261,10 @@ with description("a UX map rendered over the other file its fidelity keeps"):
             self.result = self.ux.render("drawio", _UX_CONTEXT, source="markdown", previous=_IA_DRAWING)
 
         with it("should keep the drawing with its screens and transitions"):
-            expect(self.result.content).to(equal(_IA_DRAWING))
+            expect(_cells_of(self.result.content)).to(equal(_cells_of(_IA_DRAWING)))
+
+        with it("should keep the UX context it was rendered from hidden in the drawing"):
+            expect(DrawioFile.from_text(self.result.content).kept_document).to(equal(SourceDocument(Format("markdown"), _UX_CONTEXT)))
 
     with context("from a map that holds its own scope, over the UX context a person wrote"):
         with before.each:

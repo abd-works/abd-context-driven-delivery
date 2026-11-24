@@ -277,3 +277,33 @@ Observed (`ux_spec.py`, "a front-end view rendered to another format").
 *When* Claude Code renders ++bookshop/src/CheckoutView.tsx++ to drawio
 *Then* the render is refused: a front-end view is rendered between typescript and javascript only
   *And* ++bookshop/src/CheckoutView.tsx++ is not read as a mockup page
+
+#### Scenario: Take a mockup to a Claude Design canvas and back
+
+Observed (`cdd_guidance/practices/ux/model/claude_design/claude_design_ux_map_spec.py`; the saving and the trip back through the Render action in `cdd_guidance/actions/render/render_spec.py`, "that is a mockup in html, rendered to claude_design", and through a real cdd server in `cdd_guidance/actions/render/render_saves_beside_source_heavy_spec.py`). Written after defect r3-gizmo-03: the render answered `{}`, saved nothing, and a canvas could not be read back. The person, 2026-11-23: a mockup render to claude_design works and renders back.
+
+*Given* ++bookshop/buy-a-book.html++ holds the mockup
+  *And* the canvas has no version yet
+*When* Claude Code renders ++bookshop/buy-a-book.html++ to claude_design
+*Then* the canvas's first version holds `design-canvas/version-1/project/canvas.json` and a prototype page for each screen, `screens/book-list.dc.html` and the rest
+  *And* each prototype page is a mockup page that opens on its own screen, with its regions and controls, the transitions and what it serves
+  *And* `canvas.json` places each page's board on a canvas page of its own, titled with its screen's name, in screen order
+*When* Claude Code renders `design-canvas/version-1/project/canvas.json` to html
+*Then* the render is ++bookshop/buy-a-book.html++ as it was
+
+#### Scenario: Refuse to read a canvas that is missing a screen's prototype page
+
+Observed (`claude_design_ux_map_spec.py`, "whose prototype page for a screen is missing").
+
+*Given* `design-canvas/version-1/project/canvas.json` places the board of `screens/cart.dc.html`, and the canvas holds no such page
+*When* Claude Code renders `design-canvas/version-1/project/canvas.json` to html
+*Then* the render is refused, naming `screens/cart.dc.html`
+
+#### Scenario: Leave a published canvas and a screen people ported as they are
+
+Observed (`render_spec.py`, "whose canvas's latest version is published" and "whose canvas holds a screen people ported where a prototype page goes"). Source: `harness/design_canvas/.context/cdr/0001-recipe-called-canvas-api.md`, people edit a published canvas, so only the person starts the version after it.
+
+*Given* the canvas's latest version is published, or holds at `screens/cart.dc.html` a screen the agent ported from the product
+*When* Claude Code renders ++bookshop/buy-a-book.html++ to claude_design
+*Then* the render is refused, naming the published version or the ported screen
+  *And* no file of the canvas is written

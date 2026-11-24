@@ -145,7 +145,6 @@ example: "model/_examples/trip/ordering-ux-map.json"
 leaves_out:
   drawio: "the map's name, scope, notes, invariants and references; a screen's description, image and prototype; a control's states, interactions, bound field and story steps, so a Story Demo control reads back as a plain control; content types and navigation components. They stay in the mockup's HTML"
   whiteboard: "a screen's layout, and the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in the mockup's HTML"
-  claude_design: "everything on the way back. The canvas is placed from the UX map and is never read back, so the map stays in the mockup's HTML"
 ```
 
 #### Overview
@@ -153,6 +152,8 @@ leaves_out:
 Lock screens as runnable greybox — typed controls and key interactions.
 
 **In Claude Design, the canvas is the default.** When the session runs in Claude Design, generate this fidelity with `format=claude_design` unless the person names another format: the screens become prototype screens on a Claude Design canvas with the story explorer (step 10), not greybox html, which a Claude Design session cannot show. Before designing a canvas, look for an existing one in context (the UX root's `design-canvas/`, and `.dc.html` artboards and canvas links in the `.context/` of the modules the work touches) and update it; design a new canvas only when none exists or the person asks for one.
+
+Rendering the html mockup to `claude_design` writes one prototype page for each screen, `screens/<slug>.dc.html`, each a mockup page of that screen, and `canvas.json` placing each on a canvas page of its own, into the canvas version being prepared (`design-canvas/version-N/project/`): the latest while it is unpublished, the first when there is none. A published version is refused, because people edit it; ask the person, then start the next version. Rendering `canvas.json` back to html answers the same mockup, so the html and the canvas stay one map.
 
 #### Sketch
 

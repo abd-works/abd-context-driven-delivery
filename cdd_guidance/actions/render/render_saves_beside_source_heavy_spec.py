@@ -16,6 +16,9 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
+from cdd_guidance.practices.ux.model.html.nodes import HtmlUxMap
+from cdd_guidance.practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap
 from harness.mcp.spec_support import SpecServer
 from harness.whiteboard import Whiteboard
 from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
@@ -194,6 +197,24 @@ with description("Render saving what it makes beside its source, called through 
 
         with it("should answer the chat with the saved file rather than the drawing"):
             expect((self.failed, "story-map.drawio" in self.answer, "mxGraphModel" in self.answer)).to(equal((False, True, False)))
+
+    # Exploratory testing, r3-gizmo-03: a mockup rendered to claude_design answered {} and saved nothing, and its canvas
+    # could not be read back. The person's answer (2026-11-23): a mockup render to claude_design works and renders back.
+    with context("a mockup in html rendered to claude_design, then its canvas rendered back to html"):
+        with before.each:
+            self.mockup = HtmlUxMap.create().render(OrderingMap().build(UxMap.create()))
+            (self.project.root / "bookshop").mkdir()
+            (self.project.root / "bookshop" / "buy-a-book.html").write_text(self.mockup, encoding="utf-8")
+            self.to_canvas = asyncio.run(_render(self.server, self.project.root, "claude_design", "bookshop/buy-a-book.html", "html", "ux-mockup"))
+            self.back = asyncio.run(_render(self.server, self.project.root, "html", "design-canvas/version-1/project/canvas.json", "claude_design", "ux-mockup"))
+
+        with it("should save a prototype page for each screen beside the canvas's canvas.json"):
+            project = self.project.root / "design-canvas" / "version-1" / "project"
+            saved = sorted(path.relative_to(project).as_posix() for path in project.rglob("*") if path.is_file())
+            expect(saved).to(equal(["canvas.json", "screens/cart-saved.dc.html", "screens/cart.dc.html", "screens/catalog.dc.html"]))
+
+        with it("should answer the same HTML mockup on the way back"):
+            expect(json.loads(self.back[1])[0]["content"]).to(equal(self.mockup))
 
     # Exploratory testing, r3-bolt-06: a domain model rendered to Python came back as one text and nothing was saved.
     # The person's answer (2026-11-20): every render ends in a saved file.
