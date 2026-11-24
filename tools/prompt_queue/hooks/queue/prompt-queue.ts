@@ -703,6 +703,7 @@ function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
     "Sub-agent mode is on. You decide where this message goes: do it yourself; make it a task of an item in a robot's queue with prompt-queue.add_interruption;",
     'or give it to a robot as a new item: prompt-queue.add, then prompt-queue.assign with the robot\'s name, so it stands in that robot\'s queue alone. Take it off this goal when it goes elsewhere,',
     "then call prompt-queue.show and check each card stands once, in the robot's queue you meant.",
+    "Work that waits on a robot's result goes to that robot, after the card it waits on, so no robot waits on another or hands its result over; start a new robot only for work that can run at the same time.",
     "A robot works only the words this chat sends it, and says when it finished: send it new work with SendMessage to its robot name. The robots' queues:",
     ...robots.map((robot, place) => `${agentNameOf(robot, place)}: ${robotPromptsOf(goals, robot, place).map(goal => `[${goal.id}] ${goal.text.slice(0, GOAL_TITLE_COLUMNS)}`).join('; ')}`),
   ]
@@ -1086,7 +1087,9 @@ const PLANNING_INSTRUCTIONS =
 const GROUPING_INSTRUCTIONS =
   'You are given a JSON array of prompts a person queued for a coding agent. Group them into tasks that ' +
   'independent sub-agents can run at the same time: prompts that depend on each other or touch the same ' +
-  'work go in one task, kept in their order. Answer with only a JSON array of ' +
+  "work go in one task, kept in their order. A prompt that needs another prompt's result, such as reporting on a " +
+  "test run or building on a change, goes in that prompt's task, so no sub-agent waits on another or hands its " +
+  'result over; make as many tasks as can truly run at once, and no more. Answer with only a JSON array of ' +
   '{"description": "<3 to 5 words>", "prompts": ["<prompt>", ...]}, using every prompt exactly once.'
 
 /** Keeps the queue's latest failure, what failed with the reason it gave and what the queue was doing, for CDD's shared

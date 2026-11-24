@@ -2116,3 +2116,32 @@ test('a robot whose sub-agent started again before the check is not checked on',
 
   expect(asked).toEqual([])
 })
+
+
+test("in sub-agent mode the note on a new message says work that waits on a robot's result goes to that robot, so no robot waits on another", async ($, on) => {
+  groupedQueue(on)
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'write the heavy results into the report', wait: false, origin: { kind: 'composer' } })
+
+  expect(carried.join()).toContain("waits on a robot's result goes to that robot")
+})
+
+test('grouping asks for work that waits on another prompt\'s result to go to the same robot, so no robot waits on another', async ($, on) => {
+  seedQueue(on, true)
+  const systems: string[] = []
+  on('model.complete', (_, e) => {
+    systems.push((e as { system: string }).system)
+    return { value: { isAnswered: true, text: '[]', usage: NO_USAGE } }
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-sub-agents' })
+  await ui.unmount()
+
+  expect(systems[0]).toContain("needs another prompt's result")
+})
