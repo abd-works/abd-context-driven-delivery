@@ -121,3 +121,45 @@ with description("the cdd entry a checkout's chats reach its lane's server throu
 
         with it("should drop the cdd entry, so the cdd plugin's server answers"):
             expect(list(self.servers)).to(equal(["notes"]))
+
+    with context("of another project, installed from a ticket's worktree served on the dev lane"):
+        with before.each:
+            self.other = self.root / "plain-folder"
+            self.other.mkdir()
+            self.other_config = self.other / ".mcp.json"
+            servers = {"cdd": {"type": "http", "url": self.lanes.dev.daemon.url}, "notes": {"command": "notes-server"}}
+            self.other_config.write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")
+
+        with context("with no lane asked for"):
+            with before.each:
+                installation = McpInstallation(*_placed(self.other / ".claude"), self.lanes.dev.served_checkout(self.project))
+                installation.cdd_entry.point_chats_at_served_lane()
+                self.servers = json.loads(self.other_config.read_text(encoding="utf-8"))["mcpServers"]
+
+            with it("should drop the cdd entry, so the project's chats reach the stable lane through the cdd plugin"):
+                expect(list(self.servers)).to(equal(["notes"]))
+
+        with context("asked for the dev lane"):
+            with before.each:
+                target = InstallTarget(IdeLayout("Claude"), self.other / ".claude", dev_lane=True)
+                installation = McpInstallation(target, InstallRecord(target), self.lanes.dev.served_checkout(self.project))
+                installation.cdd_entry.point_chats_at_served_lane()
+                self.servers = json.loads(self.other_config.read_text(encoding="utf-8"))["mcpServers"]
+
+            with it("should name the dev lane's server"):
+                expect(self.servers["cdd"]["url"]).to(equal(self.lanes.dev.daemon.url))
+
+            with it("should name that project as the chats' project"):
+                expect(self.servers["cdd"]["headers"]).to(equal({PROJECT_HEADER: str(self.other.resolve())}))
+
+    with context("of another project, installed from a main checkout and asked for the dev lane"):
+        with before.each:
+            self.other = self.root / "plain-folder"
+            self.other.mkdir()
+            target = InstallTarget(IdeLayout("Claude"), self.other / ".claude", dev_lane=True)
+            installation = McpInstallation(target, InstallRecord(target), self.lanes.stable.served_checkout(self.project))
+            installation.cdd_entry.point_chats_at_served_lane()
+            self.servers = json.loads((self.other / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]
+
+        with it("should name the dev lane's server"):
+            expect(self.servers["cdd"]["url"]).to(equal(self.lanes.dev.daemon.url))

@@ -149,21 +149,31 @@ class CddEntry:
             self._installation.wrote(written)
 
     def point_chats_at_served_lane(self) -> None:
-        """Point the Claude Code chats working in this checkout at the server of the lane it is served on: the dev
-        lane's through a ``cdd`` entry in the project's ``.mcp.json``, the stable lane's through the cdd plugin alone.
-        A full install does this, and so does every switch of the server onto this checkout's code, so a ticket's
+        """Point the Claude Code chats working in the project installed into at the server of its lane: the dev lane's
+        through a ``cdd`` entry in the project's ``.mcp.json``, the stable lane's through the cdd plugin alone. A full
+        install does this, and so does every switch of the server onto the served checkout's code, so a ticket's
         worktree pinned on the dev lane is not left talking to the stable lane."""
-        if self._installation.served.daemon.home.is_dev_lane:
+        if self.points_at_dev_lane:
             self._write_dev_lane_entry()
         else:
             self._drop_cdd_entry(self._project_root / ".mcp.json", "project's", remove_when_empty=True)
+
+    @property
+    def points_at_dev_lane(self) -> bool:
+        """Whether the project's chats reach the dev lane: the served checkout's own chats run on the lane it is served
+        on, and any other project's on the stable lane unless the install was asked for the dev lane, so an install
+        into a person's project never follows the lane of the checkout that ran it."""
+        served = self._installation.served
+        if self._project_root.resolve() == served.checkout.resolve():
+            return served.home.is_dev_lane
+        return self._installation.target.dev_lane
 
     def _write_dev_lane_entry(self) -> None:
         """Point the chats working in this checkout at the dev lane's server. The cdd plugin names the stable lane's
         server, which runs main and so lists none of the tools the feature adds; a ``cdd`` entry in the project's
         ``.mcp.json`` outranks the plugin, so a chat started in the worktree lists and calls the feature's own tools."""
         config_path = self._project_root / ".mcp.json"
-        server = {"type": "http", "url": self._installation.served.daemon.url, "headers": {PROJECT_HEADER: str(self._project_root.resolve())}}
+        server = {"type": "http", "url": self._installation.lanes.dev.daemon.url, "headers": {PROJECT_HEADER: str(self._project_root.resolve())}}
         manifest = self._merged_with_other_servers(config_path, {self._layout.mcp_servers_key: {"cdd": server}})
         self._ide_config(config_path).write(manifest)
         self._installation.wrote(config_path)
@@ -260,10 +270,12 @@ class McpChannelServer(ChannelServer):
     server to every chat, and the mods of the code the server runs installed from the home's marketplace. Inside the cdd
     server, as an install through MCP runs, it stands up nothing: the server already serves them."""
 
-    def __init__(self, served: ServedCheckout, daemon: McpDaemon, claude_plugins: ClaudePlugins, layout: IdeLayout) -> None:
+    def __init__(self, served: ServedCheckout, lanes: ServerLanes, claude_plugins: ClaudePlugins, layout: IdeLayout) -> None:
         self.served = served
-        # The stable lane's server, which every chat's cdd plugin names.
-        self._daemon = daemon
+        # The stable lane's server, which every chat's cdd plugin names, and the dev lane, whose feature an install
+        # withdraws once that feature's worktree is gone.
+        self._daemon = lanes.stable.daemon
+        self._dev_lane = lanes.dev
         self._claude_plugins = claude_plugins
         self._layout = layout
 
@@ -284,8 +296,11 @@ class McpChannelServer(ChannelServer):
         """Start the one cdd server when none answers, installing ``~/.cdd/`` on first use; an install that finds a
         server already running leaves it, and the code it serves, alone. For Claude Code also install the cdd plugin
         and the mods of the code the served lane runs; chats install mods from the stable lane's marketplace, so a dev
-        lane's mods are published there first."""
-        lines = [f"mcp: {self.served.ensure()}"]
+        lane's mods are published there first. A dev lane whose served feature's worktree is gone goes back to main
+        first, and the install says so."""
+        returned = self._dev_lane.return_to_main_when_feature_gone()
+        lines = [f"dev lane: {returned}"] if returned else []
+        lines.append(f"mcp: {self.served.ensure()}")
         if self._layout.is_claude_code:
             lines.append(f"cdd plugin: {self._claude_plugins.install(self._daemon.home.marketplace.cdd_plugin)}")
             lines.extend(self.install_mods())
@@ -312,10 +327,12 @@ class McpInstallation(RegisteredChannel):
         stable lane for a main checkout, the dev lane for a ticket's worktree."""
         super().__init__(target, record, RepositoryToolsets(served.checkout))
         self.served = served
-        # The stable lane's server is the one every chat's cdd plugin names, so the plugins and the IDE entry follow it.
-        self.daemon = ServerLanes.from_serving(served.daemon.home, served.daemon.address).stable.daemon
+        # Both lanes as the served checkout's sees them. The stable lane's server is the one every chat's cdd plugin
+        # names, so the plugins and the IDE entry follow it; a project pointed at the dev lane names the dev lane's.
+        self.lanes = ServerLanes.from_serving(served.daemon.home, served.daemon.address)
+        self.daemon = self.lanes.stable.daemon
         self.claude_plugins = ClaudePlugins(self.daemon.home)
-        self.server = McpChannelServer(served, self.daemon, self.claude_plugins, target.layout)
+        self.server = McpChannelServer(served, self.lanes, self.claude_plugins, target.layout)
         # The IDE's cdd entry, written once the whole install has been recorded.
         self.cdd_entry = CddEntry(self)
         self.mcp_operations: list[AgentTool] = []

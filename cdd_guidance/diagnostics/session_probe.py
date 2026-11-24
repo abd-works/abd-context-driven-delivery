@@ -58,7 +58,7 @@ class SessionProbe:
         from space.session.sessions import Sessions
 
         sessions = Sessions(self._repo)
-        sessions.switch(_SESSION_PROBE_NAME, self._work)
+        sessions.switch(_SESSION_PROBE_NAME, self._work, create=True)
         session = sessions.current()
         transcript = self._probe_transcript(session)
         call = ToolCall(request=ToolRequest(ChatPointer("guidance-probe", transcript, "1")))

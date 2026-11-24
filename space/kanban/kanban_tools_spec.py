@@ -31,7 +31,8 @@ from space.kanban.session_board_examples import saved_graph, saved_practice  # n
 from harness.graph.edge import Edge  # noqa: E402
 from harness.graph.saved_graph import SavedGraph, SavedNode  # noqa: E402
 from space.kanban.story_test import progress_in  # noqa: E402
-from space.kanban.ticket import MainStaysOpenError, Ticket  # noqa: E402
+from space.kanban.ticket import Ticket  # noqa: E402
+from space.session.session import MainStaysOpenError  # noqa: E402
 from space.kanban.board import NotAStageError  # noqa: E402
 from space.kanban.board_practices import PracticeNotFoundError  # noqa: E402
 from space.session import Sessions  # noqa: E402
@@ -157,7 +158,7 @@ def a_dozen_tickets_overview(project: ProjectTools) -> dict:
     for number in range(12):
         project.ticket(f"ticket-{number}", *DISCOVERY_DONE, title=f"Ticket {number}")
     # The chat bar of ticket-0's own chat, which works on ticket-0.
-    project.call("sessions.switch", name="ticket-0")
+    project.call("sessions.switch", name="ticket-0", create=True)
     return project.call("board.overview")
 
 
@@ -1284,7 +1285,7 @@ with description("the board tools") as self:
     with context("with a session open in the project"):
         with before.all:
             def logged(project: ProjectTools) -> str:
-                Sessions(project.root).switch("pet-visits", project.root)
+                Sessions(project.root).switch("pet-visits", project.root, create=True)
                 project.call("board.show")
                 return (project.sessions / "pet-visits" / "session.log").read_text(encoding="utf-8")
 
@@ -1378,7 +1379,7 @@ with description("the board tools") as self:
                 project.ticket("pet-visits", title="Pet visits")
                 project.backlog_item("returns.md", "Returns and refunds")
                 board = project.call("board.show")
-                project.call("sessions.switch", name="pet-visits")
+                project.call("sessions.switch", name="pet-visits", create=True)
                 return board, project.call("board.show")["active"]
 
             self.board, self.active = ProjectTools.answer_of(shown)

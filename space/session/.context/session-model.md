@@ -34,7 +34,8 @@ The work sessions of one checkout: open ones in `.sessions/{name}/`, closed ones
 + create(name: str, workpath: Path | None = None, title: str = '', scope: str = '', parent: str = ''): Session
 + current(call: ToolCall | None = None): Session
 	-> OpenSessions.current
-+ switch(name: str = '', workpath: Path | None = None, call: ToolCall | None = None): str
++ switch(name: str = '', workpath: Path | None = None, create: bool = False, call: ToolCall | None = None): str
+	// a name no session has is refused with UnknownSessionError unless create is true
 	-> OpenSessions.switch
 ---<<creates>>--> Name
 ---<<calls of_project on>>--> Repo
@@ -104,10 +105,11 @@ Which session each chat has open in one checkout, kept by the cdd server under `
 + current(chat: str): Session
 + close(session: Session, chat: str): None
 + ticket_of_worktree(): Session | None
-+ switch(name: str, workpath: Path | None, call: ToolCall | None): SwitchedSession
++ switch(name: str, workpath: Path | None, create: bool, call: ToolCall | None): SwitchedSession
 ---<<creates>>--> WorkState
 ---<<creates>>--> SwitchedSession
 ---<<raises>>--> SessionNameRequiredError
+---<<raises>>--> UnknownSessionError
 
 ## SwitchedSession
 
@@ -147,6 +149,8 @@ One named piece of work in a project, its record (session.json, idea file) kept 
 ------
 + name: str
 	// its record folder's name
++ is_main: bool
+	// whether it is main, the default session, which never closes
 + << association >> sessions: Sessions
 + << association >> repo: Repo
 + << composition >> checkout: SessionCheckout
@@ -201,9 +205,12 @@ One named piece of work in a project, its record (session.json, idea file) kept 
 + reopen(): Session
 	-> Sessions.moved
 + practice(name: str): PracticeSessionOutput
++ refuse_if_main(action: str): None
+	// raises MainStaysOpenError for main
 + close(call: ToolCall): None
-	// closes the session for the calling chat
+	// closes the session for the calling chat; main, the default session, raises MainStaysOpenError
 	-> OpenSessions.close
+---<<raises>>--> MainStaysOpenError
 + choose_workpath(path: str = ''): Session
 + show(): Session
 + add_tag(word: str): None
@@ -380,6 +387,25 @@ A log a hook appends to while a session is open, such as `dispatch.debug` or the
 + append(text: str): None
 + stamped(line: str): None
 ---<<stamps lines with>>--> LogTimestamp
+
+## MainStaysOpenError : ValueError
+
+Raised when a tool would close main, the default session, or a board tool would archive, delete, or shelve it or edit its text or tags (`Session.refuse_if_main`); `session.close` and `ticket.close` give this one refusal. Keeps what was asked of main.
+
++ MainStaysOpenError(action: str)
+------
++ action: str
+----
+
+## UnknownSessionError : LookupError
+
+`sessions.switch` to a name no session has, without create: nothing is made or opened. Names the name asked for and the sessions there are.
+
++ UnknownSessionError(name: str, there: list[str])
+------
++ name: str
++ there: list[str]
+----
 
 ## SessionFolderHeldError : RuntimeError
 

@@ -227,6 +227,14 @@ with description("a guidance action"):
 
             expect(lambda: GuidanceAction()._work_on({"foo": "bar"})).to(raise_error(GuidanceMappingNamesNoToolset, contain("toolset")))
 
+    with context("with a mapping sent as text that is not JSON"):
+        with it("should refuse it, naming the text and where it stops being JSON"):
+            from harness.guidance_actions import GuidanceAction, GuidanceMappingUnreadable
+
+            expect(lambda: GuidanceAction()._work_on('{"toolset": "stories",}')).to(
+                raise_error(GuidanceMappingUnreadable, contain('{"toolset": "stories",} is not JSON'))
+            )
+
     # Reported 2026-11-18: with ux off, `ux-ia` alone ran as text, so render answered the slug back and validate checked
     # nothing, while ["stories-story-map", "ux-ia"] said no practice had the slug.
     with context("in a session that works on stories with ux turned off"):

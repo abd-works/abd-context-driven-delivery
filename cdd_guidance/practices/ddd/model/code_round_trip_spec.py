@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from expects import be_true, contain, equal, expect
-from mamba import context, description, it
+from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
 from cdd_guidance.practices.ddd.ddd import Ddd
@@ -175,3 +175,93 @@ with description("Ddd.render at model fidelity"):
             aggregate = model.contexts[0].aggregates[0]
             expect([card.name for card in aggregate.classes]).to(equal(["Cart", "CartRepository", "CartLine"]))
             expect(aggregate.repository is not None).to(be_true)
+
+
+# Seen 2026-11-21 (r3-bolt-07): a model rendered from Python to TypeScript kept Python's type spellings, an operation's
+# note and call became a Python body to translate, and TypeScript rendered back kept `-> boolean` and lost each note.
+_SHOP = """# Domain Model
+
+## Ordering | custom
+
+### Cart
+
+#### Cart <<Aggregate Root>> <<Entity>>
+
+------
++ cartId: string
++ << composition >> lines: CartLine[]
++ checkedOut: boolean
+----
++ addBook(bookId: string, quantity: number): CartLine
+	// the title and price cross at the moment the book is added
+	-> BookRepository.load(bookId)
++ isEmpty(): boolean
+
+#### CartLine <<Value Object>>
+
+------
++ bookId: string
++ quantity: number
+----
+
+#### CartRepository <<Repository>>
+
+------
++ << aggregation >> carts: Collection<Cart>
+----
++ load(cartId: string): Cart
++ search(customerId: string): Order[]
+	// the Customer looks up their own orders
+"""
+
+
+def _rendered_through(*formats):
+    """The shop's model rendered from markdown through each of formats in turn: the text of the last."""
+    text, source = _SHOP, "markdown"
+    for target in formats:
+        text, source = Ddd(fidelity="model").render(target, text, source=source).content, target
+    return text
+
+
+with description("a domain model rendered from one code format to the other") as self:
+    with context("from Python to TypeScript"):
+        with before.all:
+            self.code = _rendered_through("python", "typescript")
+
+        with it("should write a list as a TypeScript array"):
+            expect(self.code).to(contain("search(customerId: string): Order[] {"))
+
+        with it("should write a generic type in TypeScript's brackets"):
+            expect(self.code).to(contain("carts: Collection<Cart>;"))
+
+        with it("should keep the relationship each property is marked with"):
+            expect(self.code).to(contain("  // << composition >>\n  lines: CartLine[];"))
+
+        with it("should write an operation's note as a TypeScript comment"):
+            expect(self.code).to(contain("    // the Customer looks up their own orders\n"))
+
+        with it("should write an operation's call in TypeScript, with its arguments"):
+            expect(self.code).to(contain("    BookRepository.load(bookId);\n"))
+
+        with it("should leave no Python body to translate"):
+            expect(self.code).not_to(contain("python body to translate"))
+
+    with context("from TypeScript back to Python"):
+        with before.all:
+            self.code = _rendered_through("python", "typescript", "python")
+
+        with it("should write a boolean as Python writes one"):
+            expect(self.code).to(contain("def isEmpty(self) -> bool:"))
+
+        with it("should leave no TypeScript body to translate"):
+            expect(self.code).not_to(contain("typescript body to translate"))
+
+    with context("from TypeScript to markdown"):
+        with before.all:
+            self.back = _rendered_through("python", "typescript", "markdown")
+
+        with it("should keep each operation's note"):
+            expect(self.back).to(contain("+ search(customerId: string): Order[]\n\t// the Customer looks up their own orders"))
+
+        with it("should keep each call with its arguments"):
+            expect(self.back).to(contain("\t-> BookRepository.load(bookId)"))

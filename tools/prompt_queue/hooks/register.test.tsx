@@ -1338,18 +1338,25 @@ test('the queue beside a prompt tells the agent to keep one card for each goal, 
 })
 
 
-test('a message sent between turns is filed under the goal last worked, opening it again, instead of a card of its own', async ($, on) => {
+/** The goal last worked, a, is done and its turn ended asking the person something, when the person sends a message. */
+async function messageSentAfterQuestion($: TestEngine, on: TestOn, text: string) {
   const seeded = seedQueue(on, false, '', [
     { id: 'a', text: 'Write the scenarios', is_done: true },
     { id: 'b', text: 'Run the unit tier' },
   ] as Prompt[], true, '', 'a')
+  planToolAnswers(on)
   const carried: string[] = []
   on('prompt.submit', (_, e) => {
     carried.push(...(e.context ?? []))
     return { text: e.text }
   })
+  await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'Two ways to cut it.', ask: 'Cut it with an ellipsis?' })
+  await $.prompt.submit({ text, wait: false, origin: { kind: 'composer' } })
+  return { seeded, carried }
+}
 
-  await $.prompt.submit({ text: 'cut the text with an ellipsis', wait: false, origin: { kind: 'composer' } })
+test('an answer sent between turns to the question the agent asked is filed under the goal last worked, opening it again', async ($, on) => {
+  const { seeded, carried } = await messageSentAfterQuestion($, on, 'cut the text with an ellipsis')
 
   expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
   expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] cut the text with an ellipsis', state: 'pending' }])
@@ -1357,19 +1364,80 @@ test('a message sent between turns is filed under the goal last worked, opening 
   expect(carried.join()).toContain('filed it under the goal last worked, [a]')
 })
 
-
-test("the note on a filed message tells the agent to decide first where it belongs, listing the goals on the queue", async ($, on) => {
-  seedQueue(on, false, '', [
-    { id: 'a', text: 'Write the scenarios', is_done: true },
-    { id: 'b', text: 'Run the unit tier' },
-  ] as Prompt[], true, '', 'a')
+test('a message about new work sent between turns starts a goal of its own, not another step of the goal last worked', async ($, on) => {
+  const seeded = seedQueue(on, false, '', QUEUED.map(prompt => ({ ...prompt })), true, '', 'a')
   const carried: string[] = []
   on('prompt.submit', (_, e) => {
     carried.push(...(e.context ?? []))
     return { text: e.text }
   })
 
-  await $.prompt.submit({ text: 'take the Alt hint off the queue', wait: false, origin: { kind: 'composer' } })
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['[interruption] Fix the Files app', 'Write the scenarios', 'Run the unit tier'])
+  expect(seeded.prompts[1]!.steps).toBeUndefined()
+  expect(seeded.stored.askedAbout?.value).toBe(seeded.prompts[0]!.id)
+  expect(carried.join()).toContain(`as [${seeded.prompts[0]!.id}]`)
+})
+
+// A first message of a chat as Claude Code hands a paste to the mod: the pasted text inside its tags.
+const PASTED_NOTES = '<pasted_content id="7250">\n## Notes from the backlog\nFrom `board-enhancements` the board needs a filter.\n</pasted_content>'
+
+test('a goal sent as pasted text is titled by the paste\'s first line, without its tags', async ($, on) => {
+  const seeded = seedQueue(on, false, '', [], true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  await $.prompt.submit({ text: PASTED_NOTES, wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['[interruption] Notes from the backlog'])
+})
+
+test("a goal sent as the person's words with a paste is titled by the person's words", async ($, on) => {
+  const seeded = seedQueue(on, false, '', [], true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  await $.prompt.submit({ text: `Triage these notes into the backlog\n${PASTED_NOTES}`, wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['[interruption] Triage these notes into the backlog'])
+})
+
+test("a long goal is titled by its first sentence, cut short with an ellipsis", async ($, on) => {
+  const seeded = seedQueue(on, false, '', [], true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+  const long = `Fix the queue band's goal title. ${'Then keep going with every other thing on the list. '.repeat(5)}`
+
+  await $.prompt.submit({ text: `${'Rework '.repeat(20)}the band. ${long}`, wait: false, origin: { kind: 'composer' } })
+  await $.prompt.submit({ text: long, wait: false, origin: { kind: 'composer' } })
+
+  // Each message goes above the goal sent before it, the next to do.
+  const [sentence, cut] = seeded.prompts.map(prompt => prompt.text)
+  expect(sentence).toBe("[interruption] Fix the queue band's goal title.")
+  expect(cut!.length).toBeLessThanOrEqual('[interruption] '.length + 80)
+  expect(cut!.endsWith('Rework…')).toBe(true)
+})
+
+test('messages sent after a pasted first message each start a goal of their own, so no goal gathers them as interruptions', async ($, on) => {
+  const seeded = seedQueue(on, false, '', [], true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  await $.prompt.submit({ text: PASTED_NOTES, wait: false, origin: { kind: 'composer' } })
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+  await $.prompt.submit({ text: 'Run the unit tier', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text).sort()).toEqual(
+    ['[interruption] Fix the Files app', '[interruption] Notes from the backlog', '[interruption] Run the unit tier'])
+  expect(seeded.prompts.flatMap(prompt => prompt.steps ?? [])).toEqual([])
+})
+
+test('a pasted message sent mid-work becomes a step titled by its first line, not the paste', async ($, on) => {
+  const { seeded } = await messageSentMidWork($, on, PASTED_NOTES)
+
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] Notes from the backlog', state: 'pending' }])
+})
+
+
+test("the note on a filed message tells the agent to decide first where it belongs, listing the goals on the queue", async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'take the Alt hint off the queue')
 
   expect(carried.join()).toContain('Before any other work, decide where this message belongs')
   expect(carried.join()).toContain('[b] Run the unit tier')
@@ -1549,6 +1617,29 @@ test("a card queued for a robot by name shows in that robot's queue", async ($, 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
 
   expect(JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))).toContain('"card-row-c"')
+  await ui.unmount()
+})
+
+// Answered 2026-11-23 (sparky-06): an agent types a robot's name by hand, so case and outer spaces do not make another robot.
+test("a card queued for a robot by name in another case and with spaces shows in that robot's queue", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...seeded.prompts, { id: 'c', text: '[for  bolt ] Run the heavy tier' }]).map(answered) }, version: 2 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))).toContain('"card-row-c"')
+  await ui.unmount()
+})
+
+test("a card given to a robot spelled in another case stands in that robot's queue, not in a second robot's", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.queue = { value: { chat: CHAT, prompts: ([...seeded.prompts, { id: 'c', text: 'Run the heavy tier', robot: 'bOLT' }]).map(answered) }, version: 2 }
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const bolt = JSON.stringify(await ui.find({ type: 'Box', key: 'agent-column-2' }))
+  const third = await ui.find({ type: 'Box', key: 'agent-column-3' })
+
+  expect([bolt.includes('"card-row-c"'), third]).toEqual([true, undefined])
   await ui.unmount()
 })
 

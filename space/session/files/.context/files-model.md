@@ -35,11 +35,15 @@ List and read the files under a session's roots, the folders its practices work 
 	-> ToolCall.session
 + list(folder: str = ''): Folder
 + read(path: str): FileText
-	// never reads a path outside the session's roots; such a path raises PathOutsideRootsError
+	// never reads a path outside the session's roots; such a path raises PathOutsideRootsError, and one inside a .git folder VersionControlPathRefused
++ write(path: str, text: str, version: str = ''): FileText
+	// a file on disk that is no longer the version its read answered raises FileChangedSinceReadError and is left as it is
 + find(pattern: str): list[Path]
 ---<<creates>>--> Folder
 ---<<creates>>--> FileText
 ---<<raises>>--> PathOutsideRootsError
+---<<raises>>--> VersionControlPathRefused
+---<<raises>>--> FileChangedSinceReadError
 ---<<annotated with>>--> LanguageAdapter
 ---<<annotated with>>--> AgentToolSetAnnotation
 ---<<annotated with>>--> Mcp
@@ -59,11 +63,32 @@ One file something declares, such as a fidelity's output, as a path from the pro
 
 The text of one file, with its path from the workpath; no text for a file that is not there, which `exists` tells from a file that is there and empty.
 
-+ FileText(path: str, text: str, exists: bool = True)
++ FileText(path: str, text: str, version: str, exists: bool = True)
 ------
 + path: Annotated[str, SourceFile]
 + text: str
++ version: str
 + exists: bool
+----
+
+## VersionControlPathRefused : PermissionError
+
+A read or write aimed inside a repository's .git folder, which holds git's own record: a hook written there runs on the person's next commit.
+
++ VersionControlPathRefused(path: str)
+------
++ path: str
+----
+
+## FileChangedSinceReadError : RuntimeError
+
+A write of a file that is no longer the version its caller read: changed, made or deleted on disk since, so saving would lose that change unseen.
+
++ FileChangedSinceReadError(path: str, version: str, on_disk: str)
+------
++ path: str
++ version: str
++ on_disk: str
 ----
 
 ## PathOutsideRootsError : ValueError

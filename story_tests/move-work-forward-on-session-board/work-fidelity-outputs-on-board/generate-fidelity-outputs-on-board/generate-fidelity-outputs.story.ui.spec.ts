@@ -139,7 +139,8 @@ test.describe('with a chat connected', () => {
   }
 
   test.describe('Choose Action And Formats', () => {
-    test.describe('Keep Run off with no format picked', () => {
+    // Exploratory testing, widget-13: a fidelity keeps at least one format chosen, so unpicking its last chip is refused.
+    test.describe('Keep the last format picked', () => {
       test.beforeEach(async ({ page }) => {
         writeInto(DECLARED_STORY_MAP, '# Check Out Order\n')
         await openWithChat(page)
@@ -147,12 +148,12 @@ test.describe('with a chat connected', () => {
         await turnOffActiveSessionOnly(page)
       })
 
-      test('Then Run is off', async ({ page }) => {
+      test('Then a toast says markdown is the only format chosen and the chip stays picked', async ({ page }) => {
         const bar = await openStoryMapTile(page)
         await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'true')
         await chip(bar, 'markdown').click()
-        await expect(bar.locator('[aria-pressed="true"]')).toHaveCount(0)
-        await expect(runOf(bar)).toBeDisabled()
+        await expect(toast(page, 'markdown is the only format chosen for story_map').first()).toBeVisible()
+        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'true')
       })
     })
 

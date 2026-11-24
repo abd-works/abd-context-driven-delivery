@@ -46,7 +46,7 @@ def _session_with_code():
     (repo / "work" / "kanban").mkdir(parents=True)
     (repo / TICKET_FILE).write_text(TICKET_TEXT, encoding="utf-8")
     (repo / BOARD_FILE).write_text(BOARD_TEXT, encoding="utf-8")
-    Sessions(repo).switch("checkout-flow", repo / "work")
+    Sessions(repo).switch("checkout-flow", repo / "work", create=True)
     session = Sessions(repo).current()
     for key, practice in session.own_practices.items():
         if key != "clean_engineering":

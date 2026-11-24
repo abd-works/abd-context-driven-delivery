@@ -25,17 +25,23 @@ from harness.e2e_review.e2e_review import RUN_STAMP_FORMAT, ScheduledReview
 from harness.installation.data_class import data_field
 from harness.mcp.cdd_home import CddHome
 from harness.git.git import Git, RepoConnectError
+from harness.process.lock_file import LockFile
 from harness.process.process import BackgroundStart, PythonInterpreter, RunningProcess
 from harness.process.starter_bound_job import StarterBoundJob
 
 TEST_SCRIPT = Path("scripts") / "test.ps1"
 MAIN_BRANCH = "main"
 RECORD_FILE = "test-runs.json"
-# Held while one process looks at what is due and starts it.
+# The lock file held while one process looks at what is due and starts it, or saves a run.
 CLAIM_FILE = "test-runs.claim"
-CLAIM_STALE_SECONDS = 60
 # How long a run waits between tries at a claim another process holds, which is held for a second or two.
 CLAIM_WAIT_SECONDS = 1
+# How long a save waits for another process's look at the record to end.
+SAVE_WAIT_SECONDS = 30
+# What the record keeps a tier run by scripts/test.ps1 itself under, beside the tier's latest run and the one before it.
+SCRIPT_RUN = "script"
+# Set for the scripts/test.ps1 a recorded run starts, which then does not record itself a second time.
+RUN_RECORDED_VARIABLE = "CDD_TEST_RUN_RECORDED"
 # How long a read or a write of the record is tried again while Windows refuses it, which it does for the instant
 # another process puts a new record in the file's place.
 RECORD_BUSY_SECONDS = 5
@@ -165,6 +171,10 @@ class TestRun:
         """Its interval has passed since it started; at once when it was abandoned, since it gave no result."""
         return self.outcome is RunOutcome.ABANDONED or now - self.started_at >= self.tier.interval
 
+    def is_on(self, checkout: Path | None) -> bool:
+        """It ran, or runs, on checkout."""
+        return bool(checkout) and os.path.normcase(self.checkout) == os.path.normcase(str(checkout))
+
     @property
     def is_live(self) -> bool:
         """Recorded as running, and the process it names still runs: one with its id that started when the record
@@ -224,7 +234,9 @@ class TestRunRecordUnreadable(Exception):
 
 class TestRunRecord:
     """The latest run of each tier on one checkout, and the finished run before it, kept with every other checkout's
-    in one JSON file in the cdd home. A record with no checkout holds the runs kept before runs named theirs."""
+    in one JSON file in the cdd home, with the run scripts/test.ps1 makes of a tier when a person or an agent starts it
+    in the checkout's own folder. A record with no checkout holds the runs kept before runs named theirs. One process at
+    a time looks at the record and changes it, holding its claim, a *LockFile* beside it."""
 
     __test__ = False
 
@@ -233,6 +245,7 @@ class TestRunRecord:
         self.path = self.folder / RECORD_FILE
         self.checkout = Path(checkout).resolve() if checkout else None
         self.lock = threading.RLock()
+        self._claim = LockFile(self.folder / CLAIM_FILE, SAVE_WAIT_SECONDS)
 
     def latest(self, tier: TestTier) -> TestRun | None:
         return self._run(tier, "latest")
@@ -244,7 +257,8 @@ class TestRunRecord:
     @property
     def runs(self) -> list[TestRun]:
         """Every run the file holds, of every tier and every checkout: any of them may be live on this computer."""
-        return [self._as_run(held[which]) for held in self._read().values() for which in ("latest", "previous") if held.get(which)]
+        return [self._as_run(held[which]) for held in self._read().values() for which in ("latest", "previous", SCRIPT_RUN)
+                if held.get(which)]
 
     def new_run(self, tier: TestTier, commit: str, started_at: datetime) -> TestRun:
         """A run of tier on commit of this record's checkout, not yet kept."""
@@ -252,49 +266,40 @@ class TestRunRecord:
 
     def save(self, run: TestRun) -> None:
         """Keep run as its tier's latest on this checkout; a different run held as latest becomes the previous one."""
-        with self.lock:
-            runs = self._read()
-            held = dict(self._held(runs, run.tier))
+        def as_latest(held: dict) -> None:
             latest = held.get("latest")
             if latest and self._as_run(latest).run_id != run.run_id:
                 held["previous"] = latest
             held["latest"] = run.to_json()
-            runs.pop(run.tier.value, None)
-            runs[self._key(run.tier)] = held
-            self._write(runs)
+        self._change(run.tier, as_latest)
+
+    def save_script_run(self, run: TestRun) -> None:
+        """Keep run as the tier scripts/test.ps1 runs in this checkout's own folder: live while its process runs, so
+        the runner and the cadence wait for it, and never the tier's latest result, since it tests the folder's files as
+        they stand, uncommitted edits too, not a commit."""
+        self._change(run.tier, lambda held: held.update({SCRIPT_RUN: run.to_json()}))
 
     @contextlib.contextmanager
     def claimed(self) -> Iterator[bool]:
-        """Hold the record against every other process for one look at what is due: True when this one holds it. Each
-        chat's health report asks, and two asking at once must not start the same tier twice. A claim older than a
-        minute was left by a process that died holding it, and is taken over; so is one dated ahead of the clock by
-        more than that, which a corrected clock leaves and which would never grow old."""
-        claim = self.folder / CLAIM_FILE
-        self.folder.mkdir(parents=True, exist_ok=True)
-        try:
-            if claim.exists() and abs(time.time() - claim.stat().st_mtime) > CLAIM_STALE_SECONDS:
-                claim.unlink(missing_ok=True)
-            handle = os.open(claim, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except OSError:
-            yield False
-            return
-        try:
-            os.close(handle)
-            yield True
-        finally:
-            claim.unlink(missing_ok=True)
+        """Hold the record against every other process for one look at what is due: True when this one holds it, False
+        at once while another does. Each chat's health report asks, and two asking at once must not start the same tier
+        twice. The operating system gives the claim back when the process holding it ends, however it ends, so a claim
+        file a killed process left holds nothing. The saves a look makes are steps of its claim."""
+        with self.lock:
+            if not self._claim.try_claim():
+                yield False
+                return
+            try:
+                yield True
+            finally:
+                self._claim.release()
 
     @property
     def claim_wait(self) -> str:
-        """What a process kept waiting by another's claim tells its reader: the file it waits for, how long that has
-        been held, and how long until it is taken over."""
-        claim = self.folder / CLAIM_FILE
-        try:
-            held_seconds = time.time() - claim.stat().st_mtime
-        except OSError:
-            return f"waiting for {claim}, which another process held a moment ago while it looked at which tier is due"
-        return (f"waiting for {claim}, which another process has held for {held_seconds:.0f} seconds while it looks at which "
-                f"tier is due; it is taken over in {max(0.0, CLAIM_STALE_SECONDS - held_seconds):.0f} seconds unless that process releases it first")
+        """What a process kept waiting by another's claim tells its reader: the file it waits for, and the process that
+        holds it, which gives it back when it has looked, or when it ends."""
+        return (f"waiting for {self._claim.path}, which process {self._claim.holder} holds while it looks at which tier is due; "
+                "it is given back when that process has looked, or has ended")
 
     def log_path(self, tier: TestTier) -> Path:
         return self.folder / f"test-run-{tier.value}.log"
@@ -307,6 +312,17 @@ class TestRunRecord:
         """This checkout's runs of tier; a file written before runs named their checkout keeps them under the tier
         alone, and the first checkout to save a run takes those as its own."""
         return runs.get(self._key(tier)) or runs.get(tier.value) or {}
+
+    def _change(self, tier: TestTier, change: Callable[[dict], None]) -> None:
+        """Make change to this checkout's runs of tier, holding the claim from the record's read to its write, so a
+        change another process makes at the same time waits its turn and neither is lost."""
+        with self.lock, self._claim.held():
+            runs = self._read()
+            held = dict(self._held(runs, tier))
+            change(held)
+            runs.pop(tier.value, None)
+            runs[self._key(tier)] = held
+            self._write(runs)
 
     def _run(self, tier: TestTier, which: str) -> TestRun | None:
         held = self._held(self._read(), tier).get(which)
@@ -476,9 +492,10 @@ class TestRunner:
 
     def _run_script(self, tier: TestTier, folder: Path, env: dict[str, str] | None) -> tuple[int, str]:
         command = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(folder / TEST_SCRIPT), "-Suite", tier.value]
+        # The run is recorded already, so test.ps1 does not record itself as a second run beside it.
         process = subprocess.Popen(command, cwd=folder, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                    text=True, encoding="utf-8", errors="replace", creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-                                   env={**os.environ, **env} if env else None)
+                                   env={**os.environ, **(env or {}), RUN_RECORDED_VARIABLE: "1"})
         # Killing this process ends PowerShell and the specs it runs, so no tier goes on working after its run is gone.
         StarterBoundJob().take_in(process)
         lines = []
@@ -555,7 +572,7 @@ class TestCadence:
         there is no main checkout."""
         if self.checkout is None:
             return None
-        with self.record.lock, self.record.claimed() as is_claimed:
+        with self.record.claimed() as is_claimed:
             due = self.due() if is_claimed else []
             if not due:
                 return None
@@ -571,7 +588,7 @@ class TestCadence:
     def run_now(self, tier: TestTier, recorded_start: datetime | None = None) -> TestRun:
         """Run tier here to its end and record its result: the background process the cadence starts runs this, naming
         the run by when the cadence recorded it as started, and so can a person, naming none. The run so named is the
-        one finished, or one a process that ended left running on this commit; otherwise a new one starts."""
+        one finished; otherwise a new one starts."""
         started = self._started(tier, recorded_start)
         if tier is TestTier.E2E:
             # Each browser story step is screenshotted into this run's folder under .sessions/scheduled/, then reviewed.
@@ -585,34 +602,59 @@ class TestCadence:
             self.record.save(finished)
         return finished
 
+    def record_script_run(self, tier: TestTier, script: RunningProcess) -> TestRun:
+        """Record scripts/test.ps1, run by a person or an agent in this checkout's own folder, as running tier in its
+        process script, once no run is live on this checkout, so the runner and the cadence wait for it as for their
+        own runs. Two runs of one checkout's tiers at once start its servers on the same ports and fail on each other."""
+        def live_on_this_checkout() -> list[TestRun]:
+            return [run for run in self._live_elsewhere() if run.is_on(self.checkout)]
+
+        def recorded() -> TestRun:
+            run = self.record.new_run(tier, "", self._clock()).taken_by(script)
+            self.record.save_script_run(run)
+            return run
+        return self._once_none_live(live_on_this_checkout, recorded)
+
     def _started(self, tier: TestTier, recorded_start: datetime | None) -> TestRun:
         """The run this process goes on with, recorded under this process once no other process has a run live. The
         e2e tier's board specs all serve on one port, and every tier's specs load the one computer, so a second run
         started beside a live one fails on what the first holds, not on the code it tests."""
+        return self._once_none_live(lambda: self._live_elsewhere(recorded_start), lambda: self._taken(tier, recorded_start))
+
+    def _once_none_live(self, live_runs: Callable[[], list[TestRun]], record_run: Callable[[], TestRun]) -> TestRun:
+        """The run record_run records once live_runs names no run, both under the record's claim; until then this says,
+        each time it looks, which run it waits for."""
         while True:
             with self._claim():
-                live = self._live_elsewhere(recorded_start)
+                live = live_runs()
                 if not live:
-                    return self._taken(tier)
+                    return record_run()
             self._say(f"waiting for the {live[0].tier.value} run process {live[0].pid} started at {live[0].started} to end; "
                       f"looking again every {WAIT_SECONDS} seconds")
             self._wait(WAIT_SECONDS)
 
-    def _taken(self, tier: TestTier) -> TestRun:
-        """The tier's run, recorded as this process's: the one left running on HEAD, by the cadence for this process
-        or by a process that ended; else a new one. A run left running on another commit is not taken, since this
-        run tests HEAD."""
-        run, head = self.record.latest(tier), self._head()
-        if run is None or run.outcome is not RunOutcome.RUNNING or run.commit != head:
-            run = self.record.new_run(tier, head, self._clock())
+    def _taken(self, tier: TestTier, recorded_start: datetime | None) -> TestRun:
+        """The tier's run, recorded as this process's: the run the cadence recorded at recorded_start for the process it
+        started, which started this one; else a new one on HEAD. A run another process left running, that process gone,
+        is recorded as abandoned, not taken over: it gave no result, and a run of its own keeps both runs and how long
+        each took."""
+        run = self.record.latest(tier)
+        if not self._is_recorded_for_this_process(run, recorded_start):
+            if run is not None and run.outcome is RunOutcome.RUNNING:
+                self.record.save(run.settled())
+            run = self.record.new_run(tier, self._head(), self._clock())
         self.record.save(run.taken_by(self._process))
         return run
 
+    def _is_recorded_for_this_process(self, run: TestRun | None, recorded_start: datetime | None) -> bool:
+        """run is the one the cadence recorded as running at recorded_start, for the process it started to run it."""
+        return run is not None and run.outcome is RunOutcome.RUNNING and recorded_start is not None and run.started_at == recorded_start
+
     @contextlib.contextmanager
     def _claim(self) -> Iterator[None]:
-        """Hold the record's claim, saying what is waited for and how long while another process holds it."""
+        """Hold the record's claim, saying what is waited for while another process holds it."""
         while True:
-            with self.record.lock, self.record.claimed() as is_claimed:
+            with self.record.claimed() as is_claimed:
                 if is_claimed:
                     yield
                     return
@@ -643,12 +685,15 @@ class TestCadence:
 def main(argv: list[str] | None = None) -> int:
     """python -m harness.release.test_runs <tier> <checkout> <record folder>: run a tier and record its result. The
     cadence starts it this way in the background, with --started naming the run it recorded; the /release command runs
-    it the same way."""
+    it the same way. scripts/test.ps1 calls it with --script naming its own process, to be recorded as running."""
     parser = argparse.ArgumentParser(description=main.__doc__)
     parser.add_argument("tier", choices=[tier.value for tier in TestTier])
     parser.add_argument("checkout")
     parser.add_argument("record", nargs="?", default="")
     parser.add_argument("--started", default="", help="when the cadence recorded the run this process goes on with")
+    parser.add_argument("--script", type=int, default=0,
+                        help="the scripts/test.ps1 process running the tier in the checkout's own folder: record it as running once "
+                             "no run is live on the checkout, and end")
     arguments = parser.parse_args(argv)
     # Run from a console, the output is echoed in its code page, such as cp1252, which cannot write every character a
     # spec prints; one it cannot write is shown as ? rather than ending the run.
@@ -656,6 +701,10 @@ def main(argv: list[str] | None = None) -> int:
     record = TestRunRecord(arguments.record or default_record_folder(), Path(arguments.checkout))
     recorded_start = datetime.fromisoformat(arguments.started) if arguments.started else None
     try:
+        if arguments.script:
+            run = TestCadence(record).record_script_run(TestTier(arguments.tier), RunningProcess(arguments.script))
+            print(f"{run.tier.value} run by scripts/test.ps1 (process {run.pid}) recorded as running in {record.path}")
+            return 0
         run = TestCadence(record).run_now(TestTier(arguments.tier), recorded_start)
     except TestRunRecordUnreadable as unreadable:
         print(f"{arguments.tier} not run: {unreadable}", file=sys.stderr)

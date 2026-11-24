@@ -28,8 +28,8 @@ QUEUE_FILE = "prompt-queue.json"
 _PROMPT_ID_LENGTH = 12
 # The folder beside a chat's queue file that holds the images and documents queued with its prompts.
 ATTACHMENTS_FOLDER = "attachments"
-# The folder that keeps a JSON copy of every prompt clear or remove took off, so the work stays on record: in the session's
-# folder the queue's chat works in, else beside the chat's queue file.
+# The folder that keeps a JSON copy of every prompt clear, remove or flush took off, and of the whole queue file each flush
+# found, so the work stays on record: in the session's folder the queue's chat works in, else beside the chat's queue file.
 ARCHIVE_FOLDER = "queue-archive"
 # How a copy of the whole queue file that flush keeps in the queue archive is named, before the time it was copied: it
 # holds the queue as it stood, not prompts taken off, so the lookup of when a prompt was taken off reads past it.
@@ -177,6 +177,7 @@ class QueuedPrompt:
         self._attachments: list[str] | None = list(record["attachments"]) if "attachments" in record else None
         self._is_done: bool | None = record.get("is_done") if "is_done" in record else None
         self._robot: str = record.get("robot", "")
+        self._deleted_attachments: list[str] = list(record.get("deleted_attachments", []))
 
     @classmethod
     def new(cls, text: str) -> QueuedPrompt:
@@ -264,10 +265,22 @@ class QueuedPrompt:
         """List file among the files queued with it."""
         self._attachments = [*(self._attachments or []), str(file)]
 
+    def delete_attachments(self, folder: Path) -> None:
+        """Delete the files queued with it that folder, the chat's attachments folder, holds, as it leaves the queue:
+        nothing reads them once the card is gone, so they would only grow the chat's folder. It then names them as
+        deleted, no longer as attached. A file listed outside folder is not the queue's to delete, so it stays listed."""
+        held = folder.resolve()
+        deleted = [file for file in self.attachments if Path(file).resolve().parent == held]
+        for file in deleted:
+            Path(file).unlink(missing_ok=True)
+        self._deleted_attachments = [*self._deleted_attachments, *deleted]
+        self._attachments = [file for file in self.attachments if file not in deleted] or None
+
     @property
     def record(self) -> dict:
         """What the queue's file keeps of it: id and text, and steps, attachments, is_done and robot only when it has
-        them, the keys the stable and dev lanes' servers both read."""
+        them, the keys the stable and dev lanes' servers both read; and, once it has left the queue, the files deleted
+        with it, which only its copy in the queue archive keeps."""
         kept: dict = {"id": self._id, "text": self._text}
         if self._has_steps:
             kept["steps"] = self.steps.listed
@@ -277,6 +290,8 @@ class QueuedPrompt:
             kept["is_done"] = self._is_done
         if self._robot:
             kept["robot"] = self._robot
+        if self._deleted_attachments:
+            kept["deleted_attachments"] = list(self._deleted_attachments)
         return kept
 
 
@@ -334,6 +349,7 @@ class PromptQueue:
         self._folder = file.parent
         self._file = JsonFile(file, QueueFileUnreadable)
         self._archive_folder = archive or file.parent / ARCHIVE_FOLDER
+        self._attachments_folder = file.parent / ATTACHMENTS_FOLDER
 
     @classmethod
     @tool_subject
@@ -440,33 +456,27 @@ class PromptQueue:
     @mcp
     @agent_tool
     def remove(self, prompt: str) -> PromptQueue:
-        """Take the queued prompt whose id is prompt off the queue, keeping a copy of it in the chat's queue archive."""
+        """Take the queued prompt whose id is prompt off the queue, keeping a copy of it in the chat's queue archive; the files attached to it are deleted with it."""
         with self._file.held():
             held = self.prompts
             removed = self._found(held, prompt)
-            self._archive([removed])
+            self._take_off([removed])
             return self._keep([item for item in held if item is not removed])
 
     @mcp
     @agent_tool
     def clear(self) -> PromptQueue:
-        """Take the finished prompts off the queue, leaving the work still to do; with none finished, take every prompt off."""
+        """Take the done prompts off the queue, keeping a copy of them in the chat's queue archive and deleting the files attached to them, and leave the work still to do. With no prompt done, nothing is done to clear: every prompt stays, so a second clear never takes off work a robot may be doing. Answers the queue as it then stands."""
         with self._file.held():
-            held = self.prompts
-            unfinished = [item for item in held if not item.is_done]
-            kept = [] if len(unfinished) == len(held) else unfinished
-            self._archive([item for item in held if item not in kept])
-            return self._keep(kept)
+            return self._take_off_done()
 
     @mcp
     @agent_tool
     def flush(self) -> PromptQueue:
-        """Keep a copy of the whole queue file as it stands in the chat's queue archive, named prompt-queue and the time, such as prompt-queue-20261124T044511Z.json, then take the done prompts off, leaving the work still to do in order. With no prompt done, the copy is still kept and nothing is taken off. Answers the queue as it then stands."""
+        """Keep a copy of the whole queue file as it stands in the chat's queue archive, named prompt-queue and the time, such as prompt-queue-20261124T044511Z.json, then take the done prompts off as clear does, leaving the work still to do in order. With no prompt done, the copy is still kept and nothing is taken off. Answers the queue as it then stands."""
         with self._file.held():
             self._copy_whole_file()
-            held = self.prompts
-            self._archive([item for item in held if item.is_done])
-            return self._keep([item for item in held if not item.is_done])
+            return self._take_off_done()
 
     @mcp
     @agent_tool
@@ -483,8 +493,8 @@ class PromptQueue:
     @mcp
     @agent_tool
     def assign(self, prompt: str, robot: str) -> PromptQueue:
-        """Give the queued prompt whose id is prompt to the robot named robot, the sub-agent that works it in sub-agent mode: the queue keeps it, so each robot's queue comes back after a reload. An empty robot takes the prompt off its robot."""
-        return self._changing(prompt, lambda found: found.assign(robot))
+        """Give the queued prompt whose id is prompt to the robot named robot, the sub-agent that works it in sub-agent mode: the queue keeps it, so each robot's queue comes back after a reload. An empty robot takes the prompt off its robot. A robot already on the queue is matched with no regard to case or outer spaces and keeps the spelling the queue first held, so bOLT and Bolt are one robot."""
+        return self._changing(prompt, lambda found: found.assign(self._robot_as_spelled(robot)))
 
     @mcp
     @agent_tool
@@ -556,6 +566,12 @@ class PromptQueue:
             change(self._found(held, prompt))
             return self._keep(held)
 
+    def _robot_as_spelled(self, robot: str) -> str:
+        """robot as the queue first spelled it: the robot of the first card whose name is robot's, with no regard to case
+        or outer spaces; robot without its outer spaces when no card has it. Its caller holds the queue's file."""
+        named = robot.strip()
+        return next((item.robot for item in self.prompts if item.robot.casefold() == named.casefold()), named)
+
     def _new_prompts(self, texts: list[str]) -> list[QueuedPrompt]:
         """One prompt, with an id of its own, for each of texts that is more than spaces."""
         return [QueuedPrompt.new(text) for text in texts if text.strip()]
@@ -568,10 +584,16 @@ class PromptQueue:
         """The file an attachment is saved as: named for its prompt and its place among the prompt's attachments, with
         the extension of its name, else of its media type."""
         extension = Path(filename).suffix or mimetypes.guess_extension(media_type) or ""
-        saved = self._file.path.parent / ATTACHMENTS_FOLDER / f"{prompt}-{number}{extension}"
+        saved = self._attachments_folder / f"{prompt}-{number}{extension}"
         saved.parent.mkdir(parents=True, exist_ok=True)
         saved.write_bytes(base64.b64decode(data))
         return saved
+
+    def _take_off(self, prompts: list[QueuedPrompt]) -> None:
+        """Delete the files attached to prompts, which leave the queue, and keep a copy of them in the queue archive."""
+        for prompt in prompts:
+            prompt.delete_attachments(self._attachments_folder)
+        self._archive(prompts)
 
     def _archive(self, prompts: list[QueuedPrompt]) -> None:
         """Keeps a JSON copy of prompts taken off the queue in the chat's queue archive, one file for each time, named
@@ -583,6 +605,12 @@ class PromptQueue:
         saved = self._archive_folder / f"{taken_off.strftime('%Y%m%dT%H%M%S%fZ')}.json"
         kept = {"chat": self._chat, "taken_off": taken_off.isoformat(), "prompts": [prompt.record for prompt in prompts]}
         saved.write_text(json.dumps(kept, indent=2), encoding="utf-8")
+
+    def _take_off_done(self) -> PromptQueue:
+        """Take the done prompts off the queue into its archive and keep the rest in order. Its caller holds the file."""
+        held = self.prompts
+        self._take_off([item for item in held if item.is_done])
+        return self._keep([item for item in held if not item.is_done])
 
     def _copy_whole_file(self) -> None:
         """Keeps a copy of the queue's file, every field it holds, in the chat's queue archive, named for when it was

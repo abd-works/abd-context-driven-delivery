@@ -8,10 +8,11 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.git.git import Git
+from space.repo.new_repository import FolderInsideARepositoryError, NewRepository
 from space.repo.repo import Repo
 
 
@@ -77,3 +78,44 @@ with description("a plain folder a session works in") as self:
 
         with it("should leave none of them ignored"):
             expect(Git(self.folder).run("status", "--porcelain", "--ignored")).not_to(contain("conf/"))
+
+
+with description("a folder made a git repository") as self:
+    with before.each:
+        self.top = Path(tempfile.mkdtemp(prefix="cdd-new-repo-")).resolve()
+
+    with after.each:
+        shutil.rmtree(self.top, ignore_errors=True)
+
+    with context("that does not exist yet"):
+        with before.each:
+            self.folder = self.top / "brand-new"
+            self.answer = NewRepository(Repo(self.folder)).make_from_folder().sentence
+
+        with it("should make the folder a repository on main"):
+            expect(Git(self.folder).run("rev-parse", "--abbrev-ref", "HEAD")).to(equal("main"))
+
+        with it("should commit its .gitignore and a README"):
+            expect(Git(self.folder).run("ls-files").splitlines()).to(equal([".gitignore", "README.md"]))
+
+        with it("should say it created it"):
+            expect(self.answer).to(contain("on main with a first commit"))
+
+    with context("inside a subfolder of another repository"):
+        with before.each:
+            self.outer = _plain_folder(self.top / "outer")
+            Repo(self.outer).make_repository()
+            self.inner = self.outer / "sub" / "inner"
+            self.inner.mkdir(parents=True)
+            (self.inner / "a.txt").write_text("a\n", encoding="utf-8")
+
+        with it("should be refused, naming the repository that holds it"):
+            expect(lambda: NewRepository(Repo(self.inner)).make_from_folder()).to(raise_error(FolderInsideARepositoryError, contain(str(self.outer))))
+
+        with it("should leave the outer repository able to add the subfolder's files"):
+            try:
+                NewRepository(Repo(self.inner)).make_from_folder()
+            except FolderInsideARepositoryError:
+                pass
+            Git(self.outer).run("add", "-A")
+            expect(Git(self.outer).run("ls-files")).to(contain("sub/inner/a.txt"))

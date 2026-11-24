@@ -28,6 +28,15 @@ class NamedPathNotFoundError(FileNotFoundError):
         super().__init__(f"nothing{where} at {named}, read from {project}; name paths from the project's root, or absolute")
 
 
+class EmptyPathNamedError(ValueError):
+    """Raised when a call names an empty path, or one of only spaces, as a file or folder to work on: read from the
+    project's root it would be the root itself, so the call would work on the whole project nobody named."""
+
+    def __init__(self, named: str) -> None:
+        self.named = named
+        super().__init__(f"an empty path names no file or folder (named {named!r}); name paths from the project's root, or absolute")
+
+
 class SessionFiles:
     """The files one session works with, read through two file managers that name paths from two tops: the session's
     own, named from its workpath, which a page lists and reads; and one named from the project's top, which reads and
@@ -120,18 +129,23 @@ class SessionFiles:
 
     def read(self, path: str) -> FileText:
         """The text of path, a file in the session's repository or under a folder its practices write to, such as its
-        ticket's worktree beside the repository; no text when the file is gone."""
+        ticket's worktree beside the repository, with the version a write of it gives back; no text when the file is
+        gone. A path inside a .git folder is refused (*VersionControlPathRefused*)."""
         return self._from_project.read(path)
 
-    def write(self, path: str, text: str) -> FileText:
+    def write(self, path: str, text: str, version: str = "") -> FileText:
         """Save text as path, a file in the session's repository or under a folder its practices write to, named from
-        the project's top as ``read`` names it. The session's own session.json is refused (*SessionRecordWriteRefused*):
-        only its record writes it."""
-        return self._from_project.write(path, text)
+        the project's top as ``read`` names it; version is the one ``read`` answered, none for a new file. A file changed
+        on disk since that read is refused (*FileChangedSinceReadError*), as is the session's own session.json
+        (*SessionRecordWriteRefused*), which only its record writes, and a path inside a .git folder."""
+        return self._from_project.write(path, text, version)
 
     def existing(self, named: str | Path) -> Path:
         """The path named, read as the session reads every path its agent writes (``SessionPaths.path_named``), once
-        something is there; refused otherwise."""
+        something is there; refused otherwise. An empty name is refused (*EmptyPathNamedError*), never read as the
+        project's root."""
+        if not str(named).strip():
+            raise EmptyPathNamedError(str(named))
         path = self._session.paths.path_named(named)
         if not path.exists():
             raise NamedPathNotFoundError(str(named), self._session.checkout.root)

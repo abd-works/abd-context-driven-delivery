@@ -130,7 +130,7 @@ with description("the folder a checkout last installed into") as self:
         self.kept = Path(tempfile.mkdtemp(prefix="last-install-"))
         self.last = LastInstall(self.kept / InstallRecord.NAME)
         # A project's own folder, outside the temporary folder; nothing is written into it.
-        self.project_folder = Path.home() / "no-such-project" / ".claude"
+        self.project_folder = Path.home() / ".claude-of-no-such-project"
 
     with after.each:
         shutil.rmtree(self.kept, ignore_errors=True)

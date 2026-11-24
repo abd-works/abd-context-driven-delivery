@@ -90,7 +90,7 @@ with description("an in-process toolset run with a timeout"):
 with description("a toolset run request") as self:
     with before.each:
         self.project = ThrowawayProject()
-        Sessions(self.project.root).switch("checkout-flow")
+        Sessions(self.project.root).switch("checkout-flow", create=True)
         Sessions(self.project.root).switch("main")
 
     with after.each:

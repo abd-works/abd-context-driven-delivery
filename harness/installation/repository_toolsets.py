@@ -167,10 +167,11 @@ class RepositoryToolsets:
             return None
 
     def _text_of(self, py_file: Path) -> str:
-        """py_file's text; empty for a file that cannot be read."""
+        """py_file's text, a byte that is not UTF-8, such as one in a comment saved in another code page, read as a
+        replacement character so the file's toolsets are still found; empty for a file gone since the scan listed it."""
         try:
-            return py_file.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            return py_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
             return ""
 
     def _toolset_refs_in_file(self, py_file: Path) -> list[ToolsetReference]:

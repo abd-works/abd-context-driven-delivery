@@ -164,6 +164,33 @@ Observed (`cdd_guidance/actions/render/render_spec.py`, `render_saves_beside_sou
 *When* Claude Code renders `src/ordering/.context/ordering-model.md` to drawio at ++clean-engineering-model++, naming no source
 *Then* the saved file is `src/ordering/.context/ordering-model.drawio`, which draws Cart
 
+#### Scenario: Save a class model drawn from code under the name the model fidelity writes markdown to
+
+Observed (`cdd_guidance/actions/render/render_spec.py`, `harness/guidance/declared_outputs_spec.py`). Written after exploratory testing (defect widget-15): a class model rendered from code to markdown was saved beside the code under the code's own name, `src/order.md`. `clean_engineering.md` declares `{module}/` for the model's code and `{module}/.context/{module}-model.md` for its markdown; the module is the folder holding the code.
+
+*Given* `src/ordering/cart.ts` holds the class Cart, in the module folder `src/ordering`
+*When* Claude Code renders `src/ordering/cart.ts` to markdown at ++clean-engineering-model++
+*Then* the saved file is `src/ordering/.context/ordering-model.md`, which holds Cart
+  *And* no `src/ordering/cart.md` is saved beside the code
+
+#### Scenario: Refuse a fidelity that declares no file in the format rendered to
+
+Observed (`cdd_guidance/actions/render/render_spec.py`). Written after exploratory testing (defect widget-16): one render of ++.context/story-map.md++ to drawio at the story map and the scenarios wrote the scenarios' drawing over the story map's, though `stories.md` declares no drawing for the scenarios. Each fidelity saves under its own declared name for a format.
+
+*Given* ++.context/story-map.md++ holds the story map
+*When* Claude Code renders ++.context/story-map.md++ to drawio at ++stories-story-map++ and ++stories-scenarios++ in one call
+*Then* the call is refused, naming ++stories-scenarios++ and drawio as a format it declares no file for
+  *And* no drawing is saved for either fidelity
+
+#### Scenario: Refuse to render a finished spec to a format that holds no test body
+
+Observed (`cdd_guidance/actions/render/render_spec.py`, `cdd_guidance/practices/bdd/model/spec_trip_spec.py`). Written after exploratory testing round 3 (defect r3-rivet-11): a finished Mamba spec rendered to markdown and back came back as signatures, its imports, setup and test bodies gone, and nothing said so. A describe tree in markdown or a sketch holds names only.
+
+*Given* `src/cart_spec.py` is a finished spec whose test should total its lines asserts the cart's total
+*When* Claude Code renders `src/cart_spec.py` to markdown at ++bdd-realization++
+*Then* the call is refused, naming should total its lines as a test whose body would be lost
+  *And* `src/cart_spec.py` is as it was
+
 #### Scenario: Answer a render that saves nothing with its content and where the fidelity declares it
 
 Observed (`cdd_guidance/actions/render/render_spec.py`). Written after exploratory testing round 3 (defects r3-bolt-06, r3-sparky-07, r3-rivet-08): a render to code answered one text with no word of where it goes, and a realization rendered from a saved graph was saved as `graph.md` beside the graph. Render's description says a render other than drawio, whiteboard or markdown "returns its content"; whether a render to code should save one file for each aggregate or story itself waits for the person's decision.

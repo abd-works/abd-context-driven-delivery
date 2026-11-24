@@ -26,6 +26,16 @@ logger = logging.getLogger(__name__)
 # made: a malformed reference, a missing module or class, a class that is no toolset, or a constructor it cannot call.
 
 
+class ToolInputUnreadable(ValueError):
+    """An event whose tool arguments the IDE sent as text that is not JSON. Read as no arguments, a handler would act as
+    if the tool named no file or guidance, so the event's handlers would do nothing and say nothing."""
+
+    def __init__(self, tool: str, text: str) -> None:
+        super().__init__(f"the arguments the IDE sent for tool {tool or '(none)'} are not JSON: {text[:200]!r}")
+        self.tool = tool
+        self.text = text
+
+
 class HookPayload(Mapping[str, Any]):
     """The fields an IDE sends on stdin for one firing of a hook, such as the tool that just ran and its input, and the
     checkout of the hook server that received them. Its handlers read them through the named properties; it reads as a
@@ -76,13 +86,14 @@ class HookPayload(Mapping[str, Any]):
 
     @property
     def tool_input(self) -> dict[str, Any]:
-        """The arguments the tool was called with; none when the IDE sent none or sent text that is no JSON object."""
+        """The arguments the tool was called with; none when the IDE sent none or sent JSON that is no object. Text
+        that is not JSON raises *ToolInputUnreadable*."""
         raw = self._fields.get("tool_input") or {}
         if isinstance(raw, str):
             try:
                 raw = json.loads(raw)
-            except json.JSONDecodeError:
-                return {}
+            except json.JSONDecodeError as unreadable:
+                raise ToolInputUnreadable(self.tool_name, raw) from unreadable
         return raw if isinstance(raw, dict) else {}
 
     @property

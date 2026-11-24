@@ -4,7 +4,7 @@
 - **Tester:** Sparky
 - **Story:** Queue Prompts For Later / Build Prompt Queue / "Keep a queued draft's image beside its prompt"; "Remove one prompt, keeping a copy in the queue archive". No scenario says what happens to a card's files when the card is taken off.
 - **Module and class:** `tools/prompt_queue/prompt_queue.py` `PromptQueue.remove`, `PromptQueue.clear`, `PromptQueue._archive`.
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 
@@ -27,3 +27,7 @@ Also for the answer: `attach` keeps whatever extension the file name has (`.exe`
 ## Tier that should catch it
 
 Unit (`prompt_queue_spec.py`) or the story test of Attach Images To Queued Prompt, once the answer is known.
+
+## Answer (2026-11-23)
+
+A card's attached files are deleted with the card when it is removed or cleared, and the archived copy names them under `deleted_attachments`, no longer under `attachments`; a file the card names outside the chat's attachments folder is left alone. Built in `tools/prompt_queue/prompt_queue.py` (`QueuedPrompt.delete_attachments`, `PromptQueue._take_off`); tested by `prompt_queue_spec.py` context "whose first prompt has a file attached" (five examples) and the story test `attach_images_to_queued_prompt_story.test.py`; scenario "Delete a prompt's files when it leaves the queue" in `story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md`, story Attach Images To Queued Prompt.

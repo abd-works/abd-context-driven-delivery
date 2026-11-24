@@ -134,7 +134,7 @@ def _(s):
 
     @s.when("the session open in the project becomes billing-report's, which the board then shows as active")
     def _(world):
-        world.sessions.switch(BILLING_REPORT.name)
+        world.sessions.switch(BILLING_REPORT.name, create=True)
         world.graph = world.app_call().session.graph
         world.graph.load_practice_roots(world.app_call())
 

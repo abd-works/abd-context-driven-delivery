@@ -1094,7 +1094,7 @@ Keeps the card's key and the column's name, as `card` and `column`.
 
 ## MainStaysOpenError : ValueError
 
-`ticket.py`, raised when a tool would close, archive, shelve, or delete main, or edit its text or its tags. Keeps what was asked of main, as `action`.
+The session's (`space/session/session.py`, `Session.refuse_if_main`), raised when a tool would close, archive, shelve, or delete main, or edit its text or its tags; `session.close` and `ticket.close` refuse main with this one error. Keeps what was asked of main, as `action`.
 
 ---
 

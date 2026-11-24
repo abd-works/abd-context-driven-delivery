@@ -255,8 +255,8 @@ with description("the cdd server") as self:
         with before.each:
             self.worktrees = TwoWorktrees()
             self.worktrees.create()
-            self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "alpha"}), self.worktrees.first)
-            self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "beta"}), self.worktrees.second)
+            self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "alpha", "create": True}), self.worktrees.first)
+            self.chat.run(lambda session: session.call_tool("sessions.switch", arguments={"name": "beta", "create": True}), self.worktrees.second)
 
         with after.each:
             self.worktrees.remove()

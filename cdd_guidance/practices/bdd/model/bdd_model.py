@@ -14,6 +14,19 @@ from cdd_guidance.practices.source_code import CodeBody
 from harness.guidance.practice_formats import FormatAdapter, Written
 
 
+class SpecBodiesNotKept(ValueError):
+    """A finished spec was asked for in a format that holds its describe tree only, a markdown tree or a sketch: its
+    imports, its setup and every test body would be lost, and written back over the spec, its tests would become
+    signatures."""
+
+    def __init__(self, tests: list[str]) -> None:
+        super().__init__(
+            "the spec is finished, and a tree holds no test body, so these tests would come back as signatures, with the "
+            f"spec's imports and setup gone: {'; '.join(tests)}. Keep the spec in its code format, or render it to another code format"
+        )
+        self.tests = tests
+
+
 class BddModel(ModelNode, FormatAdapter):
     _semantic_type_name = "Spec"
     graph_facts = (
@@ -80,6 +93,8 @@ class BddModel(ModelNode, FormatAdapter):
         return found
 
     def render(self, canonical: "BddModel", written: Written = Written()) -> str:
+        """canonical's describe tree as indented lines; refused for a finished spec, whose test bodies a tree loses."""
+        canonical.refuse_losing_bodies()
         return "\n\n".join(self._sketch_lines(item) for item in canonical.descriptions)
 
     def _sketch_lines(self, description: Description) -> str:
@@ -109,6 +124,16 @@ class BddModel(ModelNode, FormatAdapter):
             f"{pad}it {observation.name}",
             f"{pad}```",
         ]
+
+    def tests_with_bodies(self) -> list[str]:
+        """The name of each observation that holds a test body rather than a signature."""
+        return [node.name for node in self.behavior_nodes() if isinstance(node, Observation) and not node.body.is_empty]
+
+    def refuse_losing_bodies(self) -> None:
+        """Refuse a render of this spec into a format that holds its tree only, when the spec holds test bodies."""
+        tests = self.tests_with_bodies()
+        if tests:
+            raise SpecBodiesNotKept(tests)
 
     def node_at(self, path: tuple) -> BddModel | Description | Context | Observation | None:
         """The block at this path of names, the spec itself at the empty path; None when this spec has no such block."""

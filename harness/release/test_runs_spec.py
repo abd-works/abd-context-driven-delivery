@@ -9,7 +9,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -19,6 +18,7 @@ from mamba import after, before, context, description, it
 from harness.release.test_run_examples import NOON, THIS_PROCESS, Clock, GitStub, RunnerStub
 from harness.release.test_runs import RunOutcome, TestCadence, TestRun, TestRunRecord, TestRunRecordUnreadable, TestTier, main_checkout
 from harness.git.git import RepoConnectError
+from harness.process.lock_file import LockFile
 from harness.process.process import RunningProcess
 
 # A process id that is never running.
@@ -40,9 +40,11 @@ with description("the test cadence") as self:
         self.waits = []
         self.said = []
         self.claim = self.record.folder / "test-runs.claim"
+        self.other_holder = LockFile(self.claim, wait_seconds=0)
         self.cadence = TestCadence(self.record, self.runner, GitStub(), self.clock, review=self.review, wait=self.wait, say=self.said.append)
 
     with after.each:
+        self.other_holder.release()
         shutil.rmtree(self.folder, ignore_errors=True)
 
     def review(self, checkout: Path, run_name: str) -> list[str]:
@@ -52,13 +54,14 @@ with description("the test cadence") as self:
         return self.review_lines
 
     def wait(self, seconds: float) -> None:
-        """While run_now waits, the other process releases its claim, its run ends, and a run after it ends too, so
-        neither the latest nor the previous run of a tier is live; what had run here by then is kept for the spec."""
+        """While run_now waits, the other process releases its claim, its run ends, a run after it ends too, and so
+        does scripts/test.ps1, so no run of a tier is live; what had run here by then is kept for the spec."""
         self.waits.append(list(self.runner.ran))
-        self.claim.unlink(missing_ok=True)
+        self.other_holder.release()
         for tier in TestTier:
             for minutes in (3, 4):
                 self.record.save(TestRun(tier, "abc123", NOON - timedelta(minutes=minutes), RunOutcome.FAILED, pid=GONE))
+            self.record.save_script_run(TestRun(tier, "", NOON - timedelta(minutes=2), pid=GONE))
 
     def running_elsewhere(self, tier: TestTier) -> TestRun:
         """A run of tier another live process holds, one this spec started that runs until the spec ends."""
@@ -66,11 +69,9 @@ with description("the test cadence") as self:
         self.record.save(run)
         return run
 
-    def held_claim(self, age_seconds: float = 0) -> None:
-        """The claim another process holds, taken age_seconds ago; a negative age dates it ahead of the clock."""
-        self.record.folder.mkdir(parents=True, exist_ok=True)
-        self.claim.write_text("", encoding="utf-8")
-        os.utime(self.claim, (time.time() - age_seconds,) * 2)
+    def held_claim(self) -> None:
+        """The claim another holder has, as another process's look at what is due holds it."""
+        self.other_holder.claim()
 
     def ran_at(self, tier: TestTier, started: datetime, outcome: RunOutcome = RunOutcome.PASSED) -> None:
         self.record.save(TestRun(tier, "old", started, outcome, pid=GONE))
@@ -159,19 +160,20 @@ with description("the test cadence") as self:
             self.held_claim()
             expect(self.cadence.start_due()).to(be_none)
 
-        with it("should say, to a run by hand, which file it waits for and how long until it takes it over"):
-            self.held_claim(age_seconds=20)
+        with it("should say, to a run by hand, which file it waits for and which process holds it"):
+            self.held_claim()
             self.cadence.run_now(TestTier.HEAVY)
-            expect(self.said[0]).to(contain(str(self.claim), "taken over in 40 seconds"))
+            expect(self.said[0]).to(contain(str(self.claim), f"process {os.getpid()} holds"))
 
         with it("should then run the tier"):
             self.held_claim()
             self.cadence.run_now(TestTier.HEAVY)
             expect(self.runner.ran).to(equal([TestTier.HEAVY]))
 
-    with context("that a process left its claim behind, dated ahead of the clock"):
-        with it("should take the claim over and start the tier that is due"):
-            self.held_claim(age_seconds=-3600)
+    with context("that a process that ended left its claim file behind"):
+        with it("should start the tier that is due"):
+            self.record.folder.mkdir(parents=True, exist_ok=True)
+            self.claim.write_text(str(GONE), encoding="ascii")
             expect(self.cadence.start_due().tier).to(equal(TestTier.E2E))
 
     with context("whose run will not start"):
@@ -200,7 +202,7 @@ with description("the test cadence") as self:
         with it("should finish the run the cadence started, not a new one"):
             started = self.cadence.start_due()
             self.clock.now = NOON + timedelta(minutes=20)
-            expect(self.cadence.run_now(TestTier.E2E).run_id).to(equal(started.run_id))
+            expect(self.cadence.run_now(TestTier.E2E, started.started_at).run_id).to(equal(started.run_id))
 
         with it("should record HEAD, not take over a run left running on another commit"):
             self.record.save(TestRun(TestTier.E2E, "old", NOON - timedelta(hours=1), pid=GONE))
@@ -276,17 +278,52 @@ with description("the test cadence") as self:
             self.cadence.run_now(TestTier.E2E, self.recorded.started_at)
             expect(self.record.previous(TestTier.E2E).state).to(equal("failed"))
 
-    with context("that a process that ended left running on this commit"):
+    with context("that a process that was killed left running on this commit"):
         with before.each:
             self.left = TestRun(TestTier.HEAVY, "abc123", NOON - timedelta(minutes=10), pid=GONE, process_started=NOON - timedelta(minutes=10))
             self.record.save(self.left)
 
-        with it("should go on with that run"):
-            expect(self.cadence.run_now(TestTier.HEAVY).run_id).to(equal(self.left.run_id))
+        with it("should record a run of its own"):
+            expect(self.cadence.run_now(TestTier.HEAVY).run_id).not_to(equal(self.left.run_id))
+
+        with it("should record the killed run as abandoned"):
+            self.cadence.run_now(TestTier.HEAVY)
+            expect(self.record.previous(TestTier.HEAVY).state).to(equal("abandoned"))
 
         with it("should read as running to the cadence while this process runs it"):
             self.cadence.run_now(TestTier.HEAVY)
             expect(self.runner.recorded_while_running.is_live).to(be_true)
+
+        with context("that the cadence recorded for the process it started, which started this one"):
+            with it("should finish that run, not record a second"):
+                expect(self.cadence.run_now(TestTier.HEAVY, self.left.started_at).run_id).to(equal(self.left.run_id))
+
+    with context("that scripts/test.ps1 runs in the checkout's own folder"):
+        with before.each:
+            self.script = self.cadence.record_script_run(TestTier.HEAVY, RunningProcess(ANOTHER_PROCESS.pid))
+
+        with it("should be recorded as running in its own process"):
+            expect([run.pid for run in self.record.runs if run.is_live]).to(equal([ANOTHER_PROCESS.pid]))
+
+        with it("should not be the tier's latest result"):
+            expect(self.record.latest(TestTier.HEAVY)).to(be_none)
+
+        with it("should keep the cadence from starting a tier"):
+            expect(self.cadence.start_due()).to(be_none)
+
+        with it("should keep a run by hand waiting until it ends"):
+            self.cadence.run_now(TestTier.E2E)
+            expect(self.waits[0]).to(equal([]))
+
+        with it("should keep a second scripts/test.ps1 on the checkout waiting until it ends"):
+            self.cadence.record_script_run(TestTier.E2E, THIS_PROCESS)
+            expect(self.said[0]).to(contain(f"waiting for the heavy run process {ANOTHER_PROCESS.pid}"))
+
+        with context("and another started on another checkout"):
+            with it("should not keep that one waiting"):
+                TestCadence(TestRunRecord(self.record.folder, self.folder / "another-checkout"), self.runner, GitStub(), self.clock,
+                            wait=self.wait, say=self.said.append).record_script_run(TestTier.HEAVY, THIS_PROCESS)
+                expect(self.waits).to(equal([]))
 
     with context("of the e2e tier"):
         with it("should screenshot its steps under the scheduled release"):
@@ -400,8 +437,8 @@ with description("the record of test runs") as self:
         with it("should hold it as its tier's latest"):
             expect(self.record.latest(TestTier.HEAVY).run_id).to(equal(self.failed.run_id))
 
-        with it("should leave nothing beside its file"):
-            expect([file.name for file in self.folder.iterdir()]).to(equal(["test-runs.json"]))
+        with it("should leave nothing beside its file but the claim file its save held"):
+            expect(sorted(file.name for file in self.folder.iterdir())).to(equal(["test-runs.claim", "test-runs.json"]))
 
         with context("and then another checkout's run of the same tier"):
             with before.each:

@@ -35,6 +35,17 @@ class BoardNotKept(LookupError):
         self.searched = searched
 
 
+class FormatNotDeclared(ValueError):
+    """A render was asked to save a fidelity's work in a format the fidelity declares no file for: with no name of its
+    own, the file would take another fidelity's name and be written over its file."""
+
+    def __init__(self, fidelity: str, format: str, declared: list[str]) -> None:
+        super().__init__(f"{fidelity} declares no {format} file, so a render at it saves none; it declares {', '.join(declared) or 'no file'}")
+        self.fidelity = fidelity
+        self.format = format
+        self.declared = declared
+
+
 @agent_toolset
 class Render(GuidanceAction):
     """Render already-generated output for the listed guidance."""
@@ -60,6 +71,8 @@ class Render(GuidanceAction):
                 return AnsweredContent(worked.render(format, content, source))
             return self._with_supplement_records(worked, self._render_files(worked, format, paths, source))
 
+        if paths:
+            self.work.each(lambda worked: self._refuse_undeclared(worked, Format(format)))
         converted = self.work.each(on)
         self.files.wrote([str(path) for result in converted if isinstance(result, RenderResult) for path in result.saved])
         tools(self.act_quickly)
@@ -70,6 +83,15 @@ class Render(GuidanceAction):
         if self._session is not None:
             tools(self.graph.refresh)
         return converted
+
+    def _refuse_undeclared(self, worked: WorkedGuidance, format: Format) -> None:
+        """Refuse, before anything is saved, a render that saves work at a fidelity in a format the fidelity declares
+        no file for (*FormatNotDeclared*): each fidelity saves under its own name, and one with none would take
+        another's. Guidance that is no fidelity, and a format no render saves, such as a sketch, are let through."""
+        if not isinstance(worked, FidelityGuidance) or not (format.is_code or format.group in SAVED_GROUPS):
+            return
+        if not worked.declared.placement.paths_in(format):
+            raise FormatNotDeclared(worked.slug, format.name, sorted(label for label in worked.declared.outputs if Format(label).is_offered))
 
     def _render_files(self, worked: WorkedGuidance, format: str, paths: list[str] | str, source: str | None) -> RenderResult:
         """The render of the files at paths, saved: a diagram or a document beside them, code at the paths the fidelity

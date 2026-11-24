@@ -53,6 +53,15 @@ def is_desktop_spare(folder: Path) -> bool:
     return resolved == spares or spares in resolved.parents
 
 
+class ClaudeSessionFileUnreadable(ValueError):
+    """The session file Claude Code keeps for a chat process holds text that is not JSON. Read as no session, the chat's
+    tool calls would work in the folder its headers named when it connected, which may not be the one it works in now."""
+
+    def __init__(self, session_file: Path, error: ValueError) -> None:
+        super().__init__(f"Claude Code's session file {session_file} is not JSON: {error}")
+        self.session_file = session_file
+
+
 class ClaudeChatProcess:
     """A running Claude Code chat process, known by its process id."""
 
@@ -112,13 +121,17 @@ class ClaudeChatProcess:
         return self._recorded("sessionId")
 
     def _recorded(self, field: str) -> str:
-        """One field of the session file; empty when the file is gone, unreadable, or does not hold it."""
-        if not self.session_file.is_file():
+        """One field of the session file; empty when the file is gone or does not hold it. A file that is not JSON
+        raises *ClaudeSessionFileUnreadable*."""
+        try:
+            text = self.session_file.read_text(encoding="utf-8")
+        except OSError:
             return ""
         try:
-            value = json.loads(self.session_file.read_text(encoding="utf-8")).get(field)
-        except (OSError, ValueError):
-            return ""
+            recorded = json.loads(text)
+        except ValueError as unreadable:
+            raise ClaudeSessionFileUnreadable(self.session_file, unreadable) from unreadable
+        value = recorded.get(field) if isinstance(recorded, dict) else None
         return value if isinstance(value, str) else ""
 
 

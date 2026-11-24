@@ -94,7 +94,7 @@ with description("a session's diagnosis of a domain whose bounded contexts each 
     with before.each:
         self.home = ExampleHome()
         self.project = _project()
-        Sessions(self.project).switch("bookshop", self.project)
+        Sessions(self.project).switch("bookshop", self.project, create=True)
         session = Sessions(self.project).current()
         for practice in session.own_practices.values():
             practice.enable(practice.name == "ddd")

@@ -146,10 +146,13 @@ The prompts one chat has queued, in the order they will be done, kept in a file 
 + edit(prompt: str, text: str): PromptQueue
 + move(prompt: str, to: int): PromptQueue
 + remove(prompt: str): PromptQueue
+	// the files attached to the prompt are deleted with it (QueuedPrompt.delete_attachments)
 + clear(): PromptQueue
+	// takes off the done prompts only; with none done, nothing is taken off
 + done(prompt: str): PromptQueue
 + reopen(prompt: str): PromptQueue
 + assign(prompt: str, robot: str): PromptQueue
+	// a robot already on the queue is matched with no regard to case or outer spaces, and keeps the spelling the queue first held
 + set_steps(prompt: str, steps: list[PromptStep]): PromptQueue
 	// a step's state is one of STEP_STATES; any other raises StepStateUnknown
 + add_interruption(prompt: str, text: str): PromptQueue
@@ -194,6 +197,8 @@ One prompt on a chat's queue. It changes itself; `record` is what the queue's fi
 + plan(steps: list[PromptStep])
 + interrupt(text: str)
 + attach(file: Path)
++ delete_attachments(folder: Path)
+	// as it leaves the queue: deletes its files in the chat's attachments folder, and its record names them as deleted_attachments
 
 ## PromptSteps
 

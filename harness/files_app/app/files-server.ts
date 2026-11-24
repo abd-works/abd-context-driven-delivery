@@ -16,7 +16,8 @@ import { sessionRoutes } from '@cdd/space/session/session'
 
 import { DrawioViewer } from './drawio-viewer'
 import { FileExplorer } from './file-explorer'
-import { API_ROOT, DRAWIO_PAGE, FILES_HEADER, REVEAL_PATH } from './files/files-paths'
+import { API_ROOT, DRAWIO_PAGE, FILES_HEADER, PAGE_FILES, REVEAL_PATH } from './files/files-paths'
+import { PageFiles } from './page-files'
 
 const CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 const BAD_REQUEST = 400
@@ -98,7 +99,7 @@ async function answer(running: () => Promise<unknown>, response: Response): Prom
   }
 }
 
-export function createFilesApp(projects: ProjectConnections, port: number, staticRoot: string, drawio: DrawioViewer, explorer = new FileExplorer()): Express {
+export function createFilesApp(projects: ProjectConnections, port: number, staticRoot: string, drawio: DrawioViewer, explorer = new FileExplorer(), pageFiles = new PageFiles()): Express {
   const app = express()
   app.use(onlyThisMachine(port))
   app.use(express.json())
@@ -125,6 +126,9 @@ export function createFilesApp(projects: ProjectConnections, port: number, stati
       response.status(FAILED).json({ error: textOf(failure) })
     }
   })
+  // Where an HTML page of the project the header names finds its own files, which the server then serves to its frame.
+  app.post(`${API_ROOT}${PAGE_FILES}`, (request, response) => void answer(async () => ({ base: pageFiles.baseOf(connectionOf(projects, request).project) }), response))
+  pageFiles.serveOn(app)
   app.use(express.static(staticRoot))
   app.get('*', (_request, response) => response.sendFile(join(staticRoot, 'index.html')))
   return app

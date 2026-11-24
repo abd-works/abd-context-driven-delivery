@@ -33,7 +33,7 @@ def _session_with_every_practice_off():
     (repo / ".git").mkdir()
     (repo / "work" / "kanban").mkdir(parents=True)
     (repo / TICKET_FILE).write_text(TICKET_TEXT, encoding="utf-8")
-    Sessions(repo).switch("checkout-flow", repo / "work")
+    Sessions(repo).switch("checkout-flow", repo / "work", create=True)
     session = Sessions(repo).current()
     for practice in session.own_practices.values():
         practice.enable(False)

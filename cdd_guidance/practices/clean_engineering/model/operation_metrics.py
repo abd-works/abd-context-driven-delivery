@@ -332,8 +332,9 @@ class CatchClause:
         """The failure to parse or decode this clause catches and answers with an empty value, by name; empty when it
         catches none, raises, or answers something else. A failure that says so by its name (``JSONDecodeError``) is
         one wherever it is caught; ``ValueError`` and the catch-all types are one only when the ``try`` they guard
-        parses stored text (``json.loads``), since they also catch a number that does not parse, which reads nothing."""
-        if any(isinstance(inner, ast.Raise) for inner in ast.walk(self._handler)) or not self._answers_empty():
+        parses stored text (``json.loads``), since they also catch a number that does not parse, which reads nothing. A
+        clause that keeps the failure on its own object, for a later call to report or raise, hands it on as a raise does."""
+        if self._hands_on() or not self._answers_empty():
             return ""
         caught = self._caught_names()
         named = next((name for name in caught if name in _UNREADABLE_FAILURES), "")
@@ -394,9 +395,9 @@ class CatchClause:
         return kept
 
     def _on_self(self, expression: ast.expr) -> bool:
-        """True for a member reached from ``self``: ``self._error``, ``self.thread_errors.append``."""
+        """True for a member reached from ``self``: ``self._error``, ``self.thread_errors.append``, ``self._unreadable[file]``."""
         reached = expression
-        while isinstance(reached, ast.Attribute):
+        while isinstance(reached, (ast.Attribute, ast.Subscript)):
             reached = reached.value
         return reached is not expression and isinstance(reached, ast.Name) and reached.id == "self"
 

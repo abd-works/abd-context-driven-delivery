@@ -65,7 +65,7 @@ Sessions, a session, and its log
 + current(): Session
 	// MCP `sessions.current`, slash `/current-session`
 + switch(name: str, workpath: Path | None): str
-	// MCP `sessions.switch`, slash `/switch-session`: opens the session called name, creating it when missing; the name defaults to the saved session, then to the saved branch
+	// MCP `sessions.switch`, slash `/switch-session`: opens the session called name; a name no session has is refused, naming the sessions there are, unless create asks for it to be made; the name defaults to the saved session, then to the saved branch
 	// returns how to keep the log
 	-> SessionLog.instructions
 + close(session: Session): None

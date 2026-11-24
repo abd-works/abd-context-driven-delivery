@@ -102,7 +102,7 @@ def _project() -> Path:
 def _session(project: Path):
     """The project's session working on Stories alone, with the story map's drawing and whiteboard chosen beside its
     markdown."""
-    Sessions(project).switch("fill-cart", project)
+    Sessions(project).switch("fill-cart", project, create=True)
     session = Sessions(project).current()
     for practice in session.own_practices.values():
         practice.enable(practice.name == "stories")
@@ -325,7 +325,7 @@ with description("a session's domain model with its markdown and Python chosen")
         self.home = ExampleHome()
         self.project = _project()
         (self.project / DOMAIN_MODEL).write_text(DOMAIN_MODEL_TEXT, encoding="utf-8")
-        Sessions(self.project).switch("fill-cart", self.project)
+        Sessions(self.project).switch("fill-cart", self.project, create=True)
         self.session = Sessions(self.project).current()
         for practice in self.session.own_practices.values():
             practice.enable(practice.name == "ddd")
@@ -360,7 +360,7 @@ with description("a session's formats diagnosed and aligned through the cdd serv
         self.server.start()
         self.project = _project()
         self.chat = SpecChat(self.server, self.project)
-        self.chat.answer("sessions.switch", name="fill-cart")
+        self.chat.answer("sessions.switch", name="fill-cart", create=True)
         self.session_file = ".sessions/fill-cart/session.json"
         for format in ("drawio", "whiteboard"):
             self.chat.answer("fidelity-session-output.choose_format", session=self.session_file, practice="stories", fidelity="story_map", format=format, is_chosen=True)

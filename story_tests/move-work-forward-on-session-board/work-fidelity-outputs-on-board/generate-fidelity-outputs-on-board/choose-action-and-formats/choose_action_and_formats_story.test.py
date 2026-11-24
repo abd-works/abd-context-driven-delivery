@@ -41,16 +41,29 @@ with story("Choose Action And Formats"):
             pass
         with and_("the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected"):
             pass
-    with scenario("Keep Run off with no format picked"):
-        # Evidence: observed: tile-client.spec 'should keep Run off until a format is chosen'.
+    with scenario("Keep the last format picked"):
+        # Evidence: observed: practice_session_output_spec 'with one format chosen, left out'; generate-fidelity-outputs.story.ui.spec 'Keep the last format picked'.
         with given("billing-report's story map is already in markdown"):
             pass
-        with but_("no format is picked"):
+        with and_("markdown is the only chip picked on the story_map bar"):
             pass
-        with when("the session board draws the story_map bar"):
-            # Board page -> TileActionsClient.barOf(billing-report, Discovery, story_map tile) <- runOff: true
+        with when("the Person unpicks the markdown chip"):
+            # Person -> TileActionsClient.toggleFormat(story_map tile, 'markdown') -> Ticket.choose_formats -> FidelityFormats.choose_from -> FidelitySessionOutput.choose_formats -> LastFormatLeftOut
             pass
-        with then("Run is off"):
+        with then("a toast says markdown is the only format chosen for story_map"):
+            pass
+        with and_("the markdown chip stays picked"):
+            pass
+    with scenario("Refuse a format for a practice turned off"):
+        # Evidence: observed: practice_session_output_spec 'of a practice turned off'.
+        with given("UX is turned off for billing-report's session"):
+            pass
+        with when("Claude Code chooses drawio for UX's ia"):
+            # Claude Code -> FidelitySessionOutput.choose_format('drawio', True) -> PracticeTurnedOff
+            pass
+        with then("the choice is refused, saying ux is turned off for the session and to turn ux on first"):
+            pass
+        with and_("billing-report's session.json keeps no format for ia"):
             pass
     with scenario("Keep Run off on a render with nothing to render"):
         # Evidence: observed: tile-client.spec 'should keep Run off on a render with nothing to render'.

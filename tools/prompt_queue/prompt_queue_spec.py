@@ -1,6 +1,7 @@
 import json
 
 import os
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -34,8 +35,12 @@ with describe(PromptQueue):
         self.queue.done(self.queue.prompts[0].id)
         expect([prompt.text for prompt in self.queue.clear().prompts]).to(equal(["Run the unit tier"]))
 
-    with it("clears every prompt when none is finished"):
-        expect(self.queue.clear().prompts).to(equal([]))
+    with it("takes nothing off when no prompt is done, so a second clear never throws away the work still to do"):
+        expect([prompt.text for prompt in self.queue.clear().prompts]).to(equal(["Write the scenarios", "Run the unit tier"]))
+
+    with it("keeps no copy in the queue archive when clear takes nothing off"):
+        self.queue.clear()
+        expect((self.folder / "queue-archive").exists()).to(equal(False))
 
     with it("keeps the robot a prompt is assigned to on the queue, so its robot's queue comes back after a reload"):
         self.queue.assign(self.queue.prompts[0].id, "Bolt")
@@ -46,6 +51,12 @@ with describe(PromptQueue):
         self.queue.assign(first, "Bolt")
         self.queue.assign(first, "")
         expect("robot" in self.queue.prompts[0].record).to(equal(False))
+
+    with it("gives a card a robot already on the queue by its first spelling, matching the name with no regard to case or outer spaces"):
+        first, second = (prompt.id for prompt in self.queue.prompts)
+        self.queue.assign(first, "Bolt")
+        self.queue.assign(second, "  bOLT ")
+        expect([prompt.robot for prompt in self.queue.prompts]).to(equal(["Bolt", "Bolt"]))
 
     with it("reopens a done prompt so it runs again, its steps not started"):
         first = self.queue.prompts[0].id
@@ -67,9 +78,10 @@ with describe(PromptQueue):
         expect(lambda: self.queue.done(removed)).to(raise_error(PromptNotQueued, contain(f"{removed} was taken off the queue at ")))
 
     with it("keeps a copy of the prompts clear takes off, as JSON in the chat's queue archive"):
+        self.queue.done(self.queue.prompts[0].id)
         self.queue.clear()
         archived = [json.loads(saved.read_text(encoding="utf-8")) for saved in (self.folder / "queue-archive").glob("*.json")]
-        expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Write the scenarios", "Run the unit tier"]]))
+        expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Write the scenarios"]]))
 
     with context("that the person flushes the queue"):
         with before.each:
@@ -109,6 +121,7 @@ with describe(PromptQueue):
     with it("keeps its archive in the folder it is given, such as its session's folder"):
         session_archive = self.folder / ".sessions" / "simple-queue" / "queue-archive"
         queue = PromptQueue("chat-1", self.folder / "prompt-queue.json", session_archive)
+        queue.done(queue.prompts[0].id)
         queue.clear()
         expect(len(list(session_archive.glob("*.json")))).to(equal(1))
 
@@ -118,6 +131,7 @@ with describe(PromptQueue):
         call = SimpleNamespace(chat_id="chat-1", project=worktree, session=SimpleNamespace(work_folder=worktree / ".sessions" / "simple-queue"))
         queue = PromptQueue.load("chat-1", call=call)
         queue.add("Write the scenarios")
+        queue.done(queue.prompts[0].id)
         queue.clear()
         expect(len(list((worktree / ".sessions" / "simple-queue" / "queue-archive").glob("*.json")))).to(equal(1))
 
@@ -204,6 +218,41 @@ with describe(PromptQueue):
         with it("moves the pointer back: the done step above worked again, every later step not started"):
             self.queue.step_back(self.goal)
             expect([state for _, state in self.steps()]).to(equal(["in_progress", "pending", "pending"]))
+
+    with context("whose first prompt has a file attached"):
+        with before.each:
+            self.goal = self.queue.prompts[0].id
+            self.attached = Path(self.queue.attach(self.goal, "screenshot.png", "image/png", "aGk=").prompts[0].attachments[0])
+
+        def archived_card(self) -> dict:
+            return json.loads(next((self.folder / "queue-archive").glob("*.json")).read_text(encoding="utf-8"))["prompts"][0]
+
+        with it("deletes the file with its card when the card is removed"):
+            self.queue.remove(self.goal)
+            expect(self.attached.exists()).to(equal(False))
+
+        with it("deletes the file with its card when the card is cleared"):
+            self.queue.done(self.goal)
+            self.queue.clear()
+            expect(self.attached.exists()).to(equal(False))
+
+        with it("keeps the file of a card clear leaves on the queue"):
+            self.queue.done(self.queue.prompts[1].id)
+            self.queue.clear()
+            expect(self.attached.exists()).to(equal(True))
+
+        with it("names the file in the archived copy as deleted, no longer as attached"):
+            self.queue.remove(self.goal)
+            expect({key: self.archived_card().get(key) for key in ("attachments", "deleted_attachments")}).to(equal({"attachments": None, "deleted_attachments": [str(self.attached)]}))
+
+        with it("leaves a file the card names outside the chat's attachments folder"):
+            outside = self.folder / "notes.txt"
+            outside.write_text("keep me", encoding="utf-8")
+            record = json.loads((self.folder / "prompt-queue.json").read_text(encoding="utf-8"))
+            record["prompts"][0]["attachments"].append(str(outside))
+            (self.folder / "prompt-queue.json").write_text(json.dumps(record), encoding="utf-8")
+            self.queue.remove(self.goal)
+            expect(outside.exists()).to(equal(True))
 
     with context("whose first prompt is done and second asks a decision"):
         with before.each:

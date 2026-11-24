@@ -122,7 +122,7 @@ class StoryMapProject:
         self.server = ProjectToolsets(project=self.root)
         self.server.start([ToolsetReference.parsed(text) for text in TOOLSETS])
         # The Story UI works in the session open in the project, as the board's server reaches the cdd server.
-        self.call("sessions.switch", name="checkout-flow")
+        self.call("sessions.switch", name="checkout-flow", create=True)
 
     @property
     def map(self) -> Path:

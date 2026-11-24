@@ -179,16 +179,19 @@ class Sessions:
     @mcp
     @command(name="switch-session")
     @agent_tool
-    def switch(self, name: str = "", workpath: Path | None = None, call: ToolCall | None = None) -> str:
-        """Open the session called ``name`` for this chat, creating its folder when missing. Returns how to keep its log.
+    def switch(self, name: str = "", workpath: Path | None = None, create: bool = False, call: ToolCall | None = None) -> str:
+        """Open the session called ``name`` for this chat. Returns how to keep its log.
 
         ``name`` defaults to the session this chat has open, then to its open ``branch``.
+        A name no session has is refused, naming the sessions there are, so a misspelt name never makes a session and a
+        card on the board nobody asked for; pass ``create`` true only when the person asked for a new session, and it
+        makes the session's folder.
         ``workpath`` is a folder a new session works in; without one its root is derived: its worktree, else the checkout.
         A switch writes nothing in the checkout and does not touch branches or worktrees: when the session has its own
         worktree and the call's chat works elsewhere, the answer opens by saying to start a chat in that worktree.
         A chat in a ticket's own worktree always opens that ticket's session, whatever name it asks for, because the
         worktree holds only that ticket's work; the answer says so when it asked for another."""
-        return self.opened.switch(name, workpath, call).instructions
+        return self.opened.switch(name, workpath, create, call).instructions
 
 
 class SessionsRead:

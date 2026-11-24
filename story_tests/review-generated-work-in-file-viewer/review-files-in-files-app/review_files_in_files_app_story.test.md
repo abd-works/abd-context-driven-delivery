@@ -424,10 +424,25 @@ The lines of a node selected in the graph view, its comments and its broken rule
 
 | file | text | rendered |
 | --- | --- | --- |
-| *notes/page.html* | `<h1>Checkout</h1><script>parent.hacked = 1</script>` | the page in a frame that runs no script, *Checkout* as its heading |
+| *notes/page.html* | `<h1>Checkout</h1><script>parent.hacked = 1</script>` | the page in a frame apart from the Files app, *Checkout* as its heading, its script reaching nothing outside the frame |
 | *design/cart.svg* | `<svg xmlns="http://www.w3.org/2000/svg"><circle r="4"/><script>alert(1)</script></svg>` | the drawing, its circle and no script |
 | *data/cart.json* | `{"items":[1,2]}` | the object laid out two spaces to a level, *"items": [* on its second line |
 | *data/broken.json* | `{"items":` | its text, and a note that it is not valid JSON |
+
+#### Scenario: Walk a generated UX mockup in its frame
+
+Answered by the person on 2026-11-23 (round 3 of exploratory testing, r3-pixel-08): a UX mockup is runnable greybox, so the Files app shows it as a person can walk it. Every HTML page runs its own scripts in a frame of its own, which gives it no origin, so nothing it runs reaches the Files app; the Files server serves the scripts it names from its own folder of the project, under a key the server made for the project, and the Story Demo scripts of the CDD install it names from */practices/ux/story-demo* (`harness/files_app/app/page-files.ts`, `files/page-frames.ts`).
+
+*Given* checkout-flow's session holds *ordering.html*, a mockup the UX mockup fidelity wrote, with its Catalog, Cart and Cart - Saved screens, its Browse button going to the Cart, and its story module *stories/place_order.js* beside it, whose story lists the Product *Tiny Tales*
+*When* the Person views *ordering.html*
+*Then* the Files app shows the mockup with its Site Map Explorer listing *catalog*, *cart* and *cart-saved*
+*When* the Person presses *Browse <all>*
+*Then* the mockup shows the Cart screen
+*When* the Person zooms the mockup in
+*Then* the mockup shows at 110%
+*When* the Person plays the next story step
+*Then* the Catalog's Products list *Tiny Tales*
+*But* nothing the mockup runs reaches the Files app
 
 #### Scenario: Show text in angle brackets that is no HTML tag
 
@@ -699,9 +714,9 @@ Requested (the person, 2026-11-15): Rules and Cross-file toggles at the top, off
 
 Intended in the Files app: the board's files panel did it until 2026-11-21, when that panel was removed (design proposal 24); the Files app is read-only today, so no page saves an edited file.
 
-*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow
+*Given* the [Files app](../../../harness/files_app/.context/files-app-model.md#filespage-filesfiles-pagets) shows *order.py* of checkout-flow, read with its version
 *And* the Person has edited line 14 to read *raise EmptyCartError(cart.id, "a cart needs one item to be placed")*
-*When* the Person saves the file
+*When* the Person saves the file with the version it was read with
 *Then* *order.py* on disk reads that line 14
 *And* the source view is read-only again, showing the saved text
 
@@ -725,6 +740,27 @@ Requested 2026-11-22 (the person: the session's record has one writer). Observed
 *And* the same save is refused when the path is absolute, opens with *./*, goes through a folder and back (*debug/../session.json*), is written with backslashes, or is in another case where the file system reads that as the same file
 *But* session.read_file still reads *session.json*
 *And* a file named *session.json* in another folder, such as *.sessions/checkout-flow/debug/session.json*, is saved
+
+#### Scenario: Refuse to save over a file changed on disk since it was read
+
+Found on 2026-11-23 (exploratory testing, pixel-06; the person's answer: refuse it and say so). session.write_file replaced a file someone changed on disk between the read and the write, and the change was lost with no word. session.read_file now answers the file's *version*, a hash of its content, and session.write_file takes it back. Acceptance tests: `space/session/files/session_files_spec.py`.
+
+*Given* the viewer shows *order.py* of checkout-flow, read with its version
+*And* someone else has since changed *order.py* on disk
+*When* the Person saves the file with the version it was read with
+*Then* the save is refused, saying *order.py* changed on disk since it was read
+*And* *order.py* on disk keeps the change someone else made
+*But* a save of a file not there yet, with no version, is saved
+
+#### Scenario: Refuse to read or save a file inside the repository's .git folder
+
+Found on 2026-11-23 (exploratory testing, pixel-05; the person's answer: refuse it, naming the path). session.write_file wrote *.git/pixel-probe* and session.read_file answered the whole of *.git/config*; a hook written under *.git* runs on the person's next commit. Acceptance tests: `space/session/files/session_files_spec.py`.
+
+*Given* checkout-flow's repository holds *.git/config*
+*When* the Person reads *.git/config*, or saves *.git/hooks/pre-commit*
+*Then* each is refused, naming the path as inside a *.git* folder, which holds git's own record
+*And* nothing is written under *.git*
+*But* a file whose name only starts with *.git*, such as *.gitignore*, is read and saved as any other
 
 ---
 

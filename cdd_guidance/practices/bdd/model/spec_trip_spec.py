@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -12,6 +12,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 import cdd_guidance.practices  # noqa: F401
 from cdd_guidance.practices.bdd.bdd import Bdd
+from cdd_guidance.practices.bdd.model.bdd_model import SpecBodiesNotKept
 
 _CART_PYTHON = '''\
 from expects import equal, expect
@@ -315,4 +316,20 @@ with description("a sketch in the heading notation of the sketch template"):
         with it("should render the behavior section alone, under its own heading"):
             expect(_render("sketch", _SESSION_SKETCH, "sketch")).to(
                 equal("Fidelity: behavior\n\n## behavior driven development:\n\n### a cart\n\n#### that is new\n\n```\nit should hold no lines\n```\n")
+            )
+
+
+# Exploratory testing, r3-rivet-11: a finished spec rendered to markdown or a sketch came back as signatures only, its
+# imports, setup and test bodies gone, and nothing said so.
+with description("a finished spec taken to a tree format"):
+    with context("that is python, taken to markdown"):
+        with it("should be refused, naming each test whose body would be lost"):
+            expect(lambda: _render("markdown", _CART_PYTHON, "python", "development")).to(
+                raise_error(SpecBodiesNotKept, contain("should hold one line for the book", "should total twice the book's price"))
+            )
+
+    with context("that is typescript, taken to a sketch"):
+        with it("should be refused, naming each test whose body would be lost"):
+            expect(lambda: _render("sketch", _CART_TYPESCRIPT, "typescript", "development")).to(
+                raise_error(SpecBodiesNotKept, contain("should hold one line for the book"))
             )

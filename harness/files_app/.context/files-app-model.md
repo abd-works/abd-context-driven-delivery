@@ -56,6 +56,10 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 - The system's file browser on this machine: Explorer, Finder, or the desktop's file manager. `reveal(path)` has the Files server start it on the file or folder (`/reveal`, `app/file-explorer.ts`); a browser that does not open is a failure told to the chat.
 
+### PageFrames (`files/page-frames.ts`)
+
+- The frames an HTML page of the session shows in. `pageOf(path, html)` gives the page a base address in its own folder of the project, under the key the Files server made for the project (`/page-files`, asked once), so the scripts, styles and images it names, and a UX mockup's Story Demo scripts, come from the Files server; the frame runs them with no origin, apart from the page.
+
 ### ChatContext (`files/chat-context.ts`)
 
 - The context of the chat that opened the page. `add(path, lines?)` has the session put a file, or lines of it, in that chat's prompt box, to go with the person's next prompt; the source view's Add to context calls it for the selected lines.

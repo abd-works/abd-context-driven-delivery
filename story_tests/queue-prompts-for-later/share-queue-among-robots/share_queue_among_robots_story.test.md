@@ -28,6 +28,7 @@ In sub-agent mode the queue's work is shared among robots, sub-agents that run s
 | ++Write the scenarios++ | a |
 | ++Run the unit tier++ | b |
 | ++[for Bolt] Run the heavy tier++ | c, queued for Bolt by name |
+| ++[for  bolt ] Run the heavy tier++ | c, queued for Bolt by name, typed in lower case with spaces |
 
 ### grouping
 
@@ -76,6 +77,15 @@ In sub-agent mode the queue's work is shared among robots, sub-agents that run s
 *When* the person opens the prompt queue
 *Then* ++Bolt++'s queue shows ++[for Bolt] Run the heavy tier++
 
+#### Scenario: Show a card queued for a robot by a name typed in another case in that robot's queue
+
+Answered 2026-11-23 (sparky-06): an agent types a robot's name by hand, so case and outer spaces do not make another robot.
+
+*Given* sub-agent mode is on, ++Sparky++ holding ++Write the scenarios++ (a) and ++Bolt++ holding ++Run the unit tier++ (b)
+*And* the queue also holds ++[for  bolt ] Run the heavy tier++ (c)
+*When* the person opens the prompt queue
+*Then* ++Bolt++'s queue shows ++[for  bolt ] Run the heavy tier++
+
 #### Scenario: Show a card given to one robot only in that robot's queue, whatever robot its text names
 
 *Given* sub-agent mode is on, ++Sparky++ holding ++Write the scenarios++ (a) and ++Bolt++ holding ++Run the unit tier++ (b)
@@ -91,6 +101,15 @@ In sub-agent mode the queue's work is shared among robots, sub-agents that run s
 *Given* the chat's prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
 *When* the cdd server is asked to give ++Write the scenarios++ to ++Bolt++
 *Then* the queue answers ++Write the scenarios++ with the robot ++Bolt++ and ++Run the unit tier++ with none
+
+#### Scenario: Give a card to a robot already on the queue by the spelling the queue holds
+
+*Given* ++Write the scenarios++ (a) is given to ++Bolt++, and ++Run the unit tier++ (b) to no robot
+*When* the cdd server is asked to give ++Run the unit tier++ to "  bOLT  "
+*Then* the queue answers ++Run the unit tier++ with the robot ++Bolt++
+*And* the open queue in sub-agent mode shows one robot ++Bolt++, holding both cards
+
+Evidence: `prompt_queue_spec.py` "gives a card a robot already on the queue by its first spelling" and the plugin test "a card given to a robot spelled in another case stands in that robot's queue, not in a second robot's".
 
 #### Scenario: Take a card off its robot
 

@@ -136,6 +136,8 @@ section: body
 | `.sessions/release-1-2-fixes/exploratory-testing/defects/bolt-05-make-repository-ignores-the-persons-own-files.md` | the defect the second scenario closes |
 | `space/repo/new_repository_spec.py` | unit tier: the patterns written into `.gitignore` |
 | `space/repo/new_repository_heavy_spec.py` | heavy tier, with real git |
+| `.sessions/release-1-2-fixes/exploratory-testing/defects/bolt-08-question-make-repository-in-a-subfolder-nests-a-repository.md` | the person's answer: a folder inside another repository is refused |
+| `.sessions/release-1-2-fixes/exploratory-testing/defects/bolt-09-question-make-repository-on-a-missing-folder-raises-file-not-found.md` | the person's answer: a folder not there yet is made first |
 
 #### Scenario: Make a plain folder a repository
 
@@ -151,6 +153,22 @@ section: body
 *When* the Person creates the git repository  
 *Then* its first commit holds each of those files  
   *And* its .gitignore lists only what CDD writes into a project
+
+#### Scenario: Refuse a folder inside another repository
+
+*Given* shop is a repository  
+  *And* its folder sub/inner holds a.txt and is no repository of its own  
+*When* the Person creates the git repository in sub/inner  
+*Then* it is refused, naming sub/inner and the repository shop  
+  *And* sub/inner is given no .gitignore and no repository  
+  *And* shop can still commit sub/inner/a.txt
+
+#### Scenario: Make a folder that is not there yet
+
+*Given* the folder brand-new does not exist  
+*When* the Person creates the git repository in brand-new  
+*Then* brand-new is made, a repository on main  
+  *And* its first commit holds .gitignore and README.md
 
 ## Story: Open App From Health Panel
 

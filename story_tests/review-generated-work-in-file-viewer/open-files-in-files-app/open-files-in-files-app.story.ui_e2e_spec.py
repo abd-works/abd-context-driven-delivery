@@ -14,6 +14,9 @@ import urllib.parse
 from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
+from cdd_guidance.practices.ux.model.html.nodes import HtmlUxMap
+from cdd_guidance.practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap
 from files_app_browser import BOARD_LINK, BOARD_STORY, DESIGN_REVIEW, NBSP, SHOWN_MILLISECONDS, WHITEBOARD, FilesStack, all_session_files
 from space.kanban.graph_view_examples import BOARD_CODE, BOARD_TEXT, CHECKOUT_FLOW
 from space.session.files.session_file import VIEWER_SHOWS_LINES
@@ -196,6 +199,32 @@ RENDERED_FILES = {
     str(Path(BOARD_CODE).with_name("broken.json").as_posix()): '{"items":',
 }
 
+# Seed: a UX mockup as the UX mockup fidelity writes it (HtmlUxMap, the ordering map of the UX format specs): Catalog,
+# Cart and Cart - Saved screens, its Browse button going to the Cart, its Story Demo scripts named from
+# /practices/ux/story-demo, and the story module and object module it names from its own folder, here beside it.
+MOCKUP = str(Path(BOARD_CODE).with_name("ordering.html").as_posix())
+MOCKUP_STORIES = str(Path(BOARD_CODE).with_name("stories").as_posix()) + "/place_order.js"
+MOCKUP_OBJECTS = str(Path(BOARD_CODE).with_name("domain").as_posix()) + "/order.js"
+MOCKUP_STORIES_TEXT = """import { scenario, story } from "/practices/ux/story-demo/play-dual-runner/story-test-core.js";
+export function createBrowseProductCatalogStory(_mode) {
+  story("Browse Product Catalog", () => {
+    scenario("Products are listed", ({ given, expose }) => {
+      let catalog = null;
+      given("the catalog lists Products", () => { catalog = { products: [{ name: "Tiny Tales" }] }; });
+      expose(() => ({ catalog }));
+    });
+  });
+}
+"""
+MOCKUP_OBJECTS_TEXT = "export class Order {}\n"
+
+
+def _seed_mockup(project: Path) -> None:
+    (project / MOCKUP).write_text(HtmlUxMap.create().render(OrderingMap().build(UxMap.create())), encoding="utf-8")
+    for path, text in ((MOCKUP_STORIES, MOCKUP_STORIES_TEXT), (MOCKUP_OBJECTS, MOCKUP_OBJECTS_TEXT)):
+        (project / path).parent.mkdir(parents=True, exist_ok=True)
+        (project / path).write_text(text, encoding="utf-8")
+
 
 def _view(stack, path: str):
     """A page on checkout-flow's files opened on path, as a link naming the file to open first opens it."""
@@ -265,7 +294,7 @@ with description("Story: View File In Source View, files with a rendered form") 
             for page in self.pages:
                 page.close()
 
-        with it("Then page.html shows in a frame that runs no script, Checkout as its heading"):
+        with it("Then page.html shows in a frame apart from the Files app, Checkout as its heading, its script reaching nothing outside it"):
             page = _view(self.stack, "space/kanban/page.html")
             self.pages.append(page)
             page.frame_locator("iframe.rendered-html").get_by_role("heading", name="Checkout").wait_for(timeout=SHOWN_MILLISECONDS)
@@ -291,6 +320,37 @@ with description("Story: View File In Source View, files with a rendered form") 
             problem = page.locator(".rendered-problem")
             problem.wait_for(timeout=SHOWN_MILLISECONDS)
             expect((problem.inner_text().startswith("Not valid JSON"), page.locator(".file-rendered.rendered-json pre").inner_text())).to(equal((True, '{"items":')))
+
+    with context("Scenario: Walk a generated UX mockup in its frame"):
+        with before.all:
+            _seed_mockup(self.stack.project)
+            self.page = _view(self.stack, MOCKUP)
+            self.mockup = self.page.frame_locator("iframe.rendered-html")
+            self.mockup.locator("#explorer-tree li").first.wait_for(timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the Site Map Explorer lists the mockup's screens, which its Story Demo scripts drew"):
+            expect([label.strip() for label in self.mockup.locator("#explorer-tree > li > .node-label").all_inner_texts()]).to(equal(["catalog", "cart", "cart-saved"]))
+
+        with it("And pressing Browse <all> on the Catalog shows the Cart, by the page's own script"):
+            self.mockup.get_by_role("button", name="Browse <all>").click()
+            self.mockup.get_by_role("heading", name="Cart", exact=True).wait_for(timeout=SHOWN_MILLISECONDS)
+            expect(self.mockup.locator(".screen:not([hidden]) h2").all_inner_texts()).to(equal(["Cart"]))
+
+        with it("And pressing + zooms the mockup to 110%"):
+            self.mockup.get_by_role("button", name="Zoom in").click()
+            expect(self.mockup.get_by_role("button", name="Reset zoom").inner_text()).to(equal("110%"))
+
+        with it("And Play next plays the story module the mockup names from its own folder, the Catalog's Products listing Tiny Tales"):
+            self.mockup.get_by_role("button", name="Play next").click()
+            products = self.mockup.locator('[data-bound-field="catalog.products"] [data-name]')
+            products.first.wait_for(state="attached", timeout=SHOWN_MILLISECONDS)
+            expect(products.evaluate_all("items => items.map(item => item.textContent.trim())")).to(equal(["Tiny Tales"]))
+
+        with it("But nothing the mockup runs reaches the Files app, whose frame gives it no origin"):
+            expect((self.page.locator("iframe.rendered-html").get_attribute("sandbox"), self.page.evaluate("window.hacked === undefined"))).to(equal(("allow-scripts", True)))
 
     with context("Scenario: Show only the source view for a file with no rendered form"):
         with before.all:

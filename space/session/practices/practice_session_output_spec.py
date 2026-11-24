@@ -12,7 +12,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from space.session.practices.practice_session_output import OutputRootRefused
+from space.session.practices.practice_session_output import LastFormatLeftOut, OutputRootRefused, PracticeTurnedOff
 from space.session.spec_support.session_roots_examples import REFUND_AGGREGATE, REFUND_DOMAIN, REFUND_STORIES, RETURN_PARCEL_STORIES, RefundOrderSession
 
 
@@ -136,3 +136,64 @@ with description("a fidelity's root in a session") as self:
             self.tests.choose_root(REFUND_STORIES)
             self.tests.add_root(RETURN_PARCEL_STORIES)
             expect(self.refund.roots("stories", "acceptance_tests")).to(equal([REFUND_STORIES, RETURN_PARCEL_STORIES]))
+
+
+# Exploratory testing, widget-13 and widget-17: every format of a fidelity could be left out, and generate then wrote in
+# none; and a format could be chosen for a fidelity of a practice turned off, which every action refuses to work on.
+with description("a fidelity's chosen formats in a session") as self:
+    with before.each:
+        self.refund = RefundOrderSession()
+        self.story_map = self.refund.output("stories", "story_map")
+
+    with after.each:
+        self.refund.close()
+
+    with context("with one format chosen, left out"):
+        with it("should be refused, naming the format and the fidelity"):
+            expect(lambda: self.story_map.choose_format("markdown", False)).to(raise_error(LastFormatLeftOut, contain("markdown is the only format chosen for story_map")))
+
+        with it("should keep the format chosen"):
+            try:
+                self.story_map.choose_format("markdown", False)
+            except LastFormatLeftOut:
+                pass
+            expect(self.refund.output("stories", "story_map").chosen_formats).to(equal(["markdown"]))
+
+    with context("with two formats chosen, one left out"):
+        with it("should keep the other"):
+            self.story_map.choose_format("drawio", True)
+            expect(self.story_map.choose_format("markdown", False).chosen_formats).to(equal(["drawio"]))
+
+    with context("with only the diagram formats chosen, the diagram group left out"):
+        with before.each:
+            self.story_map.choose_format("drawio", True)
+            self.story_map.choose_format("whiteboard", True)
+            self.story_map.choose_format("markdown", False)
+
+        with it("should be refused, naming the formats"):
+            expect(lambda: self.story_map.formats.choose_from(["drawio", "whiteboard"], False)).to(raise_error(LastFormatLeftOut, contain("drawio, whiteboard")))
+
+        with it("should keep every format of the group chosen"):
+            try:
+                self.story_map.formats.choose_from(["drawio", "whiteboard"], False)
+            except LastFormatLeftOut:
+                pass
+            expect(self.refund.output("stories", "story_map").chosen_formats).to(equal(["drawio", "whiteboard"]))
+
+    with context("of a practice turned off"):
+        with before.each:
+            self.refund.session.practice("ux").enable(False)
+            self.ia = self.refund.output("ux", "ia")
+
+        with it("should refuse a format chosen, naming the practice"):
+            expect(lambda: self.ia.choose_format("drawio", True)).to(raise_error(PracticeTurnedOff, contain("ux is turned off for session")))
+
+        with it("should refuse a format left out the same way"):
+            expect(lambda: self.ia.choose_format("markdown", False)).to(raise_error(PracticeTurnedOff, contain("turn ux on")))
+
+        with it("should keep no format chosen for it in the session's record"):
+            try:
+                self.ia.choose_format("drawio", True)
+            except PracticeTurnedOff:
+                pass
+            expect(self.refund.output("ux", "ia").fields.formats).to(equal(None))

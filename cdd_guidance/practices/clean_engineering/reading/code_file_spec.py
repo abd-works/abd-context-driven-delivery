@@ -154,8 +154,17 @@ with description("a cart"):
         return Cart()
 """
 
+# Test support in another folder, whose imports the read keeps for no production file.
+_CART_EXAMPLES = """from shop.cart import Cart
+
+
+def filled_cart():
+    return Cart()
+"""
+
 _FILES = {
     "shop/cart.py": _CART,
+    "checkout/cart_examples.py": _CART_EXAMPLES,
     "shop/__init__.py": _PACKAGE,
     "shop/cart.ts": _CART_SCRIPT,
     "shop/cart.spec.ts": _CART_SCRIPT_SPEC,
@@ -271,6 +280,17 @@ with description("a file of the code read"):
         with it("should reach nothing when two classes declare the member the chain opens with"):
             expect(self.called("cart.add('a').quantity")).to(equal([]))
 
+    with context("whose span assigns a local from a chain that opens with a local of no known class"):
+        with it("should type the local by what the chain ends on"):
+            expect(self.called("till = cart.emptied().till\ntill.open()")).to(equal(["Cart.emptied", "Cart.till", "Till.open"]))
+
+        with it("should type the local by what the guessed member holds when it is the chain's only member"):
+            expect(self.called("till = cart.till\ntill.open()")).to(equal(["Cart.till", "Till.open"]))
+
+        with it("should join what the local reaches by the same guess"):
+            reach = self.spec_file.reach_of(CodeSpan(CodeSpan.code_of("till = cart.till\ntill.open()")))
+            expect(_named(reach.guessed)).to(equal(["Cart.till", "Till.open"]))
+
     with context("whose span follows a chain of three or more parts from an object from outside the code read"):
         with it("should reach no member of the code's classes"):
             expect(self.called("folder = Path('shop')\nfolder.parent.till.open()")).to(equal([]))
@@ -283,6 +303,11 @@ with description("a file of the code read"):
             module_file = self.index.file("shop/cart_spec.py", [ClassReference("shop/cart", "Cart")])
             called = module_file.members_called_in(CodeSpan("shop.Cart().add('a')"))
             expect(_named(called)).to(equal(["Cart.__init__", "Cart.add"]))
+
+    with context("written in test support, whose imports the read keeps for no production file"):
+        with it("should name the classes its own text imports"):
+            support = self.index.file("checkout/cart_examples.py")
+            expect(_named(support.members_called_in(CodeSpan("Cart().add('a')")))).to(equal(["Cart.add", "Cart.__init__"]))
 
     with context("whose import names a package that passes the class on"):
         with it("should name the class the package's module declares"):

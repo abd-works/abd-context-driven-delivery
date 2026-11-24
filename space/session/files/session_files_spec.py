@@ -10,7 +10,7 @@ import cdd_guidance.practices  # noqa: F401 - registers the practices a session'
 from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from space.session import Session, Sessions
 from space.session.session import SessionNotFoundError
-from space.session.files.file_manager import PathOutsideRootsError, SessionRecordWriteRefused
+from space.session.files.file_manager import FileChangedSinceReadError, PathOutsideRootsError, SessionRecordWriteRefused, VersionControlPathRefused
 from space.session.files.session_files import NamedPathNotFoundError
 from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
@@ -19,6 +19,10 @@ DEBUG_REPORT = "debug/debug-20261116T225500.md"
 DEBUG_TEXT = "# debug" + chr(10)
 # Seed: an examples module a story test imports its fixtures from.
 EXAMPLES_TEXT = "LISTED = []" + chr(10)
+# Seed: a cart module as read, as someone else changed it on disk, and as an agent saves it.
+CART_TEXT = "class Cart:" + chr(10) + "    items = []" + chr(10)
+CHANGED_CART_TEXT = "class Cart:" + chr(10) + "    CHANGED_ON_DISK = True" + chr(10)
+SAVED_CART_TEXT = "class Cart:" + chr(10) + "    pass" + chr(10)
 
 
 def _working_in(project: Path, root: Path) -> Session:
@@ -214,3 +218,108 @@ with description("the files of a session's folder, as the Files app lists them")
         with it("should list it"):
             (self.folder / "notes.lock").write_text("", encoding="utf-8")
             expect(self.listed()).to(equal(["notes.lock", "session.json", "session.log"]))
+
+
+# The person's answer (2026-11-23, pixel-05): the repository's .git folder holds git's own record, its config and the
+# hooks git runs on the next commit, so no file call reads or writes inside it.
+with description("session.read_file and session.write_file, on a path inside the repository's .git folder") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        (self.project.root / ".sessions" / "checkout-flow").mkdir(parents=True)
+        (self.project.root / ".sessions" / "checkout-flow" / "session.json").write_text(json.dumps({"name": "checkout-flow"}), encoding="utf-8")
+        (self.project.root / ".git").mkdir(exist_ok=True)
+        (self.project.root / ".git" / "config").write_text("[core]" + chr(10), encoding="utf-8")
+        tools = ToolsetReference.of(Session).made().tools
+        self.read = lambda path: tools["read_file"].invoke({"session": "checkout-flow", "path": path}, project=self.project.root)
+        self.write = lambda path: tools["write_file"].invoke({"session": "checkout-flow", "path": path, "text": "x"}, project=self.project.root)
+
+    with after.each:
+        OPEN_PROJECTS.close_all()
+
+    with it("should refuse to read .git/config, naming the path"):
+        expect(lambda: self.read(".git/config")).to(raise_error(VersionControlPathRefused, contain(".git/config", "git's own")))
+
+    with it("should refuse to write a hook git would run on the next commit"):
+        expect(lambda: self.write(".git/hooks/pre-commit")).to(raise_error(VersionControlPathRefused, contain(".git/hooks/pre-commit")))
+
+    with it("should write nothing there"):
+        try:
+            self.write(".git/hooks/pre-commit")
+        except VersionControlPathRefused:
+            pass
+        expect((self.project.root / ".git" / "hooks" / "pre-commit").exists()).to(equal(False))
+
+    with it("should refuse the path written with a .git folder deeper down, such as a nested repository's"):
+        expect(lambda: self.write("vendor/lib/.git/config")).to(raise_error(VersionControlPathRefused))
+
+    with it("should refuse the path in another case, which Windows reads as the same folder"):
+        expect(lambda: self.read(".GIT/config")).to(raise_error(VersionControlPathRefused))
+
+    with it("should still save a file whose name only starts with .git, such as .gitignore"):
+        self.write(".gitignore")
+        expect((self.project.root / ".gitignore").read_text(encoding="utf-8")).to(equal("x"))
+
+
+# The person's answer (2026-11-23, pixel-06): read_file answers the version of the file it read, and write_file takes it
+# back; a file changed on disk since then is refused, so a change someone else made is never written over unseen.
+with description("session.write_file, on a file that read_file read") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        (self.project.root / ".sessions" / "checkout-flow").mkdir(parents=True)
+        (self.project.root / ".sessions" / "checkout-flow" / "session.json").write_text(json.dumps({"name": "checkout-flow"}), encoding="utf-8")
+        self.cart = self.project.root / "src" / "cart.py"
+        self.cart.parent.mkdir(parents=True)
+        self.cart.write_text(CART_TEXT, encoding="utf-8")
+        tools = ToolsetReference.of(Session).made().tools
+        self.read = lambda: tools["read_file"].invoke({"session": "checkout-flow", "path": "src/cart.py"}, project=self.project.root)
+        self.write = lambda path, version: tools["write_file"].invoke({"session": "checkout-flow", "path": path, "text": SAVED_CART_TEXT, "version": version}, project=self.project.root)
+
+    with after.each:
+        OPEN_PROJECTS.close_all()
+
+    with context("that is as it was read"):
+        with before.each:
+            self.saved = self.write("src/cart.py", self.read().version)
+
+        with it("should save the text"):
+            expect(self.cart.read_text(encoding="utf-8")).to(equal(SAVED_CART_TEXT))
+
+        with it("should answer the version of the file as saved, which a read now answers too"):
+            expect(self.saved.version).to(equal(self.read().version))
+
+    with context("that changed on disk since it was read"):
+        with before.each:
+            self.version = self.read().version
+            self.cart.write_text(CHANGED_CART_TEXT, encoding="utf-8")
+
+        with it("should refuse the write, saying the file changed since it was read"):
+            expect(lambda: self.write("src/cart.py", self.version)).to(raise_error(FileChangedSinceReadError, contain("src/cart.py", "changed on disk since it was read")))
+
+        with it("should keep the change made on disk"):
+            try:
+                self.write("src/cart.py", self.version)
+            except FileChangedSinceReadError:
+                pass
+            expect(self.cart.read_text(encoding="utf-8")).to(equal(CHANGED_CART_TEXT))
+
+    with context("that is on disk, written with no version, as by a caller that never read it"):
+        with it("should refuse the write"):
+            expect(lambda: self.write("src/cart.py", "")).to(raise_error(FileChangedSinceReadError))
+
+    with context("that was deleted since it was read"):
+        with it("should refuse the write"):
+            version = self.read().version
+            self.cart.unlink()
+            expect(lambda: self.write("src/cart.py", version)).to(raise_error(FileChangedSinceReadError))
+
+    with context("that is not there yet, written with no version"):
+        with it("should save the new file"):
+            self.write("src/checkout.py", "")
+            expect((self.project.root / "src" / "checkout.py").read_text(encoding="utf-8")).to(equal(SAVED_CART_TEXT))
+
+    with context("that a read answered as not there, written with that read's version"):
+        with it("should save the new file"):
+            read = ToolsetReference.of(Session).made().tools["read_file"]
+            missing = read.invoke({"session": "checkout-flow", "path": "src/checkout.py"}, project=self.project.root)
+            self.write("src/checkout.py", missing.version)
+            expect((self.project.root / "src" / "checkout.py").is_file()).to(equal(True))

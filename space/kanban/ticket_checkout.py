@@ -77,12 +77,6 @@ class Leaving:
         return self.merges or self.deletes_branch or self.deletes_worktree
 
     @property
-    def saves_work(self) -> bool:
-        """Whether it saves the ticket's work before anything is removed: a commit, a push, or a change of its branch,
-        which saves what a worktree about to go holds."""
-        return self.commits or self.pushes or self.changes_branch
-
-    @property
     def removes_worktree(self) -> bool:
         """Whether the ticket's own worktree goes: deleted, or taken with the branch, since git deletes no branch a
         worktree has checked out."""
@@ -111,8 +105,10 @@ class TicketCheckout:
     def work_branch(self) -> Branch:
         """The branch the ticket's work is on: its own branch while it is checked out, in the repository or in its own
         worktree, else the default branch while the repository has it checked out, as for a session with no branch of
-        its own. Any other branch checked out is not the ticket's, so its own branch comes back not checked out."""
-        if self.branch.is_checked_out:
+        its own. Any other branch checked out is not the ticket's, so its own branch comes back not checked out; so does
+        an own branch checked out nowhere, such as one whose worktree is gone, so its close never commits what the
+        repository's own folder holds."""
+        if self.branch.is_checked_out or self._own_branch is not None:
             return self.branch
         default = self._repo.default_branch
         return default if default.is_checked_out_here else self.branch
@@ -217,60 +213,56 @@ class TicketCheckout:
         return f"{self._ticket.name}: leave session"
 
     def save_work(self, leaving: Leaving) -> None:
-        """Commit and push the branch the ticket's work is on, in the checkout that has it: the repository, or the
-        ticket's own worktree; work on the default branch is committed and pushed there. Then merge the ticket's own
-        branch into the default branch when leaving names merge. Nothing of the ticket is removed here, and this runs
-        before anything is: a merge git refuses leaves its worktree, its branch, and its session as they were, and the
-        commit is made where the ticket's work is, never from whatever the repository's own folder holds once the
-        worktree is gone."""
-        if not leaving.saves_work:
-            return
-        if leaving.commits or leaving.pushes:
-            self.work_branch.save(self._leave_message, push=leaving.pushes)
+        """Do with the ticket's work what leaving names and nothing more: commit the branch its work is on, in the
+        checkout that has it (the repository, or the ticket's own worktree), push it, and merge the ticket's own branch
+        into the default branch. Nothing of the ticket is removed here, and this runs before anything is: a merge git
+        refuses leaves its worktree, its branch, and its session as they were, and a commit is made where the ticket's
+        work is, never from whatever the repository's own folder holds once the worktree is gone."""
+        work = self.work_branch
+        if leaving.commits:
+            work.save(self._leave_message, push=leaving.pushes)
+        elif leaving.pushes:
+            work.push()
         own = self._own_branch
-        if own is None:
-            return
-        self._save_worktree_to_delete(own, leaving)
-        if leaving.merges:
+        if own is not None and leaving.merges:
             own.land_on_default()
 
-    def leave_branch(self, leaving: Leaving) -> None:
-        """Do what leaving names with the ticket's own branch once its work is saved and merged: delete its worktree,
-        and delete the branch, here and on origin. Each is its own choice: deleting never merges."""
+    def leave_branch(self, leaving: Leaving) -> list[str]:
+        """Do what leaving names with the ticket's own branch once its work is saved and merged: delete its worktree as
+        it is, and delete the branch, here and on origin. Each is its own choice: deleting never merges or commits.
+        Answers the files whose changes nobody committed and that went with the worktree; none when it stays."""
         own = self._own_branch
         if own is None or not leaving.changes_branch:
-            return
-        self._delete_worktree(own, leaving)
+            return []
+        dropped = self._remove_worktree(own) if leaving.removes_worktree else []
         self._delete_branch(leaving)
+        return dropped
 
     def free_worktree(self) -> None:
         """Remove the ticket's own worktree, its work committed and pushed on its branch first; the branch stays. A
         ticket that is archived or deleted takes its card away, so it leaves no checkout with unsaved work that no card
         reaches. A worktree a running program holds open stops it before the ticket changes."""
         own = self._own_branch
-        if own is not None:
-            self._delete_worktree(own, Leaving([LEAVE_DELETE_WORKTREE]))
-
-    def _worktree_to_delete(self, branch: Branch, leaving: Leaving) -> Repo | None:
-        """The branch's own worktree when leaving names delete_worktree or delete_branch: git deletes no branch a
-        worktree has checked out, so deleting the branch takes its worktree with it. A merge needs neither, since the
-        default branch's checkout merges it."""
-        if not leaving.removes_worktree:
-            return None
-        return branch.linked_worktree
-
-    def _save_worktree_to_delete(self, branch: Branch, leaving: Leaving) -> None:
-        """Commit and push the work in a worktree leaving is about to delete, whether or not leaving names a commit, so
-        the merge that follows carries all of it."""
-        if self._worktree_to_delete(branch, leaving) is not None:
-            branch.save(self._leave_message)
-
-    def _delete_worktree(self, branch: Branch, leaving: Leaving) -> None:
-        """Remove the branch's own worktree folder, its work committed and pushed there, when leaving names it."""
-        worktree = self._worktree_to_delete(branch, leaving)
+        worktree = own.linked_worktree if own is not None else None
         if worktree is None:
             return
         worktree.close(self._leave_message)
+        self._forget_worktree()
+
+    def _remove_worktree(self, branch: Branch) -> list[str]:
+        """Remove the branch's own worktree folder as it is, committing nothing: git deletes no branch a worktree has
+        checked out, so deleting the branch takes its worktree too. Answers the files with changes nobody committed that
+        went with it; none when the branch has no worktree of its own."""
+        worktree = branch.linked_worktree
+        if worktree is None:
+            return []
+        dropped = worktree.working_tree.uncommitted()
+        worktree.worktrees.remove(worktree)
+        self._forget_worktree()
+        return dropped
+
+    def _forget_worktree(self) -> None:
+        """The board reads its worktrees and tickets again once a worktree is gone."""
         self._ticket.board.sessions.worktrees.forget()
         self._ticket.board.placement.reread()
 
@@ -368,8 +360,34 @@ class LeaveChoices:
     def _branch_steps(self) -> list[str]:
         if self._own_branch is None:
             return []
-        worktree = [LEAVE_DELETE_WORKTREE] if self._own_branch.linked_worktree is not None else []
+        worktree = [LEAVE_DELETE_WORKTREE] if self._own_worktree is not None else []
         return [LEAVE_MERGE, LEAVE_DELETE_BRANCH, *worktree]
+
+    @property
+    def _own_worktree(self) -> Repo | None:
+        return self._own_branch.linked_worktree if self._own_branch is not None else None
+
+    @property
+    @data_field
+    def unsaved_work(self) -> list[str]:
+        """The files in the ticket's own worktree with changes nobody committed, new files among them: deleting the
+        worktree or the branch without a commit loses them, since closing does only what the person ticks. None while
+        the ticket has no worktree of its own."""
+        worktree = self._own_worktree
+        return worktree.working_tree.uncommitted() if worktree is not None else []
+
+    @property
+    @data_field
+    def warning(self) -> str:
+        """What closing can lose, said before the person closes: the work in unsaved_work, gone with the worktree unless
+        commit is chosen. Empty when nothing would be lost."""
+        unsaved = self.unsaved_work
+        if not unsaved:
+            return ""
+        return (
+            f"Deleting {self._own_branch.name}'s worktree or branch without a commit loses the work nobody committed in "
+            f"{', '.join(unsaved)}; choose commit to keep it."
+        )
 
     @property
     @data_field

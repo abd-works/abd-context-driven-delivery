@@ -47,6 +47,12 @@ _PARSES_SOURCE_IN_A_WIDE_CATCH = (
     "import ast\n\n\nclass Classes:\n    def named_in(self, source: str) -> list:\n        try:\n            tree = ast.parse(source)\n"
     "        except ValueError:\n            return []\n        return [node.name for node in tree.body]\n"
 )
+# A reader of many files that keeps the reason a file could not be read on its own object, for validate to report.
+_KEEPS_THE_FAILURE_TO_REPORT = (
+    "from pathlib import Path\n\n\nclass Sources:\n    def __init__(self) -> None:\n        self._unreadable: dict = {}\n\n"
+    "    def text_of(self, path: Path) -> str | None:\n        try:\n            return path.read_text(encoding='utf-8')\n"
+    "        except UnicodeDecodeError as error:\n            self._unreadable[path] = f'cannot be read: {error}'\n            return None\n"
+)
 _TYPESCRIPT_READ_AS_EMPTY = (
     "export class Settings {\n  read(text: string): Record<string, string> {\n    try {\n      return JSON.parse(text);\n"
     "    } catch (unreadable) {\n      return {};\n    }\n  }\n}\n"
@@ -105,6 +111,10 @@ with description("a read of something that is not there") as self:
     with context("that reads source code with ast.parse inside a wide catch"):
         with it("should pass, since only a JSON read or a decode is a read of stored data"):
             expect(_hits(_PARSES_SOURCE_IN_A_WIDE_CATCH)).to(equal([]))
+
+    with context("that keeps the reason it could not decode a file on its own object, to report it"):
+        with it("should pass, since the failure is kept for validate to report rather than read as nothing there"):
+            expect(_hits(_KEEPS_THE_FAILURE_TO_REPORT)).to(equal([]))
 
     with context("that answers a default for a number that does not parse, with no file or record read"):
         with it("should pass, since no stored thing is read as empty"):

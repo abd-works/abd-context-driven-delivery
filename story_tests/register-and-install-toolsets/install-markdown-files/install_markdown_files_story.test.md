@@ -75,6 +75,7 @@ section: body
 | `scripts/install.py --help` | "IDE name: Cursor, VS Code, Kilo, or Claude" |
 | `scripts/install.py` `_chat_folder_refusal` | a chat folder that is no project is refused with exit 3, so the board mod stays quiet at chat start |
 | bolt-02, bolt-04, bolt-11 (the empty name only) | the defects each scenario closes |
+| bolt-10 | the person's answer: a path whose parent folder does not exist is refused |
 | `harness/installation/ide_layout_spec.py`, `install_target_spec.py`, `scripts/install_spec.py` | unit tier |
 
 #### Scenario: Name the IDE in another case
@@ -96,6 +97,19 @@ section: body
 *When* the Person installs CDD into the path shop/README.md  
 *Then* the install is refused, saying shop/README.md is a file  
   *And* nothing is written
+
+#### Scenario: Refuse a path whose parent folder does not exist
+
+*Given* shop has no folder named does  
+*When* the Person installs CDD for VS Code into the path shop/does/not/exist/.github  
+*Then* the install is refused, naming shop/does/not/exist as a folder that does not exist  
+  *And* no folder is made under shop
+
+#### Scenario: Make the IDE folder itself
+
+*Given* shop exists and has no .claude  
+*When* the Person installs CDD for Claude into the path shop/.claude  
+*Then* shop/.claude is made and CDD is installed into it
 
 #### Scenario: Refuse an empty path
 

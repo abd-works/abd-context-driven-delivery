@@ -66,6 +66,21 @@ with description("the file a fidelity declares for a render of one of its files"
             placed = self.declared.file_beside("C:/work/src/ordering/.context/ordering-model.md", "drawio")
             expect(placed).to(equal("C:/work/src/ordering/.context/ordering-model.drawio"))
 
+    # Exploratory testing, widget-15: a class model rendered from Python to markdown was saved as src/order.md beside
+    # the code, not under the name the model fidelity writes markdown to.
+    with context("with code declared as a folder for each module, and a code file in a module's folder"):
+        with before.each:
+            self.declared = _declared(_CLASS_MODEL)
+
+        with it("should place the markdown model in the module's .context, named for the folder holding the code"):
+            expect(self.declared.file_beside("src/ordering/cart.py", "markdown")).to(equal("src/ordering/.context/ordering-model.md"))
+
+        with it("should take the one folder holding the code as the module, for code at the root's first folder"):
+            expect(self.declared.file_beside("src/order.py", "markdown")).to(equal("src/.context/src-model.md"))
+
+        with it("should place no file for a file in that folder in another format than the code"):
+            expect(self.declared.file_beside("src/ordering/notes.md", "drawio")).to(equal(""))
+
     with context("with one drawing declared for the project and a markdown file declared for each module"):
         with before.each:
             self.declared = _declared(_MODULES)

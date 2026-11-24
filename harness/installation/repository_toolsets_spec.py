@@ -71,6 +71,15 @@ with description("a repository's toolsets") as self:
         with it("should leave the class out, as it leaves out one annotated hosted_only"):
             expect(_texts(RepositoryToolsets(self.root).references())).to(equal([]))
 
+    with context("with a class whose file holds a comment written in a code page other than UTF-8"):
+        with before.each:
+            (self.root / "shop" / "cafe.py").write_bytes(
+                b"# caf\xe9 menu\nfrom harness.mcp.mcp_annotations import mcp\n\n\nclass Cafe:\n    @mcp\n    def menu(self) -> int:\n        return 0\n"
+            )
+
+        with it("should still collect the class, reading the byte it cannot decode as a replacement character"):
+            expect(_texts(RepositoryToolsets(self.root).references())).to(contain("shop.cafe:Cafe"))
+
     with context("with a class no annotation names"):
         with before.each:
             (self.root / "shop" / "plain.py").write_text("class Plain:\n    def run(self) -> None:\n        pass\n", encoding="utf-8")

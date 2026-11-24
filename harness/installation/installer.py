@@ -309,15 +309,16 @@ class Installer:
         """The install this installer ran last; none before its first."""
 
     @classmethod
-    def create(cls, ide: str | None = None, path: str | Path | None = None, *, repo: str | Path) -> Installer:
+    def create(cls, ide: str | None = None, path: str | Path | None = None, *, repo: str | Path, dev_lane: bool = False) -> Installer:
         """The installer of repo into path for ide; with neither named, into the IDE folder it last installed into,
         else repo's own folder for the default IDE. An IDE name that is none CDD installs into is refused with
-        *UnknownIde*, and a path that is empty or a file with *NotAnInstallFolder*."""
+        *UnknownIde*, and a path that is empty, a file, or in a folder that does not exist with *NotAnInstallFolder*. dev_lane points the chats of a project other than repo at the dev lane's cdd
+        server, which they otherwise reach on the stable lane."""
         root = Path(repo).resolve()
         last_install = LastInstall(_LAST_INSTALL)
         last_ide, last_folder = (last_install.ide, last_install.folder) if ide is None and path is None else (None, None)
         layout = IdeLayout(ide or last_ide or IdeLayout.DEFAULT_IDE)
-        target = InstallTarget(layout, path) if path is not None else InstallTarget.from_last_install(layout, last_folder, root)
+        target = InstallTarget(layout, path, dev_lane) if path is not None else InstallTarget.from_last_install(layout, last_folder, root, dev_lane)
         return cls(target, RepositoryToolsets(root), last_install)
 
     @classmethod

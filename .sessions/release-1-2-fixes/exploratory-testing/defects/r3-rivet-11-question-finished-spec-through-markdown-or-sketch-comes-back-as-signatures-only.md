@@ -4,7 +4,7 @@
 - **Tester:** Rivet
 - **Story:** epic "Deliver Work With Context Guidance", sub-epic "Produce Formal Artifacts"; no scenario covers a finished spec through the tree formats.
 - **Module and class:** `cdd_guidance/practices/bdd/model/bdd_model.py` `BddModel.render` (the tree holds names only), `code_spec_model.py` `CodeBddModel.render` (keeps bodies only from a `previous` file, which a render that returns content is not given).
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 Sandbox `C:\dev\_et\round3\rivet\work`, session `main` (`drv\run.py`, calls in `drv\trip-development.json`).
@@ -34,3 +34,7 @@ The tree, names and counts are kept (apart from the order change of r3-rivet-03)
 Unit, once the answer is known.
 
 ## Also seen by
+
+## Answer (2026-11-23)
+
+A finished spec rendered to markdown or a sketch is refused, naming the tests whose bodies would be lost. Built in `cdd_guidance/practices/bdd/model/bdd_model.py` (`SpecBodiesNotKept`, `BddModel.tests_with_bodies` and `refuse_losing_bodies`, called by `BddModel.render` and `SketchBddModel.render`); at `bdd-development` and every other code fidelity, which declare no markdown, a render to markdown is refused before that by `FormatNotDeclared` (widget-16), naming the fidelity and the format. Tested by `cdd_guidance/practices/bdd/model/spec_trip_spec.py` "a finished spec taken to a tree format" and `cdd_guidance/actions/render/render_spec.py` "that is a finished Python spec, rendered to the markdown realization" and "... rendered to markdown at development, which declares none"; scenario "Refuse to render a finished spec to a format that holds no test body" in `story_tests/deliver-work-with-context-guidance/produce-formal-artifacts/produce_formal_artifacts_story.test.md`.

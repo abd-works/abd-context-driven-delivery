@@ -9,13 +9,15 @@ import type { FileCallouts } from './file-callouts'
 import { FileSourceView } from './file-source-view'
 import { renderingOf, type RenderedForm, type Rendering } from './file-rendering'
 import { FILE_PATH, RenderedCallouts } from './rendered-callouts'
+import type { PageFrames } from './page-frames'
 import { calloutsOf } from './source-of-file'
 
 const NO_CALLOUTS: SourceCallout[] = []
 const NO_MEMBERS: NodeSourceData[] = []
 
-// What the source view takes, and callouts, which reads another file's callouts for a section opened in place.
-type FileViewProps = ComponentProps<typeof FileSourceView> & { callouts: FileCallouts }
+// What the source view takes; callouts, which reads another file's callouts for a section opened in place; and frames,
+// which shows an HTML page running its own scripts.
+type FileViewProps = ComponentProps<typeof FileSourceView> & { callouts: FileCallouts; frames: PageFrames }
 
 // Rendered and Source, the two ways a file with a rendered form shows; the one showing is pressed.
 function RenderedToggleView({ rendered, onChoose }: { rendered: boolean; onChoose: (rendered: boolean) => void }) {
@@ -51,10 +53,35 @@ function MarkdownPageView({ path, html, shown, rendered }: { path: string; html:
   return <div ref={page} className="markdown-page" {...{ [FILE_PATH]: path }} onClick={follow} />
 }
 
-// The file drawn as its form draws it: markdown and SVG in the page, cleaned of scripts; an HTML page in a frame whose
-// sandbox runs none of its scripts; JSON laid out, or as its text with the reason it is not valid.
-function RenderedFileView({ path, rendering, shown, rendered }: { path: string; rendering: Rendering; shown: SourceCallout[]; rendered: RenderedCallouts }) {
-  if (rendering.form === 'html') return <iframe className="file-rendered rendered-html" title={`${path} rendered`} sandbox="" srcDoc={rendering.html} />
+// An HTML page in a frame whose sandbox runs the page's own scripts but gives it no origin, so nothing it runs reaches the
+// Files app, its storage or its server's routes; the page finds the scripts, styles and images it names through the
+// Files server, from its own folder of the project and, for a UX mockup, the Story Demo scripts. The frame waits for that
+// address, so the page's scripts run once; a page whose address could not be read shows without it, and says so.
+function FramedPageView({ path, html, frames }: { path: string; html: string; frames: PageFrames }) {
+  const [page, setPage] = useState<{ html: string; problem: string } | null>(null)
+  useEffect(() => {
+    let shown = true
+    frames.pageOf(path, html).then(
+      framed => shown && setPage({ html: framed, problem: '' }),
+      failure => shown && setPage({ html, problem: `The page's own scripts, styles and images could not be reached: ${(failure as Error).message}` }),
+    )
+    return () => {
+      shown = false
+    }
+  }, [frames, path, html])
+  if (!page) return null
+  return (
+    <>
+      {page.problem ? <p className="files-note rendered-problem">{page.problem}</p> : null}
+      <iframe className="file-rendered rendered-html" title={`${path} rendered`} sandbox="allow-scripts" srcDoc={page.html} />
+    </>
+  )
+}
+
+// The file drawn as its form draws it: markdown and SVG in the page, cleaned of scripts; an HTML page in a frame of its
+// own, running its scripts apart from the Files app; JSON laid out, or as its text with the reason it is not valid.
+function RenderedFileView({ path, rendering, shown, rendered, frames }: { path: string; rendering: Rendering; shown: SourceCallout[]; rendered: RenderedCallouts; frames: PageFrames }) {
+  if (rendering.form === 'html') return <FramedPageView path={path} html={rendering.html} frames={frames} />
   return (
     <div className={`file-rendered rendered-${rendering.form}`} aria-label={`${path} rendered`}>
       {rendering.problem ? <p className="files-note rendered-problem">{rendering.problem}</p> : null}
@@ -75,7 +102,7 @@ function useRenderedCallouts({ callouts, members = NO_MEMBERS, onGoToFile }: Pic
   return useMemo(() => new RenderedCallouts({ calloutsIn: path => now.current.callouts.in(path), within: (callout, stack) => now.current.within(callout, stack), goTo: callout => now.current.onGoToFile?.(callout) }), [])
 }
 
-function RenderableFileView({ form, callouts, ...props }: FileViewProps & { form: RenderedForm }) {
+function RenderableFileView({ form, callouts, frames, ...props }: FileViewProps & { form: RenderedForm }) {
   const around = props.openAround ?? []
   // It opens rendered unless lines of it are asked to show, such as a node selected in the graph view, whose lines,
   // comments and broken rules only the source view marks.
@@ -96,7 +123,7 @@ function RenderableFileView({ form, callouts, ...props }: FileViewProps & { form
   return (
     <div className="file-source">
       <div className="file-source-bar">{toggle}</div>
-      <RenderedFileView path={file.path} rendering={rendering} shown={shown} rendered={rendered} />
+      <RenderedFileView path={file.path} rendering={rendering} shown={shown} rendered={rendered} frames={frames} />
     </div>
   )
 }

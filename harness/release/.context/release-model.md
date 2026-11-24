@@ -45,11 +45,14 @@ One run of a tier on one commit of one checkout: when it started, the process th
 	// the run keeps the process's id and when it started, which together name that one process
 + finished(exit_code: int, output: str, previous: TestRun | None, now: datetime): TestRun
 + is_due(now: datetime): bool
++ is_on(checkout: Path | None): bool
++ settled(): TestRun
+	// abandoned when it is recorded as running and its process is gone
 ---<<names the process that runs it as>>--> RunningProcess
 
 ## TestRunRecord
 
-The latest run of each tier on one checkout, and the finished run before it, kept with every other checkout's in `test-runs.json` in the cdd home. One process at a time looks at what is due: it claims the file `test-runs.claim` beside the record, and a claim left by a process that ended is taken over once it is stale.
+The latest run of each tier on one checkout, and the finished run before it, kept with every other checkout's in `test-runs.json` in the cdd home, with the run `scripts/test.ps1` makes of a tier when a person or an agent starts it in the checkout's own folder. One process at a time looks at what is due, or changes the record: it holds the record's claim, the *LockFile* `test-runs.claim` beside it, which the operating system gives back when its process ends, however it ends.
 
 + TestRunRecord(folder: Path | str, checkout: Path | str | None = None)
 ------
@@ -63,10 +66,14 @@ The latest run of each tier on one checkout, and the finished run before it, kep
 + previous(tier: TestTier): TestRun | None
 + new_run(tier: TestTier, commit: str, started_at: datetime): TestRun
 + save(run: TestRun): None
-	// the file is put in place whole, so a reader never meets half a record
+	// the file is put in place whole, so a reader never meets half a record, under the record's claim
++ save_script_run(run: TestRun): None
+	// live while test.ps1 runs, never the tier's latest result
 + claimed(): Iterator[bool]
+	// False at once while another process holds the claim
 + log_path(tier: TestTier): Path
 ---<<keeps>>--> TestRun
+---<<claimed through>>--> LockFile
 ---<<raises>>--> TestRunRecordUnreadable
 
 ## TestRunRecordUnreadable : Exception
@@ -119,6 +126,9 @@ Runs heavy every hour and e2e every day on the main checkout its record is of. N
 	-> TestRunRecord.claimed
 	-> TestRunner.start
 + run_now(tier: TestTier, recorded_start: datetime | None = None): TestRun
-	// a run started while another is live, on any checkout, waits and says each time what it waits for
+	// a run started while another is live, on any checkout, waits and says each time what it waits for; it finishes the run the cadence recorded at recorded_start, else records one of its own, a run left running by a process that ended recorded as abandoned
 	-> TestRunner.run
 	-> TestRunRecord.save
++ record_script_run(tier: TestTier, script: RunningProcess): TestRun
+	// scripts/test.ps1 recorded as running in its own process, once no run is live on this checkout
+	-> TestRunRecord.save_script_run

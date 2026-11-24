@@ -28,7 +28,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_false, equal, expect
+from expects import be_false, contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.mcp.spec_support import SpecChat, SpecServer
@@ -48,6 +48,8 @@ _TURN_SECONDS = 240
 # How many times the chat is asked to give the goal its steps before the spec goes on and fails on what it finds.
 _SET_STEPS_ASKS = 3
 _NOTICE ="<task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification>"
+# A paste as Claude Code hands it to the plugin: the pasted text inside its tags.
+_PASTED_NOTES = '<pasted_content id="7250">\n## Notes from the backlog\nFrom `board-enhancements` the board needs a filter.\n</pasted_content>'
 
 
 class ClaudeCodeNotFoundError(RuntimeError):
@@ -174,13 +176,16 @@ with description("a chat's prompt queue as the prompt-queue plugin keeps it in a
             with it("should go above the next prompt to do, below the done ones, marked as an interruption"):
                 expect(texts(self.chat.prompts())).to(equal(["Write the scenarios", "[interruption] Fix the Files app", "Run the unit tier"]))
 
-            with context("that the person sends another message after that turn"):
+            with context("that the person pastes new work after that turn, which asked nothing"):
                 with before.all:
-                    self.chat.send("cut the text with an ellipsis")
+                    self.chat.send(_PASTED_NOTES)
 
-                with it("should file it under the goal last worked, as a step not started marked as the person's interruption"):
+                with it("should start a goal of its own, titled by the paste's first line"):
+                    expect(texts(self.chat.prompts())).to(contain("[interruption] Notes from the backlog"))
+
+                with it("should leave the goal last worked without a step from it"):
                     sent = next(prompt for prompt in self.chat.prompts() if prompt["text"] == "[interruption] Fix the Files app")
-                    expect(sent.get("steps")).to(equal([{"text": "[interruption] cut the text with an ellipsis", "state": "pending"}]))
+                    expect(sent.get("steps") or []).to(equal([]))
 
     with context("that a background task's notice arrives in the chat as a prompt"):
         with before.all:

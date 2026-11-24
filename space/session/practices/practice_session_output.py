@@ -257,6 +257,27 @@ class FormatNotOfferedError(ValueError):
         self.format = format
 
 
+class LastFormatLeftOut(ValueError):
+    """Every format chosen for a fidelity was left out: the fidelity would write in no format, and generate would still
+    hand over its rules with nothing to write them in."""
+
+    def __init__(self, fidelity: FidelityGuidance, formats: list[str]) -> None:
+        named = ", ".join(formats)
+        only = "is the only format" if len(formats) == 1 else "are the only formats"
+        super().__init__(f"{named} {only} chosen for {fidelity.name}; choose another format before leaving it out")
+        self.fidelity = fidelity
+        self.formats = formats
+
+
+class PracticeTurnedOff(ValueError):
+    """A format was chosen, or left out, for a fidelity of a practice turned off for the session: every action refuses
+    to work on that practice, so the choice would be kept for work nobody can do."""
+
+    def __init__(self, practice: PracticeSessionOutput) -> None:
+        super().__init__(f"{practice.name} is turned off for session {practice.session.name}; turn {practice.name} on for the session before choosing its formats")
+        self.practice = practice
+
+
 class FidelityNotInPractice(LookupError):
     """A fidelity was named that the practice does not have, by its name or its slug."""
 
@@ -369,20 +390,33 @@ class FidelitySessionOutput:
     @noSessionLog
     def choose_format(self, format: str, is_chosen: bool) -> FidelitySessionOutput:
         """Choose format for this fidelity in its session, or leave it out when is_chosen is false, saved in its
-        session.json. A format the fidelity does not write is refused."""
+        session.json. A format the fidelity does not write is refused, as is any choice for a practice turned off and
+        leaving out the last format chosen."""
         named = Format(format).name
         if named not in self.offered_formats:
             raise FormatNotOfferedError(self._fidelity, format)
+        return self.choose_formats([named], is_chosen)
+
+    def choose_formats(self, names: list[str], is_chosen: bool) -> FidelitySessionOutput:
+        """Choose each of names, formats this fidelity writes, or leave out each one, in one change of session.json.
+        Refused while the practice is turned off for the session (*PracticeTurnedOff*), and when leaving them out would
+        leave the fidelity no format chosen (*LastFormatLeftOut*), so it always writes in at least one."""
+        if not self.is_enabled:
+            raise PracticeTurnedOff(self._practice)
+        if not names:
+            return self
         defaults = self.formats.default_formats
 
         def chosen(fields: FidelityFields) -> None:
             # Worked out from the formats the file holds inside the change, so a format another chat chooses at the
-            # same moment stays chosen.
+            # same moment stays chosen, and the last format is never left out by two changes at once.
             held = defaults if fields.formats is None else fields.formats
-            others = [each for each in held if each != named]
-            fields.formats = held if is_chosen and named in held else others + ([named] if is_chosen else [])
+            others = [each for each in held if each not in names]
+            if not is_chosen and held and not others:
+                raise LastFormatLeftOut(self._fidelity, held)
+            fields.formats = held + [name for name in names if name not in held] if is_chosen else others
 
-        self._change(chosen, f"format {named} {'chosen' if is_chosen else 'left out'}")
+        self._change(chosen, f"format {', '.join(names)} {'chosen' if is_chosen else 'left out'}")
         self._session.guidance.changed()
         return self
 
@@ -715,9 +749,9 @@ class FidelityFormats:
         return defaults or [own if own in group else group[0]]
 
     def choose_from(self, group: list[str], is_chosen: bool) -> None:
-        """Choose every format this fidelity would use from group, or leave out every one of group chosen for it."""
-        for name in (self.wanted_from(group) if is_chosen else self.chosen_from(group)):
-            self._output.choose_format(name, is_chosen)
+        """Choose every format this fidelity would use from group, or leave out every one of group chosen for it, in one
+        change, so a refusal leaves every format of the group as it was."""
+        self._output.choose_formats(self.wanted_from(group) if is_chosen else self.chosen_from(group), is_chosen)
 
     @property
     def default_formats(self) -> list[str]:

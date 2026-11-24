@@ -30,7 +30,7 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
 import space.session.validation.validation_report as validation_report_module
 from harness.graph.saved_graph import SavedGraph
 from cdd_guidance.actions.validate.report_files import ReportFiles
-from space.session.files.session_files import NamedPathNotFoundError
+from space.session.files.session_files import EmptyPathNamedError, NamedPathNotFoundError
 from cdd_guidance.actions.validate.validate import UnknownRule, Validate
 from cdd_guidance.actions.validate.validate_examples import ENTITY_ROOT_FILE, SPEC_FILE, STORY_FILE, SampleWorkingCopy, working_in
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
@@ -667,6 +667,27 @@ with description("a validate action on practice guidance") as self:
                 except NamedPathNotFoundError:
                     pass
                 expect((self.missing.session / "validation-reports").exists()).to(equal(False))
+
+        # An empty name would be read as the project's root, so the call would check the whole project unasked.
+        with context("that is named by an empty path"):
+            with before.all:
+                self.empty = _StoryMapFolder()
+
+            with after.all:
+                self.empty.close()
+
+            with it("should refuse it, saying the path is empty"):
+                expect(lambda: self.empty.validate(paths=[""])).to(raise_error(EmptyPathNamedError, contain("an empty path names no file or folder")))
+
+            with it("should refuse a path of only spaces the same way"):
+                expect(lambda: self.empty.validate(paths=["board/.context/story-map.md", "  "])).to(raise_error(EmptyPathNamedError, contain("an empty path names no file or folder")))
+
+            with it("should save no report"):
+                try:
+                    self.empty.validate(paths=[""])
+                except EmptyPathNamedError:
+                    pass
+                expect((self.empty.session / "validation-reports").exists()).to(equal(False))
 
     # Exploratory testing, widget-10: the code fidelity declares its output as a folder named by a part, {module}/, which
     # names no one folder, so a validate naming no paths found nothing written and answered "No graph checked".

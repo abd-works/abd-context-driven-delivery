@@ -155,7 +155,7 @@ def _(s):
 
     @s.when("billing-report's session is opened in the project")
     def _(world):
-        world.sessions.switch(BILLING_REPORT.name)
+        world.sessions.switch(BILLING_REPORT.name, create=True)
         world.graph = world.app_call().session.graph
         world.graph.load_practice_roots(world.app_call())
 
@@ -268,7 +268,7 @@ def _(s):
 
     @s.when("the Person activates billing-report's ticket on the board")
     def _(world):
-        world.sessions.switch(BILLING_REPORT.name)
+        world.sessions.switch(BILLING_REPORT.name, create=True)
 
     @s.then("the Story UI editor shows billing-report's story map, without a reload")
     def _(world):

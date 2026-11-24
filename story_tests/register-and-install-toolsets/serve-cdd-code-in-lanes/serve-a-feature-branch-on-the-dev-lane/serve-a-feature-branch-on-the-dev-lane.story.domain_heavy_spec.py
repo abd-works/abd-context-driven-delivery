@@ -11,7 +11,7 @@ _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import equal, expect
+from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.mcp.examples import server_lanes_examples as examples
@@ -77,3 +77,38 @@ with description("Serve A Feature Branch On The Dev Lane") as self:
 
         with it("should serve the worktree on disk and name the branch checkout-flow"):
             expect((self.disk_home.source, self.disk_home.served_branch)).to(equal((self.worktree.resolve(), examples.CHECKOUT_FLOW)))
+
+
+# Answered 2026-11-23 (bolt-15): once the worktree the dev lane was pinned from is removed, the dev lane returns to main
+# and says so: its runtime record is withdrawn, so the stable lane answers its chats on main again.
+with description("Serve A Feature Branch On The Dev Lane, once the feature's worktree is removed") as self:
+    with before.all:
+        self.root = Path(tempfile.mkdtemp())
+        self.main, self.worktree = _seed_main_with_ticket_worktree(self.root)
+        _commit(self.worktree, "harness/feature.py", "# checkout-flow's change\n")
+        self.lanes = examples.seed_lanes(self.root)
+        self.lanes.stable.home.pin(self.main)
+        self.lanes.dev.home.pin(self.worktree)
+        _git(self.main, "worktree", "remove", "--force", str(self.worktree))
+        self.said = self.lanes.dev.return_to_main_when_feature_gone()
+
+    with after.all:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    with it("should say the dev lane runs main again, naming the branch and the worktree that is gone"):
+        expect(self.said).to(contain(examples.CHECKOUT_FLOW, str(self.worktree.resolve()), "main"))
+
+    with it("should serve no feature on the dev lane"):
+        expect(self.lanes.dev.home.is_installed).to(equal(False))
+
+    with it("should answer a dev-lane chat's call on the stable lane, which runs main"):
+        elsewhere = self.root / "notes"
+        elsewhere.mkdir(exist_ok=True)
+        expect(self.lanes.other_lane_answering(self.lanes.stable.home, elsewhere)).to(equal(None))
+
+    with it("should leave the stable lane serving main"):
+        expect(self.lanes.stable.home.served_branch).to(equal(examples.MAIN_BRANCH))
+
+    with it("should say nothing the next time it is asked"):
+        expect(self.lanes.dev.return_to_main_when_feature_gone()).to(equal(""))
+

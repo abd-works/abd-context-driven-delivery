@@ -63,6 +63,12 @@ def _add_install_options(parser: argparse.ArgumentParser) -> None:
         help="Leave files from the previous install in place.",
     )
     parser.add_argument(
+        "--dev-lane",
+        action="store_true",
+        help="Point the chats of the project installed into at the dev lane's cdd server. A project other than this "
+        "checkout is otherwise pointed at the stable lane, whichever lane this checkout runs on.",
+    )
+    parser.add_argument(
         "--self",
         action="store_true",
         help="Deploy only the Installer toolset (slash /install and /clean, hooks), leaving the rest of the last install in place.",
@@ -160,7 +166,7 @@ def _install_from_chat_checkout(args: argparse.Namespace, chat_checkout: Path) -
     return subprocess.run(command, cwd=chat_checkout, check=False).returncode
 
 
-# The exit of an install refused for an IDE name that is no IDE, or a path that is empty or a file.
+# The exit of an install refused for an IDE name that is no IDE, or a path that is empty, a file, or in a missing folder.
 REFUSED_EXIT = 2
 
 
@@ -173,7 +179,7 @@ def _install(args: argparse.Namespace) -> int:
     from harness.mcp.mcp_server import McpInstallation
 
     try:
-        installer = Installer.create(ide=args.ide, path=_install_path(args), repo=_REPO)
+        installer = Installer.create(ide=args.ide, path=_install_path(args), repo=_REPO, dev_lane=args.dev_lane)
     except (UnknownIde, NotAnInstallFolder) as refusal:
         print(f"not installed: {refusal}", file=sys.stderr)
         return REFUSED_EXIT

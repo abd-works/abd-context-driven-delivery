@@ -235,6 +235,15 @@ Intended: built (`planFromConversation`) but no test or run shows it; the eviden
 *When* the queue attaches ++screenshot.png++ to ++missing prompt++
 *Then* it is told no prompt z is on the queue
 
+#### Scenario: Delete a prompt's files when it leaves the queue
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a), with ++screenshot.png++ attached
+*When* the person removes ++Write the scenarios++
+*Then* the file ++screenshot.png++ was saved as is deleted
+*And* the queue archive's copy of ++Write the scenarios++ names that file as deleted, no longer as attached
+
+Also when the person clears the queue with ++Write the scenarios++ done. A file the card names outside the chat's attachments folder is not the queue's, so it stays.
+
 #### Scenario: List each prompt's files for the agent to open
 
 *Given* the prompt queue plays and holds ++Write the scenarios++ (a) with ++a-1.png++ attached, then ++Run the unit tier++ (b) with none
@@ -345,18 +354,20 @@ Intended: built (`movePrompt`, `prompt-queue.move`); the evidence missing is a t
 *Then* the queue holds only ++Run the unit tier++
 *And* the queue archive holds one copy, holding ++Write the scenarios++
 
-#### Scenario: Clear every prompt when none is done
+#### Scenario: Clear nothing when no prompt is done
+
+Answered 2026-11-23 (sparky-10): clear only ever takes off done prompts, so pressing it a second time never throws away work a robot may be doing.
 
 *Given* the chat's prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b), neither done
 *When* the person clears the queue
-*Then* the queue is empty
-*And* the queue archive holds one copy, holding ++Write the scenarios++ and ++Run the unit tier++
+*Then* the queue still holds ++Write the scenarios++, then ++Run the unit tier++
+*And* the queue archive holds no copy
 
 #### Scenario: Keep the archive in the session's work folder
 
 *Given* the chat works in the session simple-queue, whose work folder is .sessions/simple-queue in the ticket's worktree
 *And* its prompt queue holds ++Write the scenarios++
-*When* the person clears the queue
+*When* the person clears the queue once ++Write the scenarios++ is done
 *Then* .sessions/simple-queue/queue-archive in the ticket's worktree holds one copy
 
 ## Story: Flush Prompt Queue

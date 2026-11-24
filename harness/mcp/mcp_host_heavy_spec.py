@@ -333,7 +333,7 @@ with description("an MCP host tool result") as self:
             self.repo = Path(tempfile.mkdtemp())
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.host = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo))
             self.blocks = self.host._content_blocks(Sessions(self.repo).current())
             self.payload = json.loads(self.blocks[0].text)
@@ -412,7 +412,7 @@ with description("an MCP host") as self:
             expect(tools).to(contain("sessions.switch"))
 
         with it("should open the named session in that project through sessions.switch"):
-            self.host.dispatch("sessions.switch", {"name": "mcp-host-spec-session"}, project=self.project)
+            self.host.dispatch("sessions.switch", {"name": "mcp-host-spec-session", "create": True}, project=self.project)
             expect(WorkState(self.project).session).to(equal("mcp-host-spec-session"))
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):

@@ -8,10 +8,10 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import contain, equal, expect
+from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from space.repo.new_repository import CDD_WRITTEN_PATTERNS, NewRepository
+from space.repo.new_repository import CDD_WRITTEN_PATTERNS, FolderInsideARepositoryError, NewRepository
 from space.repo.repo import Repo
 
 
@@ -54,3 +54,28 @@ with description("a plain folder a session works in") as self:
 
         with it("should add only the patterns it lacks"):
             expect(self.added).to(equal(len(CDD_WRITTEN_PATTERNS) - 1))
+
+
+with description("a plain folder inside another repository's checkout") as self:
+    with before.each:
+        self.outer = Path(tempfile.mkdtemp(prefix="cdd-outer-")).resolve()
+        # A .git folder holding a HEAD is how a checkout's top is known; no git runs.
+        (self.outer / ".git").mkdir()
+        (self.outer / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+        self.inner = self.outer / "sub" / "inner"
+        self.inner.mkdir(parents=True)
+        self.new = NewRepository(Repo(self.inner))
+
+    with after.each:
+        shutil.rmtree(self.outer, ignore_errors=True)
+
+    with context("made a repository"):
+        with it("should be refused, naming the repository that holds it"):
+            expect(lambda: self.new.make_from_folder()).to(raise_error(FolderInsideARepositoryError, contain(str(self.outer))))
+
+        with it("should write no .gitignore into it"):
+            try:
+                self.new.make_from_folder()
+            except FolderInsideARepositoryError:
+                pass
+            expect((self.inner / ".gitignore").exists()).to(equal(False))

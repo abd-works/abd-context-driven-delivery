@@ -235,13 +235,20 @@ class Typed(NamedTuple):
 
 
 class _Read(NamedTuple):
-    """What an expression of the code is, where it ends, how the code reaches the object it is, and, when the read
-    cannot tell its class, why (a cause of ``receiver_causes``)."""
+    """What an expression of the code is, where it ends, how the code reaches the object it is, when the read cannot
+    tell its class, why (a cause of ``receiver_causes``), and whether its class was found only through a guessed member,
+    as a chain from a local of no known class is."""
 
     value: "Typed | None"
     end: int
     reach: str = REACHED_THROUGH_ANOTHER_OBJECT
     cause: str = OTHERWISE
+    guessed: bool = False
+
+    @property
+    def said(self) -> "Typed | None":
+        """What the code says the expression is: its value, unless that was found only through a guess."""
+        return None if self.guessed else self.value
 
 
 class SpanReach:
@@ -638,7 +645,7 @@ class MemberAnswers:
         """What every `return` operation writes that the code types answers, when they agree."""
         span = self._index.span_of(operation)
         calls = _SpanCalls(file, self._index, span).expressions
-        answers = [calls.typed_at(match.end())[0] for match in _RETURN.finditer(span.text)]
+        answers = [calls.typed_at(match.end()).said for match in _RETURN.finditer(span.text)]
         typed = [answer for answer in answers if answer is not None]
         return typed[0] if typed and all(answer == typed[0] for answer in typed) else None
 
@@ -658,8 +665,8 @@ class MemberAnswers:
             if initialized is not None:
                 read = _SpanCalls(file, self._index, CodeSpan(code, holder)).expressions.typed_at(initialized.end())
                 self._field_causes.setdefault((holder.node_id, name), read.cause)
-                if read.value is not None:
-                    return read.value
+                if read.said is not None:
+                    return read.said
         return None
 
     def _assigned_in_operations(self, holder: "Node", name: str) -> "Typed | None":
@@ -673,7 +680,7 @@ class MemberAnswers:
                 read = _SpanCalls(file, self._index, span).expressions.typed_at(match.end()) if found is None else None
                 if read is not None:
                     self._field_causes.setdefault((holder.node_id, name), read.cause)
-                    found = read.value
+                    found = read.said
                 if found is not None:
                     return found
         return None
@@ -696,7 +703,7 @@ class MemberAnswers:
             return file.hints.typed(match.group(1))
         read = _SpanCalls(file, self._index, CodeSpan("")).expressions.typed_at(match.end(), text)
         self._module_causes[(relative, name)] = read.cause
-        return read.value
+        return read.said
 
     def _declared_function(self, relative: str, name: str) -> "Typed | None":
         text = self.text_of(relative)
@@ -709,14 +716,17 @@ class MemberAnswers:
             return file.hints.typed(hint)
         code = CodeSpan.code_of(body)
         calls = _SpanCalls(file, self._index, CodeSpan(code)).expressions
-        answers = [answer for answer in (calls.typed_at(match.end())[0] for match in _RETURN.finditer(code)) if answer is not None]
+        answers = [answer for answer in (calls.typed_at(match.end()).said for match in _RETURN.finditer(code)) if answer is not None]
         return answers[0] if answers and all(answer == answers[0] for answer in answers) else None
 
     def text_of(self, relative: str) -> str:
+        """The text of the file at relative, read once, to work out the types its declarations answer: a byte that is
+        not UTF-8 is read as a replacement character, since the read of the code reports such a file (``source-parses``);
+        empty for a file gone since, or no file named."""
         if relative not in self._texts:
             try:
-                self._texts[relative] = (Path(self._index.source_root) / relative).read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError, TypeError):
+                self._texts[relative] = (Path(self._index.source_root) / relative).read_text(encoding="utf-8", errors="replace")
+            except (OSError, TypeError):
                 self._texts[relative] = ""
         return self._texts[relative]
 
@@ -954,6 +964,8 @@ class _Locals:
         self._unjoined = unjoined
         self._types: dict[str, Typed] = {}
         self._reaches: dict[str, str] = {}
+        # The locals typed only through a guessed member, whose members are joined by that guess too.
+        self._guessed: set[str] = set()
         # What a comprehension's own local is within its brackets, by where they open and close in the span's code.
         self._scoped: list[tuple[int, int, str, _Read]] = []
 
@@ -981,6 +993,8 @@ class _Locals:
             return
         self._types[name] = read.value
         self._reaches[name] = read.reach
+        if read.guessed:
+            self._guessed.add(name)
 
     def narrow(self, name: str, read: _Read) -> None:
         """Keep what read says the local name is in place of what it was, as a check that it is of a class narrows it."""
@@ -990,6 +1004,10 @@ class _Locals:
 
     def typed(self, name: str) -> "Typed | None":
         return self._types.get(name)
+
+    def typed_by_a_guess(self, name: str) -> bool:
+        """Whether the local name's class was found only through a guessed member, `till = fixture.till`."""
+        return name in self._guessed
 
     def reach(self, name: str) -> str:
         return self._reaches[name]
@@ -1065,11 +1083,11 @@ class _Expressions:
         chain = _chain_at(code, position)
         if chain is None:
             return _Read(None, start, cause=ON_OUTSIDE_OBJECTS if ReceiverCauses.is_literal(code, position) else OTHERWISE)
-        found, reach, cause = self._span.walk(chain, None)
+        walked = self._span.walk(chain, None)
         cast = _CAST.match(code, chain.end) if self._file.is_script else None
         if cast is not None:
-            return _Read(self._file.hints.typed(cast.group(1), self._owner), cast.end(), reach, self._file.receiver_causes.of_hint(cast.group(1)))
-        return _Read(found, chain.end, reach, cause)
+            return _Read(self._file.hints.typed(cast.group(1), self._owner), cast.end(), walked.reach, self._file.receiver_causes.of_hint(cast.group(1)))
+        return walked
 
     def _built_at(self, code: str, position: int) -> "_Read | None":
         """What a value the code builds at position is: a script's object, a list or a tuple, or a copy of a collection
@@ -1152,7 +1170,8 @@ class _Expressions:
             if named is None:
                 break
             if named.group(2):
-                value, end, _reach, _cause = self._typed_chain_at(code, named.end())
+                read = self._typed_chain_at(code, named.end())
+                value, end = read.said, read.end
             else:
                 value, end = self._locals.typed(named.group(1)), named.end()
             fields.append((named.group(1), value))
@@ -1352,41 +1371,45 @@ class _ChainWalk:
         self._unjoined = span.unjoined
         self._head = chain.head
         self._steps = chain.steps
+        self._end = chain.end
         self._found = found
         self._value, self._at, self._reach = span.heads.typed(chain.head, chain.steps, found, chain.start)
         called = bool(self._steps) and self._steps[0].kind == "call"
         self._cause = self._unjoined.of_head(chain.head, called) if self._value is None else OTHERWISE
 
-    def run(self) -> "tuple[Typed | None, str, str]":
-        """What the chain is, how the code reaches it, and, when the read cannot tell its class, why."""
+    def run(self) -> _Read:
+        """What the chain is, where it ends, how the code reaches it, when the read cannot tell its class, why, and
+        whether its class was found only through a guess."""
         if self._guessed():
             guessed = self._span.guess(self._steps, self._value, self._found, self._cause)
             if not self._go_on_from(guessed):
-                return None, self._reach, self._cause
+                return _Read(None, self._end, self._reach, self._cause)
+            return self._walk_guessed()
+        if self._at == 0 and self._span.locals.typed_by_a_guess(self._head):
             return self._walk_guessed()
         value = self._value
         if self._found is not None and value is not None and value.of is not None and self._reach in _CREATED:
             self._found.reach_class(value.of, self._reach)
         return self._walk()
 
-    def _walk(self) -> "tuple[Typed | None, str, str]":
+    def _walk(self) -> _Read:
         """Take each step left; what the chain is at its end, how the code reaches it, and why its class is unknown."""
         while self._at < len(self._steps):
             if not self._take(self._steps[self._at]):
-                return None, self._reach, self._cause
-        return self._value, self._reach, self._cause
+                return _Read(None, self._end, self._reach, self._cause)
+        return _Read(self._value, self._end, self._reach, self._cause)
 
-    def _walk_guessed(self) -> "tuple[Typed | None, str, str]":
-        """Take each step left after a guessed first member: each member reached is joined by that guess too, and no
-        class is kept as reached, since the code never says which class the chain runs through."""
+    def _walk_guessed(self) -> _Read:
+        """Take each step left after a guessed member, the chain's first or the one a local typed by a guess was
+        assigned: each member reached is joined by that guess too, no class is kept as reached, since the code never
+        says which class the chain runs through, and what the chain ends on is known only through the guess."""
         found = self._found
-        if found is None:
-            return self._walk()
-        members, classes = len(found.members), len(found.classes)
+        members, classes = (len(found.members), len(found.classes)) if found is not None else (0, 0)
         walked = self._walk()
-        found.guessed.extend(found.members[members:])
-        del found.classes[classes:]
-        return walked
+        if found is not None:
+            found.guessed.extend(found.members[members:])
+            del found.classes[classes:]
+        return walked._replace(guessed=True)
 
     def _guessed(self) -> bool:
         """Whether the chain opens with a local of no known class, or of a class that neither declares nor inherits the
@@ -1406,16 +1429,15 @@ class _ChainWalk:
         return self._cause != ON_OUTSIDE_OBJECTS
 
     def _go_on_from(self, guessed: "Node | None") -> bool:
-        """Go on along a chain of three or more parts from the member its first name was guessed to reach, as what
-        that member answers or holds, `fixture.board.column("Backlog").cards`; whether any step is left to take."""
+        """Go on along the chain from the member its first name was guessed to reach, as what that member answers or
+        holds, `fixture.board.column("Backlog").cards`, so a longer chain reaches its other members and a local assigned
+        the chain is typed; whether the walk goes on."""
         steps = self._steps
         holder = self._span.index.class_declaring(guessed) if guessed is not None else None
         if holder is None or not self._goes_on_past_a_guess():
             return False
         name, calls = steps[0].text, len(steps) > 1 and steps[1].kind == "call"
         self._at = 2 if calls else 1
-        if self._at >= len(steps):
-            return False
         answer = self._members.answer_of(Typed(holder), name, guessed, calls)
         if answer is None:
             self._cause = self._unjoined.of_member([holder, *self._members.bases_of(holder)], name, guessed, calls)
@@ -1540,9 +1562,9 @@ class _SpanCalls:
         found.members.extend(self._called_by_name(found))
         return found
 
-    def walk(self, chain: _Chain, found: SpanReach | None) -> "tuple[Typed | None, str, str]":
-        """What chain is, how the code reaches it, and, when the read cannot tell its class, why; adding to found, when
-        given, what it reaches on the way."""
+    def walk(self, chain: _Chain, found: SpanReach | None) -> _Read:
+        """What chain is, where it ends, how the code reaches it, and, when the read cannot tell its class, why; adding
+        to found, when given, what it reaches on the way."""
         return _ChainWalk(self, chain, found).run()
 
     def reach_member(self, found: SpanReach, value: Typed, name: str, member: "Node | None", reach: str, called: bool) -> None:

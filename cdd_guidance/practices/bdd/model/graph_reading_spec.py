@@ -205,8 +205,30 @@ describe("an order", () => {
 });
 """
 
+# Test support that drives the code under test, and a spec whose observation only calls it.
+_ORDER_EXAMPLES = """from src.ordering.cart import Cart
+from src.ordering.order import Order
+
+
+def check_paid_order(amount):
+    order = Order(Cart())
+    order.pay(amount)
+    assert order.is_paid
+"""
+
+_PAID_ORDER_SPEC = """from mamba import description, it
+
+from src.checks.order_examples import check_paid_order
+
+with description('a paid order'):
+    with it('should be paid'):
+        check_paid_order(12)
+"""
+
 _FILES = {
     "src/catalogue/book.py": _BOOK,
+    "src/checks/order_examples.py": _ORDER_EXAMPLES,
+    "src/ordering/paid_order_spec.py": _PAID_ORDER_SPEC,
     "src/ordering/cart.py": _CART,
     "src/ordering/order.py": _ORDER,
     "src/ordering/cart_spec.py": _CART_SPEC,
@@ -277,6 +299,12 @@ with description("a spec read into the graph beside the code it drives"):
                 equal(["src/ordering/order.py:__init__:Order", "src/ordering/cart.py:__init__:Cart", "src/ordering/order.py:is_paid:Order"])
             )
 
+    with context("whose observation calls only test support that drives the code"):
+        with it("should link the observation to the members the test support invokes"):
+            expect(_linked(self.graph, "invokes", "src/ordering/paid_order_spec.py", "should be paid")).to(
+                equal(["src/ordering/order.py:pay:Order", "src/ordering/order.py:is_paid:Order", "src/ordering/order.py:__init__:Order", "src/ordering/cart.py:__init__:Cart"])
+            )
+
     with context("whose describe names a class its spec imports"):
         with it("should link the describe to that class"):
             expect(_linked(self.graph, "alignsWith", "src/ordering/order_spec.py", "an order")).to(
@@ -318,3 +346,20 @@ with description("a describe that writes observations and states in turn, read i
     with it("should list them in the order the spec writes them, not its observations first"):
         shelf = next(node for node in self.graph.practices.named("bdd").reading.in_graph.nodes("Description") if node.name == "a shelf")
         expect([child.name for child in shelf.children]).to(equal(["should start empty", "with a book", "should name its section"]))
+
+
+with description("a spec saved with a byte that is not UTF-8, read into the graph"):
+    with before.all:
+        self.folder = Path(tempfile.mkdtemp())
+        (self.folder / "cafe_spec.py").write_bytes(
+            b"# caf\xe9 menu\nfrom mamba import description, it\n\nwith description('a menu'):\n    with it('should list a dish'):\n        pass\n"
+        )
+        self.graph = Graph()
+        self.graph.load_files(str(self.folder), ["bdd"], ["cafe_spec.py"])
+
+    with after.all:
+        shutil.rmtree(self.folder, ignore_errors=True)
+
+    with it("should still read its describe tree, the byte read as a replacement character"):
+        names = [node.name for node in self.graph.practices.named("bdd").reading.in_graph.nodes("Observation")]
+        expect(names).to(equal(["should list a dish"]))

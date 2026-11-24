@@ -114,10 +114,11 @@ class BddGraphReading(HoldsProjectTestCode, PracticeReading):
         self._add_tree(spec, text.splitlines(), relative)
 
     def _spec_text(self, file: Path) -> str | None:
-        """The spec file's text; none when it cannot be read as UTF-8, so the graph skips it."""
+        """The spec file's text, a byte that is not UTF-8 read as a replacement character, so a spec saved in another
+        code page is still read and checked; none for a file gone since the scan listed it."""
         try:
-            return file.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            return file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
             return None
 
     def _add_tree(self, spec: BddModel, lines: list[str], relative: str) -> None:
@@ -140,12 +141,15 @@ class ObservationLinks:
     aligns with the class it describes. A spec's code is resolved by the spec's own file as Clean Engineering's index
     knows it, given the classes the spec imports (``CodeFile.members_called_in``), so an observation invokes the member
     a call in the code it drives would invoke; a spec and the helpers only specs use drive the code under test, so they
-    are never part of it, and a tool called by its name is that toolset's operation."""
+    are never part of it: a call of one is followed through what it invokes, as Clean Engineering's own ``invokes``
+    edges say, to the members of the code under test it reaches. A tool called by its name is that toolset's operation."""
 
     def __init__(self, bdd: BddGraphReading, clean: PracticeReading) -> None:
         self.bdd = bdd
         self.clean = clean
         self.graph = bdd.graph
+        # The members of the code under test each member of test code reaches, by the member, read once per link.
+        self.driven: dict[int, list[Node]] = {}
 
     def link(self) -> None:
         by_file: dict[str, list[Node]] = {}
@@ -166,6 +170,7 @@ class _SpecLinks:
     def __init__(self, links: ObservationLinks, nodes: list[Node], code_file: CodeFile, is_python: bool) -> None:
         self._graph = links.graph
         self._index = links.clean.code_index
+        self._driven = links.driven
         self._test_code = links.bdd.test_code
         self._nodes = nodes
         self._file = code_file
@@ -194,12 +199,32 @@ class _SpecLinks:
                 self._graph.edges.relate("invokedBy", member, node)
 
     def _called_in(self, code: "_SpecCode", before: str) -> list[Node]:
-        """The members of the code under test the code calls and reads, after the code before it; a call that carries
-        a tool by its name is transport, not the act, so it is none of them."""
+        """The members of the code under test the code calls and reads, after the code before it, directly or through
+        the test support and the spec's own helpers it calls; a call that carries a tool by its name is transport, not
+        the act, so it is none of them."""
         return [
-            member for member in self._file.members_called_in(CodeSpan(code.code, None, {}, before))
-            if member.source.file and not self._test_code.is_test_code(member.source.file) and member.name not in code.transports
+            driven
+            for member in self._file.members_called_in(CodeSpan(code.code, None, {}, before))
+            if member.source.file and member.name not in code.transports
+            for driven in self._driven_by(member)
         ]
+
+    def _driven_by(self, member: Node) -> list[Node]:
+        """member itself when it is code under test; for a member of test code, each member of the code under test it
+        invokes, in the order it calls them, followed through each member of test code it calls in turn."""
+        if not self._test_code.is_test_code(member.source.file):
+            return [member]
+        if id(member) not in self._driven:
+            # Kept empty first, so a helper that calls itself, or one that calls back the helper calling it, ends.
+            self._driven[id(member)] = []
+            reached = [
+                driven
+                for edge in self._graph.edges.from_parent("invokes", member)
+                if edge.child.source.file
+                for driven in self._driven_by(edge.child)
+            ]
+            self._driven[id(member)] = list(dict.fromkeys(reached))
+        return self._driven[id(member)]
 
     def _tool_operations(self, code: "_SpecCode") -> list[Node]:
         """A tool is named by its toolset and operation, which is its address, so it is found without an import: the

@@ -547,7 +547,14 @@ class Branch:
             return
         if checkout.working_tree.is_dirty():
             checkout.working_tree.commit_all(commit_message)
-        if push and checkout.has_origin and checkout.origin.needs_push():
+        if push:
+            self.push()
+
+    def push(self) -> None:
+        """Push this branch's commits from the checkout that has it out, committing nothing, when origin lacks some of
+        them. A branch no checkout has, or a checkout with no origin, has nothing to push."""
+        checkout = self.checkout
+        if checkout is not None and checkout.has_origin and checkout.origin.needs_push():
             checkout.origin.push_upstream()
 
     def land_on_default(self) -> None:

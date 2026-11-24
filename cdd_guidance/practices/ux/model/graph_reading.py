@@ -190,11 +190,12 @@ class _UxMapFiles:
         return sorted(found)
 
     def _format_of(self, path: Path) -> tuple[UxMap, str] | None:
-        """The format that says path is its own, with the file's text; none for a file no format reads, or one that
-        cannot be read as UTF-8."""
+        """The format that says path is its own, with the file's text, a byte that is not UTF-8 read as a replacement
+        character, so a map saved in another code page is still read, or kept among the files that could not be; none
+        for a file no format reads, or one gone since the scan listed it."""
         try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
             return None
         suffix = path.suffix.lower()
         reader = next((format for format in self._formats if suffix in format.map_file_suffixes and format.reads_file(path, text)), None)

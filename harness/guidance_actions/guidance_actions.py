@@ -134,6 +134,16 @@ class UnknownGuidance(ValueError):
         self.slugs = tuple(slugs)
 
 
+class GuidanceMappingUnreadable(ValueError):
+    """A guidance argument written as a ``{toolset, fidelity, format}`` mapping, between braces, that is not JSON. Read
+    as a slug instead, it would be refused as a practice nobody has, which hides the typo; the message names the text
+    and where it stops being JSON."""
+
+    def __init__(self, text: str, error: json.JSONDecodeError) -> None:
+        super().__init__(f"the guidance mapping {text} is not JSON: {error.msg} at character {error.pos}")
+        self.text = text
+
+
 class GuidanceMappingNamesNoToolset(ValueError):
     """A guidance mapping with no ``toolset``, which is where a mapping names its practice. The message says what a
     toolset holds and lists the slugs there are."""
@@ -313,8 +323,8 @@ class GuidanceArgument:
             return None
         try:
             parsed = json.loads(text)
-        except json.JSONDecodeError:
-            return None
+        except json.JSONDecodeError as unreadable:
+            raise GuidanceMappingUnreadable(text, unreadable) from unreadable
         return parsed if isinstance(parsed, dict) and parsed.get("toolset") else None
 
 

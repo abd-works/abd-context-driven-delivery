@@ -4,7 +4,7 @@
 - **Tester:** Pixel
 - **Story:** no scenario covers this.
 - **Module and class:** `space/session/session.py` `Session.write_file` / `read_file`, through `SessionFiles.write` / `read` in `space/session/session_files.py`; reached from a page by the Files server's routes `POST /api/session/<session.json>/write-file` and `/read-file` (`harness/files_app/app/files-server.ts`).
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 
@@ -30,3 +30,7 @@ Is `.git` meant to count as "a file in this repository" for `write_file`?
 unit (a spec of `SessionFiles.write` naming a path under `.git`), once the answer is that it is refused.
 
 ## Also seen by
+
+## Answer (2026-11-23)
+
+No: a path inside a .git folder is refused for reading and writing, with a named refusal carrying the path. Built in `space/session/files/file_manager.py` (*VersionControlPathRefused*, checked in `FileManager._inside` for every segment of the path under its root, in any case, so `list`, `read` and `write` and through them `session.read_file`, `session.write_file` and `session.file` refuse it; `.gitignore` is still read and saved); tested by `space/session/files/session_files_spec.py`, "session.read_file and session.write_file, on a path inside the repository's .git folder"; scenario "Refuse to read or save a file inside the repository's .git folder" in `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md`, replayed by its domain story spec.

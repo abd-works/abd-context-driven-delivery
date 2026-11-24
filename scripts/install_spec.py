@@ -75,7 +75,7 @@ with description("the cdd server's restart in an install from the latest release
 
 
 def _chat_install(from_chat: str | None, path: str | None = None, ide: str | None = "Claude") -> argparse.Namespace:
-    return argparse.Namespace(from_chat=from_chat, path=path, ide=ide)
+    return argparse.Namespace(from_chat=from_chat, path=path, ide=ide, dev_lane=False)
 
 
 with description("the folder an install writes into"):
@@ -127,6 +127,21 @@ with description("an install told where to go by something that is no IDE or no 
     with description("with a file as the path"):
         with it("should refuse with the refused exit, before anything is written"):
             expect(install._install(_chat_install(None, path=str(_SCRIPT)))).to(equal(install.REFUSED_EXIT))
+
+    with description("with a path whose parent folder does not exist"):
+        with it("should refuse with the refused exit, before anything is written"):
+            missing = _SCRIPT.parent / "does" / "not" / "exist" / ".github"
+            expect(install._install(_chat_install(None, path=str(missing), ide="VS Code"))).to(equal(install.REFUSED_EXIT))
+
+
+with description("the install command"):
+    with description("asked for the dev lane"):
+        with it("should point the project's chats at the dev lane"):
+            expect(install._parser().parse_args(["--dev-lane"]).dev_lane).to(equal(True))
+
+    with description("asked for no lane"):
+        with it("should leave the project's chats on the stable lane unless it is the checkout's own"):
+            expect(install._parser().parse_args([]).dev_lane).to(equal(False))
 
 
 class FakeFullInstaller:

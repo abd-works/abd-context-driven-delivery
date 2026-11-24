@@ -167,8 +167,16 @@ class OperationSourceFacts:
         self.span = SourceText("")
 
     def take_body(self, text: str, language: CodeLanguage) -> None:
-        """Keep the statements its parser read, in the language they are written in, as the operation's body."""
-        self._operation.body = CodeBody(text, language)
+        """Keep the statements its parser read, in the language they are written in, as the operation's body. A body
+        that is only what a render wrote from the model (its notes, its calls, then the line that fails until it is
+        written) is no body: the operation keeps those calls, as written, as the ones it makes, and its notes as its
+        parser read them, so a render into another language writes them in that language."""
+        calls = language.scaffold_calls(text)
+        if calls is None:
+            self._operation.body = CodeBody(text, language)
+            return
+        self._operation.body = CodeBody()
+        self._operation.callees = calls
 
     def take_body_fingerprint(self, body: str) -> None:
         """Keep the fingerprint of its body text, which another operation with the same whitespace-collapsed body

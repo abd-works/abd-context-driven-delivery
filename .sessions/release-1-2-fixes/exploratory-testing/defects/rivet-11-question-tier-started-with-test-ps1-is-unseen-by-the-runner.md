@@ -4,7 +4,7 @@
 - **Tester:** Rivet
 - **Story:** no scenario covers this
 - **Module and class:** scripts/test.ps1 (writes nothing to the record); harness/diagnostics/test_runs.py - `TestCadence._live_elsewhere`, `due`
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 Sandbox as in rivet-01, RIVET_SLEEP=25.
@@ -27,3 +27,7 @@ Seen in the same run: killing the runner's test.ps1 child records the run as fai
 
 ## Tier that should catch it
 heavy - two real processes; no spec starts test.ps1 beside a recorded run.
+
+## Answer (2026-11-23)
+
+Yes: scripts/test.ps1 records its heavy and e2e runs as running in the record the runner reads, and waits while a run is live on its checkout. Built in `scripts/test.ps1` (calls `python -m harness.release.test_runs <tier> <checkout> --script <its process>` before it sets its own cdd home) and `harness/release/test_runs.py` (`TestCadence.record_script_run`, `TestRunRecord.save_script_run`, the `script` entry beside a tier's latest and previous runs, `CDD_TEST_RUN_RECORDED` set for the test.ps1 a recorded run starts); tested by `harness/release/test_runs_heavy_spec.py` "a tier started with scripts/test.ps1" (the real test.ps1, the runner and a second test.ps1 as real processes) and `harness/release/test_runs_spec.py` "that scripts/test.ps1 runs in the checkout's own folder"; no story on the map yet: the story Person --> Run Test Tier and its scenario "Run a tier while another runs on the checkout" are proposed to the lead. The killed run's summary not saying it was cut short is left as it was.

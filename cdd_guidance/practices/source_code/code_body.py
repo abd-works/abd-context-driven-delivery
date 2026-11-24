@@ -113,6 +113,26 @@ class CodeLanguage:
         called = ".".join([owner, *(self.identifier(member) for member in members)])
         return f"{called}({arguments}){end}"
 
+    def scaffold_calls(self, text: str) -> Optional[List[str]]:
+        """The calls a body holds when it is only what a render writes from the model for a body nobody has written
+        yet (``CodeCleanEngineeringModel._scaffold``): its notes as comments, its interactions as whole calls, then
+        the line that fails until it is written. Each call as written, without its statement end. None for a body that
+        holds anything else, or that is a body of another language kept under its translation note."""
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        if not lines or lines[-1] != self.unfinished:
+            return None
+        if any(lines[0] == self.translation_note(other) for other in CODE_LANGUAGES if other is not self):
+            return None
+        calls: List[str] = []
+        for line in lines[:-1]:
+            if line.startswith(self.line_comment):
+                continue
+            statement = line.removesuffix(self.spelling.statement_end).strip()
+            if not _WHOLE_CALL.fullmatch(statement):
+                return None
+            calls.append(statement)
+        return calls
+
     def assignment(self, name: str) -> str:
         field_name = self.identifier(name)
         return f"{self.spelling.receiver}.{field_name} = {field_name}{self.spelling.statement_end}"

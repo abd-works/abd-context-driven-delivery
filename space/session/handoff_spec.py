@@ -27,7 +27,7 @@ from space.work_state import WorkState
 def _open_session(root: Path, name: str = "my-session") -> Path:
     work = root / "work"
     work.mkdir(parents=True, exist_ok=True)
-    Sessions(root).switch(name, work)
+    Sessions(root).switch(name, work, create=True)
     return work
 
 

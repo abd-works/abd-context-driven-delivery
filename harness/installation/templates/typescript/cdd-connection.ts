@@ -105,7 +105,7 @@ export class CddConnection {
   private readonly running = new Map<number, { label: string; step?: string }>()
   private nextId = 1
 
-  constructor(private readonly project: string = SOURCE_ROOT) {}
+  constructor(readonly project: string = SOURCE_ROOT) {}
 
   // A server restarted since this connection opened no longer knows its session and runs nothing for it, so the call
   // is sent once more on a new session rather than failing the page that made it.

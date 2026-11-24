@@ -2,6 +2,7 @@
 for every other chat (``.context/cdr/0003-two-lanes-main-stable-features-dev.md``)."""
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,8 @@ from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
 # How long the stable lane waits for the dev lane to answer one tool call. The chat is told a call is still running at
 # the tool's own time limit; this only bounds how long the stable lane's worker thread keeps waiting after that.
 LANE_CALL_SECONDS = 60 * 60
+
+logger = logging.getLogger(__name__)
 
 
 class LaneCallFailed(Exception):
@@ -58,6 +61,14 @@ class ServerLane:
     def served_checkout(self, checkout: Path) -> ServedCheckout:
         """``checkout`` as this lane installs and serves it."""
         return ServedCheckout(self.daemon, checkout)
+
+    def return_to_main_when_feature_gone(self) -> str:
+        """When the worktree this lane's served feature came from is gone, serve no feature, so the lane's chats run on
+        main, and stop its server, which still runs the removed feature's code; answer what was done, or nothing."""
+        said = self.home.return_to_main_when_feature_gone()
+        if said:
+            self.daemon.stop()
+        return said
 
     def tools_for(self, project: Path) -> list[dict[str, Any]]:
         """The tools this lane's server serves, as data, listed for a chat working on project, starting the server first
@@ -117,9 +128,13 @@ class ServerLanes:
     def other_lane_answering(self, serving: CddHome, project: Path | None) -> ServerLane | None:
         """The lane that answers project's calls instead of the server running from serving: the dev lane, when serving
         is the stable lane, project belongs to the dev lane, and a feature is served there. Until one is, the dev
-        lane's chats run on main, so the stable lane answers them itself."""
+        lane's chats run on main, so the stable lane answers them itself, as it does once the served feature's worktree
+        is gone, which it then says in its log."""
         if project is None or serving.folder != self.stable.home.folder:
             return None
+        returned = self.dev.home.return_to_main_when_feature_gone()
+        if returned:
+            logger.warning("%s", returned)
         if self.for_project(project) is not self.dev or not self.dev.home.is_installed:
             return None
         return self.dev

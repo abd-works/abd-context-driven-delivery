@@ -49,6 +49,16 @@ class FolderIsAWorktreeError(ValueError):
         self.folder = folder
 
 
+class FolderInsideARepositoryError(ValueError):
+    """Raised when the folder named lies inside another repository's checkout: a repository made there would nest in
+    that one, which could then no longer commit the folder's files."""
+
+    def __init__(self, folder: Path, repository: Path) -> None:
+        super().__init__(f"{folder} is inside the repository at {repository}; CDD makes no repository inside another")
+        self.folder = folder
+        self.repository = repository
+
+
 @dataclass(frozen=True)
 class MadeRepository:
     """What making a folder a repository did: whether it was a repository already, the branch it is on (empty when on
@@ -83,12 +93,39 @@ class NewRepository:
 
     def create(self) -> MadeRepository:
         """Make root, made first when missing, a repository on main with a README and a first commit of what it holds.
-        A repository already there is left as it is; a linked worktree is refused."""
+        A repository already there is left as it is; a linked worktree, or a folder inside another repository, is
+        refused."""
+        existing = self._existing()
+        if existing is not None:
+            return existing
+        self._commit_first()
+        return MadeRepository(self.root, was_there=False, branch=DEFAULT_BRANCH)
+
+    def make_from_folder(self) -> MadeRepository:
+        """Make the folder at root, made first when missing, a repository: its .gitignore takes what CDD writes into a
+        project before the first commit, so that commit holds the folder's own files and not CDD's install or its
+        sessions' working files. Refused, before anything is written, as create refuses."""
+        existing = self._existing()
+        if existing is not None:
+            return existing
+        added = self.write_ignores()
+        self._commit_first()
+        return MadeRepository(self.root, was_there=False, branch=DEFAULT_BRANCH, ignored_lines=added)
+
+    def _existing(self) -> MadeRepository | None:
+        """The repository root is already, or None for a folder in no repository; refused when root is a linked
+        worktree or lies inside another repository's checkout, whose git would otherwise hold it."""
         checkout = self.repo.checkout
-        if checkout.folder == self.root and checkout.is_linked_worktree:
+        if checkout.is_clone and checkout.folder != self.root:
+            raise FolderInsideARepositoryError(self.root, checkout.folder)
+        if checkout.is_linked_worktree:
             raise FolderIsAWorktreeError(self.root)
-        if checkout.folder == self.root and checkout.is_clone:
+        if checkout.is_clone:
             return MadeRepository(self.root, was_there=True, branch=checkout.branch)
+        return None
+
+    def _commit_first(self) -> None:
+        """git init root on main, with a README when it has none, and commit everything it holds."""
         self.root.mkdir(parents=True, exist_ok=True)
         self.repo.git.run("init", "-b", DEFAULT_BRANCH)
         readme = self.root / "README.md"
@@ -96,17 +133,6 @@ class NewRepository:
             readme.write_text(f"# {self.root.name}\n", encoding="utf-8")
         self.repo.git.run("add", "-A")
         self.repo.git.run("commit", "-m", _FIRST_COMMIT)
-        return MadeRepository(self.root, was_there=False, branch=DEFAULT_BRANCH)
-
-    def make_from_folder(self) -> MadeRepository:
-        """Make the plain folder at root a repository: its .gitignore takes what CDD writes into a project before the
-        first commit, so that commit holds the folder's own files and not CDD's install or its sessions' working files."""
-        checkout = self.repo.checkout
-        if checkout.folder == self.root and checkout.is_clone:
-            return self.create()
-        added = self.write_ignores()
-        made = self.create()
-        return MadeRepository(made.root, made.was_there, made.branch, added)
 
     def ignore_as_cdd_does(self) -> int:
         """Add to root's .gitignore each pattern for what CDD writes into a project that it lacks, and commit it; answer
@@ -120,6 +146,7 @@ class NewRepository:
     def write_ignores(self) -> int:
         """Write into root's .gitignore each pattern for what CDD writes into a project that it lacks; answer how many
         were added, none when it ignores every one already."""
+        self.root.mkdir(parents=True, exist_ok=True)
         target = self.root / ".gitignore"
         have = target.read_text(encoding="utf-8").splitlines() if target.is_file() else []
         present = {line.strip() for line in have}

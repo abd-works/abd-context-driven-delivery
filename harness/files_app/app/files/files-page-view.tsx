@@ -379,7 +379,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
       {isOneOfSeveral ? <OpenFilesBarView page={page} /> : null}
       {isOneOfSeveral ? <OpenFileHeadView page={page} path={state.file.path} /> : null}
       {page.openFiles.isCollapsed(state.file.path) ? null : (
-        <FileView key={state.file.path} file={state.file} callouts={page.callouts} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(state.file.path)} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileView key={state.file.path} file={state.file} callouts={page.callouts} frames={page.frames} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(state.file.path)} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
@@ -420,7 +420,7 @@ function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }
     <section className="open-file more-file" aria-label={file.path}>
       <OpenFileHeadView page={page} path={file.path} />
       {page.openFiles.isCollapsed(file.path) ? null : (
-        <FileView file={file} callouts={page.callouts} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(file.path)} onGoToFile={goToFile} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileView file={file} callouts={page.callouts} frames={page.frames} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(file.path)} onGoToFile={goToFile} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
     </section>
   )

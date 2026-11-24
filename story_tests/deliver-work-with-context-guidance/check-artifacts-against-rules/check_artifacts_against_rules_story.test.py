@@ -47,3 +47,12 @@ with story("Validate Artifact Against Rules"):
             pass
         with then("the call is refused, naming no/such/graph.json as not there, read from the project's root"):
             pass
+    with scenario("Refuse an empty path as it refuses a missing one"):
+        with given('.context/story-map.md holds the story map'):
+            pass
+        with when('Claude Code validates stories-story-map on .context/story-map.md and a path that is empty or only spaces'):
+            pass
+        with then('the call is refused, saying an empty path names no file or folder'):
+            pass
+        with and_('no validation report is saved'):
+            pass

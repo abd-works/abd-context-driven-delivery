@@ -6,6 +6,7 @@ practice's default folder when it records none. The session's own folder under `
 
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 import re
@@ -54,6 +55,41 @@ class OwnRecord(Protocol):
 
     def is_left_beside(self, path: Path) -> bool:
         """Whether path is the lock file or the staged text a change to a session.json leaves beside it."""
+
+
+# The folder git keeps its own record in: its config, its objects, and the hooks it runs on the next commit.
+VERSION_CONTROL_FOLDER = ".git"
+
+
+class VersionControlPathRefused(PermissionError):
+    """A read or write aimed inside a repository's .git folder, which holds git's own record: a hook written there runs
+    on the person's next commit, and its config holds where the repository pushes. It names the path refused."""
+
+    def __init__(self, path: str) -> None:
+        super().__init__(f"{path} is inside a .git folder, which holds git's own record (its config, objects and hooks): it is neither read nor written as a file")
+        self.path = path
+
+
+class FileChangedSinceReadError(RuntimeError):
+    """A write of a file that is no longer as its caller read it: someone changed it, made it, or deleted it on disk
+    since, and saving over it would lose that change unseen. It names the path, the version the write gave, and the
+    version on disk now."""
+
+    def __init__(self, path: str, version: str, on_disk: str) -> None:
+        given = version or "none, as for a new file"
+        now = on_disk or "no file"
+        super().__init__(
+            f"{path} changed on disk since it was read: the write gave version {given}, and the disk holds {now}; "
+            "read it again with read_file and write from what it holds now, passing the version that read answers"
+        )
+        self.path = path
+        self.version = version
+        self.on_disk = on_disk
+
+
+def version_of(data: bytes) -> str:
+    """The version of a file's content, a hash of its bytes, which read_file answers and write_file takes back."""
+    return hashlib.sha256(data).hexdigest()
 
 
 class PathOutsideRootsError(ValueError):
@@ -262,12 +298,14 @@ RENDERED_FORMS = {".md": "markdown", ".markdown": "markdown", ".html": "html", "
 
 
 class FileText:
-    """The text of one file, with its path from the workpath; no text for a file that is not there, which ``exists``
-    tells from a file that is there and empty."""
+    """The text of one file, with its path from the workpath and the version of its content, which a write of the file
+    gives back; no text and no version for a file that is not there, which ``exists`` tells from a file that is there
+    and empty."""
 
-    def __init__(self, path: str, text: str, exists: bool = True) -> None:
+    def __init__(self, path: str, text: str, version: str, exists: bool = True) -> None:
         self._path = path
         self._text = text
+        self._version = version
         self._exists = exists
 
     @property
@@ -284,6 +322,13 @@ class FileText:
     @data_field
     def text(self) -> str:
         return self._text
+
+    @property
+    @data_field
+    def version(self) -> str:
+        """The version of the file's content as read or saved, a hash of its bytes, which a write of the file passes
+        back so a change made on disk since is refused rather than lost; none for a file that is not there."""
+        return self._version
 
     @property
     @data_field
@@ -349,23 +394,30 @@ class FileManager:
     @agent_tool
     @noSessionLog
     def read(self, path: str) -> FileText:
-        """Return the text of path, a file inside one of the session's roots, named from its workpath; no text when the file is not there, such as one deleted since a page listed it."""
+        """Return the text of path, a file inside one of the session's roots, named from its workpath, with the version of its content, which a write of it passes back; no text and no version when the file is not there, such as one deleted since a page listed it. A path inside a .git folder is refused."""
         target = self._inside(path)
-        exists = target.is_file()
-        text = target.read_text(encoding="utf-8", errors="replace") if exists else ""
-        return FileText(self._relative(target), text, exists)
+        if not target.is_file():
+            return FileText(self._relative(target), "", "", exists=False)
+        data = target.read_bytes()
+        # Line ends read as a text file reads them, so \r\n and \r are each one \n.
+        text = data.decode("utf-8", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+        return FileText(self._relative(target), text, version_of(data))
 
     @mcp
     @agent_tool
     @noSessionLog
-    def write(self, path: str, text: str) -> FileText:
-        """Save text as the whole of path, a file inside one of the session's roots, named from its workpath, making its folder when it has none; the file as saved. The session's own session.json is refused, since only the session's tools change it."""
+    def write(self, path: str, text: str, version: str = "") -> FileText:
+        """Save text as the whole of path, a file inside one of the session's roots, named from its workpath, making its folder when it has none; the file as saved, with its new version. version is the one read answered for the file; none for a file not there yet. A file on disk that is no longer that version, changed, made or deleted since it was read, is refused (FileChangedSinceReadError) and left as it is. The session's own session.json is refused, since only the session's tools change it, and so is a path inside a .git folder."""
         target = self._inside(path)
         if self._record is not None and self._record.is_its_file(target):
             raise SessionRecordWriteRefused(path)
+        on_disk = version_of(target.read_bytes()) if target.is_file() else ""
+        if on_disk != version:
+            raise FileChangedSinceReadError(path, version, on_disk)
+        data = text.encode("utf-8")
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(text, encoding="utf-8", newline="")
-        return FileText(self._relative(target), text)
+        target.write_bytes(data)
+        return FileText(self._relative(target), text, version_of(data))
 
     def find(self, pattern: str) -> list[Path]:
         """The files pattern names, written from the workpath, in the glob form Path.glob reads: `**/` is any number of
@@ -385,10 +437,14 @@ class FileManager:
         return sorted(Path(base, inside) for inside in self._files_under(str(base)) if matching.fullmatch(inside))
 
     def _inside(self, path: str) -> Path:
-        """The path resolved from the workpath; a page names paths, so one outside every root is refused."""
+        """The path resolved from the workpath; a page names paths, so one outside every root is refused, and so is one
+        inside a .git folder under its root, in any case, as Windows reads ``.GIT`` as the same folder."""
         target = (self._workpath / path).resolve()
-        if not any(target == root or root in target.parents for root in self._roots):
+        root = next((root for root in self._roots if target == root or root in target.parents), None)
+        if root is None:
             raise PathOutsideRootsError(path)
+        if any(part.casefold() == VERSION_CONTROL_FOLDER for part in target.relative_to(root).parts):
+            raise VersionControlPathRefused(path)
         return target
 
     def _relative(self, target: Path) -> str:

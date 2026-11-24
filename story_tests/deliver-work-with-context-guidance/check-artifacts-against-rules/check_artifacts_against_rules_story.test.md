@@ -125,3 +125,12 @@ Observed (`cdd_guidance/actions/validate/validate_spec.py`).
 *When* Claude Code validates clean-engineering-code on `specs/bookshop-sketch.md`
 *Then* the report says no graph rule ran on `specs/bookshop-sketch.md`
   *And* the report does not say the graph rules passed
+
+#### Scenario: Refuse an empty path as it refuses a missing one
+
+Observed (`cdd_guidance/actions/validate/validate_spec.py`). Written after exploratory testing round 1 (question widget-14, answered 2026-11-23): an empty path was read as the project's root, so the call checked the whole project nobody named, while a missing path was refused by name.
+
+*Given* ++.context/story-map.md++ holds the story map
+*When* Claude Code validates stories-story-map on ++.context/story-map.md++ and a path that is empty or only spaces
+*Then* the call is refused, saying an empty path names no file or folder
+  *And* no validation report is saved

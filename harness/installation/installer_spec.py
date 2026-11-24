@@ -26,8 +26,9 @@ with description("the installer's diagnose-install instructions"):
 
 with description("the installer of a checkout into a project's own IDE folder"):
     with before.each:
-        # A project's own folder, outside the temporary folder; making its installer writes nothing into it.
-        self.folder = Path.home() / "no-such-project" / ".claude"
+        # A folder outside the temporary folder, in one that exists, as a project's IDE folder is; making its installer
+        # writes nothing into it.
+        self.folder = Path.home() / ".claude-of-no-such-project"
         self.installer = Installer.create(ide="Claude", path=self.folder, repo=_REPO)
 
     with it("should keep the record of what it wrote in that folder, so each folder's install is known by itself"):

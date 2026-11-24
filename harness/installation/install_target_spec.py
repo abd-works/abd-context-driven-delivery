@@ -48,3 +48,33 @@ with description("the folder an install is told to write into") as self:
                 InstallTarget(IdeLayout("Claude"), self.file)
             except NotAnInstallFolder as refusal:
                 expect(refusal.path).to(equal(self.file))
+
+    with context("whose parent folder does not exist"):
+        with before.each:
+            self.folder = Path(tempfile.mkdtemp(prefix="install-target-"))
+            self.mistyped = self.folder / "does" / "not" / "exist" / ".github"
+
+        with after.each:
+            shutil.rmtree(self.folder, ignore_errors=True)
+
+        with it("should be refused, naming the folder that is missing"):
+            expect(lambda: InstallTarget(IdeLayout("VS Code"), self.mistyped)).to(
+                raise_error(NotAnInstallFolder, contain(str(self.folder / "does" / "not" / "exist"), "does not exist"))
+            )
+
+        with it("should make no folder"):
+            try:
+                InstallTarget(IdeLayout("VS Code"), self.mistyped)
+            except NotAnInstallFolder:
+                pass
+            expect((self.folder / "does").exists()).to(equal(False))
+
+    with context("missing, in a folder that exists"):
+        with before.each:
+            self.folder = Path(tempfile.mkdtemp(prefix="install-target-"))
+
+        with after.each:
+            shutil.rmtree(self.folder, ignore_errors=True)
+
+        with it("should be taken, since an install makes the IDE folder itself"):
+            expect(InstallTarget(IdeLayout("Claude"), self.folder / ".claude").path).to(equal(self.folder / ".claude"))

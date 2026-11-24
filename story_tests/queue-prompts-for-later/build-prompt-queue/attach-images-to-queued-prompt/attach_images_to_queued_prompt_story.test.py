@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 from pathlib import Path
 
 from expects import contain, equal, expect, raise_error
@@ -36,6 +37,19 @@ with story("Attach Images To Queued Prompt"):
             attached = Path(self.answered.prompts[0].attachments[0])
             expect(attached.read_bytes()).to(equal(SCREENSHOT_PNG))
             expect(attached.name).to(contain(id_of(self.answered, WRITE_THE_SCENARIOS)))
+    with scenario("Delete a prompt's files when it leaves the queue"):
+        with given("the chat's prompt queue holds WRITE_THE_SCENARIOS, with SCREENSHOT_PNG attached"):
+            self.queue = seed_queue(WRITE_THE_SCENARIOS)
+            self.queue.attach(id_of(self.queue, WRITE_THE_SCENARIOS), SCREENSHOT_NAME, "image/png", base64.b64encode(SCREENSHOT_PNG).decode())
+            self.attached = Path(self.queue.prompts[0].attachments[0])
+        with when("the person removes WRITE_THE_SCENARIOS"):
+            # Prompt Queue mod -> PromptQueue.remove(prompt) -> QueuedPrompt.delete_attachments(folder)
+            self.queue.remove(id_of(self.queue, WRITE_THE_SCENARIOS))
+        with then("the file SCREENSHOT_PNG was saved as is deleted"):
+            expect(self.attached.exists()).to(equal(False))
+        with and_("the queue archive's copy of WRITE_THE_SCENARIOS names that file as deleted, no longer as attached"):
+            archived = json.loads(next((self.attached.parent.parent / "queue-archive").glob("*.json")).read_text(encoding="utf-8"))["prompts"][0]
+            expect((archived.get("attachments"), archived.get("deleted_attachments"))).to(equal((None, [str(self.attached)])))
     with scenario("Refuse an image for a prompt the queue does not hold"):
         with given("the chat's prompt queue holds WRITE_THE_SCENARIOS"):
             self.queue = seed_queue(WRITE_THE_SCENARIOS)

@@ -54,7 +54,7 @@ with description("a session loop"):
                 json.dumps({"role": "user", "message": {"content": [{"type": "text", "text": "question"}]}}),
                 encoding="utf-8",
             )
-            Sessions(repo).switch("alpha", work)
+            Sessions(repo).switch("alpha", work, create=True)
             session = Sessions(repo).current()
             session.log.record(LogLine("---", subject="1"))
             chat_id = "b4c2a422-7199-47ce-9656-c0429af8adb8"
@@ -67,7 +67,7 @@ with description("a session loop"):
     with context("whose ticket's worktree was removed"):
         with before.each:
             repo = Path(tempfile.mkdtemp())
-            Sessions(repo).switch("alpha", repo)
+            Sessions(repo).switch("alpha", repo, create=True)
             self.session = Sessions(repo).current()
             self.worktree = Path(tempfile.mkdtemp()) / "cdd-alpha"
             self.session.work_folder = self.worktree / ".sessions" / "alpha"
@@ -89,7 +89,7 @@ with description("a session loop"):
         with it("should be one session object, which holds no chat of either"):
             repo = Path(tempfile.mkdtemp())
             (repo / ".git").mkdir()
-            Sessions(repo).switch("alpha", repo, ToolCall.sent({"conversation_id": "chat-2"}, repo))
+            Sessions(repo).switch("alpha", repo, create=True, call=ToolCall.sent({"conversation_id": "chat-2"}, repo))
             first = ToolCall.sent({"conversation_id": "chat-1"}, repo).session_named(".sessions/alpha/session.json")
             second = ToolCall.sent({"conversation_id": "chat-2"}, repo).session
             expect(first is second).to(equal(True))
@@ -103,7 +103,7 @@ with description("a session loop"):
             (self.repo / ".git").mkdir()
             (self.repo / "docs").mkdir()
             for chat in ("chat-1", "chat-2"):
-                Sessions.of_project(self.repo).switch("alpha", self.repo, _call_from(self.repo, chat, self.repo))
+                Sessions.of_project(self.repo).switch("alpha", self.repo, call=_call_from(self.repo, chat, self.repo), create=True)
             self.session = _call_from(self.repo, "chat-1", self.repo).session
             self.inside = _call_from(self.repo, "chat-2", self.repo / "docs").session
             self.named = _call_from(self.repo, "chat-3", None).session_named(str(self.repo / ".sessions" / "alpha" / "session.json"))
@@ -129,7 +129,7 @@ with description("a session loop"):
         with it("should be the practice's own session, the one the call opened"):
             repo = Path(tempfile.mkdtemp())
             (repo / ".git").mkdir()
-            Sessions(repo).switch("alpha", repo)
+            Sessions(repo).switch("alpha", repo, create=True)
             call = ToolCall.sent({"conversation_id": "chat-v"}, repo)
             expect(call.session.practice("stories").session is call.session).to(equal(True))
 
@@ -141,7 +141,7 @@ with description("a session loop"):
             self.marking_home = ExampleHome()
             self.repo = Path(tempfile.mkdtemp())
             (self.repo / ".git").mkdir()
-            Sessions(self.repo).switch("alpha", self.repo)
+            Sessions(self.repo).switch("alpha", self.repo, create=True)
             Sessions(self.repo).switch("main")
             self.transcript = self.repo / "chat.jsonl"
             self.transcript.write_text("{}\n", encoding="utf-8")
@@ -165,7 +165,7 @@ with description("a session loop"):
     with context("whose log reached its size limit"):
         with before.each:
             repo = Path(tempfile.mkdtemp())
-            Sessions(repo).switch("alpha", repo)
+            Sessions(repo).switch("alpha", repo, create=True)
             self.session = Sessions(repo).current()
             self.session.log.record(LogLine("---", subject="3", chat=ChatPointer("chat-a")))
             self.session.log.record(LogLine("x" * LOG_SIZE_LIMIT_BYTES))
@@ -184,7 +184,7 @@ with description("a session loop"):
     with context("whose error file reached its size limit"):
         with before.each:
             repo = Path(tempfile.mkdtemp())
-            Sessions(repo).switch("alpha", repo)
+            Sessions(repo).switch("alpha", repo, create=True)
             self.session = Sessions(repo).current()
             self.folder = repo / ".sessions" / "alpha"
             (self.folder / "session.err").write_text("x" * LOG_SIZE_LIMIT_BYTES, encoding="utf-8")
@@ -200,7 +200,7 @@ with description("a session loop"):
         with it("should point the note at the chat that called it"):
             repo = Path(tempfile.mkdtemp())
             (repo / ".git").mkdir()
-            Sessions(repo).switch("alpha", repo)
+            Sessions(repo).switch("alpha", repo, create=True)
             transcript = repo / "chat.jsonl"
             transcript.write_text("{}\n", encoding="utf-8")
             chat = {"conversation_id": "chat-n", "transcript_path": str(transcript), "transcript_lines": "4"}
@@ -239,7 +239,7 @@ with description("a hook log"):
         with before.each:
             repo = Path(tempfile.mkdtemp())
             (repo / ".git").mkdir()
-            Sessions(repo).switch("alpha", repo)
+            Sessions(repo).switch("alpha", repo, create=True)
             session = Sessions(repo).current()
             session.folder.hook_log("prompt-log.txt").append("== entry under its own stamped header")
             session.folder.hook_log("prompt-log.txt").stamped("dispatch line")
@@ -255,7 +255,7 @@ with description("a hook log"):
         with before.each:
             repo = Path(tempfile.mkdtemp())
             (repo / ".git").mkdir()
-            Sessions(repo).switch("alpha", repo)
+            Sessions(repo).switch("alpha", repo, create=True)
             logs = repo / ".sessions" / "alpha" / "logs"
             logs.mkdir(parents=True)
             (logs / "dispatch.debug").write_text("x" * LOG_SIZE_LIMIT_BYTES, encoding="utf-8")
@@ -281,28 +281,28 @@ with description("a session a chat switches to"):
 
     with context("whose practices write under their default folders"):
         with it("should tell the chat to point each practice at where its artifacts already are"):
-            answer = Sessions(self.repo).switch("alpha", self.repo)
+            answer = Sessions(self.repo).switch("alpha", self.repo, create=True)
             expect(answer).to(contain("practice-session-output.choose_root"))
 
         with it("should tell the chat to give a fidelity kept apart, such as the story tests, a root of its own, as local as it can"):
-            answer = Sessions(self.repo).switch("alpha", self.repo)
+            answer = Sessions(self.repo).switch("alpha", self.repo, create=True)
             expect(answer).to(contain("fidelity-session-output.choose_root", "most local folder"))
 
         with it("should tell the chat to set up its roots from the ticket and its branch and confirm them with the person"):
-            answer = Sessions(self.repo).switch("alpha", self.repo)
+            answer = Sessions(self.repo).switch("alpha", self.repo, create=True)
             expect(answer).to(contain("session.set_up_roots", "fidelity-session-output.propose_roots", "confirm"))
 
         with it("should tell the chat to add each further folder beside a fidelity's root"):
-            answer = Sessions(self.repo).switch("alpha", self.repo)
+            answer = Sessions(self.repo).switch("alpha", self.repo, create=True)
             expect(answer).to(contain("fidelity-session-output.add_root"))
 
     with context("whose every practice has a chosen root"):
         with it("should not ask about roots"):
-            Sessions(self.repo).switch("alpha", self.repo)
+            Sessions(self.repo).switch("alpha", self.repo, create=True)
             session = Sessions(self.repo).current()
             for practice in session.own_practices.values():
                 practice.choose_root("work")
-            answer = Sessions(self.repo).switch("alpha", self.repo)
+            answer = Sessions(self.repo).switch("alpha", self.repo, create=True)
             expect("Output roots" in answer).to(equal(False))
 
     with context("that is main"):

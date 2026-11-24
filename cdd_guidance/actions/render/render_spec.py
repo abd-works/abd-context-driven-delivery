@@ -17,11 +17,12 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
 from expects import contain, end_with, equal, expect, have_key, raise_error
 from mamba import after, before, context, description, it
 
-from cdd_guidance.actions.render.render import Render
+from cdd_guidance.actions.render.render import FormatNotDeclared, Render
 from cdd_guidance.actions.render.rendered_code import RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import NothingToRender
 from cdd_guidance.actions.render.source_files import SourceFormatRefused
 from cdd_guidance.actions.render.render_order import RenderFailed
+from cdd_guidance.practices.bdd.model.bdd_model import SpecBodiesNotKept
 from cdd_guidance.practices.stories.stories import Stories
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
@@ -93,6 +94,16 @@ _CART_SPEC = """from mamba import description, it
 with description("a cart"):
     with it("should total its lines"):
         pass
+"""
+_FINISHED_SPEC = """from expects import equal, expect
+from mamba import description, it
+
+from shop.cart import Cart
+
+
+with description("a cart"):
+    with it("should total its lines"):
+        expect(Cart().total).to(equal(0))
 """
 _CART_SPEC_IN_TYPESCRIPT = """describe('a cart', () => {
   it('should total its lines', () => {
@@ -906,19 +917,6 @@ with description("Render asked for a path, in a session") as self:
         with it("should save the drawing beside the model, under the name the fidelity declares for the module"):
             expect(Path(self.results[0].path)).to(equal(self.project.root / "src" / "ordering" / ".context" / "ordering-model.drawio"))
 
-
-with description("A comment a person left on a board in Claude") as self:
-    with before.each:
-        self.project = ThrowawayProject()
-        self.folder = self.project.root / ".context"
-        self.folder.mkdir()
-        (self.folder / "story-map.md").write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
-        self.board_file = self.folder / "story-map.whiteboard"
-        self.board_file.write_text(Whiteboard("Story Map").save(), encoding="utf-8")
-        self.action = Render().for_call(ToolCall({}, self.project.root))
-
-    with after.each:
-        self.project.close()
     # The dev lane's server, 2026-11-22: a render read a module card's `**Purpose:**` line as Python, because the files
     # it read in the format the fidelity works in were named by a folder, a sketch's name, or a source the call named.
     with context("that is a module's .context folder of markdown, with no source named, at a fidelity that works in Python"):
@@ -976,6 +974,70 @@ with description("A comment a person left on a board in Claude") as self:
         with it("should refuse the render, naming each file's format"):
             expect(self.render).to(raise_error(SourceFormatRefused, contain("story-map.md", "markdown", "story-map.drawio", "drawio")))
 
+    # Exploratory testing, widget-16: one render of the story map and the scenarios to drawio wrote the scenarios'
+    # drawing over the story map's, though the scenarios fidelity declares no drawing.
+    with context("that is the story map, rendered to drawio at the story map and at the scenarios at once"):
+        with before.each:
+            self.render = lambda: self.action.render(["stories-story-map", "stories-scenarios"], format="drawio", paths=[".context/story-map.md"], source="markdown")
+
+        with it("should refuse the fidelity that declares no drawing, naming it and the format"):
+            expect(self.render).to(raise_error(FormatNotDeclared, contain("stories-scenarios", "drawio")))
+
+        with it("should save no drawing for either fidelity"):
+            try:
+                self.render()
+            except FormatNotDeclared:
+                pass
+            expect((self.folder / "story-map.drawio").exists()).to(equal(False))
+
+    with context("that is the story map, rendered to drawio at the story map alone"):
+        with it("should save the drawing under the story map fidelity's own name for it"):
+            results = self.action.render(["stories-story-map"], format="drawio", paths=[".context/story-map.md"], source="markdown")
+            expect([Path(result.path).name for result in results]).to(equal(["story-map.drawio"]))
+
+    # Exploratory testing, widget-15: a class model rendered from code to markdown was saved beside the code under the
+    # code's own name, not under the name the model fidelity writes markdown to.
+    with context("that is TypeScript code in a module's folder, named for none of its classes, rendered to markdown at the class model"):
+        with before.each:
+            code = self.project.root / "src" / "ordering" / "cart.ts"
+            code.parent.mkdir(parents=True)
+            code.write_text("export class Cart {\n  total(): number {\n    return 0;\n  }\n}\n", encoding="utf-8")
+            self.results = self.action.render("clean-engineering-model", format="markdown", paths=["src/ordering/cart.ts"])
+
+        with it("should save the model in the module's .context, under the name the fidelity writes markdown to"):
+            expect(Path(self.results[0].path).relative_to(self.project.root).as_posix()).to(equal("src/ordering/.context/ordering-model.md"))
+
+    # Exploratory testing, r3-rivet-11: a finished spec rendered to a tree format came back as signatures only.
+    with context("that is a finished Python spec, rendered to the markdown realization"):
+        with before.each:
+            spec = self.project.root / "src" / "cart_spec.py"
+            spec.parent.mkdir()
+            spec.write_text(_FINISHED_SPEC, encoding="utf-8")
+            self.render = lambda: self.action.render("bdd-realization", format="markdown", paths=["src/cart_spec.py"])
+
+        with it("should refuse the render, naming the test whose body would be lost"):
+            expect(self.render).to(raise_error(SpecBodiesNotKept, contain("should total its lines")))
+
+    with context("that is a finished Python spec, rendered to markdown at development, which declares none"):
+        with it("should refuse the render, naming the fidelity and the format"):
+            (self.project.root / "src").mkdir()
+            (self.project.root / "src" / "cart_spec.py").write_text(_FINISHED_SPEC, encoding="utf-8")
+            render = lambda: self.action.render("bdd-development", format="markdown", paths=["src/cart_spec.py"])
+            expect(render).to(raise_error(FormatNotDeclared, contain("bdd-development", "markdown")))
+
+
+with description("A comment a person left on a board in Claude") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        self.folder = self.project.root / ".context"
+        self.folder.mkdir()
+        (self.folder / "story-map.md").write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+        self.board_file = self.folder / "story-map.whiteboard"
+        self.board_file.write_text(Whiteboard("Story Map").save(), encoding="utf-8")
+        self.action = Render().for_call(ToolCall({}, self.project.root))
+
+    with after.each:
+        self.project.close()
 
     with context("on the board the story map's whiteboard file was published to"):
         with before.each:

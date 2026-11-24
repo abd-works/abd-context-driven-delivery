@@ -4,6 +4,7 @@ test-runs.json. test_runs_spec.py holds the stubbed twins.
 
 Each run is started as a person or the cadence starts it, `python -m harness.release.test_runs <tier> <checkout>
 <record folder>`, and the record is read as the file holds it."""
+import _winapi
 import json
 import os
 import shutil
@@ -169,6 +170,9 @@ with description("a tier run") as self:
                 cadence = TestCadence(TestRunRecord(self.home, self.checkout))
                 expect([run.state for run in cadence.latest_runs]).to(equal(["running"]))
 
+            with it("should record a run of its own, the killed run before it recorded as abandoned"):
+                expect(self.recorded("previous").get("outcome")).to(equal("abandoned"))
+
     with context("that the cadence starts in the background, after a run that failed"):
         with before.each:
             self.two_hours_ago = datetime.now(timezone.utc) - timedelta(hours=2)
@@ -269,6 +273,96 @@ with description("a tier run") as self:
 
         with it("should keep its own result under its own checkout"):
             expect(TestRunRecord(self.home, self.other).latest(TestTier.HEAVY).state).to(equal("passed"))
+
+
+# A heavy spec of the throwaway checkout, which takes as long as the run asks.
+SLOW_HEAVY_SPEC = """import os, time
+from mamba import description, it
+
+with description("a slow tier"):
+    with it("should take its time"):
+        time.sleep(int(os.environ.get("RUN_SECONDS", "0")))
+"""
+# How long the first tier works, long enough for the runner and a second test.ps1 to start beside it.
+FIRST_RUN_SECONDS = 15
+# How long a run that waits for the first, then runs its own tier, has to end.
+WAITED_SECONDS = 180
+
+
+with description("a tier started with scripts/test.ps1") as self:
+    with before.each:
+        self.root = Path(tempfile.mkdtemp(prefix="test-ps1-heavy-"))
+        self.checkout = self.root / "checkout"
+        self.home = self.root / "home"
+        self.home.mkdir()
+        self.started = []
+        self.commit_the_real_script()
+        self.env = {key: value for key, value in os.environ.items() if key != "CDD_TEST_RUN_RECORDED"}
+        self.env.update({"CDD_HOME": str(self.home), "PYTHONPATH": str(REPOSITORY), "PYTHONIOENCODING": "utf-8"})
+        self.first = self.script(FIRST_RUN_SECONDS)
+        until(lambda: self.script_run().get("outcome") == "running", SOON_SECONDS)
+
+    with after.each:
+        for process in self.started:
+            if process.poll() is None:
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True, check=False)
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def commit_the_real_script(self) -> None:
+        """A repository on main that commits this checkout's scripts/test.ps1 and one slow heavy spec, its venv the one
+        this spec runs in, linked where test.ps1 looks for it."""
+        subprocess.run(["git", "init", "-q", "-b", "main", str(self.checkout)], check=True)
+        for setting in (("user.name", "Spec"), ("user.email", "spec@example.invalid"), ("commit.gpgsign", "false")):
+            git(self.checkout, "config", *setting)
+        (self.checkout / "scripts").mkdir()
+        shutil.copyfile(REPOSITORY / "scripts" / "test.ps1", self.checkout / "scripts" / "test.ps1")
+        (self.checkout / "slow_heavy_spec.py").write_text(SLOW_HEAVY_SPEC, encoding="utf-8")
+        (self.checkout / ".gitignore").write_text(".venv\n.pycache/\n", encoding="utf-8")
+        git(self.checkout, "add", ".")
+        git(self.checkout, "commit", "-q", "-m", "The real test.ps1 and a slow tier")
+        _winapi.CreateJunction(sys.prefix, str(self.checkout / ".venv"))
+
+    def script(self, seconds: int) -> subprocess.Popen:
+        """scripts/test.ps1 -Suite heavy started by hand in the checkout's own folder, its tier working for seconds."""
+        command = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(self.checkout / "scripts" / "test.ps1"), "-Suite", "heavy"]
+        return self.begun(command, self.checkout, seconds)
+
+    def runner(self) -> subprocess.Popen:
+        """The runner started by hand on the same checkout, as a person or the /release command starts it."""
+        return self.begun([sys.executable, "-m", "harness.release.test_runs", "heavy", str(self.checkout), str(self.home)], self.root, 0)
+
+    def begun(self, command: list[str], folder: Path, seconds: int) -> subprocess.Popen:
+        process = subprocess.Popen(command, cwd=folder, env={**self.env, "RUN_SECONDS": str(seconds)}, stdin=subprocess.DEVNULL,
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+        self.started.append(process)
+        return process
+
+    def script_run(self) -> dict:
+        """The heavy run test.ps1 recorded of itself, as the file holds it; empty before it is."""
+        try:
+            runs = json.loads((self.home / "test-runs.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return next((held.get("script") or {} for held in runs.values()), {})
+
+    with it("should be recorded as running under its own PowerShell process"):
+        expect(self.script_run().get("pid")).to(equal(self.first.pid))
+
+    with it("should keep a run the runner starts beside it waiting until it ends"):
+        output = self.runner().communicate(timeout=WAITED_SECONDS)[0]
+        expect(output).to(contain(f"waiting for the heavy run process {self.first.pid}", "heavy passed on"))
+
+    with it("should keep a second test.ps1 waiting until it ends"):
+        output = self.script(0).communicate(timeout=WAITED_SECONDS)[0]
+        expect(output).to(contain(f"waiting for the heavy run process {self.first.pid}", "1/1 files passed"))
+
+    with it("should keep the cadence from starting a tier while it runs"):
+        expect(TestCadence(TestRunRecord(self.home, self.checkout)).due()).to(equal([]))
+
+    with context("that has ended"):
+        with it("should no longer be live"):
+            self.first.communicate(timeout=WAITED_SECONDS)
+            expect(TestCadence(TestRunRecord(self.home, self.checkout)).due()).to(equal([TestTier.E2E, TestTier.HEAVY]))
 
 
 with description("the record of test runs") as self:

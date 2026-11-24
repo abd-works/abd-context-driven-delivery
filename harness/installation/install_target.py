@@ -30,7 +30,7 @@ def _resolved_temp() -> Path:
 
 class NotAnInstallFolder(ValueError):
     """An install was told to write into something that cannot be an IDE folder: an empty path, which would be whatever
-    directory the command runs in, or a file. Nothing is written."""
+    directory the command runs in, a file, or a folder whose parent does not exist. Nothing is written."""
 
     def __init__(self, path: Path | str, reason: str) -> None:
         super().__init__(f"{str(path)!r} {reason}")
@@ -39,24 +39,31 @@ class NotAnInstallFolder(ValueError):
 
 class InstallTarget:
     """The IDE folder one install writes into, with that IDE's layout: where every channel of the install writes its
-    files, and the ``diagnostics.json`` the install keeps there (``diagnostics``), made once."""
+    files, and the ``diagnostics.json`` the install keeps there (``diagnostics``), made once. ``dev_lane`` is whether
+    the install was asked to point the chats of the project it installs into at the dev lane's cdd server; a project
+    other than the checkout installing it is otherwise pointed at the stable lane, whichever lane that checkout runs on."""
 
-    def __init__(self, layout: IdeLayout, path: Path | str) -> None:
+    def __init__(self, layout: IdeLayout, path: Path | str, dev_lane: bool = False) -> None:
         if not str(path).strip():
             raise NotAnInstallFolder(path, "is empty: name the IDE folder to install into, such as .claude")
         if Path(path).is_file():
             raise NotAnInstallFolder(path, "is a file, and an install writes into a folder")
-        self.layout = layout
         # The whole path, so the record an install saves is found by a clean run from any other directory.
-        self.path = Path(os.path.abspath(path))
+        whole = Path(os.path.abspath(path))
+        # An install makes the IDE folder itself, never the folders above it, so a mistyped path makes no new tree.
+        if not whole.parent.is_dir():
+            raise NotAnInstallFolder(path, f"is in {whole.parent}, which does not exist: an install makes only the IDE folder itself")
+        self.layout = layout
+        self.path = whole
+        self.dev_lane = dev_lane
 
     @classmethod
-    def from_last_install(cls, layout: IdeLayout, last: str | None, repo: Path) -> InstallTarget:
+    def from_last_install(cls, layout: IdeLayout, last: str | None, repo: Path, dev_lane: bool = False) -> InstallTarget:
         """The folder the last install wrote into, last, while it is there and not a temporary one; else repo's own
         folder for layout's IDE."""
         if last and Path(last).exists() and not is_temporary(Path(last)):
-            return cls(layout, last)
-        return cls(layout, repo / layout.folder_name)
+            return cls(layout, last, dev_lane)
+        return cls(layout, repo / layout.folder_name, dev_lane)
 
     @property
     def is_temporary(self) -> bool:

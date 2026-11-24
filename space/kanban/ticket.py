@@ -38,7 +38,6 @@ from space.kanban.ticket_checkout import LeaveChoices, Leaving, TicketCheckout
 from space.kanban.ticket_tree import NotAChildError, ParentLoopError, TicketTree
 from space.repo.repo import Branch
 from space.session import Session
-from space.session.session import MAIN_SESSION_NAME
 from space.kanban.progress_cache import ACCEPTED_COUNT, HAS_OUTPUT, PROGRESS_CACHES, VIOLATION_COUNT
 from space.session.session_log import LogLine
 from space.session.practices.guidance_selection import GuidanceSelection
@@ -60,8 +59,10 @@ class StageMark(Enum):
     IN_PROGRESS = "in-progress"
 
 
-# The session.json fields the board keeps for a ticket: its stage and its mark there (``record.extra("ticket")``).
+# The session.json fields the board keeps for a ticket: its stage and its mark there, and the files whose work its
+# latest close dropped (``record.extra("ticket")``).
 _STAGE_FIELD = "stage"
+_DROPPED_WORK_FIELD = "dropped_work"
 # What a ticket worked out about itself and keeps until it next writes something.
 Remembered = TypeVar("Remembered")
 _STAGE_MARK_FIELD = "stage_mark"
@@ -143,15 +144,6 @@ class TicketPrompts:
         )
 
 
-class MainStaysOpenError(ValueError):
-    """Raised when a tool would close, archive, delete, or shelve main, the default session, which stays on the board,
-    or edit its text or tags, which the board keeps for no ticket's work. It names what was asked of main."""
-
-    def __init__(self, action: str) -> None:
-        self.action = action
-        super().__init__(f"main is the default session and stays open; it cannot {action}")
-
-
 class StagePlace:
     """*StagePlace* is where a move puts a ticket that stays on a stage: the stage, and whether in its Done or its In
     progress. The board sends it on each ticket for Move next and Move previous, so the page can show the card there
@@ -180,6 +172,7 @@ class TicketCheckoutTools:
 
     checkout: TicketCheckout
     session: Session
+    moves: TicketMoves
     forget_reads: Callable[[], None]
 
     @mcp
@@ -216,10 +209,11 @@ class TicketCheckoutTools:
     @agent_tool
     @noSessionLog
     def activate(self) -> Ticket:
-        """Open ticket in its own worktree, where its own chat works on it: the worktree it has, else a new one on its own branch, made when missing, after the session folders not yet committed are committed on main and pushed. Sessions open only from main: the chat that asks keeps its own session, the repository's own folder stays on main, and nothing is left or moved."""
-        self.checkout.open()
-        self.forget_reads()
-        return self
+        """Open ticket in its own worktree, where its own chat works on it: the worktree it has, else a new one on its own branch, made when missing, after the session folders not yet committed are committed on main and pushed. A closed ticket reopens first, as moving it out of Complete does: its folder back among the open sessions, on the stage it was closed from. Sessions open only from main: the chat that asks keeps its own session, the repository's own folder stays on main, and nothing is left or moved."""
+        opened = self.moves.reopened()
+        opened.checkout.open()
+        opened.forget_reads()
+        return opened
 
 
 @hosted_only
@@ -310,14 +304,13 @@ class TicketEnding:
     its whole folder. Main, the default session, never leaves; each ending's move is committed on main and pushed."""
 
     name: str
-    is_main: bool
     session: Session
     board: Board
     checkout: TicketCheckout
+    board_fields: OwnedFields
 
     def _refuse_main(self, action: str) -> None:
-        if self.is_main:
-            raise MainStaysOpenError(action)
+        self.session.refuse_if_main(action)
 
     def _end_session(self) -> None:
         """End the ticket's session for the chat the board is read for: when that chat has it open, main becomes open."""
@@ -340,7 +333,7 @@ class TicketEnding:
         # sessions. Moved first, git would find the work folder added inside a folder main renamed, and refuse the merge.
         checkout.save_work(chosen)
         checkout.keep_landing_release(chosen)
-        checkout.leave_branch(chosen)
+        self.board_fields.save(**{_DROPPED_WORK_FIELD: checkout.leave_branch(chosen)})
         self._end_session()
         closed = self.board.placement.ticket_of(self.session.folder.move_to_closed())
         checkout.return_to_default_branch()
@@ -478,7 +471,7 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
     def is_main(self) -> bool:
         """Whether this is main, the default session: every chat in the repository's own folder works on it, and it
         never closes, archives, or goes to the Backlog."""
-        return self.name == MAIN_SESSION_NAME
+        return self._session.is_main
 
     @property
     def title(self) -> str:
@@ -657,6 +650,18 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
 
     @property
     @data_field
+    def dropped_work(self) -> list[str]:
+        """The files whose changes nobody committed that went with its worktree when it was last closed, since commit was
+        not chosen, so the close's answer names what was lost; none when nothing was."""
+        return list(self.board_fields.get(_DROPPED_WORK_FIELD) or [])
+
+    @property
+    def board_fields(self) -> OwnedFields:
+        """The fields the board keeps for it in its session.json: its stage, its mark there, and its dropped work."""
+        return self._session.record.extra(_TICKET_FIELDS)
+
+    @property
+    @data_field
     def new_chat_link(self) -> str:
         """The claude://code/new link that opens the ticket's chat in the Claude app on its worktree, with a prompt typed
         in for the person to send; empty while it has no worktree. The app starts no chat a person did not send, so the
@@ -781,7 +786,7 @@ class TicketMoves:
         ticket.tree.refuse_moving_a_parent()
         column = ticket.column
         if not isinstance(column, Stage):
-            reopened, final = ticket.board.placement.ticket_of(ticket.session.folder.reopen()), ticket.board.stages[-1]
+            reopened, final = self.reopened(), ticket.board.stages[-1]
             reopened.marks.enter(final)
             return reopened.marks.mark(StageMark.DONE, final)
         place = self.previous_place
@@ -802,6 +807,14 @@ class TicketMoves:
         earlier = column.previous_stage
         return StagePlace(earlier, True) if earlier is not None else None
 
+    def reopened(self) -> Ticket:
+        """The ticket on a stage: itself while it is on one; out of Complete, reopened, its folder back among the open
+        sessions and the ticket read there, on the stage it was closed from until a move places it."""
+        ticket = self._ticket
+        if not ticket.is_closed:
+            return ticket
+        return ticket.board.placement.ticket_of(ticket.session.folder.reopen())
+
     def move_to(self, stage: str, done: bool) -> Ticket | BacklogItem:
         """Straight into stage's In progress, or its Done when done; out of Complete it reopens first; into the Backlog
         it becomes a backlog item that keeps its whole folder."""
@@ -810,8 +823,7 @@ class TicketMoves:
         if stage == BACKLOG_COLUMN:
             return ticket.to_backlog()
         target = ticket.board.stage(stage)
-        moved = ticket if isinstance(ticket.column, Stage) else ticket.board.placement.ticket_of(ticket.session.folder.reopen())
-        return moved.marks.place(target, StageMark.DONE if done else StageMark.IN_PROGRESS)
+        return self.reopened().marks.place(target, StageMark.DONE if done else StageMark.IN_PROGRESS)
 
 
 class TicketWork:
@@ -911,7 +923,7 @@ class StageMarks:
 
     @property
     def _fields(self) -> OwnedFields:
-        return self._ticket.session.record.extra(_TICKET_FIELDS)
+        return self._ticket.board_fields
 
     @property
     def moved_into(self) -> Stage | None:

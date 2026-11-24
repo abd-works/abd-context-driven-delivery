@@ -8,6 +8,11 @@ export const DRAWIO_PAGE = '/drawio/page'
 export const DRAWIO_PORT = 8791
 // The route that shows a file or folder in the system's file browser, on the machine the Files server runs on.
 export const REVEAL_PATH = '/reveal'
+// Where an HTML page of the page's project finds its own scripts, styles and images: the server serves each project
+// under a key of its own (app/page-files.ts), which a post to this route under the API root answers.
+export const PAGE_FILES = '/page-files'
+// Where a generated UX mockup loads the Story Demo scripts from (cdd_guidance/practices/ux/templates/html/mockup_shell.html).
+export const STORY_DEMO_ROOT = '/practices/ux/story-demo'
 
 export const SESSION_FOLDER_QUERY = 'session-folder'
 export const WORKPATH_FOLDER_QUERY = 'workpath-folder'

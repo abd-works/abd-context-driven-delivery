@@ -4,7 +4,7 @@
 - **Tester:** Pixel
 - **Story:** no scenario covers this.
 - **Module and class:** `space/session/session.py` `Session.write_file` ("Save text as the whole of path"), `SessionFiles.write` in `space/session/session_files.py`. The Files page itself has no save: nothing under `harness/files_app/app/files/` calls `write-file`, so only a caller of the route or the tool meets this.
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 
@@ -29,3 +29,7 @@ Related, same cause as pixel-01: `read-file` of a folder (`{"path":"src"}`) answ
 unit (a spec of `SessionFiles.write` on a file changed since `read`), once the answer is that it is refused or warned.
 
 ## Also seen by
+
+## Answer (2026-11-23)
+
+Refuse it and say so: read_file answers the file's version, a hash of its bytes, and write_file takes it back; a file changed, made or deleted on disk since that read is refused with *FileChangedSinceReadError* naming the path, and left as it is; a file not there yet is written with no version. Built in `space/session/files/file_manager.py` (`FileText.version`, `FileManager.read`/`write(path, text, version)`), `space/session/files/session_files.py` (`SessionFiles.write`) and `space/session/session.py` (`read_file`, `write_file(path, text, version)`, and the debug skill's step 3, which passes the version its step 2 write answered); the TypeScript adapters and the Files server's `write-file` route are generated from these signatures and take `version` at the next install; tested by `space/session/files/session_files_spec.py`, "session.write_file, on a file that read_file read"; scenario "Refuse to save over a file changed on disk since it was read" in `story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md`, and "Save the edited text to the file on disk" now reads the file and saves with its version. The folder read answered as an empty file and the Latin-1 file read with replacement letters (same cause as pixel-01) are left as they were.

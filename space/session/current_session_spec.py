@@ -6,7 +6,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from expects import equal, expect
+from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -16,6 +16,7 @@ if str(_REPO_ROOT) not in sys.path:
 from harness.agent_tools.tool_call import ToolCall
 from space.repo.mock_repo import MockGit
 from space.session import Sessions
+from space.session.open_sessions import UnknownSessionError
 from space.session.spec_support.throwaway_project import ExampleHome
 
 
@@ -30,8 +31,8 @@ with description("the session a tool call opens"):
         self.home = ExampleHome()
         self.first = _project()
         self.second = _project()
-        Sessions(self.first).switch("alpha")
-        Sessions(self.second).switch("beta")
+        Sessions(self.first).switch("alpha", create=True)
+        Sessions(self.second).switch("beta", create=True)
 
     with after.each:
         shutil.rmtree(self.first, ignore_errors=True)
@@ -58,6 +59,33 @@ with description("the session a tool call opens"):
                 for call in calls:
                     call.join()
                 expect(seen).to(equal({self.first.name: "alpha", self.second.name: "beta"}))
+
+    # (S) Person --> Switch Session
+    # Exploratory testing, gizmo-10: a misspelt name made a session folder and a card on the board nobody asked for.
+    with context("that a chat switches to a name no session has"):
+        with it("should refuse the switch, naming the sessions there are"):
+            expect(lambda: Sessions(self.first).switch("alpah")).to(raise_error(UnknownSessionError, contain("alpah", "main, alpha")))
+
+        with it("should make no session folder for it"):
+            try:
+                Sessions(self.first).switch("alpah")
+            except UnknownSessionError:
+                pass
+            expect((self.first / ".sessions" / "alpah").exists()).to(equal(False))
+
+        with it("should keep the chat's open session"):
+            try:
+                Sessions(self.first).switch("alpah")
+            except UnknownSessionError:
+                pass
+            expect(ToolCall({}, self.first).session.name).to(equal("alpha"))
+
+        with context("that asks for it to be made"):
+            with before.each:
+                Sessions(self.first).switch("gamma", create=True)
+
+            with it("should make the session and open it"):
+                expect(ToolCall({}, self.first).session.name).to(equal("gamma"))
 
     with context("that the session a chat has open was closed since"):
         with before.each:

@@ -137,6 +137,18 @@ class CddHome:
         named = self._runtime().get("worktree")
         return Path(named) if named else None
 
+    def return_to_main_when_feature_gone(self) -> str:
+        """On the dev lane, when the worktree its served feature came from is gone, withdraw the runtime record, so the
+        lane serves no feature and its chats run on main again, as they do until a feature is served; answer what was
+        done, naming the branch and the worktree, or nothing when the feature's worktree is there. The stable lane runs
+        main, so it is left as it is."""
+        worktree = self.served_worktree if self.is_dev_lane and self.is_installed else None
+        if worktree is None or worktree.exists():
+            return ""
+        branch = self.served_branch or "a feature"
+        self.runtime_record.unlink(missing_ok=True)
+        return f"the dev lane served {branch} from {worktree}, which is gone; its chats run on main until another feature is served"
+
     def is_pinned_to(self, checkout: Path | str) -> bool:
         """True when the pinned runtime serves ``checkout``'s current commit."""
         source = Path(checkout).resolve()

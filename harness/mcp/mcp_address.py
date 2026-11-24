@@ -41,6 +41,17 @@ class LaneUnreachable(Exception):
         self.port = port
 
 
+class PingReplyUnreadable(Exception):
+    """A ping whose reply is not JSON: the program answering on the port is no cdd server, or not one this code can
+    read. Read as nothing answering, the next start would try the port another program holds and fail for a reason
+    nobody sees."""
+
+    def __init__(self, port: int, reply: str) -> None:
+        super().__init__(f"the program answering on port {port} is no cdd server this code can read: its ping reply is not JSON: {reply[:200]!r}")
+        self.port = port
+        self.reply = reply
+
+
 class SentCall(Protocol):
     """A tool call one lane's server can hand the other's: it writes itself as JSON data (``ToolCall.as_sent``)."""
 
@@ -92,19 +103,27 @@ class McpAddress:
 
     def ping_answer(self, reply_seconds: float) -> dict | None:
         """What the server says about itself when pinged, or ``None`` when nothing answers on the port within
-        reply_seconds."""
+        reply_seconds; a reply that is not JSON raises *PingReplyUnreadable*."""
         connection = http.client.HTTPConnection(self.HOST, self.port)
         try:
             connection.sock = socket.create_connection((self.HOST, self.port), timeout=_CONNECT_SECONDS)
             connection.sock.settimeout(reply_seconds)
             connection.request("GET", PING_PATH)
             reply = connection.getresponse()
-            answer = json.loads(reply.read().decode("utf-8")) if reply.status == 200 else None
-        except (OSError, http.client.HTTPException, json.JSONDecodeError):
+            text = reply.read().decode("utf-8", errors="replace") if reply.status == 200 else ""
+        except (OSError, http.client.HTTPException):
             return None
         finally:
             connection.close()
+        answer = self._ping_reply(text) if text else None
         return answer if isinstance(answer, dict) and answer.get("ok") else None
+
+    def _ping_reply(self, text: str) -> Any:
+        """The ping reply text read as JSON; a reply that is not JSON raises *PingReplyUnreadable*."""
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as unreadable:
+            raise PingReplyUnreadable(self.port, text) from unreadable
 
     def send_lane_call(self, call: SentCall, reply_seconds: float) -> LaneReply:
         """Hand call to the server on this port and wait up to reply_seconds for its reply: the tool's answer, or the

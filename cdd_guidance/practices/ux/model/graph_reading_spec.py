@@ -317,6 +317,16 @@ with description("a UX map read into the graph") as self:
         with it("should join the new screen to the story it shows"):
             expect(self.shop.linked("shows", self.shop.node("Screen", "Cart"))).to(equal([("Story", "View Book")]))
 
+    with context("from a project whose map's file holds a byte that is not UTF-8"):
+        with before.all:
+            self.shop = Bookshop(("ux",))
+            saved = json.dumps(dict(_UX_MAP, notes=["A Customer reaches the Cafe from every screen."]), indent=2)
+            (self.shop.root / _MAP_FILE).write_bytes(saved.encode("utf-8").replace(b"Cafe", b"Caf\xe9"))
+            self.shop.graph.refresh([_MAP_FILE])
+
+        with it("should still hold the map's screens, reading the byte as a replacement character"):
+            expect(self.shop.names("Screen")).to(equal(["Book List", "Home", "Book Details"]))
+
     with context("from a project that also holds files named as a UX map that are no map"):
         with before.all:
             self.shop = Bookshop(("ux",), _NOT_MAPS)

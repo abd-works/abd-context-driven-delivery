@@ -421,6 +421,62 @@ with description("a ticket's work through the cdd server") as self:
         with it("should still offer to delete its worktree"):
             expect(self.on_board).to(contain("delete_worktree"))
 
+    # (S) Person --> Close Active Session
+    # Exploratory testing, gizmo-12: a close that chose only to delete the worktree committed and pushed its work.
+    with context("that a ticket is closed with only its worktree deleted while that worktree holds work nobody committed"):
+        with before.all:
+            self.chat.answer("ticket.create", title="Walk drop")
+            self.chat.answer("ticket.activate", ticket="walk-drop")
+            self.drop_worktree = self.clone.worktree_of("walk-drop")
+            (self.drop_worktree / "README.md").write_text("# Work\nchanged, never committed\n", encoding="utf-8")
+            (self.drop_worktree / "notes.txt").write_text("never added\n", encoding="utf-8")
+            self.drop_choices = self.chat.answer("ticket.close_choices", ticket="walk-drop")
+            self.drop_head = git(self.clone.work, "rev-parse", "walk-drop")
+            self.dropped = self.chat.answer("ticket.close", ticket="walk-drop", leaving=["delete_worktree"])
+
+        with it("should warn, before the close, that deleting the worktree without a commit loses that work"):
+            expect(self.drop_choices["warning"]).to(contain("without a commit", "README.md", "notes.txt"))
+
+        with it("should list the files that work is in among the closing choices"):
+            expect(sorted(self.drop_choices["unsaved_work"])).to(contain("README.md", "notes.txt"))
+
+        with it("should commit nothing on the ticket's branch"):
+            expect(git(self.clone.work, "rev-parse", "walk-drop")).to(equal(self.drop_head))
+
+        with it("should push nothing of the ticket's branch to origin"):
+            expect(self.clone.origin_branches()).not_to(contain("walk-drop"))
+
+        with it("should remove the worktree"):
+            expect(self.drop_worktree.exists()).to(equal(False))
+
+        with it("should name in its answer the files whose work went with the worktree"):
+            expect(sorted(self.dropped["dropped_work"])).to(contain("README.md", "notes.txt"))
+
+    # (S) Person --> Activate Ticket
+    # Exploratory testing, gizmo-02: activating a closed ticket opened its worktree but left it in Complete, its folder
+    # among the closed sessions, so a chat in that worktree got a session kept under _complete.
+    with context("that a closed ticket is activated"):
+        with before.all:
+            self.chat.answer("ticket.activate", ticket="walk-drop")
+            self.reopened_worktree = self.clone.worktree_of("walk-drop")
+            self.reopened = next(ticket for column in self.chat.answer("board.show")["columns"] for key in ("in_progress", "done", "tickets") for ticket in column.get(key, []) if ticket["name"] == "walk-drop")
+            self.reopened_session = SpecChat(self.server, self.reopened_worktree).answer("sessions.current")["name"]
+            self.reopened_folder = (self.clone.work / ".sessions" / "walk-drop" / "session.json").is_file()
+            self.left_closed = (self.clone.work / ".sessions" / "_complete" / "walk-drop").exists()
+            self.chat.answer("ticket.close", ticket="walk-drop", leaving=["delete_branch"])
+
+        with it("should open it in its own worktree"):
+            expect(self.reopened_worktree is not None and self.reopened_worktree.is_dir()).to(be_true)
+
+        with it("should move its folder back among the open sessions"):
+            expect((self.reopened_folder, self.left_closed)).to(equal((True, False)))
+
+        with it("should put it back on a stage of the board"):
+            expect(self.reopened["is_closed"]).to(equal(False))
+
+        with it("should give a chat in its worktree its session"):
+            expect(self.reopened_session).to(equal("walk-drop"))
+
     # (S) Person --> Activate Ticket
     with context("that a ticket is activated while a folder left on no branch is where its worktree goes"):
         with before.all:
@@ -500,7 +556,7 @@ with description("a ticket's work through the cdd server") as self:
     # (S) Person --> Switch Session
     with context("that a session is switched to and closed"):
         with before.all:
-            self.chat.answer("sessions.switch", name="walk-side")
+            self.chat.answer("sessions.switch", name="walk-side", create=True)
             self.opened = self.chat.answer("sessions.current")["name"]
             self.chat.answer("session.close", session=".sessions/walk-side/session.json")
 
@@ -514,7 +570,7 @@ with description("a ticket's work through the cdd server") as self:
         with before.all:
             self.first = SpecChat(self.server, self.clone.work)
             self.second = SpecChat(self.server, self.clone.work)
-            self.first.answer("sessions.switch", name="walk-first")
+            self.first.answer("sessions.switch", name="walk-first", create=True)
 
         with it("should keep the second chat's own open session"):
             expect(self.second.answer("sessions.current")["name"]).to(equal("main"))
@@ -531,7 +587,7 @@ with description("a ticket's work through the cdd server") as self:
             session_file.parent.mkdir(parents=True, exist_ok=True)
             session_file.write_text(json.dumps({"pid": int(MOVED_CHAT_PROCESS), "sessionId": str(uuid.uuid4()), "cwd": str(self.clone.work)}), encoding="utf-8")
             moved = SpecChat(self.server, spare, "unnamed", MOVED_CHAT_PROCESS)
-            moved.answer("sessions.switch", name="walk-moved")
+            moved.answer("sessions.switch", name="walk-moved", create=True)
             (self.clone.work / "moved.txt").write_text("moved chat\n", encoding="utf-8")
             moved.answer("repo.push_commit", message="From a moved chat", untracked=True, sync_remote=False)
             self.spare = spare

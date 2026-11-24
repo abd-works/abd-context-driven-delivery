@@ -26,7 +26,7 @@ from space.session.spec_support.throwaway_project import OPEN_PROJECTS, Throwawa
 def _open_session(root: Path) -> Path:
     work = root / "work"
     work.mkdir(parents=True, exist_ok=True)
-    Sessions(root).switch("decisions", work)
+    Sessions(root).switch("decisions", work, create=True)
     return work
 
 

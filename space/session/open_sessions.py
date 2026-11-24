@@ -36,6 +36,19 @@ class SessionNameRequiredError(ValueError):
         )
 
 
+class UnknownSessionError(LookupError):
+    """Raised when a chat switches to a name no session has and did not ask for it to be made, such as a misspelt name:
+    it names the name asked for and the sessions there are, and nothing is made or opened."""
+
+    def __init__(self, name: str, there: list[str]) -> None:
+        super().__init__(
+            f"no session is called {name}; the sessions there are: {', '.join(there)}. Switch to one of them, or pass "
+            f"create to make a session called {name}"
+        )
+        self.name = name
+        self.there = there
+
+
 # What a module outside the session does when a chat opens a session, such as queueing its latest handoff's steps on
 # that chat's prompt queue: handed the session and the chat's id, it answers what the chat is told, empty for nothing.
 SessionOpenedListener = Callable[[Session, str], str]
@@ -119,9 +132,10 @@ class OpenSessions:
         holding = [name for name in tickets if names_ticket(branch, name)]
         return sessions.named(holding[0]) if len(holding) == 1 else None
 
-    def switch(self, name: str, workpath: Path | None, call: ToolCall | None) -> SwitchedSession:
-        """Open the session called name for the call's chat, creating its folder when missing; a chat in a ticket's own
-        worktree always opens that ticket's session. Answers the switch, which says what the chat is told."""
+    def switch(self, name: str, workpath: Path | None, create: bool, call: ToolCall | None) -> SwitchedSession:
+        """Open the session called name for the call's chat; a name no session has is made only when create asks for
+        it, else refused with ``UnknownSessionError`` before anything is made. A chat in a ticket's own worktree always
+        opens that ticket's session. Answers the switch, which says what the chat is told."""
         sessions = self._sessions
         chat = call.chat_id if call is not None else ""
         ticket = self._ticket_of_worktree()
@@ -131,6 +145,8 @@ class OpenSessions:
         wanted = self._name_to_switch_to(name, chat)
         folder = sessions.folder_of(wanted)
         is_kept = (folder / SESSION_FILE).is_file() or wanted == MAIN_SESSION_NAME
+        if not is_kept and not create:
+            raise UnknownSessionError(wanted, [MAIN_SESSION_NAME, *sorted(sessions.listing.open_names())])
         session = sessions.held.load(folder) if is_kept else sessions.create(wanted, workpath)
         opened = self.open(session, chat)
         return SwitchedSession(opened, self._told_on_opening(opened, chat), chat_works_in=call.project if call is not None else None)

@@ -37,6 +37,22 @@ $python = if (Test-Path $venvPython) { $venvPython } else { "python" }
 $mamba = $python
 $mambaModule = @("-m", "mamba.cli")
 
+# A heavy or e2e tier run here is recorded as running in the record of test runs the runner and the cadence read
+# (harness/release/test_runs.py, in the cdd home), so neither starts a run of this checkout beside it; while one of
+# theirs, or another test.ps1, runs a tier of this checkout, this waits and says so. Two runs at once start the same
+# servers on the same ports and fail on each other. A run the runner started is recorded already, and says so.
+$runRecordedVariable = "CDD_TEST_RUN_RECORDED"
+if ($Suite -ne "unit" -and -not [Environment]::GetEnvironmentVariable($runRecordedVariable)) {
+    $shellPythonPath = $env:PYTHONPATH
+    $env:PYTHONPATH = "$repo$([IO.Path]::PathSeparator)$shellPythonPath"
+    & $python -m harness.release.test_runs $Suite $repo --script $PID
+    $recorded = $LASTEXITCODE
+    $env:PYTHONPATH = $shellPythonPath
+    if ($recorded -ne 0) { exit $recorded }
+}
+# The specs this run starts are not the recorded run, and a spec that starts test.ps1 must see it record itself.
+Remove-Item "Env:$runRecordedVariable" -ErrorAction SilentlyContinue
+
 $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
     [string[]]@(
         ".codeql", ".cq", ".venv", ".git", "node_modules", "__pycache__",

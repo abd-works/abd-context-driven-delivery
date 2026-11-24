@@ -4,7 +4,7 @@
 - **Tester:** Rivet
 - **Story:** no scenario covers this
 - **Module and class:** harness/diagnostics/test_runs.py - `TestCadence._started`, `TestRun.is_run_by_this_process`
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 Sandbox as in rivet-01 (`C:\dev\_et\rivet\work\repo`, CDD_HOME=C:\dev\_et\rivet\cdd_home), RIVET_SLEEP=20.
@@ -21,3 +21,7 @@ Should a run by hand always record a run of its own, and only the process the ca
 
 ## Tier that should catch it
 unit - `run_now` over a record left running by a dead process on the same commit; test_runs_spec.py covers the other-commit case.
+
+## Answer (2026-11-23)
+
+Yes: a run by hand always records a run of its own, the run a killed process left running is recorded as abandoned, and only the process the cadence started (named by `--started`) finishes the cadence's record. Built in `harness/release/test_runs.py` (`TestCadence._taken`, `_is_recorded_for_this_process`); tested by `harness/release/test_runs_spec.py` "that a process that was killed left running on this commit" (and its nested context for the cadence's own process) and `harness/release/test_runs_heavy_spec.py` "that is killed while its tier works, and run again on the same commit"; no story on the map yet: the scenario "Run a tier again after a killed run" under the proposed story Person --> Run Test Tier is proposed to the lead.

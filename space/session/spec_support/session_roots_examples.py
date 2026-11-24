@@ -68,7 +68,7 @@ class RefundOrderSession:
         for file, source in REFUND_ORDER_FILES.items():
             (self.repo / file).parent.mkdir(parents=True, exist_ok=True)
             (self.repo / file).write_text(source, encoding="utf-8")
-        Sessions(self.repo).switch(REFUND_ORDER, None)
+        Sessions(self.repo).switch(REFUND_ORDER, None, create=True)
         self.session: Session = Sessions.of_project(self.repo).current()
         self.session.session_files.branch_changes = ChangedOnBranch(self.repo, changed)
 

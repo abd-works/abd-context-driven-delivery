@@ -39,12 +39,24 @@ section: body
 *But* no thin_slice or realization chip, and choosing thin_slice or realization as a format is refused
 *And* the thin slice and realization files still belong to story_map and scenarios
 
-#### Scenario: Keep Run off with no format picked
+#### Scenario: Keep the last format picked
+
+> Answered 2026-11-23 (exploratory testing, widget-13): a [fidelity](../../../../space/kanban/.context/kanban-model.md#fidelityguidance) keeps at least one format chosen, so generate always has a format to write in.
 
 *Given* billing-report's story map is already in markdown
-*But* the Person unpicks the markdown chip, so no format is picked
-*When* the session board draws the story_map bar
-*Then* Run is off
+*And* markdown is the only chip picked on the story_map bar
+*When* the Person unpicks the markdown chip
+*Then* a toast says markdown is the only format chosen for story_map
+*And* the markdown chip stays picked
+
+#### Scenario: Refuse a format for a practice turned off
+
+> Answered 2026-11-23 (exploratory testing, widget-17): every action refuses a practice turned off, so a format chosen for it would be kept for work nobody can do.
+
+*Given* UX is turned off for billing-report's session
+*When* Claude Code chooses drawio for UX's ia
+*Then* the choice is refused, saying ux is turned off for the session and to turn ux on first
+*And* billing-report's session.json keeps no format for ia
 
 #### Scenario: Keep Run off on a render with nothing to render
 

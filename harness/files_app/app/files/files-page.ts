@@ -19,6 +19,7 @@ import { FilesStore, type FidelityFiles, type SelectedNode } from './files-state
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
 import { OpenFiles } from './open-files'
+import { PageFrames } from './page-frames'
 import { reasonOf } from './reason'
 
 // While a comment on the open file is with a chat, the file is read again this often, so the chat's change and the
@@ -43,6 +44,7 @@ export class FilesPage {
   readonly openFiles = new OpenFiles(this.store)
   readonly foldKeys: FilesFoldKeys
   readonly callouts: FileCallouts
+  readonly frames: PageFrames
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
   // The link's line shows in the file the link opens until the person opens another file or selects a node.
   private showsLinkedLine = true
@@ -55,6 +57,7 @@ export class FilesPage {
     this.notices = new FilesNotices(this.store, api, link.chat)
     this.foldKeys = new FilesFoldKeys(this.session, this.notices)
     this.callouts = new FileCallouts(this.store, this.session)
+    this.frames = new PageFrames(api)
     this.chatContext = new ChatContext(this.session, link.chat, this.notices)
     this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
     this.comments = new FileCommentsActions(this)

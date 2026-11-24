@@ -4,7 +4,7 @@
 - **Tester:** Widget
 - **Story:** epic "Deliver Work With Context Guidance"; no scenario covers this.
 - **Module and class:** `cdd_guidance/actions/validate/checked_graph.py`, `NamedToCheck`
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 Sandbox `repo`, session `main`, throwaway cdd server (`C:\dev\_et\widget\work\drv\run.py`).
@@ -19,3 +19,7 @@ Not known: nothing read says which is meant.
 
 ## Tier that should catch it
 Once the person answers, a unit example that states the answer.
+
+## Answer (2026-11-23)
+
+Validate refuses an empty path, or one of only spaces, by name, as it refuses a missing one. Built in `space/session/files/session_files.py` (`SessionFiles.existing` raises *EmptyPathNamedError*, so validate's `paths`, and every action reading paths through the session's files, refuse it); tested by `cdd_guidance/actions/validate/validate_spec.py` "a validate action on practice guidance" with an edited story map markdown file, that is named by an empty path; scenario "Refuse an empty path as it refuses a missing one" in `story_tests/deliver-work-with-context-guidance/check-artifacts-against-rules/check_artifacts_against_rules_story.test.md`.

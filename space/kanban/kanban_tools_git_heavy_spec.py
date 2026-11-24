@@ -226,10 +226,6 @@ with description("the board tools") as self:
 
             # git deletes no branch a worktree has checked out, so deleting the branch takes its worktree with it.
             with it("should delete its worktree when closing deletes its branch"):
-                # Deleting the worktree pushes its work first, so the project needs an origin to push to.
-                origin = Path(tempfile.mkdtemp(prefix="kanban-origin-"))
-                subprocess.run(["git", "init", "-q", "--bare", str(origin)], check=True)
-                subprocess.run(["git", "remote", "add", "origin", str(origin)], cwd=self.project.root, check=True)
                 self.project.call("ticket.close", ticket="sign-up", leaving=["delete_branch"])
                 expect(self.opened.exists()).to(be_false)
 
@@ -284,7 +280,7 @@ with description("the board tools") as self:
 
         with context("with the active ticket on no branch of its own"):
             with before.each:
-                Sessions(self.project.root).switch("pet-visits")
+                Sessions(self.project.root).switch("pet-visits", create=True)
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left has no branch yet"):
@@ -294,7 +290,7 @@ with description("the board tools") as self:
                 expect(self.project.call("ticket.work_branch", ticket="pet-visits")).to(equal({"name": "main", "exists": True, "is_checked_out": True}))
 
             with it("should offer to close it with a handoff and a commit and push of main"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": []}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": [], "unsaved_work": [], "warning": ""}))
 
             with it("should leave the branch checked out as it was"):
                 self.project.call("ticket.close", ticket="pet-visits", leaving=["commit", "merge"])
@@ -305,24 +301,26 @@ with description("the board tools") as self:
         with context("with the active ticket's own branch in git but checked out nowhere"):
             with before.each:
                 subprocess.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
-                Sessions(self.project.root).switch("pet-visits")
+                Sessions(self.project.root).switch("pet-visits", create=True)
 
-            with it("should offer to close it with a delete of its branch, naming that branch"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": []}))
+            # Nothing checked out is its own, so closing it commits and pushes nothing: the main clone's edits are never
+            # committed under its name.
+            with it("should offer to close it with a merge and a delete of its branch, naming that branch, and no commit or push of main"):
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": [], "unsaved_work": [], "warning": ""}))
 
         with context("with the active ticket on its own branch"):
             with before.each:
                 subprocess.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
                 subprocess.run(["git", "config", "user.name", "t"], cwd=self.project.root, check=True)
                 subprocess.run(["git", "config", "user.email", "t@t"], cwd=self.project.root, check=True)
-                Sessions(self.project.root).switch("pet-visits")
+                Sessions(self.project.root).switch("pet-visits", create=True)
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left is on its branch"):
                 expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_true)
 
             with it("should offer to close it with a merge into main and a delete of its branch, neither chosen at first"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": []}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": [], "unsaved_work": [], "warning": ""}))
 
             with it("should put the repository's folder on main when it closes, whatever was chosen"):
                 self.project.call("ticket.close", ticket="pet-visits", leaving=["commit"])
@@ -363,12 +361,12 @@ with description("the board tools") as self:
             with before.each:
                 subprocess.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
                 subprocess.run(["git", "checkout", "-q", "-b", "someone-else"], cwd=self.project.root, check=True)
-                Sessions(self.project.root).switch("pet-visits")
+                Sessions(self.project.root).switch("pet-visits", create=True)
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             # Nothing checked out is its own, so nothing is committed or pushed; its branch can still be merged and deleted.
             with it("should offer to close it with a handoff and a merge and delete of its branch, and no commit or push"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": []}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": [], "unsaved_work": [], "warning": ""}))
 
 
     # The shapes in data.py are the only agreement between the two languages: the language adapter is written from them.

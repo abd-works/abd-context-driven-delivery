@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 
-from expects import contain, equal, expect
+from expects import be_a, contain, equal, expect
 
 from harness.graph.saved_graph import GRAPH_FILE_NAME
 from space.kanban.session_board_examples import (
@@ -48,6 +48,7 @@ from space.kanban.session_board_examples import (
 )
 from space.kanban.story_test import SharedStories, expect_refused, refusal_of
 from harness.chat.chat import ChatNotConnectedError
+from space.session.files.file_manager import FileChangedSinceReadError, VersionControlPathRefused
 
 shared_stories = SharedStories("Review Files In Files App")
 
@@ -252,17 +253,18 @@ def _(s):
 
 @shared_stories.scenario("Save Edited File", "Save the edited text to the file on disk")
 def _(s):
-    @s.given("the viewer shows order.py of checkout-flow")
+    @s.given("the viewer shows order.py of checkout-flow, read with its version")
     def _(world):
         seed_checkout_flow(world)
+        world.read = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.read_file(path=ORDER_FILE))
 
     @s.and_('the Person has edited line 14 to read raise EmptyCartError(cart.id, "a cart needs one item to be placed")')
     def _(world):
         world.edited = ORDER_TEXT.replace(PLACE_LINES[2], EDITED_LINE_14)
 
-    @s.when("the Person saves the file")
+    @s.when("the Person saves the file with the version it was read with")
     def _(world):
-        world.saved = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.write_file(path=ORDER_FILE, text=world.edited))
+        world.saved = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.write_file(path=ORDER_FILE, text=world.edited, version=world.read["version"]))
 
     @s.then("order.py on disk reads that line 14")
     def _(world):
@@ -271,6 +273,69 @@ def _(s):
     @s.and_("the viewer is read-only again, showing the saved text")
     def _(world):
         expect(world.saved["text"]).to(equal(world.edited))
+
+
+# Interaction: what someone else writes into order.py on disk while the viewer shows it.
+CHANGED_ON_DISK_TEXT = ORDER_TEXT + "# changed on disk by someone else" + chr(10)
+
+
+@shared_stories.scenario("Save Edited File", "Refuse to save over a file changed on disk since it was read")
+def _(s):
+    @s.given("the viewer shows order.py of checkout-flow, read with its version")
+    def _(world):
+        seed_checkout_flow(world)
+        world.read = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.read_file(path=ORDER_FILE))
+
+    @s.and_("someone else has since changed order.py on disk")
+    def _(world):
+        (world.project.root / ORDER_FILE).write_text(CHANGED_ON_DISK_TEXT, encoding="utf-8")
+
+    @s.when("the Person saves the file with the version it was read with")
+    def _(world):
+        session = world.Ticket.load(CHECKOUT_FLOW.name).session
+        world.refusal = refusal_of(lambda: session.write_file(path=ORDER_FILE, text=ORDER_TEXT, version=world.read["version"]))
+
+    @s.then("the save is refused, saying order.py changed on disk since it was read")
+    def _(world):
+        expect(world.refusal).to(be_a(FileChangedSinceReadError))
+        expect(str(world.refusal)).to(contain(ORDER_FILE, "changed on disk since it was read"))
+
+    @s.and_("order.py on disk keeps the change someone else made")
+    def _(world):
+        expect((world.project.root / ORDER_FILE).read_text(encoding="utf-8")).to(equal(CHANGED_ON_DISK_TEXT))
+
+    @s.but_("a save of a file not there yet, with no version, is saved")
+    def _(world):
+        world.Ticket.load(CHECKOUT_FLOW.name).session.write_file(path="src/checkout/receipt.py", text=ORDER_TEXT)
+        expect((world.project.root / "src" / "checkout" / "receipt.py").read_text(encoding="utf-8")).to(equal(ORDER_TEXT))
+
+
+@shared_stories.scenario("Save Edited File", "Refuse to read or save a file inside the repository's .git folder")
+def _(s):
+    @s.given("checkout-flow's repository holds .git/config")
+    def _(world):
+        seed_checkout_flow(world)
+        (world.project.root / ".git").mkdir(exist_ok=True)
+        (world.project.root / ".git" / "config").write_text("[core]" + chr(10), encoding="utf-8")
+
+    @s.when("the Person reads .git/config, or saves .git/hooks/pre-commit")
+    def _(world):
+        session = world.Ticket.load(CHECKOUT_FLOW.name).session
+        world.refusals = [refusal_of(lambda: session.read_file(path=".git/config")), refusal_of(lambda: session.write_file(path=".git/hooks/pre-commit", text="exit 1"))]
+
+    @s.then("each is refused, naming the path as inside a .git folder, which holds git's own record")
+    def _(world):
+        expect([(type(refusal), str(refusal).split(" is inside")[0]) for refusal in world.refusals]).to(equal([(VersionControlPathRefused, ".git/config"), (VersionControlPathRefused, ".git/hooks/pre-commit")]))
+
+    @s.and_("nothing is written under .git")
+    def _(world):
+        expect((world.project.root / ".git" / "hooks" / "pre-commit").exists()).to(equal(False))
+
+    @s.but_("a file whose name only starts with .git, such as .gitignore, is read and saved as any other")
+    def _(world):
+        session = world.Ticket.load(CHECKOUT_FLOW.name).session
+        session.write_file(path=".gitignore", text="dist" + chr(10))
+        expect(world.data_of(session.read_file(path=".gitignore"))["text"]).to(equal("dist" + chr(10)))
 
 
 # --- Add Comment To File Selection --------------------------------------------------------------------------------

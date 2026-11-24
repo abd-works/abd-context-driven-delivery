@@ -33,7 +33,9 @@ class SketchBddModel(BddModel):
         return super().parse(text)
 
     def render(self, canonical: BddModel, written: Written = Written()) -> str:
-        """The spec as the BDD section of a sketch: the fidelity it holds, the section's heading, then each subject."""
+        """The spec as the BDD section of a sketch: the fidelity it holds, the section's heading, then each subject. Refused
+        for a finished spec, whose test bodies a sketch loses."""
+        canonical.refuse_losing_bodies()
         realized = any(self._is_realized(node) for node in canonical.behavior_nodes() if isinstance(node, Observation))
         blocks = [f"Fidelity: {'realization' if realized else 'behavior'}", f"## {self.lens.titles[-1]}"]
         for description in canonical.descriptions:

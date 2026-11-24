@@ -30,6 +30,7 @@ from harness.hooks.hook_server import (
     HookPayload,
     HookResult,
     HookServer,
+    ToolInputUnreadable,
 )
 from harness.hooks.hooks import Hook, Hooks, hook
 from harness.installation.ide_layout import IdeLayout
@@ -577,7 +578,7 @@ with description("a project's hook logs") as self:
 
         with before.each:
             self.sessions = Sessions(self.root)
-            self.sessions.switch("checkout", workpath=self.root)
+            self.sessions.switch("checkout", workpath=self.root, create=True)
 
         with it("should go to that session's logs folder"):
             expect(_dispatch_log_folder(self.root).as_posix()).to(
@@ -794,6 +795,11 @@ with description("a hook handler"):
 
     with it("should be handed the project the event happened in"):
         expect(_PayloadReader.seen[0].project).to(equal(self.root))
+
+    with context("with an event whose tool arguments are text that is not JSON"):
+        with it("should refuse to read them, naming the tool and the text"):
+            payload = HookPayload({"tool_name": "Edit", "tool_input": '{"path": "a.md"'})
+            expect(lambda: payload.tool_input).to(raise_error(ToolInputUnreadable, contain("Edit", '{"path": "a.md"')))
 
     with context("with an event Claude Code sent, which names the folder it ran in"):
         with it("should take that folder as the project"):

@@ -49,15 +49,16 @@ class LockFileHeld(TimeoutError):
 
 class LockFile:
     """A file locked by the operating system for the one holder that claimed it, such as the lock that lets one install
-    write into an IDE folder at a time, the lock beside a JSON file several processes change, or the lock that lets one
-    command start a server while the others wait for it. Claiming it is one step of the operating system, so of any
-    number of claims made at the same moment exactly one gets it. The operating system gives the lock back when its
-    holder closes it or its process ends, however it ends, so a killed holder leaves the file but never a held lock, and
-    a process id another program was given later holds nothing. The holder writes its process id at the file's start
-    (`holder`), so a claim that waits can say for whom. A claim waits up to its wait while another holder has the file,
-    then refuses (*LockFileHeld*). One holder may claim again while it holds the file, as the steps of one install do; the
-    file is free once its first claim is given back. Each holder makes its own *LockFile*: two threads sharing one
-    would both pass as its one holder."""
+    write into an IDE folder at a time, the lock beside a JSON file several processes change, the lock that lets one
+    command start a server while the others wait for it, or the claim on the record of test runs that lets one process
+    at a time look at which tier is due. Claiming it is one step of the operating system, so of any number of claims
+    made at the same moment exactly one gets it. The operating system gives the lock back when its holder closes it or
+    its process ends, however it ends, so a killed holder leaves the file but never a held lock, and a process id
+    another program was given later holds nothing. The holder writes its process id at the file's start (`holder`), so a
+    claim that waits can say for whom. A claim waits up to its wait while another holder has the file, then refuses
+    (*LockFileHeld*); `try_claim` does not wait, and answers whether it took the file. One holder may claim again while
+    it holds the file, as the steps of one install do; the file is free once its first claim is given back. Each holder
+    makes its own *LockFile*: two threads sharing one would both pass as its one holder."""
 
     def __init__(self, path: Path, wait_seconds: float) -> None:
         self.path = Path(path)
@@ -94,6 +95,14 @@ class LockFile:
         if self._depth == 0:
             self._wait_until_claimed()
         self._depth += 1
+
+    def try_claim(self) -> bool:
+        """Take the file, or one more step of the work that already holds it, at once; False, without waiting, while
+        another holder has it, as for a look that is skipped rather than kept waiting."""
+        if self._depth == 0 and not self._claimed():
+            return False
+        self._depth += 1
+        return True
 
     def release(self) -> None:
         """Give back one step; the file is free once the first claim is given back. The file stays, since removing it

@@ -4,6 +4,7 @@ import type { EngineInterface, McpToolResult, PromptSubmitAttachment } from 'cla
 import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
 import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
+import { goalTitleOf } from './goal-title'
 
 const GROUPING_MODEL = 'sonnet'
 const GROUPING_TOKENS = 4096
@@ -277,7 +278,7 @@ function placingPrompt(draft: string, goals: QueuedPrompt[]): string {
     'A piece about a goal on the queue becomes a task of that goal: {"goal": "<id>", "text": "<the task, short>"}.',
     'A piece no goal covers becomes a card of its own, a short title of the goal: {"card": "<text>"}.',
     'The goals on the queue:',
-    ...goals.map(goal => `- [${goal.id}] ${goal.text.replace(/\s+/g, ' ').slice(0, GOAL_TITLE_COLUMNS)}${goal.is_done ? ' (done)' : ''}`),
+    ...goals.map(goalLineOf),
     'Answer with only a JSON array of those objects.',
   ].join('\n')
 }
@@ -472,10 +473,11 @@ async function workOn($: EngineInterface, id: string): Promise<void> {
 /** A prompt sent straight to the chat, as the queue holds it: its id, and what the agent is told about it. */
 export type SentPrompt = { id: string; note: string }
 
-/** A prompt the person sent straight to the chat interrupts the queue: while a turn works a queued prompt it becomes a
- * step of that prompt; otherwise it goes on the queue just above the next prompt to do, below the done ones, marked
- * [interruption], as the prompt being worked, so the steps the agent plans for it sit under it. The agent is told its id,
- * to mark it done when it is finished. */
+/** A prompt the person sent straight to the chat interrupts the queue: while a turn works a goal, or when that goal's
+ * turn ended asking the person something, it is about that goal and becomes its step; otherwise it is new work, a goal
+ * of its own, which goes on the queue just above the next prompt to do, below the done ones, marked [interruption], as
+ * the prompt being worked, so the steps the agent plans for it sit under it. Either way the queue holds the message's
+ * title (goalTitleOf), never a paste. The agent is told its id, to mark it done when it is finished. */
 export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
   if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text)) {
     return undefined
@@ -484,10 +486,15 @@ export async function queueSentPrompt($: EngineInterface, text: string): Promise
   await refreshQueue($)
   const interrupted = await interruptedPrompt($)
   if (interrupted) {
-    return addInterruption($, interrupted, text.trim())
+    return addInterruption($, interrupted, goalTitleOf(text))
   }
+  return addSentGoal($, goalTitleOf(text))
+}
+
+/** A message about new work goes on the queue as a goal of its own, just above the next prompt to do. */
+async function addSentGoal($: EngineInterface, title: string): Promise<SentPrompt | undefined> {
   const nextPlace = (await read($, queue)).prompts.findIndex(prompt => !prompt.is_done)
-  if (!(await changeQueue($, 'add', { text: `${INTERRUPTION_MARK} ${text.trim()}` }))) {
+  if (!(await changeQueue($, 'add', { text: `${INTERRUPTION_MARK} ${title}` }))) {
     return undefined
   }
   const sent = (await read($, queue)).prompts.at(-1)
@@ -496,20 +503,30 @@ export async function queueSentPrompt($: EngineInterface, text: string): Promise
   }
   await changeQueue($, 'move', { prompt: sent.id, to: nextPlace < 0 ? (await read($, queue)).prompts.length - 1 : nextPlace })
   await workOn($, sent.id)
-  return {
-    id: sent.id,
-    note: `This prompt is on this chat's prompt queue as [${sent.id}]. If it belongs to a goal already on the queue, make it a task of that goal ` +
-      'with prompt-queue.set_steps and take this card off with prompt-queue.remove; otherwise, when its work is done, call prompt-queue.done with that id.',
-  }
+  const goals = (await read($, queue)).prompts
+  const robots = (await read($, isSubAgentMode)) ? robotsOf(goals, await read($, tasks)) : []
+  return { id: sent.id, note: [sentGoalNoteOf(sent.id), ...robotsNoteOf(robots, goals)].join('\n') }
 }
 
-/** The goal a message the person sends is filed under: the one last worked, if it is on the queue, done or not. */
+/** What the agent is told about a message queued as a goal of its own: fold it into a goal it belongs to, or mark it
+ * done once its work is done. */
+function sentGoalNoteOf(sentId: string): string {
+  return `This prompt is on this chat's prompt queue as [${sentId}]. If it belongs to a goal already on the queue, make it a task of that goal ` +
+    'with prompt-queue.set_steps and take this card off with prompt-queue.remove; otherwise, when its work is done, call prompt-queue.done with that id.'
+}
+
+/** The goal a message the person sends is filed under: the one last worked, if it is on the queue, done or not, while
+ * the message is about it: a turn works that goal, or its turn ended asking the person something. Otherwise a message
+ * sent between turns is new work, filed under no goal, so one goal never gathers every later message as its steps. */
 async function interruptedPrompt($: EngineInterface): Promise<QueuedPrompt | undefined> {
+  if (!(await read($, isTurnRunning)) && !(await read($, isAwaitingDecision))) {
+    return undefined
+  }
   const working = await read($, askedAbout)
   return (await read($, queue)).prompts.find(prompt => prompt.id === working)
 }
 
-/** A message the person sends, mid-turn or between turns, is filed by the cdd server under the goal last worked, as its
+/** A message about the goal last worked is filed by the cdd server under that goal, as its
  * step marked [interruption], opening it again if it was done; the agent is told so, and moves it to a card of its own
  * when it is separate work. The task list carries on from the goal's filed steps. */
 async function addInterruption($: EngineInterface, prompt: QueuedPrompt, text: string): Promise<SentPrompt> {
@@ -530,8 +547,13 @@ function filingNoteOf(filedUnder: string, goals: QueuedPrompt[]): string {
     '2. It is about another goal below: file it there with prompt-queue.add_interruption and take its step off this goal with prompt-queue.set_steps.',
     '3. It is new work no goal covers, even a small one: queue it as its own card with prompt-queue.add, written as a short title of the goal, and take its step off this goal.',
     'A question or a yes/no answer belongs to the goal it is about. The goals on the queue:',
-    ...goals.map(goal => `- [${goal.id}] ${goal.text.replace(/\s+/g, ' ').slice(0, GOAL_TITLE_COLUMNS)}${goal.is_done ? ' (done)' : ''}`),
+    ...goals.map(goalLineOf),
   ].join('\n')
+}
+
+/** A goal as a note lists it: its id and the start of its text, enough to tell the goals apart. */
+function goalLineOf(goal: QueuedPrompt): string {
+  return `- [${goal.id}] ${goal.text.replace(/\s+/g, ' ').slice(0, GOAL_TITLE_COLUMNS)}${goal.is_done ? ' (done)' : ''}`
 }
 
 /** In sub-agent mode, what the agent reads beside a new message: each robot's queue, and that the agent decides whether
@@ -542,29 +564,45 @@ function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
   }
   return [
     "Sub-agent mode is on. You decide where this message goes: do it yourself; make it a task of an item in a robot's queue with prompt-queue.add_interruption;",
-    "or give it to a robot as a new item with prompt-queue.add, its text starting [for <robot name>]. Take its step off this goal when it goes elsewhere.",
+    "or give it to a robot as a new item with prompt-queue.add, its text starting [for <robot name>]. Take it off this goal when it goes elsewhere.",
     "A robot works only the words this chat sends it, and says when it finished: send it new work with SendMessage to its robot name. The robots' queues:",
     ...robots.map((robot, place) => `${agentNameOf(robot, place)}: ${robotPromptsOf(goals, robot, place).map(goal => `[${goal.id}] ${goal.text.slice(0, GOAL_TITLE_COLUMNS)}`).join('; ')}`),
   ]
 }
 
 /** A robot's items as they stand on the queue, in queue order: the cards given to it, and any card given to no robot
- * that is queued for it by name, its text starting [for <robot name>]. The robot a card was given to decides, so a
- * card stands in one robot's queue and one sub-agent is handed it. */
+ * that is queued for it by name, its text starting [for <robot name>], the name matched with no regard to case or outer
+ * spaces. The robot a card was given to decides, so a card stands in one robot's queue and one sub-agent is handed it. */
 export function robotPromptsOf(goals: QueuedPrompt[], robot: SubAgentTask, place: number): QueuedPrompt[] {
   const name = agentNameOf(robot, place)
-  return goals.filter(goal => (goal.robot ? goal.robot === name : goal.text.startsWith(`${ROBOT_MARK_OPEN}${name}]`)))
+  return goals.filter(goal => isSameRobot(goal.robot || robotNamedIn(goal.text), name))
 }
 
-/** The robots on the queue, in the order their first card stands. Each card keeps the robot it was given on the
+/** The robot a card's text names by its opening [for <robot name>]; empty when it names none. */
+function robotNamedIn(text: string): string {
+  if (!text.startsWith(ROBOT_MARK_OPEN) || !text.includes(']')) {
+    return ''
+  }
+  return text.slice(ROBOT_MARK_OPEN.length, text.indexOf(']'))
+}
+
+/** Whether two robot names are one robot: an agent types a robot's name by hand, so case and outer spaces do not make
+ * another robot, as the cdd server's queue matches them. */
+function isSameRobot(given: string | undefined, name: string): boolean {
+  const robot = (given ?? '').trim().toLowerCase()
+  return robot !== '' && robot === name.trim().toLowerCase()
+}
+
+/** The robots on the queue, in the order their first card stands, each by the first spelling the queue holds of it, so
+ * bOLT and Bolt are one robot. Each card keeps the robot it was given on the
  * queue, so the robots' queues come back after a reload; what a robot does is what grouping said, while the plugin
  * still holds it. */
 export function robotsOf(goals: QueuedPrompt[], described: SubAgentTask[]): SubAgentTask[] {
-  const names = [...new Set(goals.flatMap(goal => (goal.robot ? [goal.robot] : [])))]
+  const names = goals.flatMap(goal => (goal.robot ? [goal.robot] : [])).filter((name, place, given) => given.findIndex(first => isSameRobot(first, name)) === place)
   return names.map(name => ({
     name,
     description: described.find(task => task.name === name)?.description ?? '',
-    prompts: goals.filter(goal => goal.robot === name).map(goal => goal.text),
+    prompts: goals.filter(goal => isSameRobot(goal.robot, name)).map(goal => goal.text),
   }))
 }
 
@@ -758,7 +796,7 @@ export async function sendTasksToSubAgents($: EngineInterface): Promise<void> {
   const handed: { robot: string; card: QueuedPrompt }[] = []
   for (const [place, task] of robotsOf(held.filter(prompt => !prompt.is_done), await read($, tasks)).entries()) {
     const robot = agentNameOf(task, place)
-    const card = held.find(prompt => prompt.robot === robot && !prompt.is_done)
+    const card = held.find(prompt => isSameRobot(prompt.robot, robot) && !prompt.is_done)
     if (card && card.id !== sent[robot]) {
       handed.push({ robot, card })
     }

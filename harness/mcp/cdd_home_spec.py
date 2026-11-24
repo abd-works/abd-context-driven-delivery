@@ -11,7 +11,7 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import end_with, equal, expect, raise_error
+from expects import contain, end_with, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -154,3 +154,54 @@ with description("a cdd home's server environment") as self:
 
     with it("should keep the server's bytecode where the checkout's toolsets keep theirs, as the hook daemon does"):
         expect(self.home.server_environment["PYTHONPYCACHEPREFIX"]).to(equal(RepositoryToolsets(self.checkout).pycache_prefix()))
+
+
+def _pinned_from(home: CddHome, worktree: Path) -> None:
+    """A runtime record as a pin from worktree leaves it, on the branch feature-x."""
+    home.folder.mkdir(parents=True, exist_ok=True)
+    record = {"source": str(home.pinned_checkout), "mode": CddHome.PINNED, "worktree": str(worktree), "branch": "feature-x", "commit": "1b684af68"}
+    home.runtime_record.write_text(json.dumps(record), encoding="utf-8")
+
+
+with description("a lane's served feature") as self:
+    with before.each:
+        self.root = Path(tempfile.mkdtemp(prefix="cdd-home-"))
+        self.stable = CddHome(self.root / ".cdd")
+        self.dev = self.stable.dev_lane
+        self.worktree = self.root / "checkout-feature"
+        self.worktree.mkdir()
+
+    with after.each:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    with context("pinned on the dev lane from a worktree that is gone"):
+        with before.each:
+            _pinned_from(self.dev, self.worktree)
+            self.worktree.rmdir()
+            self.said = self.dev.return_to_main_when_feature_gone()
+
+        with it("should say the dev lane runs main again, naming the branch and the worktree that is gone"):
+            expect(self.said).to(contain("feature-x", str(self.worktree), "main"))
+
+        with it("should serve no feature on the dev lane, so its chats run on main"):
+            expect(self.dev.is_installed).to(equal(False))
+
+    with context("pinned on the dev lane from a worktree still there"):
+        with before.each:
+            _pinned_from(self.dev, self.worktree)
+            self.said = self.dev.return_to_main_when_feature_gone()
+
+        with it("should say nothing"):
+            expect(self.said).to(equal(""))
+
+        with it("should keep serving the feature"):
+            expect(self.dev.served_branch).to(equal("feature-x"))
+
+    with context("pinned on the stable lane from a checkout that is gone"):
+        with before.each:
+            _pinned_from(self.stable, self.worktree)
+            self.worktree.rmdir()
+
+        with it("should be left as it is, since the stable lane runs main"):
+            self.stable.return_to_main_when_feature_gone()
+            expect(self.stable.is_installed).to(equal(True))

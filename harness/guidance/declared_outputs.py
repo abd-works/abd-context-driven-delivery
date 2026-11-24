@@ -132,6 +132,20 @@ class DeclaredFile:
             return ""
         return path[: found.start() + (1 if found.group(0).startswith("/") else 0)]
 
+    def folder_holding(self, path: str) -> tuple[str, dict[str, str]] | None:
+        """Where this declared folder, such as Clean Engineering's ``{module}/``, starts in path, and the named parts it
+        reads off the folders holding path, each named folder taking as few folders as it can: ``src/ordering/cart.py``
+        is in module ``ordering``, starting at ``src/``. None for a declared file, or a path in no such folder."""
+        if not self._declared.endswith("/"):
+            return None
+        folders = PurePosixPath(path).parent.parts
+        for first in range(len(folders) - 1, -1, -1):
+            found = self.pattern.match("/".join(folders[first:]) + "/")
+            if found is not None:
+                start = "/".join(folders[:first]).replace("//", "/")
+                return (f"{start}/" if start else ""), {name: value for name, value in found.groupdict().items() if value}
+        return None
+
     def _group(self, name: str) -> str:
         """The name a named part goes by in the pattern: a name such as ``sub-epic`` is no group name as it is written."""
         return re.sub(r"\W", "_", name)
@@ -210,14 +224,28 @@ class DeclaredOutputs:
         source's own declared path starts, so ``docs/.context/story-map.md`` places ``docs/.context/story-map.drawio``.
         A declared path that takes the whole of source, such as ``{module}/.context/module-context.md``, places the file
         from the fidelity's root: one ``.context/modules.drawio`` for every module. Empty when source is none of its
-        files, or no file in format can be named for it."""
+        files, or no file in format can be named for it. A code file in a folder the fidelity declares for its code,
+        such as ``src/ordering/cart.py`` against ``{module}/``, is one of its files, in the module its folder names."""
         holding = self._holding(source)
         path = self._path_beside(source, format)
-        return f"{holding[0][1].start_of(source)}{path}" if holding and path else ""
+        return f"{holding[0][1]}{path}" if holding and path else ""
 
-    def _holding(self, source: str) -> list[tuple[str, DeclaredFile]]:
-        """The declared files source is one of, each with the output that declares it."""
-        return [(label, declared) for label, files in self._files.items() for declared in files if declared.pattern.search(source)]
+    def is_in_code_folder(self, source: str) -> bool:
+        """Whether source is a code file in a folder the fidelity declares for code in source's own format."""
+        return bool(self._held_in_code_folders(source))
+
+    def _holding(self, source: str) -> list[tuple[str, str, dict[str, str]]]:
+        """The outputs source is one of, each with where its declared path starts in source and the named parts it reads
+        off source: the declared files source matches, else the code folders that hold it."""
+        files = [(label, declared.start_of(source), declared.parts_of(source)) for label, files in self._files.items() for declared in files if declared.pattern.search(source)]
+        return files or self._held_in_code_folders(source)
+
+    def _held_in_code_folders(self, source: str) -> list[tuple[str, str, dict[str, str]]]:
+        """The code formats whose declared folder holds source, a file in that format, each with where the folder
+        starts in source and the named parts it reads off it (``DeclaredFile.folder_holding``)."""
+        labels = [label for label in self.code_folders() if source.endswith(Format(label).extension)]
+        held = ((label, DeclaredFile(name).folder_holding(source)) for label in labels for name in self.paths_in(label))
+        return [(label, *found) for label, found in held if found is not None]
 
     def _path_beside(self, source: str, format: str) -> str:
         """The declared path of the file written in format for source, with each named part read off source: a file of
@@ -225,9 +253,9 @@ class DeclaredOutputs:
         output named for format."""
         holding = self._holding(source)
         parts: dict[str, str] = {}
-        for _, declared in holding:
-            parts.update(declared.parts_of(source))
-        labels = list(dict.fromkeys(label for label, _ in holding))
+        for _, _, read in holding:
+            parts.update(read)
+        labels = list(dict.fromkeys(label for label, _, _ in holding))
         written = Format(format)
         candidates = [declared for label in labels for declared in self._files[label] if declared._is_written_in(written)]
         if all(Format(label).is_offered for label in labels):
@@ -268,8 +296,9 @@ class RenderPlacement:
 
     def owns(self, first: Path, source: Format) -> bool:
         """Whether a render of first, written in source, writes one of the fidelity's own files: first is a folder, a
-        sketch, or a file the fidelity declares."""
-        return first.is_dir() or source.name == self.SKETCH or self._declared.includes(first.as_posix())
+        sketch, a file the fidelity declares, or a code file in a folder it declares for its code."""
+        written = first.as_posix()
+        return first.is_dir() or source.name == self.SKETCH or self._declared.includes(written) or self._declared.is_in_code_folder(written)
 
     def name_beside(self, first: Path, source: Format, format: Format) -> str:
         """The name of the file a render of first into format is saved under beside it: the name the fidelity writes

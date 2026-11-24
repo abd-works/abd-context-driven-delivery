@@ -113,7 +113,7 @@ A log file that, once it reaches its size (4 MB), moves its lines to the previou
 
 ## LockFile
 
-A file the operating system locks for the one holder that claimed it, naming that holder's process at its start: the install lock of an IDE folder, the lock beside a JSON file several processes change, and the start lock of a server. The operating system gives the lock back when its holder's process ends, however it ends.
+A file the operating system locks for the one holder that claimed it, naming that holder's process at its start: the install lock of an IDE folder, the lock beside a JSON file several processes change, the start lock of a server, and the claim on the record of test runs. The operating system gives the lock back when its holder's process ends, however it ends.
 
 + LockFile(path: Path, wait_seconds: float)
 ------
@@ -125,6 +125,8 @@ A file the operating system locks for the one holder that claimed it, naming tha
 + held(): Iterator[None]
 + claim(): None
 	// waits while another holder has the file, then refuses; one holder may claim again, and the file is free once its first claim is given back
++ try_claim(): bool
+	// takes the file at once, or answers False without waiting while another holder has it
 + release(): None
 ---<<raises>>--> LockFileHeld
 

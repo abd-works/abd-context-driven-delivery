@@ -5,7 +5,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from expects import be_true, contain, equal, expect, raise_error
+from expects import be_false, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from harness.process.lock_file import LockFile, LockFileHeld
@@ -46,6 +46,17 @@ with description("a lock file") as self:
                 self.lock.release()
                 self.second.claim()
                 expect(self.second.is_held).to(be_true)
+
+        with it("should answer that a second holder trying it at once did not take it"):
+            expect(self.second.try_claim()).to(be_false)
+
+        with context("and tries it again"):
+            with it("should take one more step of the work that holds it"):
+                expect(self.lock.try_claim()).to(be_true)
+
+    with context("that no holder has claimed"):
+        with it("should be taken by a holder trying it at once"):
+            expect(self.lock.try_claim()).to(be_true)
 
     with context("held for one piece of work"):
         with it("should be free again afterwards"):

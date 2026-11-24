@@ -4,7 +4,7 @@
 **Tester:** Bolt
 **Story:** no scenario covers this.
 **Module and class:** space/repo/new_repository.py NewRepository.make_from_folder (write_ignores runs before create makes the folder)
-**Severity:** question
+**Severity:** answered question
 
 **Steps:** NewRepository(C:/dev/_et/bolt/work/brand-new).make_from_folder()
 
@@ -13,3 +13,7 @@
 **Expected:** not known; is this intended?
 
 **Tier that should catch it:** to be decided with the answer.
+
+## Answer (2026-11-23)
+
+make_from_folder makes a missing folder first, then makes it a repository on main. Built in `space/repo/new_repository.py` (`write_ignores` and `_commit_first` make root first); tested by `space/repo/new_repository_heavy_spec.py` ("a folder made a git repository" / "that does not exist yet", real git); scenario "Make a folder that is not there yet" in `story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar/check_cdd_server_health_in_chat_bar_story.test.md`.

@@ -26,8 +26,8 @@ Publish every annotated member of the toolsets a repository defines into one IDE
 + << composition >> last_run: InstallRun | None
 	// the install this installer ran last; none before its first
 ----
-+ create(ide: str | None = None, path: str | Path | None = None, repo: str | Path): Installer
-	// an IDE name is matched whatever its case; a name that is no IDE raises UnknownIde, and a path that is empty or a file raises NotAnInstallFolder, before anything is written
++ create(ide: str | None = None, path: str | Path | None = None, repo: str | Path, dev_lane: bool = False): Installer
+	// an IDE name is matched whatever its case; a name that is no IDE raises UnknownIde, and a path that is empty, a file, or in a folder that does not exist raises NotAnInstallFolder, before anything is written; dev_lane points the chats of a project other than repo at the dev lane
 + load(project: Path | str): Installer
 + clean(): list[str]
 + install(toolsets: Iterable[ToolsetReference | AgentToolSet] | None = None, replace: bool = True): InstallChannels

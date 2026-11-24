@@ -36,6 +36,7 @@ from space.session.practices.guidance_selection import UnknownSelectionPart
 from harness.agent_tools.chat_pointer import ChatPointer
 from space.session.session_log import LogLine, LoopNotFoundError
 from space.session.open_sessions import SessionNameRequiredError
+from space.session.session import MainStaysOpenError
 from space.session.sessions import SERVED_SESSIONS
 from space.work_state import WorkState
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
@@ -93,7 +94,7 @@ with description("a session"):
             with before.each:
                 self.work = self.root / "work"
                 self.work.mkdir()
-                Sessions(self.root).switch("alpha", self.work)
+                Sessions(self.root).switch("alpha", self.work, create=True)
 
             with it("should be that session"):
                 expect(self.event().session.name).to(equal("alpha"))
@@ -131,7 +132,7 @@ with description("a session"):
             with before.each:
                 self.work = self.repo / "work"
                 self.work.mkdir()
-                Sessions(self.repo).switch("alpha", self.work)
+                Sessions(self.repo).switch("alpha", self.work, create=True)
 
             with it("should be that session"):
                 expect(ToolCall({}, self.repo).session.record_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
@@ -149,11 +150,11 @@ with description("a session"):
             self.repo = Path(tempfile.mkdtemp())
             work = self.repo / "work"
             work.mkdir()
-            Sessions(self.repo).switch("alpha", work)
+            Sessions(self.repo).switch("alpha", work, create=True)
             Sessions(self.repo).current().handoffs.write(_HANDOFF_WITH_STEPS)
             self.chat = f"queue-chat-{time.time_ns()}"
             self.call = ToolCall.sent({}, self.repo, ToolRequest(ChatPointer.from_request(self.chat)))
-            self.instructions = Sessions(self.repo).switch("alpha", call=self.call)
+            self.instructions = Sessions(self.repo).switch("alpha", call=self.call, create=True)
 
         with it("should queue the handoff's steps on the chat's prompt queue, in order"):
             expect([prompt.text for prompt in PromptQueue.of_chat(self.chat).prompts]).to(equal(["Read the handoff", "Run the unit tier"]))
@@ -162,7 +163,7 @@ with description("a session"):
             expect(self.instructions).to(contain("prompt-queue.done"))
 
         with it("should queue them once, however often the chat switches to it again"):
-            Sessions(self.repo).switch("alpha", call=self.call)
+            Sessions(self.repo).switch("alpha", call=self.call, create=True)
             expect(len(PromptQueue.of_chat(self.chat).prompts)).to(equal(2))
 
     # (E) Open Named Session
@@ -173,7 +174,7 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            self.instructions = Sessions(self.repo).switch("alpha", self.work)
+            self.instructions = Sessions(self.repo).switch("alpha", self.work, create=True)
 
         with it("should return how to keep its log to the agent"):
             expect(self.instructions).to(contain("Keeping the session log"))
@@ -207,7 +208,7 @@ with description("a session"):
                 json.dumps({"name": "alpha", "title": "Pet visits", "scope": "feature", "parent": "pawplace"}),
                 encoding="utf-8",
             )
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
 
         with it("should keep the ticket's title, scope, and parent after it is switched to"):
             stored = json.loads((self.repo / ".sessions" / "alpha" / "session.json").read_text(encoding="utf-8"))
@@ -219,7 +220,7 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             Sessions(self.called).current().close(ToolCall())
 
         with it("should clear the open session kept under the cdd home"):
@@ -228,6 +229,16 @@ with description("a session"):
         with it("should go back to the main session"):
             expect(Sessions(self.called).current().name).to(equal("main"))
 
+    # (S) Person --> Close Active Session
+    # Exploratory testing, gizmo-11: closing main answered nothing, while ticket.close refused it.
+    with context("that is main and is closed"):
+        with before.each:
+            self.repo = Path(tempfile.mkdtemp())
+
+        with it("should refuse the close, saying main stays open"):
+            main = Sessions(self.repo).current()
+            expect(lambda: main.close(ToolCall())).to(raise_error(MainStaysOpenError, "main is the default session and stays open; it cannot close"))
+
     # (S) Session --> Select Existing Session
     with context("that is selected"):
         with before.each:
@@ -235,7 +246,7 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
 
         with context("with only a name"):
             with before.each:
@@ -244,7 +255,7 @@ with description("a session"):
                 (self.repo / ".git").mkdir()
                 os.environ["CDD_REPO"] = str(Path(tempfile.mkdtemp()))
                 os.environ["CDD_PROJECT"] = str(self.repo / "other")
-                self.instructions = Sessions(self.called).switch("alpha")
+                self.instructions = Sessions(self.called).switch("alpha", create=True)
 
             with it("should bind the existing session from the environment"):
                 session = Sessions(self.called).current()
@@ -271,7 +282,7 @@ with description("a session"):
         # A session's name is its folder and its branch, and git refuses a space in a branch name.
         with context("with a name that has spaces and capitals"):
             with before.each:
-                Sessions(self.repo).switch("Chat UI", self.work)
+                Sessions(self.repo).switch("Chat UI", self.work, create=True)
 
             with it("should name the session by its slug"):
                 expect(Sessions(self.called).current().name).to(equal("chat-ui"))
@@ -359,7 +370,7 @@ with description("a session"):
 
             with context("that a chat in the repository's own folder switches to"):
                 with before.each:
-                    self.instructions = Sessions(self.repo).switch("alpha", call=ToolCall({}, self.repo))
+                    self.instructions = Sessions(self.repo).switch("alpha", call=ToolCall({}, self.repo), create=True)
 
                 with it("should say the chat works outside the ticket's worktree"):
                     expect(self.instructions).to(contain(f"This chat works in {self.repo.resolve()}, but alpha's worktree is {self.worktree.resolve()}"))
@@ -369,7 +380,7 @@ with description("a session"):
 
             with context("that a chat in the ticket's worktree switches to"):
                 with it("should give no warning"):
-                    instructions = Sessions(self.worktree).switch("alpha", call=ToolCall({}, self.worktree))
+                    instructions = Sessions(self.worktree).switch("alpha", call=ToolCall({}, self.worktree), create=True)
                     expect(instructions).not_to(contain("This chat works in"))
 
             # A session's root has to be in its own worktree: a workpath saved into the repository's own folder, as
@@ -437,7 +448,7 @@ with description("a session"):
             with context("that a chat in the ticket's worktree switches to another ticket"):
                 with before.each:
                     Sessions(self.repo).create("beta")
-                    self.instructions = Sessions(self.worktree).switch("beta", call=ToolCall({}, self.worktree))
+                    self.instructions = Sessions(self.worktree).switch("beta", call=ToolCall({}, self.worktree), create=True)
 
                 with it("should open the worktree's ticket"):
                     expect(Sessions(self.worktree).current().name).to(equal("alpha"))
@@ -447,7 +458,7 @@ with description("a session"):
 
         with context("with a repo path"):
             with before.each:
-                self.instructions = Sessions(self.repo).switch("alpha")
+                self.instructions = Sessions(self.repo).switch("alpha", create=True)
 
             with it("should keep its record under that repo at sessions and the name"):
                 expect(Sessions(self.called).current().record_folder).to(equal(self.repo.resolve() / ".sessions" / "alpha"))
@@ -461,8 +472,8 @@ with description("a session"):
 
         with context("that another client of the same chat switches"):
             with it("should reload the named session instead of keeping stale memory"):
-                Sessions(self.repo).switch("alpha", self.work)
-                Sessions(self.repo).switch("beta", self.work)
+                Sessions(self.repo).switch("alpha", self.work, create=True)
+                Sessions(self.repo).switch("beta", self.work, create=True)
                 expect(Sessions(self.called).current().name).to(equal("beta"))
                 WorkState(self.repo).session = "alpha"
                 expect(Sessions(self.called).current().name).to(equal("alpha"))
@@ -474,7 +485,7 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
 
         with it("should seed loop 1 in session.log when the session is new"):
             log = (Sessions(self.called).current().work_folder / "session.log").read_text(encoding="utf-8")
@@ -489,18 +500,18 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             Sessions(self.called).current().log.record(LogLine("---", subject="2"))
 
         with it("should append the next loop after switch without in-memory loops"):
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             expect(Sessions(self.called).current().mark_loop(ToolCall())).to(equal("3"))
 
     # A ticket's moves and marks are lines of its session's log, which the log answers rather than its readers scanning it.
     with context("whose log records moves and marks on the board's stages"):
         with before.each:
             self.repo = Path(tempfile.mkdtemp())
-            Sessions(self.repo).switch("alpha", self.repo)
+            Sessions(self.repo).switch("alpha", self.repo, create=True)
             self.log = Sessions(self.repo).current().log
             for verb, stage in (("move", "Discovery"), ("done", "Discovery"), ("move", "Specification"), ("in-progress", "Specification")):
                 self.log.record(LogLine(verb, subject=stage))
@@ -522,7 +533,7 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.failure = RuntimeError("boom")
 
         with it("should write the trace to session.err"):
@@ -548,7 +559,7 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.session = Sessions(self.called).current()
 
         with it("should append session.err and session.log when an agent tool raises"):
@@ -578,7 +589,7 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.session = Sessions(self.called).current()
             self.transcript = _chat_in(self.session, "mcp-dispatch-chat").transcript
 
@@ -600,7 +611,7 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.session = Sessions(self.called).current()
             self.chat_log = self.session.log.by(_chat_in(self.session, "note-chat"))
 
@@ -631,7 +642,7 @@ with description("a session"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.session = Sessions(self.called).current()
             self.chat_log = self.session.log.by(_chat_in(self.session))
             self.edited = self.work / "cart.py"
@@ -643,7 +654,7 @@ with description("a session"):
                 bare = Path(tempfile.mkdtemp())
                 work = bare / "work"
                 work.mkdir()
-                Sessions(bare).switch("alpha", work)
+                Sessions(bare).switch("alpha", work, create=True)
                 self.bare_session = Sessions(self.called).current()
                 self.bare_session.log.by(None).action("sketch", [work / "x.py"])
 
@@ -714,7 +725,7 @@ with description("a session"):
             (self.repo / ".git").mkdir()
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.record_folder = Sessions(self.called).current().record_folder
 
         with it("should read the repo path and the workpath from that session"):
@@ -730,10 +741,10 @@ with description("a session"):
             (self.repo / ".git").mkdir()
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
 
         with it("should keep the given workpath and take the repo root from it"):
-            Sessions(self.work).switch("alpha", self.work)
+            Sessions(self.work).switch("alpha", self.work, create=True)
             session = Sessions(self.called).current()
             expect(session.workpath).to(equal(self.work.resolve()))
             expect(session.checkout.root).to(equal(self.repo.resolve()))
@@ -755,7 +766,7 @@ with description("a loop"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.first = Sessions(self.called).current().log.by(None).next_loop()
             self.second = Sessions(self.called).current().log.by(None).next_loop()
 
@@ -772,7 +783,7 @@ with description("a loop"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.session = Sessions(self.called).current()
             chat_log = self.session.log.by(_chat_in(self.session, "loop-chat"))
             self.opened = chat_log.next_loop()
@@ -786,7 +797,7 @@ with description("a loop"):
             expect(reloaded.entries[0]).to(contain(f"--- {reloaded.number}"))
 
         with it("should reload log lines from session.log when accessed by loop number"):
-            Sessions(self.repo).switch("alpha")
+            Sessions(self.repo).switch("alpha", create=True)
             reloaded = Sessions(self.called).current().log.loop_at(self.opened.number)
             expect(any("sketch" in line for line in reloaded.entries)).to(equal(True))
 
@@ -826,7 +837,7 @@ with description("an action"):
         self.called = self.repo
         self.work = self.repo / "work"
         self.work.mkdir()
-        Sessions(self.repo).switch("alpha", self.work)
+        Sessions(self.repo).switch("alpha", self.work, create=True)
         self.session = Sessions(self.called).current()
         self.chat_log = self.session.log.by(_chat_in(self.session, "action-chat"))
 
@@ -941,7 +952,7 @@ with description("a practice"):
             self.called = self.repo
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions.of_project(self.called).switch("alpha", self.work)
+            Sessions.of_project(self.called).switch("alpha", self.work, create=True)
             self.session = Sessions.of_project(self.called).current()
             self.opened = self.session.practice("bdd")
 
@@ -1181,7 +1192,7 @@ with description("a practice"):
                 from harness.installation.context_config import ContextConfig
 
                 ContextConfig(self.repo).update(practice_folders={"bdd": "."})
-                Sessions(self.repo).switch("alpha")
+                Sessions(self.repo).switch("alpha", create=True)
                 self.session = Sessions(self.called).current()
                 self.opened = self.session.practice("bdd")
 
@@ -1193,7 +1204,7 @@ with description("a practice"):
                 from harness.installation.context_config import ContextConfig
 
                 ContextConfig(self.repo).update(default_formats={"*": ["default", "drawio", "whiteboard"], "stories.scenarios": ["python"]})
-                Sessions(self.repo).switch("alpha")
+                Sessions(self.repo).switch("alpha", create=True)
                 self.stories = Sessions(self.called).current().practice("stories")
 
             with it("should choose a fidelity's own default and the diagram formats it writes until the session chooses"):
@@ -1211,7 +1222,7 @@ with description("a practice"):
                 self.custom = self.repo / "custom-bdd"
                 self.custom.mkdir()
                 self.session.practice("bdd").keep_root(self.custom)
-                Sessions(self.repo).switch("alpha")
+                Sessions(self.repo).switch("alpha", create=True)
                 self.session = Sessions(self.called).current()
                 self.opened = self.session.practice("bdd")
 
@@ -1228,7 +1239,7 @@ with description("a practice"):
             self.turned_off_home = ExampleHome()
             self.turned_off_repo = Path(tempfile.mkdtemp())
             (self.turned_off_repo / ".git").mkdir()
-            Sessions.of_project(self.turned_off_repo).switch("alpha", self.turned_off_repo)
+            Sessions.of_project(self.turned_off_repo).switch("alpha", self.turned_off_repo, create=True)
             self.turned_off = Sessions.of_project(self.turned_off_repo).current()
             self.turned_off.practice("ddd").enable(False)
             self.saved = json.loads((self.turned_off.record_folder / "session.json").read_text(encoding="utf-8"))
@@ -1275,11 +1286,11 @@ with description("a practice"):
             self.work = self.repo / "work"
             self.work.mkdir()
             self.tree = _REPO_ROOT / "harness" / "guidance"
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.session = Sessions(self.called).current()
             for practice in ("clean_engineering", "stories", "bdd"):
                 self.session.practice(practice).keep_root(self.tree)
-            Sessions(self.repo).switch("alpha")
+            Sessions(self.repo).switch("alpha", create=True)
             self.session = Sessions(self.called).current()
             started = time.perf_counter()
             self.opened = [self.session.practice(name) for name in ("clean_engineering", "stories", "bdd")]
@@ -1323,7 +1334,7 @@ with description("a session working in a folder of its own, holding an aggregate
         for name in ("client.ts", "helpers.ts"):
             (self.work / "sales" / "client").mkdir(parents=True, exist_ok=True)
             (self.work / "sales" / "client" / name).write_text("export class Client {}\n", encoding="utf-8")
-        Sessions(self.repo).switch("alpha", self.work)
+        Sessions(self.repo).switch("alpha", self.work, create=True)
         self.model = Sessions(self.repo).current().practice("ddd").fidelities["model"]
 
     with after.each:
@@ -1396,7 +1407,7 @@ with description("a session whose branch changed code in the folder it works in"
         for file in changed:
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text("x\n", encoding="utf-8")
-        Sessions(self.repo).switch("alpha", self.work)
+        Sessions(self.repo).switch("alpha", self.work, create=True)
         session = Sessions(self.repo).current()
         session.session_files.branch_changes.files = lambda: {file.resolve() for file in changed}
         self.code = session.practice("clean_engineering").fidelities["code"]
@@ -1453,7 +1464,7 @@ with description("a session whose UX work has an information architecture, a pub
         for file, text in written.items():
             file.parent.mkdir(parents=True, exist_ok=True)
             file.write_text(text, encoding="utf-8")
-        Sessions(self.repo).switch("alpha", self.work)
+        Sessions(self.repo).switch("alpha", self.work, create=True)
         self.front_end_code = Sessions(self.repo).current().practice("ux").fidelities["front_end_code"]
 
     with after.each:
@@ -1483,7 +1494,7 @@ with description("a session whose story map is drawn on a whiteboard") as self:
         self.work = self.repo / "work"
         (self.work / ".context").mkdir(parents=True)
         (self.work / ".context" / "story-map.whiteboard").write_text("{}", encoding="utf-8")
-        Sessions(self.repo).switch("alpha", self.work)
+        Sessions(self.repo).switch("alpha", self.work, create=True)
         self.story_map = Sessions(self.repo).current().practice("stories").fidelities["story_map"]
 
     with after.each:
@@ -1527,7 +1538,7 @@ with description("a session's guidance selection") as self:
         self.repo = Path(tempfile.mkdtemp(prefix="session-guidance-")).resolve()
         (self.repo / ".git").mkdir()
         (self.repo / "work").mkdir()
-        Sessions(self.repo).switch("alpha", self.repo / "work")
+        Sessions(self.repo).switch("alpha", self.repo / "work", create=True)
         self.session = Sessions(self.repo).current()
 
     with after.each:
@@ -1652,7 +1663,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
         self._prior_project = os.environ.get("CDD_PROJECT")
         self.cdd = Path(tempfile.mkdtemp(prefix="cdd-checkout-"))
         (self.cdd / ".git").mkdir()
-        Sessions(self.cdd).switch("overlay", Path.home())
+        Sessions(self.cdd).switch("overlay", Path.home(), create=True)
         self.project = Path(tempfile.mkdtemp(prefix="cdd-project-"))
         (self.project / ".git").mkdir()
         os.environ["CDD_REPO"] = str(self.cdd)
@@ -1668,7 +1679,7 @@ with description("a session on an MCP host whose CDD_REPO is the CDD checkout, n
 
     with context("with a session named on the project"):
         with before.each:
-            Sessions(self.project).switch("beta", self.project)
+            Sessions(self.project).switch("beta", self.project, create=True)
 
         with it("should bind the project's session, not the CDD checkout's"):
             session = Sessions(self.project).current()
@@ -1759,7 +1770,7 @@ with description("a session read for a board") as self:
         self.home = ExampleHome()
         self.repo = Path(tempfile.mkdtemp(prefix="session-board-"))
         (self.repo / ".git").mkdir()
-        Sessions(self.repo).switch("alpha", self.repo)
+        Sessions(self.repo).switch("alpha", self.repo, create=True)
         Sessions(self.repo).create("beta", self.repo, title="Beta")
         self.beta = Sessions(self.repo).held.load(self.repo / ".sessions" / "beta")
 

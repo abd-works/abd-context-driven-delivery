@@ -16,7 +16,8 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 - ++step++ — one thing the agent plans to do for a queued prompt: its text and its state, pending, being worked, or done.
 - ++working prompt++ — the queued prompt the agent was last asked to take, or the prompt the person sent straight to the chat.
 - ++task list++ — the agent's own checklist in the desktop chat, set and advanced with `update_plan`.
-- ++interruption++ — a message the person sent while a goal was worked, filed as that goal's step, its text starting "[interruption]".
+- ++interruption++ — a message the person sent while a goal was worked, or in answer to the question its turn ended with, filed as that goal's step, its text starting "[interruption]".
+- ++goal title++ — what the queue holds for a message the person sent: the first sentence of their own words, or a paste's first line, at most 80 characters, never the paste or its `<pasted_content>` tags.
 - ++step pointer++ — the mark at the left of a card's first step not done.
 
 > In steps: ++example++ names an example in a table below.
@@ -55,6 +56,7 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 | ++cut the text++ | cut the text with an ellipsis |
 | ++also run the heavy tier++ | also run the heavy tier |
 | ++background notice++ | <task-notification> <task-id>b1</task-id> <status>completed</status> </task-notification> |
+| ++pasted notes++ | <pasted_content id="7250"> ## Notes from the backlog From `board-enhancements` the board needs a filter. </pasted_content> |
 
 ### robots
 
@@ -194,14 +196,56 @@ Not yet known: whether a mod's tool-call hook sees the desktop app's `update_pla
 *And* the queue still holds only ++Write the scenarios++ and ++Run the unit tier++
 *And* the agent is told the queue filed it under the goal last worked, [a], and to decide before any other work where it belongs, with each goal on the queue listed, such as [b] Run the unit tier
 
-#### Scenario: Open a done goal again for a message sent between turns
+#### Scenario: Open a done goal again for an answer to the agent's question sent between turns
 
 *Given* the prompt queue plays and holds ++Write the scenarios++ (a), done, then ++Run the unit tier++ (b)
-*And* ++Write the scenarios++ was the goal last worked
+*And* ++Write the scenarios++ was the goal last worked, and its turn ended asking the person something
 *But* no turn runs
 *When* the person sends ++cut the text++
 *Then* ++Write the scenarios++ is no longer done and has the step "[interruption] cut the text with an ellipsis", not started
 *And* the queue still holds only ++Write the scenarios++ and ++Run the unit tier++
+
+#### Scenario: Start a goal of its own for new work sent between turns
+
+*Given* the prompt queue plays and holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
+*And* ++Write the scenarios++ was the goal last worked, and its turn ended asking nothing
+*But* no turn runs
+*When* the person sends ++Fix the Files app++ straight to the chat
+*Then* the queue holds "[interruption] Fix the Files app" first, as the working prompt, then ++Write the scenarios++, then ++Run the unit tier++
+*And* ++Write the scenarios++ has no step from the message
+*And* the agent is told the prompt is on the queue as its id, and to make it a task of a goal it belongs to or mark it done when its work is done
+
+#### Scenario: Title a goal sent as pasted text by its first line, never the paste
+
+*Given* the chat's prompt queue is empty
+*When* the person's first message is ++pasted notes++
+*Then* the queue holds one goal, "[interruption] Notes from the backlog", without the paste or its tags
+*And* the agent still reads the whole message in the chat
+
+#### Scenario: Title a goal by the person's own words beside a paste
+
+*Given* the chat's prompt queue is empty
+*When* the person sends "Triage these notes into the backlog" with ++pasted notes++ below it
+*Then* the queue holds one goal, "[interruption] Triage these notes into the backlog"
+
+#### Scenario: Title a long goal by its first sentence, cut short
+
+*Given* the chat's prompt queue is empty
+*When* the person sends a message whose first sentence is longer than 80 characters
+*Then* the goal's title is that sentence cut at a word, at most 80 characters, ending in an ellipsis
+
+#### Scenario: Gather no later messages under a pasted first message
+
+*Given* the person's first message was ++pasted notes++, queued as "[interruption] Notes from the backlog"
+*When* the person sends ++Fix the Files app++, then ++Run the unit tier++, each between turns
+*Then* each is a goal of its own on the queue
+*And* "[interruption] Notes from the backlog" has no steps
+
+#### Scenario: Title a pasted message sent mid-work by its first line
+
+*Given* a turn runs on ++Write the scenarios++, the working prompt
+*When* the person sends ++pasted notes++
+*Then* ++Write the scenarios++ has the step "[interruption] Notes from the backlog", not started
 
 #### Scenario: Keep the interruption when the agent sets a new task list
 

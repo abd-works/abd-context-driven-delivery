@@ -88,6 +88,8 @@ Record `@mcp` operations and write each IDE's `cdd` entry once every tool is rec
 ------
 + destination: Mcp
 + << association >> served: ServedCheckout
++ lanes: ServerLanes
+	// both lanes as the served checkout's sees them; a project pointed at the dev lane names the dev lane's server
 + daemon: McpDaemon
 	// the stable lane's server, which every chat's cdd plugin names
 + << composition >> claude_plugins: ClaudePlugins
@@ -114,13 +116,14 @@ Record `@mcp` operations and write each IDE's `cdd` entry once every tool is rec
 
 The one cdd server as an install handles it: stood up in the install's process over every toolset of the served checkout, to check it loads, then started from `~/.cdd`, and, for Claude Code, the `cdd` plugin and every mod the served code declares installed. Inside the cdd server, as an install through MCP runs, it stands up nothing.
 
-+ McpChannelServer(served: ServedCheckout, daemon: McpDaemon, claude_plugins: ClaudePlugins, layout: IdeLayout)
++ McpChannelServer(served: ServedCheckout, lanes: ServerLanes, claude_plugins: ClaudePlugins, layout: IdeLayout)
 ------
 + << association >> served: ServedCheckout
 + runs_this_process: bool
 ----
 + stand_up(): StandUp
 + ensure_running(): list[str]
+	// returns the dev lane to main first when its served feature's worktree is gone, and says so on a `dev lane:` line
 + install_mods(): list[str]
 	// one line for each mod, `{plugin name}: {state}`; a dev lane's mods are published into the stable lane's marketplace first, since chats install from it
 ---<<loads>>--> McpHost
@@ -153,6 +156,8 @@ The user's cdd folder: which checkout the one server runs, the pinned copy of it
 + << composition >> marketplace: ClaudeMarketplace
 ----
 + is_pinned_to(checkout: Path | str): bool
++ return_to_main_when_feature_gone(): str
+	// on the dev lane only: withdraws the runtime record once the served feature's worktree is gone, naming the branch and the worktree
 + install(checkout: Path | str, connect_script: Path | str): None
 + pin(checkout: Path | str): str
 + serve_current(checkout: Path | str): None

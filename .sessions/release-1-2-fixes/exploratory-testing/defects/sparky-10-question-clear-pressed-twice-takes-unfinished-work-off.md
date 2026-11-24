@@ -4,7 +4,7 @@
 - **Tester:** Sparky
 - **Story:** Queue Prompts For Later / Build Prompt Queue / "Clear the done prompts first, leaving the work still to do" and "Clear every prompt when none is done".
 - **Module and class:** `tools/prompt_queue/prompt_queue.py` `PromptQueue.clear`.
-- **Severity:** question
+- **Severity:** answered question
 
 ## Steps
 
@@ -27,3 +27,7 @@ The same press means "tidy the finished work" the first time and "throw away wha
 ## Tier that should catch it
 
 Unit (`prompt_queue_spec.py`), once the answer is known.
+
+## Answer (2026-11-23)
+
+Clear only ever takes off done cards; with none done it takes nothing off and keeps no archive copy, so a second press never throws away work a robot may be doing. Built in `tools/prompt_queue/prompt_queue.py` (`PromptQueue.clear`); tested by `prompt_queue_spec.py` "takes nothing off when no prompt is done, so a second clear never throws away the work still to do" and "keeps no copy in the queue archive when clear takes nothing off"; scenario "Clear every prompt when none is done" is now "Clear nothing when no prompt is done" in `story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md`. The mod shows no message that nothing was done; the queue simply stays as it was, and the tool's description says so.

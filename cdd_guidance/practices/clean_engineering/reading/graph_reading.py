@@ -36,7 +36,7 @@ from cdd_guidance.practices.clean_engineering.reading.compared_facts import Comp
 from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES, folders_of
 from cdd_guidance.practices.clean_engineering.reading.card_lines import CardLines
 from cdd_guidance.practices.clean_engineering.reading.node_evidence import CodeNodeTypes
-from cdd_guidance.practices.source_code import ClassReference, HoldsProjectTestCode
+from cdd_guidance.practices.source_code import ClassReference, HoldsProjectTestCode, ScriptImports
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
@@ -207,8 +207,19 @@ class CodeIndex:
         if imports is not None:
             return CodeFile(self, relative, imports, self._reading.graph.scope.over_whole)
         if relative not in self._files:
-            self._files[relative] = CodeFile(self, relative, self._imports_of(relative), self._reading.graph.scope.over_whole)
+            kept = self._imports_of(relative) if self.has_imports(relative) else self._imports_written_in(relative)
+            self._files[relative] = CodeFile(self, relative, kept, self._reading.graph.scope.over_whole)
         return self._files[relative]
+
+    def _imports_written_in(self, relative: str) -> list[ClassReference]:
+        """The classes and functions the text of a file the read keeps no imports for imports, such as test support
+        (`rule_examples.py`, `spec_support.py`) or a spec's own helpers, so a call it makes on a class it imports is
+        joined as a production file's is; none for a file that cannot be read."""
+        text = self.answers.text_of(relative)
+        if not text:
+            return []
+        root = Path(self.source_root)
+        return ScriptImports(text).class_references(root / relative, root)
 
     def has_imports(self, relative: str) -> bool:
         """Whether the read keeps the imports of the file at relative, as it does for each production file it read."""
