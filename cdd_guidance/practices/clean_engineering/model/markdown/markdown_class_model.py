@@ -54,6 +54,14 @@ if TYPE_CHECKING:
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _CARD_HEADING = re.compile(r"^(#{2,6})\s+\*\*([^*]+)\*\*(.*?)\s*$")
 _FENCE = re.compile(r"^\s*(```|~~~)")
+# An HTML comment written after a heading's words, as a template marks the fidelities that write the heading
+# (`## {ClassName}   <!-- Md -->`): no part of what the heading names.
+_HEADING_COMMENT = re.compile(r"\s*<!--.*?-->\s*$")
+
+
+def _heading_words(heading: str) -> str:
+    """A heading's words, without the comment written after them."""
+    return _HEADING_COMMENT.sub("", heading).strip()
 
 
 @dataclass
@@ -71,7 +79,7 @@ class ClassHeading:
 
     @classmethod
     def read(cls, raw: str) -> "ClassHeading":
-        text = raw.strip()
+        text = _heading_words(raw)
         bold = re.match(r"^\*\*([^*]+)\*\*", text)
         if bold is None:
             name, _, bases = without_marks(text.replace("**", "")).partition(" : ")
@@ -296,7 +304,7 @@ class MarkdownModule(Module):
             heading = re.match(r"^##\s+(.+)", class_block) if class_block else None
             if heading is None:
                 continue
-            class_name = heading.group(1).strip()
+            class_name = _heading_words(heading.group(1))
             if class_name.lower() in self._META_HEADINGS:
                 self._take_section(class_name.lower(), class_block[heading.end():])
             elif re.search(r"(?m)^###\s+\*\*", class_block):
@@ -418,7 +426,7 @@ class CardDocument:
     def _module_at(self, index: int) -> MarkdownModule:
         """The module whose heading is the line at index, with the preamble under its heading."""
         heading = self._lines[index]
-        module = MarkdownModule(name=_HEADING.match(heading).group(2), sequential_order=len(self._model.modules) + 1)
+        module = MarkdownModule(name=_heading_words(_HEADING.match(heading).group(2)), sequential_order=len(self._model.modules) + 1)
         module.start_card(heading)
         self._model.modules.append(module)
         self._parts.append(module)
@@ -470,7 +478,7 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             heading = re.match(r"^#\s+(.+)", block.strip())
             if heading is None:
                 continue
-            module = MarkdownModule(name=heading.group(1).strip(), sequential_order=len(self.modules) + 1)
+            module = MarkdownModule(name=_heading_words(heading.group(1)), sequential_order=len(self.modules) + 1)
             module.read_body(block.strip()[heading.end():].lstrip("\n"))
             module.keep_text(block.rstrip("\n") + "\n")
             self.modules.append(module)
