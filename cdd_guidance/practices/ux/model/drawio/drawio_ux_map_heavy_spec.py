@@ -13,7 +13,7 @@ if str(_REPO) not in sys.path:
 
 from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliTimedOut, DrawioUxMap
 from harness.drawio import UnreadableDrawio
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, Transition
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, StoryStep, Transition
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
 from harness.guidance.practice_formats import Written
 
@@ -79,6 +79,21 @@ class SpecFixture:
         add_to_cart.show_story(_STORY_LINK)
         add_to_cart.show_scenario(_SCENARIO_LINK)
         add_to_cart.show_scenario("Add Book To Cart › Add a second book")
+        return ux_map
+
+
+    def mockup_with_story_demo(self) -> DrawioUxMap:
+        """Checkout, whose Payment form ends in a Story Demo control named Pay Button and labelled Pay, which runs a
+        story step and serves a story."""
+        ux_map = DrawioUxMap.create()
+        checkout = Screen("Checkout", 0)
+        payment = made(Region, "Payment", 0, area="body")
+        payment.append_control(made(Control, "Card Number", 0, control_type="text", label="Card number"))
+        pay = made(StoryDemoControl, "Pay Button", 1, control_type="button", label="Pay", story_steps=[StoryStep("when", "the Customer pays")])
+        pay.show_story("Pay For Order")
+        payment.append_control(pay)
+        checkout.append_region(payment)
+        ux_map.append_screen(checkout)
         return ux_map
 
 
@@ -193,6 +208,20 @@ with description("a UX map drawn as a draw.io information architecture"):
 
         with it("should still read back only the regions the mockup has"):
             expect([region.name for region in self.details.regions]).to(equal(["Book Summary", "Add To Cart"]))
+
+    with context("of a mockup whose controls are named otherwise than they are labelled, one a Story Demo control, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup_with_story_demo()))
+            self.controls = self.parsed.find_screen("Checkout").regions[0].controls
+
+        with it("should read back each control's name"):
+            expect([control.name for control in self.controls]).to(equal(["Card Number", "Pay Button"]))
+
+        with it("should read back the label each control shows"):
+            expect([control.label for control in self.controls]).to(equal(["Card number", "Pay"]))
+
+        with it("should read back the story the Story Demo control serves"):
+            expect(self.controls[1].story_keys).to(equal(["Pay For Order"]))
 
     with context("of a mockup, drawn again over a drawing that shows what the mockup does not"):
         with before.each:

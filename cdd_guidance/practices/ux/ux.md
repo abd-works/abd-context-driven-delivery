@@ -76,7 +76,7 @@ outputs:
   json: ["{epic}/ux-map.json", "ux/ux.json"]
 example: "model/_examples/trip/ordering-ux-map.json"
 leaves_out:
-  drawio: "the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in ux-map.json"
+  drawio: "the map's name, scope, notes, invariants and references; a screen's description, image and prototype; a control's states, interactions, bound field and story steps, so a Story Demo control reads back as a plain control; content types and navigation components. They stay in ux-map.json"
   whiteboard: "a screen's layout, and the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in ux-map.json"
   markdown: "everything but the map's scope, notes and invariants. ux-context.md is the map's context, and the screens stay in ux-map.json and the drawing"
 ```
@@ -143,7 +143,7 @@ outputs:
   claude_design: "design-canvas/{version}/project/canvas.json"
 example: "model/_examples/trip/ordering-ux-map.json"
 leaves_out:
-  drawio: "the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in the mockup's HTML"
+  drawio: "the map's name, scope, notes, invariants and references; a screen's description, image and prototype; a control's states, interactions, bound field and story steps, so a Story Demo control reads back as a plain control; content types and navigation components. They stay in the mockup's HTML"
   whiteboard: "a screen's layout, and the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in the mockup's HTML"
   claude_design: "everything on the way back. The canvas is placed from the UX map and is never read back, so the map stays in the mockup's HTML"
 ```
@@ -168,7 +168,7 @@ Ask what the person does on this screen to accomplish the outcome, and what they
 
 Write the target as any markdown link's: the path from the folder of the file you are writing in, or from the project's root. The drawing and the whiteboard are saved in the epic's `.context` and keep the links as the mockup wrote them, so a link there is also read from the epic's folder. For story tests written in code, which have no headings, link the file alone (`[Add Book To Cart › Add one book](../story_tests/sell-books/fill-cart/fill_cart_story.test.py)`), and the scenario with that name in that file is the one meant. A name with no link is still read, and is joined to the story, scenario, or step with exactly that key.
 
-Every format keeps these links. In the UX map's JSON they are `story_names`, `scenario_names`, and `step_names` on a screen and on a control. On the whiteboard a screen's card and each control's card list them under `Stories:`, `Scenarios:`, and `Steps:`, separated by ` · `; a person can add or change a line on a card and the next read takes it. The drawio drawing lists the same under each screen, one line for the screen and one line for each control (`Add To Cart › Quantity serves steps: …`). The drawing and the whiteboard show screens, regions, controls with their types, transitions, and these links; they hold no state, interaction, or description, which stay in the html and the JSON.
+Every format keeps these links. In the UX map's JSON they are `story_names`, `scenario_names`, and `step_names` on a screen and on a control. On the whiteboard a screen's card and each control's card list them under `Stories:`, `Scenarios:`, and `Steps:`, separated by ` · `; a person can add or change a line on a card and the next read takes it. The drawio drawing lists the same under each screen, one line for the screen and one line for each control (`Add To Cart › Quantity serves steps: …`). The drawing and the whiteboard show screens, regions, controls with their types, transitions, and these links; the drawing also keeps, beside each control's label, its name where the two differ, so the callout's `Region › Control` lines find it again. They hold no state, interaction, bound field, story step, or description, which stay in the html and the JSON.
 
 1. Ensure story/domain JS via Stories / CE `transform` when missing (`ensure_javascript`).
 2. Deepen regions with typed controls, states, and interactions.

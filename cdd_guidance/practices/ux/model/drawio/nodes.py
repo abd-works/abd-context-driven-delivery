@@ -7,9 +7,11 @@ domain terms come from the Detailed IA page when present. The diagram shows scre
 controls a region holds, transitions, and, in the callout under each screen, the stories, scenarios, and steps the
 screen and each of its controls serve, each a link to where it is written when it has one, with the screen's domain
 terms; beside what it shows it keeps, as
-style keys on its cells (``uxLayout``, ``uxArea``, ``uxControls``, ``uxNav``), a screen's layout, a region's area, each
-control's type, and a transition's kind of navigation, so a drawing reads back what was drawn. A control's states and
-interactions, descriptions, content types, nav components, and the map's name are not drawn.
+style keys on its cells (``uxLayout``, ``uxArea``, ``uxControls``, ``uxNames``, ``uxNav``), a screen's layout, a region's
+area, each control's type and, where it is not its label, its name, and a transition's kind of navigation, so a drawing
+reads back what was drawn. A Story Demo control is drawn as any other control. A control's states, interactions, bound
+field and story steps, descriptions, content types, nav components, and the map's name are not drawn; the fidelity's
+``leaves_out`` says so.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from harness.installation.json_file import JsonFile
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, ServesStories, Transition
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, ServesStories, StoryDemoControl, Transition
 from cdd_guidance.practices.ux.model.served import NavType, Served
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR
 from cdd_guidance.practices.ux.model.story_link import StoryLink
@@ -37,7 +39,7 @@ _CLI_TIMEOUT_SECONDS = 60
 # A Site Map edge drawn both ways carries both triggers in one label, "there / back".
 _BOTH_WAYS = " / "
 # The style keys the drawing keeps for its reader beside what it shows.
-_LAYOUT_KEY, _AREA_KEY, _CONTROLS_KEY, _NAV_KEY = "uxLayout", "uxArea", "uxControls", "uxNav"
+_LAYOUT_KEY, _AREA_KEY, _CONTROLS_KEY, _NAMES_KEY, _NAV_KEY = "uxLayout", "uxArea", "uxControls", "uxNames", "uxNav"
 # The control types the command line draws as a form's rows, and as a list's.
 _FORM_TYPES = frozenset({"text", "dropdown", "checkbox"})
 _LIST_TYPES = frozenset({"list", "tree"})
@@ -105,6 +107,12 @@ class UxCellStyle(CellStyle):
         return self.value(_CONTROLS_KEY).split(",") if _CONTROLS_KEY in self else []
 
     @property
+    def control_names(self) -> list[str]:
+        """The name of each control the cell shows, in the order it shows them, empty for one named as it is labelled;
+        none for a cell that keeps none."""
+        return self.value(_NAMES_KEY).split(",") if _NAMES_KEY in self else []
+
+    @property
     def corner(self) -> tuple[float, float]:
         """Where the cell's top left corner is drawn; the page's own corner for a cell with no geometry."""
         box = self._cell.box
@@ -130,25 +138,39 @@ class DrawioControl(Control, DrawnServed):
 
     @classmethod
     def from_cell(cls, cell: ET.Element) -> list["DrawioControl"]:
-        """The controls one cell shows, each with the type the cell keeps for it. Where the cell keeps none, a control
-        on an action strip, or one a form shows in brackets as ``[Pay]``, is a button."""
+        """The controls one cell shows, each with the type and the name the cell keeps for it, else named as it is
+        labelled. Where the cell keeps no type, a control on an action strip, or one a form shows in brackets as
+        ``[Pay]``, is a button."""
         style = UxCellStyle(cell)
         labels = [label.strip() for label in _plain_text(cell.get("value", "")).split(Served.BESIDE) if label.strip()]
-        kinds = style.control_types
+        kinds, names = style.control_types, style.control_names
         controls = []
         for index, label in enumerate(labels):
             kind = kinds[index] if index < len(kinds) else (_BUTTON if style.is_action_strip else "")
             if label.startswith("[") and label.endswith("]") and kind in ("", _BUTTON):
                 label, kind = label[1:-1].strip(), _BUTTON
-            control = cls(label, index)
+            name = names[index].strip() if index < len(names) else ""
+            control = cls(name or label, index)
             control.control_type = kind
+            control.label = label if name else ""
             controls.append(control)
         return controls
+
+    @property
+    def kept_name(self) -> str:
+        """The name the drawing keeps beside this control's label: its name when it is not what it shows, else
+        nothing, so a person who relabels it in draw.io renames it."""
+        return self.name if self.label != self.name else ""
 
     @property
     def row_label(self) -> str:
         """What a form's row shows for this control: a button in brackets."""
         return f"[{self.label}]" if self.control_type == _BUTTON else self.label
+
+
+class DrawioStoryDemoControl(StoryDemoControl, DrawioControl):
+    """A control of a mockup that runs story steps, drawn as any other control is: its label in its region and what it
+    serves in the callout. The steps it runs are not drawn, so a drawing reads it back as a plain control."""
 
 
 class DrawioRegion(Region):
@@ -187,10 +209,10 @@ class DrawioRegion(Region):
         if kinds & _FORM_TYPES and not kinds & _LIST_TYPES:
             rows = shown + buttons
             return {**record, "type": "form", "fields": [control.row_label for control in rows],
-                    "fieldKinds": [control.control_type for control in rows]}
+                    "fieldKinds": [control.control_type for control in rows], "fieldNames": [control.kept_name for control in rows]}
         return {**record, "type": "list", "fields": [control.label for control in shown],
-                "fieldKinds": [control.control_type for control in shown],
-                "actions": [control.label for control in buttons]}
+                "fieldKinds": [control.control_type for control in shown], "fieldNames": [control.kept_name for control in shown],
+                "actions": [control.label for control in buttons], "actionNames": [control.kept_name for control in buttons]}
 
 
 class DrawioScreen(Screen, DrawnServed):
@@ -319,6 +341,7 @@ class DrawioUxMap(UxMap):
     screen_type = DrawioScreen
     region_type = DrawioRegion
     control_type = DrawioControl
+    story_demo_control_type = DrawioStoryDemoControl
     cli_timeout_seconds: float = _CLI_TIMEOUT_SECONDS
     map_file_suffixes = (".drawio",)
     not_a_map_failures = (UnreadableDrawio,)

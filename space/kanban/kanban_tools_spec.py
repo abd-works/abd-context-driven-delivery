@@ -1077,6 +1077,30 @@ with description("the board tools") as self:
             with it("should count the canvas as made"):
                 expect(self.canvas["made"]).to(equal(1))
 
+        # r3-gizmo-05: with six views on disk the front-end code's code chip said none was made, since it counted the
+        # IA's and the mockup's files a person reviews for it rather than the views it writes.
+        with context("with an action bar opened on its UX front-end code, a view written in the UX root"):
+            with before.each:
+                (self.project.root / "app").mkdir()
+                session_file = self.project.sessions / "sign-up" / "session.json"
+                session = json.loads(session_file.read_text(encoding="utf-8"))
+                session_file.write_text(json.dumps({**session, "workpath": str(self.project.root / "app")}), encoding="utf-8")
+                self.project.call("practice-session-output.choose_root", session=session_file_of("sign-up"), practice="ux", path="app/ux")
+                view = self.project.root / "app" / "ux" / "src" / "CheckoutView.tsx"
+                view.parent.mkdir(parents=True)
+                view.write_text("export function CheckoutView() {}\n", encoding="utf-8")
+                self.chips = self.project.call("ticket.format_choices", ticket="sign-up", fidelities=["ux-front-end-code"])
+                self.root_files = {entry["path"]: entry for entry in self.project.call("ticket.root_files", ticket="sign-up")}
+
+            with it("should name the front-end code among the fidelities whose file the view is"):
+                expect(self.root_files["app/ux/src/CheckoutView.tsx"]["fidelities"]).to(contain("ux-front-end-code"))
+
+            with it("should offer the code chip alone"):
+                expect([chip["label"] for chip in self.chips]).to(equal(["code"]))
+
+            with it("should count the view as made"):
+                expect(self.chips[0]["made"]).to(equal(1))
+
         with context("with an action bar opened on its story map and its bounded context, the story map's markdown written"):
             with before.each:
                 (self.project.root / ".context").mkdir(exist_ok=True)

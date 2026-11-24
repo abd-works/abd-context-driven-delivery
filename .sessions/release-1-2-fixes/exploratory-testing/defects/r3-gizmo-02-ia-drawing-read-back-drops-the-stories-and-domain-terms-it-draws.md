@@ -35,3 +35,9 @@ The module's own docstring says "layouts, story names, and controls stay in the 
 
 ## Tier that should catch it
 Heavy: `drawio_ux_map_heavy_spec.py` checks screens, regions and transitions after a trip; no example checks the stories and terms the drawing shows.
+
+## Status: fixed (2026-11-23)
+- Already fixed before this pass (`b874f21ab`, `5c3b22e83`): the IA drawing read back keeps each screen's stories, scenarios, steps and domain terms (read from the callout under the screen), its layout (`uxLayout`), each region's area (`uxArea`) and each transition's kind of navigation (`uxNav`). Covered by `cdd_guidance/practices/ux/model/drawio/drawio_ux_map_heavy_spec.py`, "a UX map drawn as a draw.io information architecture" / "that is read back" (a real render through `drawio_ux.mjs` and back), and the same subject in `drawio_ux_map_spec.py` on a drawing as the command line writes it.
+- Checked again now on the Bookshop map of the steps (`ux-map.json` -> drawio -> map): 19 of 137 values differ, and every one is something the drawing does not show: the map's name, scope, notes and invariants, the screens' descriptions, the content type and the nav component. A drawing round trip keeps what the drawing shows.
+- Fixed now: the map's name was the one thing lost that the fidelity did not say it leaves out. `ux.md`'s `leaves_out` for drawio at ia and mockup now names it, so the render and the format trip say the drawing does not hold it.
+- Left as declared, not drawn: content types and navigation components are ia content (`ux.md`, ia Guidance), but the drawio-ux command line has no shape for them, and the fidelity's `leaves_out` says they stay in `ux-map.json`. Drawing them is new work on `drawio_ux.mjs` (a shape for each, and a reader for it), not a fix of what the drawing already shows.

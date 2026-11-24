@@ -12,7 +12,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from cdd_guidance.practices.ux.model.drawio.nodes import DrawioRegion, DrawioUxMap
-from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, StoryStep
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
 
@@ -60,6 +60,17 @@ _DRAWN = drawing(
     + cell("13", "[Pay]", _ROW + "uxControls=button;", parent="3")
     + cell("14", "&lt;b&gt;Stories:&lt;/b&gt; Pay For Order", "text;html=1;strokeColor=none;fillColor=none;", x=890, y=420),
     edge_style="html=1;uxNav=top nav;",
+)
+
+# Book Details whose controls are named otherwise than they are labelled: each cell keeps, beside the label it shows,
+# the name of each control whose name is not its label, and leaves the place of one whose name is its label empty.
+_DRAWN_WITH_NAMES = drawing(
+    cell("2", "Book Details", "strokeWidth=2;", x=50, y=200)
+    + cell("5", "&lt;b&gt;Add To Cart&lt;/b&gt;", _FRAMED + "uxArea=body;", parent="2")
+    + cell("6", "Add to cart · Back to list", _STRIP + "uxControls=button,button;uxNames=Add To Cart Button,;", parent="2")
+    + cell("7", "Quantity", _ROW + "uxControls=number;", parent="2")
+    + cell("9", "&lt;b&gt;Add To Cart › Add To Cart Button serves stories:&lt;/b&gt; Add Book To Cart",
+           "text;html=1;strokeColor=none;fillColor=none;", x=50, y=420),
 )
 
 # The same screen as a drawing made before the command line kept control types, or drawn by hand.
@@ -188,6 +199,20 @@ with description("a UX map drawn as a draw.io information architecture"):
         with it("should read no region from the callout"):
             expect([region.name for region in self.details.regions]).to(equal(["Add To Cart"]))
 
+    with context("of a mockup whose controls are named otherwise than they are labelled, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(_DRAWN_WITH_NAMES)
+            self.region = self.parsed.find_screen("Book Details").regions[0]
+
+        with it("should read back each control's name, else its label"):
+            expect([control.name for control in self.region.controls]).to(equal(["Quantity", "Add To Cart Button", "Back to list"]))
+
+        with it("should read back the label each control shows"):
+            expect([control.label for control in self.region.controls]).to(equal(["Quantity", "Add to cart", "Back to list"]))
+
+        with it("should give the control its callout names by its name what the line lists"):
+            expect(control_named(self.parsed, "Book Details", "Add To Cart Button").story_keys).to(equal(["Add Book To Cart"]))
+
     with context("drawn without the types of its controls, that is read back"):
         with before.each:
             self.parsed = DrawioUxMap.create().parse(_DRAWN_WITHOUT_TYPES)
@@ -201,26 +226,46 @@ with description("a UX map drawn as a draw.io information architecture"):
             expect(self.parsed.transitions[0].nav_type).to(equal("tab"))
 
 
+def map_holding(region: Region) -> UxMap:
+    """A map whose one screen, Book Details, holds region."""
+    ux_map = UxMap.create()
+    screen = Screen("Book Details", 0)
+    screen.append_region(region)
+    ux_map.append_screen(screen)
+    return ux_map
+
+
 with description("a region of a UX map drawn as draw.io"):
     with context("that holds a number and two buttons"):
         with before.each:
-            def map_holding(region):
-                ux_map = UxMap.create()
-                screen = Screen("Book Details", 0)
-                screen.append_region(region)
-                ux_map.append_screen(screen)
-                return ux_map
-
-            self.map_holding = map_holding
             region = made(Region, "Add To Cart", 0, area="body")
             for order, (name, kind) in enumerate([("Quantity", "number"), ("Add to cart", "button"), ("Back to list", "button")]):
                 region.append_control(made(Control, name, order, control_type=kind))
-            self.record = DrawioUxMap.create().copy_of(self.map_holding(region)).screens[0].regions[0].cli_record()
+            self.record = DrawioUxMap.create().copy_of(map_holding(region)).screens[0].regions[0].cli_record()
 
         with it("should be drawn as a list that shows every control, each with its type"):
             expect((self.record["type"], self.record["fields"], self.record["fieldKinds"], self.record["actions"])).to(
                 equal(("list", ["Quantity"], ["number"], ["Add to cart", "Back to list"]))
             )
+
+        with it("should keep no name for a control whose name is its label"):
+            expect((self.record["fieldNames"], self.record["actionNames"])).to(equal(([""], ["", ""])))
+
+    # A mockup's controls that run story steps are Story Demo controls; the drawing shows them as it shows any other.
+    with context("that holds a form whose button runs story steps"):
+        with before.each:
+            region = made(Region, "Payment", 0, area="body")
+            region.append_control(made(Control, "Street", 0, control_type="text"))
+            region.append_control(made(StoryDemoControl, "Pay Button", 1, control_type="button", label="Pay", story_steps=[StoryStep("When", "the Customer pays")]))
+            self.record = DrawioUxMap.create().copy_of(map_holding(region)).screens[0].regions[0].cli_record()
+
+        with it("should draw the Story Demo control as a row of the form, with its type"):
+            expect((self.record["type"], self.record["fields"], self.record["fieldKinds"])).to(
+                equal(("form", ["Street", "[Pay]"], ["text", "button"]))
+            )
+
+        with it("should keep the name of the control whose name is not its label"):
+            expect(self.record["fieldNames"]).to(equal(["", "Pay Button"]))
 
     with context("that holds no control"):
         with it("should be drawn as chrome in its area"):

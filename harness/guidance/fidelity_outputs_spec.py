@@ -87,6 +87,26 @@ with description("a fidelity's declared outputs") as self:
             ]
             expect(alone).to(be_empty)
 
+        # r3-gizmo-05: UX front_end_code's default format was html, which it does not write, and neither format it
+        # writes had an adapter, so a person was offered formats nothing renders to or from.
+        with it("should make every fidelity's default format one of its outputs"):
+            strays = [
+                f"{type(practice).__name__}.{name}: {fidelity.default_format}"
+                for practice in self.practices
+                for name, fidelity in practice.fidelities.entries.items()
+                if fidelity.default_format and fidelity.default_format.name not in fidelity.outputs
+            ]
+            expect(strays).to(be_empty)
+
+        with it("should give each format a fidelity writes an adapter that reads and writes it"):
+            lacking = [
+                f"{type(practice).__name__}.{name}: {gap}"
+                for practice in self.practices
+                for name, fidelity in practice.fidelities.entries.items()
+                for gap in practice.formats.lacking(fidelity.declared)
+            ]
+            expect(lacking).to(be_empty)
+
         with it("should give every specification and implementation fidelity a code format"):
             without_code = [
                 f"{type(practice).__name__}.{name}"

@@ -398,11 +398,17 @@ function keep(key, value) {
   return `${key}=${esc(String(value).replace(/[;=]/g, ' '))};`
 }
 
-// The type of each control a row or an action strip shows, in the order it shows them: uxControls=number,button.
-// A control of no type keeps its place, so the types stay beside their labels.
-function keepControls(kinds) {
-  if (!Array.isArray(kinds) || kinds.length === 0) return ''
-  return `uxControls=${esc(kinds.map(kind => String(kind || '').replace(/[;=,]/g, ' ')).join(','))};`
+// One value for each control a row or an action strip shows, in the order it shows them, under key: the type of each,
+// uxControls=number,button, or the name of each named otherwise than it is labelled, uxNames=Add To Cart Button,.
+// A control with no value keeps its place, so the values stay beside their labels.
+function keepEach(key, values) {
+  if (!Array.isArray(values) || values.length === 0 || values.every(value => !value)) return ''
+  return `${key}=${esc(values.map(value => String(value || '').replace(/[;=,]/g, ' ')).join(','))};`
+}
+
+// What a row or an action strip keeps of the controls it shows: their types and their names.
+function keepControls(kinds, names) {
+  return keepEach('uxControls', kinds) + keepEach('uxNames', names)
 }
 
 function mkCell(counter, { value, style, vertex, edge, source, target, parent, x, y, w, h, waypoints }) {
@@ -459,7 +465,7 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
     // Actions strip immediately below region header label (wraps as needed)
     const actions = (r.actions || []).join(' · ')
     cells.push(mkCell(counter, {
-      value: actions, style: S.verbRow + keepControls((r.actions || []).map(() => 'button')),
+      value: actions, style: S.verbRow + keepControls((r.actions || []).map(() => 'button'), r.actionNames),
       vertex: true, parent: sid,
       x: rx + 4, y: ry + LIST_HDR_H, w: rw - 8, h: vH,
     }).xml)
@@ -467,7 +473,7 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
     const fields = (r.fields || []).join(' · ')
     for (let i = 0; i < ROW_COUNT; i++) {
       cells.push(mkCell(counter, {
-        value: fields, style: S.row + keepControls(r.fieldKinds),
+        value: fields, style: S.row + keepControls(r.fieldKinds, r.fieldNames),
         vertex: true, parent: sid,
         x: rx + 4, y: ry + LIST_HDR_H + vH + i * ROW_H, w: rw - 8, h: ROW_H,
       }).xml)
@@ -485,7 +491,8 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
     }).xml)
     for (let i = 0; i < fieldCount; i++) {
       cells.push(mkCell(counter, {
-        value: (r.fields || [])[i] || '', style: S.formRow + keepControls(r.fieldKinds && i < r.fieldKinds.length ? [r.fieldKinds[i]] : null),
+        value: (r.fields || [])[i] || '', style: S.formRow + keepControls(r.fieldKinds && i < r.fieldKinds.length ? [r.fieldKinds[i]] : null,
+                                          r.fieldNames && i < r.fieldNames.length ? [r.fieldNames[i]] : null),
         vertex: true, parent: sid,
         x: rx + 4, y: ry + LIST_HDR_H + i * FORM_ROW_H, w: rw - 8, h: FORM_ROW_H,
       }).xml)
