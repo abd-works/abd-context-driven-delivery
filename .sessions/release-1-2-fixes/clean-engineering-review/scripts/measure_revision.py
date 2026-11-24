@@ -744,6 +744,8 @@ def ts_metrics(mirror: Path, files: list[str], node_tools: Path | None, work: Pa
         "function_nloc": describe([f["nloc"] for f in functions]),
         "params": describe([f["params"] for f in functions]),
         "functions_ccn_over_10": sum(f["ccn"] > 10 for f in functions),
+        "functions_nloc_over_50": sum(f["nloc"] > 50 for f in functions),
+        "functions_params_over_5": sum(f["params"] > 5 for f in functions),
         "worst_functions_by_ccn": [f"{f['file']}:{f['name']} ccn={f['ccn']} nloc={f['nloc']}"
                                    for f in top(functions, lambda f: (f["ccn"], f["nloc"]))],
     }
@@ -763,14 +765,15 @@ def ts_metrics(mirror: Path, files: list[str], node_tools: Path | None, work: Pa
             result["folder_ce"] = describe([r["ce"] for r in pkg_rows])
             result["folder_ca"] = describe([r["ca"] for r in pkg_rows])
         result["duplication"] = jscpd(mirror, node_tools, "typescript,tsx", work)
-    return result, type_names
+    return result, type_names, functions
 
 
 # --------------------------------------------------------------------------------------------- main
 
 def offenders(functions, cognitive, classes, modules) -> dict:
     """Each function, class, and module past a limit, by name with its number, so a comparison of two revisions can
-    name what a change made worse rather than only how a count moved."""
+    name what a change made worse rather than only how a count moved. `functions` holds the Python and the TypeScript
+    functions; the other measures are taken of Python alone."""
     def named(items, key, limit, label):
         return {f"{item['file']}:{item[label]}": item[key] for item in items if item[key] is not None and item[key] > limit}
     return {
@@ -784,6 +787,11 @@ def offenders(functions, cognitive, classes, modules) -> dict:
         "classes_methods": {f"{c['file']}:{c['class']}": c["nom"] for c in classes},
         "modules_lines": {m["file"]: m["sloc"] for m in modules},
     }
+
+
+def file_digests(mirror: Path, files: list[str]) -> dict[str, str]:
+    """Each measured file by its content's digest, so a comparison can say which production files a change touched."""
+    return {rel: hashlib.sha1((mirror / rel).read_bytes()).hexdigest() for rel in files}
 
 
 def measure(checkout: Path, label: str, node_tools: Path | None) -> dict:
@@ -801,7 +809,7 @@ def measure(checkout: Path, label: str, node_tools: Path | None) -> dict:
             classes_by_file[c["file"]].append(c)
         graphs = python_graph(mirror, py_files, index)
         pkg_rows, mod_rows = martin(graphs["all_imports"]["_graph"], index.file_of_mod, classes_by_file)
-        ts, ts_types = ts_metrics(mirror, ts_files, node_tools, work)
+        ts, ts_types, ts_functions = ts_metrics(mirror, ts_files, node_tools, work)
 
         methods = sum(c["nom"] for c in classes.values())
         free_functions = sum(1 for t in index.trees.values() for n in t.body
@@ -886,7 +894,8 @@ def measure(checkout: Path, label: str, node_tools: Path | None) -> dict:
             "python": py, "typescript": ts,
             "shadow_models": shadow_models(classes, ts_types),
             "worst": worst,
-            "offenders": offenders(functions, cognitive, cls_list, modules),
+            "offenders": offenders(functions + ts_functions, cognitive, cls_list, modules),
+            "file_digests": file_digests(mirror, py_files + ts_files),
         }
     finally:
         shutil.rmtree(work, ignore_errors=True)

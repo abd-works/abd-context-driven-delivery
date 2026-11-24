@@ -9,13 +9,19 @@ Usage (run with the Python of a metrics venv, as measure_revision.py is):
 
     python metrics_gate.py --base <commit> --head <checkout folder> --node-tools <dir> [--report gate.md]
 
---base is a commit in the repository that holds --head; it is extracted with ``git archive`` into a temporary folder.
---head is the folder to judge, normally the working tree with the change in it.
+--base is a commit in the repository that holds --head (or --repository, when --head is a folder outside it); its
+production files are extracted with ``git archive`` into a temporary folder the gate removes when it is done.
+--head is the folder to judge, normally the working tree with the change in it, uncommitted edits included.
+
+Python and TypeScript production code are both judged, and the report opens with how many production files of each
+the change touched, so a table with every measure unchanged shows whether the change reached production code at all.
+``python metrics_gate_check.py`` checks the comparison on hand-made measurements.
 """
 from __future__ import annotations
 
 import argparse
 import io
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -24,11 +30,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from measure_revision import measure  # noqa: E402
+from measure_revision import is_production, measure  # noqa: E402
 
 LOWER, HIGHER = "lower", "higher"
-# The folders measure_revision.py counts as production code. Extracting only these keeps a commit's archive short of
-# Windows path limits, which the retired fixtures under .retired/ exceed.
+# The folders measure_revision.py counts as production code.
 MEASURED_FOLDERS = ("harness", "cdd_guidance", "space", "tools", "scripts")
 
 
@@ -40,9 +45,12 @@ class Guard:
     better: str
     target: float
 
-    def value_in(self, summary: dict) -> float:
+    def value_in(self, summary: dict) -> float | None:
+        """The metric's value in a measurement, or None when the measurement does not hold it (a tool that failed)."""
         value = summary
         for part in self.path.split("."):
+            if not isinstance(value, dict) or part not in value:
+                return None
             value = value[part]
         return value
 
@@ -79,6 +87,15 @@ GUARDS = (
     Guard("Helper function names written separately in several modules", "python.function_clones.free_function_names_in_several_modules", LOWER, 5),
     Guard("Class names defined in more than one module", "shadow_models.class_names_in_several_modules", LOWER, 0),
     Guard("Pairs of unrelated classes holding the same fields", "shadow_models.identical_field_sets", LOWER, 0),
+    # TypeScript is measured as well, the Files app and the board being most of it, so a change made only there is
+    # judged too rather than leaving every Python measure unchanged.
+    Guard("TypeScript functions with more than 10 paths", "typescript.functions_ccn_over_10", LOWER, 10),
+    Guard("TypeScript functions longer than 50 lines", "typescript.functions_nloc_over_50", LOWER, 0),
+    Guard("TypeScript functions that take more than 5 parameters", "typescript.functions_params_over_5", LOWER, 0),
+    Guard("TypeScript modules caught in an import loop", "typescript.import_graph.modules_in_cycles", LOWER, 0),
+    Guard("Most TypeScript modules that import one single module", "typescript.module_fan_in.max", LOWER, 40),
+    Guard("Copied TypeScript lines, as a share of all lines", "typescript.duplication.duplicated_pct", LOWER, 0.30),
+    Guard("Copied blocks of TypeScript code", "typescript.duplication.clones", LOWER, 15),
 )
 
 # Limits on a single function, class or module. A change may not push anything new past one, nor make anything
@@ -101,13 +118,22 @@ GROWTH = {
 
 
 def measured_commit(repository: Path, commit: str, node_tools: Path | None) -> dict:
-    """The measurement of a commit, extracted from the repository without touching any checkout."""
+    """The measurement of a commit, extracted from the repository without touching any checkout.
+
+    Only the files measure_revision.py counts as production code are extracted: the examples and fixtures under
+    cdd_guidance hold paths longer than Windows allows below the user's temporary folder, and extracting them failed
+    the whole run. The folder is removed afterwards, whether the measurement succeeds or not."""
     archive = subprocess.run(["git", "-C", str(repository), "archive", commit, *MEASURED_FOLDERS],
                              capture_output=True, check=True).stdout
     folder = Path(tempfile.mkdtemp(prefix="gate-"))
-    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
-        tar.extractall(folder, filter="data")
-    return measure(folder, commit, node_tools)
+    try:
+        with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+            production = [member for member in tar.getmembers()
+                          if member.isfile() and is_production(Path(member.name))]
+            tar.extractall(folder, members=production, filter="data")
+        return measure(folder, commit, node_tools)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
 
 
 def worse_items(before: dict, after: dict) -> list[str]:
@@ -128,18 +154,46 @@ def worse_items(before: dict, after: dict) -> list[str]:
     return found
 
 
+def changed_files(before: dict, after: dict) -> dict[str, list[str]]:
+    """The production files the change added, removed or edited, each by its path."""
+    was, now = before["file_digests"], after["file_digests"]
+    return {
+        "added": sorted(set(now) - set(was)),
+        "removed": sorted(set(was) - set(now)),
+        "edited": sorted(path for path in set(was) & set(now) if was[path] != now[path]),
+    }
+
+
+def files_line(changed: dict[str, list[str]]) -> str:
+    """One sentence saying how many production files, Python and TypeScript, the change touched. A table with every
+    measure unchanged then reads as what it is: a change that touched no production code, or touched it without moving
+    a count."""
+    touched = [path for paths in changed.values() for path in paths]
+    python = sum(path.endswith(".py") for path in touched)
+    return (f"Production files this change touched: {len(touched)} ({python} Python, {len(touched) - python} "
+            f"TypeScript): {len(changed['added'])} added, {len(changed['removed'])} removed, "
+            f"{len(changed['edited'])} edited.")
+
+
+def verdict_of(guard: Guard, was, now) -> tuple[str, bool]:
+    """The verdict on one metric, and whether it fails the gate. A metric either side could not measure fails it,
+    since a gate that cannot see a measure cannot say it did not get worse."""
+    if was is None or now is None:
+        return "⚠️ not measured", True
+    if guard.got_worse(was, now):
+        return "🔴 worse", True
+    return ("🟢 better" if now != was else "⚪ unchanged"), False
+
+
 def report(before: dict, after: dict) -> tuple[str, bool]:
-    lines = ["| Metric | Before | After | Target | Verdict |", "|---|---|---|---|---|"]
+    lines = [files_line(changed_files(before, after)), "",
+             "| Metric | Before | After | Target | Verdict |", "|---|---|---|---|---|"]
     failed = False
     for guard in GUARDS:
         was, now = guard.value_in(before), guard.value_in(after)
-        if guard.got_worse(was, now):
-            verdict, failed = "🔴 worse", True
-        elif now != was:
-            verdict = "🟢 better"
-        else:
-            verdict = "⚪ unchanged"
-        target = "✅ met" if guard.meets_target(now) else f"{guard.target}"
+        verdict, worse = verdict_of(guard, was, now)
+        failed = failed or worse
+        target = "✅ met" if now is not None and guard.meets_target(now) else f"{guard.target}"
         lines.append(f"| {guard.name} | {was} | {now} | {target} | {verdict} |")
     items = worse_items(before, after)
     if items:
