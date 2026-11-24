@@ -69,6 +69,12 @@ def _code_in_a_folder(root: Path, name: str) -> Path:
     return code
 
 
+def _drawing_of(code: Path) -> Path:
+    """Where a class diagram of code in a module folder is saved: beside it, under the name the model fidelity gives a
+    module's drawing (widget-15)."""
+    return code.parent / f"{code.parent.name}-model.drawio"
+
+
 def _render(action: Render, code: Path) -> list:
     return action.render(_MODEL, format="drawio", paths=[str(code)], source="python")
 
@@ -78,12 +84,12 @@ with description("a class diagram rendered for a chat's call"):
         self.root = Path(tempfile.mkdtemp(prefix="render-worker-"))
         here = _code_in_a_folder(self.root, "here")
         _render(Render(), here)
-        self.drawn_here = (here.parent / "cart.drawio").read_text(encoding="utf-8")
+        self.drawn_here = _drawing_of(here).read_text(encoding="utf-8")
         self.code = _code_in_a_folder(self.root, "apart")
         with _CountedRoutes() as counted:
             self.results = _render(Render(call=_FROM_A_CHAT), self.code)
         self.routes_here = counted.routes
-        self.drawing = self.code.parent / "cart.drawio"
+        self.drawing = _drawing_of(self.code)
 
     with after.all:
         shutil.rmtree(self.root, ignore_errors=True)
