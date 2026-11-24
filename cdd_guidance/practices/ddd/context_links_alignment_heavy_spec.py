@@ -86,37 +86,50 @@ def _link_aggregates(project: Path) -> None:
         file.write_text(described.context_file(_MODEL_LINKED, file.read_text(encoding="utf-8")), encoding="utf-8")
 
 
-def _gaps(alignment: SessionAlignment, kind: str) -> list[str]:
-    return sorted(gap.file for gap in alignment.diagnose().gaps if gap.kind == kind)
+def _gaps(gaps, kind: str) -> list[str]:
+    """The files of the gaps of one kind among gaps, a diagnosis's gaps."""
+    return sorted(gap.file for gap in gaps if gap.kind == kind)
+
+
+def _open(spec) -> None:
+    """Give spec, a context's state, a cdd home and a project of its own whose session works on DDD alone, made once
+    before the context's examples, which read one diagnosis of it."""
+    spec.home = ExampleHome()
+    spec.project = _project()
+    Sessions(spec.project).switch("bookshop", spec.project, create=True)
+    session = Sessions(spec.project).current()
+    for practice in session.own_practices.values():
+        practice.enable(practice.name == "ddd")
+    spec.alignment = SessionAlignment(session)
 
 
 with description("a session's diagnosis of a domain whose bounded contexts each have their own file") as self:
-    with before.each:
-        self.home = ExampleHome()
-        self.project = _project()
-        Sessions(self.project).switch("bookshop", self.project, create=True)
-        session = Sessions(self.project).current()
-        for practice in session.own_practices.values():
-            practice.enable(practice.name == "ddd")
-        self.alignment = SessionAlignment(session)
-
-    with after.each:
-        self.home.close()
-
     with context("that name their aggregates in plain words"):
+        with before.all:
+            _open(self)
+            self.gaps = self.alignment.diagnose().gaps
+
+        with after.all:
+            self.home.close()
+
         with it("should report each edge from a context's file to the domain model as one no callout shows: a context to each aggregate, a mapping to each side"):
             ordering, catalogue = "ordering/.context/bounded-context.md", "catalogue/.context/bounded-context.md"
-            expect(_gaps(self.alignment, "edge_without_callout")).to(equal([catalogue, ordering, ordering, ordering, ordering]))
+            expect(_gaps(self.gaps, "edge_without_callout")).to(equal([catalogue, ordering, ordering, ordering, ordering]))
 
     with context("that name each aggregate as a link to its heading in the domain model"):
-        with before.each:
+        with before.all:
+            _open(self)
             _link_aggregates(self.project)
+            self.gaps = self.alignment.diagnose().gaps
+
+        with after.all:
+            self.home.close()
 
         with it("should report no edge without a callout"):
-            expect(_gaps(self.alignment, "edge_without_callout")).to(equal([]))
+            expect(_gaps(self.gaps, "edge_without_callout")).to(equal([]))
 
         with it("should report no callout that opens nothing"):
-            expect(_gaps(self.alignment, "callout_target_missing")).to(equal([]))
+            expect(_gaps(self.gaps, "callout_target_missing")).to(equal([]))
 
         with it("should report no callout the graph has no edge for"):
-            expect(_gaps(self.alignment, "callout_without_edge")).to(equal([]))
+            expect(_gaps(self.gaps, "callout_without_edge")).to(equal([]))

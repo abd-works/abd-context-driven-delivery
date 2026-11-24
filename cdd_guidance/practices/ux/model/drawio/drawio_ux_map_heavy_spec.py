@@ -154,7 +154,7 @@ fixture = SpecFixture()
 
 
 with description("a UX map drawn as a draw.io information architecture"):
-    with before.each:
+    with before.all:
         self.source = fixture.site_map()
         self.rendered = DrawioUxMap.create().render(self.source)
 
@@ -165,7 +165,7 @@ with description("a UX map drawn as a draw.io information architecture"):
         expect("host=\"drawio-ux\"" in self.rendered).to(equal(True))
 
     with context("that is read back"):
-        with before.each:
+        with before.all:
             self.parsed = DrawioUxMap.create().parse(self.rendered)
 
         with it("should read back the screen names from the Site Map page"):
@@ -203,7 +203,7 @@ with description("a UX map drawn as a draw.io information architecture"):
             expect([region.area for region in self.parsed.find_screen("Character Sheet").regions]).to(equal(["panel", "body"]))
 
     with context("of a mockup whose regions hold controls, that is read back"):
-        with before.each:
+        with before.all:
             self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup()))
 
         with it("should read back only the regions the mockup has"):
@@ -225,7 +225,7 @@ with description("a UX map drawn as a draw.io information architecture"):
             expect(self.parsed.transitions[0].nav_type).to(equal("top nav"))
 
     with context("of a mockup whose screen and controls serve stories, scenarios and steps, that is read back"):
-        with before.each:
+        with before.all:
             self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup_serving_stories()))
             self.details = self.parsed.find_screen("Book Details")
             self.controls = {control.name: control for control in self.details.regions[1].controls}
@@ -248,7 +248,7 @@ with description("a UX map drawn as a draw.io information architecture"):
             expect([region.name for region in self.details.regions]).to(equal(["Book Summary", "Add To Cart"]))
 
     with context("of a mockup whose controls are named otherwise than they are labelled, one a Story Demo control, that is read back"):
-        with before.each:
+        with before.all:
             self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup_with_story_demo()))
             self.controls = self.parsed.find_screen("Checkout").regions[0].controls
 
@@ -262,7 +262,7 @@ with description("a UX map drawn as a draw.io information architecture"):
             expect(self.controls[1].story_keys).to(equal(["Pay For Order"]))
 
     with context("with content types and nav components, that is read back"):
-        with before.each:
+        with before.all:
             self.source = fixture.bookshop_shared()
             self.rendered = DrawioUxMap.create().render(self.source)
             self.parsed = DrawioUxMap.create().parse(self.rendered)
@@ -279,7 +279,7 @@ with description("a UX map drawn as a draw.io information architecture"):
             expect(crossing).to(equal([]))
 
     with context("of a mockup, drawn again over a drawing that shows what the mockup does not"):
-        with before.each:
+        with before.all:
             held = fixture.mockup_serving_stories()
             held.find_screen("Book Details").regions[0].append_control(made(Control, "Cover", 0, control_type="image"))
             held.append_screen(Screen("Wish List", 2))
@@ -303,7 +303,7 @@ with description("a UX map drawn as a draw.io information architecture"):
             expect(lambda: DrawioUxMap.create().parse("<mxfile><diagram>")).to(raise_error(UnreadableDrawio))
 
     with context("with a command line that runs past its timeout"):
-        with before.each:
+        with before.all:
             self.writer = DrawioUxMap.create()
             self.writer.cli_timeout_seconds = 0.001
 
@@ -322,7 +322,7 @@ with description("a UX map drawn as a draw.io information architecture"):
                 expect(lambda: DrawioUxMap.create().render(self.source)).to(raise_error(DrawioCliFailed, contain("layout broke")))
 
     with context("that holds three screens side by side with transitions between them"):
-        with before.each:
+        with before.all:
             ux_map = DrawioUxMap.create()
             screens = {}
             for order, name in enumerate(["Board", "Editor", "Explorer"]):
