@@ -7,7 +7,9 @@ This module says which CDD version a chat runs, sets and releases the next one, 
 
 - **Purpose:** Say which CDD version a chat runs, set and release the next version, and keep the heavy and e2e tiers running on main, so a release is published only on green.
 - **Seam (terms):** CddVersion, Version, VersionStanding, VersionNotValid, ProjectVersion, CddRelease, ReleaseNotes, ReleaseOnRed, ReleaseAlreadyTagged, GitHubCli, GitHubCliError, TestCadence, TestTier, TestRun, RunOutcome, TestRunRecord, TestRunRecordUnreadable, TestRunner, RunWorktree, `main_checkout`, `default_record_folder`; the MCP operations `cdd-version.check`, `cdd-version.read`, `cdd-version.set_next` (`/version`), and `cdd-version.release` (`/release`); the command `python -m harness.release.test_runs <tier> <checkout> <record folder>`
-- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp (*CddHome*, where the record is kept), harness/process (*BackgroundStart*, *PythonInterpreter*, *RunningProcess*, *StarterBoundJob*), harness/git (*Git*, *RepoConnectError*), harness/e2e_review (*ScheduledReview*, which the cadence starts on the screens of the daily e2e run). harness/diagnostics reads the cadence for the server health report; nothing here imports it.
+- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp (*CddHome*, where the record is kept), harness/process (*BackgroundStart*, *PythonInterpreter*, *RunningProcess*, *StarterBoundJob*), harness/git (*Git*, *RepoConnectError*), harness/e2e_review (*ScheduledReview*, which the cadence starts on the screens of the daily e2e run).
+
+The server health report of harness/diagnostics reads the cadence the other way; nothing here imports it.
 
 ## Constraint
 
