@@ -5,7 +5,9 @@ What a spec works in. Spec files import it; production code never does.
 
 - **Purpose:** Give every spec that runs actions a project and a cdd home of its own, so nothing a spec writes lands in the repository being worked in or in the person's home.
 - **Seam (terms):** ThrowawayProject, ExampleHome, OpenProjects, OPEN_PROJECTS (`close_all()`), the examples in `session_roots_examples.py`.
-- **Dependencies (one-way):** `harness/mcp` (`CDD_HOME_ENV`), space/session (`SERVED_SESSIONS`), and in its examples space/session and space/session/practices. Nothing in production imports it.
+- **Dependencies (one-way):** none in production code: every file here is spec support, which only specs import.
+
+At test time it imports harness/mcp (`CDD_HOME_ENV`) and space/session (`SERVED_SESSIONS`), and its examples import space/session, space/session/practices (*FidelitySessionOutput*) and harness/guidance (`PRACTICE_CATALOGUE`).
 
 ## Constraint
 

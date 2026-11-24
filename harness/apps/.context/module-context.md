@@ -3,7 +3,9 @@
 
 - **Purpose:** Give every module that owns a CDD web app one way to register it, install it, and say where it answers, apart from the module that diagnoses installs.
 - **Seam (terms):** App, Apps (`APPS`), AppPackage, AppPage, AppServer, NodeScript, Npm, NpmRun, AppSources, PortProbe, AppStatus, AppNotStarted, AppNotRegistered, PackageNotInstalled, `LANGUAGE_ADAPTER_FOLDER`; the MCP operations `app.open` and `app.install`
-- **Dependencies (one-way):** harness/agent_tools, harness/installation (`@language_adapter`, `@data_field`, *JsonFile*), harness/mcp (`@mcp`, `@long_call`, *ServerLane*), harness/process (*ExclusivePort*, *ProcessNotStopped*). It sits after harness/mcp and before harness/graph: harness/graph registers the Graph app (`graph_app.py`), space/kanban the CDD Kanban and the Story UI editor, and harness/files_app the Files app, each with *App*, from the ports file its servers read. Nothing here imports a module that owns an app.
+- **Dependencies (one-way):** harness/agent_tools, harness/installation (`@language_adapter`, `@data_field`, *JsonFile*), harness/mcp (`@mcp`, `@long_call`, *ServerLane*), harness/process (*ExclusivePort*, *ProcessNotStopped*).
+
+It sits after harness/mcp and before harness/graph. The modules that own an app import this one and register it, each with *App*, from the ports file its servers read: harness/graph the Graph app (`graph_app.py`), space/kanban the CDD Kanban and the Story UI editor, and harness/files_app the Files app. Nothing here imports a module that owns an app.
 
 ## Constraint
 

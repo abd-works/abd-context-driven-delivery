@@ -10,7 +10,9 @@
 
 - **Purpose:** Let an author publish an ordinary class as operations and recipes an agent can list and use, and let every publisher (MCP, skills, hooks, the catalog) read those members from one place.
 - **Seam (terms):** AgentToolSet, AgentTool, AgentOperation, AgentInstructions, ToolSetCollection, ToolsetReference (`of`, `parsed`, `toolset_class`, `made`), ParameterSchema, ToolCall, WorkerProcess, CallSession, SessionOpener, SessionOpening (`SESSION_OPENING`), SessionsNotLoaded, ChatPointer, ToolSubjectLoader; the annotations `@agent_toolset`, `@agent_tool`, `@agent_instructions`, `@tool_subject`, `@noSessionLog`, `@subAgent`, `@published_where_held`; `tools(...)`, `instructions(...)`; `parameter_notes`
-- **Dependencies (one-way):** harness/annotations (the annotations, and *Name* for every published name), harness/markdown, harness/process (*ChatPointer* reads Claude Code's config folder and the checkout a chat works in from `claude_chat_process.py`). space/session registers its *SessionOpener* with `SESSION_OPENING.open_with`; this module imports nothing above the framework.
+- **Dependencies (one-way):** harness/annotations (the annotations, and *Name* for every published name), harness/markdown, harness/process (*ChatPointer* reads Claude Code's config folder and the checkout a chat works in from `claude_chat_process.py`), harness/git (*Checkout*, the checkout *ChatPointer* names for a chat).
+
+space/session registers its *SessionOpener* with `SESSION_OPENING.open_with` the other way; this module imports nothing above the framework.
 
 ## Constraint
 

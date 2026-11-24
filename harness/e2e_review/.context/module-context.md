@@ -5,7 +5,9 @@
 
 - **Purpose:** Let a person and an agent see what each end-to-end step's screen looks like, judge every screen that changed, and accept a run as the baseline the next one is compared with, so a change no test asserts on is still seen.
 - **Seam (terms):** E2eReview (`walk`, `run`, `changed_pairs`, `record_verdict`, `judge_step`, `record_walked_step`, `accept`, `latest`, `baseline_of`, `write_report`), E2eRun, E2eRunReview, ScheduledReview (`RELEASE`, `start`), ReportTool, E2eReviewRefused, `RUN_STAMP_FORMAT`; the MCP operations `e2e-review.walk`, `e2e-review.run`, `e2e-review.changed_pairs`, `e2e-review.record_verdict`, `e2e-review.judge_step`, `e2e-review.record_walked_step`, and `e2e-review.accept`
-- **Dependencies (one-way):** harness/agent_tools (the toolset annotations), harness/installation (`@data_field`), harness/mcp (`@mcp`, `@long_call`, and *ClaudePlugins*, which finds the Claude Code command line the review agent starts with), and harness/process (*BackgroundStart*, which starts the browser story tests). harness/release and harness/diagnostics depend on it: the test cadence (harness/release) starts a *ScheduledReview* after the daily e2e run, and the server health report shows the latest *E2eRunReview*.
+- **Dependencies (one-way):** harness/agent_tools (the toolset annotations), harness/installation (`@data_field`), harness/mcp (`@mcp`, `@long_call`, and *ClaudePlugins*, which finds the Claude Code command line the review agent starts with), and harness/process (*BackgroundStart*, which starts the browser story tests).
+
+Two modules depend on it the other way: the test cadence of harness/release starts a *ScheduledReview* after the daily e2e run, and the server health report of harness/diagnostics shows the latest *E2eRunReview*.
 
 ## Constraint
 

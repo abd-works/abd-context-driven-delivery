@@ -15,7 +15,9 @@
 
 - **Purpose:** Let any practice draw its diagram on a Claude Whiteboard and read it back, with one board format, one element id, and one way of updating a board in Claude.
 - **Seam (terms):** Whiteboard (`title`, `sections`, `shapes`, `labels`, `arrows`, `holding`, `batches`, `drawn_over`, `links_beside`), WhiteboardFile (`whiteboard-file.show`), BoardElement, Shape, Section, Label, Arrow, ElementId (`of`, `read`, `role`, `parts`, `key`), WhiteboardNode (`KEY_LENGTH`), Box, UnreadableBoard
-- **Dependencies (one-way):** harness/installation, for the JSON record of published addresses and the data annotations; harness/agent_tools and harness/mcp, for *WhiteboardFile*'s tool. The practices' whiteboard packages (`cdd_guidance/practices/*/model/whiteboard`), the Render action (`cdd_guidance/actions/render`), the session's file list and the Files app (through the generated `whiteboard-file` adapter) depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
+- **Dependencies (one-way):** harness/installation, for the JSON record of published addresses and the data annotations; harness/agent_tools and harness/mcp, for *WhiteboardFile*'s tool.
+
+The practices' whiteboard packages (`model/whiteboard` in each practice), the Render action, the session's file list and the Files app (through the generated `whiteboard-file` adapter) depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
 
 ## Constraint
 

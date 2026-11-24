@@ -5,7 +5,9 @@ The repository tools (space/repo), the session's file reads (space/session), the
 
 - **Purpose:** Run git the same way everywhere, with one set of time limits and one error, so no caller has to stop a hung git or read its exit code.
 - **Seam (terms):** Git, RepoConnectError, Checkout, GitFacts, GitFolder, AskedOfGit, NoGitFacts.
-- **Dependencies (one-way):** none (standard library only), so harness/catalog_generator, harness/diagnostics, harness/mcp, space/repo, and space/session all use it without depending on each other.
+- **Dependencies (one-way):** none (standard library only).
+
+So harness/catalog_generator, harness/diagnostics, harness/mcp, space/repo, and space/session all use it without depending on each other.
 
 ## Constraint
 

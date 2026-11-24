@@ -5,7 +5,9 @@
 
 - **Purpose:** Keep the software in the business's language, with each rule held in the aggregate that owns it, before any technical detail is added.
 - **Seam (terms):** Ddd, BoundedContextMap, `ddd.instructions`, `ddd-bounded-context`, `ddd-model`, `ddd-tactics`, `render`
-- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `cdd_guidance/practices/sketch_document` (*SketchOutline*, *DiscoveryDocument*), `cdd_guidance/practices/clean_engineering/model` (class model and its markdown format), `cdd_guidance/practices/clean_engineering/model/drawio` (the class model's draw.io format, which the aggregate diagram extends), `cdd_guidance/practices/clean_engineering` (its rules, which the DDD rule examples run beside), `harness/whiteboard` (*Whiteboard*, the board the bounded-context map is drawn on), `cdd_guidance/practices/ddd/reading` (*DddReading*, the practice's `reading_type`; the reading imports the DDD model back, so the two modules form a cycle and change together).
+- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/markdown`, `harness/drawio` (*DrawioPage*, the page the bounded-context map's draw.io format draws on), `cdd_guidance/practices/sketch_document` (*SketchOutline*, *DiscoveryDocument*), `cdd_guidance/practices/clean_engineering/model` (class model and its markdown format), `cdd_guidance/practices/clean_engineering/model/drawio` (the class model's draw.io format, which the aggregate diagram extends), `cdd_guidance/practices/clean_engineering` (its rules, which the DDD rule examples run beside), `harness/whiteboard` (*Whiteboard*, the board the bounded-context map is drawn on), `cdd_guidance/practices/ddd/reading` (*DddReading*, the practice's `reading_type`).
+
+The reading imports the DDD model (`model/`), not `ddd.py`, so the practice and its reading depend one way; only a spec fixture imports *Ddd* from the model's side.
 
 Neither the class model nor harness imports DDD back; the spec support that runs its rules on examples is its own `rule_examples.py` in its rules package.
 

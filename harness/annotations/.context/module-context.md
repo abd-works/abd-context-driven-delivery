@@ -8,7 +8,9 @@
 
 - **Purpose:** Hold the annotations an author types, the one place a member's destinations are read, and the one way a name is written in each case, below every module that defines or reads an annotation, so the publishers depend on the toolsets and never the other way round.
 - **Seam (terms):** Annotation, NamesAnnotation, Destination (`marks_a_collection`, `answers_calls`), DestinationKind (`publishes`, `name_given`, `disabled_on`), `annotation_kinds` (`destinations_of`, `deploy_name_of`, `answering_calls`, `marking_a_collection`, `enlisting`), ClassRegistry, `class_folder`, the annotations an author types (`@hosted_only`, `@noCatalog`, `@noDeploy`); Name (`words`, `snake`, `kebab`, `camel`, `spellings`, `title_slug`, `title_snake`, `title_pascal`, `title_camel`). The bases publishers subclass, the registry, *DestinationKind* (the type of a channel, which a tool and an installation hold), and *Name* are the classes other modules name; the other kinds of kind (*AnnotationKind*, *NamesKind*, *OmissionKind*, *HostedOnlyKind*), *OmissionAnnotation*, the omission annotations' classes, and the registry of kinds' own class stay behind them (`cdr/0002-the-module-keeps-its-kinds-behind-its-bases.md`).
-- **Dependencies (one-way):** none. It is the lowest module of the framework, so harness/markdown and everything above it may use it.
+- **Dependencies (one-way):** none.
+
+It is the lowest module of the framework, so harness/markdown and everything above it may use it.
 
 ## Constraint
 

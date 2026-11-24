@@ -5,7 +5,9 @@
 
 - **Purpose:** Let every practice that draws a diagram read and write draw.io with one document model, one failure, and one style reader, as harness/whiteboard does for boards.
 - **Seam (terms):** DrawioFile (`from_text`, `pages`, `page`, `whole`, `add_page`, `save`), DrawioPage (`cells`, `cell`, `boxes`, `positions`, `add`, `element`), DrawioCell, CellStyle, UnreadableDrawio
-- **Dependencies (one-way):** harness/whiteboard, for *Box*, the one rectangle. The practices' draw.io packages (`cdd_guidance/practices/stories/model/drawio`, `ux/model/drawio`, `clean_engineering/model/drawio`) depend on it; Clean Engineering keeps its class diagram's edge routing and class boxes in its own *ClassDiagramPage* over a framework page.
+- **Dependencies (one-way):** harness/whiteboard, for *Box*, the one rectangle.
+
+The practices' draw.io packages depend on it the other way: Stories', UX's and Clean Engineering's `model/drawio`, and DDD's bounded-context map. Clean Engineering keeps its class diagram's edge routing and class boxes in its own *ClassDiagramPage* over a framework page.
 
 ## Constraint
 

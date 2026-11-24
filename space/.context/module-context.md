@@ -7,7 +7,9 @@ The work itself is kept by the child modules, each with its own card: the *Sessi
 
 - **Purpose:** Keep the open work of each project — its sessions, its branches and worktrees, and its board — so every tool a call runs finds the same `.sessions/` for the project the call names.
 - **Seam (terms):** WorkState, `SESSIONS_FOLDER`, `E2E_RESULTS_FOLDER`
-- **Dependencies (one-way):** none. `space/repo` and `space/session` save what is open through *WorkState*; it imports neither.
+- **Dependencies (one-way):** harness/installation (*JsonFile*, which keeps `session.json`), harness/mcp (*CddHome*).
+
+`space/repo` and `space/session` save what is open through *WorkState*; it imports neither.
 
 ## Constraint
 

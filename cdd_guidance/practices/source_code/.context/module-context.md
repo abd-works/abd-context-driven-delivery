@@ -4,8 +4,10 @@ Source code as several practices read it. *CodeBody* is an operation's body as i
 It has the same standing as `sketch_document`: shared by practices, not a practice.
 
 - **Purpose:** Let Stories, BDD, DDD, the patterns, and space/session read code without loading Clean Engineering's class model, so a brace is parsed by one reader and a test file is named by one rule.
-- **Seam (terms):** CodeBody, CodeLanguage, CodeSpelling, BraceCall, WrittenBlock, WrittenKey, InsideLines, PYTHON, TYPESCRIPT, JAVASCRIPT, CODE_LANGUAGES, BracketStructure, split_top_level, CallGraph, CallGraphEntry, parse_arrow_line, ScriptImports, ClassReference, STAR, imported_files, MeasuredBody, SourceText, SpanFailures, SpanCollaborators, TestFileName, ProjectTestCode, HoldsProjectTestCode. Callers import them from the package (`from cdd_guidance.practices.source_code import CodeBody`).
-- **Dependencies (one-way):** the standard library only. Nothing here imports a practice, a pattern, or the framework.
+- **Seam (terms):** CodeBody, CodeLanguage, CodeSpelling, BraceCall, WrittenBlock, InsideLines, PYTHON, TYPESCRIPT, JAVASCRIPT, CODE_LANGUAGES, BracketStructure, split_top_level, CallGraph, CallGraphEntry, parse_arrow_line, ScriptImports, ClassReference, STAR, imported_files, MeasuredBody, SourceText, SpanFailures, SpanCollaborators, TestFileName, ProjectTestCode, HoldsProjectTestCode. Callers import them from the package (`from cdd_guidance.practices.source_code import CodeBody`); `WrittenKey` is the type alias of a written block's key in `code_body.py`.
+- **Dependencies (one-way):** harness/graph (*Graph*, *Node*, and `scanned_files`, which `code_reach.py` walks), harness/installation (*ContextConfig*, the project's `.context/config.json`, whose `test_code` names the project's test files).
+
+Nothing here imports a practice or a pattern.
 
 ## Constraint
 

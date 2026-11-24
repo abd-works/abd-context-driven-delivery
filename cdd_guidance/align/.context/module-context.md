@@ -5,7 +5,9 @@ Format alignment: whether the formats a session chose for each fidelity hold the
 
 - **Purpose:** Find every gap between the formats of a session's fidelities and close the ones a render can close, handing each item one file holds and another lacks, where no render may close it, to the agent's decide pass.
 - **Seam (terms):** FormatAlignment (the toolset: `format-alignment.diagnose_alignment`, `format-alignment.align_formats`, `FormatAlignment.load(session, call)`; `@language_adapter(language="typescript")`, whose client is `@cdd/align/format-alignment`), SessionAlignment (`diagnose`, `align`), AlignmentDiagnosis, AlignmentGap, AlignmentResult, AlignedFile, AlignmentFailure, GraphDifference, GraphReading, CalloutAlignment.
-- **Dependencies (one-way):** `cdd_guidance/actions/render` (*Render*, *RenderResult*), space/session (*DocumentGraph*), space/session/files (*FileTooLongToShowError*, *NamedPathNotFoundError*), `harness/agent_tools`, `harness/installation`, `harness/mcp`, `harness/graph` (*SavedGraph*), `harness/markdown` (*Format*), `harness/diagnostics` (`raised_by_a_bug`). Nothing in space imports it.
+- **Dependencies (one-way):** `cdd_guidance/actions/render` (*Render*, *RenderResult*), space/session (*DocumentGraph*), space/session/files (*FileTooLongToShowError*, *NamedPathNotFoundError*), `harness/agent_tools`, `harness/installation`, `harness/mcp`, `harness/graph` (*SavedGraph*), `harness/markdown` (*Format*), `harness/guidance` (`PRACTICE_CATALOGUE`, and *PracticeGuidance* and *FidelityGuidance* for typing), `harness/diagnostics` (`raised_by_a_bug`).
+
+Nothing in space imports it.
 
 ## Constraint
 

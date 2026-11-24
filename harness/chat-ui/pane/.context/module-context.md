@@ -9,7 +9,9 @@ The mod declares itself to the cdd home in `cdd-mod.json`, beside its `.claude-p
 
 - **Purpose:** let a person drive the agent from the board, and keep the chat aware of the active ticket.
 - **Seam (terms):** `cdd-board` plugin; `/board`; the status line below the chat; the active ticket section of the system prompt; the server health band
-- **Dependencies (one-way):** harness/chat (the chat tools it checks in with, through the board's `/api/chat/:chat/check-in` route), space/kanban (the board it reads, and ticket types from the language adapter at compile time only), harness/diagnostics (`server-health.report`, which lists every app with its url, the CDD Kanban's being the board's address the chat checks in at, and `app.open`, which readies an app; their types from the language adapter at compile time only), harness/mcp (`install.json`, the install command the cdd home's marketplace writes into the published mod, which Run install runs)
+- **Dependencies (one-way):** none that it imports. The mod is TypeScript that Claude Code loads, and it reaches the framework only through the cdd server's routes and MCP tools, as the next paragraph lists.
+
+The tools it calls: harness/chat (the chat tools it checks in with, through the board's `/api/chat/:chat/check-in` route), space/kanban (the board it reads, and ticket types from the language adapter at compile time only), harness/diagnostics (`server-health.report`, which lists every app with its url, the CDD Kanban's being the board's address the chat checks in at, and `app.open`, which readies an app; their types from the language adapter at compile time only), harness/mcp (`install.json`, the install command the cdd home's marketplace writes into the published mod, which Run install runs).
 
 ## Constraint
 

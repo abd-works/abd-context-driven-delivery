@@ -12,7 +12,9 @@ The process classes live in one module, `process.py`, since each is a few lines 
 
 - **Purpose:** Start, name, and stop the processes the framework keeps, the same way on Windows and elsewhere.
 - **Seam (terms):** BackgroundStart, PythonInterpreter, ExclusivePort, RunningProcess, ProcessNotStopped, StarterBoundJob, JobNotMade, ClaudeChatProcess, CappedLogFile, LogTimestamp, `REPORT_DATE_FORMAT`, AnswerReads (`ANSWER_READS`), ServedAnswers, HeldForAnswer, LockFile, LockFileHeld, ServerDaemon, RunningServer, ServerDidNotStart, `is_desktop_spare`, `claude_config_folder`. The module is a toolkit, not one deep class: each class is a small tool for one job on this computer that its callers use directly, so every class is part of the seam by design, and a deep-module count that reads all of them as exposed reads the toolkit's purpose. A class added here is one more such tool. *ServerDaemon* is the one base class here, the shape every long-running server of the framework takes, built from the other tools (*ExclusivePort*, *CappedLogFile*, *LockFile*, *BackgroundStart*); the servers themselves live in the modules that serve, harness/hooks and harness/mcp.
-- **Dependencies (one-way):** `harness/git` (*Checkout*, standard library only), so harness/hooks, harness/mcp, harness/installation, harness/agent_tools, harness/diagnostics, and the scripts all use it without depending on each other.
+- **Dependencies (one-way):** `harness/git` (*Checkout*, standard library only).
+
+So harness/hooks, harness/mcp, harness/installation, harness/agent_tools, harness/diagnostics, and the scripts all use it without depending on each other.
 
 ## Constraint
 

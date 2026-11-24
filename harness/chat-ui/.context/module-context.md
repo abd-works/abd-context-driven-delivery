@@ -5,7 +5,9 @@ The prompt queue above the chat bar is another mod, `prompt-queue` in `tools/pro
 
 - **Purpose:** keep the person and the agent in one chat looking at the same session: what stage and fidelities it is at, what to do next, and whether CDD is running, with each press calling the cdd server's own tool.
 - **Seam (terms):** the `cdd-board` plugin (`pane/.claude-plugin/plugin.json`, `pane/hooks/register.ts`); the chat bar (`ChatBarClient`, `ChatBarView`); the status line (`ChatBarClient.statusLine`, drawn by the `PromptHint` hook and `$.ui.status`); the failure line (`FailureClient`, `fixFailure`, `dismissFailure`); the server health band (`pane/hooks/health/`); `/board`
-- **Dependencies (one-way):** as the mod's card lists them: harness/chat, space/kanban, harness/diagnostics and harness/mcp, each through the cdd server's MCP tools, with their data types from the language adapter at compile time only. Nothing in Python imports this folder; harness/mcp publishes the mod from `pane/cdd-mod.json`.
+- **Dependencies (one-way):** none that it imports. The mod is TypeScript that Claude Code loads, and it reaches the framework only through the cdd server, as the next paragraph says.
+
+As the mod's card lists them, it calls the MCP tools of harness/chat, space/kanban, harness/diagnostics and harness/mcp through the cdd server, with their data types from the language adapter at compile time only. Nothing in Python imports this folder; harness/mcp publishes the mod from `pane/cdd-mod.json`.
 
 ## Constraint
 

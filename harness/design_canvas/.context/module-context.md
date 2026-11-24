@@ -5,7 +5,9 @@
 
 - **Purpose:** Let a practice publish its views as a Claude Design canvas without knowing the canvas's file layout, and regenerate it without overwriting what people edited.
 - **Seam (terms):** DesignCanvas (`add`, `place`, `placed`, `files`, `project`), CanvasProject, CanvasBoard, Artboard (`name`, `stem`), `artboard_stem(path)`, Place, CardLook; CanvasVersions (`latest`, `working`, `unpublished`, `start_next`, `published`), CanvasVersion, PublishedVersion. The practices' own canvas parts live with them: UX's abd look (`LOOK`, `FONTS`, `BACKGROUND`) and its fixture screens (*FixtureScreen*, *ScenarioSource*) are in `cdd_guidance/practices/ux/model/claude_design/`.
-- **Dependencies (one-way):** harness/annotations (*Name*); harness/installation (*JsonFile*, *PublishedLinks*, which keep `versions.json`). Nothing in harness imports it back; cdd_guidance/practices/ux (`model/claude_design`, the story canvas) and space/session (each version's link) use it.
+- **Dependencies (one-way):** harness/installation (*JsonFile*, *PublishedLinks*, which keep `versions.json`).
+
+Nothing in harness imports it back; the UX practice's story canvas (`model/claude_design` in cdd_guidance/practices/ux) and space/session (each version's link) use it.
 
 ## Constraint
 
