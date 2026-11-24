@@ -1,4 +1,76 @@
-# Strategy: Context as code, verified by tests
+# Principles
+
+The guiding principles that shape how this project is built. Each section is one principle: what to do, and why.
+
+## Bootstrap
+
+All features are built using the same capability pattern — including the capability pattern itself.
+
+## Singular focus
+
+Every capability does exactly one thing — compose capabilities to build larger behaviours, never expand a single capability's scope.
+
+Keep capabilities extremely focused — one concept, one job. Build larger capabilities by extending focused ones, not by bloating a single capability.
+
+A capability should do exactly one thing well. When a capability starts doing two things, split it.
+
+**DO** — one concept per capability, composed via `extends:` frontmatter:
+
+```
+agentic-tdd/     ← builds and runs agent tests
+rules/           ← validates and generates rule-compliant artifacts
+capability/      ← deploys and manages capabilities
+```
+
+`agentic-tdd` extends `capability` and inherits Deploy and Clean at deploy time rather than reimplementing them.
+
+**DON'T** — accumulate unrelated concerns in one capability:
+
+```
+tools/           ← tests, validation, deployment, scanning, and more
+```
+
+When a capability needs behaviour from another capability, set `extends:` on the target and list local actions in `overrides:`. Deploy wires the rest as `read @{parent} § {action}`. Extend `_BaseCli` in the API surface for deterministic actions. Let each capability own its domain; let the extend chain wire them together.
+
+## Domain locality
+
+Keep every aspect of a capability — agentic surface, API surface, tests, rules, config — together in one folder. Organise around concepts, not layers.
+
+All concerns of a capability belong in the capability folder itself. Do not split a capability across layers or generic shared folders.
+
+| Concern | Lives in |
+|---|---|
+| Agentic surface | `{capability}/{capability}.md` |
+| API surface | `{capability}/{capability}.py` |
+| Rules | `{capability}/rules/{rule-name}/` |
+| Tests | `{capability}/test_*.py` |
+| Config | `{capability}/.cdd-config.json` |
+
+**DO** — co-locate everything that belongs to a concept:
+
+```
+enforce/
+  enforce.md
+  enforce.py
+  rules/
+    vehicle-has-means/
+      vehicle-has-means-rule.md
+      vehicle-has-means-scanner.py
+      examples/<descriptive-folder>/
+        faultyAsset
+        repairedAsset
+  validate-artifact-rules-test.py
+```
+
+**DON'T** — split by technical layer across the repo:
+
+```
+rules/vehicle-has-means.md       ← wrong: rules folder at repo root
+scanners/vehicle-has-means.py    ← wrong: scanners folder at repo root
+tests/vehicle-has-means-test.py  ← wrong: tests folder at repo root
+```
+
+## Context as code, verified by tests
 
 We want to get the most accurate context we can for an existing system so that we can make further changes in an AI augmented mode  with the least amount of drift or hallucination. 
 
@@ -27,7 +99,7 @@ For a **frontend** we want to prove the UI: stub the next layer down (the API it
 
 ---
 
-## Why
+### Why
 
 **Context as code.** Guidelines, story maps, domain models, and acceptance tests are generated and checked using automated tests. Prose that cannot be validated will drift. Code that has no story will be guessed.
 
@@ -45,7 +117,7 @@ For a **frontend** we want to prove the UI: stub the next layer down (the API it
 
 ---
 
-## Summary of Steps
+### Summary of Steps
 
 - Stand the app up **alone** with [ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/cdd_guidance/context_setup).
 - Document what it actually does with [Stories](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/stories) and [DDD](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/practices/ddd) against that isolated app. Scaffold a story map and a bounded-context / aggregate outline. Then, with a human in the loop, take **one micro-increment** at a time — one story (default), or one BDD describe, or one aggregate operation. Write the Given / When / Then, and the required **domain classes and operations**, including underlying application code required to implement the test. Build / extend fixtures (example data) and mocks / stubs required to support the tests. Render a markdown view of both story map / story scenarios as well as the domain model. Allow the human to review for semantic correctness. Run tests until green, repeat until the app is covered. Once you have confidence the system is working, expand the scope to larger slices.
@@ -56,11 +128,11 @@ Example: `/stories /ddd /document /specification` — one story’s scenarios an
 
 ---
 
-## Steps
+### Steps
 
 One increment at a time. Green, then the next, until the outline is covered.
 
-### 1 — Set up the sandbox
+#### 1 — Set up the sandbox
 
 Isolate the app with [ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/cdd_guidance/context_setup). Classify externals, write the **minimum** stubs (canned neighbor bodies) at the outermost boundary, smoke-test, scout pages. Do not stub the seam you are proving. For a **non-core** aggregate, take stubs from **that aggregate's folder / source repository** (`domain/{bounded-context}/{aggregate}/stubs/{system}/`) — do not invent a stub inside the story test. Point it at the **application repository on disk**. That writes `tests/stubs/{system}/` (global) or `domain/{aggregate}/stubs/{system}/` (domain-owned) and `sandbox/extracted-context/app-extraction/` in the **capture repo**. Never a domain folder inside `tests/` or inside `tests/stubs/`.
 
@@ -71,7 +143,7 @@ against the application repository on disk, as a web app; write stubs and scout 
 
 That action always smoke-tests and scouts. It calls `complete_capture` only when the scout has FAIL or WARN pages.
 
-### 2 — Scaffold from the running app
+#### 2 — Scaffold from the running app
 
 Open a session **in the capture repo**. That is where `session.md`, tests, domain, and the scripts that **point at the application clone** live. Context comes from the running app; you do not open the session in the app repo. Scaffold only — no Given / When / Then, no operations, no classes. This is **discovery**: for Stories an **initial story map** (epics / sub-epics / story names); for DDD an **initial bounded-context / aggregate hierarchy** (names only). Markdown is the default at this fidelity — no format argument required. Capture what the running isolated app shows; do not invent the product. Creates `<capture-repo>/.context/sessions/<name>/session.md`. Same capture repo and run on later calls.
 
@@ -80,7 +152,7 @@ Open a session **in the capture repo**. That is where `session.md`, tests, domai
 follow [this strategy](acceptance-test-strategy.md) — discovery: scaffold an initial story map from the running isolated app (epics / sub-epics / stories, not scenarios); and an initial bounded-context / aggregate hierarchy from the running isolated app; markdown is the default
 ```
 
-### 3 — Document Stories and DDD against the running app
+#### 3 — Document Stories and DDD against the running app
 
 The running app is the context. Document Stories and DDD **together**, one small slice — not iterate (no inbound iteration loop). Stories: capture the scenarios for **one** story (what the actor does). DDD: capture the **classes, operations, and relationships** for the aggregates (and associated) **inside a bounded context**. Do not invent depth the isolated app has not shown. When this run should be a markdown view, pass **`format markdown`** on the command.
 
@@ -89,7 +161,7 @@ The running app is the context. Document Stories and DDD **together**, one small
 follow [this strategy](acceptance-test-strategy.md) — capture the scenarios for one story, and the classes, operations, and relationships of its aggregates within a bounded context, from the running isolated app; format markdown
 ```
 
-### 4 — Write the story and tactical domain as code, execute tests until green
+#### 4 — Write the story and tactical domain as code, execute tests until green
 
 Write this story’s **scenarios as test code** and the **tactical domain** (classes, operations, relationships of the aggregates inside a bounded context) as code. Execute. Fix until they pass. Do not stub away the seam you are proving.
 
@@ -120,7 +192,7 @@ domain/{bounded-context}/{aggregate}/{class}.{system}.ts     ← any further tie
 follow [this strategy](acceptance-test-strategy.md) — write this story's scenarios as tests and the tactical domain (classes, operations, relationships) as code; run them; fix until they pass
 ```
 
-### 5 — Human reviews
+#### 5 — Human reviews
 
 Read the GWT, the named aggregate/operation, and the running app. Reject invented steps, screen-as-class, and replaying a prior story as a Given. Green tests can still encode the wrong story.
 
@@ -138,7 +210,7 @@ the wrong file, the failed rule, one line of what was wrong — now, before the 
 
 
 
-### 6 — Repeat until the app is covered
+#### 6 — Repeat until the app is covered
 
 Next increment on the outline. Cover distinct behaviors (errors, empty, must-not-call), not only the happy path. Stop when stories + domain + tests fail if the captured behavior changes. Same call as step 4.
 
@@ -146,7 +218,7 @@ AI should have the commands in Context so you can just use natural language.
 
 ---
 
-## Where everything lives
+### Where everything lives
 
 ```
 <cdd-repo>/                         # context-driven delivery tools (Stories, DDD, ContextSetup, eval)
@@ -190,7 +262,7 @@ AI should have the commands in Context so you can just use natural language.
 
 ---
 
-## Tools
+### Tools
 
 **[ContextSetup](https://forge.abdworks.net/abd-context-driven-delivery/src/branch/main/cdd_guidance/context_setup)** — `/context-setup /capture_from_live_app` (and `smoke_test`, `scout_app`). Isolate the app: stubs, smoke, scout. No session.
 

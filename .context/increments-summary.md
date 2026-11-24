@@ -360,7 +360,7 @@ Each lesson has the same parts: **What you do**, **What you get** (the benefit),
   - The app runs in isolation, with only its outermost neighbours stubbed, so the seam you are proving stays real.
   - Every page is captured as a screenshot plus an accessibility tree, with one overview the practices can read.
 - *Try it:* smoke-test the app first with `context-setup-smoke-test`, then run the full live-app capture.
-- *Under the hood:* `cdd_guidance/context_setup` (`smoke_test`, `scout_app`, `complete_capture`, `capture_from_live_app`) and `.context/principles/context-as-code-strategy.md`, step 1 "Set up the sandbox".
+- *Under the hood:* `cdd_guidance/context_setup` (`smoke_test`, `scout_app`, `complete_capture`, `capture_from_live_app`) and `.context/principles.md`, Context as code, step 1 "Set up the sandbox".
 - *What happens underneath:*
   1. **Isolate:** classify the app's external systems and write the minimum stubs (canned responses from its neighbours) at the outermost boundary only, never on the seam being proven. Global stubs go in `tests/stubs/{system}/`. A domain's own stubs go in `domain/{aggregate}/stubs/{system}/`, taken from that aggregate's source rather than invented in a test.
   2. **Smoke test:** probe the app's primary screens and pass only when each returns HTTP 2xx or 3xx. The results go to `tests/stubs/stub-inventory.md`.
