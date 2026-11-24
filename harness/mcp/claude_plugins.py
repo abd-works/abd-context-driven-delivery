@@ -131,8 +131,7 @@ class ClaudePlugins:
             return False
         return (entry.name == name and entry.parent.name in ("claude-plugins", CHAT_PLUGINS)) or self._plugin_named(entry) == name
 
-    @staticmethod
-    def _plugin_named(folder: Path) -> str:
+    def _plugin_named(self, folder: Path) -> str:
         """The name the plugin in folder gives itself in its manifest; empty when folder holds no plugin it can read."""
         try:
             return str(JsonFile(folder / ".claude-plugin" / "plugin.json").read().get("name", ""))

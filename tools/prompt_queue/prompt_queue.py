@@ -66,6 +66,57 @@ def persons_words(text: str) -> str:
     return _VIEWER_STATE.sub(" ", text).strip()
 
 
+# A markdown line's own marks, so a heading or a list item reads as its words.
+_LINE_MARKS = re.compile(r"^\s*(?:#+|[-*>]|\d+[.)])\s+")
+# A message that is only an answer or an acknowledgement, such as yes, no, ok or thanks.
+_ANSWER = re.compile(
+    r"^(?:y|n|yes|yeah|yep|no|nope|ok|okay|k|sure|thanks|thank you|thx|agreed|agree|done|good|great|fine|right|correct"
+    r"|got it|go|go ahead|do it)[\s.!]*$", re.IGNORECASE)
+# A message that is only marks, such as ??? or !.
+_ONLY_MARKS = re.compile(r"^[\s?!.,]*$")
+# The words a question opens with.
+_QUESTION_OPENING = re.compile(
+    r"^(?:why|what|where|when|who|which|how|is|are|was|were|do|does|did|can|could|should|would|will|has|have|isn't"
+    r"|aren't|doesn't|don't|didn't)\b", re.IGNORECASE)
+# The words that ask for work, so a message holding them is work even when it also asks something.
+_ASKS_FOR_WORK = re.compile(
+    r"\b(?:please|pls|fix|add|make|change|remove|delete|move|rename|build|write|run|deploy|pin|repin|commit|push|merge"
+    r"|update|create|implement|refactor|restart|install|open|close|start|stop|put|send|show|hide)\b", re.IGNORECASE)
+# Where a paste starts: a paste is the person's material for work, so a message holding one is never only talk.
+_PASTE_OPENING = re.compile(r"<pasted_content\b", re.IGNORECASE)
+# The most words a message that is only talk holds; a longer one is likely to ask for something.
+_TALK_WORDS = 15
+
+
+class SentMessage:
+    """A message the person sent straight to the chat, read for whether it asks for work."""
+
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    @property
+    def is_only_talk(self) -> bool:
+        """Whether the message is only talk, not work to do: an answer or an acknowledgement (yes, ok, thanks), only
+        marks (???), or a short question that asks for no work (why is there no flush button?). The chat answers talk,
+        so the agent is not asked to place it on the queue. A board viewer's state is not the person's words, and a
+        message that is nothing else is talk; a message holding a paste never is."""
+        if _PASTE_OPENING.search(self._text):
+            return False
+        words = self._words
+        if _ONLY_MARKS.match(words) or _ANSWER.match(words):
+            return True
+        return self._is_question(words) and len(words.split(" ")) <= _TALK_WORDS and not _ASKS_FOR_WORK.search(words)
+
+    @property
+    def _words(self) -> str:
+        """The person's words as one line, each markdown line's own marks taken off."""
+        lines = (_LINE_MARKS.sub("", line).strip() for line in persons_words(self._text).splitlines())
+        return re.sub(r"\s+", " ", " ".join(line for line in lines if line))
+
+    def _is_question(self, words: str) -> bool:
+        return words.rstrip().endswith("?") or bool(_QUESTION_OPENING.match(words))
+
+
 class PromptStep(TypedDict):
     """One thing the agent plans to do for a queued prompt, as the queue's file and set_steps hold it: its text and
     where it stands. A step has no behaviour of its own: its prompt's *PromptSteps* change it."""
@@ -582,6 +633,12 @@ class PromptQueue:
     def attach(self, prompt: str, filename: str, media_type: str, data: str) -> PromptQueue:
         """Keep an image or document pasted in a queued draft beside the queued prompt whose id is prompt: data is its bytes in base64, saved as a file in this chat's folder whose path the prompt lists under attachments, for the agent to open when it takes the prompt."""
         return self._changing(prompt, lambda found: found.attach(self._saved_attachment(prompt, len(found.attachments) + 1, filename, media_type, data)))
+
+    @mcp
+    @agent_tool
+    def is_only_talk(self, message: str) -> dict[str, bool]:
+        """Answer whether message, one the person sent straight to the chat, is only talk: an answer, an acknowledgement, only marks, or a short question that asks for no work. The chat answers talk and queues none of it; a board viewer's state in the message is not the person's words, and a message holding a paste is never only talk."""
+        return {"is_only_talk": SentMessage(message).is_only_talk}
 
     def queue_once(self, source: str, texts: list[str]) -> int:
         """Queue texts, in order, one prompt each, once for source, such as the steps of a handoff called source: a

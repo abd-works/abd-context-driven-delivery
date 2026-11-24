@@ -13,7 +13,6 @@ if str(_REPO) not in sys.path:
 from expects import equal, expect
 from mamba import after, before, context, description, it
 
-from harness.installation.ide_layout import IdeLayout
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.cdd_home_checkout_examples import QUEUE_MOD, checkout_with_board_mod
 from harness.mcp.mcp_address import McpAddress
@@ -57,7 +56,7 @@ with description("a cdd home's Claude Code plugins") as self:
             with before.each:
                 self.loaded: dict[str, Path] = {}
                 plugins = SimpleNamespace(install=lambda plugin: self.loaded.setdefault(plugin.name, plugin.marketplace.mod_folder(plugin)) and "watched")
-                server = McpChannelServer(self.lanes.dev.served_checkout(self.feature), self.lanes, plugins, IdeLayout("Claude"))
+                server = McpChannelServer(self.lanes.dev.served_checkout(self.feature), self.lanes, plugins)
                 server.install_plugins()
 
             # The cdd plugin goes through the fixed folders like every mod, so the settings name only those.

@@ -4,7 +4,6 @@ import type { AgentSpawnInput, AgentSpawnResult, EngineInterface, McpToolResult,
 import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
 import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
-import { isOnlyTalk } from './talk'
 
 const GROUPING_MODEL = 'sonnet'
 const GROUPING_TOKENS = 4096
@@ -541,15 +540,27 @@ async function workOn($: EngineInterface, id: string): Promise<void> {
   await update($, plan, () => [])
 }
 
+/** Whether the cdd server reads a message the person sent as only talk, which the chat answers and queues none of. A
+ * server that cannot answer shows the failure, and the message is read as work, so the agent still decides where it
+ * goes. */
+async function isOnlyTalk($: EngineInterface, message: string): Promise<boolean> {
+  try {
+    return (await callQueue<{ is_only_talk: boolean }>($, 'is_only_talk', { message })).is_only_talk
+  } catch (thrown) {
+    await showFailure($, `Not read as talk or work: ${reasonOf(thrown)}`, 'Calling prompt-queue.is_only_talk on the cdd server')
+    return false
+  }
+}
+
 /** A prompt sent straight to the chat, as the queue holds it: its id, and what the agent is told about it. */
 export type SentPrompt = { id: string; note: string }
 
 /** A prompt the person sent straight to the chat goes to the chat as sent and puts nothing on the queue: the agent is
  * told about the queue beside it and decides whether it is work, and only then puts it there, as a step of the goal it
- * belongs to or a card of its own with a clean title. A message that is only talk (isOnlyTalk) carries no note, since
- * the chat just answers it. */
+ * belongs to or a card of its own with a clean title. A message the cdd server reads as only talk
+ * (prompt-queue.is_only_talk) carries no note, since the chat just answers it. */
 export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
-  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text) || isOnlyTalk(text)) {
+  if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text) || (await isOnlyTalk($, text))) {
     return undefined
   }
   // The queue as the server holds it now: the chat's start may have read it before the cdd server connected.

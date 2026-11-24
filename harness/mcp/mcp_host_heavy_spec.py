@@ -335,7 +335,7 @@ with description("an MCP host tool result") as self:
             self.work.mkdir()
             Sessions(self.repo).switch("alpha", self.work, create=True)
             self.host = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo))
-            self.blocks = self.host._content_blocks(Sessions(self.repo).current())
+            self.blocks = self.host.chat_protocol.content_blocks(Sessions(self.repo).current())
             self.payload = json.loads(self.blocks[0].text)
 
         with after.each:
@@ -351,7 +351,7 @@ with description("an MCP host tool result") as self:
         with before.each:
             self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
             commit = Commit("abc123", "push: checkpoint\nReviewed-By: human")
-            self.payload = json.loads(self.host._content_blocks(commit)[0].text)
+            self.payload = json.loads(self.host.chat_protocol.content_blocks(commit)[0].text)
 
         with it("should expose the commit sha as JSON"):
             expect(self.payload["sha"]).to(equal("abc123"))

@@ -32,7 +32,7 @@ def _call(host: McpHost, name: str, project: Path, chat_id: str = "", chat_proce
     """Send one tools/call request to the host's protocol handler, as a chat that started on project sends it; with
     chat_id, as the Claude Code chat of that id; with chat_process, from the Claude Code process of that id; with
     client, over the connection whose caller's end is that address."""
-    handler = host._protocol.request_handlers[types.CallToolRequest]
+    handler = host.chat_protocol.protocol.request_handlers[types.CallToolRequest]
     request = types.CallToolRequest(method="tools/call", params=types.CallToolRequestParams(name=name, arguments={}))
     headers = {
         PROJECT_HEADER: str(project),
@@ -48,7 +48,7 @@ def _call(host: McpHost, name: str, project: Path, chat_id: str = "", chat_proce
 
 
 def _list(host: McpHost) -> list[str]:
-    handler = host._protocol.request_handlers[types.ListToolsRequest]
+    handler = host.chat_protocol.protocol.request_handlers[types.ListToolsRequest]
     return [tool.name for tool in asyncio.run(handler(types.ListToolsRequest(method="tools/list"))).root.tools]
 
 

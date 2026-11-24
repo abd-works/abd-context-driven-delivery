@@ -30,6 +30,9 @@ type TestEngine = Parameters<Extract<Parameters<typeof test>[1], (...args: never
 
 // The chat the tests run in, as the engine names it.
 const CHAT = 'chat-1'
+// The messages the stubbed cdd server reads as only talk: which messages are talk is the server's to decide
+// (prompt_queue_spec.py), so the mod is tested on what it does with the answer.
+const TALK = ['why is there no flush button?', 'yes']
 
 type Step = { text: string; state: 'pending' | 'in_progress' | 'done' }
 type Prompt = { id: string; text: string; steps?: Step[]; attachments?: string[]; is_done?: boolean; robot?: string }
@@ -53,6 +56,7 @@ function promptQueueTools(prompts: Prompt[]) {
   const at = (id: unknown) => prompts.findIndex(prompt => prompt.id === id)
   const operations: Record<string, (args: Record<string, unknown>) => unknown> = {
     show: () => answer(),
+    is_only_talk: args => ({ is_only_talk: TALK.includes(String(args.message)) }),
     add: args => operations.add_all!({ texts: [args.text] }),
     add_all: args => {
       for (const text of (args.texts as string[]).filter(text => text.trim())) prompts.push({ id: `added-${++added}`, text: text.trim() })
@@ -155,10 +159,17 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
   const server = promptQueueTools(structuredClone(queued))
   on('session.id', () => ({ value: CHAT }))
   on('session.root', () => ({ value: 'C:/work' }))
+  // Each tool the mod called, with its arguments, and the tools the server refuses, as a test sets them.
+  const calls: { tool: string; args: Record<string, unknown> }[] = []
+  const refused = new Set<string>()
   on('mcp.call', (_, e) => {
     const { server: called, tool, args } = e as { server: string; tool: string; args: Record<string, unknown> }
     if (!servers.includes(called)) {
       return { deny: `no MCP server ${called}` }
+    }
+    calls.push({ tool, args })
+    if (refused.has(tool)) {
+      return { deny: `${tool} could not answer` }
     }
     return { value: { content: [{ type: 'text', text: JSON.stringify(server.call(tool, args)) }], isError: false } }
   })
@@ -181,7 +192,7 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
     return { value: { isSet: true, version } }
   })
 
-  return { get prompts() { return server.prompts }, flushes: server.flushes, stored }
+  return { get prompts() { return server.prompts }, flushes: server.flushes, stored, calls, refuse: (tool: string) => refused.add(tool) }
 }
 
 for (const surface of ['desktop', 'terminal'] as const) {
@@ -1084,8 +1095,9 @@ test("↓ on a step moves it one place down among its prompt's steps", async ($,
 
 
 /** A turn is running on prompt a, the one being worked, when the person sends a message. */
-async function messageSentMidWork($: Parameters<Parameters<typeof test>[1]>[0], on: TestOn, text: string) {
+async function messageSentMidWork($: Parameters<Parameters<typeof test>[1]>[0], on: TestOn, text: string, arrange: (seeded: ReturnType<typeof seedQueue>) => void = () => {}) {
   const seeded = seedQueue(on, false, '', QUEUED.map(prompt => ({ ...prompt })), true, '', 'a')
+  arrange(seeded)
   planToolAnswers(on)
   on('turn.start', (_, e) => e)
   const carried: string[] = []
@@ -1164,16 +1176,14 @@ test('the agent is told to check the queue after placing the message', async ($,
 })
 
 // A question, an answer or a comment is talk, not work: the chat answers it, and the queue keeps only work to do.
-for (const talk of ['why is there no flush button?', 'where is the flush button', 'yes', 'ok', '???', `${VIEWER_STATE}
+for (const talk of TALK) {
+  test(`a message the cdd server reads as only talk, such as ${JSON.stringify(talk)}, sent mid-work carries no note`, async ($, on) => {
+    const { carried } = await messageSentMidWork($, on, talk)
 
-?`]) {
-  test(`a message that is only talk, such as ${JSON.stringify(talk.slice(-30))}, sent mid-work is not filed on the queue`, async ($, on) => {
-    const { seeded } = await messageSentMidWork($, on, talk)
-
-    expect(seeded.prompts[0]!.steps ?? []).toEqual([])
+    expect(carried.join()).not.toContain('on no card')
   })
 
-  test(`a message that is only talk, such as ${JSON.stringify(talk.slice(-30))}, sent between turns is not queued`, async ($, on) => {
+  test(`a message the cdd server reads as only talk, such as ${JSON.stringify(talk)}, sent between turns is not queued`, async ($, on) => {
     const seeded = seedQueue(on, false, '', [], true)
     on('prompt.submit', (_, e) => ({ text: e.text }))
 
@@ -1182,6 +1192,22 @@ for (const talk of ['why is there no flush button?', 'where is the flush button'
     expect(seeded.prompts).toEqual([])
   })
 }
+
+test('the mod asks the cdd server whether a message is only talk, sending the message as the person sent it', async ($, on) => {
+  const { seeded } = await messageSentMidWork($, on, `${VIEWER_STATE}
+
+?`)
+
+  expect(seeded.calls.filter(call => call.tool === 'prompt-queue.is_only_talk').map(call => call.args.message)).toEqual([`${VIEWER_STATE}
+
+?`])
+})
+
+test('a message the cdd server could not read is given the note, so the agent still decides where it goes', async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'yes', seeded => seeded.refuse('prompt-queue.is_only_talk'))
+
+  expect(carried.join()).toContain('on no card')
+})
 
 const GROUPED = [
   { description: 'Write the story map', prompts: ['Write the scenarios', 'Validate them'], name: 'Sparky' },

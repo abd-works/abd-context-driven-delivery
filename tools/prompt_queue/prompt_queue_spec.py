@@ -456,3 +456,38 @@ with describe(PromptQueue):
             except ChatIdNotAnId:
                 pass
             expect((self.folder / "escape-chat").exists()).to(equal(False))
+
+    with context("that the person sent a message to the chat"):
+        with it("reads a question that asks for no work as only talk"):
+            expect(self.queue.is_only_talk("why is there no flush button?")).to(equal({"is_only_talk": True}))
+
+        with it("reads a question without its question mark as only talk"):
+            expect(self.queue.is_only_talk("where is the flush button")).to(equal({"is_only_talk": True}))
+
+        with it("reads an answer as only talk"):
+            expect(self.queue.is_only_talk("yes")).to(equal({"is_only_talk": True}))
+
+        with it("reads an acknowledgement as only talk"):
+            expect(self.queue.is_only_talk("ok")).to(equal({"is_only_talk": True}))
+
+        with it("reads a message of only marks as only talk"):
+            expect(self.queue.is_only_talk("???")).to(equal({"is_only_talk": True}))
+
+        with it("reads a question sent from a board viewer by the person's words alone, as only talk"):
+            expect(self.queue.is_only_talk(f"{VIEWER_STATE}\n\n?")).to(equal({"is_only_talk": True}))
+
+        with it("reads a request for work as work"):
+            expect(self.queue.is_only_talk("Fix the Files app")).to(equal({"is_only_talk": False}))
+
+        with it("reads a question that also asks for work as work"):
+            expect(self.queue.is_only_talk("why is there no flush button? please add one")).to(equal({"is_only_talk": False}))
+
+        with it("reads a long question as work, since it is likely to ask for something"):
+            question = "why does the board show every epic twice when I open it from the chat bar after a repin of the lane?"
+            expect(self.queue.is_only_talk(question)).to(equal({"is_only_talk": False}))
+
+        with it("reads a message holding a paste as work, since a paste is the person's material for work"):
+            expect(self.queue.is_only_talk('<pasted_content id="1">notes</pasted_content> ok?')).to(equal({"is_only_talk": False}))
+
+        with it("reads a request for work sent from a board viewer as work"):
+            expect(self.queue.is_only_talk(f"{VIEWER_STATE}\n\nPlease add a flush button")).to(equal({"is_only_talk": False}))

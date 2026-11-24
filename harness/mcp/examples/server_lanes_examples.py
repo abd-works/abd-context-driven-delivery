@@ -97,7 +97,7 @@ class DevLaneInProcess(McpAddress):
         super().__init__(DEV_PORT)
         from starlette.testclient import TestClient
 
-        self._client = TestClient(dev_host._http_app(DEV_PORT))
+        self._client = TestClient(dev_host.http_endpoints.app(DEV_PORT))
         self.handed_over: list[SentCall] = []
 
     def ping_answer(self, reply_seconds: float) -> dict:

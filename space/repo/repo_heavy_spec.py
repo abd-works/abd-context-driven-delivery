@@ -518,7 +518,7 @@ with description("the repo push toolset"):
             commit = host.dispatch(
                 "repo.push_commit", {"message": "push: checkpoint", "sync_remote": False}
             )
-            payload = json.loads(host._content_blocks(commit)[0].text)
+            payload = json.loads(host.chat_protocol.content_blocks(commit)[0].text)
             expect(payload["sha"]).to(equal(_git(self.repo_root, "rev-parse", "HEAD")))
 
         with it("should publish push_commit on MCP and keep /push as instructions only"):
