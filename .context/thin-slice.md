@@ -569,27 +569,7 @@ section: body
 - *Share Real-Time Story Map Session*
 - *Change Story Map With AI*
 
-### Increment 15: Guard Work And Recover Fast
-
-**Outcome:** a person sees at once when cdd is down, fixes it from where they are, and the agent is stopped before it breaks a rule.
-
-**Slicing notes:** mod-ideas build order 1, server health band and rule guards: small, and they fix problems that already happened.
-
-**Stories in this increment:**
-
-- *Refuse Forbidden Edits*
-- *Warn When Work Outruns Fidelity*
-- *Catch Banned Words In Markdown*
-- *Warn On Branch Mismatch*
-- *Open Board Server Health Panel*
-- *Reconnect CDD Server From Board*
-- *Reinstall CDD Tools From Board*
-- *Reload Everything With One Button*
-- *Update CDD From Chat Bar*
-- *Restart Parts From Chat Bar*
-- *Open App From Health Panel*
-
-### Increment 16: Bring Chat Bar Level With Board
+### Increment 15: Bring Chat Bar Level With Board
 
 **Outcome:** everything a person can do to one session on the board, they can do from the chat bar.
 
@@ -608,7 +588,7 @@ section: body
 - *Push Work From Chat Bar*
 - *Pull Latest From Chat Bar*
 
-### Increment 17: Draw Linked Models On The Canvas
+### Increment 16: Draw Linked Models On The Canvas
 
 **Outcome:** from any story a person reaches its screen, its classes and its bounded context by clicking, and back, and every diagram matches its drawio layout.
 
@@ -625,7 +605,7 @@ section: body
 - *See The Stories That Exercise A Class*
 - *Mark Model Nodes That Fail Rules*
 
-### Increment 18: Maybe Later
+### Increment 17: Maybe Later
 
 **Outcome:** work set aside for now because it is complicated and not needed yet; picked up only when asked.
 
