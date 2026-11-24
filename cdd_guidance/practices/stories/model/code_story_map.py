@@ -329,12 +329,16 @@ class CodeStory(Story, CodeStoryNode):
         self.scenarios.append(scenario)
 
     def _take_background_examples(self, content: str) -> None:
+        """The examples the story's comment carries for its background; a story whose code writes no background holds
+        them on a background of its own with no steps, as its scenarios file held them above its scenarios."""
         match = re.search(r"background-examples:\s*(\{.*\})", content)
-        if match is None or not self.backgrounds:
+        if match is None:
             return
         payload = json.loads(match.group(1))
         if not isinstance(payload, dict):
             return
+        if not self.backgrounds:
+            self.backgrounds = [Background("background", 1)]
         for name, cells in payload.items():
             self.backgrounds[0].examples[name] = cells if isinstance(cells, dict) else name
 

@@ -25,7 +25,7 @@ from cdd_guidance.practices.stories.model.story_map import Background, StepType,
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles, path_from, source_at
 from cdd_guidance.practices.stories.model.markdown.links import DomainTermLinks, StoryMapLinks, unlink
 from cdd_guidance.practices.stories.model.markdown.map_reading import OutlineLines, ReplacedOutline, described, has_map_structure, is_outline, read_at, read_map
-from cdd_guidance.practices.stories.model.markdown.markup import STEP_LINE, MarkdownExample, MarkdownStep, step_line, step_lines, strip_backticks
+from cdd_guidance.practices.stories.model.markdown.markup import STEP_LINE, MarkdownExample, MarkdownStep, step_block_lines, step_line, step_lines, strip_backticks
 from cdd_guidance.practices.stories.model.markdown.scenario_file import SCENARIO_HEADING, ScenarioFileReading, ScenarioFiles
 from cdd_guidance.practices.stories.model.markdown.read_lines import HeadingLine, HeldLines, ReadLine, ReadScenarioDocument, written_lines
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import StorySection
@@ -44,6 +44,12 @@ _DEEPEST_HEADING = 6
 # below it.
 _SECTION_TOP = 3
 _SECTION_HEADING = re.compile(r"^(#{3,6}) (.*)$")
+
+
+# The heading level the scenarios template writes a scenario and an outline's Examples at, under Behaviors.
+_TEMPLATE_SCENARIO_MARKS = "####"
+# The name a story's background has when the file heads it only `### Background`.
+_SHARED_BACKGROUND = "background"
 
 
 # How a story's own scenarios file ends, after the story's name in snake case.
@@ -81,6 +87,15 @@ class MarkdownScenario(Scenario):
         lines.extend(example_table_lines(self.examples))
         return lines if lines[-1] == "" else lines + [""]
 
+    def template_lines(self) -> List[str]:
+        """This scenario as the scenarios template writes it under its story's Behaviors heading: its heading, its
+        steps in Given, When, Then order, then an outline's examples table under its own Examples heading."""
+        steps = [*self.steps_in(StepType.GIVEN), *(step for whens, thens in self.when_then_runs() for step in [*whens, *thens])]
+        lines = [self.heading(_TEMPLATE_SCENARIO_MARKS), "", *step_block_lines(steps)]
+        if self.examples:
+            lines.extend(["", *example_table_lines(self.examples, _TEMPLATE_SCENARIO_MARKS)])
+        return lines if lines[-1] == "" else lines + [""]
+
     def document_text(self) -> str:
         """This scenario in a scenarios document: each line as it was read, with its heading and steps written anew
         where the model changed them; a scenario not read from a document is written whole, as ``lines`` writes it."""
@@ -109,11 +124,12 @@ def _example_tables(examples: "Examples") -> List[tuple]:
     return list(tables.values())
 
 
-def example_table_lines(examples: "Examples") -> List[str]:
-    """Examples as markdown tables under an Examples heading: one table per group and set of columns."""
+def example_table_lines(examples: "Examples", marks: str = "###") -> List[str]:
+    """Examples as markdown tables under an Examples heading at the level marks gives: one table per group and set of
+    columns."""
     if not examples:
         return []
-    lines = ["### Examples", ""]
+    lines = [f"{marks} Examples", ""]
     for group, headers, entries in _example_tables(examples):
         if group:
             lines.extend([f"#### {group}", ""])
@@ -166,8 +182,22 @@ class MarkdownStory(Story):
         lines.extend([f"## Story: {self.name}", ""] if self.name else [])
         lines.extend([self.notes, ""] if self.notes else [])
         links = DomainTermLinks(self.notes)
-        lines.extend(links.linked(line) if STEP_LINE.match(line) else line for line in self._scenario_section_lines())
+        lines.extend(links.linked(line) if STEP_LINE.match(line) else line for line in self._template_lines())
         return "\n".join(lines).rstrip() + "\n"
+
+    def _template_lines(self) -> List[str]:
+        """The story's examples, its background and its scenarios under the headings the scenarios template writes:
+        Examples, Background, then Behaviors with each scenario under it."""
+        story_examples = self.backgrounds[0].examples if self.backgrounds and self.backgrounds[0].examples else self._shared_examples()
+        lines = example_table_lines(story_examples)
+        for background in (background for background in self.backgrounds if background.steps):
+            heading = "### Background" if background.name == _SHARED_BACKGROUND else f"### Story Background: {background.name}"
+            lines.extend([heading, "", *step_block_lines(background.steps), ""])
+        if self.scenarios:
+            lines.extend(["### Behaviors", ""])
+        for scenario in self.scenarios:
+            lines.extend(self._as_markdown(scenario).template_lines())
+        return lines
 
     def outline_lines(self, level: int, links: Optional[StoryMapLinks]) -> List[str]:
         """This story as an outline heading at level, linked to its own file when links name one, with its
@@ -565,7 +595,7 @@ class MarkdownStoryMap(StoryMap):
         story = MarkdownStory(section.name, len(holder.stories) + 1, StoryType.USER)
         read_at(story, file, section.line)
         section.give_notes(story)
-        if section.background.steps:
+        if section.background.steps or section.background.examples:
             story.backgrounds = [section.background]
         for scenario in section.scenarios:
             story.scenarios.append(scenario)

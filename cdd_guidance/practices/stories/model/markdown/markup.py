@@ -127,3 +127,22 @@ def step_lines(step: Step) -> List[str]:
     if getattr(step, "call_graph", None):
         lines.extend(["", "```realization", step.call_graph.block(), "```"])
     return lines
+
+
+# How the scenarios template ends a step line that another step line follows: two spaces, a markdown line break.
+_LINE_BREAK = "  "
+# How the scenarios template indents an And or But under the step it continues.
+_CONTINUATION_INDENT = "  "
+
+
+def step_block_lines(steps: List[Step]) -> List[str]:
+    """Steps as the scenarios template writes them: each step, the And and But lines chained onto it indented under
+    it, its realization fence after them, and every step line that another step line follows ending in a line break."""
+    lines: List[str] = []
+    for step in steps:
+        lines.append(step_line(step))
+        lines.extend(_CONTINUATION_INDENT + step_line(extra) for extra in step.ands)
+        if getattr(step, "call_graph", None):
+            lines.extend(["", "```realization", step.call_graph.block(), "```", ""])
+    return [line + _LINE_BREAK if STEP_LINE.match(line) and index + 1 < len(lines) and STEP_LINE.match(lines[index + 1]) else line for index, line in enumerate(lines)]
+

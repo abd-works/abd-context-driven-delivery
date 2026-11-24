@@ -14,15 +14,16 @@ from cdd_guidance.practices.stories.model.python.python_story_map import PythonS
 from cdd_guidance.practices.stories.model.typescript.typescript_story_map import TypeScriptStoryMap
 
 _ADD_BOOK = Path(__file__).resolve().parent / "fixtures" / "bookshop" / "story_tests" / "fill-cart" / "add-books" / "add_book_to_cart_story.test.md"
+_CHANGE_QUANTITY = _ADD_BOOK.with_name("change_cart_line_quantity_story.test.md")
 _DOMAIN_MODEL = "../../../.context/domain-model.md"
 _BOOK = f"++[Book]({_DOMAIN_MODEL}#book-aggregate-root-entity)++"
 _CART = f"++[Cart]({_DOMAIN_MODEL}#cart-aggregate-root-entity)++"
 
 
-def _back_from(format: type) -> str:
-    """The scenarios file of Add Book To Cart, written from the story read back from the code format writes it in."""
+def _back_from(format: type, scenarios: Path = _ADD_BOOK) -> str:
+    """The scenarios file, written from the story read back from the code format writes it in."""
     code = format(tests_root="tests")
-    files = code.render(MarkdownStoryMap().parse(_ADD_BOOK.read_text(encoding="utf-8")))
+    files = code.render(MarkdownStoryMap().parse(scenarios.read_text(encoding="utf-8")))
     story = format(tests_root="tests").parse(files).descendants.stories()[0]
     return MarkdownStory.copy_of(story).scenarios_text()
 
@@ -77,3 +78,23 @@ with description("a scenarios file written after the template") as self:
 
         with it("should write each examples table once"):
             expect(self.back.count("| book | Tiny Tales | 978-1 | Tiny Tales | 5 | 10 |")).to(equal(1))
+
+
+# Requested 2026-11-24: a scenarios file written after the template comes back byte for byte, its line breaks (two
+# spaces at the end of a step line), the indent before an And, its Background and its Behaviors heading included.
+with description("a scenarios file written after the template, through a code format and back") as self:
+    with context("of a story with a Background and a realization, through Python"):
+        with it("should come back as the file was written"):
+            expect(_back_from(PythonStoryMap)).to(equal(_ADD_BOOK.read_text(encoding="utf-8")))
+
+    with context("of a story with a Background and a realization, through TypeScript"):
+        with it("should come back as the file was written"):
+            expect(_back_from(TypeScriptStoryMap)).to(equal(_ADD_BOOK.read_text(encoding="utf-8")))
+
+    with context("of a story with a Scenario Outline and its examples, through Python"):
+        with it("should come back as the file was written"):
+            expect(_back_from(PythonStoryMap, _CHANGE_QUANTITY)).to(equal(_CHANGE_QUANTITY.read_text(encoding="utf-8")))
+
+    with context("of a story with a Scenario Outline and its examples, through TypeScript"):
+        with it("should come back as the file was written"):
+            expect(_back_from(TypeScriptStoryMap, _CHANGE_QUANTITY)).to(equal(_CHANGE_QUANTITY.read_text(encoding="utf-8")))

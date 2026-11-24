@@ -206,7 +206,7 @@ How many story columns an epic spans on a drawn map, and how deep its sub-epics 
 + evidence: list[str]
 + front_matter: str
 + notes: str
-	// what a person wrote about the story in its scenarios file that no scenario holds: the front matter above its heading, and the lines under it before its examples, backgrounds and scenarios (its kind, a story map link, its domain terms, prose). A code format writes each line in the story's comment under `^` or `|` and reads it back; the scenarios file links each underlined domain term a step names as the notes link it (*DomainTermLinks*)
+	// what a person wrote about the story in its scenarios file that no scenario holds: the front matter above its heading, and the lines under it before its examples, backgrounds and scenarios (its kind, a story map link, its domain terms, prose). A code format writes each line in the story's comment under `^` or `|` and reads it back; the scenarios file (`MarkdownStory.scenarios_text`) is written in the scenarios template's layout and links each underlined domain term a step names as the notes link it (*DomainTermLinks*), so a file written after the template comes back through code byte for byte
 + backgrounds: list[Background]
 + scenarios: list[Scenario]
 + scenario_class: type

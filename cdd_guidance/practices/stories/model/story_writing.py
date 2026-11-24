@@ -260,7 +260,8 @@ class StoryWriting:
 
     def _story_head(self, story: "Story") -> List[str]:
         lines = self.story_open(story) + story.setup.lines_in(self.language, self.language.indent, "")
-        for background in story.backgrounds:
+        # A background with no steps holds only the examples its story's comment carries, so it writes no block.
+        for background in (background for background in story.backgrounds if background.steps):
             lines.extend(self.story_background_lines(background))
         return lines
 
