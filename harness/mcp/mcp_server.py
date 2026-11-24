@@ -295,9 +295,8 @@ class McpChannelServer(ChannelServer):
     def ensure_running(self) -> list[str]:
         """Start the one cdd server when none answers, installing ``~/.cdd/`` on first use; an install that finds a
         server already running leaves it, and the code it serves, alone. For Claude Code also install the cdd plugin
-        and the mods of the code the served lane runs; chats install mods from the stable lane's marketplace, so a dev
-        lane's mods are published there first. A dev lane whose served feature's worktree is gone goes back to main
-        first, and the install says so."""
+        and the mods of the stable lane's marketplace, which every chat installs from. A dev lane whose served
+        feature's worktree is gone goes back to main first, and the install says so."""
         returned = self._dev_lane.return_to_main_when_feature_gone()
         lines = [f"dev lane: {returned}"] if returned else []
         lines.append(f"mcp: {self.served.ensure()}")
@@ -307,12 +306,11 @@ class McpChannelServer(ChannelServer):
         return lines
 
     def install_mods(self) -> list[str]:
-        """Install the mods of the code the served lane runs, such as the board and the prompt queue, one line for each.
-        Chats install mods from the stable lane's marketplace, so a dev lane's mods are published there first."""
-        marketplace = self._daemon.home.marketplace
-        if self.served.home.is_dev_lane:
-            marketplace.publish_mods(self.served.home.source)
-        return [f"{plugin.name}: {self._claude_plugins.install(plugin)}" for plugin in marketplace.mods]
+        """Install the mods of the stable lane's marketplace, which every chat's plugins come from, such as the board and
+        the prompt queue, one line for each. It holds the stable lane's own mods only: the stable server runs main, so a
+        feature's mods published there would give main's chats buttons their server cannot serve. A dev lane's mods stay
+        in its own marketplace."""
+        return [f"{plugin.name}: {self._claude_plugins.install(plugin)}" for plugin in self._daemon.home.marketplace.mods]
 
 
 class McpInstallation(RegisteredChannel):
@@ -1001,17 +999,10 @@ class McpHost:
         return {"is_restarted": True, "tools": len(tools) + len(self._checkout_toolsets.prompts), "exceptions": self._checkout_toolsets.skipped.as_data}
 
     def _publish_mods(self) -> None:
-        """Publish the chat bar and the prompt queue from the code the server now runs, so a chat watching the published
-        copy reloads it with the server's restart rather than at the next install."""
+        """Publish the chat bar and the prompt queue from the code the server now runs into its own lane's marketplace,
+        so a chat watching the published copy reloads it with the server's restart rather than at the next install."""
         if self._home is not None and self._home.is_installed:
-            self._home.marketplace.publish_mods_for_chats(is_dev_lane_running=self._dev_lane_runs())
-
-    def _dev_lane_runs(self) -> bool:
-        """Whether the dev lane's server answers beside this stable one; a dev lane's own server never asks."""
-        if self._home.is_dev_lane:
-            return True
-        dev = self._lanes.dev
-        return dev.home.is_installed and dev.daemon.is_running()
+            self._home.marketplace.publish_mods(self._home.source)
 
     def diagnose(self) -> dict[str, Any]:
         """What this host publishes: the ping's answer, every tool name, and what start-up skipped."""

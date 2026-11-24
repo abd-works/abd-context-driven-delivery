@@ -18,6 +18,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.mcp.cdd_home import CddHome, RuntimeNotInstalled, RuntimeRecordUnreadable
 from harness.mcp.claude_marketplace import ClaudeMarketplace
 from harness.mcp.cdd_home_checkout_examples import BOARD_MOD, QUEUE_MOD, checkout_with_board_mod
+from harness.mcp.server_lanes import ServerLanes
 
 def _plugin_names(home: CddHome) -> list[str]:
     marketplace = json.loads((home.marketplace.folder / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
@@ -171,7 +172,7 @@ with description("a lane's served feature") as self:
     with before.each:
         self.root = Path(tempfile.mkdtemp(prefix="cdd-home-"))
         self.stable = CddHome(self.root / ".cdd")
-        self.dev = self.stable.dev_lane
+        self.dev = ServerLanes(self.stable).dev.home
         self.worktree = self.root / "checkout-feature"
         self.worktree.mkdir()
 

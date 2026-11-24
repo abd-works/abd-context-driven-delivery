@@ -145,8 +145,6 @@ The user's cdd folder: which checkout the one server runs, the pinned copy of it
 + pinned_checkout: Path
 + is_installed: bool
 + is_dev_lane: bool
-+ stable_lane: CddHome
-+ dev_lane: CddHome
 + source: Path
 + mode: str
 + served_branch: str
@@ -186,8 +184,7 @@ The local Claude Code marketplace a cdd home publishes, its `claude-plugins` fol
 	// a served checkout's own mod folder, so an edit there reloads in every chat, else the published copy
 + publish_cdd_plugin(server: dict[str, object]): list[Path]
 + publish_mods(code: Path): None
-+ publish_mods_for_chats(is_dev_lane_running: bool): None
-	// this lane's mods, then the dev lane's into the stable lane's marketplace, which chats install from
+	// into this lane's own marketplace only: a dev lane's mods never reach the stable lane's, which every chat installs from
 ---<<creates>>--> PublishedPlugin
 ---<<finds the mods to publish through>>--> PublishedMods
 ---<<publishes the mods one install at a time, holding>>--> InstallLock

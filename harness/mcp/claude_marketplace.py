@@ -223,15 +223,6 @@ class ClaudeMarketplace:
         if self._home.mode == self._home.CHECKOUT and Path(code).resolve() == self._home.source.resolve():
             JsonFile(mod.folder / mod.install_command_file).write({"command": self.install_command})
 
-    def publish_mods_for_chats(self, is_dev_lane_running: bool) -> None:
-        """Publish this lane's mods when its server restarts, then the mods every chat installs, which come from the
-        stable lane's marketplace: a dev lane's own, and, on the stable lane, the dev lane's after its own while the dev
-        lane's server runs, so a restart of either server leaves the feature's mods in the chats."""
-        self.publish_mods(self._home.source)
-        if self._home.is_dev_lane or is_dev_lane_running:
-            stable = self._home.stable_lane
-            stable.marketplace.publish_mods(stable.dev_lane.source)
-
     def _write_listing(self) -> Path:
         """List every plugin published here, the cdd plugin first; a marketplace naming a missing folder fails to load."""
         folders = sorted(folder for folder in self.folder.iterdir() if folder.is_dir()) if self.folder.is_dir() else []

@@ -91,16 +91,6 @@ class CddHome:
         return self.folder / "connect.py"
 
     @property
-    def stable_lane(self) -> CddHome:
-        """The stable lane's home: this one, or the one a dev lane's home sits in."""
-        return CddHome(self.folder.parent) if self.is_dev_lane else self
-
-    @property
-    def dev_lane(self) -> CddHome:
-        """The dev lane's home inside this stable lane's home."""
-        return CddHome(self.folder / DEV_LANE_FOLDER)
-
-    @property
     def runtime_record(self) -> Path:
         """Which checkout the server runs, in which mode, on which Python."""
         return self._runtime_file.path

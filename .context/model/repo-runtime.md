@@ -513,7 +513,7 @@ The one way the code runs git, with a timeout and no stdin.
 - `McpHost.notice`
   - `-> ProjectToolsets.skipped` reads skipped of · harness/mcp/mcp_server.py:864
 - `McpHost._publish_mods`
-  - `-> ClaudeMarketplace.publish_mods_for_chats` publishes the mods of the code the server now runs · harness/mcp/mcp_server.py:992
+  - `-> ClaudeMarketplace.publish_mods` publishes the mods of the code the server now runs into its own lane's marketplace · harness/mcp/mcp_server.py:992
 - `McpHost.from_repo`
   - `-> RepositoryToolsets()` creates · harness/mcp/mcp_server.py:1017
   - `-> ProjectToolsets()` creates · harness/mcp/mcp_server.py:1019
