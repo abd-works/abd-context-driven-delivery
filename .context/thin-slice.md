@@ -337,11 +337,11 @@ section: body
 - *Fix Graph Violations From Files App*
 - *Open UX Design In Claude Design*
 
-### Increment 6: Built - Show Board Quickly
+### Increment 6: Built - Defect Fixing
 
-**Outcome:** `board.show` stops repeating git checks, guidance parsing and session file reads, so the board and the chat bar answer faster and `space/kanban/kanban_tools_spec.py` runs in under 60 s.
+**Outcome:** small fixes and technical stories that need no increment of their own, built and checked off here.
 
-**Slicing notes:** `.sessions/_backlog/show-board-quickly.md`. Technical stories in shared modules (`space/repo`, `harness/guidance`, `harness/installation`), so reinstall after; small, and can go in at any point. Built on release-1-2-fixes, checked 2026-11-23: git facts read refs from the ref files with no git process (`harness/git/git_facts.py`), guidance files are stamped by change time and size at most once a second (`SourceStamps`, df4042b2c), and `HeldJsonFile` reads session.json again only when it changes.
+**Slicing notes:** one increment for miscellaneous fixes, so a small backlog item does not get an increment of its own (the person, 2026-11-23). Show Board Quickly (`.sessions/_complete/show-board-quickly/`): `board.show` stopped repeating git checks, guidance parsing and session file reads. Built on release-1-2-fixes, checked 2026-11-23: git facts read refs from the ref files with no git process (`harness/git/git_facts.py`), guidance files are stamped by change time and size at most once a second (`SourceStamps`, df4042b2c), and `HeldJsonFile` reads session.json again only when it changes.
 
 **Stories in this increment:**
 
