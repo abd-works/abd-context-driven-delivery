@@ -97,9 +97,9 @@ Observed: `/{practice} /{action} /{fidelity}`, such as `/stories /sketch /discov
 
 Observed: the skill or MCP tool returns the practice's overview and guidance, its shared rules, the fidelity's rules, template and examples, all read from the markdown kept beside the practice's class, so a practice is one class plus the words the agent follows (`harness/.context/module-context.md`; `harness/markdown`).
 
-### (S) Agent --> Call CDD Tool Through MCP
+### (S) Agent --> [Call CDD Tool Through MCP](../story_tests/deliver-work-with-context-guidance/invoke-guidance-through-slash-commands/invoke_guidance_through_slash_commands_story.test.md#story-call-cdd-tool-through-mcp)
 
-Observed: a skill or slash command that says "Use MCP tool" runs that operation on the cdd server, and a failed call stops the work and says what failed rather than falling back to a shell (`.claude/rules/mcp-fail-loud.md`).
+Observed: a skill or slash command that says "Use MCP tool" runs that operation on the cdd server, and a failed call stops the work and says what failed rather than falling back to a shell (`.claude/rules/mcp-fail-loud.md`). Observed (2026-11-23, commit b609c986e, `harness/mcp/tool_calls.py`): a call still running at its time limit keeps running and its caller is told so; the same call made again, however late, is answered with that run's result or its failure, never "still running" again (`harness/mcp/tool_calls_spec.py`).
 
 ### (S) Agent --> Guide Output With Matching Rules
 
@@ -247,9 +247,9 @@ The CDD Kanban shows every ticket in the repository. Story files are under `move
 
 ## (E) Check CDD Server Health On Board
 
-### (S) Board App --> Display Board Server Health
+### (S) Board App --> [Display Board Server Health](../story_tests/move-work-forward-on-session-board/check-cdd-server-health-on-board/check_cdd_server_health_on_board_story.test.md#story-display-board-server-health)
 
-Observed: a band across the page says the cdd server is not connected and how to reconnect. Requested (2026-11-06, as the Chat Bar does): a mark with ✓ connected, ⟳ reconnecting, ✕ disconnected or ! tools missing.
+Observed: a band across the page says the cdd server is not connected and how to reconnect; a failing tool shows in a toast without that band, a server failure shows its exception line with the whole traceback behind Details, and a call still running after eight seconds says the board is still waiting on it. Scenarios moved from Display Board on 2026-11-24. Requested (2026-11-06, as the Chat Bar does): a mark with ✓ connected, ⟳ reconnecting, ✕ disconnected or ! tools missing.
 
 ### (S) Person --> Open Board Server Health Panel
 
@@ -263,7 +263,7 @@ Requested (2026-11-06, as the Chat Bar does): the board retries `cdd` and reads 
 
 Requested (2026-11-06, as the Chat Bar does): the board runs the installer and says installing, installed or failed.
 
-### (S) Person --> Update Board And CDD
+### (S) Person --> [Update Board And CDD](../story_tests/move-work-forward-on-session-board/check-cdd-server-health-on-board/check_cdd_server_health_on_board_story.test.md#story-update-board-and-cdd)
 
 Observed (2026-11-12): Update in the header installs the Kanban app again through its generated client (`App.install`, `app.install`): npm install and build in the board's folder, then the page loads the new build; a failed install says why and how to fix it (`AppNotStarted`). It no longer gets the latest commit or re-pins cdd; `scripts/install.py --update` does that.
 
@@ -279,7 +279,7 @@ Observed: `board-page.ts` `start()` reads the board when the page opens.
 
 ### (S) Board App --> [Display Board](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-board)
 
-Observed: Backlog, Discovery, Specification, Implementation and Complete, with In progress and Done inside each stage; the board refreshes after each cdd tool call, and a toast announces a ticket's move or review.
+Observed: Backlog, Discovery, Specification, Implementation and Complete, with In progress and Done inside each stage; the board refreshes after each cdd tool call, and a toast announces a ticket's move or review. The scenarios about the cdd server's health and the board's own install moved to Display Board Server Health and Update Board And CDD on 2026-11-24.
 
 ### (S) Person --> [Arrange Board And Details](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-arrange-board-and-details)
 
@@ -292,6 +292,10 @@ Observed: the Backlog column shows the title of each file in `.sessions/_backlog
 ### (S) Board App --> [Display Ticket Card](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-card)
 
 Observed: `ticket-card-view.tsx` draws the title, age and one block per enabled practice; the active ticket has a thick orange outline.
+
+### (S) Board App --> [Place Ticket In Column](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-place-ticket-in-column)
+
+Observed: a ticket shows in the stage of its latest move or, before any move, in the earliest stage its session shows work in; work in a later or an earlier stage moves it there, and a person's move holds until the next work (`see-work-on-session-board.story.shared.py`). Split from Display Ticket Card on 2026-11-24.
 
 ### (S) Board App --> [Display Ticket Details](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-display-ticket-details)
 
@@ -307,7 +311,7 @@ Observed: the report, files and help panels resize, expand one at a time and clo
 
 ### (S) Person --> [Expand Ticket From Empty Area](../story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md#story-expand-ticket-from-empty-area)
 
-Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "click any empty area to expand ticket"): a press anywhere on a card that is not a control expands it. Built today (checked 2026-11-11): a press on a card chooses it and shows its details (`ticket-card-view.tsx:198`); only the expand mark opens the card's actions (`ticket-card-view.tsx:57`). Missing: expanding from an empty area.
+Observed: one ticket's card is expanded at a time, and a press on a card's fidelity segment opens the card on that fidelity (scenarios moved from Display Ticket Details on 2026-11-24). Intended (`.sessions/_backlog/maintain-tickets-on-board.md` "click any empty area to expand ticket"): a press anywhere on a card that is not a control expands it. Built today (checked 2026-11-11): a press on a card chooses it and shows its details (`ticket-card-view.tsx:198`); only the expand mark opens the card's actions (`ticket-card-view.tsx:57`). Missing: expanding from an empty area.
 
 Built (2026-11-12): on the board, driven by its screen story in `story_tests/move-work-forward-on-session-board/see-work-on-session-board/see-work-on-session-board.story.ui.spec.ts`, and by the domain and server tiers.
 
@@ -315,15 +319,35 @@ Built (2026-11-12): on the board, driven by its screen story in `story_tests/mov
 
 ### (S) Person --> [Open Ticket Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-open-ticket-session)
 
-Observed: `Ticket.new` calls `Session.new`; a person can choose the folder the ticket's work goes in, for the whole ticket or one practice.
+Observed: `Ticket.new` calls `Session.new`; a person can open the ticket on a folder of the repository.
+
+### (S) Person --> [Choose Ticket Workpath And Roots](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-choose-ticket-workpath-and-roots)
+
+Observed: a person browses to the folder a ticket's work goes in, for the whole ticket or one practice, and can put a practice back on its default root (the roots dialog; `steer-ticket-sessions.story.shared.py`). Split from Open Ticket Session on 2026-11-24.
+
+### (S) Board App --> [Refuse Unusable Ticket Title](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-refuse-unusable-ticket-title)
+
+Observed (exploratory-testing defects gizmo-04, 05, 06): a new ticket's title that gives no name, whose name a ticket already has, or whose name is longer than 64 characters is refused, naming the title or the limit, and nothing is written for it. Split from Open Ticket Session on 2026-11-24.
 
 ### (S) Person --> [Activate Ticket](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-activate-ticket)
 
 Observed: Activate opens a dialog with what to do on leaving (commit, push, merge into main) and on opening (branch and worktree), then calls `board.activate`.
 
+### (S) Board App --> [Find Ticket Branch And Worktree](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-find-ticket-branch-and-worktree)
+
+Observed: activating a ticket finds the branch and worktree its work is on when its session records none or a wrong one, says which branches could be its own rather than guess, leaves a branch named as another ticket to that ticket, and refuses to open onto a folder that is not its checkout (`Ticket.activate`; `space/repo/worktree.py`). Split from Activate Ticket on 2026-11-24.
+
+### (S) Person --> [Switch Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-switch-session)
+
+Observed: a chat switches to the session it names (`sessions.switch`, `OpenSessions.switch` in `space/session/open_sessions.py`); a chat in a ticket's own worktree always works on that ticket's session, and a new chat started for a ticket first switches to it. A name no session has is refused, naming the sessions there are, unless the switch asks for a new session (`create=true`), which makes its folder and so its card on the board (exploratory-testing question gizmo-10, answered 2026-11-23). Scenarios moved from Activate Ticket on 2026-11-24.
+
 ### (S) Person --> [Close Active Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-close-active-session)
 
 Observed: Close asks what to do with the work, then `Ticket.close` moves the folder to `.sessions/_complete/`, so the ticket shows in Complete.
+
+### (S) Board App --> [Protect Work When Closing Session](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-protect-work-when-closing-session)
+
+Observed (exploratory-testing defects gizmo-14, 15, 17 and questions gizmo-11, 12): closing offers to commit a branch open in its worktree, warns that deleting a worktree without a commit loses its work, leaves what the repository's own folder holds uncommitted out of the close, keeps the ticket open when its branch does not merge into main or a program holds its worktree open, and refuses to close main. Split from Close Active Session on 2026-11-24.
 
 ### (S) Person --> [Move Ticket](../story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md#story-move-ticket)
 
@@ -353,7 +377,11 @@ Observed (checked 2026-11-10): starting a backlog item opens Where <item> works,
 
 ### (S) Person --> [Add Backlog Item](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-add-backlog-item)
 
-Observed: the + on the Backlog heading writes a title and text to one markdown file in `.sessions/_backlog/`; the → on a backlog card starts it as a ticket in Discovery (`BacklogItem.start`).
+Observed: the + on the Backlog heading writes a title and text to one markdown file in `.sessions/_backlog/`, and refuses a title another idea's file has or one that gives its file no name.
+
+### (S) Person --> [Start Backlog Item](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-start-backlog-item)
+
+Observed: the → on a backlog card starts it as a ticket in Discovery, in the folder the Person chooses, with its idea file kept with the new ticket (`BacklogItem.start`); a ticket moved back to the Backlog comes back with its work, and an idea whose name a ticket already has is refused. Split from Add Backlog Item on 2026-11-24.
 
 ### (S) Person --> [Edit Ticket Text](../story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md#story-edit-ticket-text)
 
@@ -979,7 +1007,7 @@ Intended (`.sessions/_backlog/guard-work-and-recover-fast.md` "Branch guard"): a
 
 The prompt queue is its own Claude Code mod, `prompt-queue`, not part of the CDD chat bar: it sits above the chat bar, at rest only a stack image with the count drawn on it (the person, 2026-11-16: "this shouldnt be part of the cdd chat bar / it should be above it with some separation / a separate mod from chat ui"). Sources: the brief that started the simple-queue chat on 2026-11-16 (stack above the prompt, a `+` button, Ctrl+Enter, reordering, a sub-agent mode, sending on `turn.complete` ahead of Claude's own queue, a `/queue` command) and the person's directions in that chat. The mod is `tools/prompt_queue/hooks/`, published by the installer, with its `claude plugin test` specs in `register.test.tsx`. Evidence words as on the chat bar epics: **Observed** seen working in the desktop chat, **Built** in code and plugin tests but not seen, **Intended** asked for and not done.
 
-Grouped on 2026-11-17 into four sub-epics, as the epic had grown to sixteen children: Build Prompt Queue (the person puts work on the queue and shapes it), Work Through Prompt Queue (play, pause and the agent take the work in order), Nest Prompt Steps In Queue (each card's steps), and Share Queue Among Robots (sub-agent mode). The story names stay as they were.
+Grouped on 2026-11-17 into four sub-epics, as the epic had grown to sixteen children: Build Prompt Queue (the person puts work on the queue and shapes it), Work Through Prompt Queue (play, pause and the agent take the work in order), Nest Prompt Steps In Queue (each card's steps), and Share Queue Among Robots (sub-agent mode). The story names stay as they were. On 2026-11-24 a fifth, Keep Queue Files Safe, took the two stories exploratory testing added to Build Prompt Queue about the queue's file.
 
 ## (E) [Build Prompt Queue](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md)
 
@@ -1021,11 +1049,19 @@ Built: the ✕ on a card takes its prompt off the queue (`removePrompt`); the bi
 
 Built (2026-11-23), not seen (the person: "add a flush button that does what I just asked when I click it, eg time stamped copy of queue file then delete finished bots"): the flush button on the queue's toolbar, beside the bin, calls `prompt-queue.flush` (`flushQueue`), which keeps a copy of the whole queue file as it stood in the queue archive, named for when, such as `prompt-queue-20261124T044511Z.json`, then takes the done cards off as clear does, leaving the work still to do in order (`PromptQueue.flush`). With no card done it still keeps the copy and takes nothing off. Story test: [flush_prompt_queue_story.test.py](../story_tests/queue-prompts-for-later/build-prompt-queue/flush-prompt-queue/flush_prompt_queue_story.test.py).
 
-### (S) Agent --> [Refuse Queue File That Holds No Queue](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-refuse-queue-file-that-holds-no-queue)
+## (E) [Keep Queue Files Safe](../story_tests/queue-prompts-for-later/keep-queue-files-safe/keep_queue_files_safe_story.test.md)
+
+The cdd server keeps each chat's prompt queue in one file in that chat's own folder, and every caller, the mod, the agent and both lanes' cdd servers, changes that one file (`tools/prompt_queue/prompt_queue.py`). The queue stays whole however it is reached: every caller's change is kept, a file nobody can read is refused and left for a person to repair, and no queue file is written outside the chats folder. Moved out of Build Prompt Queue on 2026-11-24 (closing choice 13 of the release-1-2-fixes exploratory testing), with the scenarios of Queue Draft Prompt about callers changing the queue at once.
+
+### (S:system) Cdd Server --> [Keep Every Caller's Queue Change](../story_tests/queue-prompts-for-later/keep-queue-files-safe/keep_queue_files_safe_story.test.md#story-keep-every-callers-queue-change)
+
+Observed (2026-11-19, exploratory-testing defects sparky-01, 02; `PromptQueue` holds the queue's file from its read to its write; `prompt_queue_spec.py`, `prompt_queue_processes_heavy_spec.py`): callers that change one queue at the same moment, on one cdd server or on both lanes' servers, each keep their change; a reader is shown the whole queue while another caller changes it; a caller killed while it held the file blocks nobody; and a change that waits for the file in vain is told the file is held, with its path. Split from Queue Draft Prompt on 2026-11-24.
+
+### (S) Agent --> [Refuse Queue File That Holds No Queue](../story_tests/queue-prompts-for-later/keep-queue-files-safe/keep_queue_files_safe_story.test.md#story-refuse-queue-file-that-holds-no-queue)
 
 Observed (2026-11-19, `tools/prompt_queue/prompt_queue.py` `QueueFileUnreadable`; `prompt_queue_spec.py`, `harness/installation/json_file_spec.py`): a queue file that is cut off, is empty, holds a list, or holds cards with no id or a shared id is refused with the file's path, and nothing is written over it, so a person can repair it; a file saved with a byte-order mark is read.
 
-### (S) Agent --> [Name Queue By Chat Id](../story_tests/queue-prompts-for-later/build-prompt-queue/build_prompt_queue_story.test.md#story-name-queue-by-chat-id)
+### (S) Agent --> [Name Queue By Chat Id](../story_tests/queue-prompts-for-later/keep-queue-files-safe/keep_queue_files_safe_story.test.md#story-name-queue-by-chat-id)
 
 Observed (2026-11-19, `PromptQueue.of_chat`, `ChatIdNotAnId`; `prompt_queue_spec.py`, `prompt_queue_heavy_spec.py`): a chat's queue is kept in that chat's own folder under the chats folder, and a chat id that is a path, holds a separator or a drive, or is empty is refused, so no queue file is written outside the chats folder.
 
@@ -2516,6 +2552,14 @@ Intended (ticket, step 5 of the review): once every changed pair is intended, th
 ### (S:system) CDD Server --> Review The Daily E2E Run
 
 Intended (ticket, "Daily run"): when the daily e2e run ends, the cdd server starts the regression review in a background agent session and raises a toast for each step judged missed by the tests; the fix happens in a ticket.
+
+## (E) [Run Test Tiers One At A Time](../story_tests/review-end-to-end-screens/run-test-tiers-one-at-a-time/run_test_tiers_one_at_a_time_story.test.md)
+
+Observed (`harness/release/test_runs.py`; `test_runs_spec.py`, `test_runs_heavy_spec.py`): the test runner, the cadence and `scripts/test.ps1` run one tier at a time on a checkout, and the record of test runs keeps the runs the release reads. Closing choice 12 of the release-1-2-fixes exploratory testing asked whether the test runner gets a story on the map; the person decided on 2026-11-23 that it does.
+
+### (S) Person --> [Run Test Tier](../story_tests/review-end-to-end-screens/run-test-tiers-one-at-a-time/run_test_tiers_one_at_a_time_story.test.md#story-run-test-tier)
+
+Observed (`harness/release/test_runs.py`, tested by `harness/release/test_runs_spec.py` and `test_runs_heavy_spec.py`): `python -m harness.release.test_runs <tier>` and `scripts/test.ps1` each wait for a tier already running on the same checkout, saying which process they wait for; the cadence starts nothing while one runs; a run again after a killed run is the latest, the killed one abandoned; the process the cadence started finishes the run the cadence recorded rather than recording a second; and a run by `scripts/test.ps1` on uncommitted edits is never the tier's latest result. Its scenarios are tested by those specs; no story test file runs them.
 
 ## (E) Read E2E Reports
 

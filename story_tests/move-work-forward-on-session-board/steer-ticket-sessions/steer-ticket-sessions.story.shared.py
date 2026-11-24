@@ -98,7 +98,7 @@ def _(s):
         expect([(item["title"], item["text"]) for item in items]).to(equal([(GIFT_CARDS_IDEA.title, GIFT_CARDS_IDEA.text)]))
 
 
-@shared_stories.scenario("Add Backlog Item", "Start a backlog item in a chosen folder")
+@shared_stories.scenario("Start Backlog Item", "Start a backlog item in a chosen folder")
 def _(s):
     @s.given("the backlog item Gift cards is in the Backlog")
     def _(world):
@@ -130,7 +130,7 @@ def _(s):
         expect(world.started["session"]["workpath"]).to(equal(VISITS_ROOT))
 
 
-@shared_stories.scenario("Add Backlog Item", "Keep the idea file with the new ticket")
+@shared_stories.scenario("Start Backlog Item", "Keep the idea file with the new ticket")
 def _(s):
     @s.given("the backlog item Returns and refunds is the file .sessions/_backlog/returns-and-refunds.md")
     def _(world):
@@ -159,7 +159,7 @@ def _(s):
         expect_backlog(world.data_of(world.Board.load().show()), [])
 
 
-@shared_stories.scenario("Add Backlog Item", "Bring a ticket back from the Backlog with its work")
+@shared_stories.scenario("Start Backlog Item", "Bring a ticket back from the Backlog with its work")
 def _(s):
     @s.given("the ticket sign-up was moved back out of Discovery and waits in the Backlog as the backlog item Sign up")
     def _(world):
@@ -229,7 +229,7 @@ def _(s):
         expect(world.opened["session"]["workpath"]).to(equal(BILLING_ROOT))
 
 
-@shared_stories.scenario("Open Ticket Session", "Choose a ticket's root")
+@shared_stories.scenario("Choose Ticket Workpath And Roots", "Choose a ticket's root")
 def _(s):
     @s.given("checkout-flow works on the whole repository")
     def _(world):
@@ -260,7 +260,7 @@ def _(s):
         expect(all(entry["root"].startswith(VISITS_ROOT) for entry in world.chosen["practices"].values())).to(be_true)
 
 
-@shared_stories.scenario("Open Ticket Session", "Choose one practice's root and go back to its default")
+@shared_stories.scenario("Choose Ticket Workpath And Roots", "Choose one practice's root and go back to its default")
 def _(s):
     @s.given("checkout-flow's Stories practice writes under its default root")
     def _(world):
@@ -339,7 +339,7 @@ def _(s):
         expect(world.project.current_branch()).to(equal("main"))
 
 
-@shared_stories.scenario("Close Active Session", "Offer to commit a branch open in its worktree")
+@shared_stories.scenario("Protect Work When Closing Session", "Offer to commit a branch open in its worktree")
 def _(s):
     @s.given("checkout-flow is the active ticket, its branch open in its own worktree")
     def _(world):
@@ -638,7 +638,7 @@ def _(s):
         expect(worktree.resolve()).to(equal(world.worktree.resolve()))
 
 
-@shared_stories.scenario("Activate Ticket", "Work on the ticket from a chat in its worktree")
+@shared_stories.scenario("Switch Session", "Work on the ticket from a chat in its worktree")
 def _(s):
     @s.given("billing-report is open in its own worktree")
     def _(world):
@@ -671,7 +671,7 @@ def recorded_checkout(world) -> tuple[str, str]:
     return fields.get("branch", ""), str(Path(fields["worktree"]).resolve()) if fields.get("worktree") else ""
 
 
-@shared_stories.scenario("Activate Ticket", "Find a branch and worktree made outside CDD")
+@shared_stories.scenario("Find Ticket Branch And Worktree", "Find a branch and worktree made outside CDD")
 def _(s):
     @s.given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree")
     def _(world):
@@ -695,7 +695,7 @@ def _(s):
         expect(recorded_checkout(world)).to(equal((OUTSIDE_BRANCH, str(world.worktree.resolve()))))
 
 
-@shared_stories.scenario("Activate Ticket", "Correct a branch the session records wrongly")
+@shared_stories.scenario("Find Ticket Branch And Worktree", "Correct a branch the session records wrongly")
 def _(s):
     @s.given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree")
     def _(world):
@@ -715,7 +715,7 @@ def _(s):
         expect(recorded_checkout(world)).to(equal((OUTSIDE_BRANCH, str(world.worktree.resolve()))))
 
 
-@shared_stories.scenario("Activate Ticket", "Say which branches could be the session's rather than guess")
+@shared_stories.scenario("Find Ticket Branch And Worktree", "Say which branches could be the session's rather than guess")
 def _(s):
     @s.given("the repository has the branches claude/checkout-flow-cef4bc and claude/checkout-flow-9a1b2c")
     def _(world):
@@ -736,7 +736,7 @@ def _(s):
         expect(recorded_checkout(world)[0]).to(equal(""))
 
 
-@shared_stories.scenario("Activate Ticket", "Leave a branch named as another ticket to that ticket")
+@shared_stories.scenario("Find Ticket Branch And Worktree", "Leave a branch named as another ticket to that ticket")
 def _(s):
     @s.given("checkout-flow-retry is a ticket whose work is on the branch checkout-flow-retry")
     def _(world):
@@ -979,7 +979,7 @@ def _(s):
         expect(world.selected["session"]["handoff"]).to(equal(""))
 
 
-@shared_stories.scenario("Open Ticket Session", "Refuse a title that gives a ticket no name")
+@shared_stories.scenario("Refuse Unusable Ticket Title", "Refuse a title that gives a ticket no name")
 def _(s):
     @s.given("the board shows checkout-flow")
     def _(world):
@@ -999,7 +999,7 @@ def _(s):
         expect((world.project.sessions / "session.json").exists()).to(be_false)
 
 
-@shared_stories.scenario("Open Ticket Session", "Refuse a title whose name a ticket already has")
+@shared_stories.scenario("Refuse Unusable Ticket Title", "Refuse a title whose name a ticket already has")
 def _(s):
     @s.given("the ticket pet-visits is titled Pet visits")
     def _(world):
@@ -1027,7 +1027,7 @@ def _(s):
         expect_refused(world.refusal, TicketNameTakenError, "a ticket named main already exists; give 'main' another title")
 
 
-@shared_stories.scenario("Open Ticket Session", "Refuse a title too long for a name")
+@shared_stories.scenario("Refuse Unusable Ticket Title", "Refuse a title too long for a name")
 def _(s):
     @s.given("the board shows checkout-flow")
     def _(world):

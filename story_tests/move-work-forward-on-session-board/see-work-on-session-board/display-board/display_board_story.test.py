@@ -12,7 +12,6 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 # Actor: Board App
 #
 # Acceptance criteria:
-# - Display Connected Status: with the cdd server not connected, a band across the page says so and how to reconnect, until the server answers again. Observed.
 # - Draw Board Columns: Backlog, Discovery, Specification, Implementation, and Complete, in that order, with In progress and Done inside each stage. Observed: `board-columns-view.tsx`.
 # - Refresh Board After Tool Calls: after a cdd tool call finishes, the board, an open tile, and an open report show the state they are in then. Observed.
 # - Announce Ticket Changes: a toast shows when a ticket moves, including from In progress to Done and to the Backlog, or a fidelity is done. Observed.
@@ -33,56 +32,6 @@ with story("Display Board"):
         with and_("each [stage](../../../.context/kanban-model.md#stage--column) shows an In progress list and a Done list"):
             pass
         with and_("the Discovery [stage](../../../.context/kanban-model.md#stage--column) requires story_map, bounded_context, and ia, each through Generate and Validate"):
-            pass
-    with scenario("Say the cdd server is not connected"):
-        # Evidence: observed: board-client.spec 'should show a band when the board read answers that cdd is not connected', 'should show the band when the server itself does not answer' (the band then says not answering); board-header-view.tsx names the button Connect.
-        with given("the cdd server behind the session board is not connected"):
-            pass
-        with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
-            # Board page -> Board.show()
-            # Board page <- the cdd server is not connected
-            pass
-        with then("a band across the top of the page says The cdd server is not connected"):
-            pass
-        with and_("the header offers Update"):
-            pass
-    with scenario("Show a failing tool in a toast"):
-        # Evidence: observed: board-client.spec 'with a tool failing' — 'should show no band', 'should show a toast'.
-        with given("the [ticket](../../../.context/kanban-model.md#ticket--card)s checkout-flow and billing-report are on the [board](../../../.context/kanban-model.md#board)"):
-            pass
-        with when("the Person adds a child titled Billing report to checkout-flow"):
-            # Ticket card -> Ticket.add_child(title)
-            # Ticket -> CardName
-            # Ticket <- TicketNameTakenError
-            pass
-        with then("a toast says cdd ticket.add_child failed: TicketNameTakenError: a ticket named billing-report already exists; give 'Billing report' another title"):
-            pass
-        with but_("no band says the cdd server is lost"):
-            pass
-    with scenario("Install the board again"):
-        # Evidence: observed: board-client.spec 'that a person has pressed Update'; board-page.ts update posts App.install of the Kanban app through its generated client (editor-app-client.ts kanban).
-        with given("the board is open"):
-            pass
-        with when("the Person presses Update"):
-            # Board page -> App: install (app.install, the Kanban app)
-            # App -> npm install  [External: npm]
-            # App -> npm run build  [External: npm]
-            pass
-        with then("the Kanban app is installed again through App.install, which installs its packages and rebuilds its page"):
-            pass
-        with and_("the page loads again from the new build"):
-            pass
-    with scenario("Say why the board's install failed"):
-        # Evidence: observed: board-client.spec 'with an install that fails'; app.py AppNotStarted.
-        with given("npm cannot install the Kanban app"):
-            pass
-        with when("the Person presses Update"):
-            # Board page -> App: install
-            # App <- AppNotStarted
-            pass
-        with then("a toast says the Kanban install failed, with the reason and the fix"):
-            pass
-        with and_("the page keeps running as it was"):
             pass
     with scenario("Keep the newer board when an older read answers late"):
         # Evidence: observed: board-client.spec 'Refresh Board After Tool Calls' — 'should keep the newer board when an older read answers late'; board-reader.ts refresh.

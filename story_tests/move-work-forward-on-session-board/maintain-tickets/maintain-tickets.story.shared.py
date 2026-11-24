@@ -430,7 +430,7 @@ def _(s):
         expect((world.project.sessions / "_backlog" / ".md").exists()).to(equal(False))
 
 
-@shared_stories.scenario("Add Backlog Item", "Refuse to start an idea whose name a ticket already has")
+@shared_stories.scenario("Start Backlog Item", "Refuse to start an idea whose name a ticket already has")
 def _(s):
     @s.given("the ticket pet-visits is on the board")
     def _(world):

@@ -13,7 +13,6 @@ from story_test import and_, background, but_, given, scenario, story, then, whe
 #
 # Acceptance criteria:
 # - Display Sessions As Tickets: each session shows as one ticket, main first. Observed.
-# - Place Ticket In Column: a ticket shows in the stage of its latest move, or before any move in the earliest stage its session shows work in. Observed.
 # - Display Active Ticket: the active ticket has a thick orange outline. Observed.
 # - Show Active Ticket On Status Line: the chat's status line names the active ticket, its stage, its next guidance, and its violations. Inferred: `statusOf` in `harness/chat-ui/pane/hooks/register.ts`.
 with story("Display Ticket Card"):
@@ -31,29 +30,6 @@ with story("Display Ticket Card"):
         with and_("the Complete [column](../../../.context/kanban-model.md#column) shows Browse pets"):
             pass
         with but_("old-spike is not on the board"):
-            pass
-    with scenario("Place a ticket in the stage of its latest move"):
-        # Evidence: observed: kanban_tools_spec 'should show the ticket in the next stage'; Ticket.column in ticket.py; fixture-repo.ts second-spec.
-        with given("the [session log](../../../.context/kanban-model.md#session) of the [ticket](../../../.context/kanban-model.md#ticket--card) second-spec ends with move Specification"):
-            pass
-        with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
-            # Board -> Ticket.column
-            # Ticket <- the stage of its latest move line: Specification
-            pass
-        with then("second-spec shows In progress in the Specification [stage](../../../.context/kanban-model.md#stage--column)"):
-            pass
-    with scenario("Place a ticket with no move in the earliest stage it has work in"):
-        # Evidence: observed: kanban_spec 'with its first logged work on a Specification fidelity' — 'should be in Specification'; 'that has just been started' — 'should be in Discovery, in progress'.
-        with given("the [session log](../../../.context/kanban-model.md#session) of the [ticket](../../../.context/kanban-model.md#ticket--card) pet-visits has one line, generate /work/ux ux mockup html ux"):
-            pass
-        with but_("it has no move line"):
-            pass
-        with when("the session board reads the [board](../../../.context/kanban-model.md#board)"):
-            # Board -> Ticket.column
-            # Ticket -> Ticket.progress
-            # Ticket <- the first stage with work done: Specification
-            pass
-        with then("pet-visits shows in the Specification [stage](../../../.context/kanban-model.md#stage--column)"):
             pass
     with scenario("Draw the card's title, age, and fidelity segments"):
         # Evidence: observed: board-client.spec 'Display Ticket Card' — 'should say how many hours ago its ticket was worked on', 'should say one hour in the singular', 'should say a ticket with no activity has none'; ticket-card-view.tsx SegmentsView draws one segment per enabled fidelity of its stage, dim while not started.

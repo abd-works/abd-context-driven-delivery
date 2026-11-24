@@ -58,6 +58,30 @@ Seed state from `space/kanban/session_board_examples.py`, which the shared stori
 *Then* Add stays off
 *And* no [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) is written
 
+#### Scenario: Refuse an idea whose title another idea's file has
+
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-13. space/kanban module-context: a backlog item's file is the only copy of the idea.
+
+*Given* the Backlog keeps the idea Gift cards, with the text Sell gift cards.
+*When* the Person adds an idea titled Gift cards with another text
+*Then* the board says the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md
+*And* that file still says Sell gift cards.
+
+#### Scenario: Refuse an idea whose title gives its file no name
+
+> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
+
+> Evidence: exploratory-testing defect gizmo-13.
+
+*Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows the Backlog
+*When* the Person adds an idea whose title is empty, or 日本語
+*Then* the board says the title gives no name
+*And* no file named .md is written in the Backlog
+
+## Story: Start Backlog Item
+
 #### Scenario: Start a backlog item in a chosen folder
 
 *Given* the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Gift cards is in the Backlog
@@ -86,28 +110,6 @@ Seed state from `space/kanban/session_board_examples.py`, which the shared stori
 *When* the Person starts Sign up
 *Then* sign-up is back on the board with its session log and session.json
 *But* no new ticket is opened
-
-#### Scenario: Refuse an idea whose title another idea's file has
-
-> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
-
-> Evidence: exploratory-testing defect gizmo-13. space/kanban module-context: a backlog item's file is the only copy of the idea.
-
-*Given* the Backlog keeps the idea Gift cards, with the text Sell gift cards.
-*When* the Person adds an idea titled Gift cards with another text
-*Then* the board says the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md
-*And* that file still says Sell gift cards.
-
-#### Scenario: Refuse an idea whose title gives its file no name
-
-> Test: maintain-tickets.story.shared.py, replayed by the domain spec.
-
-> Evidence: exploratory-testing defect gizmo-13.
-
-*Given* the [board](../../../space/kanban/.context/kanban-model.md#board) shows the Backlog
-*When* the Person adds an idea whose title is empty, or 日本語
-*Then* the board says the title gives no name
-*And* no file named .md is written in the Backlog
 
 #### Scenario: Refuse to start an idea whose name a ticket already has
 
@@ -212,7 +214,6 @@ EditorAppClient.openFilesOn(main, { folder: 'session', file: '.sessions/_backlog
 ```
 
 *Then* the Files app opens .sessions/_backlog/gift-cards.md
-
 
 #### Scenario: Edit a child's text inside its parent
 

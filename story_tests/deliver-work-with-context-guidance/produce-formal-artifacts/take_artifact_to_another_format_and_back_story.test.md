@@ -11,7 +11,7 @@ Story map: [Produce Formal Artifacts](../../../.context/story-map.md#e-produce-f
 
 **Evidence modes.** *Observed* scenarios hold for the practices' format adapters today (`cdd_guidance/practices/stories/model`, `clean_engineering/model`, `ddd/model`) and each names the spec that runs it. *Intended* scenarios say what a trip should keep where a format cannot hold it yet; each names the evidence still missing (`flagged-writes-intended-gwt`). They were written after exploratory testing (defects widget-04, 05, 08, 19, 20) showed that no scenario covered a trip from one format to another and back.
 
-The story below is not on the story map yet: it was split from Render Artifact Into Another Format, which already holds four scenarios about where a render is saved.
+The story below is on the story map under Produce Formal Artifacts: it was split from Render Artifact Into Another Format, which already holds four scenarios about where a render is saved.
 
 ### Domain terms
 

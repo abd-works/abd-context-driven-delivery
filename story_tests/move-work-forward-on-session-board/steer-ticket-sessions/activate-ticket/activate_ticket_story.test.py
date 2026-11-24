@@ -14,7 +14,6 @@ from story_test import and_, but_, given, scenario, story, then, when
 # Acceptance criteria:
 # - Sessions open only from main: activating a ticket opens it in its own worktree, on its own branch, made when
 #   missing, and the chat that asked stays on main. Requested 2026-11-10.
-# - A chat in a ticket's worktree works on that ticket; no chat moves. Requested 2026-11-10.
 with story("Activate Ticket"):
     with scenario("Open a ticket in its own worktree"):
         # Evidence: requested 2026-11-10: main is the only place sessions open; another ticket is another chat and worktree.
@@ -45,55 +44,6 @@ with story("Activate Ticket"):
             pass
         with then("billing-report keeps that worktree"):
             pass
-    with scenario("Work on the ticket from a chat in its worktree"):
-        with given("billing-report is open in its own worktree"):
-            pass
-        with when("a chat in that worktree asks which session it works on"):
-            # Chat -> Sessions.current()
-            pass
-        with then("the answer is billing-report"):
-            pass
-    with scenario("Find a branch and worktree made outside CDD"):
-        # Evidence: observed 2026-11-09: the chat bar offered to create a branch and worktree for chat-ui-defects, whose work was already on claude/chat-ui-defects-cef4bc in its own worktree, made by the Claude desktop app.
-        with given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree"):
-            pass
-        with but_("checkout-flow's session records no branch or worktree"):
-            pass
-        with when("the Person activates checkout-flow"):
-            # TicketCheckout -> Repo.branches, Worktrees.of(branch) -> SessionCheckout.record_opened(branch, worktree)
-            pass
-        with then("checkout-flow opens in that worktree, creating nothing"):
-            pass
-        with and_("checkout-flow's session records claude/checkout-flow-cef4bc and its worktree"):
-            pass
-    with scenario("Correct a branch the session records wrongly"):
-        with given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree"):
-            pass
-        with but_("checkout-flow's session records a branch the repository no longer has"):
-            pass
-        with when("the Person activates checkout-flow"):
-            pass
-        with then("checkout-flow's session records claude/checkout-flow-cef4bc and its worktree"):
-            pass
-    with scenario("Say which branches could be the session's rather than guess"):
-        with given("the repository has the branches claude/checkout-flow-cef4bc and claude/checkout-flow-9a1b2c"):
-            pass
-        with when("the Person activates checkout-flow"):
-            pass
-        with then("the Person is told both branches could be checkout-flow's"):
-            pass
-        with and_("checkout-flow's session records no branch"):
-            pass
-    with scenario("Leave a branch named as another ticket to that ticket"):
-        with given("checkout-flow-retry is a ticket whose work is on the branch checkout-flow-retry"):
-            pass
-        with when("the Person activates checkout-flow"):
-            # Person -> Ticket.activate()
-            # SessionCheckout -> SessionCheckout.candidate_branches
-            # SessionListing -> SessionListing.open_names()
-            pass
-        with then("checkout-flow's session records its own branch checkout-flow"):
-            pass
     with scenario("Open a ticket again after its worktree folder was deleted"):
         # Evidence: tested by heavy: space/repo/worktree_heavy_spec.py 'whose folder was deleted outside CDD'; unit: space/repo/worktree_spec.py.
         with given("billing-report is open in its own worktree"):
@@ -116,21 +66,6 @@ with story("Activate Ticket"):
             # Worktrees -> Worktrees.sibling_folder(branch)
             pass
         with then("customer-order-history-export-weekly has a worktree of its own, in another folder"):
-            pass
-    with scenario("Refuse to open a ticket onto a folder that is not its checkout"):
-        # Evidence: tested by heavy: space/kanban/ticket_work_heavy_spec.py 'that a ticket is activated while a folder left on no branch is where its worktree goes'.
-        with given("billing-report's worktree folder is still there, left on no branch"):
-            pass
-        with and_("the git [repository](../../../.context/kanban-model.md#repo) no longer has the branch billing-report"):
-            pass
-        with when("the Person activates billing-report"):
-            # Person -> Ticket.activate()
-            # TicketCheckout -> Branch.open_in_worktree()
-            # Worktrees -> Worktrees.add(folder, branch)
-            pass
-        with then("the board says billing-report cannot open in a worktree, naming that folder"):
-            pass
-        with and_("the folder's files are as they were"):
             pass
     with scenario("Answer every chat that activates a ticket at the same moment"):
         # Evidence: tested by heavy: space/repo/worktree_heavy_spec.py 'that two callers open for one branch at the same moment'.

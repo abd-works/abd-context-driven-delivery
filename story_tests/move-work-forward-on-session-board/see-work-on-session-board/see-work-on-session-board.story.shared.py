@@ -8,12 +8,15 @@ and the cdd tools spec replay the same steps. Every Then asserts what the board 
 fields its classes mark, which the board app draws from.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
-operation: Arrange Board And Details (all three); Arrange Side Panel (all four); Display Board "Say the cdd server is
-not connected", "Show a failing tool in a toast", "Install the board again", "Say why the board's install failed", "Keep the newer board when an older read answers late", "Announce a
-ticket that moved", "Announce a fidelity done"; Display Ticket Card "Draw the card's title, age, and fidelity
-segments", "Name the active ticket on the chat's status line"; Display Ticket Details "Show the active ticket with no
-card pressed", "Show main when no other ticket is opened", "Say another session must be activated to act on
-a locked ticket", "Expand one ticket's card at a time", "Open a card on the fidelity of a pressed segment"; Open Board
+operation: Arrange Board And Details (all three); Arrange Side Panel (all four); Display Board "Keep the newer board
+when an older read answers late", "Announce a ticket that moved", "Announce a fidelity done"; Display Board Server
+Health "Say the cdd server is not connected", "Show a failing tool in a toast" and Update Board And CDD "Install the
+board again", "Say why the board's install failed", whose scenarios are in
+story_tests/move-work-forward-on-session-board/check-cdd-server-health-on-board/check_cdd_server_health_on_board_story.test.md;
+Display Ticket Card "Draw the card's title, age, and fidelity segments", "Name the active ticket on the chat's status
+line"; Display Ticket Details "Show the active ticket with no card pressed", "Show main when no other ticket is
+opened", "Say another session must be activated to act on a locked ticket"; Expand Ticket From Empty Area "Expand one
+ticket's card at a time", "Open a card on the fidelity of a pressed segment"; Open Board
 "Find the board from a chat"; Restrict Actions To Active Session (all three: Active session only is the board app's
 own setting); Set Stage WIP Limit "Change nothing for a limit that is not a whole number". The Thens of the scenarios
 below that only the page shows (the band, the outline, the polling) are left to those specs too.
@@ -242,7 +245,7 @@ def _(s):
         expect(ticket_in(world.read, OLD_SPIKE.name)).to(be_none)
 
 
-@shared_stories.scenario("Display Ticket Card", "Place a ticket in the stage of its latest move")
+@shared_stories.scenario("Place Ticket In Column", "Place a ticket in the stage of its latest move")
 def _(s):
     @s.given("the session log of the ticket second-spec ends with move Specification")
     def _(world):
@@ -257,7 +260,7 @@ def _(s):
         expect_placed(ticket_in(world.read, SECOND_SPEC.name), "Specification", is_done=False)
 
 
-@shared_stories.scenario("Display Ticket Card", "Place a ticket with no move in the stage of its latest work")
+@shared_stories.scenario("Place Ticket In Column", "Place a ticket with no move in the stage of its latest work")
 def _(s):
     @s.given("the session log of the ticket pet-visits has one line, generate /work/ux ux mockup html ux")
     def _(world):
@@ -277,7 +280,7 @@ def _(s):
         expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Specification"))
 
 
-@shared_stories.scenario("Display Ticket Card", "Follow work into a later stage")
+@shared_stories.scenario("Place Ticket In Column", "Follow work into a later stage")
 def _(s):
     @s.given("a person moved pet-visits into Discovery")
     def _(world):
@@ -296,7 +299,7 @@ def _(s):
         expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Specification"))
 
 
-@shared_stories.scenario("Display Ticket Card", "Keep a person's move until the next work")
+@shared_stories.scenario("Place Ticket In Column", "Keep a person's move until the next work")
 def _(s):
     @s.given("pet-visits' ux mockup was generated")
     def _(world):
@@ -315,7 +318,7 @@ def _(s):
         expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Discovery"))
 
 
-@shared_stories.scenario("Display Ticket Card", "Follow work back into an earlier stage")
+@shared_stories.scenario("Place Ticket In Column", "Follow work back into an earlier stage")
 def _(s):
     @s.given("a person moved pet-visits into Implementation")
     def _(world):

@@ -43,67 +43,6 @@ with story("Add Backlog Item"):
             pass
         with and_("no [backlog item](../../../.context/kanban-model.md#backlogitem--card) is written"):
             pass
-    with scenario("Start a backlog item in a chosen folder"):
-        # Evidence: observed: root-choice-client.spec 'with a backlog item a person has asked to start' — 'should browse the top of the repository for its workpath before it starts', 'should not start it yet', 'should open its ticket with that folder as its workpath', 'should stay open on the new ticket's roots'; backlog-item-client.spec 'should say so in a toast'.
-        with given("the [backlog item](../../../.context/kanban-model.md#backlogitem--card) Gift cards is in the Backlog"):
-            pass
-        with and_("the [repository](../../../.context/kanban-model.md#repo) has the folders src/billing and src/visits"):
-            pass
-        with when("the Person starts Gift cards"):
-            # Person -> Board.folders('')
-            # Board <- the repository's top folders
-            pass
-        with then("the roots dialog lists the top folders of the repository"):
-            pass
-        with and_("Gift cards is still in the Backlog"):
-            pass
-        with when("the Person chooses src/visits as its root"):
-            # Person -> BacklogItem.start(path='src/visits')
-            # BacklogItem -> Ticket.create('Gift cards', 'feature', '', 'src/visits')
-            # Ticket -> Sessions.create('gift-cards', <repo>/src/visits, title, scope, parent)
-            # BacklogItem -> TicketWork.record('backlog .sessions/_backlog/gift-cards.md')
-            # BacklogItem -> SessionFolder.keep_file(gift-cards.md)
-            # BacklogItem <- Ticket gift-cards
-            pass
-        with then("the [ticket](../../../.context/kanban-model.md#ticket--card) gift-cards is In progress in Discovery with root src/visits"):
-            pass
-        with and_("the roots dialog stays open on gift-cards so its practices' roots can be set"):
-            pass
-        with and_("a toast says Gift cards started in Discovery"):
-            pass
-    with scenario("Keep the idea file with the new ticket"):
-        # Evidence: observed: kanban_spec 'that has been started' — 'should keep the item's file, text and all, in the new ticket's session folder', 'should open a ticket in Discovery', 'should name the item's file in the new ticket's session log'; kanban_tools_spec 'should take the item off the Backlog'.
-        with given("the [backlog item](../../../.context/kanban-model.md#backlogitem--card) Returns and refunds is the file .sessions/_backlog/returns-and-refunds.md"):
-            pass
-        with when("the Person starts Returns and refunds on the whole repository"):
-            # Person -> BacklogItem.start(scope='feature')
-            # BacklogItem -> Ticket.create('Returns and refunds', 'feature', '', '')
-            # BacklogItem -> TicketWork.record('backlog <path of returns-and-refunds.md>')
-            # BacklogItem -> SessionFolder.keep_file(returns-and-refunds.md)
-            pass
-        with then("the [ticket](../../../.context/kanban-model.md#ticket--card) returns-and-refunds is In progress in Discovery"):
-            pass
-        with and_("its session folder holds returns-and-refunds.md, text and all"):
-            pass
-        with and_("its session log names the item's file"):
-            pass
-        with but_("the Backlog no longer shows Returns and refunds"):
-            pass
-    with scenario("Bring a ticket back from the Backlog with its work"):
-        # Evidence: observed: kanban_tools_spec 'that starts the item again' — 'should bring the ticket back with its work'; kanban_spec 'should bring its ticket back with the history in its session log'.
-        with given("the [ticket](../../../.context/kanban-model.md#ticket--card) sign-up was moved back out of Discovery and waits in the Backlog as the [backlog item](../../../.context/kanban-model.md#backlogitem--card) Sign up"):
-            pass
-        with and_("its folder .sessions/_backlog/sign-up/ keeps its session log"):
-            pass
-        with when("the Person starts Sign up"):
-            # Person -> BacklogItem.start()
-            # BacklogItem -> HeldSessions.load(.sessions/_backlog/sign-up) -> SessionFolder.reopen()
-            # BacklogItem <- Ticket sign-up
-            pass
-        with then("sign-up is back on the board with its session log and session.json"):
-            pass
-        with but_("no new ticket is opened"):
-            pass
     with scenario("Refuse an idea whose title another idea's file has"):
         # Evidence: tested by maintain-tickets.story.shared.py, replayed by the domain spec.
         with given("the Backlog keeps the idea Gift cards, with the text Sell gift cards."):
@@ -126,18 +65,4 @@ with story("Add Backlog Item"):
         with then("the board says the title gives no name"):
             pass
         with and_("no file named .md is written in the Backlog"):
-            pass
-    with scenario("Refuse to start an idea whose name a ticket already has"):
-        # Evidence: tested by maintain-tickets.story.shared.py, replayed by the domain spec.
-        with given("the [ticket](../../../.context/kanban-model.md#ticket--card) pet-visits is on the board"):
-            pass
-        with and_("the Backlog keeps an idea titled Pet visits"):
-            pass
-        with when("the Person starts that idea"):
-            # Person -> BacklogItem.start()
-            # CardPlacement -> CardPlacement.free_name_for('Pet visits') <- TicketNameTakenError
-            pass
-        with then("the board says a ticket named pet-visits already exists"):
-            pass
-        with and_("the idea stays in the Backlog"):
             pass

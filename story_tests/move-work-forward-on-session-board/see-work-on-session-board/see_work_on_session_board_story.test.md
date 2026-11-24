@@ -34,22 +34,6 @@ section: body
 *And* each [stage](../../../space/kanban/.context/kanban-model.md#stage--column) shows an In progress list and a Done list
 *And* the Discovery [stage](../../../space/kanban/.context/kanban-model.md#stage--column) requires story_map, bounded_context, and ia, each through Generate and Validate
 
-#### Scenario: Say the cdd server is not connected
-
-*Given* the cdd server behind the session board is not connected
-*When* the session board reads the [board](../../../space/kanban/.context/kanban-model.md#board)
-*Then* a band across the top of the page says The cdd server is not connected
-*And* the header offers Update
-
-#### Scenario: Show a failing tool in a toast
-
-> A session.json that does not read no longer fails `board.show` (the next scenario), so the failing tool here is a child ticket whose title makes the name of a ticket already there, which `ticket.add_child` refuses.
-
-*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card)s checkout-flow and billing-report are on the [board](../../../space/kanban/.context/kanban-model.md#board)
-*When* the Person adds a child titled Billing report to checkout-flow
-*Then* a toast says cdd ticket.add_child failed: TicketNameTakenError: a ticket named billing-report already exists; give 'Billing report' another title
-*But* no band says the cdd server is lost
-
 #### Scenario: Show the other tickets when one ticket's session file does not read
 
 > Test: see-work-on-session-board.story.shared.py, replayed by the domain spec; unit: space/kanban/kanban_tools_spec.py; the page's notice: see-work-on-session-board.story.ui.spec.ts and space/kanban/app/src/kanban/board/board-page.spec.ts.
@@ -65,20 +49,6 @@ section: body
 *When* the Person tags broken's session with billing
 *Then* the board says .sessions/broken/session.json is not a readable JSON object
 *And* that file is as it was
-
-#### Scenario: Install the board again
-
-*Given* the board is open
-*When* the Person presses Update
-*Then* the Kanban app is installed again through App.install, which installs its packages and rebuilds its page
-*And* the page loads again from the new build
-
-#### Scenario: Say why the board's install failed
-
-*Given* npm cannot install the Kanban app
-*When* the Person presses Update
-*Then* a toast says the Kanban install failed, with the reason and the fix
-*And* the page keeps running as it was
 
 #### Scenario: Keep the newer board when an older read answers late
 
@@ -99,19 +69,6 @@ section: body
 *Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) billing-report has the story_map [fidelity](../../../space/kanban/.context/kanban-model.md#fidelityguidance) generated and validated with no violations
 *When* a clean validate of stories-story-map is written to billing-report's [session log](../../../space/kanban/.context/kanban-model.md#session)
 *Then* a toast says stories-story-map done on billing-report
-
-#### Scenario: Show a server failure on one line
-
-*Given* the cdd server answers with a Python traceback
-*When* the session board draws its server band
-*Then* the band shows the traceback's exception line
-*And* the whole traceback is behind Details
-
-#### Scenario: Say a slow call is still running
-
-*Given* the cdd server is busy
-*When* a ticket call has run for eight seconds
-*Then* a toast says the board is still waiting on it
 
 ## Story: Arrange Board And Details
 
@@ -171,6 +128,30 @@ section: body
 *And* the Complete [column](../../../space/kanban/.context/kanban-model.md#column) shows Browse pets
 *But* old-spike is not on the board
 
+#### Scenario: Draw the card's title, age, and fidelity segments
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow, titled Checkout flow, last worked on at 2026-11-01T10:00:00Z
+*And* its story_map [fidelity](../../../space/kanban/.context/kanban-model.md#fidelityguidance) has violations and its other Discovery fidelities are not started
+*When* the session board draws checkout-flow's [card](../../../space/kanban/.context/kanban-model.md#card) 13 hours later
+*Then* the card reads Checkout flow and 13 hours ago
+*And* it shows one segment for each enabled Discovery fidelity, the story_map segment in the violations colour and the rest dim
+*And* a violations link on the card opens the report
+
+#### Scenario: Outline the active ticket
+
+*Given* the [repository](../../../space/kanban/.context/kanban-model.md#repo)'s .sessions/session.json names checkout-flow as the open [session](../../../space/kanban/.context/kanban-model.md#session)
+*When* the session board reads the [board](../../../space/kanban/.context/kanban-model.md#board)
+*Then* the checkout-flow [card](../../../space/kanban/.context/kanban-model.md#card) has a thick orange outline
+*And* the header names Checkout flow as active
+
+#### Scenario: Name the active ticket on the chat's status line
+
+*Given* checkout-flow is the active [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card), in Discovery, with violations on stories-story-map
+*When* a turn in a chat with the cdd-board mod loaded ends
+*Then* the chat's status line reads checkout-flow · Discovery · next: stories-story-map · 1 with violations
+
+## Story: Place Ticket In Column
+
 #### Scenario: Place a ticket in the stage of its latest move
 
 *Given* the [session log](../../../space/kanban/.context/kanban-model.md#session) of the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) second-spec ends with move Specification
@@ -204,28 +185,6 @@ section: body
 *And* pet-visits' ux mockup was generated after that move
 *When* the session board reads the [board](../../../space/kanban/.context/kanban-model.md#board)
 *Then* pet-visits shows in the Specification [stage](../../../space/kanban/.context/kanban-model.md#stage--column)
-
-#### Scenario: Draw the card's title, age, and fidelity segments
-
-*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow, titled Checkout flow, last worked on at 2026-11-01T10:00:00Z
-*And* its story_map [fidelity](../../../space/kanban/.context/kanban-model.md#fidelityguidance) has violations and its other Discovery fidelities are not started
-*When* the session board draws checkout-flow's [card](../../../space/kanban/.context/kanban-model.md#card) 13 hours later
-*Then* the card reads Checkout flow and 13 hours ago
-*And* it shows one segment for each enabled Discovery fidelity, the story_map segment in the violations colour and the rest dim
-*And* a violations link on the card opens the report
-
-#### Scenario: Outline the active ticket
-
-*Given* the [repository](../../../space/kanban/.context/kanban-model.md#repo)'s .sessions/session.json names checkout-flow as the open [session](../../../space/kanban/.context/kanban-model.md#session)
-*When* the session board reads the [board](../../../space/kanban/.context/kanban-model.md#board)
-*Then* the checkout-flow [card](../../../space/kanban/.context/kanban-model.md#card) has a thick orange outline
-*And* the header names Checkout flow as active
-
-#### Scenario: Name the active ticket on the chat's status line
-
-*Given* checkout-flow is the active [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card), in Discovery, with violations on stories-story-map
-*When* a turn in a chat with the cdd-board mod loaded ends
-*Then* the chat's status line reads checkout-flow · Discovery · next: stories-story-map · 1 with violations
 
 #### Scenario: Place a ticket with no move in the earliest stage it has work in
 
@@ -272,19 +231,6 @@ section: body
 *And* checkout-flow is the active [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card)
 *When* the Person selects billing-report's card
 *Then* the details say Activate this session to run actions
-
-#### Scenario: Expand one ticket's card at a time
-
-*Given* the card of the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow is expanded over the board
-*When* the Person expands billing-report's card
-*Then* billing-report's card is expanded with a tile for each enabled Discovery fidelity
-*And* checkout-flow's card is closed
-
-#### Scenario: Open a card on the fidelity of a pressed segment
-
-*Given* billing-report's card shows a segment for the story_map [fidelity](../../../space/kanban/.context/kanban-model.md#fidelityguidance)
-*When* the Person opens billing-report's story_map segment
-*Then* billing-report's card is expanded with the story_map tile's action bar open
 
 #### Scenario: Name the board's own project
 
@@ -372,6 +318,19 @@ section: body
 *When* the Person opens checkout-flow's files from its card
 *Then* checkout-flow's files show
 *And* checkout-flow's card stays collapsed
+
+#### Scenario: Expand one ticket's card at a time
+
+*Given* the card of the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow is expanded over the board
+*When* the Person expands billing-report's card
+*Then* billing-report's card is expanded with a tile for each enabled Discovery fidelity
+*And* checkout-flow's card is closed
+
+#### Scenario: Open a card on the fidelity of a pressed segment
+
+*Given* billing-report's card shows a segment for the story_map [fidelity](../../../space/kanban/.context/kanban-model.md#fidelityguidance)
+*When* the Person opens billing-report's story_map segment
+*Then* billing-report's card is expanded with the story_map tile's action bar open
 
 ## Story: Restrict Actions To Active Session
 

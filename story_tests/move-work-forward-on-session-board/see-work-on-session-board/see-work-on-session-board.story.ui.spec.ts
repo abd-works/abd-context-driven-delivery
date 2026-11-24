@@ -9,7 +9,11 @@
  * A Given seeds the fixture project's `.sessions/`, where the board reads it; a When does what the person does on the
  * page; a Then reads what the person sees.
  *
- * Left out here: "Install the board again" and "Say why the board's install failed" (an install really runs npm install
+ * Display Board Server Health's scenarios "Say the cdd server is not connected" and "Show a failing tool in a toast" run
+ * here too, though their scenarios are in
+ * story_tests/move-work-forward-on-session-board/check-cdd-server-health-on-board/check_cdd_server_health_on_board_story.test.md.
+ *
+ * Left out here: Update Board And CDD's "Install the board again" and "Say why the board's install failed" (an install really runs npm install
  * and build in the board's folder; board-client.spec drives the page with the install's answer given), "Keep the newer board when an older read answers late" (a browser cannot hold one answer back;
  * board-client.spec drives the page's reads in order), and "Find the board from a chat" and "Name the active ticket on
  * the chat's status line" (the cdd-board mod in harness/chat-ui, not the board app, does them).
@@ -71,7 +75,7 @@ test.describe('Open Board', () => {
   })
 })
 
-test.describe('Display Board', () => {
+test.describe('Display Board Server Health', () => {
   test.describe('Say the cdd server is not connected', () => {
     // A board of its own whose cdd cannot start, because the program it names does not exist.
     let stop: () => void = () => undefined
@@ -114,6 +118,9 @@ test.describe('Display Board', () => {
     })
   })
 
+})
+
+test.describe('Display Board', () => {
   test.describe("Show the other tickets when one ticket's session file does not read", () => {
     const notice = (page: Page) => page.getByRole('alert', { name: 'Session files not read' })
 
@@ -303,7 +310,9 @@ test.describe('Display Ticket Details', () => {
       await expect(page.locator('.details-bar')).toContainText('Activate this session to run actions')
     })
   })
+})
 
+test.describe('Expand Ticket From Empty Area', () => {
   test.describe("Expand one ticket's card at a time", () => {
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
@@ -330,10 +339,8 @@ test.describe('Display Ticket Details', () => {
       await expect(openCard(page, 'billing-report').locator('[data-tile="stories-story-map"] .expansion')).toBeVisible()
     })
   })
-})
 
-// Scenarios: see_work_on_session_board_story.test.md, story Expand Ticket From Empty Area; one test per scenario.
-test.describe('Expand Ticket From Empty Area', () => {
+  // Scenarios: see_work_on_session_board_story.test.md, story Expand Ticket From Empty Area; one test per scenario.
   test('Expand a card from an empty area', async ({ page }) => {
     await openBoard(page)
     await expect(openCard(page, 'checkout-flow')).toHaveCount(0)

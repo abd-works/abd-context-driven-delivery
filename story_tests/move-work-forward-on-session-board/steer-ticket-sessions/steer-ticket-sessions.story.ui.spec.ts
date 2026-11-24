@@ -70,7 +70,9 @@ test.describe('with no chat connected', () => {
         await expect(backlogCards(page)).toHaveCount(1)
       })
     })
+  })
 
+  test.describe('Start Backlog Item', () => {
     test.describe('Start a backlog item in a chosen folder', () => {
       let links: ClaudeLinks
 
