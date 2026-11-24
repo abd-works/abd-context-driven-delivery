@@ -1,17 +1,20 @@
 """Draw.io UX channel - CLI Detailed IA + Site Map against the UxMap sketch."""
 
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from unittest.mock import patch
 
-from expects import be, equal, expect, raise_error
+from expects import be, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 _REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliTimedOut, DrawioUxMap
+from cdd_guidance.practices.ux.model.drawio import nodes as drawio_nodes
+from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliFailed, DrawioCliMissing, DrawioCliTimedOut, DrawioUxMap
 from harness.drawio import UnreadableDrawio
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen, StoryDemoControl, StoryStep, Transition
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
@@ -254,6 +257,17 @@ with description("a UX map drawn as a draw.io information architecture"):
 
         with it("should stop it and say it timed out"):
             expect(lambda: self.writer.render(self.source)).to(raise_error(DrawioCliTimedOut))
+
+    with context("with no command line vendored beside it"):
+        with it("should refuse to draw, naming where the command line should be"):
+            with patch.object(drawio_nodes, "_CLI", Path("missing") / "drawio_ux.mjs"):
+                expect(lambda: DrawioUxMap.create().render(self.source)).to(raise_error(DrawioCliMissing, contain("drawio_ux.mjs")))
+
+    with context("with a command line that fails"):
+        with it("should refuse to draw, with what the command line said"):
+            failed = subprocess.CompletedProcess([], 1, stdout="", stderr="layout broke")
+            with patch.object(drawio_nodes.subprocess, "run", return_value=failed):
+                expect(lambda: DrawioUxMap.create().render(self.source)).to(raise_error(DrawioCliFailed, contain("layout broke")))
 
     with context("that holds three screens side by side with transitions between them"):
         with before.each:
