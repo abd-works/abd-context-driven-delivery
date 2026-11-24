@@ -130,6 +130,12 @@ class Format(str):
 TEMPLATE_FOLDER_NAMES = frozenset(Format(name).short for name in Format.TEMPLATED)
 
 
+class ContentNotHeld(ValueError):
+    """A format refuses content it cannot hold, such as a test body asked for in a format that holds a describe tree
+    only, rather than write it and lose part of it on the way back. A practice raises its own kind, naming what would be
+    lost."""
+
+
 @dataclass(frozen=True)
 class SourceDocument:
     """The document a drawing was drawn from, in the format it was written in, kept hidden in the drawing: a draw.io

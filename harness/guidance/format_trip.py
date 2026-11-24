@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from harness.guidance.practice_formats import ExistingText, RenderRequest
-from harness.markdown.format import Format
+from harness.markdown.format import ContentNotHeld, Format
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import FidelityGuidance
@@ -141,7 +141,8 @@ class FormatTrip:
     def through(self, format: str) -> TripOutcome:
         """The outcome of taking the example to format and back. What comes back is compared with the example as its
         own format writes it, so the spelling that format chooses, such as its quotes, is not counted as lost. A format
-        nothing reads back, which refuses the read with ``NotImplementedError``, holds none of the example. A format
+        nothing reads back, which refuses the read with ``NotImplementedError``, holds none of the example, and a format
+        that refuses content it cannot hold (``ContentNotHeld``) holds less than the example. A format
         that cannot write or read the example (one of ``FORMAT_FAILURES``) fails on the way; any other failure raises."""
         if self._example is None:
             return TripOutcome(NO_EXAMPLE)
@@ -150,6 +151,9 @@ class FormatTrip:
         try:
             went_in = ExistingText(_text_of(self._rendered(self._written_in, self._example, self._written_in)))
             there = self._rendered(Format(format), self._example, self._written_in)
+        except ContentNotHeld as not_held:
+            # The format refused what it cannot hold instead of losing it; the fidelity says what that is, or not.
+            return TripOutcome(said, (str(not_held),), leaves_out, f"{type(not_held).__name__}: {not_held}")
         except FORMAT_FAILURES as failure:
             return TripOutcome(FAILS_ON_THE_WAY, leaves_out=leaves_out, refused=f"{type(failure).__name__}: {failure}")
         if not went_in.lines_not_in(""):

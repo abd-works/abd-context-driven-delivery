@@ -12,9 +12,10 @@ from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observa
 from cdd_guidance.practices.bdd.model.spec_source import has_signature_marker, is_developed
 from cdd_guidance.practices.source_code import CodeBody
 from harness.guidance.practice_formats import FormatAdapter, Written
+from harness.markdown.format import ContentNotHeld
 
 
-class SpecBodiesNotKept(ValueError):
+class SpecBodiesNotKept(ContentNotHeld):
     """A finished spec was asked for in a format that holds its describe tree only, a markdown tree or a sketch: its
     imports, its setup and every test body would be lost, and written back over the spec, its tests would become
     signatures."""
