@@ -1,0 +1,188 @@
+{
+  "prompts": [
+    {
+      "id": "7396e10d13bd",
+      "text": "[interruption] make sure queue is running",
+      "steps": [
+        {
+          "text": "Repin the dev lane and bring the cdd server back",
+          "state": "done"
+        },
+        {
+          "text": "Reload plugins in the chats (the person runs /reload-plugins)",
+          "state": "pending"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "67a98bcf7e54",
+      "text": "Fix all the open items from the Clean Engineering review (the person, 2026-11-23, \"fix all on release-1-2\"): (1) Tooling: install lizard into the dev lane's Python and the tests' Python so limit-paths-through-a-function, keep-functions-readable and limit-class-complexity measure instead of reporting \"lizard not installed\" on every function; review b2fba7b51 (committed unreviewed when the machine was turned off) and fix what it got wrong; then run the unit tier, and the heavy tier once at the end. (2) Gap: add a check that every name the code calls or imports still exists (a renamed member still called after a merge, imports lost in a merge, a TypeScript getter renamed while the chat bar still read the old name all slipped through), as a graph rule or a spec over the whole repository, Python and TypeScript, and fix what it finds. (3) Defects: fix r3-bolt-04 (the domain model drawing has no context or aggregate container) and r3-lens-09 (graph tree entries cannot be told apart), finish the 14 defects fixed only in part (release-1-2-fixes-report.md section 7 lists them), and fix the two dev server problems: a render reading a module card as Python, and a failed or long call answering \"still running, 10 seconds\" on every ask (suspected 99260068a; keep or revert it so a finished call answers). Also in this worktree: the main chat updated three AGENTS.md files to today's names (StoryMap, SESSION_OPENING.open_with, HOOK_TOASTS.show_with) and left them uncommitted for you; cdd_guidance/practices/stories/model/story_model.py is an untracked leftover that still defines StoryModel; delete it if nothing needs it. Commit and push the whole worktree after each part, and say what the unit and heavy tiers showed.",
+      "is_done": true,
+      "robot": "Robot 19"
+    },
+    {
+      "id": "c87e1c628275",
+      "text": "Find out what the 353 BDD observations that invoke nothing are (release-1-2-fixes-report.md, the measures table: \"BDD observations that invoke nothing, 1,013 of 5,648 \u2192 353\" after 87705f816). Build the whole-repository graph, list every BDD observation (each `it`) with no invokes edge, and sort them into (a) observations that really call no production code (they check a fixture, a constant or the test's own helper) and (b) observations whose call the resolver cannot follow, grouped by why it can't (untyped fixture, a call through a dict or a callable, a TypeScript spec, a dynamic attribute, and so on). Give the count for each group with two or three examples by path and line. Then teach the resolver the (b) groups it can follow, compare the whole graph's invokes edges before and after as 87705f816 did, and report the new count. Put the counts in the report's measures table and name the source commits in that row instead of \"The same\". Commit and push the whole worktree.",
+      "is_done": true,
+      "robot": "Robot 20"
+    },
+    {
+      "id": "397a514b2582",
+      "text": "Finish everything in section 7, \"What is still open\", of release-1-2-fixes-report.md (the person, 2026-11-23: \"finish all 7 open items\"). Items 1, 2, 6, 11, 12 and 14 are already on this queue in \"Fix all the open items\" (67a98bcf7e54), and item 5's measure is in c87e1c628275; do the rest here and work in parallel lanes where the files don't overlap: (2) reinstall and repin the dev lane after the unit tier passes; (3) run the heavy tier alone from the main checkout after clearing ~/.cdd/test-run-worktrees/heavy, and find why the e2e tier's web server did not start on bff9051ea; (4) find why the metrics gate reported every measure unchanged after large changes, and fix it; (5) check a sample of the chain walk's gained edges, run the graph heavy specs, and give a local assigned from such a chain its guessed members; (7) fix the 121 seam-names-current-code findings and the import loops in clean_engineering/rules, stories and installation; (8) the 63 declared exceptions no test raises (write the test or remove the declaration) and the 11 refuse-unreadable-input violations; (9) one thing is one node in the graph (.sessions/_backlog/one-thing-one-node-in-the-graph.md), now that the robots are done, then let the cross-file rules run on every fidelity; (10) design proposal 8 (c), the node type tables (compare saved graph.json before and after), and 21's NameFacts (say what in the guardrails blocks it, and build it if the guardrails allow); (13) move the Files app rules still decided in TypeScript (callout line and title, which fold-outs open, which files open rendered, filesShown, rootFilesShown, listedBy, emptyReason) into Python; (15) the open chat bar defects in .sessions/_backlog/chat-ui-defects.md; (18) harness/guidance/AGENTS.md and any other AGENTS.md still naming StoryModel or from_workspace (the main chat already fixed the root, stories/model and prompt_notify ones); (19) redraw repo-model.whiteboard without the removed members, and delete repo-model2.drawio, which has no markdown source, unless something uses it; (20) delete the empty folder C:\\g and prune the stale .git/worktrees entries in the main checkout; (21) a live walk of the chat bar, the queue mod, Auto mode and Remote Control in the Claude desktop app, with a report of what works. For 16 and 17 (the person's decisions: the unanswered question files, keeping 99260068a, a second judge round, publishing the story map whiteboard), list each question in one short line with your recommendation in a single message to the person, and don't wait on the answer. Update section 7 as each item closes, commit and push the whole worktree after each part, run the unit tier after each part and the heavy tier once at the end, and report what each tier showed.",
+      "is_done": true,
+      "robot": "Robot 20"
+    },
+    {
+      "id": "64bb6e0dd1a9",
+      "text": "Build the person's answers to section 7 items 16 and 17 (2026-11-23, \"yes to all, agree to all recommendations\"); this replaces the \"list the decisions in one message\" part of 397a514b2582, so don't ask again. For each: a scenario on the story map where the behaviour is a story's, the fix, a test in the tier that should have caught it, the question file marked answered with the answer, and section 7 updated. (A) 99260068a: keep joining identical calls, but a finished call answers its result, never \"still running\" again (with the dev server fix in 67a98bcf7e54). Second judge round: yes, after section 7's work lands, only on files changed since 2026-11-21, and report the after count beside the 1,106. Story map whiteboard: re-render from today's story map and publish it to a new board. (B) Question files: bolt-07 an install into another project uses the stable lane unless asked for dev; bolt-08 making a repository inside another repository is refused; bolt-09 make_from_folder makes a missing folder first; bolt-10 an install whose parent folder does not exist is refused; bolt-15 when the dev lane's pinned worktree is gone, the dev lane falls back to main and says so; gizmo-02 activating a closed ticket moves it back to In Progress and its folder out of _complete; gizmo-10 sessions.switch to an unknown name is refused unless asked to create; gizmo-11 session.close on main is refused as ticket.close is; gizmo-12 close does only what was picked, and warns that uncommitted work will be lost; pixel-05 read_file and write_file refuse paths inside .git; pixel-06 write_file refuses a file changed on disk since it was read, and says so; r3-gizmo-03 a mockup render to claude_design works and renders back, or the format is removed; r3-pixel-08 the Files app's frame runs a mockup's own scripts; r3-rivet-11 a finished spec rendered to markdown or sketch and back is refused, or warns that bodies are lost; rivet-11 test.ps1 registers with the runner; rivet-12 a run whose process is gone gets a fresh record; sparky-06 robot names are trimmed and matched ignoring case; sparky-10 Clear only ever removes done cards; sparky-11 attachments are deleted with their card; widget-13 a fidelity keeps at least one format chosen; widget-14 validate refuses an empty path; widget-15 a class model rendered from Python is saved under the name the fidelity writes markdown to; widget-16 one render of two fidelities writes one file per fidelity; widget-17 choosing a format on a practice that is turned off is refused; widget-22 load_practice_roots includes the story map and the other folders (with section 7 item 9). (C) The closing robots' 14 choices in final-report.md are agreed as built, with these changes: 3 closing a ticket whose worktree is gone no longer offers to commit main (update the heavy spec that expects it); 10 prose a drawing cannot hold is kept in the drawing's hidden metadata, so a trip through a drawing loses nothing (and widget-19's outline examples); 12 the test runner gets a story on the map; 13 split Activate Ticket, Close Active Session, Open Ticket Session, Display Board and Add Backlog Item into stories of seven scenarios or fewer, and give the two new queue stories their own sub-epic; 14 one shared class in harness/process for InstallLock, JsonFile.held, the hook daemon's _SpawnLock and the test runner's claim file (and give TestRunRecord.save that lock). Story map changes go on main as well. Commit and push the whole worktree after each part; unit tier after each part, heavy once at the end.",
+      "is_done": true,
+      "robot": "Robot 21"
+    },
+    {
+      "id": "16dea5c90378",
+      "text": "Update the release report once every robot on this queue is done (67a98bcf7e54, c87e1c628275, 397a514b2582, 5ebb9d7e87f6, 64bb6e0dd1a9): in .sessions/release-1-2-fixes/release-1-2-fixes-report.md, add what each one found and fixed, in the found / fixed / open form of Wave 6, not a list of commits; refresh the measures table (lizard numbers, the invokes count, a fresh validate's findings by rule against 388 and 2,733, the second judge round's after count beside 1,106); rewrite section 7 so it lists only what is still open, with each question file and choice marked answered; and say what the unit, heavy and e2e tiers showed on the last commit. Link sources by their whole paths. Commit and push the whole worktree. Wait for the others before starting; run this last.",
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "17cd52154048",
+      "text": "[for Robot 25] Add a Flush button to the queue mod: one click saves a timestamped copy of the whole queue file in the session's queue archive, then takes every finished card off the queue (the person, 2026-11-23).",
+      "is_done": true,
+      "robot": "Bolt"
+    },
+    {
+      "id": "08f30fd05ed8",
+      "text": "Fix the queue band's goal title and runaway interruptions (main's .sessions/_backlog/chat-ui-defects.md, 2026-11-23, the person: \"wth\"). The main chat's band read \"70/77 1. [interruption] <pasted_content id=\"7250\"> ## Notes from the backlog\u2026\": a chat whose first message was pasted text got the raw paste, tags included, as its goal title, and the prompt.submit hook then filed every later message under that goal as an [interruption] step until it held 77. Make a goal's title a short summary of what it asks (never raw pasted text or <pasted_content> tags; strip the tags and take the person's own words, or a short summary), and make the hook file a message about new work as a goal of its own rather than another step of the last goal. Add the scenario to the prompt queue's stories, a test in the right tier, mark the defect fixed on main, and commit and push the whole worktree.",
+      "is_done": true,
+      "robot": "Gizmo"
+    },
+    {
+      "id": "b1033844d5c5",
+      "text": "[for Robot 26] Validate replaces the metrics gate: give classes and modules the measures only the gate has, as graph facts with Clean Engineering code rules and limits (the person, 2026-11-24). Class: coupling (classes it depends on, over 14), response (methods one call can set off, over 50). Module: length (over 800 lines), maintainability index (below 20), average class complexity of its classes (over 15), fan-in (modules importing it, over 40), each a fact the module node holds, made from all its files. Shadow models stay a judged rule.",
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "62432a57d430",
+      "text": "Whiteboard render creates the Claude Artifact and links it in the .whiteboard file, so the file viewer shows the board (the person, 2026-11-24: \"the goal is the claude artifact you must create the artifact when creating the whiteboard and add link it to the file\")",
+      "steps": [
+        {
+          "text": "Pixel: the .whiteboard file holds its board's address; render isn't finished until the artifact exists (4fd0c38d8)",
+          "state": "done"
+        },
+        {
+          "text": "Write the story map's 735 cards to its board (https://claude.ai/artifact/RBc7NrXtfghmJXbCTjvM6a)",
+          "state": "done"
+        },
+        {
+          "text": "Record the board in story-map.whiteboard (e980f46be)",
+          "state": "done"
+        },
+        {
+          "text": "Repin dev lane, push",
+          "state": "done"
+        },
+        {
+          "text": "Unit tier: 8 files failed under load; 7 pass alone, cdd_home_spec is Widget's area; whole tier again after Widget",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Pixel"
+    },
+    {
+      "id": "e0590a2623ef",
+      "text": "[decision required] Restart the stable cdd server (or repin from the main checkout) so stable chats get main's queue bar back without the Flush button the 02:40 dev-lane write left them? Recommendation: yes, restart the stable server; it restarts what every stable chat uses, so do it when no stable chat is mid-call. Done so far on issue 105: each lane publishes its plugins only into its own folder (6f23c41d6, heavy specs pass, dev lane repinned, issue commented and closed); two whiteboard specs fixed (091088637); unit tier running again.",
+      "steps": [
+        {
+          "text": "Check the main checkout before repinning",
+          "state": "done"
+        },
+        {
+          "text": "Repin the stable lane from main",
+          "state": "done"
+        },
+        {
+          "text": "Confirm stable mods have no Flush button",
+          "state": "done"
+        },
+        {
+          "text": "Mark card e0590a2623ef done",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] yes (restart the stable server)",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] why is tere no flish buttin? pelase add to this branch",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] no we are on releae 1-1-2 here repon to that not main",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] ???? piun to dfev",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] and deploy rel4eae1-1-2 to dev",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] what the fucka re you talking about pin to dev lane for fucks sake",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] and pin this chat to dev ffs",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] where the FUCK is the flush buttin",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Widget"
+    },
+    {
+      "id": "f660ff600e00",
+      "text": "[interruption] <artifact-view-context artifact=\"61db8915-fd22-4e78-aabd-93f97ad19f33\">\u2026"
+    },
+    {
+      "id": "1dab2c6d7b82",
+      "text": "[interruption] can you NOT EVER USE THIS FICKING CVACHE \""
+    },
+    {
+      "id": "95407841f053",
+      "text": "Bots integrated with the Claude pane's background tasks: move its ticket to In Progress on main and do it in this chat (no worktree or branch); also fix interruption steps that hold the board viewer's raw state text (the person, 2026-11-24)",
+      "steps": [
+        {
+          "text": "[interruption] it ewas doen already",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] jsut fucking fix it",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] fuxck off wo9th the queue",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] ???",
+          "state": "pending"
+        }
+      ],
+      "is_done": false,
+      "robot": "Cog"
+    },
+    {
+      "id": "1cc8f5d3caca",
+      "text": "Chats in a dev-lane worktree load the dev lane's mods (queue bar with Flush) without overwriting the stable lane's mod folder; today the dev queue mod was copied into ~/.cdd/claude-plugins by hand, so main chats show a Flush their server can't run until the next stable repin (the person, 2026-11-24)",
+      "robot": "Sprocket"
+    }
+  ]
+}

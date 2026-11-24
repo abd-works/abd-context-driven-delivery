@@ -10,19 +10,20 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from harness.mcp.claude_plugins import ClaudePlugins
+from harness.mcp.claude_plugins import ClaudePlugins, PluginInstall
 from harness.agent_tools.agent_tools import InstalledName, ToolsetReference
 from harness.installation.installer import Installer, ToolsetInstallFailed
 
 
 class _Published:
-    """A plugin the cdd home's marketplace publishes, at the version it publishes it at."""
+    """A plugin the cdd home's marketplace publishes, at the version it publishes it at, from its folder."""
 
     def __init__(self, name: str, version: str) -> None:
         self.name = name
         self.version = version
         self.installed_name = f"{name}@cdd-home"
-        self.marketplace = type("Marketplace", (), {"folder": Path("claude-plugins")})()
+        self.folder = Path(tempfile.gettempdir()) / "cdd-home" / "claude-plugins" / name
+        self.marketplace = type("Marketplace", (), {"folder": self.folder.parent, "mod_folder": lambda _self, plugin: plugin.folder})()
 
 
 _BOARD = _Published("cdd-board", "0.6.3-abc")
@@ -31,23 +32,36 @@ _QUEUE = _Published("prompt-queue", "0.1.0-abc")
 
 
 class _ScriptedClaude(ClaudePlugins):
-    """The plugin installer with a claude command that records each call and lists what the spec says."""
+    """The plugin installer over a throwaway Claude Code settings folder, with a claude command that records each call and
+    lists what the spec says."""
+
+    # A folder the person's settings named already, which an install keeps.
+    OWN_FOLDER = str(Path("own") / "chat-ui" / "pane")
 
     def __init__(self, listed: str) -> None:
-        super().__init__()
+        self.claude_folder = Path(tempfile.mkdtemp(prefix="cdd-claude-settings-"))
+        super().__init__(claude_folder=self.claude_folder)
         self.listed = listed
         self.calls: list[tuple[str, ...]] = []
         self.cli: str | None = "claude"
         self.plugins_installed: dict[str, str] = {}
-        # The machine running the spec may watch its own board folder; the spec says whether this one does.
-        self.board_watched = False
+        self.watch_folders(self.OWN_FOLDER)
+
+    def watch_folders(self, *folders: str) -> None:
+        settings = self.claude_folder / "settings.json"
+        named = json.loads(settings.read_text(encoding="utf-8")) if settings.is_file() else {}
+        current = [f for f in named.get("env", {}).get("CLAUDE_CODE_PLUGIN_DIRS", "").split(os.pathsep) if f]
+        named.setdefault("env", {})["CLAUDE_CODE_PLUGIN_DIRS"] = os.pathsep.join([*current, *folders])
+        settings.write_text(json.dumps(named), encoding="utf-8")
+
+    @property
+    def watched_folders(self) -> list[str]:
+        named = json.loads((self.claude_folder / "settings.json").read_text(encoding="utf-8"))
+        return [f for f in named["env"]["CLAUDE_CODE_PLUGIN_DIRS"].split(os.pathsep) if f]
 
     @property
     def installed(self) -> dict[str, str]:
         return self.plugins_installed
-
-    def is_watched(self, plugin: _Published) -> bool:
-        return self.board_watched
 
     @property
     def claude_cli(self) -> str | None:
@@ -60,7 +74,7 @@ from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(_REPO_ROOT).ensure_import_path()
 
-from expects import be_below, be_true, contain, equal, expect, have_key, raise_error, start_with
+from expects import be_true, contain, equal, expect, have_key, raise_error, start_with
 from mamba import after, before, context, description, it
 from harness.guidance.fixtures.agentic_ops.agentic_ops import (
     SampleAgenticOps,
@@ -1381,108 +1395,81 @@ with description("toolsets installed for Claude Code") as self:
         expect(servers["cdd"]["headers"]).to(equal({"X-CDD-Project": str(self.project.resolve())}))
         expect((self.tree / "mcp.json").exists()).to(equal(False))
 
-    with context("installing the board plugin"):
+    # Claude Code loads a plugin it installed from a copy in its own cache, which a later publish never reaches, so a chat
+    # kept a queue bar with no Flush after the mod gained one. Every cdd plugin is loaded from its published folder instead.
+    with context("installing a cdd plugin"):
         with before.each:
-            self.plugins = _ScriptedClaude(listed="cdd-board@cdd-home")
+            self.plugins = _ScriptedClaude(listed="")
 
-        # A board mod installed from a checkout's own marketplace runs that branch's code, not the server's.
-        with it("should remove the board mod installed from a checkout's own marketplace"):
-            self.plugins.plugins_installed = {"cdd-board@abd-works": "0.6.3"}
-            self.plugins.install(_BOARD)
-            expect(self.plugins.calls[:2]).to(equal([
-                ("plugin", "uninstall", "cdd-board@abd-works", "--scope", "user"),
-                ("plugin", "marketplace", "remove", "abd-works"),
-            ]))
+        with after.each:
+            shutil.rmtree(self.plugins.claude_folder, ignore_errors=True)
 
-        # Each claude command starts the Claude Code CLI, which takes seconds, so an install with nothing to change runs none.
-        with context("with the board mod the cdd home publishes already installed"):
+        with context("that Claude Code does not load yet"):
             with before.each:
-                self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-abc"}
-                self.answer = str(self.plugins.install(_BOARD))
+                self.answer = str(self.plugins.install(_QUEUE))
 
-            with it("should say it is installed"):
-                expect(self.answer).to(equal("installed"))
+            with it("should name its published folder in CLAUDE_CODE_PLUGIN_DIRS"):
+                expect(self.plugins.watched_folders).to(contain(str(_QUEUE.folder)))
+
+            with it("should keep the folders the settings named already"):
+                expect(self.plugins.watched_folders).to(contain(_ScriptedClaude.OWN_FOLDER))
+
+            # Claude Code reads CLAUDE_CODE_PLUGIN_DIRS when it starts, so a chat open now loads the folder only after a restart.
+            with it("should say Claude must restart to load it"):
+                expect(self.answer).to(equal(PluginInstall.NEWLY_WATCHED))
 
             with it("should run no claude command"):
                 expect(self.plugins.calls).to(equal([]))
 
-        # Claude Code reloads a watched board folder in every chat as the install writes it, so installing it too loads it twice.
-        with context("with the board folder watched by Claude Code"):
+        with context("that Claude Code loads from its folder already"):
             with before.each:
-                self.plugins.board_watched = True
-                self.answer = str(self.plugins.install(_BOARD))
+                self.plugins.install(_QUEUE)
+                self.answer = str(self.plugins.install(_QUEUE))
 
             with it("should say it is watched"):
-                expect(self.answer).to(equal("watched"))
+                expect(self.answer).to(equal(PluginInstall.WATCHED))
 
-            with it("should run no claude command"):
-                expect(self.plugins.calls).to(equal([]))
+            with it("should name its folder once"):
+                expect(self.plugins.watched_folders.count(str(_QUEUE.folder))).to(equal(1))
 
-        with context("with an older board mod installed"):
-            with it("should update it"):
-                self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
-                self.plugins.install(_BOARD)
-                expect(("plugin", "update", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
-
-            # Adding a marketplace Claude Code already has reads nothing new, so the update would find the old board.
-            with it("should read the cdd home's marketplace again before it updates"):
-                self.plugins.plugins_installed = {"cdd-board@cdd-home": "0.6.3-old"}
-                self.plugins.install(_BOARD)
-                refresh = self.plugins.calls.index(("plugin", "marketplace", "update", "cdd-home"))
-                expect(refresh).to(be_below(self.plugins.calls.index(("plugin", "update", "cdd-board@cdd-home", "--scope", "user"))))
-
-        with it("should install the board mod the cdd home publishes, at user scope"):
-            expect(str(self.plugins.install(_BOARD))).to(equal("installed"))
-            expect(("plugin", "install", "cdd-board@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
-
-        with it("should say the plugin is missing when the list does not show it"):
-            self.plugins.listed = ""
-            expect(str(self.plugins.install(_BOARD))).to(equal("missing"))
-
-        with it("should say the plugin is missing when there is no claude command"):
-            self.plugins.cli = None
-            expect(str(self.plugins.install(_BOARD))).to(equal("missing"))
-
-    with context("installing the prompt queue plugin"):
-        with before.each:
-            self.plugins = _ScriptedClaude(listed="prompt-queue@cdd-home")
-
-        with it("should install the prompt queue mod the cdd home publishes, at user scope"):
-            expect(str(self.plugins.install(_QUEUE))).to(equal("installed"))
-            expect(("plugin", "install", "prompt-queue@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
-
-        with context("with the prompt queue mod the cdd home publishes already installed"):
-            with it("should run no claude command"):
-                self.plugins.plugins_installed = {"prompt-queue@cdd-home": "0.1.0-abc"}
-                self.plugins.install(_QUEUE)
-                expect(self.plugins.calls).to(equal([]))
-
-    with context("installing the cdd plugin"):
-        with before.each:
-            self.plugins = _ScriptedClaude(listed="cdd@cdd-home")
-
-        with context("that is already installed at the published version"):
+        # A lane's or an older home's copy of the same plugin, named too, would load the plugin twice.
+        with context("that the settings name from another published folder"):
             with before.each:
-                self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0-abc"}
-                self.answer = str(self.plugins.install(_CDD))
+                self.plugins.watch_folders(str(Path("elsewhere") / "claude-plugins" / "prompt-queue"))
+                self.plugins.install(_QUEUE)
 
-            with it("should say it is installed"):
-                expect(self.answer).to(equal("installed"))
+            with it("should name only its own published folder"):
+                expect([f for f in self.plugins.watched_folders if f.endswith("prompt-queue")]).to(equal([str(_QUEUE.folder)]))
 
-            with it("should run no claude command"):
-                expect(self.plugins.calls).to(equal([]))
+        with context("that Claude Code has a cached copy of"):
+            with before.each:
+                self.plugins.plugins_installed = {"prompt-queue@cdd-home": "0.1.0-old", "cdd-board@cdd-home": "0.6.3-abc"}
+                self.answer = str(self.plugins.install(_QUEUE))
 
-        with context("that is not installed"):
-            with it("should install it at user scope"):
-                self.plugins.install(_CDD)
-                expect(("plugin", "install", "cdd@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
+            with it("should uninstall the cached copy"):
+                expect(self.plugins.calls).to(contain(("plugin", "uninstall", "prompt-queue@cdd-home", "--scope", "user")))
 
-        # Claude Code keeps the copy it installed for a version, so a changed server entry reaches chats only as an update.
-        with context("that is installed at an older version"):
-            with it("should update it at user scope"):
+            with it("should leave other plugins' copies alone"):
+                expect([c for c in self.plugins.calls if "cdd-board@cdd-home" in c]).to(equal([]))
+
+            with it("should still name its published folder"):
+                expect(self.plugins.watched_folders).to(contain(str(_QUEUE.folder)))
+
+        # A mod installed from a checkout's own marketplace runs that branch's code, not the server's.
+        with context("that is installed from a checkout's own marketplace"):
+            with it("should uninstall it and remove that marketplace"):
+                self.plugins.plugins_installed = {"cdd-board@abd-works": "0.6.3"}
+                self.plugins.install(_BOARD)
+                expect(self.plugins.calls).to(equal([
+                    ("plugin", "uninstall", "cdd-board@abd-works", "--scope", "user"),
+                    ("plugin", "marketplace", "remove", "abd-works"),
+                ]))
+
+        with context("with a cached copy and no claude command"):
+            with it("should say the cached copy is still there"):
                 self.plugins.plugins_installed = {"cdd@cdd-home": "1.0.0"}
-                self.plugins.install(_CDD)
-                expect(("plugin", "update", "cdd@cdd-home", "--scope", "user") in self.plugins.calls).to(equal(True))
+                self.plugins.cli = None
+                expect(str(self.plugins.install(_CDD))).to(equal(PluginInstall.CACHED))
 
     with context("finding Claude Code in the desktop app"):
         with before.each:

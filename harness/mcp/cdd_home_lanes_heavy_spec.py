@@ -55,9 +55,14 @@ with description("a cdd home's Claude Code plugins") as self:
 
         with context("that a dev-lane install installs its mods"):
             with before.each:
-                plugins = SimpleNamespace(install=lambda plugin: "installed")
+                self.loaded_from: list[Path] = []
+                plugins = SimpleNamespace(install=lambda plugin: self.loaded_from.append(plugin.marketplace.mod_folder(plugin)) or "watched")
                 server = McpChannelServer(self.lanes.dev.served_checkout(self.feature), self.lanes, plugins, IdeLayout("Claude"))
                 server.install_mods()
+
+            # The person approves a lane by pinning it; its chats then load that lane's mods, never a cached copy.
+            with it("should have Claude Code load the mods of the code the dev lane serves"):
+                expect([folder.is_relative_to(self.feature) for folder in self.loaded_from]).to(equal([True, True]))
 
             with it("should leave the stable lane's mods as the stable lane's code has them"):
                 expect(self.queue_of(self.home)).to(equal(STABLE_QUEUE))

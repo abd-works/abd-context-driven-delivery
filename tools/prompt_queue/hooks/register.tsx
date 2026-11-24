@@ -14,7 +14,7 @@ import {
   noteDecisionAsked,
   refreshQueue,
   finishTurn,
-  rememberRobotAgent,
+  startRobotAgent,
   startTurn,
   followQueueAnswer,
 } from './queue/prompt-queue'
@@ -74,9 +74,6 @@ export const register: Register = on => {
     if (PROMPT_QUEUE_TOOL.test(e.tool) && !isRefused(ran)) {
       await followQueueAnswer($, ran)
     }
-    if (e.agentId === undefined && e.tool === 'Agent' && !isRefused(ran)) {
-      await rememberRobotAgent($, e as unknown as Record<string, unknown>, ran)
-    }
     if (e.agentId === undefined && PLAN_TOOL.test(e.tool)) {
       await followPlan($, e as unknown as Record<string, unknown>)
     } else if (e.agentId === undefined && SET_STEPS_TOOL.test(e.tool) && !isRefused(ran)) {
@@ -88,6 +85,9 @@ export const register: Register = on => {
 
     return ran
   })
+
+  // A sub-agent this chat starts for a robot goes by that robot's name, so the robot and its background task match.
+  on('agent.spawn', async ($, e, next) => (e.parentAgentId === undefined ? startRobotAgent($, e, next) : next(e)))
 
   on('turn.start', async ($, e, next) => {
     if (e.agentId === undefined) {

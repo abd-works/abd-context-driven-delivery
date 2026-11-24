@@ -2,6 +2,9 @@
 // sometimes missing when the paste runs to the end of the message.
 const PASTED = /<pasted_content\b[^>]*>([\s\S]*?)(?:<\/pasted_content>|$)/gi
 const STRAY_TAG = /<\/?pasted_content\b[^>]*>/gi
+// What the Claude app puts before a message sent while a board viewer is open: the viewer's live state, written by the
+// viewer's page, never by the person, so no title is made from it.
+const VIEWER_STATE = /<artifact-view-context\b[^>]*>[\s\S]*?(?:<\/artifact-view-context>|$)/gi
 // A markdown line's own marks, so a heading or a list item reads as its words.
 const LINE_MARKS = /^\s*(?:#+|[-*>]|\d+[.)])\s+/
 // The end of a message's first sentence.
@@ -12,13 +15,13 @@ const ELLIPSIS = '…'
 // What a message holding only empty paste tags is called.
 const UNTITLED_PASTE = 'Pasted text'
 
-/** A goal's title, made from a message the person sent: the person's own words, with any pasted text and its
- * <pasted_content> tags taken out; when the message is only a paste, the paste's first line. The title is the first
+/** A goal's title, made from a message the person sent: the person's own words, with any board viewer's state, and any
+ * pasted text and its <pasted_content> tags, taken out; when the message is only a paste, the paste's first line. The title is the first
  * sentence of those words, cut to one line of the band with an ellipsis, so a long or pasted message never becomes the
  * goal's whole title. The agent still reads the whole message in the chat. */
 export function goalTitleOf(message: string): string {
   const pastes: string[] = []
-  const ownWords = message.replace(PASTED, (_, pasted: string) => {
+  const ownWords = message.replace(VIEWER_STATE, '\n').replace(PASTED, (_, pasted: string) => {
     pastes.push(pasted)
     return '\n'
   }).replace(STRAY_TAG, '\n')

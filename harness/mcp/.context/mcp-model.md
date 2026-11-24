@@ -222,30 +222,29 @@ The mods a checkout's code declares, each a *PublishedMod*: a folder holding `.c
 
 ## ClaudePlugins
 
-The plugins a cdd home's marketplace publishes, installed into Claude Code at user level with its own `claude` command. Each command takes seconds, so one runs only for a plugin that is missing, old, or installed from a checkout's own marketplace (`abd-works`), which is replaced. A plugin is a convenience on top of the install, so a miss is printed, never raised.
+The plugins a cdd home's marketplace publishes, loaded by Claude Code from their published folders, which its user settings name in `CLAUDE_CODE_PLUGIN_DIRS`, never from a copy in its own plugin cache: a cached copy keeps the version it was installed at, so a mod published afterwards never reaches the chats. A cached copy found at install is uninstalled with the `claude` command, along with a checkout's own marketplace (`abd-works`). A plugin is a convenience on top of the install, so a miss is printed, never raised.
 
-+ ClaudePlugins(home: CddHome | None = None)
++ ClaudePlugins(home: CddHome | None = None, claude_folder: Path | None = None)
 ------
 + installed: dict[str, str]
 + claude_cli: str | None
 ----
 + install(plugin: PublishedPlugin): PluginInstall
-+ is_watched(plugin: PublishedPlugin): bool
-	// Claude Code's settings name the plugin's folder in CLAUDE_CODE_PLUGIN_DIRS, so it reloads as the folder changes and needs no install
----<<installs>>--> PublishedPlugin
+	// names the plugin's published folder in CLAUDE_CODE_PLUGIN_DIRS in place of any other published copy, and uninstalls every cached copy
+---<<loads from its folder>>--> PublishedPlugin
 ---<<creates>>--> PluginInstall
----<<reads Claude Code's settings through>>--> IdeLayout
+---<<reads and writes Claude Code's settings through>>--> IdeLayout
 
 ## PluginInstall
 
-What installing one plugin came to, printed as its state: installed (it is at the published version), watched (Claude Code loads its folder, so it needs no install), or missing (no claude command, or the install did not take).
+What installing one plugin came to, printed as its state: watched (Claude Code loads it from its folder already), watched from now on (the install named the folder just now; Claude Code reads it when the app restarts), or a cached copy still loaded (no claude command to uninstall it).
 
 + PluginInstall(state: str)
 ------
 + state: str
-+ INSTALLED: str
 + WATCHED: str
-+ MISSING: str
++ NEWLY_WATCHED: str
++ CACHED: str
 ----
 
 ## ThrottledReporter

@@ -1132,6 +1132,16 @@ test("a message sent while a prompt is worked becomes a step of that prompt, mar
   expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] cut the text with an ellipsis', state: 'pending' }])
 })
 
+// The state the Claude app puts before a message sent while a board viewer is open: the viewer's, not the person's.
+const VIEWER_STATE = '<artifact-view-context artifact="c9a2df8e">\n{"context":{"mode":"board","dirty":false,"selected":[]}}\n' +
+  "(The JSON line above is this viewer's live state in the artifact, not typed by the user.)\n<artifact-content-authored-by-others/>\n</artifact-view-context>"
+
+test("a message sent mid-work from a board viewer becomes a step of the person's words, without the viewer's state", async ($, on) => {
+  const { seeded } = await messageSentMidWork($, on, `${VIEWER_STATE}\n\nwhy do the first 2 epics have no sub epics`)
+
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] why do the first 2 epics have no sub epics', state: 'pending' }])
+})
+
 test('the agent is told a message sent mid-work joined the prompt it works on', async ($, on) => {
   const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
 
@@ -1299,15 +1309,43 @@ test('with every robot still working its card, this chat is asked nothing', asyn
   expect(asked).toEqual([])
 })
 
-test("this chat's Agent call that starts a robot is remembered: the robot's name goes with that sub-agent's id", async ($, on) => {
+/** This chat starts a sub-agent with the description and prompt given: what the started task shows as, and the queue's
+ * stored state after it. */
+async function agentStarted($: TestEngine, on: TestOn, description: string, prompt: string) {
   const seeded = seedQueue(on, true, '', ROBOT_CARDS)
   seeded.stored.isSubAgentMode = { value: true, version: 1 }
   seeded.stored.tasks = { value: GROUPED, version: 1 }
-  on('tool.call', () => ({ result: { status: 'async_launched', agentId: 's1', description: 'Sparky: Write the scenarios' } }))
+  const started: string[] = []
+  on('agent.spawn', (_, e) => {
+    started.push(e.description)
+    return { model: 'sonnet', agentId: 's1' }
+  })
+  await $.agent.spawn({ description, prompt })
+  return { seeded, started }
+}
 
-  await $.tool.call({ tool: 'Agent', description: 'Sparky: Write the scenarios', prompt: 'Write the scenarios' })
+test("this chat's Agent call that starts a robot is remembered: the robot's name goes with that sub-agent's id", async ($, on) => {
+  const { seeded } = await agentStarted($, on, 'Sparky: Write the scenarios', 'Write the scenarios')
 
   expect(seeded.stored.robotAgents?.value).toEqual({ Sparky: 's1' })
+})
+
+test("a sub-agent started for a card goes by the name of the card's robot on the queue, whatever name this chat wrote", async ($, on) => {
+  const { started } = await agentStarted($, on, 'Robot 20: run the tests', 'Card [b]: Run the unit tier')
+
+  expect(started).toEqual(['Bolt: run the tests'])
+})
+
+test("a sub-agent started for a card is remembered as the card's robot", async ($, on) => {
+  const { seeded } = await agentStarted($, on, 'Robot 20: run the tests', 'Card [b]: Run the unit tier')
+
+  expect(seeded.stored.robotAgents?.value).toEqual({ Bolt: 's1' })
+})
+
+test("the hand-out asks that each robot's sub-agent be started with its card's id, so the task and the robot share one name", async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS)
+
+  expect(asked[0]).toContain('its prompt starting "Card [a]: "')
 })
 
 test("a robot whose sub-agent is known is handed its next card by that sub-agent's id", async ($, on) => {
@@ -1762,6 +1800,31 @@ test("opening one robot's queue closes the robot that was open, so one queue sho
   await ui.unmount()
 
   expect(seeded.stored.expandedAgents?.value).toEqual([0])
+})
+
+/** The robots' queues with Sparky's sub-agent known, robot 1 open as given: the views the person was shown on pressing
+ * robot 1. */
+async function robotPressed($: TestEngine, on: TestOn, open: number[]) {
+  const seeded = groupedQueue(on)
+  seeded.stored.expandedAgents = { value: open, version: 1 }
+  seeded.stored.robotAgents = { value: { Sparky: 's1' }, version: 1 }
+  const viewed: unknown[] = []
+  on('ui.view', (_, e) => {
+    viewed.push(e)
+    return { value: {} }
+  })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'collapse-agent-1' })
+  await ui.unmount()
+  return viewed
+}
+
+test("pressing a closed robot whose sub-agent is running shows that sub-agent's task in the main view", async ($, on) => {
+  expect(await robotPressed($, on, [])).toEqual([{ agentId: 's1' }])
+})
+
+test('pressing the open robot goes back to the main conversation', async ($, on) => {
+  expect(await robotPressed($, on, [0])).toEqual([{}])
 })
 
 test("pressing a closed robot opens its queue", async ($, on) => {

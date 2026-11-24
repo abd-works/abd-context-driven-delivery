@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, McpToolResult, PromptSubmitAttachment } from 'claude-code'
+import type { AgentSpawnInput, AgentSpawnResult, EngineInterface, McpToolResult, PromptSubmitAttachment } from 'claude-code'
 
 import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
 import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
@@ -714,10 +714,22 @@ async function changeSteps($: EngineInterface, prompt: QueuedPrompt, steps: Prom
   await changeQueue($, 'set_steps', { prompt: prompt.id, steps })
 }
 
-/** Pressing a robot opens its queue under it and closes the one that was open, so one queue shows at a time; pressing
- * it again closes its queue to the robot alone. */
+/** Pressing a robot opens its queue under it and closes the one that was open, so one queue shows at a time, and shows
+ * its sub-agent's task in the main view, as picking it from the Claude pane's background tasks does; pressing it again
+ * closes its queue to the robot alone and goes back to the main conversation. A robot whose sub-agent has not started
+ * changes no view. */
 export async function toggleAgentQueue($: EngineInterface, place: number): Promise<void> {
-  await update($, expandedAgents, open => (open.includes(place) ? [] : [place]))
+  const isOpening = !(await read($, expandedAgents)).includes(place)
+  await update($, expandedAgents, () => (isOpening ? [place] : []))
+  const robot = robotsOf((await read($, queue)).prompts, await read($, tasks))[place]
+  const agentId = robot ? (await read($, robotAgents))[agentNameOf(robot, place)] : undefined
+  if (agentId === undefined) {
+    return
+  }
+  const shown = await $.ui.view(isOpening ? { agentId } : {})
+  if (shown.deny !== undefined) {
+    $.ui.toast(`${agentNameOf(robot!, place)}'s task is not shown: ${shown.deny}`)
+  }
 }
 
 export async function toggleSteps($: EngineInterface, id: string): Promise<void> {
@@ -838,21 +850,47 @@ function handOutOf(handed: { robot: string; card: QueuedPrompt }[], agents: Reco
     "Hand out the robots' next cards. Send each robot its card's words exactly as written below, and nothing else.",
     'When a robot tells you it finished, mark its card done with prompt-queue.done; its next card follows.',
     ...handed.map(({ robot, card }) => {
-      const how = agents[robot] ? `SendMessage to ${agents[robot]}` : `start it with the Agent tool in the background, its description starting "${robot}: "`
+      const how = agents[robot]
+        ? `SendMessage to ${agents[robot]}`
+        : `start it with the Agent tool in the background, its description starting "${robot}: " and its prompt starting "Card [${card.id}]: "`
       return `- ${robot} (${how}), card [${card.id}]: ${card.text}`
     }),
   ].join('\n')
 }
 
-/** This chat started a sub-agent: when its description starts with a robot's name, that robot goes with its id. */
-export async function rememberRobotAgent($: EngineInterface, call: Record<string, unknown>, ran: unknown): Promise<void> {
-  const result = (ran as { result?: { agentId?: string } } | undefined)?.result
-  const robot = String(call.description ?? '').split(':')[0]!.trim()
-  const names = robotsOf((await read($, queue)).prompts, await read($, tasks)).map((task, place) => agentNameOf(task, place))
-  if (!result?.agentId || !names.includes(robot)) {
-    return
+// How a sub-agent's prompt names the card it was started for, as the hand-out asks: Card [id].
+const CARD_OF_PROMPT = /\bcard \[([^\]\s]+)\]/i
+// The name a description starts with, before its colon, such as Robot 20 in "Robot 20: fix the review items".
+const NAMED_DESCRIPTION = /^\s*([^:\n]{1,40}):\s*/
+
+/** This chat starts a sub-agent for a robot: the card its prompt names, else the robot its description starts with.
+ * The task then goes by that robot's name on the queue, whatever name this chat wrote, and the robot goes with the
+ * sub-agent's id, so the robot's cards and the Claude pane's background task always name the same work. A sub-agent
+ * for no robot starts as it was asked. */
+export async function startRobotAgent($: EngineInterface, spawn: AgentSpawnInput, next: (spawn: AgentSpawnInput) => Promise<AgentSpawnResult>): Promise<AgentSpawnResult> {
+  const robot = await robotOfSpawn($, spawn)
+  if (robot === undefined) {
+    return next(spawn)
   }
-  await update($, robotAgents, agents => ({ ...agents, [robot]: result.agentId! }))
+  const started = await next({ ...spawn, description: `${robot}: ${spawn.description.replace(NAMED_DESCRIPTION, '')}` })
+  const agentId = 'agentId' in started ? started.agentId : undefined
+  if (agentId !== undefined) {
+    await update($, robotAgents, agents => ({ ...agents, [robot]: agentId }))
+  }
+  return started
+}
+
+/** The robot on the queue a sub-agent is started for: the robot of the card its prompt names, else the robot whose
+ * name its description starts with. */
+async function robotOfSpawn($: EngineInterface, spawn: AgentSpawnInput): Promise<string | undefined> {
+  const goals = (await read($, queue)).prompts
+  const card = CARD_OF_PROMPT.exec(spawn.prompt)?.[1]
+  const cardRobot = goals.find(goal => goal.id === card)?.robot
+  if (cardRobot) {
+    return cardRobot
+  }
+  const named = NAMED_DESCRIPTION.exec(spawn.description)?.[1]?.trim() ?? ''
+  return robotsOf(goals, await read($, tasks)).map((task, place) => agentNameOf(task, place)).find(name => isSameRobot(named, name))
 }
 
 /**

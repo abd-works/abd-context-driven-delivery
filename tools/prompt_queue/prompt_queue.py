@@ -7,6 +7,7 @@ import base64
 import json
 from datetime import datetime, timezone
 import mimetypes
+import re
 import uuid
 from pathlib import Path
 from typing import Callable, Literal, TypedDict, get_args
@@ -36,6 +37,9 @@ ARCHIVE_FOLDER = "queue-archive"
 WHOLE_FILE_COPY = "prompt-queue-"
 # What marks a step that came from a message the person sent: a correction or comment filed under the goal it belongs to.
 INTERRUPTION_MARK = "[interruption]"
+# The state the Claude app puts before a message the person sends while a board viewer is open: the viewer's live state
+# as JSON with a note about it, written by the viewer's page, never by the person, so the queue keeps none of it.
+_VIEWER_STATE = re.compile(r"\s*<artifact-view-context\b[^>]*>.*?(?:</artifact-view-context>\s*|$)", re.DOTALL)
 # What marks a prompt that waits for the person's answer to a decision: the queue's pointer passes over it.
 DECISION_MARK = "[decision required]"
 # The key under which the queue's file lists each source, such as a handoff, whose prompts were queued once.
@@ -54,6 +58,12 @@ STEP_STATES: tuple[str, ...] = get_args(StepState)
 # What a chat id may not hold, since each would make it a path to another folder: a folder separator, a drive's colon,
 # and the two dots that name the folder above.
 _PATH_MARKS = ("/", "\\", ":", "..")
+
+
+def persons_words(text: str) -> str:
+    """text as the person wrote it: any board viewer's state the Claude app put in the message taken out, so a step or
+    card says what the person asked for instead of where their viewer stood, and outer spaces trimmed."""
+    return _VIEWER_STATE.sub(" ", text).strip()
 
 
 class PromptStep(TypedDict):
@@ -189,7 +199,7 @@ class QueuedPrompt:
     @classmethod
     def new(cls, text: str) -> QueuedPrompt:
         """A new prompt of text, with an id of its own."""
-        return cls({"id": uuid.uuid4().hex[:_PROMPT_ID_LENGTH], "text": text.strip()})
+        return cls({"id": uuid.uuid4().hex[:_PROMPT_ID_LENGTH], "text": persons_words(text)})
 
     @property
     @data_field
@@ -261,10 +271,12 @@ class QueuedPrompt:
 
     def interrupt(self, text: str) -> None:
         """File a message the person sent under it: its last step, not started, marked as an interruption; a done
-        prompt opens again, since it has work again. A message that is only spaces files nothing."""
-        if not text.strip():
+        prompt opens again, since it has work again. Only the person's words are filed, so a message that is only spaces,
+        or only a board viewer's state, files nothing."""
+        words = persons_words(text)
+        if not words:
             return
-        self.steps.add(f"{INTERRUPTION_MARK} {text.strip()}")
+        self.steps.add(f"{INTERRUPTION_MARK} {words}")
         self._has_steps = True
         self._is_done = False
 
@@ -597,8 +609,8 @@ class PromptQueue:
         return next((item.robot for item in self.prompts if item.robot.casefold() == named.casefold()), named)
 
     def _new_prompts(self, texts: list[str]) -> list[QueuedPrompt]:
-        """One prompt, with an id of its own, for each of texts that is more than spaces."""
-        return [QueuedPrompt.new(text) for text in texts if text.strip()]
+        """One prompt, with an id of its own, for each of texts that holds more than spaces and a board viewer's state."""
+        return [QueuedPrompt.new(text) for text in texts if persons_words(text)]
 
     def _misshapen(self, fault: str) -> QueueFileUnreadable:
         """The refusal of the queue's file for fault, what in it is not a prompt queue."""

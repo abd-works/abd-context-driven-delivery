@@ -14,6 +14,16 @@ from tools.prompt_queue.prompt_queue import ChatIdNotAnId, ChatNotKnown, PromptN
 
 
 
+# The state the Claude app puts before a message sent while a board viewer is open: the viewer's live state, not
+# anything the person typed.
+VIEWER_STATE = (
+    '<artifact-view-context artifact="c9a2df8e-628d-4905-9380-d29f23b38f13">\n'
+    '{"context":{"mode":"board","dirty":false,"selected":[],"viewport":{"x":-4,"y":-11,"w":468,"h":1475}}}\n'
+    "(The JSON line above is this viewer's live state in the artifact, not typed by the user.)\n"
+    "<artifact-content-authored-by-others/>\n"
+    "</artifact-view-context>"
+)
+
 with describe(PromptQueue):
     with before.each:
         import tempfile
@@ -160,6 +170,19 @@ with describe(PromptQueue):
     with it("files nothing under a goal for a message of only spaces"):
         self.queue.add_interruption(self.queue.prompts[0].id, "   ")
         expect("steps" in self.queue.prompts[0].record).to(equal(False))
+
+    with it("files only the person's words of a message sent from a board viewer, leaving out the viewer's state"):
+        goal = self.queue.prompts[0].id
+        self.queue.add_interruption(goal, f"{VIEWER_STATE}\n\nwhy do the first 2 epics have no sub epics")
+        expect(self.queue.prompts[0].listed_steps).to(equal([{"text": "[interruption] why do the first 2 epics have no sub epics", "state": "pending"}]))
+
+    with it("files nothing under a goal for a message that holds only a board viewer's state"):
+        self.queue.add_interruption(self.queue.prompts[0].id, VIEWER_STATE)
+        expect("steps" in self.queue.prompts[0].record).to(equal(False))
+
+    with it("queues only the person's words of a card sent from a board viewer"):
+        self.queue.add(f"[interruption] {VIEWER_STATE}\n\nrepin to dev lane")
+        expect(self.queue.prompts[-1].text).to(equal("[interruption] repin to dev lane"))
 
     with it("leaves a done goal done for a message of only spaces"):
         goal = self.queue.prompts[0].id

@@ -306,11 +306,12 @@ class McpChannelServer(ChannelServer):
         return lines
 
     def install_mods(self) -> list[str]:
-        """Install the mods of the stable lane's marketplace, which every chat's plugins come from, such as the board and
-        the prompt queue, one line for each. It holds the stable lane's own mods only: the stable server runs main, so a
-        feature's mods published there would give main's chats buttons their server cannot serve. A dev lane's mods stay
-        in its own marketplace."""
-        return [f"{plugin.name}: {self._claude_plugins.install(plugin)}" for plugin in self._daemon.home.marketplace.mods]
+        """Have Claude Code load the mods of the lane the person approved by serving it, such as the board and the
+        prompt queue, from that lane's own marketplace, one line for each: the dev lane's when the install serves a
+        feature there, else the stable lane's. Claude Code loads each from its published folder, never a cached copy,
+        so a mod the lane publishes reaches the chats; the stable lane's marketplace is never written with a feature's
+        mods."""
+        return [f"{plugin.name}: {self._claude_plugins.install(plugin)}" for plugin in self.served.home.marketplace.mods]
 
 
 class McpInstallation(RegisteredChannel):

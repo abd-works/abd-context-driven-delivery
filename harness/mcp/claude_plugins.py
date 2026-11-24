@@ -1,6 +1,7 @@
-"""ClaudePlugins - installs the plugins a cdd home's marketplace publishes into Claude Code through its own command line."""
+"""ClaudePlugins - has Claude Code load the plugins a cdd home's marketplace publishes from their folders, never its cache."""
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -11,20 +12,21 @@ from pathlib import Path
 from harness.installation.ide_layout import IdeLayout
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.claude_marketplace import CLAUDE_MARKETPLACE, PublishedPlugin
+from harness.mcp.claude_marketplace import PublishedPlugin
 
 # Each claude plugin command clones or reads a marketplace; a slow disk or network can take this long.
 _CLAUDE_COMMAND_TIMEOUT_SECONDS = 120
 
 
 class PluginInstall:
-    """What installing one plugin came to: ``installed`` (it is at the published version, or installing put it there),
-    ``watched`` (Claude Code loads its folder and reloads it as it changes, so it needs no install), or ``missing``
-    (no claude command, or the install did not take)."""
+    """What installing one plugin came to: ``watched`` (Claude Code loads it from its published folder already),
+    ``watched from now on: restart the Claude app to load it`` (the install named its folder just now, which Claude Code
+    reads when it starts), or ``cached copy still loaded: no claude command to uninstall it`` (a copy in Claude Code's
+    cache that the install could not remove)."""
 
-    INSTALLED = "installed"
     WATCHED = "watched"
-    MISSING = "missing"
+    NEWLY_WATCHED = "watched from now on: restart the Claude app to load it"
+    CACHED = "cached copy still loaded: no claude command to uninstall it"
 
     def __init__(self, state: str) -> None:
         self.state = state
@@ -40,63 +42,80 @@ class PluginInstall:
 
 
 class ClaudePlugins:
-    """The plugins ``~/.cdd/`` publishes for Claude Code, installed at user level with the ``claude`` command: the
-    ``cdd`` plugin, which declares the cdd server for every chat, and the mods of the code the server runs. Each claude
-    command takes seconds, so one runs only for what is missing, old, or installed from a checkout. A plugin is a
-    convenience on top of the install, so a miss is printed, never raised."""
+    """The plugins ``~/.cdd/`` publishes for Claude Code: the ``cdd`` plugin, which declares the cdd server for every
+    chat, and the mods of the code the server runs. Claude Code loads each from its published folder, named in
+    ``CLAUDE_CODE_PLUGIN_DIRS`` in its user settings, never from a copy in its own plugin cache: a cached copy keeps the
+    version it was installed at, so a mod published afterwards, such as the queue bar gaining Flush, never reaches the
+    chats. A cached copy the install finds is uninstalled with the ``claude`` command. A plugin is a convenience on top
+    of the install, so a miss is printed, never raised."""
 
-    # A plugin installed from a checkout's own marketplace runs that branch's code, not the server's.
+    # A plugin installed from a checkout's own marketplace, whose listing goes when its plugin does.
     CHECKOUT_MARKETPLACE = "abd-works"
+    WATCHED_FOLDERS = "CLAUDE_CODE_PLUGIN_DIRS"
 
-    def __init__(self, home: CddHome | None = None) -> None:
+    def __init__(self, home: CddHome | None = None, claude_folder: Path | None = None) -> None:
         self._home = home if home is not None else CddHome()
-        self._claude = IdeLayout("Claude")
+        self._claude_folder = claude_folder if claude_folder is not None else IdeLayout("Claude").user_settings_folder
 
     def install(self, plugin: PublishedPlugin) -> PluginInstall:
-        """Install plugin from the cdd home's marketplace, or update it when what it publishes changed. A plugin whose
-        folder Claude Code watches, named in ``CLAUDE_CODE_PLUGIN_DIRS``, needs no install: every chat reloads it as
-        the folder is written, and installing it too would load it twice. A copy installed from a checkout's own
-        marketplace is replaced."""
-        if self.is_watched(plugin):
-            return PluginInstall(PluginInstall.WATCHED)
-        installed = self.installed
-        from_checkout = f"{plugin.name}@{self.CHECKOUT_MARKETPLACE}"
-        if from_checkout not in installed and installed.get(plugin.installed_name) == plugin.version:
-            return PluginInstall(PluginInstall.INSTALLED)
-        claude = self.claude_cli
-        if claude is None:
-            print(
-                f"{plugin.installed_name} not installed: no claude command found. Run: claude plugin marketplace add "
-                f"{plugin.marketplace.folder}",
-                file=sys.stderr,
-            )
-            return PluginInstall(PluginInstall.MISSING)
-        if from_checkout in installed:
-            self.run(claude, "plugin", "uninstall", from_checkout, "--scope", "user")
-            self.run(claude, "plugin", "marketplace", "remove", self.CHECKOUT_MARKETPLACE)
-        return self._install(claude, plugin)
+        """Have Claude Code load plugin from its published folder: name the folder in its settings, in place of any
+        other published folder of the same plugin, and uninstall every cached copy of it. Claude Code reads the
+        settings when it starts, so a folder named just now loads after the app restarts."""
+        newly_watched = self._watch(plugin.marketplace.mod_folder(plugin), plugin.name)
+        cached = [name for name in self.installed if name.split("@")[0] == plugin.name]
+        if cached and not self._uninstall(cached):
+            print(f"{plugin.name}: a cached copy is still installed and no claude command was found to uninstall it", file=sys.stderr)
+            return PluginInstall(PluginInstall.CACHED)
+        return PluginInstall(PluginInstall.NEWLY_WATCHED if newly_watched else PluginInstall.WATCHED)
 
     @property
     def installed(self) -> dict[str, str]:
-        """Each plugin Claude Code has installed, with its version, from its own record of them."""
-        record = JsonFile(self._claude.user_settings_folder / "plugins" / "installed_plugins.json")
+        """Each plugin Claude Code has a copy of in its cache, with its version, from its own record of them."""
+        record = JsonFile(self._claude_folder / "plugins" / "installed_plugins.json")
         try:
             plugins = record.read().get("plugins", {})
         except JsonFileUnreadable:
-            # A record Claude Code is writing: nothing reads as installed, and the install runs again.
+            # A record Claude Code is writing reads as empty; the next install looks again.
             return {}
         return {name: str((entries or [{}])[0].get("version", "")) for name, entries in plugins.items()}
 
-    def is_watched(self, plugin: PublishedPlugin) -> bool:
-        """Whether the user's Claude Code settings name plugin's folder in ``CLAUDE_CODE_PLUGIN_DIRS``, which every chat
-        loads it from and reloads it from when the folder changes: a served checkout's mod folder, else the copy."""
+    def _watch(self, folder: Path, name: str) -> bool:
+        """Name folder in ``CLAUDE_CODE_PLUGIN_DIRS``, dropping any other published folder of the plugin called name,
+        which would load it twice; answer whether the settings changed."""
+        settings = JsonFile(self._claude_folder / "settings.json")
         try:
-            env = JsonFile(self._claude.user_settings_folder / "settings.json").read().get("env", {})
+            named = settings.read()
         except JsonFileUnreadable:
+            named = {}
+        env = named.setdefault("env", {})
+        current = [entry.strip() for entry in str(env.get(self.WATCHED_FOLDERS, "")).split(os.pathsep) if entry.strip()]
+        wanted = str(Path(folder).resolve())
+        kept = [entry for entry in current if not self._another_copy(Path(entry), name, wanted)]
+        if wanted not in kept:
+            kept.append(wanted)
+        if kept == current:
             return False
-        watched = plugin.marketplace.mod_folder(plugin).resolve()
-        folders = str(env.get("CLAUDE_CODE_PLUGIN_DIRS", "")).split(os.pathsep)
-        return any(folder.strip() and Path(folder.strip()).expanduser().resolve() == watched for folder in folders)
+        env[self.WATCHED_FOLDERS] = os.pathsep.join(kept)
+        self._claude_folder.mkdir(parents=True, exist_ok=True)
+        (self._claude_folder / "settings.json").write_text(json.dumps(named, indent=2), encoding="utf-8")
+        return True
+
+    @staticmethod
+    def _another_copy(entry: Path, name: str, wanted: str) -> bool:
+        """Whether entry is another published folder of the plugin called name: one in a ``claude-plugins`` folder."""
+        return entry.name == name and entry.parent.name == "claude-plugins" and str(entry.resolve()) != wanted
+
+    def _uninstall(self, cached: list[str]) -> bool:
+        """Uninstall each cached copy, and the listing of a checkout's own marketplace with its copy; answer whether a
+        claude command ran them."""
+        claude = self.claude_cli
+        if claude is None:
+            return False
+        for name in cached:
+            self.run(claude, "plugin", "uninstall", name, "--scope", "user")
+            if name.endswith(f"@{self.CHECKOUT_MARKETPLACE}"):
+                self.run(claude, "plugin", "marketplace", "remove", self.CHECKOUT_MARKETPLACE)
+        return True
 
     @property
     def claude_cli(self) -> str | None:
@@ -116,19 +135,6 @@ class ClaudePlugins:
         except (OSError, subprocess.SubprocessError) as error:
             return str(error)
         return run.stdout + run.stderr
-
-    # Adding a marketplace Claude Code already has reads nothing new, and an update compares against the listing it last
-    # read, so the marketplace is read again before the update, or a newly published board stays uninstalled.
-    def _install(self, claude: str, plugin: PublishedPlugin) -> PluginInstall:
-        named = plugin.installed_name
-        self.run(claude, "plugin", "marketplace", "add", str(plugin.marketplace.folder))
-        self.run(claude, "plugin", "marketplace", "update", CLAUDE_MARKETPLACE)
-        self.run(claude, "plugin", "install", named, "--scope", "user")
-        self.run(claude, "plugin", "update", named, "--scope", "user")
-        if named in self.run(claude, "plugin", "list"):
-            return PluginInstall(PluginInstall.INSTALLED)
-        print(f"{named} not installed: claude plugin install did not take", file=sys.stderr)
-        return PluginInstall(PluginInstall.MISSING)
 
     def _desktop_claude_code_folders(self) -> list[Path]:
         """Where the desktop app keeps its Claude Code: under `%APPDATA%\\Claude`, or under each profile in
