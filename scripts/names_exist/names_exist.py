@@ -36,8 +36,9 @@ import sys
 import sysconfig
 import tempfile
 import warnings
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
-from functools import cached_property
+from functools import cache, cached_property
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -116,6 +117,19 @@ def _defined_in(tree: ast.AST) -> set[str]:
     return names
 
 
+def _names_defined_in_file(path: Path) -> set[str]:
+    """Every name one file defines, or none when it does not parse: read in a worker process, since reading the
+    standard library and the imported packages one file after another takes over a minute."""
+    tree = _parsed(path)
+    return _defined_in(tree) if tree is not None else set()
+
+
+@cache
+def _distributions_by_module() -> dict[str, list[str]]:
+    """Each top-level module's installed distributions, read once: reading them takes nearly a second."""
+    return importlib.metadata.packages_distributions()
+
+
 def _parsed(path: Path) -> ast.Module | None:
     try:
         with warnings.catch_warnings():
@@ -132,6 +146,8 @@ class _ModuleIndex:
     def __init__(self, repo: Path) -> None:
         self._repo = repo
         self._roots = [repo / root for root in IMPORT_ROOTS]
+        self._paths: dict[str, Path | None] = {}
+        self._top_levels: dict[Path, _TopLevel | None] = {}
 
     def is_ours(self, dotted: str) -> bool:
         """Whether dotted names a module or package of the repository under one of its import roots."""
@@ -142,7 +158,13 @@ class _ModuleIndex:
         return any((root / first).is_dir() or (root / f"{first}.py").is_file() for root in self._roots)
 
     def path_of(self, dotted: str) -> Path | None:
-        """The file (module.py, or a package's __init__.py) or folder (a namespace package) dotted names."""
+        """The file (module.py, or a package's __init__.py) or folder (a namespace package) dotted names, looked up
+        once for each name: the files are imported from thousands of times."""
+        if dotted not in self._paths:
+            self._paths[dotted] = self._found_path(dotted)
+        return self._paths[dotted]
+
+    def _found_path(self, dotted: str) -> Path | None:
         parts = dotted.split(".")
         for root in self._roots:
             base = root.joinpath(*parts)
@@ -160,8 +182,15 @@ class _ModuleIndex:
         path = self.path_of(dotted)
         if path is None or path.is_dir():
             return False
-        tree = _parsed(path)
-        return tree is None or name in _TopLevel(tree)
+        top_level = self._top_level(path)
+        return top_level is None or name in top_level
+
+    def _top_level(self, path: Path) -> _TopLevel | None:
+        """What the module at path defines at its top level, read once; None when it does not parse."""
+        if path not in self._top_levels:
+            tree = _parsed(path)
+            self._top_levels[path] = _TopLevel(tree) if tree is not None else None
+        return self._top_levels[path]
 
 
 class _TopLevel:
@@ -225,7 +254,12 @@ class PythonNames:
         if self._files is not None:
             return list(self._trees.values())
         listed = subprocess.run(["git", "ls-files", "-z", "*.py"], cwd=self._repo, capture_output=True, text=True, check=True).stdout
-        return [tree for name in listed.split("\0") if name and (self._repo / name).is_file() and (tree := _parsed(self._repo / name)) is not None]
+        trees = self._trees
+        return [
+            tree
+            for name in listed.split("\0")
+            if name and (tree := trees.get(name) or (_parsed(self._repo / name) if (self._repo / name).is_file() else None)) is not None
+        ]
 
     def missing(self) -> list[MissingName]:
         return sorted({*self.undefined_names(), *self.missing_imports(), *self.missing_members()})
@@ -346,11 +380,22 @@ class PythonNames:
         names: set[str] = set()
         for tree in self._every_tree:
             names |= _defined_in(tree)
-        for source in self._outside_sources() if self._reads_outside else []:
-            if (tree := _parsed(source)) is not None:
-                names |= _defined_in(tree)
-        names |= _LiveNames(self._imported_packages() if self._reads_outside else set()).names
+        for defined in self._names_outside():
+            names |= defined
+        names |= _LiveNames(self._imported if self._reads_outside else set()).names
         return names
+
+    def _names_outside(self) -> list[set[str]]:
+        """The names each file of the standard library and the imported packages defines, read in worker processes."""
+        if not self._reads_outside:
+            return []
+        with ProcessPoolExecutor(max_workers=min(16, os.cpu_count() or 1)) as workers:
+            return list(workers.map(_names_defined_in_file, self._outside_sources(), chunksize=64))
+
+    @cached_property
+    def _imported(self) -> set[str]:
+        """The packages outside the repository its code imports, read once."""
+        return self._imported_packages()
 
     def _imported_packages(self) -> set[str]:
         imported: set[str] = set()
@@ -379,7 +424,7 @@ class PythonNames:
         """The Python files of the installed distribution that provides the top-level module first, so a package
         split over several top-level folders, as lizard is (lizard, lizard_ext, lizard_languages), is read whole."""
         found: list[Path] = []
-        for distribution in importlib.metadata.packages_distributions().get(first, []):
+        for distribution in _distributions_by_module().get(first, []):
             for file in importlib.metadata.files(distribution) or []:
                 if file.suffix == ".py":
                     found.append(Path(file.locate()))
@@ -388,7 +433,7 @@ class PythonNames:
     def _outside_sources(self) -> list[Path]:
         """The Python source of the standard library and of each installed package the repository imports."""
         folders = {Path(sysconfig.get_paths()["stdlib"])}
-        for first in {name.split(".")[0] for name in self._imported_packages()}:
+        for first in {name.split(".")[0] for name in self._imported}:
             try:
                 spec = importlib.util.find_spec(first)
             except (ImportError, ValueError):
