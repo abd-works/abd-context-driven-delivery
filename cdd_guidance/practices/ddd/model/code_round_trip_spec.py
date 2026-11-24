@@ -256,6 +256,18 @@ with description("a domain model rendered from one code format to the other") as
         with it("should leave no TypeScript body to translate"):
             expect(self.code).not_to(contain("typescript body to translate"))
 
+    with context("from Python whose operation has a docstring, to TypeScript and back"):
+        with it("should keep the docstring"):
+            code = (
+                '@aggregate_root\n@entity\nclass Cart:\n    """Module: Ordering | custom · Cart"""\n\n'
+                "    def add_book(self, book_id: str) -> bool:\n"
+                '        """the title and price cross at the moment the book is added"""\n'
+                "        raise NotImplementedError\n"
+            )
+            typescript = Ddd(fidelity="model").render("typescript", code, source="python").content
+            back = Ddd(fidelity="model").render("python", typescript, source="typescript").content
+            expect(back).to(contain('"""the title and price cross at the moment the book is added"""'))
+
     with context("from TypeScript to markdown"):
         with before.all:
             self.back = _rendered_through("python", "typescript", "markdown")

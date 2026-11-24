@@ -281,7 +281,24 @@ class CFamilyParse:
         self._apply_method_end_line(operation, match.end() - 1)
         filled = self._operation_from_body(operation, method_body)
         self._read_modifiers(filled, match)
+        filled.description = self._doc_comment_above(header_start) or filled.description
         return filled
+
+    def _doc_comment_above(self, header_start: int) -> str:
+        """The doc comment written right above the method whose header starts at header_start, `/** ... */`, with
+        only its decorators between them: its words, without the comment's marks; empty when none is written there."""
+        above = self._class_body[:header_start].rstrip()
+        lines = above.split("\n")
+        while lines and lines[-1].strip().startswith("@"):
+            lines.pop()
+        above = "\n".join(lines).rstrip()
+        if not above.endswith("*/") or "/**" not in above:
+            return ""
+        comment = above[above.rindex("/**") + 3 : -2]
+        if "*/" in comment:
+            return ""
+        words = [line.strip().lstrip("*").strip() for line in comment.split("\n")]
+        return " ".join(word for word in words if word)
 
     def _read_modifiers(self, operation: Operation, match: re.Match) -> None:
         """Whether the method is an accessor, static, or private, as its header and the words before it say."""
