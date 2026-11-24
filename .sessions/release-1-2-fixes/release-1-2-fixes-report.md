@@ -15,7 +15,7 @@ From 2026-11-21 the session ran a Clean Engineering review of the whole codebase
 
 On 2026-11-23 and 2026-11-24 six robots worked what the review left open (wave 7): lizard installed, a check that every name the code calls or imports still exists, the last two open defects and the parts left of fourteen others, every question the person answered built, a second judge round, one node in the graph for a class a model document and its code both describe, and the metrics gate replaced by validate rules. A validate of the whole code at the end ([clean-engineering-code-20261124T074203.md](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\validation-reports\clean-engineering-code-20261124T074203.md)) finds 1,058 violations in 27 rules, with every measured limit measured: the eleven rules the first run also checked find 339 where they found 256, and the seventeen that found nothing at the first run, most of them added since, find 719 (section 6). A second judge round on the 613 production files changed since 2026-11-21 found 1,337 findings, 586 of them the first round's still open; none of the second round's has been fixed beyond four defects.
 
-The tiers at the end, on `a34fa3501` (2026-11-24): the unit tier passed 476 of 476 files; the heavy tier passed 77 of 77 files on the code as it stood after `f25dcfc3e`, and has not run over the commits after it; the e2e tier passed 9 of 12 files at first, then 12 of 12 (Playwright 241 of 241) once `96d944ccf` brought three specs up to two answers already built: the Files app's graph-view specs looked for the `kanban` label a folder had before the explorer tree labelled it by its path at the practice's root, `space/kanban` (r3-lens-09, `0ba9d8958`), and the board's render test unchose the last chosen format, which widget-13's answer refuses.
+The tiers at the end, on `a34fa3501` (2026-11-24): the unit tier passed 476 of 476 files; the heavy tier passed 77 of 77 files, at `f25dcfc3e` and again on the final code at `203eac4a6`; the e2e tier passed 9 of 12 files at first, then 12 of 12 (Playwright 241 of 241) once `96d944ccf` brought three specs up to two answers already built: the Files app's graph-view specs looked for the `kanban` label a folder had before the explorer tree labelled it by its path at the practice's root, `space/kanban` (r3-lens-09, `0ba9d8958`), and the board's render test unchose the last chosen format, which widget-13's answer refuses.
 
 ## 2. The waves
 
@@ -699,7 +699,7 @@ Files passed of files run. Sources: the handoffs, [final-report.md](C:\dev\abd-c
 | Round 3's fourth wave, 2026-11-21 | `ea0a0739c` | 388 of 388 | 66 of 68; both fixed and passed alone | 8 of 12 |
 | After the refactor and the cross-file checks, 2026-11-22 | `acd46a9e5` (heavy `87a3b8c75`) | 454 of 454 | 71 of 73; the ticket-work race was fixed after (`5de881d36`) and the tier not run again | 12 of 12 |
 | 2026-11-23 | `c7e865340` | not run over the day's changes | not run; the measures' heavy spec needs lizard | not run |
-| After wave 7, 2026-11-24 | `a34fa3501` (heavy: the code after `f25dcfc3e`) | 476 of 476 | 77 of 77 | 12 of 12 (Playwright 241 of 241) at `96d944ccf`; 9 of 12 at `a34fa3501`, three specs behind two answers already built |
+| After wave 7, 2026-11-24 | `a34fa3501` (heavy: `203eac4a6`) | 476 of 476 | 77 of 77 | 12 of 12 (Playwright 241 of 241) at `96d944ccf`; 9 of 12 at `a34fa3501`, three specs behind two answers already built |
 | main, after the merge of 2026-11-23 | `f9f655e4a` | 366 of 366 | stopped after 24 files, none failed; the next start failed to make its worktree | failed: the web server did not start (`bff9051ea`) |
 
 The board's acceptance of a violation, the one browser story saved with its screenshots in this session, passes all 14 of its steps ([e2e-test-results](C:\dev\abd-cdd-release-1-2-fixes\.sessions\release-1-2-fixes\e2e-test-results\move-work-forward-on-session-board\work-fidelity-outputs-on-board\pixel-accept\results.json)).
@@ -709,7 +709,7 @@ The board's acceptance of a violation, the one browser story saved with its scre
 What is left after wave 7, at `a34fa3501`. Everything the earlier version of this section listed as done is in wave 7 and section 6. Every question file and every one of the closing robots' choices is answered (item 13).
 
 **Tests**
-1. The heavy tier passed 77 of 77 on the code as it stood after `f25dcfc3e`. The commits after it (the close warning `d072ee666`, the story map's limits `97c85c482`, four judge defects `c2376ea02`, the code body translation `c2e94d5ee`, the unit budget fixes `e7f397e77` and `e6ad9dc7f`) have run the unit tier, 476 of 476, and not the heavy tier. The e2e tier passes 12 of 12 files (Playwright 241 of 241) at `96d944ccf`.
+1. Done: the heavy tier passed 77 of 77 on the final code at `203eac4a6`, after every robot's commit. The e2e tier passes 12 of 12 files (Playwright 241 of 241) at `96d944ccf`.
 2. Main's heavy tier: the fixes for its run worktree (`8762cff7a`, `89416dacb`) reach main with the next merge. A leftover run worktree held by a hook daemon that a heavy spec left serving it (`hook_daemon_heavy_spec.py`, `hook_heavy_spec.py` or `installer_heavy_spec.py`) is still to find.
 3. The server health band has no plugin test, and three of the prompt queue's step-button plugin tests fail, as they did before wave 7.
 
