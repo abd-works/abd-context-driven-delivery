@@ -4,7 +4,7 @@ import type { AgentSpawnInput, AgentSpawnResult, EngineInterface, McpToolResult,
 import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
 import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
-import { goalTitleOf, isOnlyTalk } from './goal-title'
+import { isOnlyTalk } from './talk'
 
 const GROUPING_MODEL = 'sonnet'
 const GROUPING_TOKENS = 4096
@@ -493,55 +493,25 @@ async function workOn($: EngineInterface, id: string): Promise<void> {
 /** A prompt sent straight to the chat, as the queue holds it: its id, and what the agent is told about it. */
 export type SentPrompt = { id: string; note: string }
 
-/** A prompt the person sent straight to the chat interrupts the queue, unless it is only talk (isOnlyTalk), which the
- * chat just answers: while a turn works a goal, or when that goal's
- * turn ended asking the person something, it is about that goal and becomes its step; otherwise it is new work, a goal
- * of its own, which goes on the queue just above the next prompt to do, below the done ones, marked [interruption], as
- * the prompt being worked, so the steps the agent plans for it sit under it. Either way the queue holds the message's
- * title (goalTitleOf), never a paste. The agent is told its id, to mark it done when it is finished. */
+/** A prompt the person sent straight to the chat goes to the chat as sent and puts nothing on the queue: the agent is
+ * told about the queue beside it and decides whether it is work, and only then puts it there, as a step of the goal it
+ * belongs to or a card of its own with a clean title. A message that is only talk (isOnlyTalk) carries no note, since
+ * the chat just answers it. */
 export async function queueSentPrompt($: EngineInterface, text: string): Promise<SentPrompt | undefined> {
   if (text.trim() === '' || text.trim() === ASK_FOR_NEXT || SYSTEM_NOTICE.test(text) || isOnlyTalk(text)) {
     return undefined
   }
   // The queue as the server holds it now: the chat's start may have read it before the cdd server connected.
   await refreshQueue($)
-  const interrupted = await interruptedPrompt($)
-  if (interrupted) {
-    return addInterruption($, interrupted, goalTitleOf(text))
-  }
-  return addSentGoal($, goalTitleOf(text))
-}
-
-/** A message about new work goes on the queue as a goal of its own, just above the next prompt to do. */
-async function addSentGoal($: EngineInterface, title: string): Promise<SentPrompt | undefined> {
-  const nextPlace = (await read($, queue)).prompts.findIndex(prompt => !prompt.is_done)
-  if (!(await changeQueue($, 'add', { text: `${INTERRUPTION_MARK} ${title}` }))) {
-    return undefined
-  }
-  const sent = (await read($, queue)).prompts.at(-1)
-  if (!sent) {
-    return undefined
-  }
-  await changeQueue($, 'move', { prompt: sent.id, to: nextPlace < 0 ? (await read($, queue)).prompts.length - 1 : nextPlace })
-  await workOn($, sent.id)
-  const goals = (await read($, queue)).prompts
+  const editing = await read($, editingId)
+  const goals = (await read($, queue)).prompts.filter(prompt => !prompt.is_done && prompt.id !== editing)
+  const working = await interruptedPrompt($)
   const robots = (await read($, isSubAgentMode)) ? robotsOf(goals, await read($, tasks)) : []
-  return { id: sent.id, note: [sentGoalNoteOf(sent.id), ...robotsNoteOf(robots, goals)].join('\n') }
+  return { id: '', note: [sentNoteOf(working?.id, goals), ...robotsNoteOf(robots, goals)].join('\n') }
 }
 
-/** What the agent is told about a message queued as a goal of its own: fold it into a goal it belongs to, or mark it
- * done once its work is done. */
-function sentGoalNoteOf(sentId: string): string {
-  return `This prompt is on this chat's prompt queue as [${sentId}], titled with the person's words as typed. Before any other work, decide what it is. ` +
-    'If it is only talk (a question, an answer, a complaint or a comment), take this card off with prompt-queue.remove and just answer it. ' +
-    'If it belongs to a goal already on the queue, make it a task of that goal with prompt-queue.set_steps and take this card off with prompt-queue.remove. ' +
-    'Otherwise it is work of its own: give it with prompt-queue.edit a clean title, a short statement of the goal in plain words with the typing ' +
-    'mistakes, the [interruption] mark and any venting left out, and when its work is done, call prompt-queue.done with that id.'
-}
-
-/** The goal a message the person sends is filed under: the one last worked, if it is on the queue, done or not, while
- * the message is about it: a turn works that goal, or its turn ended asking the person something. Otherwise a message
- * sent between turns is new work, filed under no goal, so one goal never gathers every later message as its steps. */
+/** The goal a message the person sends is most likely about: the one last worked, if it is on the queue, while a turn
+ * works that goal or its turn ended asking the person something. A message sent between turns is about none. */
 async function interruptedPrompt($: EngineInterface): Promise<QueuedPrompt | undefined> {
   if (!(await read($, isTurnRunning)) && !(await read($, isAwaitingDecision))) {
     return undefined
@@ -550,28 +520,15 @@ async function interruptedPrompt($: EngineInterface): Promise<QueuedPrompt | und
   return (await read($, queue)).prompts.find(prompt => prompt.id === working)
 }
 
-/** A message about the goal last worked is filed by the cdd server under that goal, as its
- * step marked [interruption], opening it again if it was done; the agent is told so, and moves it to a card of its own
- * when it is separate work. The task list carries on from the goal's filed steps. */
-async function addInterruption($: EngineInterface, prompt: QueuedPrompt, text: string): Promise<SentPrompt> {
-  await changeQueue($, 'add_interruption', { prompt: prompt.id, text })
-  const goals = (await read($, queue)).prompts
-  await update($, plan, () => goals.find(goal => goal.id === prompt.id)?.steps ?? [])
-  const robots = (await read($, isSubAgentMode)) ? robotsOf(goals, await read($, tasks)) : []
-  return { id: '', note: [filingNoteOf(prompt.id, goals), ...robotsNoteOf(robots, goals)].join('\n') }
-}
-
-/** What the agent is told about a message filed under the goal last worked: decide where it belongs before any other
- * work, with every goal on the queue to choose from, so a message about other work never stays on the wrong card. */
-function filingNoteOf(filedUnder: string, goals: QueuedPrompt[]): string {
+/** What the agent is told about a message the person sent: it is on no card, and the agent puts it on the queue only
+ * when it is work, where it belongs, titled cleanly, then reads the queue back to check. */
+function sentNoteOf(working: string | undefined, goals: QueuedPrompt[]): string {
   return [
-    `The person sent this; the queue filed it under the goal last worked, [${filedUnder}], as a step marked ${INTERRUPTION_MARK}.`,
-    'Before any other work, decide where this message belongs, then make the queue say so:',
-    `1. It is about [${filedUnder}]: leave it there and do it as part of that goal.`,
-    '2. It is about another goal below: file it there with prompt-queue.add_interruption and take its step off this goal with prompt-queue.set_steps.',
-    '3. It is new work no goal covers, even a small one: queue it as its own card with prompt-queue.add, written as a short title of the goal, and take its step off this goal.',
-    'When a goal has gathered interruptions about other work, split them onto cards of their own with prompt-queue.split.',
-    'A question, an answer or a comment is not work: take its step off with prompt-queue.set_steps and just answer it. The goals on the queue:',
+    'The person sent this message; it is on no card of the queue. Decide what it is before any other work:',
+    `1. Only talk (a question, an answer, a complaint or a comment): answer it, and put nothing on the queue.`,
+    `2. Work for a goal on the queue${working ? `, such as the one being worked, [${working}]` : ''}: file it there with prompt-queue.add_interruption, as a short clean step.`,
+    '3. New work no goal covers: queue it with prompt-queue.add as a card of its own, titled as a short statement of the goal in plain words, with the typing mistakes and any venting left out.',
+    'Then call prompt-queue.show and check that what you placed stands once, where you meant it. The goals on the queue:',
     ...goals.map(goalLineOf),
   ].join('\n')
 }

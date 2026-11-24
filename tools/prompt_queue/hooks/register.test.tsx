@@ -674,33 +674,6 @@ test('advancing the task list finishes the step being worked and starts the next
   ])
 })
 
-test('a prompt sent straight to the chat goes first on the queue, as the prompt being worked', async ($, on) => {
-  const seeded = seedQueue(on, false, '', QUEUED, true)
-  const carried: string[] = []
-  on('prompt.submit', (_, e) => {
-    carried.push(...(e.context ?? []))
-    return { text: e.text }
-  })
-
-  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
-
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['[interruption] Fix the Files app', 'Write the scenarios', 'Run the unit tier'])
-  expect(seeded.stored.askedAbout?.value).toBe(seeded.prompts[0]!.id)
-  expect(carried.join()).toContain(`as [${seeded.prompts[0]!.id}]`)
-})
-
-test('a prompt sent straight to the chat goes above the next prompt to do, below the done ones, marked as an interruption', async ($, on) => {
-  const seeded = seedQueue(on, false, '', [
-    { id: 'a', text: 'Write the scenarios', is_done: true },
-    { id: 'b', text: 'Run the unit tier' },
-  ] as Prompt[], true)
-  on('prompt.submit', (_, e) => ({ text: e.text }))
-
-  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
-
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', '[interruption] Fix the Files app', 'Run the unit tier'])
-})
-
 for (const isPlanSeen of [false, true]) {
   test(`the queue beside a prompt ${isPlanSeen ? 'leaves ticking steps to the task list once one is seen' : 'tells the agent to tick its steps itself until a task list is seen'}`, async ($, on) => {
     seedQueue(on, false, '', QUEUED, true, '', 'a')
@@ -1125,21 +1098,57 @@ async function messageSentMidWork($: Parameters<Parameters<typeof test>[1]>[0], 
   return { seeded, carried }
 }
 
-test("a message sent while a prompt is worked becomes a step of that prompt, marked as the person's interruption", async ($, on) => {
-  const { seeded } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
-
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
-  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] cut the text with an ellipsis', state: 'pending' }])
-})
-
 // The state the Claude app puts before a message sent while a board viewer is open: the viewer's, not the person's.
 const VIEWER_STATE = '<artifact-view-context artifact="c9a2df8e">\n{"context":{"mode":"board","dirty":false,"selected":[]}}\n' +
   "(The JSON line above is this viewer's live state in the artifact, not typed by the user.)\n<artifact-content-authored-by-others/>\n</artifact-view-context>"
 
-test("a message sent mid-work from a board viewer becomes a step of the person's words, without the viewer's state", async ($, on) => {
-  const { seeded } = await messageSentMidWork($, on, `${VIEWER_STATE}\n\ngive the first 2 epics sub epics`)
+// A message goes to the chat as sent: the agent decides whether it is work and puts it on the queue itself, titled cleanly.
+test('a message sent between turns puts nothing on the queue', async ($, on) => {
+  const seeded = seedQueue(on, false, '', QUEUED, true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
 
-  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] give the first 2 epics sub epics', state: 'pending' }])
+  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
+})
+
+test('a message sent while a prompt is worked adds no step to it', async ($, on) => {
+  const { seeded } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(seeded.prompts[0]!.steps ?? []).toEqual([])
+})
+
+test('a pasted message puts nothing on the queue', async ($, on) => {
+  const seeded = seedQueue(on, false, '', [], true)
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+
+  await $.prompt.submit({ text: PASTED_NOTES, wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts).toEqual([])
+})
+
+test('the agent is told the message is on no card and to queue it only when it is work, titled cleanly', async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(carried.join()).toContain('it is on no card of the queue')
+})
+
+test('the agent is told how to file work under the goal being worked, by its id', async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(carried.join()).toContain('prompt-queue.add_interruption')
+})
+
+test('the agent is told the goal being worked when a message is sent mid-work', async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(carried.join()).toContain('the one being worked, [a]')
+})
+
+test('the agent is told to check the queue after placing the message', async ($, on) => {
+  const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
+
+  expect(carried.join()).toContain('prompt-queue.show')
 })
 
 // A question, an answer or a comment is talk, not work: the chat answers it, and the queue keeps only work to do.
@@ -1161,27 +1170,6 @@ for (const talk of ['why is there no flush button?', 'where is the flush button'
     expect(seeded.prompts).toEqual([])
   })
 }
-
-test('a question that asks for work, such as one that ends "please add it", is filed as work', async ($, on) => {
-  const { seeded } = await messageSentMidWork($, on, 'why is there no flush button? please add it to this branch')
-
-  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] why is there no flush button?', state: 'pending' }])
-})
-
-test('the agent is told a message sent mid-work joined the prompt it works on', async ($, on) => {
-  const { carried } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
-
-  expect(carried.join()).toContain('filed it under the goal last worked, [a]')
-})
-
-test("the agent's next task list keeps the person's interruption among the prompt's steps", async ($, on) => {
-  const { seeded } = await messageSentMidWork($, on, 'cut the text with an ellipsis')
-
-  await $.tool.call({ tool: PLAN_TOOL, items: PLANNED })
-
-  expect(seeded.prompts[0]!.steps!.map(step => step.text)).toContain('[interruption] cut the text with an ellipsis')
-})
-
 
 const GROUPED = [
   { description: 'Write the story map', prompts: ['Write the scenarios', 'Validate them'], name: 'Sparky' },
@@ -1451,101 +1439,8 @@ async function messageSentAfterQuestion($: TestEngine, on: TestOn, text: string)
   return { seeded, carried }
 }
 
-test('an answer sent between turns to the question the agent asked is filed under the goal last worked, opening it again', async ($, on) => {
-  const { seeded, carried } = await messageSentAfterQuestion($, on, 'cut the text with an ellipsis')
-
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', 'Run the unit tier'])
-  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] cut the text with an ellipsis', state: 'pending' }])
-  expect(seeded.prompts[0]!.is_done).toBe(false)
-  expect(carried.join()).toContain('filed it under the goal last worked, [a]')
-})
-
-test('a message about new work sent between turns starts a goal of its own, not another step of the goal last worked', async ($, on) => {
-  const seeded = seedQueue(on, false, '', QUEUED.map(prompt => ({ ...prompt })), true, '', 'a')
-  const carried: string[] = []
-  on('prompt.submit', (_, e) => {
-    carried.push(...(e.context ?? []))
-    return { text: e.text }
-  })
-
-  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
-
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['[interruption] Fix the Files app', 'Write the scenarios', 'Run the unit tier'])
-  expect(seeded.prompts[1]!.steps).toBeUndefined()
-  expect(seeded.stored.askedAbout?.value).toBe(seeded.prompts[0]!.id)
-  expect(carried.join()).toContain(`as [${seeded.prompts[0]!.id}]`)
-})
-
 // A first message of a chat as Claude Code hands a paste to the mod: the pasted text inside its tags.
 const PASTED_NOTES = '<pasted_content id="7250">\n## Notes from the backlog\nFrom `board-enhancements` the board needs a filter.\n</pasted_content>'
-
-test('a goal sent as pasted text is titled by the paste\'s first line, without its tags', async ($, on) => {
-  const seeded = seedQueue(on, false, '', [], true)
-  on('prompt.submit', (_, e) => ({ text: e.text }))
-
-  await $.prompt.submit({ text: PASTED_NOTES, wait: false, origin: { kind: 'composer' } })
-
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['[interruption] Notes from the backlog'])
-})
-
-test("a goal sent as the person's words with a paste is titled by the person's words", async ($, on) => {
-  const seeded = seedQueue(on, false, '', [], true)
-  on('prompt.submit', (_, e) => ({ text: e.text }))
-
-  await $.prompt.submit({ text: `Triage these notes into the backlog\n${PASTED_NOTES}`, wait: false, origin: { kind: 'composer' } })
-
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['[interruption] Triage these notes into the backlog'])
-})
-
-test("a long goal is titled by its first sentence, cut short with an ellipsis", async ($, on) => {
-  const seeded = seedQueue(on, false, '', [], true)
-  on('prompt.submit', (_, e) => ({ text: e.text }))
-  const long = `Fix the queue band's goal title. ${'Then keep going with every other thing on the list. '.repeat(5)}`
-
-  await $.prompt.submit({ text: `${'Rework '.repeat(20)}the band. ${long}`, wait: false, origin: { kind: 'composer' } })
-  await $.prompt.submit({ text: long, wait: false, origin: { kind: 'composer' } })
-
-  // Each message goes above the goal sent before it, the next to do.
-  const [sentence, cut] = seeded.prompts.map(prompt => prompt.text)
-  expect(sentence).toBe("[interruption] Fix the queue band's goal title.")
-  expect(cut!.length).toBeLessThanOrEqual('[interruption] '.length + 80)
-  expect(cut!.endsWith('Rework…')).toBe(true)
-})
-
-test('messages sent after a pasted first message each start a goal of their own, so no goal gathers them as interruptions', async ($, on) => {
-  const seeded = seedQueue(on, false, '', [], true)
-  on('prompt.submit', (_, e) => ({ text: e.text }))
-
-  await $.prompt.submit({ text: PASTED_NOTES, wait: false, origin: { kind: 'composer' } })
-  await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
-  await $.prompt.submit({ text: 'Run the unit tier', wait: false, origin: { kind: 'composer' } })
-
-  expect(seeded.prompts.map(prompt => prompt.text).sort()).toEqual(
-    ['[interruption] Fix the Files app', '[interruption] Notes from the backlog', '[interruption] Run the unit tier'])
-  expect(seeded.prompts.flatMap(prompt => prompt.steps ?? [])).toEqual([])
-})
-
-test('a pasted message sent mid-work becomes a step titled by its first line, not the paste', async ($, on) => {
-  const { seeded } = await messageSentMidWork($, on, PASTED_NOTES)
-
-  expect(seeded.prompts[0]!.steps).toEqual([{ text: '[interruption] Notes from the backlog', state: 'pending' }])
-})
-
-
-test("the note on a filed message tells the agent to decide first where it belongs, listing the goals on the queue", async ($, on) => {
-  const { carried } = await messageSentMidWork($, on, 'take the Alt hint off the queue')
-
-  expect(carried.join()).toContain('Before any other work, decide where this message belongs')
-  expect(carried.join()).toContain('[b] Run the unit tier')
-  expect(carried.join()).toContain('prompt-queue.add_interruption')
-})
-
-test('the note on a filed message tells the agent to split a goal that gathered interruptions about other work', async ($, on) => {
-  const { carried } = await messageSentMidWork($, on, 'take the Alt hint off the queue')
-
-  expect(carried.join()).toContain('prompt-queue.split')
-})
-
 
 // A goal that gathered the person's messages as interruptions, one of them done, beside the agent's own steps.
 const GATHERED = [
@@ -1618,17 +1513,21 @@ test('fewer than three finished steps stay shown, with nothing folded', async ($
 })
 
 
-test("the first message of a chat is placed from the queue as the server holds it, even when the chat's start could not read it", async ($, on) => {
+test("the first message of a chat is answered with the queue as the server holds it, even when the chat's start could not read it", async ($, on) => {
   const seeded = seedQueue(on, false, '', [
     { id: 'a', text: 'Write the scenarios', is_done: true },
     { id: 'b', text: 'Run the unit tier' },
   ] as Prompt[], true)
   seeded.stored.queue = { value: { chat: CHAT, prompts: [] }, version: 1 }
-  on('prompt.submit', (_, e) => ({ text: e.text }))
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
 
   await $.prompt.submit({ text: 'Fix the Files app', wait: false, origin: { kind: 'composer' } })
 
-  expect(seeded.prompts.map(prompt => prompt.text)).toEqual(['Write the scenarios', '[interruption] Fix the Files app', 'Run the unit tier'])
+  expect(carried.join()).toContain('[b] Run the unit tier')
 })
 
 test("the queue is drawn from the answer of the agent's own prompt-queue call at once, without waiting for the next read", async ($, on) => {
