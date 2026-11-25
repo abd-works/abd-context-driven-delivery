@@ -239,6 +239,18 @@ The multi-line canvas, from the pml-web built features chat on 2026-11-25:
 | 5. Isolation | Does `.paradise` CSS stay inside the screen in the explorer? | The `sm-` panel is unaffected | Keep Product Styles Inside The Screen |
 | 6. Editing | What can people actually do with a mounted view? | Written down, to confirm the trade-off | Redesign A Screen By Detaching It |
 
+**Spike results, 2026-11-25** (throwaway; build in this chat's scratchpad, scratch canvas `https://claude.ai/artifact/4wi7YbbNQ28EzYQ774qGwX`, artboard `#play-screens-mounted-plan-catalog`; version-6 and pml-web untouched):
+
+| Gate | Result | Evidence |
+|---|---|---|
+| Build | **Pass, with a workaround** | pml-web's views import `@my-paradise/paradise-shell` and `@my-paradise/assets/*`, but `packages/my-paradise` was deleted in `eb529d2` (2026-11-18), and `src/revenue/cart/*.tsx` and `src/inventory/plans/*` are uncommitted: `tsc` reports 2,082 errors and production cannot build these views today. The spike aliased `@my-paradise` to the package as of `eb529d2^`. esbuild IIFE `Paradise` (`PlanCatalogScreen`, `PlanCatalogView`), 333 KB JS + 345 KB CSS with assets inlined, `@ds-bundle` header as `ds/pmlapp` uses |
+| 1. Mount | **Published, not yet seen** | `screens/mounted-plan-catalog.dc.html` mounts `<x-import component-from-global-scope="Paradise.PlanCatalogScreen">` from `ds/paradise/`. The browser pane is not signed in to claude.ai, so a person must look |
+| 2. React | **Pass** | On React 18.3.1 (UMD from cdnjs) the real `PlanCatalogView` renders 5 plan cards, no errors. `react/jsx-runtime` is answered by a shim over `window.React.createElement`, so React 19's automatic JSX runs unchanged |
+| 3. Data | **Pass (fetch table)** | The real `CartClient.loadPlans()` and `addLineToCart()` run unchanged; a build-time `fetch` table answers `GET /api/onboarding/state`, `GET /api/plans` (from `plans.json`) and `POST /api/onboarding/lines/add`. Sign up now twice: the cart holds 2 lines, Atlas and Ace. Real routes (express, `CartNode`) were not tried |
+| 4. Navigation | **Not exercised** | `window.location` is redefined at build time to a stand-in that raises `canvas-go`; `PlanCatalogView` never calls it, so the seam is untested until a view that navigates is mounted |
+| 5. Isolation | Open | Needs the published canvas looked at beside the explorer |
+| 6. Editing | Open | Needs a person to try editing the mounted artboard |
+
 **If gates 1 to 3 fail:** keep Phases 1 and 2 (assets, CSS, shots) and move screens to I3 render-to-markup, with `DCLogic` calling domain code as it does now. Screens remain copies, but generated and hash-pinned to the TSX, and the hand-written generators still go.
 
 **Phase 3 task, not a story:** migrate the 28 screens, then delete the pml-web generators. **Done:** all 28 are attached and every explorer path works.
