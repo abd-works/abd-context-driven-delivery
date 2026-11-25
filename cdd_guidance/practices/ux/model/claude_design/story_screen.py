@@ -1,17 +1,19 @@
 """A story's prototype screen on the story canvas, built on the fixture bar (``fixture_screen.py``).
 
-The screen loads the scenario the explorer picks through the bar, hands its markup the domain objects the scenario
-bound under one named input (``domain_input``, such as ``cart``), and places the markup at the position its step group
-keeps (which page, whether a sheet or dialog is open). Every value the markup shows comes through that input; positions
-hold only where the screen is. A press on a button or link before the scenario's last outcome moves the explorer on to
+The screen loads the scenario the explorer picks through the bar, hands its markup every domain object the scenario
+bound, each under its own name (``cart``, ``credentials``, ``customerProfile``), and places the markup at the position
+its step group keeps (which page, whether a sheet or dialog is open). Every value the markup shows comes through those
+objects; positions hold only where the screen is. A press on a button or link before the scenario's last outcome moves the explorer on to
 the next Then.
 
-The markup has one of three sources, each a small class with the same two parts, its head and its body:
+The markup has one of four sources, each a small class with the same two parts, its head and its body:
 
 - *WrittenMarkup* — written from scratch for the project, the main path;
 - *AppPageMarkup* — taken from a page of an existing app the project can reach, its body and stylesheets;
 - *PortedCanvasMarkup* — ported from another Claude Design canvas, drawn as that canvas's component through
-  ``dc-import`` with the named input and each position setting as its attributes.
+  ``dc-import`` with the bound objects it takes and each position setting as its attributes;
+- *MountedViewMarkup* (``mounted_view.py``) — the product's own production view, bundled and mounted through
+  ``x-import``.
 
 See ``story_canvas.md`` beside this file, *Prototype screens*."""
 
@@ -38,13 +40,14 @@ def _attribute_name(setting: str) -> str:
 
 class ScreenMarkup:
     """Where a screen's markup comes from: the head it loads (stylesheets, scripts) and the body it draws, given the
-    named input the domain objects arrive under and the position settings its step groups keep. In the body,
-    ``{{ <input> }}`` is the bound domain object and ``{{ position.<setting> }}`` the step group's position."""
+    position settings its step groups keep. In the body, ``{{ <name> }}`` is the object the scenario bound under that
+    name, ``{{ bound }}`` all of them, ``{{ repositories }}`` what its Givens filled, and ``{{ position.<setting> }}``
+    the step group's position."""
 
     head: str
     files: ScreenFiles = ScreenFiles()
 
-    def body_for(self, domain_input: str, position_settings: list[str]) -> str:
+    def body_for(self, position_settings: list[str]) -> str:
         raise NotImplementedError
 
     def copy_files(self, project: Path) -> list[Path]:
@@ -54,13 +57,13 @@ class ScreenMarkup:
 
 @dataclass(frozen=True)
 class WrittenMarkup(ScreenMarkup):
-    """Markup written from scratch for the project: its *head* and its *body*, which reads the named input and the
+    """Markup written from scratch for the project: its *head* and its *body*, which reads the bound objects and the
     position itself."""
 
     head: str
     body: str
 
-    def body_for(self, domain_input: str, position_settings: list[str]) -> str:
+    def body_for(self, position_settings: list[str]) -> str:
         return self.body
 
 
@@ -91,7 +94,7 @@ class AppPageMarkup(ScreenMarkup):
         links = [f'<link rel="stylesheet" href="{self.stylesheet_folder}/{posixpath.basename(href)}">' for href in self.stylesheets]
         return "\n".join(links + _STYLE.findall(self.page))
 
-    def body_for(self, domain_input: str, position_settings: list[str]) -> str:
+    def body_for(self, position_settings: list[str]) -> str:
         body = _BODY.search(self.page)
         return _SCRIPT.sub("", body.group(1) if body else self.page).strip()
 
@@ -100,7 +103,7 @@ class AppPageMarkup(ScreenMarkup):
 class PortedCanvasMarkup(ScreenMarkup):
     """Markup ported from another Claude Design canvas: its *component* (the ``.dc.html`` its *files* copy beside the
     screens, with the files it loads) drawn through ``dc-import``, with *attributes* it always takes (such as its
-    theme), the named input, and each position setting; *head* loads the scripts and stylesheets the component needs;
+    theme), each bound object it takes (*inputs*, by name), and each position setting; *head* loads the scripts and stylesheets the component needs;
     *size* is its hint size."""
 
     component: str
@@ -108,15 +111,19 @@ class PortedCanvasMarkup(ScreenMarkup):
     attributes: dict[str, str] = field(default_factory=dict)
     size: str = "100%,100%"
     files: ScreenFiles = field(default_factory=ScreenFiles)
+    inputs: tuple[str, ...] = ()
 
     def copy_files(self, project: Path) -> list[Path]:
         """Copy the files the component loads into a canvas version's project folder, and the component itself beside
         the screens as ``screens/<component>.dc.html``, where ``dc-import`` finds it."""
         return self.files.copy_into(project, f"screens/{self.component}.dc.html")
 
-    def body_for(self, domain_input: str, position_settings: list[str]) -> str:
+    def body_for(self, position_settings: list[str]) -> str:
         fixed = [f'{name}="{value}"' for name, value in self.attributes.items()]
-        given = [f'{domain_input}="{{{{ {domain_input} }}}}"'] + [f'{_attribute_name(setting)}="{{{{ position.{setting} }}}}"' for setting in position_settings]
+        unnamed = [name for name in self.inputs if not name.isidentifier()]
+        if unnamed:
+            raise ValueError(f"a bound object the component takes must have a JavaScript name, not {unnamed[0]!r}")
+        given = [f'{name}="{{{{ {name} }}}}"' for name in self.inputs] + [f'{_attribute_name(setting)}="{{{{ position.{setting} }}}}"' for setting in position_settings]
         return f'<dc-import name="{self.component}" {" ".join(fixed + given)} hint-size="{self.size}"></dc-import>'
 
 
@@ -129,7 +136,7 @@ storyPosition() {
 return __STORY_POSITION__;
 }
 fromFixture(repositories, scenario, examples, step, bindings) {
-return { __INPUT__: (bindings && bindings.__INPUT__) || null };
+return { bound: Object.assign({}, bindings || {}), repositories: repositories || {} };
 }
 paste(field) {
 return {};
@@ -152,17 +159,26 @@ setTimeout(() => this.props.go(this.storyName(), this.scenarioName(), 'Then'), 0
 '''
 
 
+# What the markup reads: each object the scenario bound under its own name, all of them as `bound`, the repositories its
+# Givens filled, the explorer's go, the step group's position, and the press that moves the explorer on.
+_VALS = """...(st.bound || {}),
+bound: st.bound || {},
+repositories: st.repositories || {},
+go: this.props.go || null,
+position: this.shownPosition(),
+advance: (event) => this.advance(event)"""
+
+
 @dataclass(frozen=True)
 class StoryScreen:
-    """A story's prototype screen: *markup* from one of its sources, the scenario's bound domain objects under
-    *domain_input*, and *positions*, for each scenario, one position per step group the explorer lists (an outline's
-    rows take the outline's), with *story_position* for a scenario that keeps none. *path* is the screen's path for
-    the dev seed paste; *artboard* its own canvas path, for the explorer's Edit link."""
+    """A story's prototype screen: *markup* from one of its sources, which reads every domain object the scenario
+    bound under its own name, and *positions*, for each scenario, one position per step group the explorer lists (an
+    outline's rows take the outline's), with *story_position* for a scenario that keeps none. *path* is the screen's
+    path for the dev seed paste; *artboard* its own canvas path, for the explorer's Edit link."""
 
     title: str
     story: str
     markup: ScreenMarkup
-    domain_input: str
     positions: dict[str, list[dict]]
     story_position: dict = field(default_factory=dict)
     root_class: str = "story-screen"
@@ -178,12 +194,9 @@ class StoryScreen:
 
     @property
     def html(self) -> str:
-        if not self.domain_input.isidentifier():
-            raise ValueError(f"the screen's named input must be a JavaScript name, not {self.domain_input!r}")
         body = (f'<div style="width: 100%; min-height: 100svh" onClickCapture="{{{{ advance }}}}">\n'
-                f'{self.markup.body_for(self.domain_input, self.position_settings)}\n</div>')
-        own = (_OWN_METHODS.replace("__POSITIONS__", json.dumps(self.positions)).replace("__STORY_POSITION__", json.dumps(self.story_position))
-               .replace("__INPUT__", self.domain_input))
+                f'{self.markup.body_for(self.position_settings)}\n</div>')
+        own = _OWN_METHODS.replace("__POSITIONS__", json.dumps(self.positions)).replace("__STORY_POSITION__", json.dumps(self.story_position))
         return FixtureScreen(
             title=self.title,
             head="\n".join(part for part in (self.markup.head, FIXTURES_SCRIPT) if part),
@@ -191,7 +204,7 @@ class StoryScreen:
             body=body,
             source=ScenarioSource(self.story, next(iter(self.positions), ""), self.path),
             own_methods=own,
-            vals=f"{self.domain_input}: st.{self.domain_input} || null,\nposition: this.shownPosition(),\nadvance: (event) => this.advance(event)",
+            vals=_VALS,
             width=self.width,
             height=self.height,
             artboard=self.artboard,

@@ -19,14 +19,20 @@ const Component = new Function('DCLogic', SCRIPT + '; return Component;')(DCLogi
 const screen = new Component();
 const moves = [];
 screen.props = Object.assign({ go: (...to) => moves.push(to) }, PROPS);
+screen.state = screen.fromFixture({ planRepository: { plans: 4 } }, '', {}, '', BOUND);
 const vals = screen.renderVals();
 vals.advance({ target: { closest: (selector) => PRESSED } });
-setTimeout(() => console.log(JSON.stringify({ position: vals.position, moves })), 5);
+setTimeout(() => console.log(JSON.stringify({ position: vals.position, moves, cart: vals.cart ?? null, credentials: vals.credentials ?? null,
+  bound: vals.bound, repositories: vals.repositories, go: typeof vals.go })), 5);
 """
 
 
-def run(script, props, pressed="({})"):
-    code = RUN.replace("SCRIPT", repr(script)).replace("PROPS", json.dumps(props)).replace("PRESSED", pressed)
+BOUND = {"cart": {"plan": "Ace"}, "credentials": {"email": "sam@example.com"}}
+
+
+def run(script, props, pressed="({})", bound=None):
+    code = (RUN.replace("SCRIPT", repr(script)).replace("PROPS", json.dumps(props)).replace("PRESSED", pressed)
+            .replace("BOUND", json.dumps(BOUND if bound is None else bound)))
     node = subprocess.run([shutil.which("node") or "node", "-e", code], capture_output=True, text=True, check=True)
     return json.loads(node.stdout)
 
@@ -37,12 +43,24 @@ with description("a story's prototype screen, run") as self:
             title="Add Line To Cart",
             story="Add Line To Cart",
             markup=WrittenMarkup(head="", body="<main></main>"),
-            domain_input="cart",
             positions={"Add one more line": [{"page": "plans"}, {"page": "cart"}],
                        "Add a line with ${plan}": [{"page": "plans"}, {"page": "cart", "sheet": "plan"}]},
             story_position={"page": "home"},
         ).html
         self.script = re.search(r"data-dc-script[^>]*>(.*)</script>", html, re.S).group(1)
+
+    with context("with the objects a scenario bound"):
+        with it("should hand the markup each one under its own name"):
+            shown = run(self.script, {"story": "Add Line To Cart", "scenario": "Add one more line", "stepIndex": 0})
+            expect((shown["cart"], shown["credentials"])).to(equal(({"plan": "Ace"}, {"email": "sam@example.com"})))
+
+        with it("should hand the markup all of them at once, with the repositories its Givens filled and the explorer's go"):
+            shown = run(self.script, {"story": "Add Line To Cart", "scenario": "Add one more line", "stepIndex": 0})
+            expect((shown["bound"], shown["repositories"], shown["go"])).to(equal((BOUND, {"planRepository": {"plans": 4}}, "function")))
+
+        with it("should hand the markup none when the scenario bound none"):
+            shown = run(self.script, {"story": "Sign In", "scenario": "Sign in", "stepIndex": 0}, bound={})
+            expect((shown["cart"], shown["bound"])).to(equal((None, {})))
 
     with context("on a scenario's step group"):
         with it("should show the position for that group's stepIndex"):

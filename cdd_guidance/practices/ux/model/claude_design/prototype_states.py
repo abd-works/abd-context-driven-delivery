@@ -61,7 +61,7 @@ class PrototypeStates:
 
     def story_screens(self, ux_map_file: Path, screen: StoryScreen) -> dict[str, StoryScreen]:
         """A StoryScreen, by slug, for each screen of the UX map at ux_map_file that the file keeps a state for: screen,
-        as the project configures every one (its markup, named input, root class), titled from its slug, showing the
+        as the project configures every one (its markup and root class), titled from its slug, showing the
         first story the UX map names for it (else its slug), placed at the file's positions, with its own artboard."""
         records = json.loads(Path(ux_map_file).read_text(encoding="utf-8")).get("screens", [])
         found = {}

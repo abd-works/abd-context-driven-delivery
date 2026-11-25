@@ -82,7 +82,7 @@ class QuietWalk:
 
 def order_screen() -> StoryScreen:
     return StoryScreen(title="Order Plan", story="Order Plan", markup=WrittenMarkup(head="", body="<main>{{ order.plan }}</main>"),
-                       domain_input="order", positions={"Customer orders the Ace plan": [{"page": "plans"}, {"page": "order"}]})
+                       positions={"Customer orders the Ace plan": [{"page": "plans"}, {"page": "order"}]})
 
 
 class MinusSignMissed:
@@ -154,7 +154,7 @@ with description("a project's story canvas rendered in one call") as self:
             write(self.root, "ux/prototype/domain.js", "window.Domain = {};")
             files = ScreenFiles(component=self.root / "ux/prototype/Main.dc.html", needs={"domain.js": self.root / "ux/prototype/domain.js"},
                                 dropped=(r"vendor/",))
-            ported = StoryScreen(title="Order Plan", story="Order Plan", markup=PortedCanvasMarkup("flow", files=files), domain_input="order",
+            ported = StoryScreen(title="Order Plan", story="Order Plan", markup=PortedCanvasMarkup("flow", files=files),
                                  positions={"Customer orders the Ace plan": [{"page": "plans"}]})
             self.rendered = project_canvas(self.root, RecordedFixtures()).render({"order-plan": ported})
             self.project = self.rendered.version.folder / "project"

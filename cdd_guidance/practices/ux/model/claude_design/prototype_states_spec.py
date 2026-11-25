@@ -34,7 +34,7 @@ DATA_SETTINGS = {"demoPlans", "demoVoucher"}
 
 
 def configured_screen() -> StoryScreen:
-    return StoryScreen(title="", story="", markup=PortedCanvasMarkup("flow"), domain_input="cart", positions={},
+    return StoryScreen(title="", story="", markup=PortedCanvasMarkup("flow"), positions={},
                        root_class="pml-screen")
 
 

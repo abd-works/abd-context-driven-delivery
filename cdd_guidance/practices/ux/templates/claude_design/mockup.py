@@ -18,9 +18,10 @@ from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScre
 project_root = Path("{{project root}}")
 
 # One screen for each story. The fixture bar has already run the scenario's Whens up to the step group on show; the
-# markup reads the domain objects the steps bound under the named input ({{ order.… }}) and keeps only its position per
-# step group. The markup is written from scratch here; AppPageMarkup takes a page of an existing app instead, and
-# PortedCanvasMarkup draws another Claude Design canvas's component.
+# markup reads each domain object the steps bound under its own name ({{ order.… }}) and keeps only its position per
+# step group. The markup is written from scratch here; AppPageMarkup takes a page of an existing app instead,
+# PortedCanvasMarkup draws another Claude Design canvas's component, and MountedViewMarkup (mounted_view.py) mounts the
+# product's own production view.
 screen = StoryScreen(
     title="{{Screen title}}",
     story="{{Story}}",
@@ -32,7 +33,6 @@ screen = StoryScreen(
 <sc-if value="{{ position.page === 'review' }}"><button>{{Action label}}</button></sc-if>
 </main>""",
     ),
-    domain_input="order",
     # One position per step group the explorer lists for each scenario; an outline's example takes the outline's.
     positions={"{{first scenario}}": [{"page": "{{page before the action}}"}, {"page": "{{page after it}}"}]},
     root_class="{{screen root class}}",
