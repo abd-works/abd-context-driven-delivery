@@ -15,7 +15,7 @@ section: body
 
 # Story Map — Context-Driven Delivery Framework
 
-**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. CDD Kanban and Chat Bar: the CDD Kanban map, once `space/kanban/.context/story-map.md`, now kept here; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, removed with that session in commit 8483f7a40 and read from commit b08bfe47e; its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; the ticket drawing `harness/.context/ux/ticket-ui.drawio` (2026-11-11), which supplements the design canvas for parent and child tickets; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories. The prompt queue epic: the simple-queue chat of 2026-11-16 and the `prompt-queue` mod. The Review End-To-End Screens epic: the e2e-testing ticket (`.sessions/e2e-testing/e2e-testing.md`), `cdd_guidance/practices/tdd/tdd.md` (Flow A, Cadence), `harness/release/test_runs.py`, and pml-web's `test-utils/legacy-compare/` (`report.ts`, `story-legacy-compare.ts`, `release-baseline.ts`, `end-to-end-paths.ts`).
+**Sources / context:** `harness/.context/module-context.md`; `harness/agent_tools/.context/module-context.md`; `harness/agent_tools/.context/agent-tools-model.md`; `harness/markdown/.context/module-context.md`; `installation/.context/installer-deployed-model.md`; `harness/hooks/.context/module-context.md`; `harness/guidance/guidance.py`; `harness/.context/context-tool-resource-model-om-bdd.md`; `harness/mcp/.context/module-context.md`; `actions/.context/module-context.md`; `practices/.context/module-context.md`; user spine: register agent toolsets → install markdown files (skill, slash command, rules) and MCP → invoke those → use context guidance (install skills and .mdc, invoke instructions, generate under rules) → use practice guidance (register guidance and fidelities, invoke practice and fidelity, shared and fidelity rules constrain output) → hook dispatch → extract markdown → lifecycle actions. CDD Kanban and Chat Bar: the CDD Kanban map, once `space/kanban/.context/story-map.md`, now kept here; `harness/chat-ui/.context/story-map.md` and `story-map.drawio`; the ticket enhancements on the session-board branch (`.sessions/session-board/ticket-enhancements.md`, removed with that session in commit 8483f7a40 and read from commit b08bfe47e; its `space/kanban/.context/story-map.md`); `harness/chat-ui/.context/cdr/0001-stage-strip-band.md`; `space/kanban/app/src/session-board/board-update.ts`; the ticket drawing `harness/.context/ux/ticket-ui.drawio` (2026-11-11), which supplements the design canvas for parent and child tickets; `harness/chat-ui/pane/hooks/register.ts`. The map also takes in the backlog items `.sessions/_backlog/maintain-tickets-on-board.md`, `.sessions/_backlog/guard-work-and-recover-fast.md` and `.sessions/_backlog/guard-work-and-recover-fast.md` as Intended stories. The prompt queue epic: the simple-queue chat of 2026-11-16 and the `prompt-queue` mod. The Review End-To-End Screens epic: the e2e-testing ticket (`.sessions/_complete/e2e-testing/e2e-testing.md`), `cdd_guidance/practices/tdd/tdd.md` (Flow A, Cadence), `harness/release/test_runs.py`, and pml-web's `test-utils/legacy-compare/` (`report.ts`, `story-legacy-compare.ts`, `release-baseline.ts`, `end-to-end-paths.ts`).
 
 **Evidence:** Observed behaviour is cited from those files. Intended: practice guidance and fidelity guidance declare real `@hook` events from `CURSOR_EVENTS`, and lifecycle actions use the same mark-and-install path as practice guidance. For the CDD Kanban and Chat Bar epics: **Observed** means the code and its specs or tests do it today, **Inferred** means the code does it but nothing presses it, **Intended** means a source asks for it and the code does not do it yet, and **Requested** means the person asked on 2026-11-06 for each channel to do what the other does. In `story-map.drawio`, a story whose evidence is only Intended or Requested is filled a lighter yellow than one the code does today.
 
@@ -2751,75 +2751,75 @@ Intended (integrate-stories-with-the-canvas-explorer.md slice 6, after Phase 0 o
 
 # (E) Review End-To-End Screens
 
-Intended ([e2e-testing ticket](../.sessions/e2e-testing/e2e-testing.md)): every end-to-end step records a screenshot keyed story › scenario › step, and the agent checks each screen against the phase before it: a walk by hand against the scenario text (TDD Flow A steps 1–2), the e2e test against the accepted walk (Flow A step 3), and every later e2e run against the last accepted run (regression). The run folders and pixel check come from pml-web's `test-utils/legacy-compare/` (`report.ts`, `story-legacy-compare.ts`, `release-baseline.ts`). The daily e2e run is `harness/release/test_runs.py` today; packaging results for the canvas stays under Check Screens Against Their Scenarios.
+Observed (`harness/e2e_review/`, `space/kanban/app/tests/step-capture.ts`, and the Reviewing e2e screens rules of `cdd_guidance/practices/tdd/tdd.md`; built on the [e2e-testing ticket](../.sessions/_complete/e2e-testing/e2e-testing.md) in commits 9f70a51ff, 946fff3ee and a191cd072): every end-to-end step records a screenshot keyed story › scenario › step, and the agent checks each screen against the phase before it: a walk by hand against the scenario text (TDD Flow A steps 1–2), the e2e test against the accepted walk (Flow A step 3), and every later e2e run against the last accepted run (regression). The run folders and the pixel check were adapted from pml-web's `test-utils/legacy-compare/`. The daily e2e run is `harness/release/test_runs.py`; packaging results for the canvas stays under Check Screens Against Their Scenarios. Marked Observed from the code on 2026-11-24; Read Earlier E2E Runs is the one story still Intended, and Maintain Tickets is the one sub-epic with recorded runs.
 
 ## (E) Walk Scenarios By Hand
 
-Intended (ticket, "Flow A: a new boundary", steps 1–2, and "Walk report"): the first run of a new boundary is the agent driving the real app through each scenario, as a person would.
+Observed (`harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): the first run of a new boundary is the agent driving the real app through each scenario, as a person would, started with `e2e-review.walk`.
 
 ### (S) Agent --> Screenshot Each Step Of A Walk
 
-Intended (ticket, Flow A step 1): while walking a scenario in the running app, the agent takes a screenshot after each Given, When and Then and records it, with the step text, as one row of the walk's `results.json` under its story › scenario › step key, marked walked by hand.
+Observed (`E2eReview.walk` and `record_walked_step` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `Run.addWalkedStep` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): `e2e-review.walk` opens a run folder for the sub-epic, and while walking a scenario in the running app the agent saves a screenshot after each Given, When and Then under the run's `screens/` and records it with `e2e-review.record_walked_step`, which writes the step, with its text, to the run's `results.json` under its story › scenario › step key, marked walked by hand. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Agent --> Judge A Step's Screen Against Its Step Text
 
-Intended (ticket, Flow A step 2): the agent records **meets the intent** or **misses the intent** for each step, with its reason: the Given's state is visible, the When took effect, the Then shows the right values, labels and messages. A step that misses is fixed and walked again.
+Observed (`record_walked_step` and `judge_step` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `Run.judge` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): the agent records **meets the intent** or **misses the intent** for each step, with its reason; any other verdict, or a verdict with no reason, is refused. `e2e-review.judge_step` records the same verdict on a step a test ran, and a step whose screen is unchanged from the previous run carries that run's verdict. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Agent --> Write The Walk Report
 
-Intended (ticket, "Walk report"): `report.ts` reduced to one run writes one self-contained page per sub-epic and a story map page: for each step its Given/When/Then text, its one screenshot embedded at half size, and its verdict and reason; scenarios with a missed step open by themselves.
+Observed (`writeWalkReport` and `writeStoryMapReport` in `harness/e2e_review/report/report.ts`, tested by `report.spec.ts`): each run writes one self-contained `report.html` for its sub-epic and a `story-map.html` over every sub-epic: for each step its Given/When/Then text, its screenshot embedded at half size, and its verdict and reason; a scenario with a missed or failed step opens by itself. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Person --> Accept A Walk As The Reference
 
-Intended (ticket, Flow A step 2, `person-accepts-the-baseline`): the person reviews the walk report, and accepting it makes the walk the reference the sub-epic's e2e tests are compared with. A walk with a step that misses its intent is not accepted.
+Observed (`E2eReview.accept` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `SubEpicRuns.accept` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): `e2e-review.accept` takes the person's name and writes the sub-epic's `baseline.json`, naming the walk as the run the sub-epic's e2e tests are compared with. A sub-epic's first run, with nothing to compare with, is accepted as it is: the code does not refuse a walk that holds a step missing its intent, which the `person-accepts-the-baseline` rule leaves to the person reading the report. Its scenarios are tested by those specs; no story test file runs them.
 
 ## (E) Capture End-To-End Steps
 
-Intended (ticket, Flow A step 3 and "Compare reports"): the e2e test that captures a walked path records the same steps, and is compared with the accepted walk.
+Observed (`space/kanban/app/tests/step-capture.ts`; `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): the e2e test that captures a walked path records the same steps, and is compared with the accepted walk.
 
 ### (S:system) Story Test --> Screenshot Each Step Of An E2E Run
 
-Intended (ticket, "Step capture hook", `every-step-captured`): after each Given, When and Then of a `*.story.ui.spec.ts` test, the step helper waits until the page settles (as `story-legacy-compare.ts` does), takes the screenshot, and writes the step's row to the run's `results.json`, marked run by a test, with its pass or fail.
+Observed (`step` in `space/kanban/app/tests/step-capture.ts`, used by the board's `*.story.ui.spec.ts` tests through `story-ui.ts`; `every-step-captured`): each Given, When and Then of a browser story test runs through `step`, which waits until nothing on the page has changed for 300 ms (5 seconds at most), takes the screenshot, pass or fail, and writes the step to the run's `results.json`, marked run by a test, with its pass or fail. `E2E_RELEASE` and `E2E_RUN` name the release and the run.
 
 ### (S) Agent --> Compare An E2E Run With The Accepted Walk
 
-Intended (ticket, Flow A step 3): each step's screen is paired with the same step of the accepted walk; where they differ the agent fixes the test or the code and reruns.
+Observed (`E2eReview.run` and `changed_pairs` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `Run.pairsAgainst` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`; `writeCompareReport` in `harness/e2e_review/report/report.ts`, tested by `report.spec.ts`): `e2e-review.run` runs the sub-epic's browser story tests, and `e2e-review.changed_pairs` pairs each step's screen with the same step of the accepted walk, or of the run named in `against`, and lists those that differ; `compare.html` shows the two screens side by side. Where they differ the agent fixes the test or the code and reruns. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Agent --> Walk A Disputed Step Again
 
-Intended (ticket, Flow A step 3): when it is unclear whether the walk or the test is right, the agent walks that step by hand again and compares once more.
+Observed (`record_walked_step` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `Run.addWalkedStep` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): when it is unclear whether the walk or the test is right, the agent walks that step by hand again; recording a walked step a second time replaces the earlier one, and the agent compares once more. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Person --> Accept An E2E Run As The First Baseline
 
-Intended (ticket, Flow A step 3): when every pair matches, or the person accepts the explained differences, the run becomes the sub-epic's first regression baseline.
+Observed (`E2eReview.accept` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `SubEpicRuns.accept` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): accepting the run makes it the sub-epic's regression baseline. It is refused while a step that changed against the accepted walk is not judged **intended**, so every difference is explained before the baseline moves. Its scenarios are tested by those specs; no story test file runs them.
 
 ## (E) Review E2E Runs For Regressions
 
-Intended (ticket, "Reviewing e2e screens: every e2e run", `every-run-reviewed`): every later e2e run, by ticket, by hand or scheduled, is compared with the last accepted run before its result counts.
+Observed (`harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`; `every-run-reviewed` in `cdd_guidance/practices/tdd/tdd.md`): every later e2e run, by ticket, by hand or scheduled, is compared with the last accepted run before its result counts.
 
 ### (S:system) E2E Review --> Choose The Baseline Run
 
-Intended (ticket, "Run folders"): the run to compare with is the last accepted run of the same sub-epic, as `release-baseline.ts` and `end-to-end-paths.ts` choose it in pml-web; accepted baselines are kept on a branch, as pml-web keeps `e2e-latest`.
+Observed (`E2eReview.baseline_of` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `SubEpicRuns.baseline` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): the run to compare with is the last run the person accepted for the same sub-epic, named in the sub-epic folder's `baseline.json`; before any run is accepted there is none, and the scheduled review says to accept one to start. Accepted baselines live in the run folders under `.sessions/<release>/e2e-test-results/`; no branch keeps them. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S:system) E2E Review --> List Changed Step Pairs By Pixels
 
-Intended (ticket, "Pixel prefilter"): each step is paired with the same step of the baseline, and only pairs whose 8px blocks differ (`lookDifference` in `story-legacy-compare.ts`) go to the agent; a step with no earlier screen is listed as new.
+Observed (`lookDifference` and `Run.changedAgainst` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): each step is paired with the same step of the baseline, and a pair counts as changed when at least 4 of its 8px blocks moved their average grey by more than 6 levels; only changed pairs go to the agent, each with the share of the screen that changed and the box round it. A step with no earlier screen is listed as new, one the run no longer has as gone, and screens of different sizes as all changed. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Agent --> Judge A Changed Step Pair
 
-Intended (ticket, step 3 of the review, `ai-judges-every-changed-pair`): the agent reads both screens, the step text, and the stories and code changed since the baseline, and records one verdict with its reason through `record_verdict`: **intended**, citing the change behind it; **regression caught**, naming the failing test; **missed by the tests**; or **noise**.
+Observed (`E2eReview.record_verdict` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `Run.recordVerdict` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`; `ai-judges-every-changed-pair`): the agent reads both screens, the step text, and the stories and code changed since the baseline, and records one verdict with its reason through `e2e-review.record_verdict`: **intended**, citing the change behind it; **regression caught**, naming the failing test; **missed by the tests**; or **noise**. A verdict with no reason, an intended one that cites no change, and a regression caught that names no test are refused. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Agent --> Add A Failing Test For A Missed Change
 
-Intended (ticket, step 4 of the review, `missed-change-adds-a-test-first`): for each pair missed by the tests, the agent writes the test at the layer that owns the behaviour, sees it fail, fixes the code and reruns. Noise is fixed in the harness and rerun, never accepted (`noise-is-fixed-in-the-harness`).
+Observed (`missed-change-adds-a-test-first` and `noise-is-fixed-in-the-harness` in `cdd_guidance/practices/tdd/tdd.md`; `Run.openPairs` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): the rules tell the agent, for each pair missed by the tests, to write the test at the layer that owns the behaviour, see it fail, fix the code and rerun, and to fix noise in the harness and rerun. The code holds the agent to it only at acceptance: a run with a pair judged missed or noise cannot become the baseline.
 
 ### (S) Person --> Accept A Reviewed Run As The Baseline
 
-Intended (ticket, step 5 of the review): once every changed pair is intended, the person reviews the report, and accepting it makes the run the new baseline. Nothing else moves the baseline.
+Observed (`E2eReview.accept` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `SubEpicRuns.accept` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`): once every changed pair is judged intended, the person reviews the report, and `e2e-review.accept`, which takes their name, makes the run the new baseline. It is refused while any changed pair has no verdict or a verdict other than intended, and nothing else writes `baseline.json`. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S:system) CDD Server --> Review The Daily E2E Run
 
-Intended (ticket, "Daily run"): when the daily e2e run ends, the cdd server starts the regression review in a background agent session and raises a toast for each step judged missed by the tests; the fix happens in a ticket.
+Observed (`ScheduledReview` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`, started by `harness/release/test_runs.py`; `toastMissedSteps` in `harness/chat-ui/pane/hooks/health/server-health-client.ts`): when the daily e2e run ends, the cdd server writes each sub-epic's report against its baseline and starts a background agent that may only read the screenshots and record verdicts; it changes no file and accepts nothing. The chat raises one toast for each step judged missed by the tests, once; the fix happens in a ticket.
 
 ## (E) [Run Test Tiers One At A Time](../story_tests/review-end-to-end-screens/run-test-tiers-one-at-a-time/run_test_tiers_one_at_a_time_story.test.md)
 
@@ -2835,27 +2835,27 @@ Observed (`harness/release/test_runs.py`, tested by `harness/release/test_runs_s
 
 ## (E) Read E2E Reports
 
-Intended (ticket, "Report"): one report shape for all three comparisons, from `report.ts`.
+Observed (`harness/e2e_review/report/report.ts`, tested by `report.spec.ts`), except Read Earlier E2E Runs: one report shape for all three comparisons.
 
 ### (S) Person --> Open A Sub-Epic's Step Report
 
-Intended (ticket, "Compare reports"): one page per sub-epic shows story › scenario › each step with its screen, or its two screens side by side, the test result, and the verdict with its reason.
+Observed (`writeWalkReport` and `writeCompareReport` in `harness/e2e_review/report/report.ts`, tested by `report.spec.ts`): `report.html` shows, for one sub-epic, story › scenario › each step with its screen, the test result, and the verdict with its reason; a changed step shows the previous run's screen beside its own, boxes what changed, and says how much, where, and the review's verdict. `compare.html` shows the run beside the run it is compared with. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Person --> Filter A Report To Changed Or Missed Steps
 
-Intended (ticket, "Compare reports"): a filter on the page shows only the steps that changed or that missed.
+Observed (the **Missed or changed only** checkbox in `harness/e2e_review/report/report.ts`, tested by `report.spec.ts`): ticking it shows only the steps that changed or that missed. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Person --> Open The E2E Story Map Report
 
-Intended (ticket, "Report"): a story map page over every sub-epic shows the pass, changed and missed counts per story and sub-epic, each linked to its sub-epic's page, as `writeStoryMapReport` does in pml-web.
+Observed (`writeStoryMapReport` in `harness/e2e_review/report/report.ts`, tested by `report.spec.ts`): `story-map.html` at the root of the results shows each sub-epic's newest run on one page, with the counts per story and sub-epic, each linked to that sub-epic's own report. Its scenarios are tested by those specs; no story test file runs them.
 
 ### (S) Person --> Read Earlier E2E Runs
 
-Intended (ticket, "Report"): each run also writes a page without images and a `summary.md` section into the run history, which is never cleared, as `writeHistoryReport` does in pml-web.
+Intended (ticket, "Report"): each run also writes a page without images and a `summary.md` section into the run history, which is never cleared. Partly built: `writeHistoryReport` in `harness/e2e_review/report/report.ts`, tested by `report.spec.ts` writes both, but no run calls it, so no history is kept yet.
 
 ### (S) Chat Bar --> Show The Latest E2E Review In Server Health
 
-Intended (ticket, "Health line"): the server health report shows the latest run, its changed and missed counts, and a link to the story map page.
+Observed (`ServerHealth.e2e_review` in `harness/diagnostics/server_health.py`, tested by `server_health_spec.py`; `E2eRunReview` in `harness/e2e_review/e2e_review.py`; `server-health-client.ts`): the server health report shows the latest scheduled e2e run's screen review: the run, its changed, unjudged and missed steps, and a link to the story map page; it shows none before a scheduled run has captured its screens.
 
 ---
 

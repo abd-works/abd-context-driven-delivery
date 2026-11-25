@@ -325,12 +325,33 @@ section: body
 - *Show Only Violating Nodes In Files App*
 - *See Rules Under Node In Files App*
 - *Open Violation In Files App Source*
+- *Screenshot Each Step Of A Walk*
+- *Judge A Step's Screen Against Its Step Text*
+- *Write The Walk Report*
+- *Accept A Walk As The Reference*
+- *Screenshot Each Step Of An E2E Run*
+- *Compare An E2E Run With The Accepted Walk*
+- *Walk A Disputed Step Again*
+- *Accept An E2E Run As The First Baseline*
+- *Choose The Baseline Run*
+- *List Changed Step Pairs By Pixels*
+- *Judge A Changed Step Pair*
+- *Add A Failing Test For A Missed Change*
+- *Accept A Reviewed Run As The Baseline*
+- *Review The Daily E2E Run*
+- *Run Test Tier*
+- *Record Test Run*
+- *Open A Sub-Epic's Step Report*
+- *Filter A Report To Changed Or Missed Steps*
+- *Open The E2E Story Map Report*
+- *Show The Latest E2E Review In Server Health*
 
 **Backlog items fixed in this increment** (moved to `.sessions/_complete/` or removed from the backlog on 2026-11-23):
 
 - *Chat UI defects*: every defect on the list fixed (`.sessions/_complete/chat-ui-defects/`)
 - *Install failure themes*: the locked mod file, the missing project header and the held adapter folders (`.sessions/_complete/install-failure-themes/`)
 - *Break module dependency cycles*: no module import cycle left (`.sessions/_complete/break-module-dependency-cycles/`)
+- *Review end-to-end screens against the previous run*: built on the e2e-testing ticket, all but the run history (*Read Earlier E2E Runs*, whose writer no run calls yet); moved on 2026-11-24 (`.sessions/_complete/review-end-to-end-screens-against-the-previous-run/`)
 - *Link markdown steps to code through realizations*: a markdown When's realization links it to the model operations it names (`.sessions/_complete/link-markdown-steps-to-code-through-realizations/`)
 - *Nov 18 demo fixes*: board comments carry the fidelity's rules, the debug button stays in view, file links use the whole path, a plain folder offers only to create the git repository, the Files view opens without Bypass permissions, render saves beside its source, logs roll over at 4 MB, the bar's buttons ask for a skill in plain words, story maps take their shape from the sources, a whiteboard opens as a canvas, a new repository needs no reload, and a chat installs CDD when its folder lacks it
 
