@@ -1,5 +1,7 @@
 {
   "name": "sync-design-canvas-with-production",
   "title": "Sync Design Canvas With Production",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "sync-design-canvas-with-production",
+  "worktree": "C:\\dev\\abd-cdd-sync-design-canvas-with"
 }
