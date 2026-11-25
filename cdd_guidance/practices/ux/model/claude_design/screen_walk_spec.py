@@ -4,7 +4,16 @@ them, and the report the walk writes."""
 from expects import contain, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.ux.model.claude_design.screen_walk import ScreenWalkReport, ShownText, StepValues, WalkedStep
+from cdd_guidance.practices.ux.model.claude_design.canvas_explorer import ExplorerScenario
+from cdd_guidance.practices.ux.model.claude_design.screen_walk import (
+    ScreenWalkReport,
+    ShownText,
+    StepValues,
+    StillAction,
+    WalkedStep,
+    _still_actions,
+    _Stop,
+)
 
 
 def _written(text: str) -> list:
@@ -87,3 +96,68 @@ with description("a walk's report") as self:
                 "| Story › Scenario | Screen | Step | Found | Missing |\n| --- | --- | --- | --- | --- |\n"
                 "| Pay › Pay by card | pay | Then the order is paid |  | (screen did not render: PMLApp is not defined) |\n",
             )))
+
+
+def _stills(groups: list, texts: list, played: str = "") -> list:
+    """The actions the walk finds leave the screen as it was, for a scenario of groups rendered to texts."""
+    scenario = ExplorerScenario("Enter Validation Code", "Enter the code", False, "enter-code", tuple(groups))
+    stops = [_Stop(scenario, None, group.split("\n"), index, played) for index, group in enumerate(groups)]
+    return [still.step for still in _still_actions(stops, [{"text": text} for text in texts])]
+
+
+with description("the walk's check that each action changes its screen") as self:
+    with it("should pass an action whose outcome the screen shows differently"):
+        expect(_stills(["Given a code was sent\nWhen the Customer enters 123456", "Then the account is verified"], ["Code ______", "Verified"])).to(equal([]))
+
+    with it("should name an action after which the screen shows what it showed before"):
+        expect(_stills(["Given a code was sent\nWhen the Customer enters 123456", "Then the account is verified"], ["Code", "Code"])).to(
+            equal(["When the Customer enters 123456"]))
+
+    with it("should name an action whose scenario has one state for all its steps"):
+        expect(_stills(["Given a code was sent\nWhen the Customer enters 123456\nThen the account is verified"], ["Verified"])).to(
+            equal(["When the Customer enters 123456"]))
+
+    with it("should compare an action inside a step group, followed by its outcome, with the group before it"):
+        groups = ["Given a code was sent\nWhen the Customer opens the screen", "Then the code is asked for\nWhen the Customer enters 123456\nThen the account is verified"]
+        expect((_stills(groups, ["Empty", "Verified"]), _stills(groups, ["Same", "Same"]))).to(
+            equal(([], ["When the Customer opens the screen", "When the Customer enters 123456"])))
+
+    with it("should name an outline's row by the name the screen loads it by"):
+        scenario = ExplorerScenario("Enter Validation Code", "Enter a wrong code", False, "enter-code", ("Given a code\nWhen the Customer enters {code}",))
+        stop = _Stop(scenario, None, ["Given a code", "When the Customer enters 999999"], 0, "Enter a wrong code: 999999")
+        expect([still.miss for still in _still_actions([stop], [{"text": "Code"}])]).to(
+            equal(["Enter Validation Code › Enter a wrong code: 999999 › (screen stays as it was after): When the Customer enters 999999"]))
+
+
+with description("a walk's report of actions that leave the screen as it was") as self:
+    with it("should name each as a miss, so publishing refuses it unless the person accepts it by name"):
+        report = ScreenWalkReport([], [StillAction("Enter Validation Code", "Enter the code", "enter-code", "When the Customer enters 123456")])
+        expect(report.misses).to(equal(["Enter Validation Code › Enter the code › (screen stays as it was after): When the Customer enters 123456"]))
+
+    with it("should list each in walk.md under why it matters"):
+        report = ScreenWalkReport([], [StillAction("Enter Validation Code", "Enter the code", "enter-code", "When the Customer enters 123456")])
+        expect(report.markdown()).to(contain("| Enter Validation Code › Enter the code | enter-code | When the Customer enters 123456 |"))
+
+
+with description("an outline the explorer lists with its Examples table") as self:
+    with before.each:
+        self.outline = ExplorerScenario("Create Credentials", "Enter Invalid credentials", False, "create-credentials",
+                                        ("Given the Customer has entered {example}\nWhen the Customer registers", "Then the {message} message is shown"),
+                                        ("when", "then"),
+                                        (("missing email", {"example": "missing email", "message": "email required"}),
+                                         ("password missing letters", {"example": "password missing letters", "message": "password rule"})))
+
+    with it("should play each row, by the name the fixtures bundle gives it, with that row's values in its steps"):
+        expect([(played.name, played.groups[1]) for played in self.outline.played()]).to(equal([
+            ("Enter Invalid credentials: missing email", "Then the email required message is shown"),
+            ("Enter Invalid credentials: password missing letters", "Then the password rule message is shown"),
+        ]))
+
+    with it("should name a row of an outline named with a placeholder by the outline's name with the row's value in it"):
+        outline = ExplorerScenario("Add Line To Cart", "Add a line with ${plan}", False, "cart", ("When the Customer adds ${plan}",), ("when",),
+                                   (("Atlas", {"plan": "Atlas"}),))
+        expect([played.name for played in outline.played()]).to(equal(["Add a line with Atlas"]))
+
+    with it("should play a scenario that is no outline as itself"):
+        plain = ExplorerScenario("Add Line To Cart", "Add one more line", False, "cart", ("When the Customer adds Ace",))
+        expect([(played.name, played.groups) for played in plain.played()]).to(equal([("Add one more line", ("When the Customer adds Ace",))]))

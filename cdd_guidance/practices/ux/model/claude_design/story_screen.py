@@ -128,7 +128,8 @@ class PortedCanvasMarkup(ScreenMarkup):
 
 
 # The screen's own methods: what it takes from the fixture, the position for the step group on show, and the press that
-# moves the explorer on. An outline's example row runs as '<outline>: <row>' and takes the outline's positions.
+# moves the explorer on. An outline's example row runs as '<outline>: <row>', or as the outline's name with the row's
+# values in its placeholders, and takes the outline's positions, so a project keeps them once per outline.
 _OWN_METHODS = '''positions() {
 return __POSITIONS__;
 }
@@ -141,9 +142,15 @@ return { bound: Object.assign({}, bindings || {}), repositories: repositories ||
 paste(field) {
 return {};
 }
+outlineMatches(outline, name) {
+if (name.indexOf(outline + ': ') === 0) return true;
+if (outline.indexOf('${') < 0) return false;
+const pattern = outline.split(/\\$\\{[^}]*\\}/).map((part) => part.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')).join('.+?');
+return new RegExp('^' + pattern + '$').test(name);
+}
 positionsFor(name) {
 const positions = this.positions();
-return positions[name] || positions[Object.keys(positions).filter((key) => name.indexOf(key + ': ') === 0).sort((a, b) => b.length - a.length)[0]] || null;
+return positions[name] || positions[Object.keys(positions).filter((key) => this.outlineMatches(key, name)).sort((a, b) => b.length - a.length)[0]] || null;
 }
 shownPosition() {
 const groups = this.positionsFor(this.scenarioName());

@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 _RENDERER = Path(__file__).with_name("screen_render.cjs")
 # What the miss of a screen that did not render names in place of a value.
 UNRENDERED = "(screen did not render)"
+# What the miss of an action that leaves its screen as it was names before the action.
+STILL = "(screen stays as it was after)"
 
 
 class ScreenWalkUnavailable(RuntimeError):
@@ -161,19 +163,23 @@ def _cell(text: str) -> str:
 
 
 class ScreenWalkReport:
-    """What a walk found, step by step. Its ``misses`` are what ``CanvasVersion.publish_at`` refuses to publish over."""
+    """What a walk found, step by step, and each action whose screen stays as it was (*stills*). Its ``misses`` are
+    what ``CanvasVersion.publish_at`` refuses to publish over."""
 
-    def __init__(self, steps: Sequence[WalkedStep]) -> None:
+    def __init__(self, steps: Sequence[WalkedStep], stills: Sequence["StillAction"] = ()) -> None:
         self.steps = list(steps)
+        self.stills = list(stills)
 
     @property
     def misses(self) -> List[str]:
         """Each value a screen leaves out, once, as ``Story › Scenario › value``; a screen that did not render is one
-        miss at its scenario."""
+        miss at its scenario; and each action that leaves its screen as it was, as ``Story › Scenario › STILL: When …``."""
         found: dict[str, None] = {}
         for step in self.steps:
             for value in ([UNRENDERED] if step.error else step.missing):
                 found.setdefault(f"{step.place}{KEY_SEPARATOR}{value}", None)
+        for still in self.stills:
+            found.setdefault(still.miss, None)
         return list(found)
 
     def markdown(self) -> str:
@@ -182,6 +188,10 @@ class ScreenWalkReport:
         for step in self.steps:
             missing = f"{UNRENDERED[:-1]}: {step.error})" if step.error else ", ".join(step.missing)
             lines.append(f"| {_cell(step.place)} | {_cell(step.screen)} | {_cell(step.step)} | {_cell(', '.join(step.found))} | {_cell(missing)} |")
+        if self.stills:
+            lines += ["", "Actions that leave the screen as it was, so a reader who presses on the screen sees nothing happen:", "",
+                      "| Story › Scenario | Screen | Action |", "| --- | --- | --- |"]
+            lines += [f"| {_cell(still.place)} | {_cell(still.screen)} | {_cell(still.step)} |" for still in self.stills]
         return "\n".join(lines) + "\n"
 
     def write(self, path: Path) -> Path:
@@ -193,17 +203,23 @@ class ScreenWalkReport:
 @dataclass(frozen=True)
 class _Stop:
     """One render of a scenario's screen: the step group the explorer hands it, at its position in the scenario, and the
-    steps whose values it shows."""
+    steps whose values it shows. *played* is the scenario as the screen loads it, an outline's example row by its own
+    name."""
 
     scenario: ExplorerScenario
     artboard: Optional[Path]
     lines: List[str]
     index: int
+    played: str = ""
+
+    @property
+    def name(self) -> str:
+        return self.played or self.scenario.name
 
     @property
     def props(self) -> dict:
         """The props the explorer hands the screen when the reader picks this step group."""
-        return {"story": self.scenario.story, "scenario": self.scenario.name, "step": "\n".join(self.lines), "stepIndex": self.index,
+        return {"story": self.scenario.story, "scenario": self.name, "step": "\n".join(self.lines), "stepIndex": self.index,
                 "stepKind": self.scenario.kind_of(self.index)}
 
 
@@ -227,10 +243,11 @@ class StoryCanvasWalk:
             if self._scenario_in(stories, scenario) is None:
                 unmatched.append(WalkedStep(scenario.story, scenario.name, scenario.screen, "", error="the story map holds no scenario of this name under this story"))
                 continue
-            stops.extend(_Stop(scenario, artboard, group.split("\n"), index) for index, group in enumerate(scenario.groups) if group)
+            stops.extend(_Stop(scenario, artboard, group.split("\n"), index, played.name)
+                         for played in scenario.played() for index, group in enumerate(played.groups) if group)
         rendered = self._rendered(stops)
         steps = [step for stop, text in zip(stops, rendered) for step in _checked(stop, text)]
-        return ScreenWalkReport([*unmatched, *steps])
+        return ScreenWalkReport([*unmatched, *steps], _still_actions(stops, rendered))
 
     @staticmethod
     def _scenario_in(stories: dict, scenario: ExplorerScenario) -> Optional["Scenario"]:
@@ -267,12 +284,76 @@ def _checked(stop: _Stop, rendered: dict) -> List[WalkedStep]:
     """Each line of stop checked against what its screen showed."""
     scenario = stop.scenario
     if "error" in rendered:
-        return [WalkedStep(scenario.story, scenario.name, scenario.screen, stop.lines[-1].strip(), error=rendered["error"])]
+        return [WalkedStep(scenario.story, stop.name, scenario.screen, stop.lines[-1].strip(), error=rendered["error"])]
     shown = ShownText(rendered["text"])
     steps = []
     for line in stop.lines:
         values = StepValues(line).values
-        steps.append(WalkedStep(scenario.story, scenario.name, scenario.screen, line.strip(),
+        steps.append(WalkedStep(scenario.story, stop.name, scenario.screen, line.strip(),
                                 [value.written for value in values if shown.shows(value)],
                                 [value.written for value in values if not shown.shows(value)]))
     return steps
+
+
+@dataclass(frozen=True)
+class StillAction:
+    """An action a scenario takes (a When, with its And lines) after which its screen shows what it showed before: the
+    scenario on its screen, and the action's first line."""
+
+    story: str
+    scenario: str
+    screen: str
+    step: str
+
+    @property
+    def place(self) -> str:
+        return f"{self.story}{KEY_SEPARATOR}{self.scenario}"
+
+    @property
+    def miss(self) -> str:
+        return f"{self.place}{KEY_SEPARATOR}{STILL}: {self.step}"
+
+
+_KEYWORD = re.compile(r"^\s*(Given|When|Then|And|But)\b")
+
+
+def _actions(groups: Sequence[List[str]]) -> List[tuple]:
+    """Each action of a scenario's step groups, as (its first line, the group holding it, whether its group ends on it):
+    a run of When lines, an And or But taking the phase of the line it continues."""
+    found: list[tuple] = []
+    for index, lines in enumerate(groups):
+        phase, opened = "", None
+        for place, line in enumerate(lines):
+            keyword = (_KEYWORD.match(line) or [None, ""])[1]
+            phase = phase if keyword in ("And", "But", "") else keyword.lower()
+            if phase == "when" and opened is None:
+                opened = line.strip()
+            if phase != "when" and opened is not None:
+                found.append((opened, index, False))
+                opened = None
+        if opened is not None:
+            found.append((opened, index, True))
+    return found
+
+
+def _still_actions(stops: Sequence["_Stop"], rendered: Sequence[dict]) -> List[StillAction]:
+    """Each action, of each scenario a screen plays, after which the screen shows the same text as before it. An action
+    that ends its step group is shown before on that group and after on the next; one inside a group, followed by its
+    outcome, is shown after on that group and before on the one ahead of it. An action with no group on one side has no
+    state of its own, so the screen stays as it was too. A screen that did not render is reported by the value check."""
+    played: dict[tuple, list] = {}
+    for stop, result in zip(stops, rendered):
+        played.setdefault((stop.scenario.story, stop.name, stop.scenario.screen), []).append((stop.index, stop.lines, result))
+    stills: List[StillAction] = []
+    for (story, scenario, screen), shown in played.items():
+        by_index = {index: result for index, _, result in shown}
+        if any("error" in result for result in by_index.values()):
+            continue
+        groups = [lines for _, lines, _ in sorted(shown, key=lambda each: each[0])]
+        indexes = sorted(by_index)
+        for step, at, ends in _actions(groups):
+            index = indexes[at]
+            before, after = (index, index + 1) if ends else (index - 1, index)
+            if before not in by_index or after not in by_index or by_index[before]["text"] == by_index[after]["text"]:
+                stills.append(StillAction(story, scenario, screen, step))
+    return stills

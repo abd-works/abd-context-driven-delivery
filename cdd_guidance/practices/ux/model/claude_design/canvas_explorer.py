@@ -5,6 +5,7 @@ graph rules read the explorer this way, so both judge what a reader of the publi
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator, List, Optional
@@ -35,10 +36,45 @@ class ExplorerScenario:
     screen: str
     groups: tuple = ()
     kinds: tuple = ()
+    rows: tuple = ()
 
     def kind_of(self, index: int) -> str:
         """The kind of the step group at index, empty when the explorer names none."""
         return self.kinds[index] if index < len(self.kinds) else ""
+
+    def played(self) -> List["PlayedScenario"]:
+        """The scenarios the explorer plays for this one: an outline's each example row, as the fixtures bundle names
+        it (``<outline>: <row>``, or the outline's name with the row's values in its placeholders), with its steps
+        reading that row's values; any other scenario as itself."""
+        if not self.rows:
+            return [PlayedScenario(self, self.name, self.groups)]
+        return [PlayedScenario(self, self._row_name(row, values), tuple(filled(group, values) for group in self.groups))
+                for row, values in self.rows]
+
+    def _row_name(self, row: str, values: dict) -> str:
+        return filled(self.name, values) if _PLACEHOLDER.search(self.name) else f"{self.name}: {row}"
+
+
+@dataclass(frozen=True)
+class PlayedScenario:
+    """One scenario the explorer plays on a screen: the scenario it lists (*listed*), the name the screen loads it by,
+    and its step groups as the reader sees them."""
+
+    listed: ExplorerScenario
+    name: str
+    groups: tuple
+
+
+# A placeholder an outline's steps name a column of its Examples table by: {column}, ${column} or <column>.
+_PLACEHOLDER = re.compile(r"\$\{([^}]+)\}|\{([^}]+)\}|<([^>]+)>")
+
+
+def filled(text: str, values: dict) -> str:
+    """text with each placeholder that names a column of values read as that column's value."""
+    def value(match: re.Match) -> str:
+        column = next(part for part in match.groups() if part is not None).strip()
+        return str(values[column]) if column in values else match.group(0)
+    return _PLACEHOLDER.sub(value, text)
 
 
 class CanvasExplorer:
@@ -73,7 +109,8 @@ class CanvasExplorer:
             for story in _stories_under(epic):
                 yield story["n"], [ExplorerScenario(story["n"], scenario["n"], bool(scenario.get("b")), scenario.get("p", ""),
                                                     tuple(group["x"] for group in scenario.get("t", [])),
-                                                    tuple(group.get("k", "") for group in scenario.get("t", [])))
+                                                    tuple(group.get("k", "") for group in scenario.get("t", [])),
+                                                    tuple(scenario.get("r", {}).items()))
                                    for scenario in story.get("c", [])]
 
     def scenarios(self) -> Iterator[ExplorerScenario]:

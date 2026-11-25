@@ -193,16 +193,20 @@ with description("a walk of a story canvas's screens") as self:
 
     with context("whose screen is frozen at one state"):
         with it("should name each value of the Then that the screen leaves out"):
-            expect(_walk(self.root, _FROZEN).misses).to(equal(['Add Line To Cart › Add one more line › "Ace"', "Add Line To Cart › Add one more line › $346"]))
+            expect(_walk(self.root, _FROZEN).misses[:2]).to(equal(['Add Line To Cart › Add one more line › "Ace"', "Add Line To Cart › Add one more line › $346"]))
+
+        with it("should name the action after which the screen stays as it was, so a reader's press shows nothing happen"):
+            expect(_walk(self.root, _FROZEN).misses[2:]).to(equal(["Add Line To Cart › Add one more line › (screen stays as it was after): When the Customer adds one more line"]))
 
     with context("whose scenario has two actions, each with its outcome"):
-        with it("should find every value when the screen shows a state for each step group"):
+        with it("should find every value, and a change after each action, when the screen shows a state for each step group"):
             expect(_walk(self.root, _FOLLOWS_EACH_GROUP, _two_actions_map(), _two_actions_ux_map()).misses).to(equal([]))
 
         with it("should name the first outcome's values when the screen knows only a before and an after"):
             report = _walk(self.root, _BEFORE_AND_AFTER_ONLY, _two_actions_map(), _two_actions_ux_map())
             expect(report.misses).to(equal(['Add Line To Cart › Add a line, then remove one › "Atlas"',
-                                            "Add Line To Cart › Add a line, then remove one › $346"]))
+                                            "Add Line To Cart › Add a line, then remove one › $346",
+                                            "Add Line To Cart › Add a line, then remove one › (screen stays as it was after): When the Customer removes a line"]))
 
     with context("whose screen fails to render"):
         with before.each:

@@ -98,7 +98,7 @@ class RenderedStoryCanvas:
         """The render in a few lines: where it went, the walk's misses, and the title to publish it under, the
         version's own (``CanvasVersion.title``, such as ``ux-mockup.version-7``)."""
         lines = [f"Rendered {len(self.files)} canvas files into {self.version.folder}.",
-                 f"Walk: {self.walk_file} ({len(self.walk.misses)} value(s) the screens leave out)."]
+                 f"Walk: {self.walk_file} ({len(self.walk.misses)} value(s) the screens leave out or action(s) that leave the screen as it was)."]
         lines += [f"  - {miss}" for miss in self.walk.misses]
         if self.version.link is not None:
             lines.append(f"Publish it again at {self.version.link}, the canvas this project keeps updating in place, after reading "

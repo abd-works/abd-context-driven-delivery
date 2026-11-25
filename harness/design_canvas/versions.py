@@ -5,8 +5,9 @@ People edit a published canvas directly, so a regeneration never writes over one
 copy of the latest that the generator then renders into, and that version is published as a new canvas.
 ``versions.json`` remembers each version's published link, in the order they were published (*PublishedLinks*). A
 version is recorded as published only after a walk of its screens (*WalkedScreens*, the UX practice's story canvas
-walk) finds every value its scenarios' steps name on the screen that shows the step, or the person accepts by name each
-value left out; the accepted ones are kept beside the link, so the gap stays in view. A
+walk) finds every value its scenarios' steps name on the screen that shows the step, and a change on the screen after each
+action, or the person accepts by name each value left out and each action that leaves its screen as it was; the
+accepted ones are kept beside the link, so the gap stays in view. A
 version kept as a release is renamed to the release's name (``CanvasVersion.release``); numbering then starts again at
 ``version-1``, copied from that release.
 
@@ -61,8 +62,9 @@ class UnshownStepValues(Exception):
     def __init__(self, version: str, misses: Sequence[str]) -> None:
         listed = "\n".join(f"  - {miss}" for miss in misses)
         super().__init__(
-            f"{version} is not recorded as published: its screens leave out {len(misses)} value(s) their steps name. Make "
-            f"each screen show them, or pass the ones the prototype cannot show as accepted_misses:\n{listed}")
+            f"{version} is not recorded as published: its screens leave out {len(misses)} value(s) their steps name, or stay "
+            f"as they were after an action. Make each screen show them and each action change its screen, or pass the ones "
+            f"the prototype cannot show as accepted_misses:\n{listed}")
         self.version = version
         self.misses = list(misses)
 

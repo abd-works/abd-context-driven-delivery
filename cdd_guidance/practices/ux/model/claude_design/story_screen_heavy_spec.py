@@ -76,6 +76,11 @@ with description("a story's prototype screen, run") as self:
             shown = run(self.script, {"story": "Add Line To Cart", "scenario": "Add a line with ${plan}: Atlas", "stepIndex": 1})
             expect(shown["position"]).to(equal({"page": "cart", "sheet": "plan"}))
 
+    with context("on a row of an outline named with a placeholder, which runs as the outline's name with the row's value"):
+        with it("should take the outline's positions"):
+            shown = run(self.script, {"story": "Add Line To Cart", "scenario": "Add a line with Atlas", "stepIndex": 1})
+            expect(shown["position"]).to(equal({"page": "cart", "sheet": "plan"}))
+
     with context("on a scenario it keeps no positions for"):
         with it("should show the story's position"):
             shown = run(self.script, {"story": "Add Line To Cart", "scenario": "Remove a line", "stepIndex": 0})
