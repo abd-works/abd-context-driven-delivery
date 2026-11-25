@@ -127,7 +127,7 @@ with description("the next CDD version") as self:
     with context("set with no version given"):
         with it("should commit pyproject.toml alone, naming the new version"):
             self.subject.set_next()
-            expect(self.project_git.ran).to(contain(("commit", "-m", "Version v0.2", "--", "pyproject.toml")))
+            expect(self.project_git.ran).to(contain(("commit", "-m", "Version v0.2.0", "--", "pyproject.toml")))
 
         with it("should push that commit to origin, so the next version is the latest there"):
             self.subject.set_next()
@@ -145,6 +145,11 @@ with description("the next CDD version") as self:
         with it("should leave the rest of pyproject.toml as it was"):
             self.subject.set_next("1.0")
             expect(self.written()).to(contain("[tool.setuptools]\npackages = []"))
+
+    with context("set to a version given by major, minor and patch"):
+        with it("should commit it naming the whole version, patch included"):
+            self.subject.set_next("0.1.1")
+            expect(self.project_git.ran).to(contain(("commit", "-m", "Version v0.1.1", "--", "pyproject.toml")))
 
     with context("set to text that is not a version"):
         with it("should refuse it, naming the text"):

@@ -89,8 +89,9 @@ class CddVersion:
         given the next minor version. Nothing raises the version by itself; run this when a change is a release. Then
         tell the person the version it wrote and pushed."""
         project = ProjectVersion.of(self._project)
-        project.write(self._next_version_from(version, project.version))
-        self._project_git.run("commit", "-m", f"Version {project.version.label}", "--", PYPROJECT)
+        written = self._next_version_from(version, project.version)
+        project.write(written)
+        self._project_git.run("commit", "-m", f"Version v{written}", "--", PYPROJECT)
         self._project_git.run("push", "origin", "HEAD")
         return self
 
