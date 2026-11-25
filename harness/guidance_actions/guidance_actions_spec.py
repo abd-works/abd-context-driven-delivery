@@ -35,7 +35,6 @@ from mamba import after, before, context, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 from harness.guidance_actions import GuidanceAction  # noqa: F401 - loaded with the module, not by its first example
-from harness.guidance_actions.guidance_actions import GuidanceTurnedOff
 from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: F401 - likewise
 
 
@@ -237,25 +236,41 @@ with description("a guidance action"):
             )
 
     # Reported 2026-11-18: with ux off, `ux-ia` alone ran as text, so render answered the slug back and validate checked
-    # nothing, while ["stories-story-map", "ux-ia"] said no practice had the slug.
-    with context("in a session that works on stories with ux turned off"):
+    # nothing. Reported 2026-11-25: refusing it instead blocked every render and validate the person asked for once a
+    # practice was switched off on the board; switching a practice off changes only what the board and chat show.
+    with context("in a session that works on stories with ux switched off"):
         with before.each:
             from types import SimpleNamespace
 
             from cdd_guidance.practices.stories.stories import Stories
+            from cdd_guidance.practices.ux.ux import Ux
             from harness.guidance_actions import GuidanceAction
 
-            session = SimpleNamespace(name="sign-up", practices={"stories": SimpleNamespace(guidance=Stories())}, overlays=[])
+            self.ux = Ux()
+            every = {"stories": SimpleNamespace(guidance=Stories()), "ux": SimpleNamespace(guidance=self.ux)}
+            self.taken_up = []
+            session = SimpleNamespace(
+                name="sign-up",
+                practices={"stories": every["stories"]},
+                own_practices=every,
+                overlays=[],
+                take_up=lambda key: self.taken_up.append(key) or every[key],
+            )
             self.action = GuidanceAction(session)
 
-        with it("should refuse the slug of a fidelity of the practice turned off, sent alone, saying it is off"):
-            expect(lambda: self.action._work_on("ux-ia")).to(raise_error(GuidanceTurnedOff, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
+        with it("should work on the slug of a fidelity of the practice switched off, sent alone, at that fidelity"):
+            self.action._work_on("ux-ia")
+            expect(self.action.listed()).to(equal([self.ux]))
+            expect(self.action.work.fidelity_of(self.ux).slug).to(equal("ux-ia"))
 
-        with it("should refuse it in a list the same way"):
-            expect(lambda: self.action._work_on(["stories-story-map", "ux-ia"])).to(raise_error(GuidanceTurnedOff, contain("ux-ia is a fidelity of ux, which is turned off for session sign-up")))
+        with it("should work on it in a list beside a practice switched on"):
+            self.action._work_on(["stories-story-map", "ux-ia"])
+            expect([practice.key for practice in self.action.listed()]).to(equal(["stories", "ux"]))
 
-        with it("should refuse a mapping whose toolset is the slug of the practice turned off, saying it is off"):
-            expect(lambda: self.action._work_on({"toolset": "ux", "fidelity": "ia"})).to(raise_error(GuidanceTurnedOff, contain("ux is the practice ux, which is turned off for session sign-up")))
+        with it("should work on a mapping whose toolset is the slug of the practice switched off, and hold it in the session's graph"):
+            self.action._work_on({"toolset": "ux", "fidelity": "ia"})
+            expect(self.action.listed()).to(equal([self.ux]))
+            expect(self.taken_up).to(equal(["ux"]))
 
         with it("should read a slug of the practice it works on as guidance, not text"):
             self.action._work_on("stories-story-map")
@@ -632,11 +647,12 @@ class _RecordingGraph:
 
 
 class _SessionWithGraph:
-    """A session with no practices turned on, whose graph records each refresh."""
+    """A session with no practices, whose graph records each refresh."""
 
     def __init__(self) -> None:
         self.graph = _RecordingGraph()
         self.practices: dict = {}
+        self.own_practices: dict = {}
 
 
 with description("an action started inside another that wrote files"):

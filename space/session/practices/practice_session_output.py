@@ -270,15 +270,6 @@ class LastFormatLeftOut(ValueError):
         self.formats = formats
 
 
-class PracticeTurnedOff(ValueError):
-    """A format was chosen, or left out, for a fidelity of a practice turned off for the session: every action refuses
-    to work on that practice, so the choice would be kept for work nobody can do."""
-
-    def __init__(self, practice: PracticeSessionOutput) -> None:
-        super().__init__(f"{practice.name} is turned off for session {practice.session.name}; turn {practice.name} on for the session before choosing its formats")
-        self.practice = practice
-
-
 class FidelityNotInPractice(LookupError):
     """A fidelity was named that the practice does not have, by its name or its slug."""
 
@@ -391,8 +382,8 @@ class FidelitySessionOutput:
     @noSessionLog
     def choose_format(self, format: str, is_chosen: bool) -> FidelitySessionOutput:
         """Choose format for this fidelity in its session, or leave it out when is_chosen is false, saved in its
-        session.json. A format the fidelity does not write is refused, as is any choice for a practice turned off and
-        leaving out the last format chosen."""
+        session.json. A format the fidelity does not write is refused, as is leaving out the last format chosen. A
+        practice switched off for the session takes the choice too, since an action sent to the agent still works on it."""
         named = Format(format).name
         if named not in self.offered_formats:
             raise FormatNotOfferedError(self._fidelity, format)
@@ -400,10 +391,8 @@ class FidelitySessionOutput:
 
     def choose_formats(self, names: list[str], is_chosen: bool) -> FidelitySessionOutput:
         """Choose each of names, formats this fidelity writes, or leave out each one, in one change of session.json.
-        Refused while the practice is turned off for the session (*PracticeTurnedOff*), and when leaving them out would
-        leave the fidelity no format chosen (*LastFormatLeftOut*), so it always writes in at least one."""
-        if not self.is_enabled:
-            raise PracticeTurnedOff(self._practice)
+        Refused when leaving them out would leave the fidelity no format chosen (*LastFormatLeftOut*), so it always writes
+        in at least one."""
         if not names:
             return self
         defaults = self.formats.default_formats

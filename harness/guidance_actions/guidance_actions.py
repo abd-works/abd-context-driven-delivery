@@ -157,11 +157,6 @@ class GuidanceMappingNamesNoToolset(ValueError):
         self.slugs = tuple(slugs)
 
 
-class GuidanceTurnedOff(ValueError):
-    """A guidance word names a practice CDD ships, or one of its fidelities, that is turned off for the session the
-    action works in: the session's practices leave it out."""
-
-
 class GuidanceArgument:
     """The guidance a command names, read as what the action works on. It is the Guidance list, one Guidance (a slug, a
     ``module:Class`` ref, a ``{"toolset": ...}`` mapping or its JSON, or a Guidance already made), or text the action
@@ -173,12 +168,10 @@ class GuidanceArgument:
     A slug or a ref names a practice or a fidelity of the practices the action works with (``practices``), and is read
     once into that object, so the action never looks it up again."""
 
-    def __init__(self, command: GuidanceCommand, practices: Callable[[], PracticeSet], session_name: str = "") -> None:
+    def __init__(self, command: GuidanceCommand, practices: Callable[[], PracticeSet]) -> None:
         self._command = command
         self._guidance = command.guidance
         self._practices = practices
-        # The session whose practices these are; empty for a set that is every practice CDD ships.
-        self._session_name = session_name
 
     @property
     def text(self) -> str | None:
@@ -303,20 +296,7 @@ class GuidanceArgument:
         that is no slug."""
         if not _GUIDANCE_SLUG.match(slug):
             return None
-        named = self._practices().named(slug)
-        if named is None and self._session_name:
-            self._refuse_turned_off(slug)
-        return named
-
-    def _refuse_turned_off(self, slug: str) -> None:
-        """A slug of a practice CDD ships that the session's practices leave out names a practice turned off for the
-        session; run as text, it would check or render nothing, so it is refused, naming the practice to turn on."""
-        catalogue = PRACTICE_CATALOGUE.create_all()
-        practice = catalogue.practice_answering(slug)
-        if practice is None:
-            return
-        kind = "the practice" if practice.slug == slug else "a fidelity of"
-        raise GuidanceTurnedOff(f"{slug} is {kind} {practice.slug}, which is turned off for session {self._session_name}; turn {practice.slug} on for the session to work on it")
+        return self._practices().named(slug)
 
     def _json_ref(self, text: str) -> GuidanceRef | None:
         if not (text.startswith("{") and text.endswith("}")):
@@ -359,7 +339,7 @@ class WorkList:
         overlays the command names are chosen on the session first, so the action runs with them."""
         if command.overlays is not None and self._session is not None:
             self._session.choose_overlays(list(command.overlays))
-        argument = GuidanceArgument(command, self.practice_set, self._session_name)
+        argument = GuidanceArgument(command, self.practice_set)
         self.worked_on = command.written
         self._listed = None
         self.text = argument.text
@@ -406,22 +386,17 @@ class WorkList:
             writer.format = format
         return listed
 
-    @property
-    def _session_name(self) -> str:
-        """The name of the session whose practices the list works with; empty when it works with every practice."""
-        if self._outer is not None:
-            return self._outer._session_name
-        return getattr(self._session, "name", "") if self._session is not None else ""
-
     def practice_set(self) -> PracticeSet:
-        """The practices worked with, made known once: the session's own instances, the ones its graph holds; for no
-        session, a set of their own; for a list made inside another action's, that list's."""
+        """The practices worked with, made known once: the session's own instance of every practice, switched on or
+        off, since switching a practice off only changes what the board and chat show, never what a command sent to
+        the agent can work on; for no session, a set of their own; for a list made inside another action's, that
+        list's."""
         if self._outer is not None:
             return self._outer.practice_set()
         if self._practices is None:
             session = self._session
             self._practices = (
-                PracticeSet(output.guidance for output in session.practices.values()) if session is not None else PRACTICE_CATALOGUE.create_all()
+                PracticeSet(output.guidance for output in session.own_practices.values()) if session is not None else PRACTICE_CATALOGUE.create_all()
             )
         return self._practices
 
@@ -502,7 +477,7 @@ class WorkList:
             writer.format = named.format
         self._formats.append((writer, named.format))
         if self._session is not None:
-            self._session.practice(practice.key)
+            self._session.take_up(practice.key)
         self._worked_at[practice] = fidelity
         return practice
 

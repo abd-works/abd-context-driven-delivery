@@ -38,7 +38,6 @@ An exception no test names is a failure nobody has seen happen. Its message, and
 - `harness/guidance/action_catalogue.py`: ActionsNotRegistered
 - `harness/guidance/practice_catalogue.py`: PracticesNotRegistered
 - `harness/guidance/practice_formats.py`: NoFormatReads, SourceFormatNotSet
-- `harness/guidance_actions/guidance_actions.py`: GuidanceTurnedOff
 - `harness/installation/destination.py`: SkippedTool
 - `harness/installation/installer.py`: ServersNotRegistered
 - `harness/installation/repository_toolsets.py`: ToolsetUnloadable
