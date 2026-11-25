@@ -27,7 +27,8 @@ class PublishedLinks:
     """Each published thing's address in Claude, by its name, in the order they were published, as one record keeps
     them: a design canvas's version folder. An entry is its address alone, or, when something is kept beside the
     address, an object holding the address under ``link`` and the rest beside it, such as the values a person accepted
-    that a canvas version's screens leave out."""
+    that a canvas version's screens leave out. A value of any other kind is a setting the record's owner keeps beside
+    the addresses, such as a design canvas's ``keep_one``: it is not an address, and every write keeps it."""
 
     def __init__(self, record: JsonFile) -> None:
         self._record = record
@@ -35,7 +36,7 @@ class PublishedLinks:
     def all(self) -> Dict[str, str]:
         """Each address kept, by name; none while no record is kept. A record that cannot be read raises
         *PublishedLinksUnreadable*, naming the file."""
-        kept = self._entries()
+        kept = {name: entry for name, entry in self._entries().items() if isinstance(entry, (str, dict))}
         return {str(name): str(entry.get(_LINK, "")) if isinstance(entry, dict) else str(entry) for name, entry in kept.items()}
 
     def beside(self, name: str) -> Dict[str, Any]:

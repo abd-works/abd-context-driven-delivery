@@ -9,6 +9,10 @@ walk) finds every value its scenarios' steps name on the screen that shows the s
 value left out; the accepted ones are kept beside the link, so the gap stays in view. A
 version kept as a release is renamed to the release's name (``CanvasVersion.release``); numbering then starts again at
 ``version-1``, copied from that release.
+
+A project that wants one canvas regenerated in place, until it wants versions again, sets ``"keep_one": true`` in
+``versions.json``: the render then writes into the latest version even once it is published, and publishing records the
+same link again. The walk before publishing still runs.
 """
 
 from __future__ import annotations
@@ -26,6 +30,8 @@ DESIGN_CANVAS_FOLDER = "design-canvas"
 _VERSION = re.compile(r"^version-(\d+)$")
 # What a published version keeps beside its link: the values its screens leave out that the person accepted.
 _ACCEPTED_MISSES = "accepted_misses"
+# The setting in versions.json that keeps one canvas every render updates in place, instead of a new version each time.
+KEEP_ONE = "keep_one"
 
 
 class PublishedVersion(Exception):
@@ -106,7 +112,14 @@ class CanvasVersions:
 
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root)
-        self.published = PublishedLinks(JsonFile(self.root / "versions.json"))
+        self._record = JsonFile(self.root / "versions.json")
+        self.published = PublishedLinks(self._record)
+
+    @property
+    def keeps_one(self) -> bool:
+        """Whether the project keeps one canvas that every render updates in place, set by ``"keep_one": true`` in
+        ``versions.json``; off unless set, so a published version is never written over by accident."""
+        return self._record.read().get(KEEP_ONE) is True
 
     @classmethod
     def in_practice_root(cls, practice_root: str | Path) -> CanvasVersions:
@@ -149,16 +162,18 @@ class CanvasVersions:
 
     def working(self) -> CanvasVersion:
         """The version a generator writes into: the latest while it is unpublished (no one has edited it yet), else a
-        new one started from it."""
+        new one started from it. A canvas that keeps one version (*keeps_one*) answers the latest even once it is
+        published, so the render updates that canvas in place and it is published again at the same link."""
         latest = self.latest
-        if latest is not None and latest.link is None:
+        if latest is not None and (latest.link is None or self.keeps_one):
             return latest
         return self.start_next()
 
     def unpublished(self) -> CanvasVersion:
         """The latest version, for a generator that only adds to the version being prepared; a published version is
-        people's canvas, so this refuses it."""
+        people's canvas, so this refuses it, unless the canvas keeps one version (*keeps_one*) that every render
+        updates in place."""
         latest = self.latest
-        if latest is None or latest.link is not None:
+        if latest is None or (latest.link is not None and not self.keeps_one):
             raise PublishedVersion(f"{latest.folder.name if latest else 'no version'} is published; start the next version before generating into it")
         return latest

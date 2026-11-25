@@ -4,7 +4,7 @@ The fidelity declares the canvas as ``design-canvas/{version}/project/canvas.jso
 version, and only the person says when the version after it starts (harness/design_canvas/.context/cdr/0001), so the
 render writes into the latest version while it is unpublished, starts the first version of a canvas that has none, and
 refuses a published latest version (*PublishedVersion*), leaving the agent to ask the person and start the next one
-with ``CanvasVersions.start_next()``.
+with ``CanvasVersions.start_next()``. A canvas whose ``versions.json`` sets ``keep_one`` is written in place, published or not.
 """
 
 from __future__ import annotations

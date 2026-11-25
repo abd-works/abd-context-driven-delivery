@@ -112,6 +112,45 @@ with description("Canvas versions") as self:
             self.versions.latest.publish_at("https://claude.ai/artifact/one", _CLEAN)
             expect(lambda: self.versions.unpublished()).to(raise_error(PublishedVersion))
 
+    with context("keeping one canvas that every render updates in place"):
+        with before.each:
+            self.root.mkdir(parents=True)
+            (self.root / "versions.json").write_text('{"keep_one": true}', encoding="utf-8")
+
+        with it("starts version-1 when there is no version yet"):
+            expect(self.versions.working().number).to(equal(1))
+
+        with context("once the version is published"):
+            with before.each:
+                (self.root / "version-1" / "project").mkdir(parents=True)
+                self.versions.latest.publish_at("https://claude.ai/artifact/one", _CLEAN)
+
+            with it("keeps writing into the published version"):
+                expect(self.versions.working().number).to(equal(1))
+
+            with it("starts no next version"):
+                self.versions.working()
+                expect((self.root / "version-2").exists()).to(equal(False))
+
+            with it("lets generators add to the published version"):
+                expect(self.versions.unpublished().number).to(equal(1))
+
+            with it("records the same link again when it is published again"):
+                self.versions.working().publish_at("https://claude.ai/artifact/one", _CLEAN)
+                expect(self.versions.published.all()).to(equal({"version-1": "https://claude.ai/artifact/one"}))
+
+            with it("keeps the setting when it is published again"):
+                self.versions.working().publish_at("https://claude.ai/artifact/one", _CLEAN)
+                expect(self.versions.keeps_one).to(equal(True))
+
+            with it("still refuses to publish screens that leave out values their steps name"):
+                expect(lambda: self.versions.working().publish_at("https://claude.ai/artifact/one", _Walk('Pay › Pay by card › "Visa"'))).to(
+                    raise_error(UnshownStepValues, contain('"Visa"')))
+
+    with context("without the setting"):
+        with it("does not keep one canvas"):
+            expect(self.versions.keeps_one).to(equal(False))
+
     with context("keeping a published version as a release"):
         with before.each:
             for number in (1, 2):

@@ -6,7 +6,8 @@ format.
 1. reads the story map below the Stories practice's root, with each story's scenario file, and the UX map
    (``<ux root>/ux.json``);
 2. takes the working version of the UX root's design canvas (``CanvasVersions.working()``), the latest while it is
-   unpublished, else a new one copied from it;
+   unpublished, else a new one copied from it, or the latest itself when ``versions.json`` keeps one canvas
+   (``"keep_one": true``);
 3. builds the active pattern's fixtures bundle into ``project/fixtures/canvas-fixtures.js``, and stops with
    *FixturesNotBuilt*, rendering nothing, when it cannot be built (``stop-when-fixtures-fail``);
 4. writes each story's prototype screen (*StoryScreen*) to ``project/screens/<slug>.dc.html`` and names it as that
@@ -96,7 +97,11 @@ class RenderedStoryCanvas:
         lines = [f"Rendered {len(self.files)} canvas files into {self.version.folder}.",
                  f"Walk: {self.walk_file} ({len(self.walk.misses)} value(s) the screens leave out)."]
         lines += [f"  - {miss}" for miss in self.walk.misses]
-        lines.append(f"Publish it as a new canvas titled {self.version.title(name)!r} and keep its link with version.publish_at.")
+        if self.version.link is not None:
+            lines.append(f"Publish it again at {self.version.link}, the canvas this project keeps updating in place, after reading "
+                         f"that canvas back for edits people made there, and record the link again with version.publish_at.")
+        else:
+            lines.append(f"Publish it as a new canvas titled {self.version.title(name)!r} and keep its link with version.publish_at.")
         return "\n".join(lines)
 
 

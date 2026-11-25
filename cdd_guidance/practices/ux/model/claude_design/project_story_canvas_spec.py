@@ -133,6 +133,18 @@ with description("a project's story canvas rendered in one call") as self:
             expect(self.rendered.walk_file).to(equal(self.rendered.version.folder / "walk.md"))
             expect(self.rendered.walk_file.is_file()).to(be_true)
 
+    with context("when the project keeps one canvas and it is already published"):
+        with before.each:
+            write(self.root, "ux/design-canvas/versions.json", json.dumps({"keep_one": True, "version-1": "https://claude.ai/artifact/one"}))
+            (self.root / "ux" / "design-canvas" / "version-1" / "project").mkdir(parents=True)
+            self.rendered = project_canvas(self.root, RecordedFixtures()).render({"order-plan": order_screen()})
+
+        with it("should render into the published version"):
+            expect(self.rendered.version.folder).to(equal(self.root / "ux" / "design-canvas" / "version-1"))
+
+        with it("should say to publish it again at the link it already has"):
+            expect(self.rendered.summary("Shop")).to(contain("https://claude.ai/artifact/one"))
+
     with context("when the fixtures cannot be built"):
         with before.each:
             self.canvas = project_canvas(self.root, RefusedFixtures())
