@@ -217,6 +217,25 @@ with description("Ux ensure_javascript tool"):
             stories = self.session.practices["stories"].guidance
             expect(self.ux.ensure_javascript("stories", "markdown", _STORY_MAP)).to(equal(stories.render("javascript", _STORY_MAP, source="markdown")))
 
+        with context("finding its root while nobody chose one"):
+            with it("should write under ux in the session's root while no folder holds a UX map or a design canvas"):
+                expect(self.session.practices["ux"].folder).to(equal(self.session.work_root / "ux"))
+
+            with it("should write under the folder holding the project's UX map"):
+                (self.project / "apps" / "web" / "screens").mkdir(parents=True)
+                (self.project / "apps" / "web" / "screens" / "ux.json").write_text("{}", encoding="utf-8")
+                expect(self.session.practices["ux"].folder).to(equal(self.session.work_root / "apps" / "web" / "screens"))
+
+            with it("should write under the folder holding the project's design canvas"):
+                (self.project / "design" / "design-canvas").mkdir(parents=True)
+                expect(self.session.practices["ux"].folder).to(equal(self.session.work_root / "design"))
+
+            with it("should write under the root the session chose, wherever the UX map is"):
+                (self.project / "design" / "design-canvas").mkdir(parents=True)
+                (self.project / "screens").mkdir()
+                self.session.practices["ux"].choose_root("screens")
+                expect(self.session.practices["ux"].folder).to(equal(self.session.work_root / "screens"))
+
         with context("rendering the story canvas"):
             with before.each:
                 stories = self.session.practices["stories"].folder

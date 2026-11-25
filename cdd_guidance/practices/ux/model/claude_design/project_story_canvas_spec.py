@@ -3,6 +3,7 @@ read from the project's roots, the fixtures bundle built, each story's prototype
 map, the canvas rendered into the working version with each story's and scenario's place in its scenario file, and the
 walk written beside it; and a stop, with nothing rendered, when the fixtures cannot be built."""
 
+import io
 import json
 import shutil
 import tempfile
@@ -17,7 +18,8 @@ from cdd_guidance.practices.ux.model.claude_design.project_story_canvas import (
     ProjectStoryCanvas,
     ScreenNotOnUxMap,
 )
-from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen, WrittenMarkup
+from cdd_guidance.practices.ux.model.claude_design.screen_files import ScreenFiles
+from cdd_guidance.practices.ux.model.claude_design.story_screen import PortedCanvasMarkup, StoryScreen, WrittenMarkup
 
 STORY_MAP = """# (E) Place Order
 ## (S) Customer --> [Order Plan](../story_tests/place-order/order-plan/order_plan_story.test.md#story-order-plan)
@@ -83,6 +85,19 @@ def order_screen() -> StoryScreen:
                        domain_input="order", positions={"Customer orders the Ace plan": [{"page": "plans"}, {"page": "order"}]})
 
 
+class MinusSignMissed:
+    misses = ["Then the cart reads \u2212$5.00"]
+
+    def write(self, path):
+        Path(path).write_text("# Walk\n", encoding="utf-8")
+        return Path(path)
+
+
+class MinusSignWalk(QuietWalk):
+    def walk(self, story_map):
+        return MinusSignMissed()
+
+
 def project_canvas(root: Path, fixtures) -> ProjectStoryCanvas:
     return ProjectStoryCanvas(project_root=root, ux_root=root / "ux", stories_root=root / "tests" / ".context",
                               fixtures=fixtures, walk_type=QuietWalk)
@@ -132,6 +147,40 @@ with description("a project's story canvas rendered in one call") as self:
         with it("should write the walk of the screens into the version's folder"):
             expect(self.rendered.walk_file).to(equal(self.rendered.version.folder / "walk.md"))
             expect(self.rendered.walk_file.is_file()).to(be_true)
+
+    with context("when a screen is ported from another canvas that names the files it needs"):
+        with before.each:
+            write(self.root, "ux/prototype/Main.dc.html", '<head><script src="./vendor/react.js"></script>\n<script src="domain.js"></script></head>')
+            write(self.root, "ux/prototype/domain.js", "window.Domain = {};")
+            files = ScreenFiles(component=self.root / "ux/prototype/Main.dc.html", needs={"domain.js": self.root / "ux/prototype/domain.js"},
+                                dropped=(r"vendor/",))
+            ported = StoryScreen(title="Order Plan", story="Order Plan", markup=PortedCanvasMarkup("flow", files=files), domain_input="order",
+                                 positions={"Customer orders the Ace plan": [{"page": "plans"}]})
+            self.rendered = project_canvas(self.root, RecordedFixtures()).render({"order-plan": ported})
+            self.project = self.rendered.version.folder / "project"
+
+        with it("should copy the component beside the screens, linking the copies of what it loads"):
+            component = (self.project / "screens" / "flow.dc.html").read_text(encoding="utf-8")
+            expect(component).to(equal('<head><script src="../domain.js"></script></head>'))
+
+        with it("should copy the files it loads into the version"):
+            expect((self.project / "domain.js").is_file()).to(be_true)
+
+    with context("when the walk names a value a Windows console cannot print"):
+        with before.each:
+            canvas = ProjectStoryCanvas(project_root=self.root, ux_root=self.root / "ux", stories_root=self.root / "tests" / ".context",
+                                        fixtures=RecordedFixtures(), walk_type=MinusSignWalk)
+            self.rendered = canvas.render({"order-plan": order_screen()})
+            self.bytes = io.BytesIO()
+            self.console = io.TextIOWrapper(self.bytes, encoding="cp1252")
+
+        with it("should print the summary to that console, writing the value as an escape"):
+            self.rendered.print_summary("Shop", self.console)
+            self.console.flush()
+            expect(self.bytes.getvalue()).to(contain(b"Then the cart reads \u2212$5.00"))
+
+        with it("should keep the value as it is in the summary's text"):
+            expect(self.rendered.summary("Shop")).to(contain("\u2212$5.00"))
 
     with context("when the project keeps one canvas and it is already published"):
         with before.each:

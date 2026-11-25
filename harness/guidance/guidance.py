@@ -286,7 +286,8 @@ class PracticeGuidance(Guidance):
     only the current fidelity's."""
     default_workspace_folder: str = "."
     """The folder under a session's workpath this practice writes into while no root is chosen for it, such as
-    ``tests`` for Stories; the whole workpath for a practice that names none."""
+    ``tests`` for Stories; the whole workpath for a practice that names none. A practice that finds its folder from
+    what the project holds answers it from ``default_folder``."""
     format_adapters: ClassVar[dict[str, Any]] = {}
     """The parse and render adapter of each format this practice owns, by format name: a class, or the module and class
     name it is imported from when first used. A practice with none defers rendering to its fidelity's Clean Engineering
@@ -322,6 +323,12 @@ class PracticeGuidance(Guidance):
         folder per module writes there, rather than a test of it. Every file is, unless the practice tells its tests
         apart, as a practice that writes code does."""
         return True
+
+    @property
+    def default_folder(self) -> str:
+        """The folder under its session's workpath this practice writes into while nobody chose or configured a root for
+        it: ``default_workspace_folder``, unless the practice finds the folder from what the project holds."""
+        return self.default_workspace_folder
 
     def placed_under(self, declared: PurePosixPath, root: Path) -> Path | None:
         """Where a path one of its fidelities declares, such as ``.context/story-map.md``, lands under root, that

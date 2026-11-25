@@ -10,8 +10,9 @@ format.
    (``"keep_one": true``);
 3. builds the active pattern's fixtures bundle into ``project/fixtures/canvas-fixtures.js``, and stops with
    *FixturesNotBuilt*, rendering nothing, when it cannot be built (``stop-when-fixtures-fail``);
-4. writes each story's prototype screen (*StoryScreen*) to ``project/screens/<slug>.dc.html`` and names it as that
-   screen's prototype in ``ux.json``;
+4. copies the files each screen's markup source names (*ScreenFiles*: a ported canvas's component and the scripts
+   and stylesheets it loads) into ``project/``, writes each story's prototype screen (*StoryScreen*) to
+   ``project/screens/<slug>.dc.html`` and names it as that screen's prototype in ``ux.json``;
 5. renders the story map and the story explorer (*ClaudeDesignStoryMap*), whose step groups CDD derives from the
    scenarios, with each story's and scenario's ``path:line`` in its scenario file for the explorer's open request;
 6. walks the screens at every step group and writes the report to ``walk.md`` in the version's folder.
@@ -23,9 +24,10 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Mapping, Optional, Protocol, Sequence
+from typing import Dict, Mapping, Optional, Protocol, Sequence, TextIO
 
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.model.story_map import StoryMap
@@ -103,6 +105,13 @@ class RenderedStoryCanvas:
         else:
             lines.append(f"Publish it as a new canvas titled {self.version.title(name)!r} and keep its link with version.publish_at.")
         return "\n".join(lines)
+
+    def print_summary(self, name: str, out: Optional[TextIO] = None) -> None:
+        """Print the summary to out (standard output by default), writing each character out's encoding cannot hold,
+        such as a minus sign a step value quotes on a Windows console, as its escape (``\\u2212``)."""
+        out = out or sys.stdout
+        encoding = getattr(out, "encoding", None) or "utf-8"
+        out.write(self.summary(name).encode(encoding, "backslashreplace").decode(encoding) + "\n")
 
 
 @dataclass
@@ -196,10 +205,15 @@ class ProjectStoryCanvas:
             raise ScreenNotOnUxMap(f"The UX map holds no screen for {', '.join(missing)}; add the screen to ux.json first.")
 
     def _write_screens(self, screens: Mapping[str, StoryScreen], project: Path, ux_document: dict) -> None:
-        """Write each screen into the version and name it as its UX-map screen's prototype, keeping every other field
-        ux.json holds."""
+        """Copy the files each screen's markup needs, once for each markup, then write each screen into the version
+        and name it as its UX-map screen's prototype, keeping every other field ux.json holds."""
         if not screens:
             return
+        copied = []
+        for markup in (screen.markup for screen in screens.values()):
+            if markup not in copied:
+                markup.copy_files(project)
+                copied.append(markup)
         folder = project / SCREENS_FOLDER
         folder.mkdir(parents=True, exist_ok=True)
         for slug, screen in screens.items():

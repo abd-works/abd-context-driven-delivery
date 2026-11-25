@@ -151,8 +151,9 @@ class PracticeSessionOutput:
     @property
     def folder(self) -> Path:
         """The folder this practice writes its code under: the root chosen or configured,
-        else the practice's own default folder under the session's root, such as src for BDD."""
-        relative = self._chosen_or_configured_root or self._guidance.default_workspace_folder
+        else the practice's own default folder under the session's root, such as src for BDD, or the folder holding the
+        project's UX map for UX."""
+        relative = self._chosen_or_configured_root or self._guidance.default_folder
         return self._session.paths.folder_under_root(relative)
 
     @property

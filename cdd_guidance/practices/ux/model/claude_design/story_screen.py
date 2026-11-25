@@ -22,7 +22,10 @@ import posixpath
 import re
 from dataclasses import dataclass, field
 
+from pathlib import Path
+
 from cdd_guidance.practices.ux.model.claude_design.fixture_screen import FixtureScreen, ScenarioSource
+from cdd_guidance.practices.ux.model.claude_design.screen_files import ScreenFiles
 
 # Screens live in project/screens/; the fixtures bundle in project/fixtures/.
 FIXTURES_SCRIPT = '<script src="../fixtures/canvas-fixtures.js"></script>'
@@ -39,9 +42,14 @@ class ScreenMarkup:
     ``{{ <input> }}`` is the bound domain object and ``{{ position.<setting> }}`` the step group's position."""
 
     head: str
+    files: ScreenFiles = ScreenFiles()
 
     def body_for(self, domain_input: str, position_settings: list[str]) -> str:
         raise NotImplementedError
+
+    def copy_files(self, project: Path) -> list[Path]:
+        """Copy the files the markup needs (*files*) into a canvas version's project folder."""
+        return self.files.copy_into(project)
 
 
 @dataclass(frozen=True)
@@ -67,10 +75,11 @@ _BODY = re.compile(r"<body\b[^>]*>([\s\S]*?)</body>", re.IGNORECASE)
 class AppPageMarkup(ScreenMarkup):
     """Markup taken from a page of an existing app: the *page*'s HTML, its body drawn without the app's scripts (the
     canvas runs the screen's own logic, not the app's), its inline styles kept, and its linked stylesheets linked from
-    *stylesheet_folder*, the canvas folder the project copies them into (``stylesheets`` names them)."""
+    *stylesheet_folder*, the canvas folder its *files* copy them into (``stylesheets`` names them)."""
 
     page: str
     stylesheet_folder: str = "../styles"
+    files: ScreenFiles = field(default_factory=ScreenFiles)
 
     @property
     def stylesheets(self) -> tuple[str, ...]:
@@ -89,14 +98,21 @@ class AppPageMarkup(ScreenMarkup):
 
 @dataclass(frozen=True)
 class PortedCanvasMarkup(ScreenMarkup):
-    """Markup ported from another Claude Design canvas: its *component* (the ``.dc.html`` the project copies beside the
-    screens) drawn through ``dc-import``, with *attributes* it always takes (such as its theme), the named input, and
-    each position setting; *head* loads the scripts and stylesheets the component needs; *size* is its hint size."""
+    """Markup ported from another Claude Design canvas: its *component* (the ``.dc.html`` its *files* copy beside the
+    screens, with the files it loads) drawn through ``dc-import``, with *attributes* it always takes (such as its
+    theme), the named input, and each position setting; *head* loads the scripts and stylesheets the component needs;
+    *size* is its hint size."""
 
     component: str
     head: str = ""
     attributes: dict[str, str] = field(default_factory=dict)
     size: str = "100%,100%"
+    files: ScreenFiles = field(default_factory=ScreenFiles)
+
+    def copy_files(self, project: Path) -> list[Path]:
+        """Copy the files the component loads into a canvas version's project folder, and the component itself beside
+        the screens as ``screens/<component>.dc.html``, where ``dc-import`` finds it."""
+        return self.files.copy_into(project, f"screens/{self.component}.dc.html")
 
     def body_for(self, domain_input: str, position_settings: list[str]) -> str:
         fixed = [f'{name}="{value}"' for name, value in self.attributes.items()]
