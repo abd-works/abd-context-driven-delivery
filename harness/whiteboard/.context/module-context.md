@@ -9,17 +9,16 @@
 
 A `.whiteboard` file keeps the address of the board in Claude it was published to in its own `board` field (`Whiteboard.BOARD`), which the board's store never holds: `Whiteboard.published_to(text, board)` writes it, first in the file, leaving everything else as it was; `Whiteboard.board_in(text)` and `Whiteboard.board_of(file)` read it, empty for a file never published. The Render action's `record_board` writes it once the agent has created the board in Claude as the last step of a whiteboard render, a render drawn over the file keeps it (`drawn_over`), and the session's file list reads it, so the Files app opens the board instead of the file. Text that is no whiteboard file is refused with *UnreadableBoard* and left as it was.
 
-*WhiteboardFile* is the one reader of a `.whiteboard` file for a page: `whiteboard-file.show`, published through `@language_adapter`, answers the board a file in the project holds, its title and its whole sections, shapes, labels and arrows as data (`WhiteboardData`, `@data_fields` on *Box* and *BoardElement*, with each block's `lines` and a shape's `is_rounded` and a label's `is_title` beside its fields), so the Files app draws the board from that and never reads the file's records in TypeScript; a file that holds no board is refused as an *UnreadableBoard*.
 
 *StoreWrite* is one write to the artifact's store: set a record, update its changed fields, or delete it; an agent sends them as the entries `Whiteboard.batches(previous)` answers.
 
 *KeepsDocumentOnBoard* is what a practice's whiteboard format mixes in, ahead of its model, to keep the document a board was drawn from (*SourceDocument* of harness/markdown) in the board's meta (`Whiteboard.kept_document`, written as `document` beside the title and the order, so the board in Claude keeps it too): `keeping` writes it there and `document_kept_in` reads it back, as *KeepsDocumentInDrawing* does for a draw.io file.
 
 - **Purpose:** Let any practice draw its diagram on a Claude Whiteboard and read it back, with one board format, one element id, and one way of updating a board in Claude.
-- **Seam (terms):** KeepsDocumentOnBoard (`keeping`, `document_kept_in`), Whiteboard (`kept_document`, `title`, `sections`, `shapes`, `labels`, `arrows`, `holding`, `batches`, `drawn_over`, `board`, `board_in`, `board_of`, `published_to`), WhiteboardFile (`whiteboard-file.show`), BoardElement, Shape, Section, Label, Arrow, ElementId (`of`, `read`, `role`, `parts`, `key`), WhiteboardNode (`KEY_LENGTH`), Box, UnreadableBoard
-- **Dependencies (one-way):** harness/installation, for the JSON record of published addresses and the data annotations; harness/markdown, for *Format* and *SourceDocument*; harness/agent_tools and harness/mcp, for *WhiteboardFile*'s tool.
+- **Seam (terms):** KeepsDocumentOnBoard (`keeping`, `document_kept_in`), Whiteboard (`kept_document`, `title`, `sections`, `shapes`, `labels`, `arrows`, `holding`, `batches`, `drawn_over`, `board`, `board_in`, `board_of`, `published_to`), BoardElement, Shape, Section, Label, Arrow, ElementId (`of`, `read`, `role`, `parts`, `key`), WhiteboardNode (`KEY_LENGTH`), Box, UnreadableBoard
+- **Dependencies (one-way):** harness/installation, for the JSON record of published addresses; harness/markdown, for *Format* and *SourceDocument*.
 
-The practices' whiteboard packages (`model/whiteboard` in each practice), the Render action, the session's file list and the Files app (through the generated `whiteboard-file` adapter) depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
+The practices' whiteboard packages (`model/whiteboard` in each practice), the Render action, and the session's file list depend on it; it names no practice and no diagram type, so a *WhiteboardNode* is handed the box it is drawn in.
 
 ## Constraint
 

@@ -385,14 +385,14 @@ with description("a language adapter"):
             with context("with a field holding records whose dataclass fields are their data"):
                 with before.all:
                     install_path = Path(tempfile.mkdtemp(prefix="language-adapter-"))
-                    _install(install_path, ("harness.whiteboard.whiteboard_file:WhiteboardFile",))
-                    self.whiteboard = (install_path / _ADAPTERS / "harness/whiteboard/whiteboard-file.ts").read_text(encoding="utf-8")
+                    _install(install_path, ("space.repo.repo:Repo",))
+                    self.repo_adapter = (install_path / _ADAPTERS / "space/repo/repo.ts").read_text(encoding="utf-8")
 
-                with it("should type each record by its fields, a record it holds as that record's data"):
-                    expect(self.whiteboard).to(contain("export type ShapeData = {\n  id: string\n  box: BoxData\n"))
+                with it("should type each record by its fields"):
+                    expect(self.repo_adapter).to(contain("export type ClearedFolderData = {\n  folder: string\n  reason: string\n}"))
 
-                with it("should type a string of a kind of its own as a string"):
-                    expect(self.whiteboard).to(contain("export type ArrowData = {\n  id: string\n  from_id: string\n"))
+                with it("should type a list of records as a list of that record's data"):
+                    expect(self.repo_adapter).to(contain("export type ClearedWorktreesData = {\n  removed: ClearedFolderData[]\n  kept: ClearedFolderData[]\n"))
 
         with description("its shared base"):
             with before.all:

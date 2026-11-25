@@ -575,50 +575,38 @@ describe('Add File Or Selection To Chat Context', () => {
   })
 })
 
-// Open Whiteboard In Files App: a whiteboard file opens as the board Python reads from it (whiteboard-file.show), which the
-// canvas draws; the page never reads the file's text to draw it.
+// Open Whiteboard In Files App: a whiteboard file only points at its board in Claude, so opening it opens that board,
+// and the Files app reads nothing from the file to draw; requested 2026-11-25: opening a whiteboard opens the whiteboard.
 describe('Open Whiteboard In Files App', () => {
   const WHITEBOARD = '.context/story-map.whiteboard'
-  const BOARD = { title: 'Story Map', sections: [], shapes: [], labels: [], arrows: [] }
+  const BOARD_LINK = 'https://claude.ai/artifact/story-board'
 
-  // A session whose whiteboard file holds BOARD, or holds no board at all.
-  class BoardServer extends FakeFilesServer {
-    isUnreadable = false
-
-    override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
-      if (!path.startsWith('/whiteboard-file/')) return super.post<Result>(path, body)
-      this.posts.push({ path, body })
-      if (this.isUnreadable) throw new Error('cdd whiteboard-file.show failed: UnreadableBoard: Not a whiteboard file')
-      return { path: decodeURIComponent(path.split('/')[2] ?? ''), board: BOARD } as Result
-    }
-  }
-
-  const opened = async (server: BoardServer): Promise<FilesPage> => {
+  // A session whose only file is the whiteboard, on a board in Claude when link is given.
+  const opened = async (link: string): Promise<{ server: FakeFilesServer; page: FilesPage }> => {
+    const server = new FakeFilesServer()
+    server.practices = []
+    server.rootFiles = [{ path: WHITEBOARD, exists: true, is_changed: false, link, published_kind: 'whiteboard', format: 'whiteboard', fidelities: [] }]
     const page = new FilesPage(server, new FilesLink(`${STAGE_LINK}&file=${encodeURIComponent(WHITEBOARD)}`))
     await started(page)
-    return page
+    return { server, page }
   }
+  const asked = (server: FakeFilesServer): string[] => server.posted('/send').filter(post => post.body.kind === 'submit').map(post => String(post.body.text))
 
-  it('should read the board through whiteboard-file.show', async () => {
-    const server = new BoardServer()
-    await opened(server)
-    expect(server.posts.filter(post => post.path.startsWith('/whiteboard-file/')).map(post => post.path)).toEqual([`/whiteboard-file/${encodeURIComponent(WHITEBOARD)}/show`])
+  it('should open its board in Claude when the whiteboard is on one', async () => {
+    const { server } = await opened(BOARD_LINK)
+    expect(asked(server)).toHaveLength(1)
+    expect(asked(server)[0]).toContain(BOARD_LINK)
   })
 
-  it('should hold the board it answered, for the canvas to draw', async () => {
-    expect((await opened(new BoardServer())).state.board).toEqual(BOARD)
-  })
-
-  it('should not read the file\'s text through session.file', async () => {
-    const server = new BoardServer()
-    await opened(server)
+  it('should read nothing from a whiteboard file', async () => {
+    const { server } = await opened(BOARD_LINK)
+    expect(server.posts.filter(post => post.path.startsWith('/whiteboard-file/'))).toHaveLength(0)
     expect(server.posted('/file')).toHaveLength(0)
   })
 
-  it('should say the file did not open when it holds no board', async () => {
-    const server = new BoardServer()
-    server.isUnreadable = true
-    expect((await opened(server)).state.problem).toContain('Not a whiteboard file')
+  it('should hold no board drawn from the file', async () => {
+    const { page } = await opened('')
+    expect('board' in page.state).toBe(false)
   })
 })
 

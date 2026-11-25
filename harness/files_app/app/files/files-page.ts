@@ -1,7 +1,6 @@
 import type { CddApi } from '@cdd/cdd-shared'
 import { ChatClientGenerated } from '@cdd/harness/chat/chat'
 import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
-import { WhiteboardFileClientGenerated } from '@cdd/harness/whiteboard/whiteboard-file'
 import { SessionClientGenerated, type FileEntryData, type SessionFileData } from '@cdd/space/session/session'
 
 import { ChatContext } from './chat-context'
@@ -259,6 +258,7 @@ export class FilesPage {
     return true
   }
 
+
   // A file a person chooses from the list opens alone, leaving the nodes selected in the graph view.
   async open(path: string): Promise<void> {
     this.showsLinkedLine = false
@@ -297,7 +297,11 @@ export class FilesPage {
   }
 
   private async openAt(path: string): Promise<void> {
-    this.store.change(() => ({ openPath: path, file: null, board: null }))
+    // A whiteboard on a board in Claude opens that board: the file only points at it.
+    const entry = this.fileBar.entries.find(each => each.path === path)
+    const published = entry ? publishedOf(entry) : null
+    if (entry && published?.kind === 'whiteboard' && published.link && (await this.openPublished(entry))) return
+    this.store.change(() => ({ openPath: path, file: null }))
     // A .drawio file shows in the draw.io editor beside the file list, which reads the file itself.
     if (isDrawio(path)) return this.stopRefreshing()
     await this.refreshOpen()
@@ -308,7 +312,8 @@ export class FilesPage {
     const path = this.state.openPath
     if (!path) return
     this.stopRefreshing()
-    if (isWhiteboard(path)) return this.readBoard(path)
+    // A whiteboard file is only a pointer to its board in Claude, so nothing is read from it.
+    if (isWhiteboard(path)) return
     try {
       const { rules, crossFile } = this.state.reads
       // A file opened from the graph view needs the folds its graph places, which only a read with rules answers.
@@ -320,18 +325,6 @@ export class FilesPage {
     } catch (failure) {
       this.store.change(() => ({ problem: `${path} did not open: ${reasonOf(failure)}` }))
       this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app, calling session.file`, { isShownOnPage: true, kind: 'file_display' })
-    }
-  }
-
-  // A whiteboard file read as the board it holds, which Python reads from it (whiteboard-file.show) and the canvas draws.
-  private async readBoard(path: string): Promise<void> {
-    try {
-      const read = await WhiteboardFileClientGenerated.named(this.api, path).show()
-      if (this.state.openPath !== path) return
-      this.store.change(() => ({ board: read?.board ?? null, problem: '' }))
-    } catch (failure) {
-      this.store.change(() => ({ problem: `${path} did not open: ${reasonOf(failure)}` }))
-      this.notices.fail(`The Files app did not open ${path}: ${reasonOf(failure)}`, `Opening ${path} in the Files app, calling whiteboard-file.show`, { isShownOnPage: true, kind: 'file_display' })
     }
   }
 

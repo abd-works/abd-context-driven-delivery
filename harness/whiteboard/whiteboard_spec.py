@@ -11,7 +11,6 @@ from harness.whiteboard import Arrow, BoardElement, Box, ElementId, KeepsDocumen
 from harness.markdown.format import Format, SourceDocument
 from harness.installation.data_class import data_of
 from harness.whiteboard.whiteboard import STORE_RECORD_BYTES, StoreWrite
-from harness.whiteboard.whiteboard_file import WhiteboardFile
 
 
 class CardNode(WhiteboardNode):
@@ -363,44 +362,3 @@ with description("a board drawn over the file it replaces"):
         expect(board_of_two_cards().drawn_over("")).to(equal(board_of_two_cards().save()))
 
 
-with description("a whiteboard file read for a page that draws it") as self:
-    with before.all:
-        self.project = Path(tempfile.mkdtemp(prefix="whiteboard-file-"))
-        board = board_of_two_cards()
-        board.add(Section("lane.release", box=Box(0, 0, 200, 120), color="gray", text="Release 1"))
-        board.add(Label("title", x=4, y=4, text="Orders", size="title"))
-        (self.project / ".context").mkdir()
-        (self.project / ".context" / "orders.whiteboard").write_text(board.save(), encoding="utf-8")
-        self.shown = data_of(WhiteboardFile.load(".context/orders.whiteboard", project=self.project).show())
-
-    with it("should name the file as a path from the project"):
-        expect(self.shown["path"]).to(equal(".context/orders.whiteboard"))
-
-    with it("should send the board's title"):
-        expect(self.shown["board"]["title"]).to(equal("Orders"))
-
-    with it("should send each shape with its id, its box, and its words a line each"):
-        first = self.shown["board"]["shapes"][0]
-        expect([first["id"], first["box"], first["lines"], first["is_rounded"]]).to(
-            equal(["story.a1", {"x": 20, "y": 40, "w": 60, "h": 50}, ["Submit Order"], True])
-        )
-
-    with it("should send each section apart from the shapes"):
-        expect([section["id"] for section in self.shown["board"]["sections"]]).to(equal(["lane.release"]))
-
-    with it("should send a title label marked as a title"):
-        expect([(label["text"], label["is_title"]) for label in self.shown["board"]["labels"]]).to(equal([("Orders", True)]))
-
-    with it("should send each arrow by the ids of the elements it joins"):
-        arrow = self.shown["board"]["arrows"][0]
-        expect([arrow["from_id"], arrow["to_id"], arrow["dash"]]).to(equal(["story.a1", "story.b2", False]))
-
-    with context("that holds no board"):
-        with it("should refuse it, saying it is not a whiteboard file"):
-            (self.project / "notes.whiteboard").write_text("not a board", encoding="utf-8")
-            expect(lambda: WhiteboardFile.load("notes.whiteboard", project=self.project)).to(raise_error(UnreadableBoard))
-
-
-with description("a block's words as a page draws them"):
-    with it("should be a line each, without the asterisks the board sets emphasis with"):
-        expect(Shape(ElementId("story", "a1"), text="*Customer*\nBrowse Catalog\n").lines).to(equal(["Customer", "Browse Catalog"]))
