@@ -921,6 +921,14 @@ Observed: the ⇥ handoff icon adds "Write a handoff for ticket <session> with /
 
 Requested (2026-11-06, as the CDD Kanban does): the chat bar shows the active session's latest handoff.
 
+### (S) Person --> [Show Backlog Items In Session List](../story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md#story-show-backlog-items-in-session-list)
+
+Requested (2026-11-25, the person: "Add a section to the session choices for backlog items ... A parent and child can be opened to reveal the child items"): the main chat's session list, under main's row, the open tickets and the field that names a new session (`session-dialogs-view.tsx` `SessionListView`), holds a BACKLOG section with the Backlog's items in the order the board keeps them (`Backlog.items`, `.sessions/_board.json`); an item with children (`BacklogItem.children`) shows collapsed with how many it has, and a press opens it to show its child items under it, as a parent card on the board expands. The chat bar reads them with the board it reads every turn (`board.overview`, `BoardOverview`), by title.
+
+### (S) Person --> [Start Backlog Item From Session List](../story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md#story-start-backlog-item-from-session-list)
+
+Requested (2026-11-25, the person: "If a backlog ticket is started, that is identical to moving a ticket out of the backlog ... the parent or the child can be started"): a start on a Backlog item in the session list goes down the board's own path out of the Backlog (`root-choice-client.ts` `start`: `backlog-item.start` on the folder chosen, then `ticket.activate`, then a chat started in the ticket's worktree), the folder being the one chosen beside the new session's name, or the whole repository; a parent starts with its children as its child tickets (`BacklogItem.start`), and a child starts alone, its parent staying in the Backlog.
+
 ### (S) Person --> Close Session From Chat Bar
 
 Observed: the ✕ icon opens a dialog saying the session's work is committed and pushed first when it has a branch, then Close session calls `ticket.close` (`session-dialogs-view.tsx` `CloseView`).

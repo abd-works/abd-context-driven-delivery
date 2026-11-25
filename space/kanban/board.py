@@ -960,3 +960,31 @@ class ColumnOverview:
     def tickets(self) -> list[Ticket]:
         """The open tickets in the column, by name: a stage's cards; none in Backlog or Complete."""
         return list(self._stage.cards) if self._stage is not None else []
+
+    @property
+    @data_field
+    def items(self) -> list[BacklogItemOverview]:
+        """The Backlog's own items in the order the board keeps, each by its title with its children by theirs, which the
+        session list offers to start; none in a stage or Complete."""
+        if not isinstance(self._column, Backlog):
+            return []
+        return [BacklogItemOverview(item) for item in self._column.items]
+
+
+class BacklogItemOverview:
+    """A backlog item as the overview sends it: its title and its children's titles, without its idea's text, since the
+    chat bar reads the overview every turn and the Backlog's text can run past an MCP answer's size limit."""
+
+    def __init__(self, item: BacklogItem) -> None:
+        self._item = item
+
+    @property
+    @data_field
+    def title(self) -> str:
+        return self._item.title
+
+    @property
+    @data_field(reference=True)
+    def children(self) -> list[BacklogItem]:
+        """The items its folder keeps with it, each by its title."""
+        return self._item.children

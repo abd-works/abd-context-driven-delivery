@@ -23,8 +23,9 @@ const chatBarView = atom(
     isRepoListOpen: false,
     repos: [],
     newSessionFolder: '',
+    openBacklogParents: [],
   } as ChatBarViewJson,
-  { shape: 'chat-bar-view-11' },
+  { shape: 'chat-bar-view-12' },
 )
 
 // A press turns choice on or off; the chosen stay in the order the Ticket offers them, so a choice sent reads the same
@@ -58,6 +59,14 @@ export async function showRepos($: EngineInterface, repos: RepoRowJson[]): Promi
 // The folder a new session will work on, chosen beside its name; empty for the whole repository.
 export async function chooseNewSessionFolder($: EngineInterface, newSessionFolder: string): Promise<void> {
   await update($, chatBarView, view => ({ ...view, newSessionFolder }))
+}
+
+// A press on a Backlog parent in the session list opens it on its child items, or closes it again.
+export async function toggleBacklogParent($: EngineInterface, title: string): Promise<void> {
+  await update($, chatBarView, view => {
+    const opened = view.openBacklogParents ?? []
+    return { ...view, openBacklogParents: opened.includes(title) ? opened.filter(open => open !== title) : [...opened, title] }
+  })
 }
 
 export async function closeSessionList($: EngineInterface): Promise<void> {
