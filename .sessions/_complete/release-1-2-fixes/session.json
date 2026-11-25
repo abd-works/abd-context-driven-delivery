@@ -60,5 +60,6 @@
     }
   },
   "stage": "Hardening",
-  "stage_mark": "done"
+  "stage_mark": "done",
+  "dropped_work": []
 }
