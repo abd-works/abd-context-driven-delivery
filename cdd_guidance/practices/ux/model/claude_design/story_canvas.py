@@ -326,7 +326,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
     def _scenario_entry(self, story: ClaudeDesignStory, scenario: "Scenario | Background") -> dict:
         """A scenario as the explorer lists it: its steps grouped by the screen each group ends on, and the prototype
         it plays, else its own or its story's screen."""
-        groups, prototype = self._step_groups(scenario)
+        groups, prototype = self._step_groups(story, scenario)
         if not prototype:
             prototype, image = self._screen_of(scenario, story)
             if image and not any(group["i"] for group in groups):
@@ -335,16 +335,21 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         return {"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,
                 "f": self.sources.get(StoryTree.key_of(scenario), "")}
 
-    def _step_groups(self, scenario: "Scenario | Background") -> tuple[List[dict], str]:
+    def _step_groups(self, story: ClaudeDesignStory, scenario: "Scenario | Background") -> tuple[List[dict], str]:
         """The scenario's steps, grouped so each group ends on a step a screen shows, with that screen's images; and
-        the first prototype those screens name."""
+        the first prototype those screens name. A screen that shows the story or the scenario but names none of its
+        steps shows each step that ends an action (``one-group-per-action``)."""
         groups: List[dict] = []
         waiting: List[str] = []
         prototype = ""
+        unnamed = self._screens_naming_no_steps(story, scenario)
+        ends = _action_ends(scenario) if unnamed else []
         for step in _steps_of(scenario):
             indent = "    " if step.keyword in ("And", "But") else ""
             waiting.append(f"{indent}{step.keyword} {plain_words(step.text)}")
-            shown = [screen for screen in shown_on(step, self.screen_map.screens) if not self._blank(screen)]
+            named = shown_on(step, self.screen_map.screens)
+            derived = [screen for screen in unnamed if screen not in named] if any(step is end for end in ends) else []
+            shown = [screen for screen in [*named, *derived] if not self._blank(screen)]
             prototype = prototype or next((artboard_stem(s.prototype) for s in shown if s.prototype), "")
             if shown:
                 groups.append({"x": "\n".join(waiting), "i": [f"../{s.image}" for s in shown if s.image]})
@@ -354,6 +359,15 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         elif waiting:
             groups.append({"x": "\n".join(waiting), "i": []})
         return groups, prototype
+
+    def _screens_naming_no_steps(self, story: ClaudeDesignStory, scenario: "Scenario | Background") -> List[Screen]:
+        """The screens that show the scenario or its story and name none of the steps they show, so CDD derives them."""
+        screens = self.screen_map.screens
+        found: List[Screen] = []
+        for screen in [*shown_on(scenario, screens), *shown_on(story, screens)]:
+            if not screen.step_keys and screen not in found:
+                found.append(screen)
+        return found
 
     def _screen_of(self, scenario: "Scenario | Background", story: ClaudeDesignStory) -> tuple:
         """A scenario whose steps show no screen shows its own ``shownOn`` screen, else its story's:
@@ -419,3 +433,18 @@ def _steps_of(scenario: "Scenario | Background") -> List[Step]:
         found.append(step)
         found.extend(getattr(step, "ands", []) or [])
     return found
+
+
+def _action_ends(scenario: "Scenario | Background") -> List[Step]:
+    """The steps a screen shows when the UX map names none: the step before each Then that opens a run of Thens, and
+    the scenario's last step, so each action and its outcome is one step group. An And or But takes the phase of the
+    step it continues."""
+    phased: List[tuple] = []
+    for step in scenario.steps:
+        phased.append((step, step.phase))
+        phased.extend((extra, extra.phase or step.phase) for extra in getattr(step, "ands", []) or [])
+    ends = [phased[index - 1][0] for index, (_, phase) in enumerate(phased)
+            if index and phase == "then" and phased[index - 1][1] != "then"]
+    if phased and not any(phased[-1][0] is end for end in ends):
+        ends.append(phased[-1][0])
+    return ends

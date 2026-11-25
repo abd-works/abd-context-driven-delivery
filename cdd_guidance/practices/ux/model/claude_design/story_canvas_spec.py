@@ -102,6 +102,48 @@ with description("a Claude Design story map") as self:
         with it("hands each screen the position of the selected step group, so a scenario with several actions shows each outcome"):
             expect(self.files["project/screens/explorer.dc.html"]).to(contain('step-index="{{stepIndex}}"'))
 
+    with context("rendered from a scenario with two actions, on a screen that names its story but no steps"):
+        with before.each:
+            story_map = _story_map()
+            scenario = story_map.epics[0].epics[0].stories[0].scenarios[0]
+            scenario.steps.append(Step("the catalog lists the plans", StepType.THEN, 3))
+            scenario.steps.append(Step("the Customer picks Atlas", StepType.WHEN, 4))
+            scenario.steps.append(Step("the cart holds Atlas", StepType.THEN, 5))
+            screen = Screen("Plan catalog", 1)
+            screen.prototype = "plan-catalog.dc.html"
+            screen.show_story("Choose Plan")
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map(screen))).render(story_map))
+            self.explorer = files["project/screens/explorer.dc.html"]
+
+        with it("derives one step group per action: what leads to each action, its outcome, and the last outcome"):
+            groups = [
+                "Given the Customer has no account\nWhen the Customer opens My Paradise",
+                "Then the catalog lists the plans\nWhen the Customer picks Atlas",
+                "Then the cart holds Atlas",
+            ]
+            expect(self.explorer).to(contain(json.dumps([{"x": group, "i": []} for group in groups])))
+
+    with context("rendered from a scenario with two actions, on a screen that names the first action and the last outcome"):
+        with before.each:
+            story_map = _story_map()
+            scenario = story_map.epics[0].epics[0].stories[0].scenarios[0]
+            scenario.steps.append(Step("the catalog lists the plans", StepType.THEN, 3))
+            scenario.steps.append(Step("the Customer picks Atlas", StepType.WHEN, 4))
+            scenario.steps.append(Step("the cart holds Atlas", StepType.THEN, 5))
+            screen = _catalog_screen()
+            screen.image = ""
+            screen.show_step("Choose Plan \u203a See the plan catalog \u203a the cart holds Atlas")
+            screen.show_story("Choose Plan")
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map(screen))).render(story_map))
+            self.explorer = files["project/screens/explorer.dc.html"]
+
+        with it("groups the steps at the step the UX map names, not at each action"):
+            groups = [
+                "Given the Customer has no account\nWhen the Customer opens My Paradise",
+                "Then the catalog lists the plans\nWhen the Customer picks Atlas\nThen the cart holds Atlas",
+            ]
+            expect(self.explorer).to(contain(json.dumps([{"x": group, "i": []} for group in groups])))
+
     with context("rendered from steps that mark their terms"):
         with before.each:
             story_map = _story_map()
