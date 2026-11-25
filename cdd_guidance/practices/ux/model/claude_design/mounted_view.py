@@ -100,8 +100,9 @@ class MountedViewBundle:
 @dataclass(frozen=True)
 class MountedViewMarkup(ScreenMarkup):
     """A screen drawn by the production view the project's entry exports as *view*, from *bundle*, inside the
-    screen's frame (``.canvas-screen``, which *StoryScreen* draws and the bundle's scoped stylesheet answers to). It
-    hands the view every
+    screen's frame (``.canvas-screen``, which *StoryScreen* draws and whose width the bundle's container rules read),
+    in a wrapper of its own (``.canvas-mount``, which the bundle's scoped selectors and design tokens answer to, so a
+    ported screen in the same kind of frame keeps its own theme). It hands the view every
     object the scenario bound, the repositories, the step group's position, and the explorer's ``go``. *size* is the
     hint size the editor gives it."""
 
@@ -115,8 +116,8 @@ class MountedViewMarkup(ScreenMarkup):
 
     def body_for(self, position_settings: list[str]) -> str:
         given = 'bound="{{ bound }}" repositories="{{ repositories }}" position="{{ position }}" go="{{ go }}"'
-        return (f'<x-import component-from-global-scope="{self.bundle.component}" '
-                f'view="{self.view}" {given} hint-size="{self.size}"></x-import>')
+        return (f'<div class="canvas-mount">\n<x-import component-from-global-scope="{self.bundle.component}" '
+                f'view="{self.view}" {given} hint-size="{self.size}"></x-import>\n</div>')
 
     def copy_files(self, project: Path) -> list[Path]:
         """Bundle the project's views into the version, where the screen's head loads them."""

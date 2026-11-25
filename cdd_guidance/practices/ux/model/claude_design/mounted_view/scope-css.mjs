@@ -2,8 +2,9 @@
 // canvas page, beside the story explorer's own panel, so the product's rules must neither read the browser window nor
 // reach the page around the frame:
 //
-// - every selector is scoped to the frame (`.canvas-screen`); `:root`, `html` and `body` become the frame itself, so
-//   the design tokens and the page's base rules land on the screen and nowhere else;
+// - every selector is scoped to the mounted view's own wrapper (`.canvas-mount`, inside the frame); `:root`, `html`
+//   and `body` become that wrapper, so the product's design tokens and base rules land on the mounted view and nowhere
+//   else, not even on a ported prototype screen drawn in the same kind of frame with its own theme;
 // - an `@media` rule that asks only about width or height becomes an `@container` rule on the frame, so the screen
 //   draws its phone layout in a phone-wide frame inside a wide window; any other media rule stays as it is;
 // - `vw` becomes `cqw`, the frame's width;
@@ -16,6 +17,7 @@
 import { pathToFileURL } from 'node:url';
 
 const FRAME = '.canvas-screen';
+const SCOPE = '.canvas-mount';
 const CONTAINER = 'canvas-screen';
 const UNSCOPED_AT_RULES = /^@(font-face|keyframes|-webkit-keyframes|property|page|counter-style|font-feature-values|import|charset|namespace)\b/i;
 const GROUPING_AT_RULES = /^@(media|supports|container|layer|document)\b/i;
@@ -45,14 +47,14 @@ function splitTopLevel(text, separator) {
 export function scopeSelector(selector) {
   const written = selector.trim();
   if (!written) return written;
-  if (written.startsWith(FRAME)) return written;
+  if (written.startsWith(FRAME) || written.startsWith(SCOPE)) return written;
   const page = /^(:root|html|body)(?![\w-])/i.exec(written);
   if (page) {
     const rest = written.slice(page[0].length);
     const nested = /^\s+(:root|html|body)(?![\w-])/i.exec(rest);
-    return `${FRAME}${nested ? rest.slice(nested[0].length) : rest}`;
+    return `${SCOPE}${nested ? rest.slice(nested[0].length) : rest}`;
   }
-  return `${FRAME} ${written}`;
+  return `${SCOPE} ${written}`;
 }
 
 function scopeSelectors(selectors) {
@@ -116,7 +118,7 @@ function withoutComments(css) {
   return css.replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
-// The product's stylesheet kept inside the frame: selectors scoped, size media rules on the frame, the frame's rule first.
+// The product's stylesheet kept inside the mounted view: selectors scoped to its wrapper, size media rules on the frame, the frame's rule first.
 export function scopeCss(css) {
   return `${FRAME_RULE}
 ${rewriteRules(withoutComments(css), true)}`;

@@ -379,14 +379,15 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         return prototype, image
 
     def _imports(self) -> List[str]:
-        """Each prototype screen in the explorer's screen pane: at its own width, centred, so it lays out as it does on
-        its own artboard; a screen that states no size fills the pane."""
+        """Each prototype screen in the explorer's screen pane. The import fills the pane's width and the screen's own
+        frame (StoryScreen, at the screen's width) centres itself in it, so it lays out as it does on its own artboard
+        and the fixture bar at the pane's left stays clear of it; a screen that states no size fills the pane."""
         lines = []
         sizes = self._screen_sizes()
         for prototype in self._prototypes():
             name = artboard_stem(prototype)
             size = sizes.get(prototype)
-            hint, style = (f"{size[0]}px,{size[1]}px", f"display: block; width: {size[0]}px; margin: 0 auto") if size else \
+            hint, style = (f"{size[0]}px,{size[1]}px", "display: block; width: 100%") if size else \
                 ("1280px,900px", "display: block; width: 100%; min-height: 100%")
             lines.append(f'<sc-if value="{{{{live.{Name(name).camel}}}}}" hint-placeholder-val="{{{{ false }}}}">'
                          f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" step-index="{{{{stepIndex}}}}" hint-size="{hint}" style="{style}"></dc-import></sc-if>')

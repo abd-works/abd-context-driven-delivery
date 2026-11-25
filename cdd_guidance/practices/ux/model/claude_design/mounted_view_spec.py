@@ -38,7 +38,7 @@ with description("a story's screen mounting a production view") as self:
 
         with it("should draw it inside the screen's frame, which the scoped stylesheet answers to"):
             expect(self.html).to(contain('<div class="canvas-screen" style="box-sizing: border-box; width: 390px;'))
-            expect(re.search(r'<div class="canvas-screen"[^>]*>\n<x-import', self.html)).not_to(equal(None))
+            expect(re.search(r'<div class="canvas-screen"[^>]*>\n<div class="canvas-mount">\n<x-import', self.html)).not_to(equal(None))
 
         with it("should still load its scenario through the fixture bar"):
             expect(ScreenArtboard(self.html).loads_fixtures).to(equal(True))

@@ -229,8 +229,8 @@ with description("a Claude Design story map") as self:
             board = self.sized_canvas["boards"]["screens/plan-catalog.dc.html"]
             expect((board["w"], board["h"])).to(equal((390, 844)))
 
-        with it("draws the screen in the explorer at its own width, centred, not stretched across the pane"):
-            expect(self.sized_explorer).to(contain('hint-size="390px,844px" style="display: block; width: 390px; margin: 0 auto"></dc-import>'))
+        with it("imports the screen across the pane's width, so the screen's own frame centres itself in it"):
+            expect(self.sized_explorer).to(contain('hint-size="390px,844px" style="display: block; width: 100%"></dc-import>'))
 
         with it("draws the screen on the explorer's dark background, not white"):
             expect(self.sized_explorer).to(contain("height: 100%; background: #0B0B0B; overflow: auto"))
