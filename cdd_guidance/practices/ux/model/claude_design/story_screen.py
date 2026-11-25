@@ -54,6 +54,10 @@ class ScreenMarkup:
         """Copy the files the markup needs (*files*) into a canvas version's project folder."""
         return self.files.copy_into(project)
 
+    def sources(self) -> dict[str, Path]:
+        """Where each file copy_files writes comes from, by the path it takes in the project folder."""
+        return self.files.sources()
+
 
 @dataclass(frozen=True)
 class WrittenMarkup(ScreenMarkup):
@@ -117,6 +121,10 @@ class PortedCanvasMarkup(ScreenMarkup):
         """Copy the files the component loads into a canvas version's project folder, and the component itself beside
         the screens as ``screens/<component>.dc.html``, where ``dc-import`` finds it."""
         return self.files.copy_into(project, f"screens/{self.component}.dc.html")
+
+    def sources(self) -> dict[str, Path]:
+        """Where each file copy_files writes comes from: the files the component loads, and the component itself."""
+        return self.files.sources(f"screens/{self.component}.dc.html")
 
     def body_for(self, position_settings: list[str]) -> str:
         fixed = [f'{name}="{value}"' for name, value in self.attributes.items()]

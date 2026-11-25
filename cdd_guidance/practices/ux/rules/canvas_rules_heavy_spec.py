@@ -19,6 +19,7 @@ from cdd_guidance.practices.ux.rules.canvas_rules import (
     ScreenFollowsScenario,
     ScreenIsAPrototype,
 )
+from cdd_guidance.practices.ux.rules.canvas_source_rules import PositionsHoldNoData, ScreenFilesFromProduction
 
 _SCREEN = canvas.SCREEN_ARTBOARD
 
@@ -114,3 +115,53 @@ with description("a UX map checked against the scenario-listed-once rule"):
     with context("whose canvas explorer lists each scenario once"):
         with it("should pass"):
             expect(canvas.CanvasExample({}).violations(ScenarioListedOnce())).to(equal([]))
+
+
+with description("a UX map checked against the screen-files-from-production rule"):
+    with context("whose screen loads a script copied from a prototype folder"):
+        with it("should name the file, the screen, and where it was copied from"):
+            files = {_SCREEN: canvas.loading_screen("../flow.js"), canvas.SCREEN_SOURCES: canvas.screen_sources({"flow.js": "ux/prototype/flow.js"})}
+            expect(canvas.CanvasExample(files).violations(ScreenFilesFromProduction())).to(equal([
+                "Screens cart load flow.js, copied from ux/prototype/flow.js, which is not the product's code; "
+                "load the production file, or a converted copy of it, instead."
+            ]))
+
+    with context("whose screen loads a script nobody recorded a source for"):
+        with it("should name the file as untraced"):
+            found = canvas.CanvasExample({_SCREEN: canvas.loading_screen("../flow.js")}).violations(ScreenFilesFromProduction())
+            expect(found).to(equal(["Screens cart load flow.js, which screen-sources.json does not trace to any source; "
+                                    "copy it from the product's code through the screen's markup files and render again."]))
+
+    with context("whose screen loads files copied from the product's code, a folder of them among them"):
+        with it("should pass"):
+            files = {_SCREEN: canvas.loading_screen("../ds/app/bundle.js", "../ds/app/tokens.css"),
+                     canvas.SCREEN_SOURCES: canvas.screen_sources({"ds/app": "packages/app/assets"})}
+            expect(canvas.CanvasExample(files).violations(ScreenFilesFromProduction())).to(equal([]))
+
+
+with description("a UX map checked against the positions-hold-no-data rule"):
+    with context("whose screen keeps a code typed into a position"):
+        with it("should name the screen, the setting, and the scenario with its value"):
+            files = {_SCREEN: canvas.positioned_screen({"Add the first line": [{"page": "catalog", "demoCode": "123456"}]}),
+                     canvas.COMPONENT_ARTBOARD: canvas.SHOP_COMPONENT}
+            expect(canvas.CanvasExample(files).violations(PositionsHoldNoData())).to(equal([
+                'Screen cart keeps demoCode as a position, but it holds example data in Add the first line ("123456"); '
+                "give the value through the scenario's fixtures."
+            ]))
+
+    with context("whose screen keeps a value its component does not offer"):
+        with it("should name it"):
+            files = {_SCREEN: canvas.positioned_screen({"Add the first line": [{"page": "checkout"}]}), canvas.COMPONENT_ARTBOARD: canvas.SHOP_COMPONENT}
+            expect(len(canvas.CanvasExample(files).violations(PositionsHoldNoData()))).to(equal(1))
+
+    with context("whose screen keeps only the component's options and true or false"):
+        with it("should pass"):
+            files = {_SCREEN: canvas.positioned_screen({"Add the first line": [{"page": "catalog"}, {"page": "cart", "demoCartOpen": True}]}),
+                     canvas.COMPONENT_ARTBOARD: canvas.SHOP_COMPONENT}
+            expect(canvas.CanvasExample(files).violations(PositionsHoldNoData())).to(equal([]))
+
+    with context("whose project accepts a text setting as a position by name"):
+        with it("should pass"):
+            files = {_SCREEN: canvas.positioned_screen({"Add the first line": [{"page": "catalog", "theme": "dark"}]}),
+                     canvas.COMPONENT_ARTBOARD: canvas.SHOP_COMPONENT, canvas.ACCEPTED_POSITIONS: '{"accepted": ["theme"]}'}
+            expect(canvas.CanvasExample(files).violations(PositionsHoldNoData())).to(equal([]))

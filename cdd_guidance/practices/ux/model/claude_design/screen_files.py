@@ -99,6 +99,14 @@ class ScreenFiles:
             written.append(target)
         return written
 
+    def sources(self, component_at: str = "") -> dict[str, Path]:
+        """Where each copy it makes comes from, by the path the copy takes in the version's project folder: each file
+        or folder it needs, and the component at component_at when it is copied."""
+        found = {target: Path(source) for target, source in self.needs.items()}
+        if self.component is not None and component_at:
+            found[component_at] = Path(self.component)
+        return found
+
     def relinked(self, project: Path, target: Path) -> str:
         """The component's text as it reads at target: each link to a file it needs pointed at that file's copy, each
         link matching *dropped* removed, every other link as it was."""

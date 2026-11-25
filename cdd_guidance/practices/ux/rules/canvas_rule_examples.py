@@ -121,3 +121,31 @@ class CanvasPair:
         found = CanvasExample(self._repaired).violations(self._rule)
         if found:
             raise AssertionError(f"{self._rule.slug}: expected the repaired canvas to pass, got {found!r}")
+
+
+SCREEN_SOURCES = f"{CANVAS_PROJECT}/screen-sources.json"
+COMPONENT_ARTBOARD = f"{CANVAS_PROJECT}/screens/shop.dc.html"
+ACCEPTED_POSITIONS = "ux/position-settings.json"
+
+
+def loading_screen(*links: str) -> str:
+    """The cart screen loading each of links from its head."""
+    head = "".join(f'<script src="{link}"></script>\n' for link in links)
+    return FOLLOWING_SCREEN.replace('<script src="./support.js"></script>\n', f'<script src="./support.js"></script>\n{head}')
+
+
+def screen_sources(sources: dict) -> str:
+    """A screen-sources.json recording, for each path in the project folder, the file it was copied from."""
+    return json.dumps({path: {"from": source, "kind": "copy"} for path, source in sources.items()})
+
+
+def positioned_screen(positions: dict) -> str:
+    """The cart screen keeping positions for its scenarios and drawing the shop component."""
+    logic = ("class Component extends DCLogic {\npositions() {\nreturn " + json.dumps(positions) + ";\n}\n"
+             "renderVals() { return { shown: {} }; }\n}")
+    return artboard(_CART, logic)
+
+
+# The shop component, whose data-props offer page as a choice of two and demoCartOpen as true or false.
+SHOP_COMPONENT = artboard("<div>shop</div>", "class Component extends DCLogic {\n  renderVals() { return {}; }\n}",
+                          '{"page":{"editor":"enum","options":["catalog","cart"]},"demoCartOpen":{"editor":"boolean"},"demoCode":{"editor":"text"}}')

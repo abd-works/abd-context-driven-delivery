@@ -67,4 +67,12 @@ EXAMPLE_PAIRS = {
     "every-scenario-has-a-state": canvas.CanvasPair(BY_SLUG["every-scenario-has-a-state"], {_SCREEN: canvas.ONE_STATE_SCREEN}, {}).check,
     "scenario-listed-once": canvas.CanvasPair(
         BY_SLUG["scenario-listed-once"], {canvas.EXPLORER_PAGE: canvas.explorer_page(*canvas.SCENARIOS, canvas.SCENARIOS[0])}, {}).check,
+    "screen-files-from-production": canvas.CanvasPair(
+        BY_SLUG["screen-files-from-production"],
+        {_SCREEN: canvas.loading_screen("../flow.js"), canvas.SCREEN_SOURCES: canvas.screen_sources({"flow.js": "ux/prototype/flow.js"})},
+        {_SCREEN: canvas.loading_screen("../flow.js"), canvas.SCREEN_SOURCES: canvas.screen_sources({"flow.js": "packages/app/flow.js"})}).check,
+    "positions-hold-no-data": canvas.CanvasPair(
+        BY_SLUG["positions-hold-no-data"],
+        {_SCREEN: canvas.positioned_screen({"Add the first line": [{"demoCode": "123456"}]}), canvas.COMPONENT_ARTBOARD: canvas.SHOP_COMPONENT},
+        {_SCREEN: canvas.positioned_screen({"Add the first line": [{"page": "cart"}]}), canvas.COMPONENT_ARTBOARD: canvas.SHOP_COMPONENT}).check,
 }

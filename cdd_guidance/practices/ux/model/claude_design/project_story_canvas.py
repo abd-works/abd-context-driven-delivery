@@ -11,7 +11,8 @@ format.
 3. builds the active pattern's fixtures bundle into ``project/fixtures/canvas-fixtures.js``, and stops with
    *FixturesNotBuilt*, rendering nothing, when it cannot be built (``stop-when-fixtures-fail``);
 4. copies the files each screen's markup source names (*ScreenFiles*: a ported canvas's component and the scripts
-   and stylesheets it loads) into ``project/``, writes each story's prototype screen (*StoryScreen*) to
+   and stylesheets it loads) into ``project/``, recording where each comes from (*ScreenSources*,
+   ``project/screen-sources.json``), writes each story's prototype screen (*StoryScreen*) to
    ``project/screens/<slug>.dc.html`` and names it as that screen's prototype in ``ux.json``;
 5. renders the story map and the story explorer (*ClaudeDesignStoryMap*), whose step groups CDD derives from the
    scenarios, with each story's and scenario's ``path:line`` in its scenario file for the explorer's open request;
@@ -32,6 +33,7 @@ from typing import Dict, Mapping, Optional, Protocol, Sequence, TextIO
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.model.story_map import StoryMap
 from cdd_guidance.practices.stories.model.story_tree import StoryTree
+from cdd_guidance.practices.ux.model.claude_design.screen_sources import FIXTURES, ScreenSources
 from cdd_guidance.practices.ux.model.claude_design.screen_walk import StoryCanvasWalk
 from cdd_guidance.practices.ux.model.claude_design.story_canvas import ClaudeDesignStoryMap, StoryCanvasSetup
 from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen
@@ -139,6 +141,7 @@ class ProjectStoryCanvas:
         version = CanvasVersions.in_practice_root(self.ux_root, self.scope).working()
         project = version.folder / "project"
         self._build_fixtures(story_map, project / FIXTURES_FILE)
+        ScreenSources(project).record({FIXTURES_FILE: self.stories_root}, self.project_root, FIXTURES)
         self._write_screens(screens, project, ux_document)
         ux_map = JsonUxMap().parse(ux_document)
         setup = StoryCanvasSetup(workspace=str(version.folder), ux_map=ux_map, sources=self.sources(story_map))
@@ -217,6 +220,7 @@ class ProjectStoryCanvas:
         for markup in (screen.markup for screen in screens.values()):
             if markup not in copied:
                 markup.copy_files(project)
+                ScreenSources(project).record(markup.sources(), self.project_root)
                 copied.append(markup)
         folder = project / SCREENS_FOLDER
         folder.mkdir(parents=True, exist_ok=True)

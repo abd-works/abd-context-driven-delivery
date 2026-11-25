@@ -122,3 +122,7 @@ class MountedViewMarkup(ScreenMarkup):
     def copy_files(self, project: Path) -> list[Path]:
         """Bundle the project's views into the version, where the screen's head loads them."""
         return self.bundle.build(project)
+
+    def sources(self) -> dict[str, Path]:
+        """The bundle's folder in the version comes from the project's view entry, its production code."""
+        return {f"{DESIGN_SYSTEMS_FOLDER}/{self.bundle.folder}": Path(self.bundle.project_root) / self.bundle.entry}
