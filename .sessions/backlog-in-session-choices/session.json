@@ -1,3 +1,11 @@
 {
-  "name": "backlog-in-session-choices"
+  "name": "backlog-in-session-choices",
+  "test_tiers": {
+    "harness/chat-ui/pane": {
+      "unit": "claude plugin test"
+    },
+    "space/kanban": {
+      "unit": "mamba"
+    }
+  }
 }
