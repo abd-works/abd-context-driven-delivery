@@ -63,3 +63,14 @@
 2026-11-25T14:28:00Z tool prompt-queue.show 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1312
 2026-11-25T14:28:01Z tool prompt-queue.is_only_talk 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1321
 2026-11-25T14:28:09Z tool prompt-queue.set_steps 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1376
+2026-11-25T14:30:36Z tool prompt-queue.show 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1580
+2026-11-25T14:30:40Z tool prompt-queue.step_done 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1587
+2026-11-25T14:30:41Z tool prompt-queue.step_done 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1587
+2026-11-25T14:30:41Z tool prompt-queue.step_done 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1587
+2026-11-25T14:30:45Z tool prompt-queue.set_steps 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1607
+2026-11-25T14:30:51Z tool prompt-queue.show 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1615
+2026-11-25T14:33:15Z tool prompt-queue.show 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1615
+2026-11-25T14:33:16Z tool prompt-queue.is_only_talk 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1624
+2026-11-25T14:33:22Z tool prompt-queue.add_interruption 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1643
+2026-11-25T14:33:22Z tool session.read_handoff_format 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1645
+2026-11-25T14:33:52Z tool session.write_handoff 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-1670
