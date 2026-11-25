@@ -18,6 +18,7 @@ from urllib.parse import quote, urlencode
 from harness.design_canvas.canvas import Artboard, DesignCanvas, Place, artboard_stem
 from cdd_guidance.practices.ux.model.claude_design.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
+from cdd_guidance.practices.ux.model.claude_design.screen_artboard import ScreenArtboard
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.markdown.markup import plain_words
@@ -186,7 +187,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
                                "title": "Story map", "is_interactive": True, "expand": "fill"})
         canvas.place(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": self.explorer_width, "h": self.explorer_height, "page": self.screens_page,
                                                                  "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
-        for name, board in self.screen_map.boards(self._screen_files(), reserved=2).items():
+        for name, board in self.screen_map.boards(self._screen_files(), reserved=2, sizes=self._screen_sizes()).items():
             canvas.place(name, board)
             self._add_context_panel(name)
         return canvas
@@ -378,12 +379,28 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         return prototype, image
 
     def _imports(self) -> List[str]:
+        """Each prototype screen in the explorer's screen pane: at its own width, centred, so it lays out as it does on
+        its own artboard; a screen that states no size fills the pane."""
         lines = []
+        sizes = self._screen_sizes()
         for prototype in self._prototypes():
             name = artboard_stem(prototype)
+            size = sizes.get(prototype)
+            hint, style = (f"{size[0]}px,{size[1]}px", f"display: block; width: {size[0]}px; margin: 0 auto") if size else \
+                ("1280px,900px", "display: block; width: 100%; min-height: 100%")
             lines.append(f'<sc-if value="{{{{live.{Name(name).camel}}}}}" hint-placeholder-val="{{{{ false }}}}">'
-                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" step-index="{{{{stepIndex}}}}" hint-size="1280px,900px" style="display: block; width: 100%; min-height: 100%"></dc-import></sc-if>')
+                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" step-index="{{{{stepIndex}}}}" hint-size="{hint}" style="{style}"></dc-import></sc-if>')
         return lines
+
+    def _screen_sizes(self) -> Dict[str, tuple]:
+        """Each screen artboard's own width and height, by its name, as the artboard the project holds states them
+        (``$preview``); a screen the project does not hold, or that states no size, is left out."""
+        sizes = {}
+        for name in self.screen_map.names(self._screen_files()):
+            size = ScreenArtboard.at(self.canvas.project.folder / name).preview_size if self.canvas.project.holds(name) else None
+            if size:
+                sizes[name] = size
+        return sizes
 
     def _screen_files(self) -> List[str]:
         """Screen artboards already in the canvas's screens folder: each needs a place on the Screens page."""

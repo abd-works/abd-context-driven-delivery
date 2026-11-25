@@ -1,10 +1,11 @@
 """Mamba spec for a Claude Design story map. Render writes the canvas: the map page and the screens page."""
 
 import json
+import shutil
 import tempfile
 from pathlib import Path
 
-from mamba import description, context, it, before
+from mamba import after, description, context, it, before
 from expects import be, contain, equal, expect, have_keys, have_len
 
 from cdd_guidance.practices.ux.model.claude_design.story_canvas import (
@@ -13,6 +14,7 @@ from cdd_guidance.practices.ux.model.claude_design.story_canvas import (
     ClaudeDesignStoryMap,
     StoryCanvasSetup,
 )
+from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen, WrittenMarkup
 from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap
 from cdd_guidance.practices.ux.model.nodes import Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
@@ -205,6 +207,33 @@ with description("a Claude Design story map") as self:
 
         with it("keeps the screen's stylesheets"):
             expect(self.explorer).to(contain('<link rel="stylesheet" href="../ds/app/tokens.css">'))
+
+    with context("rendered into a project whose story screen is a phone screen"):
+        with before.all:
+            self.workspace = Path(tempfile.mkdtemp(prefix="cdd-story-canvas-size-"))
+            screens = self.workspace / "project" / "screens"
+            screens.mkdir(parents=True)
+            phone = StoryScreen(title="Plan catalog", story="Choose Plan", markup=WrittenMarkup(head="", body="<main></main>"),
+                                positions={"See the plan catalog": [{}]}, width=390, height=844)
+            (screens / "plan-catalog.dc.html").write_text(phone.html, encoding="utf-8")
+            screen = _catalog_screen()
+            screen.prototype = "screens/plan-catalog.dc.html"
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(workspace=str(self.workspace), ux_map=_ux_map(screen))).render(_story_map()))
+            self.sized_canvas = json.loads(files["project/canvas.json"])
+            self.sized_explorer = files["project/screens/explorer.dc.html"]
+
+        with after.all:
+            shutil.rmtree(self.workspace, ignore_errors=True)
+
+        with it("sizes the screen's own board to the screen, not to a desktop"):
+            board = self.sized_canvas["boards"]["screens/plan-catalog.dc.html"]
+            expect((board["w"], board["h"])).to(equal((390, 844)))
+
+        with it("draws the screen in the explorer at its own width, centred, not stretched across the pane"):
+            expect(self.sized_explorer).to(contain('hint-size="390px,844px" style="display: block; width: 390px; margin: 0 auto"></dc-import>'))
+
+        with it("draws the screen on the explorer's dark background, not white"):
+            expect(self.sized_explorer).to(contain("height: 100%; background: #0B0B0B; overflow: auto"))
 
     with context("rendered with a screen that names a scenario, and a story whose screen names only the story"):
         with before.each:

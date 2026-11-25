@@ -62,6 +62,17 @@ with description("a story's prototype screen") as self:
         with it("should draw that markup inside the element that moves the explorer on a press"):
             expect(self.html).to(contain('onClickCapture="{{ advance }}">\n<main>{{ cart.plan }}</main>\n</div>'))
 
+    with context("drawn at its own size"):
+        with it("should draw its markup in a frame a phone wide, centred, at least a phone tall"):
+            expect(self.html).to(contain('<div class="canvas-screen" style="box-sizing: border-box; width: 390px; min-height: 844px; margin: 0 auto;'))
+
+        with it("should make the frame the canvas-screen size container, which the stylesheets' container rules ask"):
+            expect(self.html).to(contain("container-type: inline-size; container-name: canvas-screen; contain: layout paint\""))
+
+        with it("should draw a screen of another size in a frame of that size, and state that size to the canvas"):
+            wide = screen(WrittenMarkup(head="", body="<main></main>"), width=768, height=1024)
+            expect((wide.html.count("width: 768px; min-height: 1024px"), ScreenArtboard(wide.html).preview_size)).to(equal((1, (768, 1024))))
+
     with context("with its markup taken from a page of an existing app"):
         with before.all:
             self.page = AppPageMarkup(APP_PAGE, stylesheet_folder="../styles")

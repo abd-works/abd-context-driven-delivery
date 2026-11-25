@@ -50,14 +50,28 @@ class ScreenArtboard:
     @cached_property
     def declared_props(self) -> set[str]:
         """The props its data-props declares, which the explorer and the editor hand it."""
+        return set(self._data_props)
+
+    @cached_property
+    def preview_size(self) -> Optional[tuple[int, int]]:
+        """The screen's own width and height, as its data-props' ``$preview`` states them; none when it states none."""
+        preview = self._data_props.get("$preview")
+        if not isinstance(preview, dict):
+            return None
+        width, height = preview.get("width"), preview.get("height")
+        return (width, height) if isinstance(width, int) and isinstance(height, int) else None
+
+    @cached_property
+    def _data_props(self) -> dict:
         found = _LOGIC.search(self.text)
         declared = _DATA_PROPS.search(found.group(1)) if found else None
         if declared is None:
-            return set()
+            return {}
         try:
-            return set(json.loads(html.unescape(declared.group(1))))
+            props = json.loads(html.unescape(declared.group(1)))
         except json.JSONDecodeError:
-            return set()
+            return {}
+        return props if isinstance(props, dict) else {}
 
     @property
     def shows_only_a_picture(self) -> bool:

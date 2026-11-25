@@ -159,6 +159,13 @@ setTimeout(() => this.props.go(this.storyName(), this.scenarioName(), 'Then'), 0
 '''
 
 
+# The screen's frame: the screen's own width, centred, at least its own height, and a size container named
+# canvas-screen, so the stylesheets' container rules (``screen_files.py``, ``mounted_view/scope-css.mjs``) lay the
+# screen out at that width whatever the window; it holds its fixed and absolute children, so a sheet covers the screen.
+FRAME_STYLE = ("box-sizing: border-box; width: {width}px; min-height: {height}px; margin: 0 auto; position: relative; "
+               "container-type: inline-size; container-name: canvas-screen; contain: layout paint")
+
+
 # What the markup reads: each object the scenario bound under its own name, all of them as `bound`, the repositories its
 # Givens filled, the explorer's go, the step group's position, and the press that moves the explorer on.
 _VALS = """...(st.bound || {}),
@@ -174,7 +181,9 @@ class StoryScreen:
     """A story's prototype screen: *markup* from one of its sources, which reads every domain object the scenario
     bound under its own name, and *positions*, for each scenario, one position per step group the explorer lists (an
     outline's rows take the outline's), with *story_position* for a scenario that keeps none. *path* is the screen's
-    path for the dev seed paste; *artboard* its own canvas path, for the explorer's Edit link."""
+    path for the dev seed paste; *artboard* its own canvas path, for the explorer's Edit link. *width* and *height* are
+    the screen's own size, a phone's by default: the markup draws in a frame that wide (``.canvas-screen``), on its
+    artboard and inside the story explorer alike."""
 
     title: str
     story: str
@@ -194,7 +203,8 @@ class StoryScreen:
 
     @property
     def html(self) -> str:
-        body = (f'<div style="width: 100%; min-height: 100svh" onClickCapture="{{{{ advance }}}}">\n'
+        frame = FRAME_STYLE.format(width=self.width, height=self.height)
+        body = (f'<div class="canvas-screen" style="{frame}" onClickCapture="{{{{ advance }}}}">\n'
                 f'{self.markup.body_for(self.position_settings)}\n</div>')
         own = _OWN_METHODS.replace("__POSITIONS__", json.dumps(self.positions)).replace("__STORY_POSITION__", json.dumps(self.story_position))
         return FixtureScreen(

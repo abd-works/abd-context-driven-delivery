@@ -163,7 +163,8 @@ class FixtureScreen:
     """A whole fixture-driven screen artboard: *head* (stylesheets, the fixtures script), the bar at the top of the
     ``root_class`` element, *body* inside it, and a ``DCLogic`` class with the shared methods, *own_methods* (its
     ``fromFixture`` and ``paste``), and ``renderVals`` returning the bar's values with *vals* (JS object entries;
-    ``st`` is the state). *artboard* is the screen's own canvas path, for the explorer's Edit link."""
+    ``st`` is the state). *width* and *height* are the screen's own size (``$preview``), which the canvas sizes its board
+    and its place in the story explorer by. *artboard* is the screen's own canvas path, for the explorer's Edit link."""
 
     title: str
     head: str
@@ -172,8 +173,8 @@ class FixtureScreen:
     source: ScenarioSource
     own_methods: str
     vals: str
-    width: int = 1600
-    height: int = 1100
+    width: int = 390
+    height: int = 844
     artboard: str = ""
 
     @property
