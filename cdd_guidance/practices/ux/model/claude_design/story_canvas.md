@@ -35,7 +35,7 @@ Render a project's canvas in one call with `ProjectStoryCanvas` (`project_story_
 ## Story explorer
 
 - **`screen-left-hierarchy-right`** — The explorer fills the frame (its board expands to fill): the live screen on the left, on the explorer's dark background, and the story hierarchy as a full-height panel on the right. The screen draws at its own size (`screen-at-its-own-size`), centred in the left pane, and the pane scrolls when the screen is taller than it. Only the right panel wears the abd look; its styles are scoped (`sm-` prefixes) so they never reach the product screens, which keep their own stylesheets.
-- **`collapsible-tree`** — The hierarchy is a collapsible tree — epic → sub-epic → story → scenario → step — with a small indent, plus *Collapse all*, *Reset*, *Play next*, and a button that hides the panel.
+- **`collapsible-tree`** — The hierarchy is a collapsible tree — epic → sub-epics → story → scenario → step — nested exactly as the story map nests it: an epic that holds its stories directly lists them under itself, and sub-epics nest as deep as the map has them, each drawn once, so the tree reads like the map and never repeats an epic as its own sub-epic. Each level opens and closes on its own, with a small indent, plus *Collapse all*, *Reset*, *Play next*, and a button that hides the panel.
 - **`back-to-story-map`** — The panel starts with a **← Story map** link back to `Main.dc.html`.
 - **`outline-rows`** — An outline scenario (`Name: ${example}`) lists its example rows, read from the fixtures bundle's expanded scenarios; picking a row loads that row on the screen.
 - **`selection-in-view`** — The selected row scrolls into view whenever the selection changes, including when a screen's button moves the explorer.

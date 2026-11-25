@@ -74,7 +74,7 @@ def fixtures_bundle(*scenarios: str) -> str:
 def explorer_page(*scenarios: str) -> str:
     """An explorer page listing Add Line To Cart with scenarios, each playing the cart screen."""
     listed = [{"n": name, "b": False, "p": "cart", "t": [], "f": ""} for name in scenarios]
-    tree = [{"n": "Choose Lines", "u": [{"n": "Choose Lines", "s": [{"n": "Add Line To Cart", "f": "", "c": listed}]}]}]
+    tree = [{"n": "Choose Lines", "e": [], "s": [{"n": "Add Line To Cart", "f": "", "c": listed}]}]
     return f'<x-dc></x-dc>\n<script type="text/x-dc" data-dc-script>\nclass Component extends DCLogic {{\ntree() {{\nreturn {json.dumps(tree)};\n}}\n}}\n</script>\n'
 
 

@@ -150,6 +150,38 @@ with description("a Claude Design story map") as self:
             ]
             expect(self.explorer).to(contain(json.dumps([{"x": group, "i": [], "k": "when"} for group in groups])))
 
+    with context("rendered from an epic that holds its stories directly, with no sub-epic"):
+        with before.each:
+            story_map = StoryMap()
+            epic = Epic("Choose Lines", 1)
+            epic.stories.append(Story("Add Line To Cart", 1))
+            story_map.epics.append(epic)
+            explorer = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map())).render(story_map))["project/screens/explorer.dc.html"]
+            self.tree = json.loads(explorer.split("tree() {\nreturn ", 1)[1].split(";\n}", 1)[0])
+
+        with it("lists the stories under the epic itself, with no sub-epic named after it"):
+            expect([(epic["n"], epic["e"], [story["n"] for story in epic["s"]]) for epic in self.tree]).to(equal([("Choose Lines", [], ["Add Line To Cart"])]))
+
+    with context("rendered from epics nested three deep"):
+        with before.each:
+            story_map = StoryMap()
+            epic, sub_epic, inner = Epic("Onboard A Customer", 1), Epic("Choose Lines", 1), Epic("Pick Plans", 1)
+            inner.stories.append(Story("Display Plans", 1))
+            sub_epic.epics.append(inner)
+            sub_epic.stories.append(Story("View Cart", 2))
+            epic.epics.append(sub_epic)
+            story_map.epics.append(epic)
+            explorer = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map())).render(story_map))["project/screens/explorer.dc.html"]
+            self.tree = json.loads(explorer.split("tree() {\nreturn ", 1)[1].split(";\n}", 1)[0])
+
+        with it("nests each epic under the one that holds it, as deep as the story map does"):
+            inner = self.tree[0]["e"][0]["e"][0]
+            expect((self.tree[0]["n"], self.tree[0]["e"][0]["n"], inner["n"], [story["n"] for story in inner["s"]])).to(
+                equal(("Onboard A Customer", "Choose Lines", "Pick Plans", ["Display Plans"])))
+
+        with it("keeps the stories an epic holds beside its sub-epics"):
+            expect([story["n"] for story in self.tree[0]["e"][0]["s"]]).to(equal(["View Cart"]))
+
     with context("rendered from steps that mark their terms"):
         with before.each:
             story_map = _story_map()

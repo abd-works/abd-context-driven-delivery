@@ -219,14 +219,23 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         the screen serves, opened to their scenarios and steps. Nothing in it navigates or edits."""
         lines: List[str] = []
         for epic in self.epics:
-            lines.append(f'<div class="cx-epic">{html.escape(epic.name)}</div>')
-            for sub in epic.leaf_epics():
-                lines.append(f'<div class="cx-sub">{html.escape(sub.name)}</div>')
-                lines.extend(line for story in sub.stories for line in self._context_story_lines(story, focus))
+            lines.extend(self._context_epic_lines(epic, focus, 0))
         style = _CONTEXT_PANEL_STYLE
         body = ('<div style="position: absolute; inset: 0; overflow: auto; box-sizing: border-box; padding: 20px 20px 40px; '
                 'background: #111113; border-left: 1px solid #2A2A2A">\n' + "\n".join(lines) + "\n</div>")
         return Artboard("Stories", self.context_width, height, body, style=style, root_style=f"background: {BACKGROUND}", head=FONTS, name=name)
+
+    def _context_epic_lines(self, epic: ClaudeDesignEpic, focus: List[str], depth: int) -> List[str]:
+        """An epic in the context panel at depth (0 for an epic of the map), then its sub-epics, as deep as the map
+        nests them, then its stories."""
+        if depth:
+            lines = [f'<div class="cx-sub" style="padding-left: {12 * depth}px">{html.escape(epic.name)}</div>']
+        else:
+            lines = [f'<div class="cx-epic">{html.escape(epic.name)}</div>']
+        for sub in epic.epics:
+            lines.extend(self._context_epic_lines(sub, focus, depth + 1))
+        lines.extend(line for story in epic.stories for line in self._context_story_lines(story, focus))
+        return lines
 
     def _context_story_lines(self, story: ClaudeDesignStory, focus: List[str]) -> List[str]:
         """A story in the context panel: greyed and collapsed, or, when the screen serves it (in focus), opened to its
@@ -307,11 +316,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
     # -- explorer -------------------------------------------------------------------------
 
     def _explorer(self) -> str:
-        tree = []
-        for epic in self.epics:
-            subs = epic.leaf_epics()
-            tree.append({"n": epic.name, "u": [{"n": sub.name, "s": [self._story_entry(story) for story in sub.stories]}
-                                               for sub in subs]})
+        tree = [self._epic_entry(epic) for epic in self.epics]
         template = _EXPLORER_TEMPLATE.read_text(encoding="utf-8")
         heads = [f'<link rel="stylesheet" href="{href}">' for href in self._stylesheets()]
         heads += [f'<script src="{src}"></script>' for src in self._screen_scripts()]
@@ -319,6 +324,11 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         return (template.replace("__STYLESHEETS__", "\n".join(heads))
                 .replace("__IMPORTS__", "\n".join(self._imports()))
                 .replace("__DATA__", json.dumps(tree, ensure_ascii=False)))
+
+    def _epic_entry(self, epic: ClaudeDesignEpic) -> dict:
+        """An epic as the explorer lists it: its sub-epics (``e``), each listed the same way, as deep as the story map
+        nests them, and the stories directly under it (``s``)."""
+        return {"n": epic.name, "e": [self._epic_entry(sub) for sub in epic.epics], "s": [self._story_entry(story) for story in epic.stories]}
 
     def _story_entry(self, story: ClaudeDesignStory) -> dict:
         scenarios = [self._scenario_entry(story, scenario) for scenario in [*story.backgrounds, *story.scenarios]]
