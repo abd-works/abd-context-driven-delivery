@@ -56,7 +56,10 @@ fidelity: all
   same module H1 — interface first, then implementation. No fidelity section
   headers (## Model fidelity / ## Code fidelity) in the output.
   At modules, language is the first lines under each `# {path}` card.
-  Do not emit `## Language` or `## Modules` above those cards.
+  At model, each class's language is the first lines of its `## {ClassName}`
+  card, above the typed block: its definition paragraph, then one `### term`
+  per domain term it owns. Terms other modules own are not repeated here.
+  Do not emit `## Language` or `## Modules` above the cards at any fidelity.
   At modules fidelity, stop after Purpose / Seam / Dependencies / Constraint.
   Do not emit ## {ClassName} typed compact blocks, *is a type of*,
   Child : Parent, Sources/context of this folder's own files, scan dumps,
@@ -72,28 +75,18 @@ fidelity: all
   Substitute {ClassName} / {owned_property} / {param} / {Type} / ... when generating.
 -->
 
-## Language                                                       <!-- L, Mu — one section; do not add ## Modules -->
+# {module_path}                                                   <!-- Mu -->
 
-*{ClassName}* is {the job a caller hires it for — then what it holds and does.
-This paragraph IS the class definition. Identity and purpose. Not a decorator or merge.} <!-- L -->
+<!-- Language has no section of its own (no ## Language, no ## Modules above the cards).
+     At modules it is the first lines of this # {path} card: one ### concept per seam term.
+     At model it moves onto each class: the first lines of its ## {ClassName} card, above the
+     typed block, so a class's words and its members are read and changed together. -->
 
-### {class_name_as_a_concept}                                     <!-- L, Mu -->
+### {ClassName}                                                   <!-- L, Mu — modules only; at model this sits on the class card -->
 
-- {bullet: why a caller uses this (the outcome), then the mechanic if needed, then how it relates to *another class*} <!-- L -->
-- {as many bullets as the concept warrants}                       <!-- L -->
-- **Invariant:** {rule that must always hold — only when one exists} <!-- L -->
-
-### {ChildClass}                                                  <!-- L, Mu — own heading; no *is a type of* at modules -->
-
-- {why a caller uses this — same shape as any other concept}      <!-- L, Mu -->
-
-<!-- omit from module-context.md: *is a type of* is model language -->
+- {why a caller uses this (the outcome), then the mechanic if needed, then how it relates to *another class*} <!-- L, Mu -->
 
 Build order: `{first}` → `{second}` → `{third}`                   <!-- Mu -->
-
----
-
-# {module_path}                                                   <!-- Mu -->
 
 - **Purpose:** {the job a caller hires this module for — not how it is wired} <!-- Mu -->
 - **Seam (terms):** {ClassName}, {ChildClass}, ...                <!-- Mu -->
@@ -120,6 +113,16 @@ I{ClassName}({param}: {Type})
 
 ## {ClassName}                                                    <!-- Md -->
 
+*{ClassName}* is {the job a caller hires it for — then what it holds and does.
+This paragraph IS the class definition. Identity and purpose. Not a decorator or merge.} <!-- L -->
+
+### {term_this_class_owns}                                         <!-- L — one per domain term the class holds: itself, a property, an instance, a state -->
+
+- {bullet: why a caller uses it (the outcome), then the mechanic if needed, then how it relates to *another class*} <!-- L -->
+- {as many bullets as the term warrants}                          <!-- L -->
+- **Invariant:** {rule that must always hold — only when one exists} <!-- L -->
+- Sources: `{source file the term is defined in}`                  <!-- L — only when a source defines it -->
+
 + {ClassName}({param}: {Type})
 	// {must / never / always / before / after that stays true of the object}
 ------
@@ -141,6 +144,8 @@ I{ChildClass}({param}: {Type})
 {delta_operation}({param}: {Type}): {ReturnType}
 
 ## {ChildClass}                                                   <!-- Md -->
+
+*{ChildClass}* *is a type of* *{ClassName}* that {what it does differently — the delta only}. <!-- L -->
 
 + {ChildClass}({param}: {Type})
 ------
