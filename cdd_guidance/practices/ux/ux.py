@@ -131,6 +131,36 @@ class Ux(PracticeGuidance):
         object model from Clean Engineering. content: the practice's text in source_format. Returns {format: javascript, content: ...}."""
         return self._javascript_practice(practice).render("javascript", content, source=source_format)
 
+    @agent_tool
+    def render_story_canvas(self) -> str:
+        """Render the project's story canvas in the claude_design format: the story map below the Stories practice's
+        root, the UX map (ux.json) in the UX practice's root, the fixtures bundle the session's stack pattern builds,
+        the screens already in the working version, the story map and the story explorer, then the walk of the screens
+        (walk.md). Stops, rendering nothing, when the fixtures cannot be built. Returns where it rendered and what the
+        walk found missing."""
+        from cdd_guidance.practices.ux.model.claude_design.project_story_canvas import ProjectStoryCanvas
+
+        if self.session is None:
+            raise UxOutsideSession("Ux works in no session, so it knows no project roots to render the story canvas from.")
+        root = self.session.checkout.root
+        canvas = ProjectStoryCanvas(project_root=root, ux_root=Path(self._session_output.folder),
+                                    stories_root=Path(self.session.practices["stories"].folder),
+                                    fixtures=self._canvas_fixtures(root))
+        return canvas.render().summary(f"{root.name} Story Map")
+
+    def _canvas_fixtures(self, workspace: Path) -> object:
+        """The fixtures builder of the first pattern the session overlays that builds canvas fixtures, else one that
+        stops the render and says so."""
+        from cdd_guidance.practices.ux.model.claude_design.project_story_canvas import NoCanvasFixtures
+        from harness.graph.pattern_overlays import PatternOverlays
+
+        overlays = list(self.session.overlays)
+        for pattern in PatternOverlays(overlays).patterns:
+            builds = getattr(pattern, "canvas_fixtures", None)
+            if builds is not None:
+                return builds(workspace)
+        return NoCanvasFixtures(overlays)
+
     def _javascript_practice(self, key: str) -> PracticeGuidance:
         """The practice key, which writes the JavaScript a mockup imports: the session's own, with the fidelity and
         format it works at there."""

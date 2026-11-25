@@ -5,7 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from expects import be, be_true, equal, expect, raise_error
+from expects import be, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -17,6 +17,8 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 import cdd_guidance.practices  # noqa: F401
+import cdd_guidance.patterns  # noqa: F401  (registers lern_domain_driven, which a session can overlay)
+from cdd_guidance.practices.ux.model.claude_design.project_story_canvas import FixturesNotBuilt
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
 from cdd_guidance.practices.ux.ux import Ux, UxOutsideSession, ViewNotRendered
 from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
@@ -28,6 +30,8 @@ from harness.markdown.format import Format, SourceDocument
 
 # A story map small enough to render in an example: one epic holding one story.
 _STORY_MAP = "# Story Map\n\n## Epic: Sign Up\n\n- Story: Enter Email\n"
+# A story map the story canvas reads from the Stories practice's root: one epic holding one story.
+_CANVAS_STORY_MAP = "# (E) Place Order\n## (S) Customer --> Order Plan\n"
 
 
 class UxJsonSample:
@@ -212,6 +216,23 @@ with description("Ux ensure_javascript tool"):
         with it("should get the JavaScript from that session's own Stories practice"):
             stories = self.session.practices["stories"].guidance
             expect(self.ux.ensure_javascript("stories", "markdown", _STORY_MAP)).to(equal(stories.render("javascript", _STORY_MAP, source="markdown")))
+
+        with context("rendering the story canvas"):
+            with before.each:
+                stories = self.session.practices["stories"].folder
+                (stories / ".context").mkdir(parents=True, exist_ok=True)
+                (stories / ".context" / "story-map.md").write_text(_CANVAS_STORY_MAP, encoding="utf-8")
+                ux_root = self.session.practices["ux"].folder
+                ux_root.mkdir(parents=True, exist_ok=True)
+                (ux_root / "ux.json").write_text('{"name": "Shop", "screens": []}', encoding="utf-8")
+
+            with it("should stop, rendering nothing, when the session overlays no pattern that builds canvas fixtures"):
+                expect(lambda: self.ux.render_story_canvas()).to(raise_error(FixturesNotBuilt, contain("No pattern the session overlays")))
+                expect((self.session.practices["ux"].folder / "design-canvas" / "version-1" / "project" / "canvas.json").exists()).to(equal(False))
+
+            with it("should stop with the pattern's runtime check when the project's step library lacks the story runtime"):
+                self.session.choose_overlays(["lern_domain_driven"])
+                expect(lambda: self.ux.render_story_canvas()).to(raise_error(FixturesNotBuilt, contain("story-test.ts")))
 
 
 with description("Ux contexts instruction"):
