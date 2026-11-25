@@ -64,6 +64,7 @@ class RefusedFixtures:
 
 class NoMisses:
     misses = []
+    differences = []
 
     def write(self, path):
         Path(path).write_text("# Walk\n", encoding="utf-8")
@@ -76,7 +77,7 @@ class QuietWalk:
     def __init__(self, version) -> None:
         self.version = version
 
-    def walk(self, story_map):
+    def walk(self, story_map, beside=None):
         return NoMisses()
 
 
@@ -87,6 +88,7 @@ def order_screen() -> StoryScreen:
 
 class MinusSignMissed:
     misses = ["Then the cart reads \u2212$5.00"]
+    differences = []
 
     def write(self, path):
         Path(path).write_text("# Walk\n", encoding="utf-8")
@@ -94,7 +96,7 @@ class MinusSignMissed:
 
 
 class MinusSignWalk(QuietWalk):
-    def walk(self, story_map):
+    def walk(self, story_map, beside=None):
         return MinusSignMissed()
 
 
@@ -124,6 +126,21 @@ with description("a project's story canvas rendered in one call") as self:
                                         fixtures=RecordedFixtures(), walk_type=QuietWalk, theme="dark")
             project = canvas.render({"order-plan": order_screen()}).version.folder / "project"
             expect((project / "screens" / "order-plan.dc.html").read_text(encoding="utf-8")).to(contain('<div class="canvas-screen" data-theme="dark"'))
+
+        with it("should hand the walk the prototype a production view stands beside, by the screen's slug"):
+            handed = {}
+
+            class BesideWalk(QuietWalk):
+                def walk(self, story_map, beside=None):
+                    handed.update(beside or {})
+                    return NoMisses()
+
+            prototype = StoryScreen(title="Order Plan", story="Order Plan", markup=WrittenMarkup(head="", body="<main>prototype</main>"), positions={})
+            production = StoryScreen(title="Order Plan", story="Order Plan", markup=WrittenMarkup(head="", body="<main>production</main>"), positions={},
+                                     beside=prototype)
+            ProjectStoryCanvas(project_root=self.root, ux_root=self.root / "ux", stories_root=self.root / "tests" / ".context",
+                               fixtures=RecordedFixtures(), walk_type=BesideWalk).render({"order-plan": production})
+            expect((list(handed), "<main>prototype</main>" in handed["order-plan"])).to(equal((["order-plan"], True)))
 
         with it("should say to publish it titled exactly as the canvas and its version are named, ux-mockup.version-1"):
             expect(self.rendered.summary()).to(contain("titled exactly 'ux-mockup.version-1'"))

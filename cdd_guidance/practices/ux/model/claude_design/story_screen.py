@@ -23,6 +23,7 @@ import json
 import posixpath
 import re
 from dataclasses import dataclass, field
+from typing import Optional
 
 from pathlib import Path
 
@@ -200,7 +201,8 @@ class StoryScreen:
     outline's rows take the outline's), with *story_position* for a scenario that keeps none. *path* is the screen's
     path for the dev seed paste; *artboard* its own canvas path, for the explorer's Edit link. *theme* is the one theme
     CDD draws every screen in (``data-theme`` on the screen's frame, and the markup's own theme setting), so a project
-    names it once. *width* and *height* are
+    names it once. *beside* is the prototype screen a production view stands in for, which the walk draws next to it
+    at every step to report where their text differs. *width* and *height* are
     the screen's own size, a phone's by default: the markup draws in a frame that wide (``.canvas-screen``), on its
     artboard and inside the story explorer alike."""
 
@@ -215,6 +217,7 @@ class StoryScreen:
     height: int = 844
     artboard: str = ""
     theme: str = ""
+    beside: Optional["StoryScreen"] = None
 
     @property
     def position_settings(self) -> list[str]:

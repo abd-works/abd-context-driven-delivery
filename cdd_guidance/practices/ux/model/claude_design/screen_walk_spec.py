@@ -9,6 +9,7 @@ from cdd_guidance.practices.ux.model.claude_design.screen_walk import (
     ScreenWalkReport,
     ShownText,
     StepValues,
+    ScreenDifference,
     StillAction,
     WalkedStep,
     _still_actions,
@@ -161,3 +162,24 @@ with description("an outline the explorer lists with its Examples table") as sel
     with it("should play a scenario that is no outline as itself"):
         plain = ExplorerScenario("Add Line To Cart", "Add one more line", False, "cart", ("When the Customer adds Ace",))
         expect([(played.name, played.groups) for played in plain.played()]).to(equal([("Add one more line", ("When the Customer adds Ace",))]))
+
+
+with description("a production view's text beside its prototype's") as self:
+    with before.each:
+        scenario = ExplorerScenario("View Cart", "View the cart", False, "view-cart", ("When the Customer opens the cart",))
+        self.stop = _Stop(scenario, None, ["When the Customer opens the cart"], 0)
+
+    with it("should find no difference when both show the same lines"):
+        expect(ScreenDifference.of(self.stop, {"text": "Cart\nAtlas  $193"}, {"text": "Cart\nAtlas $193\n"})).to(equal(None))
+
+    with it("should name the lines only each shows"):
+        found = ScreenDifference.of(self.stop, {"text": "Cart\nAtlas $193"}, {"text": "Your cart\nAtlas $193"})
+        expect((found.only_in_production, found.only_in_prototype, found.step)).to(equal((("Cart",), ("Your cart",), "When the Customer opens the cart")))
+
+    with it("should say why when the prototype does not draw"):
+        found = ScreenDifference.of(self.stop, {"text": "Cart"}, {"error": "flow is not defined"})
+        expect(found.prototype_text).to(equal("(the prototype did not draw: flow is not defined)"))
+
+    with it("should be listed in walk.md without stopping the publish"):
+        report = ScreenWalkReport([], [], [ScreenDifference("View Cart", "View the cart", "view-cart", "When the Customer opens the cart", ("Cart",), ("Your cart",))])
+        expect((report.misses, "| View Cart › View the cart | view-cart | When the Customer opens the cart | Cart | Your cart |" in report.markdown())).to(equal(([], True)))

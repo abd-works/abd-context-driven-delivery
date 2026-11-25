@@ -84,6 +84,9 @@ class WalkReport(Protocol):
     @property
     def misses(self) -> Sequence[str]: ...
 
+    @property
+    def differences(self) -> Sequence: ...
+
     def write(self, path: Path) -> Path: ...
 
 
@@ -110,6 +113,9 @@ class RenderedStoryCanvas:
         lines = [f"Rendered {len(self.files)} canvas files into {self.version.folder}.",
                  f"Walk: {self.walk_file} ({len(self.walk.misses)} value(s) the screens leave out or action(s) that leave the screen as it was)."]
         lines += [f"  - {miss}" for miss in self.walk.misses]
+        if self.walk.differences:
+            lines.append(f"Production views beside their prototypes: {len(self.walk.differences)} step(s) where the text differs (see {self.walk_file}).")
+            lines += [f"  - {difference.line}" for difference in self.walk.differences]
         if self.version.link is not None:
             changed = self.changed
             lines.append(f"Publish the {len(changed)} file(s) that changed since the last publish to {self.version.link}, the canvas this "
@@ -147,7 +153,7 @@ class ProjectStoryCanvas:
     def render(self, screens: Optional[Mapping[str, StoryScreen]] = None) -> RenderedStoryCanvas:
         """Render the canvas into the working version, with screens, by UX-map slug, written beside the screens already
         there. Stops with *FixturesNotBuilt* before anything is rendered when the fixtures cannot be built."""
-        screens = {slug: dataclasses.replace(screen, theme=self.theme) if self.theme else screen for slug, screen in (screens or {}).items()}
+        screens = {slug: self._themed(screen) for slug, screen in (screens or {}).items()}
         story_map = self.story_map()
         ux_document = self._ux_document()
         self._check_on_ux_map(screens, ux_document)
@@ -163,9 +169,17 @@ class ProjectStoryCanvas:
             target = version.folder / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text, encoding="utf-8")
-        report = self.walk_type(version).walk(story_map)
+        beside = {slug: screen.beside.html for slug, screen in screens.items() if screen.beside is not None}
+        report = self.walk_type(version).walk(story_map, beside)
         walk_file = report.write(version.folder / WALK_FILE)
         return RenderedStoryCanvas(version, sorted(written), report, Path(walk_file))
+
+    def _themed(self, screen: StoryScreen) -> StoryScreen:
+        """screen, and the prototype it stands beside, in the canvas's theme."""
+        if not self.theme:
+            return screen
+        beside = dataclasses.replace(screen.beside, theme=self.theme) if screen.beside is not None else None
+        return dataclasses.replace(screen, theme=self.theme, beside=beside)
 
     def story_map(self) -> StoryMap:
         """The story map below the Stories practice's root, with each story's scenario file."""
@@ -230,7 +244,8 @@ class ProjectStoryCanvas:
         if not screens:
             return
         copied = []
-        for markup in (screen.markup for screen in screens.values()):
+        markups = [markup for screen in screens.values() for markup in (screen.markup, *([screen.beside.markup] if screen.beside else []))]
+        for markup in markups:
             if markup not in copied:
                 markup.copy_files(project)
                 ScreenSources(project).record(markup.sources(), self.project_root)

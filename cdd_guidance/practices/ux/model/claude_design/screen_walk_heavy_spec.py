@@ -161,7 +161,7 @@ def _two_actions_ux_map() -> UxMap:
                      ('the Customer adds a line', 'the Customer removes a line', 'the cart holds only "Ace" at $153/mo')))
 
 
-def _walk(root: Path, logic: str, story_map: StoryMap = None, ux_map: UxMap = None):
+def _walk(root: Path, logic: str, story_map: StoryMap = None, ux_map: UxMap = None, beside: dict = None):
     story_map = story_map or _story_map()
     version = CanvasVersions(root).start_next()
     project = version.folder / "project"
@@ -170,7 +170,7 @@ def _walk(root: Path, logic: str, story_map: StoryMap = None, ux_map: UxMap = No
         (version.folder / name).write_text(text, encoding="utf-8")
     (project / "shop.js").write_text(_SHOP_JS, encoding="utf-8")
     (project / "screens" / "cart.dc.html").write_text(_artboard(logic), encoding="utf-8")
-    return StoryCanvasWalk(version).walk(story_map)
+    return StoryCanvasWalk(version).walk(story_map, beside)
 
 
 with description("a walk of a story canvas's screens") as self:
@@ -217,3 +217,31 @@ with description("a walk of a story canvas's screens") as self:
 
         with it("should say why in the report"):
             expect(self.report.markdown()).to(contain("Missing is not defined"))
+
+
+with description("a walk of a production view beside the prototype it stands in for") as self:
+    with before.each:
+        self.folder = tempfile.TemporaryDirectory()
+        self.root = Path(self.folder.name) / "design-canvas"
+
+    with after.each:
+        self.folder.cleanup()
+
+    with context("where the prototype shows the same text"):
+        with it("should report no difference"):
+            expect(_walk(self.root, _FOLLOWS, beside={"cart": _artboard(_FOLLOWS)}).differences).to(equal([]))
+
+    with context("where the prototype shows other text at a step"):
+        with before.each:
+            self.report = _walk(self.root, _FOLLOWS, beside={"cart": _artboard(_FROZEN)})
+
+        with it("should name the screen and the step, with the text only each shows"):
+            first = self.report.differences[0]
+            expect((len(self.report.differences), first.screen, first.step, first.only_in_production, first.only_in_prototype)).to(
+                equal((1, "cart", "And the total is $346/mo", ("Line Ace", "Ace $153/mo", "Total $346/mo"), ("Total $193/mo",))))
+
+        with it("should list it in walk.md"):
+            expect(self.report.markdown()).to(contain("Production views beside the prototype they stand in for"))
+
+        with it("should leave no prototype artboard in the canvas"):
+            expect(list((self.root / "version-1" / "project" / "screens").glob("*.beside.dc.html"))).to(equal([]))
