@@ -101,6 +101,11 @@ with description("a story's prototype screen") as self:
         with it("should load the ported component's scripts"):
             expect(self.ported_html).to(contain('<script src="../flow.js"></script>'))
 
+    with context("drawn in the canvas's theme"):
+        with it("should hand the ported component the theme, over any it was given, and set it on the screen's frame"):
+            themed = screen(PortedCanvasMarkup(component="flow", attributes={"theme": "light"}), theme="dark").html
+            expect((themed.count(' theme="dark"'), 'theme="light"' in themed, themed.count('<div class="canvas-screen" data-theme="dark"'))).to(equal((1, False, 1)))
+
     with context("with a ported component that takes a bound object whose name is not a JavaScript name"):
         with it("should refuse it"):
             markup = PortedCanvasMarkup(component="flow", inputs=("the cart",))

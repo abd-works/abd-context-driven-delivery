@@ -119,6 +119,12 @@ with description("a project's story canvas rendered in one call") as self:
             self.rendered = project_canvas(self.root, self.fixtures).render({"order-plan": order_screen()})
             self.project = self.rendered.version.folder / "project"
 
+        with it("should draw every screen in the canvas's one theme, named once"):
+            canvas = ProjectStoryCanvas(project_root=self.root, ux_root=self.root / "ux", stories_root=self.root / "tests" / ".context",
+                                        fixtures=RecordedFixtures(), walk_type=QuietWalk, theme="dark")
+            project = canvas.render({"order-plan": order_screen()}).version.folder / "project"
+            expect((project / "screens" / "order-plan.dc.html").read_text(encoding="utf-8")).to(contain('<div class="canvas-screen" data-theme="dark"'))
+
         with it("should say to publish it titled exactly as the canvas and its version are named, ux-mockup.version-1"):
             expect(self.rendered.summary()).to(contain("titled exactly 'ux-mockup.version-1'"))
 

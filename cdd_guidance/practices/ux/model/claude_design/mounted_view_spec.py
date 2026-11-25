@@ -43,6 +43,11 @@ with description("a story's screen mounting a production view") as self:
         with it("should still load its scenario through the fixture bar"):
             expect(ScreenArtboard(self.html).loads_fixtures).to(equal(True))
 
+    with context("drawn in the canvas's theme"):
+        with it("should set the theme on the view's wrapper, where its scoped design tokens answer to it"):
+            themed = StoryScreen(title="Cart", story="Cart", markup=MountedViewMarkup("PlanCatalogScreen", BUNDLE), positions={}, theme="dark").html
+            expect(themed).to(contain('<div class="canvas-mount" data-theme="dark">'))
+
     with context("a bundle"):
         with it("should be drawn by its namespace's CanvasMount"):
             expect(BUNDLE.component).to(equal("Paradise.CanvasMount"))

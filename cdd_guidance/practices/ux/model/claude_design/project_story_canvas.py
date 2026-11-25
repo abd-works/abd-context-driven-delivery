@@ -23,6 +23,7 @@ See ``story_canvas.md`` beside this file, *Steps*.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 import sys
@@ -122,19 +123,21 @@ class ProjectStoryCanvas:
     """A project's story canvas: the project's root, the UX practice's root (where the canvas versions and ``ux.json``
     live), the Stories practice's root (where the story map lives), the pattern's fixtures builder, and the scope the
     canvas covers, which names it: none for the whole repository (``ux-mockup``), else the increment, feature, epic or
-    module's name (``{scope}-ux-mockup``)."""
+    module's name (``{scope}-ux-mockup``); and the one *theme* every screen is drawn in, ported prototype and mounted
+    view alike (empty for each markup's own)."""
 
     project_root: Path
     ux_root: Path
     stories_root: Path
     fixtures: CanvasFixtures
     scope: str = ""
+    theme: str = ""
     walk_type: type = field(default=StoryCanvasWalk)
 
     def render(self, screens: Optional[Mapping[str, StoryScreen]] = None) -> RenderedStoryCanvas:
         """Render the canvas into the working version, with screens, by UX-map slug, written beside the screens already
         there. Stops with *FixturesNotBuilt* before anything is rendered when the fixtures cannot be built."""
-        screens = dict(screens or {})
+        screens = {slug: dataclasses.replace(screen, theme=self.theme) if self.theme else screen for slug, screen in (screens or {}).items()}
         story_map = self.story_map()
         ux_document = self._ux_document()
         self._check_on_ux_map(screens, ux_document)

@@ -42,12 +42,12 @@ class ScreenMarkup:
     """Where a screen's markup comes from: the head it loads (stylesheets, scripts) and the body it draws, given the
     position settings its step groups keep. In the body, ``{{ <name> }}`` is the object the scenario bound under that
     name, ``{{ bound }}`` all of them, ``{{ repositories }}`` what its Givens filled, and ``{{ position.<setting> }}``
-    the step group's position."""
+    the step group's position. *theme* is the one theme the canvas draws every screen in, empty for the markup's own."""
 
     head: str
     files: ScreenFiles = ScreenFiles()
 
-    def body_for(self, position_settings: list[str]) -> str:
+    def body_for(self, position_settings: list[str], theme: str = "") -> str:
         raise NotImplementedError
 
     def copy_files(self, project: Path) -> list[Path]:
@@ -67,7 +67,7 @@ class WrittenMarkup(ScreenMarkup):
     head: str
     body: str
 
-    def body_for(self, position_settings: list[str]) -> str:
+    def body_for(self, position_settings: list[str], theme: str = "") -> str:
         return self.body
 
 
@@ -98,7 +98,7 @@ class AppPageMarkup(ScreenMarkup):
         links = [f'<link rel="stylesheet" href="{self.stylesheet_folder}/{posixpath.basename(href)}">' for href in self.stylesheets]
         return "\n".join(links + _STYLE.findall(self.page))
 
-    def body_for(self, position_settings: list[str]) -> str:
+    def body_for(self, position_settings: list[str], theme: str = "") -> str:
         body = _BODY.search(self.page)
         return _SCRIPT.sub("", body.group(1) if body else self.page).strip()
 
@@ -107,7 +107,8 @@ class AppPageMarkup(ScreenMarkup):
 class PortedCanvasMarkup(ScreenMarkup):
     """Markup ported from another Claude Design canvas: its *component* (the ``.dc.html`` its *files* copy beside the
     screens, with the files it loads) drawn through ``dc-import``, with *attributes* it always takes (such as its
-    theme), each bound object it takes (*inputs*, by name), and each position setting; *head* loads the scripts and stylesheets the component needs;
+    own options), the canvas's theme as its ``theme`` attribute, each bound object it takes (*inputs*, by name), and
+    each position setting; *head* loads the scripts and stylesheets the component needs;
     *size* is its hint size."""
 
     component: str
@@ -126,8 +127,9 @@ class PortedCanvasMarkup(ScreenMarkup):
         """Where each file copy_files writes comes from: the files the component loads, and the component itself."""
         return self.files.sources(f"screens/{self.component}.dc.html")
 
-    def body_for(self, position_settings: list[str]) -> str:
-        fixed = [f'{name}="{value}"' for name, value in self.attributes.items()]
+    def body_for(self, position_settings: list[str], theme: str = "") -> str:
+        attributes = {**self.attributes, **({"theme": theme} if theme else {})}
+        fixed = [f'{name}="{value}"' for name, value in attributes.items()]
         unnamed = [name for name in self.inputs if not name.isidentifier()]
         if unnamed:
             raise ValueError(f"a bound object the component takes must have a JavaScript name, not {unnamed[0]!r}")
@@ -196,7 +198,9 @@ class StoryScreen:
     """A story's prototype screen: *markup* from one of its sources, which reads every domain object the scenario
     bound under its own name, and *positions*, for each scenario, one position per step group the explorer lists (an
     outline's rows take the outline's), with *story_position* for a scenario that keeps none. *path* is the screen's
-    path for the dev seed paste; *artboard* its own canvas path, for the explorer's Edit link. *width* and *height* are
+    path for the dev seed paste; *artboard* its own canvas path, for the explorer's Edit link. *theme* is the one theme
+    CDD draws every screen in (``data-theme`` on the screen's frame, and the markup's own theme setting), so a project
+    names it once. *width* and *height* are
     the screen's own size, a phone's by default: the markup draws in a frame that wide (``.canvas-screen``), on its
     artboard and inside the story explorer alike."""
 
@@ -210,6 +214,7 @@ class StoryScreen:
     width: int = 390
     height: int = 844
     artboard: str = ""
+    theme: str = ""
 
     @property
     def position_settings(self) -> list[str]:
@@ -219,8 +224,9 @@ class StoryScreen:
     @property
     def html(self) -> str:
         frame = FRAME_STYLE.format(width=self.width, height=self.height)
-        body = (f'<div class="canvas-screen" style="{frame}" onClickCapture="{{{{ advance }}}}">\n'
-                f'{self.markup.body_for(self.position_settings)}\n</div>')
+        themed = f' data-theme="{self.theme}"' if self.theme else ""
+        body = (f'<div class="canvas-screen"{themed} style="{frame}" onClickCapture="{{{{ advance }}}}">\n'
+                f'{self.markup.body_for(self.position_settings, self.theme)}\n</div>')
         own = _OWN_METHODS.replace("__POSITIONS__", json.dumps(self.positions)).replace("__STORY_POSITION__", json.dumps(self.story_position))
         return FixtureScreen(
             title=self.title,

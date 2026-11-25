@@ -114,9 +114,10 @@ class MountedViewMarkup(ScreenMarkup):
     def head(self) -> str:
         return self.bundle.head
 
-    def body_for(self, position_settings: list[str]) -> str:
+    def body_for(self, position_settings: list[str], theme: str = "") -> str:
         given = 'bound="{{ bound }}" repositories="{{ repositories }}" position="{{ position }}" go="{{ go }}"'
-        return (f'<div class="canvas-mount">\n<x-import component-from-global-scope="{self.bundle.component}" '
+        themed = f' data-theme="{theme}"' if theme else ""
+        return (f'<div class="canvas-mount"{themed}>\n<x-import component-from-global-scope="{self.bundle.component}" '
                 f'view="{self.view}" {given} hint-size="{self.size}"></x-import>\n</div>')
 
     def copy_files(self, project: Path) -> list[Path]:
