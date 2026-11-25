@@ -1,9 +1,10 @@
 """The walk of a story canvas's screens: before a canvas version is published, each screen the story explorer plays is
 rendered at the scenarios it shows, and every value the scenarios' steps name is looked for on it.
 
-For each scenario the explorer lists with a prototype screen, the screen's artboard is rendered twice, with the
-``story``, ``scenario`` and ``step`` props the explorer hands it: once at the steps before the scenario's first Then (its
-Givens and Whens, as one step group), and once at its Thens. The values each step names (*StepValues*: quoted text,
+For each scenario the explorer lists with a prototype screen, the screen's artboard is rendered once for each step group
+the explorer lists for that scenario, with the ``story``, ``scenario``, ``step`` and ``stepIndex`` props the explorer
+hands it when the reader picks that group. A scenario with one action has two groups, its Givens and When, then its
+Thens; a scenario with two actions has three, so the outcome between them is walked too. The values each step names (*StepValues*: quoted text,
 dollar amounts, codes written in capitals with digits, phone numbers, and numbers of four or more digits) are looked
 for in the text the screen shows at that render (*ShownText*). The report (*ScreenWalkReport*) says per step what was
 found and what is missing, and names each miss as ``Story › Scenario › value``, which is what
@@ -23,21 +24,16 @@ import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable, List, Optional, Sequence
+from typing import TYPE_CHECKING, List, Optional, Sequence
 
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR
 from cdd_guidance.practices.ux.model.claude_design.canvas_explorer import CanvasExplorer, ExplorerScenario
 
 if TYPE_CHECKING:
-    from cdd_guidance.practices.stories.model.story_map import Scenario, Step, StoryMap
+    from cdd_guidance.practices.stories.model.story_map import Scenario, StoryMap
     from harness.design_canvas.versions import CanvasVersion
 
 _RENDERER = Path(__file__).with_name("screen_render.cjs")
-# The step keywords that open a phase of a scenario; And and But carry on the phase before them.
-_PHASES = ("Given", "When", "Then")
-_CARRY_ON = ("And", "But")
-# How the explorer indents an And or a But under the step it carries on.
-_INDENT = "    "
 # What the miss of a screen that did not render names in place of a value.
 UNRENDERED = "(screen did not render)"
 
@@ -196,15 +192,18 @@ class ScreenWalkReport:
 
 @dataclass(frozen=True)
 class _Stop:
-    """One render of a scenario's screen: the step group the explorer hands it, and the steps whose values it shows."""
+    """One render of a scenario's screen: the step group the explorer hands it, at its position in the scenario, and the
+    steps whose values it shows."""
 
     scenario: ExplorerScenario
     artboard: Optional[Path]
     lines: List[str]
+    index: int
 
     @property
-    def step_prop(self) -> str:
-        return "\n".join(self.lines)
+    def props(self) -> dict:
+        """The props the explorer hands the screen when the reader picks this step group."""
+        return {"story": self.scenario.story, "scenario": self.scenario.name, "step": "\n".join(self.lines), "stepIndex": self.index}
 
 
 class StoryCanvasWalk:
@@ -215,8 +214,8 @@ class StoryCanvasWalk:
         self.explorer = CanvasExplorer(version.folder / "project")
 
     def walk(self, story_map: "StoryMap") -> ScreenWalkReport:
-        """Render each scenario's screen before its first Then and at its Thens, and report the values its steps name
-        that each render shows and leaves out."""
+        """Render each scenario's screen at every step group the explorer lists for it, as the reader picks them, and
+        report the values its steps name that each render shows and leaves out."""
         stories = {story.name: story for story in story_map.descendants.stories()}
         stops: list[_Stop] = []
         unmatched: list[WalkedStep] = []
@@ -224,12 +223,10 @@ class StoryCanvasWalk:
             artboard = self.explorer.artboard_of(scenario)
             if artboard is None:
                 continue
-            written = self._scenario_in(stories, scenario)
-            if written is None:
+            if self._scenario_in(stories, scenario) is None:
                 unmatched.append(WalkedStep(scenario.story, scenario.name, scenario.screen, "", error="the story map holds no scenario of this name under this story"))
                 continue
-            before, then = _phase_lines(written)
-            stops.extend(_Stop(scenario, artboard, lines) for lines in (before, then) if lines)
+            stops.extend(_Stop(scenario, artboard, group.split("\n"), index) for index, group in enumerate(scenario.groups) if group)
         rendered = self._rendered(stops)
         steps = [step for stop, text in zip(stops, rendered) for step in _checked(stop, text)]
         return ScreenWalkReport([*unmatched, *steps])
@@ -246,8 +243,7 @@ class StoryCanvasWalk:
             if not stop.artboard.is_file():
                 jobs.append(None)
                 continue
-            jobs.append({"artboard": str(stop.artboard.resolve()),
-                         "props": {"story": stop.scenario.story, "scenario": stop.scenario.name, "step": stop.step_prop}})
+            jobs.append({"artboard": str(stop.artboard.resolve()), "props": stop.props})
         results = iter(_render([job for job in jobs if job is not None]))
         return [next(results) if job is not None else {"error": f"the canvas holds no screens/{stop.scenario.screen}.dc.html"}
                 for job, stop in zip(jobs, stops)]
@@ -264,31 +260,6 @@ def _render(jobs: List[dict]) -> List[dict]:
     if answer.returncode != 0:
         raise ScreenWalkUnavailable(f"The screen renderer stopped: {answer.stderr.strip()}")
     return json.loads(answer.stdout)
-
-
-def _lines(scenario: "Scenario") -> List[tuple[str, str]]:
-    """Each step of scenario with its phase (Given, When or Then) and its line as the explorer writes it."""
-    lines: list[tuple[str, str]] = []
-    phase = "Given"
-    for step in _steps(scenario):
-        keyword = step.keyword or step.step_type.name.title()
-        phase = keyword if keyword in _PHASES else phase
-        indent = _INDENT if keyword in _CARRY_ON else ""
-        lines.append((phase, f"{indent}{keyword} {step.text}"))
-    return lines
-
-
-def _steps(scenario: "Scenario") -> Iterable["Step"]:
-    for step in scenario.steps:
-        yield step
-        yield from (getattr(step, "ands", []) or [])
-
-
-def _phase_lines(scenario: "Scenario") -> tuple[List[str], List[str]]:
-    """The scenario's lines before its first Then, and from its first Then on."""
-    lines = _lines(scenario)
-    first_then = next((index for index, (phase, _) in enumerate(lines) if phase == "Then"), len(lines))
-    return [line for _, line in lines[:first_then]], [line for _, line in lines[first_then:]]
 
 
 def _checked(stop: _Stop, rendered: dict) -> List[WalkedStep]:

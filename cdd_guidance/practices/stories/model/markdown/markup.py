@@ -35,6 +35,15 @@ def strip_markup(text: str) -> str:
     return strip_backticks(s)
 
 
+_TERM_MARKS = re.compile(r"\*\*|\+\+|`")
+
+
+def plain_words(text: str) -> str:
+    """A step's words as a reader says them: its links, bold terms, underlined terms, italic values and backticks
+    reduced to the words they mark, for a page that shows the step rather than the markdown it is written in."""
+    return _ITALIC_VALUE.sub(r"\1", _TERM_MARKS.sub("", unlink(text)))
+
+
 class ExampleRowLine(NamedTuple):
     """The line an example row was read from, as written, and the headers of the table it sits in."""
 

@@ -43,7 +43,8 @@ body{margin:0}
 .sm-box-top{border-radius:4px 4px 0 0;margin-top:2px}
 .sm-box-bottom{border-radius:0 0 4px 4px;margin-bottom:2px}
 .sm-box-top.sm-box-bottom{border-radius:4px}
-.sm-step-on{color:#E8E8ED;font-weight:600}
+.sm-step-on{color:#FFFFFF;font-weight:600;background:rgba(229,83,26,0.38);box-shadow:inset 6px 0 0 #E5531A}
+.sm-step-on:hover{background:rgba(229,83,26,0.44)}
 .sm-k4{padding-left:34px;white-space:pre-wrap;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:18px;color:#9B9BA8}
 .sm-sel{background:rgba(229,83,26,0.18);box-shadow:inset 3px 0 0 #E5531A;color:#E8E8ED;font-weight:600}
 .sm-dot{display:inline-block;width:10px;flex-shrink:0;color:#4A4A52}
@@ -236,11 +237,16 @@ x = c >= 0 ? scenario : null;
 if (c < 0 && g === st.g) return;
 const at = scenarioOf(g, c);
 const groups = (S[g].c[at] || { t: [] }).t;
-const t = step ? Math.max(0, groups.findIndex((tp) => tp.x.split('\n').some((line) => line === step || line.startsWith(step)))) : 0;
+const matches = (tp) => tp.x.split('\n').some((line) => line === step || line.startsWith(step));
+// In the scenario on show, look past the group on show first, so a second action moves on to its own outcome.
+const from = g === st.g && at === st.c ? st.t + 1 : 0;
+const ahead = groups.findIndex((tp, ti) => ti >= from && matches(tp));
+const t = step ? Math.max(0, ahead >= 0 ? ahead : groups.findIndex(matches)) : 0;
 go(g, at, t, x);
 },
 scenarioName: scen.b ? (S[st.g].c.map((sc, ci) => (sc.b ? null : exampleOf(st.g, ci) || sc.n)).find(Boolean) || scen.n) : (exampleOf(st.g, st.c) || scen.n),
 stepText: step.x,
+stepIndex: scen.t[st.t] ? st.t : 0,
 showShot: !scen.p && imgs.length > 0,
 showNothing: !scen.p && imgs.length === 0,
 img: imgs[idx] || '',

@@ -20,6 +20,7 @@ from cdd_guidance.practices.ux.model.claude_design.look import BACKGROUND, FONTS
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from harness.annotations.name import Name
+from cdd_guidance.practices.stories.model.markdown.markup import plain_words
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR, StoryTree
 
 from cdd_guidance.practices.stories.model.diagram_story_map import (
@@ -342,7 +343,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         prototype = ""
         for step in _steps_of(scenario):
             indent = "    " if step.keyword in ("And", "But") else ""
-            waiting.append(f"{indent}{step.keyword} {step.text}")
+            waiting.append(f"{indent}{step.keyword} {plain_words(step.text)}")
             shown = [screen for screen in shown_on(step, self.screen_map.screens) if not self._blank(screen)]
             prototype = prototype or next((artboard_stem(s.prototype) for s in shown if s.prototype), "")
             if shown:
@@ -367,7 +368,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         for prototype in self._prototypes():
             name = artboard_stem(prototype)
             lines.append(f'<sc-if value="{{{{live.{Name(name).camel}}}}}" hint-placeholder-val="{{{{ false }}}}">'
-                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" hint-size="1280px,900px" style="display: block; width: 100%; min-height: 100%"></dc-import></sc-if>')
+                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" step-index="{{{{stepIndex}}}}" hint-size="1280px,900px" style="display: block; width: 100%; min-height: 100%"></dc-import></sc-if>')
         return lines
 
     def _screen_files(self) -> List[str]:

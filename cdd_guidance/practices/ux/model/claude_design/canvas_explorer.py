@@ -24,13 +24,15 @@ class ExplorerTreeUnreadable(ValueError):
 
 @dataclass(frozen=True)
 class ExplorerScenario:
-    """One scenario as the explorer lists it under its story: its name, whether it is the story's Background, and the
-    prototype screen it plays (the artboard's stem, empty when it plays none)."""
+    """One scenario as the explorer lists it under its story: its name, whether it is the story's Background, the
+    prototype screen it plays (the artboard's stem, empty when it plays none), and its step groups, each the lines the
+    reader picks at once, in order."""
 
     story: str
     name: str
     background: bool
     screen: str
+    groups: tuple = ()
 
 
 class CanvasExplorer:
@@ -64,7 +66,8 @@ class CanvasExplorer:
         for epic in self.tree():
             for sub_epic in epic.get("u", []):
                 for story in sub_epic.get("s", []):
-                    yield story["n"], [ExplorerScenario(story["n"], scenario["n"], bool(scenario.get("b")), scenario.get("p", ""))
+                    yield story["n"], [ExplorerScenario(story["n"], scenario["n"], bool(scenario.get("b")), scenario.get("p", ""),
+                                                        tuple(group["x"] for group in scenario.get("t", [])))
                                        for scenario in story.get("c", [])]
 
     def scenarios(self) -> Iterator[ExplorerScenario]:

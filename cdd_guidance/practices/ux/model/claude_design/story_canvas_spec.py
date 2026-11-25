@@ -99,6 +99,21 @@ with description("a Claude Design story map") as self:
         with it("hands each screen the selected step, so the screen can play it"):
             expect(self.files["project/screens/explorer.dc.html"]).to(contain('step="{{stepText}}"'))
 
+        with it("hands each screen the position of the selected step group, so a scenario with several actions shows each outcome"):
+            expect(self.files["project/screens/explorer.dc.html"]).to(contain('step-index="{{stepIndex}}"'))
+
+    with context("rendered from steps that mark their terms"):
+        with before.each:
+            story_map = _story_map()
+            scenario = story_map.epics[0].epics[0].stories[0].scenarios[0]
+            scenario.steps.append(Step("the ++[cart](../cart.md)++ holds **Line 1** · ++Atlas++", StepType.THEN, 3))
+            self.explorer = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map(_catalog_screen()))).render(story_map))["project/screens/explorer.dc.html"]
+
+        with it("writes each step in the explorer as plain words, without its term marks"):
+            expect(self.explorer).to(contain("Then the cart holds Line 1 · Atlas"))
+            expect(self.explorer).not_to(contain("++Atlas++"))
+            expect(self.explorer).not_to(contain("**Line 1**"))
+
     with context("rendered from a story with no screens"):
         with it("gives that story no thumbnail"):
             expect(self.files["project/Main.dc.html"]).not_to(contain("story=Create%20Credentials"))
