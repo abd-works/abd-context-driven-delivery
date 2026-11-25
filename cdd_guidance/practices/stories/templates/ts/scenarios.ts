@@ -81,7 +81,7 @@ story("{Story Verb–Noun}", () => {
       given("the cart holds one book", async () => {
         // test code goes here
       });
-      when("the customer places the order", async () => {
+      when("the Actor places the order", async () => {
         // test code goes here
       });
       then("an order holds the book", async () => {
@@ -95,7 +95,7 @@ story("{Story Verb–Noun}", () => {
       given("the cart holds no book", async () => {
         // test code goes here
       });
-      when("the customer places the order", async () => {
+      when("the Actor places the order", async () => {
         // test code goes here
       });
       then("the order is refused because the cart is empty", async () => {

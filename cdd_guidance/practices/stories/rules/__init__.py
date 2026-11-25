@@ -16,9 +16,12 @@ from cdd_guidance.practices.stories.rules.scenarios import (
     GivenNamesComplexStateRootFirst,
     GwtStepsTraceToDomainOperations,
     OutlineRequiresManyPermutations,
+    PersonStoriesShowThePersonActing,
     PlainEnglishGwtSteps,
+    ScenariosDifferInWhenOrOutcome,
     ScenariosNameAStoryOnTheMap,
     ScenariosShape,
+    StepSaysMoreThanAnExampleName,
     ThenObservesAnExample,
     WhenHoldsTheOperation,
     WhenNamesIntentNotInterfaceGesture,
@@ -60,6 +63,9 @@ RULES: tuple = (
     GivenNamesComplexStateRootFirst(),
     ScenariosNameAStoryOnTheMap(),
     ThenObservesAnExample(),
+    StepSaysMoreThanAnExampleName(),
+    ScenariosDifferInWhenOrOutcome(),
+    PersonStoriesShowThePersonActing(),
 )
 
 BY_SLUG = {rule.slug: rule for rule in RULES}
