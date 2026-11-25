@@ -10,6 +10,7 @@ import { FormatAlignmentView } from './format-alignment-view'
 import { FileView } from './file-view'
 import { FilesGraphView } from './files-graph-view'
 import type { FilesPage } from './files-page'
+import { SCROLLING_PANE } from './file-source-view'
 import { drawioPageOf, isDrawio, isWhiteboard, missingNoteOf, revealLabelOf } from './files-paths'
 import { formatGlyphOf } from './format-chips'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
@@ -322,8 +323,9 @@ function OpenFileView({ page }: { page: FilesPage }) {
   const path = state.file?.path ?? ''
   // The open file's selected lines, added to the chat's context; made once per file, so the editor keeps its action.
   const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(path, lines), [page, path])
-  // Go to file on a fold-out opens what it shows in its own file; made once, so the open fold-outs stay as they are.
-  const goToFile = useCallback((foldOut: SourceCallout) => void page.graph.goToFile(foldOut), [page])
+  // Go to file on a fold-out, or a press on a link, opens what it shows: a link's file beside this one, anything else in
+  // its own file; made once, so the open fold-outs stay as they are.
+  const goToFile = useCallback((foldOut: SourceCallout) => void page.goTo(foldOut), [page])
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
   if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
   if (isWhiteboard(state.openPath)) return <WhiteboardPointerView page={page} path={state.openPath} />
@@ -335,11 +337,61 @@ function OpenFileView({ page }: { page: FilesPage }) {
       {isOneOfSeveral ? <OpenFilesBarView page={page} /> : null}
       {isOneOfSeveral ? <OpenFileHeadView page={page} path={state.file.path} /> : null}
       {page.openFiles.isCollapsed(state.file.path) ? null : (
-        <FileView key={state.file.path} file={state.file} callouts={page.callouts} frames={page.frames} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(state.file.path)} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileView key={state.file.path} file={state.file} callouts={page.callouts} frames={page.frames} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(state.file.path)} anchor={state.openAnchor} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
       ))}
+    </section>
+  )
+}
+
+// The open file alone, or, once a link was followed from it, the open file and the file the link opened beside it, each
+// in a pane of its own that scrolls, takes comments and closes apart from the other. There are never more than two: the
+// next link followed, from either pane, opens its file in the right pane in place of the one there.
+function FilePanesView({ page }: { page: FilesPage }) {
+  const { linked, openPath } = useFilesState(page)
+  if (!linked) return <OpenFileView page={page} />
+  return (
+    <div className="file-panes">
+      <div className={SCROLLING_PANE} aria-label="Open file">
+        <PaneHeadView path={openPath} title={`Close ${openPath}, leaving ${linked.path} open`} onClose={() => page.closeOpen()} />
+        <OpenFileView page={page} />
+      </div>
+      <div className={SCROLLING_PANE} aria-label="Linked file">
+        <PaneHeadView path={linked.path} title={`Close ${linked.path}`} onClose={() => page.closeLinked()} />
+        <LinkedFileView page={page} />
+      </div>
+    </div>
+  )
+}
+
+// A pane's file and the button that closes it.
+function PaneHeadView({ path, title, onClose }: { path: string; title: string; onClose: () => void }) {
+  return (
+    <div className="file-pane-head">
+      <span className="source-path">{path}</span>
+      <button type="button" className="file-pane-close" aria-label={title} title={title} onClick={onClose}>
+        ×
+      </button>
+    </div>
+  )
+}
+
+// The file a link opened, at the heading the link named: rendered and scrolled to it, or, for a file with no rendered
+// form, in the source view at the section's lines.
+function LinkedFileView({ page }: { page: FilesPage }) {
+  const { linked, graph } = useFilesState(page)
+  const path = linked?.path ?? ''
+  const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(path, lines), [page, path])
+  const goToFile = useCallback((foldOut: SourceCallout) => void page.goTo(foldOut), [page])
+  if (!linked) return null
+  if (!linked.file) return <p className="files-note">Opening {linked.path}…</p>
+  const openAround = linked.file.rendered_form ? [] : linked.lines
+  return (
+    <section className="open-file linked-file" aria-label={linked.path}>
+      <CommentToolbarView page={page} file={linked.file} />
+      <FileView key={`${linked.path}#${linked.anchor}`} file={linked.file} callouts={page.callouts} frames={page.frames} actions={page.linkedComments} onAddToContext={addLines} openAround={openAround} anchor={linked.anchor} onGoToFile={goToFile} members={graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
     </section>
   )
 }
@@ -371,7 +423,7 @@ function OpenFileHeadView({ page, path }: { page: FilesPage; path: string }) {
 // A file open beside the first, holding a node selected in the graph view.
 function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }) {
   const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(file.path, lines), [page, file.path])
-  const goToFile = useCallback((foldOut: SourceCallout) => void page.graph.goToFile(foldOut), [page])
+  const goToFile = useCallback((foldOut: SourceCallout) => void page.goTo(foldOut), [page])
   return (
     <section className="open-file more-file" aria-label={file.path}>
       <OpenFileHeadView page={page} path={file.path} />
@@ -534,7 +586,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
           {fileBar.isOpen ? <FileListView page={page} /> : null}
         </nav>
         {fileBar.isOpen ? <FileBarDividerView page={page} /> : null}
-        <OpenFileView page={page} />
+        <FilePanesView page={page} />
       </div>
       <FileMenuView page={page} />
       <ToastsView page={page} />

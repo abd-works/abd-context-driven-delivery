@@ -7,18 +7,22 @@ export type CommentLines = { start: number; end: number }
 
 const NO_CHAT = 'No chat opened this page, so the comment is kept, not sent: open the Files app from the chat bar to send comments.'
 
-// What a person does with comments on the open file, each one file-comments operation on the session's comments,
+// What a person does with comments on a file the page shows, the open file or the one a link opened beside it, each one file-comments operation on the session's comments,
 // after which the open file is read again, so its markers show the state Python answered. Sending goes to the chat
 // that opened the page; a chat that cannot take it leaves the comment not sent, and the toast says why.
 export class FileCommentsActions {
   private readonly comments: FileCommentsClientGenerated
 
-  constructor(private readonly page: FilesPage) {
+  // shownPath answers the path of the file these comments are on, as the page shows it now.
+  constructor(
+    private readonly page: FilesPage,
+    private readonly shownPath: () => string,
+  ) {
     this.comments = FileCommentsClientGenerated.named(page.api, page.link.sessionFile)
   }
 
   private get path(): string {
-    return this.page.state.file?.path ?? ''
+    return this.shownPath()
   }
 
   // Enter finishes a comment: it is kept on the selected lines, then added to the chat's queue. Answers whether the chat

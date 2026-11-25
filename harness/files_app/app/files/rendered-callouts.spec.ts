@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { linkCalloutAt, type SourceCallout } from '@source-view/source-callouts'
 
-import { markdownPage } from './markdown-page'
+import { headingAnchored, markdownPage } from './markdown-page'
 import { FILE_PATH, RenderedCallouts, fileLinked, type RenderedReads } from './rendered-callouts'
 
 const STORY_MAP = '.context/story-map.md'
@@ -119,6 +119,12 @@ describe('Rendered Callouts', () => {
       expect(went.map(followed => [followed.kind, followed.path, followed.startLine])).toEqual([['section', SCENARIOS, 1]])
     })
 
+    it('should follow it as the link it is, so the file opens beside the page', () => {
+      const { page, rendered, went } = drawn(STORY_MAP, STORY_MAP_TEXT, [])
+      rendered.follow(page.querySelector('h3 a')!)
+      expect(went.map(followed => followed.link)).toEqual(['../story_tests/fill-cart/add_book_to_cart_story.test.md'])
+    })
+
     it('should name a file from the linking file\'s folder', () => {
       expect([fileLinked(SCENARIOS, '../../.context/domain-model.md#book'), fileLinked(MODEL, 'story-map.md'), fileLinked('README.md', './docs/setup.md')]).toEqual([MODEL, '.context/story-map.md', 'docs/setup.md'])
     })
@@ -156,5 +162,29 @@ describe('Follow A Link In The Source View', () => {
 
   it('should find none beside the link, or for a link to something not there', () => {
     expect([linkCalloutAt([BOOK], line, 3), linkCalloutAt([GONE], '[Cart Line](../domain-model.md#cartline-entity)', 4)]).toEqual([undefined, undefined])
+  })
+})
+
+// A file a link opens beside the page opens at the heading the link names, as GitHub names a heading's anchor.
+describe('Open A Linked File At Its Heading', () => {
+  const MODEL_TEXT = '# Domain Model\n\n## Catalogue\n\n#### Book <<Entity>>\n+ reprice(amount: Money): void\n\n#### Story: Add [Book](x.md) To Cart\n'
+  const page = (marked: number[] = []) => {
+    const drawnPage = document.createElement('div')
+    drawnPage.innerHTML = markdownPage(MODEL_TEXT, marked)
+    return drawnPage
+  }
+
+  it('should find the heading whose anchor the link names', () => {
+    expect(headingAnchored(page(), 'book-entity')?.textContent).toBe('Book <<Entity>>')
+  })
+
+  it("should read a heading by the words it shows, a link's words and not the mark of its callouts", () => {
+    const drawnPage = page([8])
+    drawnPage.querySelector('.rendered-callout-mark')!.textContent = 'Book'
+    expect(headingAnchored(drawnPage, 'story-add-book-to-cart')?.tagName).toBe('H4')
+  })
+
+  it('should find none for an anchor no heading has, or no anchor', () => {
+    expect([headingAnchored(page(), 'cart-line'), headingAnchored(page(), '')]).toEqual([null, null])
   })
 })

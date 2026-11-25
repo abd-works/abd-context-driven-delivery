@@ -366,7 +366,8 @@ with description("Story: Render File As A Page and View File In Source View, fil
 
 # Seed: a story map whose story links its scenario file, whose Given links the domain term Book to the domain model's
 # Book section and Cart Line to a heading the model does not have (review_files_in_files_app_story.test.md, View File In
-# Source View, the callouts and links of a rendered page).
+# Source View, the callouts and links of a rendered page). The model links back to the story map, and is long enough above
+# and below Book that opening it at Book scrolls Book's heading to the top of its pane.
 NOTES = str(Path(BOARD_CODE).with_name("notes").as_posix())
 LINKED_MAP = f"{NOTES}/story-map.md"
 LINKED_SCENARIOS = f"{NOTES}/add_book_to_cart_story.test.md"
@@ -374,13 +375,17 @@ LINKED_MODEL = f"{NOTES}/domain-model.md"
 LINKED_FILES = {
     LINKED_MAP: "# Story Map\n\n### (S) Customer --> [Add Book To Cart](add_book_to_cart_story.test.md)\n",
     LINKED_SCENARIOS: "## Story: Add Book To Cart\n\n*Given* the Bookshop sells ++[Book](domain-model.md#book-entity)++ ++Tiny Tales++\n*And* a ++[Cart Line](domain-model.md#cartline-entity)++\n",
-    LINKED_MODEL: "# Domain Model\n\n#### Book <<Entity>>\n\n+ reprice(amount: Money): void\n",
+    LINKED_MODEL: "# Domain Model\n\nSee the [Story Map](story-map.md).\n\n" + "".join(f"Catalogue note {number}.\n\n" for number in range(1, 81)) + "#### Book <<Entity>>\n\n+ reprice(amount: Money): void\n\n#### Cart <<Aggregate Root>>\n\n" + "".join(f"Cart note {number}.\n\n" for number in range(1, 81)),
 }
 RENDERED_MARK = ".file-rendered .rendered-callout-mark"
 
 
 def _open_files(page) -> list[str]:
     return page.locator("section.open-file").evaluate_all("files => files.map(file => file.getAttribute('aria-label'))")
+
+
+def _pane(page, name: str):
+    return page.locator(f'.file-pane[aria-label="{name}"]')
 
 
 with description("Story: Follow Links And Callouts In A File, the callouts and links of a rendered page") as self:
@@ -426,8 +431,40 @@ with description("Story: Follow Links And Callouts In A File, the callouts and l
         with after.all:
             self.page.close()
 
-        with it("Then the Files app opens the scenario file"):
-            expect(_open_files(self.page)).to(contain(LINKED_SCENARIOS))
+        with it("Then the Files app opens the scenario file beside the story map"):
+            expect(_open_files(self.page)).to(equal([LINKED_MAP, LINKED_SCENARIOS]))
+
+    with context("Scenario: Open a linked file beside the file it is linked from"):
+        with before.all:
+            self.page = _view(self.stack, LINKED_SCENARIOS)
+            self.page.locator(".file-rendered a", has_text="Book").first.click()
+            self.linked = _pane(self.page, "Linked file")
+            self.linked.get_by_role("heading", name="Book <<Entity>>").wait_for(timeout=SHOWN_MILLISECONDS)
+            self.page.wait_for_function("() => document.querySelector('.file-pane[aria-label=\"Linked file\"]').scrollTop > 0", timeout=SHOWN_MILLISECONDS)
+
+        with after.all:
+            self.page.close()
+
+        with it("Then the domain model opens in a pane to the right of the scenario"):
+            expect(_open_files(self.page)).to(equal([LINKED_SCENARIOS, LINKED_MODEL]))
+
+        with it("And its pane is scrolled to the heading Book <<Entity>>"):
+            heading_from_top = self.linked.evaluate("pane => pane.querySelector('h4').getBoundingClientRect().top - pane.getBoundingClientRect().top")
+            expect(heading_from_top < 120).to(equal(True))
+
+        with it("And scrolling the domain model leaves the scenario's pane where it is"):
+            self.linked.evaluate("pane => pane.scrollTo({ top: 0 })")
+            expect(_pane(self.page, "Open file").evaluate("pane => pane.scrollTop")).to(equal(0))
+
+        with it("And pressing the domain model's own link opens the story map in the right pane in its place, no third pane opening"):
+            self.linked.locator(".file-rendered a", has_text="Story Map").click()
+            self.linked.locator(f'section.open-file[aria-label="{LINKED_MAP}"]').wait_for(timeout=SHOWN_MILLISECONDS)
+            expect((_open_files(self.page), self.page.locator(".file-pane").count())).to(equal(([LINKED_SCENARIOS, LINKED_MAP], 2)))
+
+        with it("And closing the left pane leaves the story map the one file open"):
+            self.page.get_by_role("button", name=f"Close {LINKED_SCENARIOS}, leaving {LINKED_MAP} open").click()
+            self.page.locator(".file-pane").first.wait_for(state="detached", timeout=SHOWN_MILLISECONDS)
+            expect(_open_files(self.page)).to(equal([LINKED_MAP]))
 
     with context("Scenario: Say what is not there for a link to a heading or a file that is missing"):
         with before.all:

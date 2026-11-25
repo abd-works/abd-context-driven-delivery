@@ -76,6 +76,15 @@ button:disabled { cursor: default; opacity: 0.5; }
 .open-file-head { display: flex; align-items: center; gap: var(--space-2xs); width: 100%; border: none; background: transparent; cursor: pointer; text-align: left; font-family: var(--font-mono); font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-2xs); padding: 0; }
 .open-file-head:hover { color: var(--text); }
 .open-files-bar { display: flex; gap: var(--space-2xs); margin-bottom: var(--space-2xs); }
+/* The open file and the file a link opened beside it, side by side: each pane as tall as the window and scrolling on
+   its own, so reading one keeps the other where it is. */
+.file-panes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-md); min-width: 0; }
+.file-pane { position: sticky; top: var(--space-md); max-height: calc(100vh - 6rem); overflow: auto; min-width: 0; padding-right: var(--space-2xs); }
+.file-pane + .file-pane { border-left: 1px solid var(--border); padding-left: var(--space-md); }
+.file-pane-head { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: var(--space-xs); padding: var(--space-2xs) 0; background: var(--bg, var(--surface)); border-bottom: 1px solid var(--border); margin-bottom: var(--space-xs); }
+.file-pane-head .source-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-pane-close { flex: none; border-color: transparent; background: transparent; font-size: var(--text-md, 1rem); line-height: 1; padding: 0 var(--space-2xs); }
+.file-pane-close:hover { color: var(--warning); border-color: var(--border); }
 
 /* The graph view's node filter: the Graph app's lists of node types, connectors and rules, and its Violations switch. */
 .graph-node-filter { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.5rem; border-bottom: 1px solid var(--border); }

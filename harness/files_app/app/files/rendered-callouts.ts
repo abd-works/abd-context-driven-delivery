@@ -63,8 +63,8 @@ export class RenderedCallouts {
     }
   }
 
-  // Follows the link pressed in a drawn page: a web address in a tab of its own; a link to another file opens that file,
-  // at the section the link names when its callout holds one. Answers whether it was a link.
+  // Follows the link pressed in a drawn page: a web address in a tab of its own; a link to another file opens that file
+  // beside the page, at the section the link names when its callout holds one. Answers whether it was a link.
   follow(pressed: Element): boolean {
     const link = pressed.closest('a')
     const href = link?.getAttribute('href') ?? ''
@@ -79,7 +79,7 @@ export class RenderedCallouts {
     const named = (within ? this.shownIn.get(within) : undefined)?.find(callout => callout.link === href)
     if (named?.kind === 'missing') return
     const path = fileLinked(within?.getAttribute(FILE_PATH) ?? '', href)
-    this.reads.goTo(named ?? { id: path, kind: 'section', line: 0, title: link.textContent ?? path, path, startLine: 1, endLine: 1, text: '' })
+    this.reads.goTo(named ?? { id: path, kind: 'section', line: 0, title: link.textContent ?? path, link: href, path, startLine: 1, endLine: 1, text: '' })
   }
 
   private toggle(mark: HTMLElement, callouts: SourceCallout[], stack: string[]): void {
