@@ -93,6 +93,18 @@ globalThis.__canvasFetch = canvasFetch;
 globalThis.__canvasLocation = canvasLocation;
 
 // The component a mounted screen draws: `view` names one of the project's exports, which is handed the scene.
+function hasAny(objects) {
+  return Boolean(objects) && Object.keys(objects).length > 0;
+}
+
+// Each fixture load hands over a new bound object; its number tells one load's mount from the next.
+const loads = new WeakMap();
+let nextLoad = 0;
+function loadNumber(bound) {
+  if (!loads.has(bound)) loads.set(bound, ++nextLoad);
+  return loads.get(bound);
+}
+
 export function canvasMount(project) {
   const routes = project.canvasRoutes || NOTHING;
   const navigation = project.canvasNavigation || NOTHING;
@@ -100,6 +112,10 @@ export function canvasMount(project) {
     scene = { bound: bound || NOTHING, repositories: repositories || NOTHING, go: go || null, routes, navigation };
     const View = project[view];
     if (typeof View !== 'function') return React.createElement('p', { role: 'alert' }, `The canvas bundle has no view ${view}.`);
-    return React.createElement(View, { bound: scene.bound, repositories: scene.repositories, position: position || NOTHING });
+    // The screen hands the scenario's fixture over once it has loaded. A view mounted before then would ask the
+    // canvas routes for data the repositories do not hold yet, so it waits.
+    if (!hasAny(scene.bound) && !hasAny(scene.repositories)) return React.createElement('p', { role: 'status' }, 'Loading the scenario…');
+    // Each load hands over new objects: mounting the view afresh makes it ask for the new scenario's data.
+    return React.createElement(View, { key: loadNumber(scene.bound), bound: scene.bound, repositories: scene.repositories, position: position || NOTHING });
   };
 }

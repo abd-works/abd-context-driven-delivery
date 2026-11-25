@@ -86,9 +86,11 @@ const mounted = window.Paradise.CanvasMount({ view: 'OrderScreen', bound: { orde
   const missing = await vm.runInContext('__canvasFetch', window)('/api/nothing');
   vm.runInContext('__canvasLocation', window).assign('/sign-up');
   vm.runInContext('__canvasLocation', window).assign('/nowhere');
-  const unknown = window.Paradise.CanvasMount({ view: 'NoSuchScreen' });
+  const unknown = window.Paradise.CanvasMount({ view: 'NoSuchScreen', bound: { order: { plan: 'Ace' } } });
+  const waiting = window.Paradise.CanvasMount({ view: 'OrderScreen', bound: {}, repositories: {} });
   console.log(JSON.stringify({ mountedType: mounted.type.name, mountedBound: mounted.props.bound, order,
-    refused: [refused.status, await refused.json()], missing: missing.status, moves, unknown: unknown.props.children }));
+    refused: [refused.status, await refused.json()], missing: missing.status, moves, unknown: unknown.props.children,
+    waiting: [typeof waiting.type === 'string' ? waiting.type : waiting.type.name, waiting.props.children] }));
 })();
 """
 
@@ -197,6 +199,9 @@ with description("a production view mounted on the canvas, for real") as self:
 
         with it("should move the explorer to the story of the page the view leaves to, and nowhere for a page it does not know"):
             expect(self.run["moves"]).to(equal(["Create Credentials"]))
+
+        with it("should wait for the scenario's fixture before mounting the view, so the view's first request finds the repositories filled"):
+            expect(self.run["waiting"]).to(equal(["p", ["Loading the scenario…"]]))
 
         with it("should say so when the screen names a view the bundle does not have"):
             expect(self.run["unknown"]).to(equal(["The canvas bundle has no view NoSuchScreen."]))
