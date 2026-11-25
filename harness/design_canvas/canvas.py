@@ -73,11 +73,20 @@ class CanvasProject:
 
     def stylesheets_linked_by(self, names: List[str]) -> List[str]:
         """The stylesheets the project's artboards names link, each once, in the order they are first linked."""
+        return self._linked_by(names, r'<link rel="stylesheet" href="([^"]+)"')
+
+    def scripts_linked_by(self, names: List[str]) -> List[str]:
+        """The scripts the project's artboards names load, each once, in the order they are first loaded, leaving out
+        the canvas's own ``support.js``, which every artboard loads for itself: a design system's components and a
+        screen's own logic, which an artboard that draws those screens must load too."""
+        return [src for src in self._linked_by(names, r'<script src="([^"]+)"') if src.rsplit("/", 1)[-1] != "support.js"]
+
+    def _linked_by(self, names: List[str], linked: str) -> List[str]:
         found: List[str] = []
         for name in names:
             if not self.holds(name):
                 continue
-            for href in re.findall(r'<link rel="stylesheet" href="([^"]+)"', (self.folder / name).read_text(encoding="utf-8")):
+            for href in re.findall(linked, (self.folder / name).read_text(encoding="utf-8")):
                 if href not in found:
                     found.append(href)
         return found

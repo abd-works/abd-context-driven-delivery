@@ -22,5 +22,6 @@ The pages, boards and artboard files of one Claude Design canvas, and the files 
 + holds(name: str): bool
 + size_of(name: str): int | None
 + stylesheets_linked_by(names: list[str]): list[str]
++ scripts_linked_by(names: list[str]): list[str]
 + files(): dict[str, str]
 + write(root: str | Path): list[str]

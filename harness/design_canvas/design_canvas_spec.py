@@ -40,7 +40,11 @@ with description("a design canvas made with its project folder"):
     with before.each:
         self.project = Path(tempfile.mkdtemp(prefix="cdd-canvas-"))
         (self.project / "screens").mkdir()
-        (self.project / "screens" / "plan.dc.html").write_text('<link rel="stylesheet" href="../styles/app.css">', encoding="utf-8")
+        (self.project / "screens" / "plan.dc.html").write_text(
+            '<script src="./support.js"></script>\n<link rel="stylesheet" href="../styles/app.css">\n'
+            '<script src="../ds/app/bundle.js"></script>\n<script src="../screens.js"></script>',
+            encoding="utf-8",
+        )
         self.canvas = DesignCanvas("Story Map", self.project)
 
     with it("should list the artboards already in a folder of the project"):
@@ -48,6 +52,9 @@ with description("a design canvas made with its project folder"):
 
     with it("should name the stylesheets those artboards link"):
         expect(self.canvas.project.stylesheets_linked_by(["screens/plan.dc.html"])).to(equal(["../styles/app.css"]))
+
+    with it("should name the scripts those artboards load, leaving out the canvas's own support.js"):
+        expect(self.canvas.project.scripts_linked_by(["screens/plan.dc.html"])).to(equal(["../ds/app/bundle.js", "../screens.js"]))
 
     with it("should hold no file the project does not have"):
         expect(self.canvas.project.size_of("shots/missing.png")).to(equal(None))

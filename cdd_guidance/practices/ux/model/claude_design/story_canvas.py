@@ -312,6 +312,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
                                                for sub in subs]})
         template = _EXPLORER_TEMPLATE.read_text(encoding="utf-8")
         heads = [f'<link rel="stylesheet" href="{href}">' for href in self._stylesheets()]
+        heads += [f'<script src="{src}"></script>' for src in self._screen_scripts()]
         heads += [f'<script src="../{script}"></script>' for script in self._fixture_scripts()]
         return (template.replace("__STYLESHEETS__", "\n".join(heads))
                 .replace("__IMPORTS__", "\n".join(self._imports()))
@@ -383,6 +384,12 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
     def _stylesheets(self) -> List[str]:
         """The stylesheets the prototype screens link, so a screen drawn inside the explorer keeps its own look."""
         return self.canvas.project.stylesheets_linked_by([*self._prototypes(), *self._screen_files()])
+
+    def _screen_scripts(self) -> List[str]:
+        """The scripts the prototype screens load, such as a design system's components, so a screen drawn inside the
+        explorer finds them; the fixtures bundle is loaded on its own."""
+        fixtures = {f"../{script}" for script in self.fixture_scripts}
+        return [src for src in self.canvas.project.scripts_linked_by([*self._prototypes(), *self._screen_files()]) if src not in fixtures]
 
     def _blank(self, screen: Screen) -> bool:
         size = self.canvas.project.size_of(screen.image) if screen.image else None

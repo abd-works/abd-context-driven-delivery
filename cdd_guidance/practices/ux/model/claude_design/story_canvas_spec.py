@@ -1,6 +1,8 @@
 """Mamba spec for a Claude Design story map. Render writes the canvas: the map page and the screens page."""
 
 import json
+import tempfile
+from pathlib import Path
 
 from mamba import description, context, it, before
 from expects import be, contain, equal, expect, have_keys, have_len
@@ -100,6 +102,28 @@ with description("a Claude Design story map") as self:
     with context("rendered from a story with no screens"):
         with it("gives that story no thumbnail"):
             expect(self.files["project/Main.dc.html"]).not_to(contain("story=Create%20Credentials"))
+
+    with context("rendered into a project whose prototype screen loads its design system's scripts"):
+        with before.each:
+            workspace = Path(tempfile.mkdtemp(prefix="cdd-story-canvas-"))
+            screens = workspace / "project" / "screens"
+            screens.mkdir(parents=True)
+            (screens / "plan-catalog.dc.html").write_text(
+                '<script src="./support.js"></script>\n<link rel="stylesheet" href="../ds/app/tokens.css">\n'
+                '<script src="../ds/app/bundle.js"></script>\n<script src="../flow.js"></script>',
+                encoding="utf-8",
+            )
+            screen = _catalog_screen()
+            screen.prototype = "screens/plan-catalog.dc.html"
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(workspace=str(workspace), ux_map=_ux_map(screen))).render(_story_map()))
+            self.explorer = files["project/screens/explorer.dc.html"]
+
+        with it("loads the scripts the screen loads, so the screen's components draw inside the explorer"):
+            expect(self.explorer).to(contain('<script src="../ds/app/bundle.js"></script>'))
+            expect(self.explorer).to(contain('<script src="../flow.js"></script>'))
+
+        with it("keeps the screen's stylesheets"):
+            expect(self.explorer).to(contain('<link rel="stylesheet" href="../ds/app/tokens.css">'))
 
     with context("rendered with a screen that names a scenario, and a story whose screen names only the story"):
         with before.each:
