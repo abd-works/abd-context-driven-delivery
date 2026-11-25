@@ -134,13 +134,13 @@ with description("a generate action on practice guidance") as self:
                 self.prose = _expanded_generate(_made_for(self.project), {"guidance": ["ux-mockup"]}).instructions
 
             with it("should give the story canvas rules"):
-                expect(self.prose).to(contain("explorer-drives-the-screen", "port-the-prototype-not-screenshots", "walk-before-publish"))
+                expect(self.prose).to(contain("explorer-drives-the-screen", "real-screens-not-screenshots", "walk-before-publish"))
 
             with it("should give the Claude Design screen rules"):
                 expect(self.prose).to(contain("shown-on-edges"))
 
             with it("should give the canvas template, not the greybox shell's"):
-                expect(self.prose).to(contain("FixtureScreen("))
+                expect(self.prose).to(contain("StoryScreen("))
                 expect(self.prose).not_to(contain("AI mockup template (Story Demo shell)"))
 
             with it("should save the canvas in the UX practice's root"):

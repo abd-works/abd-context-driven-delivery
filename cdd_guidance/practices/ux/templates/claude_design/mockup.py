@@ -1,8 +1,8 @@
 """Build the story canvas of {{Product}}: one prototype screen per story, drawn from each scenario's fixture through the
 real domain, then the story map and the story explorer, into the working version of the UX root's design canvas.
 
-Write the screen's markup from scratch, or port it from the product's own app or prototype source when the project can
-reach one (another Claude Design canvas is one such source). Keep the product's stylesheets and components; never use a
+Write the screen's markup from scratch, or take it from a page of an existing app the project can reach; porting
+another Claude Design canvas is an option. Keep the product's stylesheets and components; never use a
 screenshot as a screen. Every value the screen shows comes from the fixture through the domain objects; a screen keeps
 only its position per step group (the page, an open sheet or dialog).
 
@@ -13,9 +13,9 @@ from pathlib import Path
 
 from cdd_guidance.patterns.lern_domain_driven.practices.stories.model.claude_design.fixtures import LernCanvasFixtures
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
-from cdd_guidance.practices.ux.model.claude_design.fixture_screen import FixtureScreen, ScenarioSource
 from cdd_guidance.practices.ux.model.claude_design.screen_walk import StoryCanvasWalk
 from cdd_guidance.practices.ux.model.claude_design.story_canvas import ClaudeDesignStoryMap, StoryCanvasSetup
+from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen, WrittenMarkup
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
 from harness.design_canvas.versions import CanvasVersions
 
@@ -32,30 +32,26 @@ stories = [story.name for story in story_map.descendants.stories()]
 # hand into the screens in its place.
 LernCanvasFixtures(project_root).build(stories, version.folder / "project" / "fixtures" / "canvas-fixtures.js")
 
-# One screen for each story. fromFixture reads the repositories the Givens filled and what the steps bound by name, and
-# returns the state the step group on show leaves; the bar has already run the scenario's Whens up to that group.
-screen = FixtureScreen(
+# One screen for each story. The bar has already run the scenario's Whens up to the step group on show; the markup
+# reads the domain objects the steps bound under the named input ({{ order.… }}) and keeps only its position per step
+# group. The markup is written from scratch here; AppPageMarkup takes a page of an existing app instead, and
+# PortedCanvasMarkup draws another Claude Design canvas's component.
+screen = StoryScreen(
     title="{{Screen title}}",
-    head='<link rel="stylesheet" href="../styles/{{product stylesheet}}.css">\n<script src="../fixtures/canvas-fixtures.js"></script>',
-    root_class="{{screen root class}}",
-    body="""<main>
-<h1>{{ heading }}</h1>
-<sc-for list="{{ items }}" as="item"><p>{{ item.name }} {{ item.price }}</p></sc-for>
-<button onClick="{{ next }}">{{Action label}}</button>
+    story="{{Story}}",
+    markup=WrittenMarkup(
+        head='<link rel="stylesheet" href="../styles/{{product stylesheet}}.css">',
+        body="""<main>
+<h1>{{ order.name }}</h1>
+<sc-for list="{{ order.lines }}" as="line"><p>{{ line.name }} {{ line.price }}</p></sc-for>
+<sc-if value="{{ position.page === 'review' }}"><button>{{Action label}}</button></sc-if>
 </main>""",
-    source=ScenarioSource(story="{{Story}}", scenario="{{first scenario}}", path="{{screen path}}"),
-    own_methods="""fromFixture(repositories, scenario, examples, step, bindings) {
-const order = repositories.{{orders}}.{{find the aggregate the Givens stored}};
-return { heading: order.{{name}}, items: order.{{lines}} };
-}
-paste(field) {
-return {};
-}
-next(event) {
-if (this.props.go) this.props.go(this.storyName(), this.scenarioName(), 'Then');
-}
-""",
-    vals="heading: st.heading || '',\nitems: st.items || [],\nnext: (event) => this.next(event)",
+    ),
+    domain_input="order",
+    # One position per step group the explorer lists for each scenario; an outline's rows take the outline's.
+    positions={"{{first scenario}}": [{"page": "{{page before the action}}"}, {"page": "{{page after it}}"}]},
+    root_class="{{screen root class}}",
+    path="{{screen path}}",
     artboard="/screens/{{screen slug}}.dc.html",
 )
 (screens / "{{screen slug}}.dc.html").write_text(screen.html, encoding="utf-8")
