@@ -153,7 +153,12 @@ this.shownSelection = key;
 selected.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 outlineRows(story, template) {
-if (template.indexOf('${') < 0 || typeof CanvasFixtures === 'undefined') return [];
+if (typeof CanvasFixtures === 'undefined') return [];
+// An outline named without a placeholder runs each example row as "<outline>: <row>".
+if (template.indexOf('${') < 0) {
+const prefix = template + ': ';
+return CanvasFixtures.scenarios(story).filter((name) => name.indexOf(prefix) === 0).map((name) => ({ name: name, label: name.slice(prefix.length) }));
+}
 const pattern = new RegExp('^' + template.split(/\$\{[^}]*\}/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(.+?)') + '$');
 return CanvasFixtures.scenarios(story).filter((name) => pattern.test(name)).map((name) => ({ name: name, label: name.match(pattern).slice(1).join(' · ') }));
 }
@@ -210,7 +215,7 @@ const ck = sk + '-' + ci;
 rows.push(Object.assign({ label: sc.n, is_background: Boolean(sc.b), is_scenario: !sc.b, ...copyOf(sc.f, s.n + ' › ' + sc.n), cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on sm-box sm-box-top' + (st.open[ck] ? '' : ' sm-box-bottom') : ''), pick: () => (sc.b || (g === st.g && ci === st.c && st.open[ck]) ? toggle(ck)() : go(g, ci, 0)) }, chev(st.open[ck])));
 if (!st.open[ck]) return;
 this.outlineRows(s.n, sc.n).forEach((ex) => rows.push({ label: ex.label, is_example: true, cls: 'sm-row sm-k3 sm-ex' + (g === st.g && ci === st.c ? ' sm-box' + (ex.name === exampleOf(g, ci) ? ' sm-step-on' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, 0, ex.name) }));
-sc.t.forEach((tp, ti) => rows.push(sc.b ? { label: tp.x, cls: 'sm-row sm-k4 sm-given', mark: '', markCls: 'sm-nomark', pick: () => {} } : { label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c ? ' sm-box' + (ti === st.t ? ' sm-step-on' : '') + (ti === sc.t.length - 1 ? ' sm-box-bottom' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti) }));
+sc.t.forEach((tp, ti) => rows.push(sc.b ? { label: tp.x, cls: 'sm-row sm-k4 sm-given', mark: '', markCls: 'sm-nomark', pick: () => {} } : { label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c ? ' sm-box' + (ti === st.t ? ' sm-step-on' : '') + (ti === sc.t.length - 1 ? ' sm-box-bottom' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti, g === st.g && ci === st.c ? st.x : null) }));
 });
 });
 });

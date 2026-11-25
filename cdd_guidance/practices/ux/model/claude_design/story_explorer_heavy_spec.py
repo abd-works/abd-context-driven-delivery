@@ -103,6 +103,27 @@ with description("a story explorer that a screen moves") as self:
     with it("should open a scenario at its first step when the screen names no step"):
         expect(_shown_step("Add Line To Cart", "Add one more line").startswith("Given")).to(equal(True))
 
+    with context("whose outline's example rows run as '<outline>: <row>'"):
+        with it("should list each row under the outline, so the screen loads that row's fixture"):
+            run = _RUN.replace("const explorer = new Component();", "globalThis.CanvasFixtures = { scenarios: () => ['Add one more line: Ace', 'Add one more line: Atlas'] };\nconst explorer = new Component();").replace(
+                "console.log(JSON.stringify({ step: shown.stepText, index: shown.stepIndex }));",
+                "console.log(JSON.stringify({ rows: shown.rows.filter((row) => row.is_example).map((row) => row.label), scenario: shown.scenarioName }));")
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map())).render(_story_map()))
+            code = re.search(r'<script type="text/x-dc"[^>]*>([\s\S]*?)</script>', files["project/screens/explorer.dc.html"]).group(1)
+            answer = subprocess.run(["node", "-e", run, json.dumps([["Add Line To Cart", "Add one more line"]])], input=code, capture_output=True, text=True, check=True)
+            expect(json.loads(answer.stdout)).to(equal({"rows": ["Ace", "Atlas"], "scenario": "Add one more line: Ace"}))
+
+        with it("should keep the row picked when a step group of the outline is picked"):
+            run = _RUN.replace("const explorer = new Component();", "globalThis.CanvasFixtures = { scenarios: () => ['Add one more line: Ace', 'Add one more line: Atlas'] };\nconst explorer = new Component();").replace(
+                "const shown = explorer.renderVals();",
+                "explorer.renderVals().rows.filter((row) => /^Then/.test(row.label || ''))[0].pick();\nconst shown = explorer.renderVals();").replace(
+                "console.log(JSON.stringify({ step: shown.stepText, index: shown.stepIndex }));",
+                "console.log(JSON.stringify(shown.scenarioName));")
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map())).render(_story_map()))
+            code = re.search(r'<script type="text/x-dc"[^>]*>([\s\S]*?)</script>', files["project/screens/explorer.dc.html"]).group(1)
+            answer = subprocess.run(["node", "-e", run, json.dumps([["Add Line To Cart", "Add one more line: Atlas"]])], input=code, capture_output=True, text=True, check=True)
+            expect(json.loads(answer.stdout)).to(equal("Add one more line: Atlas"))
+
     with context("whose scenario has two actions, each with its outcome"):
         with before.each:
             self.scenario = ["Add Line To Cart", "Add a line, then remove one"]

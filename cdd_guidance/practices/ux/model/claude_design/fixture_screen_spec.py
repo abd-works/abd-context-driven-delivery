@@ -43,11 +43,11 @@ with description("a fixture-driven screen") as self:
             expect(self.html).to(contain('href="/screens/select-plan.dc.html"'))
 
         with it("should declare every prop the explorer hands it"):
-            expect(ScreenArtboard(self.html).declared_props).to(equal({"story", "scenario", "step", "go", "$preview"}))
+            expect(ScreenArtboard(self.html).declared_props).to(equal({"story", "scenario", "step", "stepIndex", "go", "$preview"}))
 
         with it("should read the scenario and the step the explorer selects"):
             artboard = ScreenArtboard(self.html)
             expect((artboard.reads_prop("scenario"), artboard.reads_prop("step"))).to(equal((True, True)))
 
         with it("should hand the selected step to fromFixture, so a Then can show its outcome"):
-            expect(self.script).to(contain("this.fromFixture(repositories, scenario, fixtures.examples, this.props.step || '')"))
+            expect(self.script).to(contain("this.fromFixture(repositories, scenario, fixtures.examples, this.props.step || '', fixtures.bindings ? fixtures.bindings() : {})"))
