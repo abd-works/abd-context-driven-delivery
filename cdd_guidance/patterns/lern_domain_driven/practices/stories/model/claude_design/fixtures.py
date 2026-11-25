@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Iterable, List
 
 from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
+from cdd_guidance.patterns.lern_domain_driven.practices.stories.model.claude_design.story_runtime import StoryRuntimeContract
 
 _HERE = Path(__file__).resolve().parent
 _ENTRY_TEMPLATE = _HERE / "canvas-fixtures.ts"
@@ -61,7 +62,10 @@ class LernCanvasFixtures:
                 .replace("__STORIES__", json.dumps(list(story_names), ensure_ascii=False)))
 
     def build(self, story_names: Iterable[str], out_file: str | Path) -> Path:
-        """Write the entry beside the workspace's sources and bundle it to *out_file* with esbuild."""
+        """Write the entry beside the workspace's sources and bundle it to *out_file* with esbuild. Stops first, naming
+        what is missing, when the workspace's step library lacks the story runtime contract (StoryRuntimeContract):
+        a bundle built without it skips every action and hands the screens nothing."""
+        StoryRuntimeContract(self.workspace, self.story_test_folder).check()
         work = self.workspace / self.work_folder
         work.mkdir(parents=True, exist_ok=True)
         entry = work / "canvas-fixtures.ts"

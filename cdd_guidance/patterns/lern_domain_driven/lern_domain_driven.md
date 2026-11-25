@@ -366,7 +366,7 @@ alias (tsconfig paths and a Vitest alias):
 
 | File | What it does |
 |---|---|
-| `test-utils/story-test/story-test.ts` | `story`, `shareStory`, `background`, `scenario`, and the Given/When/Then chain. The story render writes it here and every story file imports `test-utils/story-test/story-test`. |
+| `test-utils/story-test/story-test.ts` | `story`, `shareStory`, `background`, `scenario`, `withStory`, `ctx`, and the Given/When/Then chain. The pattern ships it as `templates/test-utils/story-test/story-test.ts`; copy it here, and every story file imports `test-utils/story-test/story-test`. Its story host gives `it` the scenario's Whens and `storyBindings()` gives what the steps bound, which the Claude Design canvas fixtures replay scenarios through. |
 | `test-utils/story-test/story-playwright.ts` | Playwright host. A browser story calls `usePlaywright()` before `story()`. |
 | `test-utils/story-test/my-paradise.ts` | Starts the app for browser stories and loads their examples. |
 | `test-utils/story-test/repositories.ts` | The repositories a story runs on: in-memory for the domain spec, node for the server spec and the browser. `reset-every-repository` reads it. |
