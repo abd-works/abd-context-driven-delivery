@@ -165,6 +165,12 @@ Keeps option E's hash check and drops the stored copies. **Done:** a version rep
 - Dedupe shots by content hash: 183 shots hold only 115 unique ones, so 68 duplicates become 0.
 - Decide where originals live, because none were found outside the canvas folder; e2e output under `.sessions/<release>/e2e-test-results` holds JSON, not PNGs.
 
+##### Story: Report What Has Not Reached Production
+
+- Each version lists its diverged screens, including screens with no production view yet, and its drifted files, each with the repo path it must reach.
+- A canvas edit to a packaged file (CSS, image, font) shows here until the repo holds it, the Design System package is rebuilt, and its hash matches again.
+- A version kept as a release must report none, or name each one as accepted.
+
 ##### Story: Find Screen Files Through The Manifest
 
 Thin screens break these existence checks, so they read the manifest instead of the version folder:
@@ -303,6 +309,12 @@ This keeps a clear answer to "is this what production does?" for every screen. P
 ##### Story: Reattach A Screen Once Its Change Reaches Production
 
 - A detached screen shows as diverged until the change lands in the TSX, then it re-attaches and the mark clears.
+
+##### Story: Check A Redesign Against Production Before Reattaching
+
+- When a diverged screen's view changes in the product repo, render the new view at the same scenario state and compare it with the detached markup: the elements, classes and text it shows, and a screenshot difference.
+- A match reattaches the screen and clears the mark. A mismatch keeps it diverged and lists what differs, so a redesign is never marked as reaching production when it hasn't.
+- Without this, the mark clears when the TSX changes at all, and nothing proves production matches what was designed.
 
 ## From Fully Integrated App Flow
 
