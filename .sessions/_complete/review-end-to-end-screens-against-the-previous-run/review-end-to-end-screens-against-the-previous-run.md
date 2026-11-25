@@ -76,3 +76,11 @@ The TDD tier table in `tdd.md` gets one line: end-to-end runs record step screen
 - Baseline: the last run on main, or the last run the person accepted, whichever branch it was on?
 - Should the AI also look at unchanged pairs now and then, to catch a screen that has been wrong since before the baseline?
 - Should the report be published as an artifact for sharing, or only opened from the run folder?
+
+## Done 2026-11-24
+
+Built on the e2e-testing ticket (`.sessions/_complete/e2e-testing/`), in commits 9f70a51ff, 946fff3ee and a191cd072, as steps 1 to 5 of its order of work: the walk report, the step capture hook, the compare report, the baseline, the pixel check, the regression review, the TDD and Stories rules, the `e2e-review` toolset, the daily run's review, and the server health line. The story map's Review End-To-End Screens epic names the code behind each story.
+
+- Not built: the run history. `writeHistoryReport` in `harness/e2e_review/report/report.ts` writes the page without images and the `summary.md` section, but no run calls it; the story *Read Earlier E2E Runs* stays Intended.
+- Dropped by the person on 2026-11-24: step 6, pointing pml-web's end-to-end runs at the same recorder.
+- Built otherwise than written here: the accepted baseline is named in each sub-epic folder's `baseline.json`, not kept on a branch; the supplement's rules went into `cdd_guidance/practices/tdd/tdd.md` rather than a practice of their own.
