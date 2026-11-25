@@ -79,7 +79,7 @@ a:hover { color: #C64514; }
 .board-waiting { margin: 0; color: var(--muted); font: 12px var(--mono); }
 /* The full board less its padding: side panels make the board scroll, never narrow its columns. */
 /* Columns stretch to the tallest one, so they always end level, and each list has room for three cards before it grows. */
-.column-grid { --card-room: 104px; min-width: 1840px; display: grid; grid-template-columns: 14fr 24fr 24fr 24fr 24fr 14fr; gap: 10px; align-items: stretch; }
+.column-grid { --card-room: 104px; min-width: 1846px; display: grid; grid-template-columns: 14fr 24fr 24fr 24fr 24fr 14fr; gap: 10px; align-items: stretch; }
 .board-column { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; min-width: 0; display: flex; flex-direction: column; }
 .stage-head-box { padding: 6px; }
 .stage-head { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--raised); border: 1px solid var(--border); border-radius: 4px; font-family: var(--mono); min-width: 0; }
