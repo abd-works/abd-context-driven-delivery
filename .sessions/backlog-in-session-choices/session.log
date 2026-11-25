@@ -28,3 +28,9 @@
 2026-11-25T20:25:16Z error session.read_file C:\dev\abd-cdd-toggle-ui-only\.sessions\backlog-in-session-choices\session.err 1 no-chat
 2026-11-25T20:25:16Z error session.folder_files C:\dev\abd-cdd-toggle-ui-only\.sessions\backlog-in-session-choices\session.err 1 no-chat
 2026-11-25T20:25:16Z error session.show C:\dev\abd-cdd-toggle-ui-only\.sessions\backlog-in-session-choices\session.err 65 no-chat
+2026-11-25T20:26:02Z tool prompt-queue.show 3c1a15ff-6fae-4bff-bde0-467dbcd51054 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-toggle-ui-only\3c1a15ff-6fae-4bff-bde0-467dbcd51054.jsonl 1-1404
+2026-11-25T20:26:20Z tool prompt-queue.show 3c1a15ff-6fae-4bff-bde0-467dbcd51054 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-toggle-ui-only\3c1a15ff-6fae-4bff-bde0-467dbcd51054.jsonl 1-1405
+2026-11-25T20:26:44Z tool sessions.current 3c1a15ff-6fae-4bff-bde0-467dbcd51054 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-toggle-ui-only\3c1a15ff-6fae-4bff-bde0-467dbcd51054.jsonl 1-1448
+2026-11-25T20:26:52Z tool prompt-queue.show 3c1a15ff-6fae-4bff-bde0-467dbcd51054 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-toggle-ui-only\3c1a15ff-6fae-4bff-bde0-467dbcd51054.jsonl 1-1472
+2026-11-25T20:27:06Z tool prompt-queue.show 3c1a15ff-6fae-4bff-bde0-467dbcd51054 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-toggle-ui-only\3c1a15ff-6fae-4bff-bde0-467dbcd51054.jsonl 1-1474
+2026-11-25T20:27:39Z tool repo.merge_to_main 3c1a15ff-6fae-4bff-bde0-467dbcd51054 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-toggle-ui-only\3c1a15ff-6fae-4bff-bde0-467dbcd51054.jsonl 1-1515
