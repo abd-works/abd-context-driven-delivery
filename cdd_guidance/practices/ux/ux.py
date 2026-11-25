@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from harness.agent_tools.agent_tools import agent_tool, agent_toolset
+from harness.design_canvas.versions import DESIGN_CANVAS_FOLDER
 from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.guidance import SketchLens
 from harness.guidance.practice_formats import PracticeFormats, Rendered, RenderContent, RenderRequest, TextOrData
@@ -114,6 +115,14 @@ class Ux(PracticeGuidance):
         "typescript": ("cdd_guidance.practices.ux.model.view.view_formats", "TypeScriptView"),
         "javascript": ("cdd_guidance.practices.ux.model.view.view_formats", "JavaScriptView"),
     }
+
+    def placed_under(self, declared: PurePosixPath, root: Path) -> Path | None:
+        """Where a path a UX fidelity declares lands under root. A design canvas (``design-canvas/...``) lands in the
+        UX practice's own root, the folder the session names for it (``ux`` by default), where
+        ``CanvasVersions.in_practice_root`` keeps its versions, rather than in the session's root."""
+        if declared.parts[:1] == (DESIGN_CANVAS_FOLDER,) and self._session_output is not None:
+            return Path(self._session_output.folder) / declared
+        return super().placed_under(declared, root)
 
     @agent_tool
     def ensure_javascript(self, practice: str, source_format: str, content: str) -> Rendered:

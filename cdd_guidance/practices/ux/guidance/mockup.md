@@ -1,5 +1,7 @@
 # UX — Procedural Guidance (mockup fidelity)
 
+This guidance writes the greybox in the html format. In the claude_design format, follow the canvas guidance these instructions give (`claude_design.md` and `story_canvas.md`) in its place: the screens are prototype screens on the story canvas, not a Story Demo shell.
+
 ## How to build mockups
 
 Mockups deepen IA regions into typed controls with key interactions, running inside the Story Demo shell:

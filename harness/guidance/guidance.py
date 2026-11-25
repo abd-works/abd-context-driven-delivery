@@ -597,6 +597,18 @@ class PracticeGuidance(Guidance):
     def examples(self) -> str:
         """Examples folder content — not part of instructions."""
 
+    def format_guidance(self, format: Format) -> str:
+        """The documents the practice keeps beside format's adapter, ``model/{format}/*.md``, such as UX's
+        ``claude_design.md`` and ``story_canvas.md``: the rules and steps for writing in that format, which a fidelity
+        working in it gives the agent in full, because an agent handed only a document's path misses every rule in it.
+        The document named for the format comes first, then the rest by name; empty when the format keeps none."""
+        folder = self.module_dir / "model" / format.name
+        if not format.name or not folder.is_dir():
+            return ""
+        documents = sorted(folder.glob("*.md"), key=lambda path: (path.stem != format.name, path.name))
+        filled = self.markdown_scope.filled
+        return "\n\n".join(f"### {format.name} guidance: {path.name}\n\n{filled(path.read_text(encoding='utf-8')).strip()}" for path in documents)
+
     @agent_tool
     def render(self, format: str, content: RenderContent = "", source: str | None = None, previous: str = "") -> Rendered:
         """Turn content into the practice object model, then render the target format. Content is in source, the
@@ -1033,11 +1045,18 @@ class FidelityGuidance(Guidance):
                 (self.overview or "").strip(),
                 (self.guidance or "").strip(),
                 (self.rules.markdown or "").strip(),
+                self._format_guidance_part(format),
                 self._template_part(format),
                 self.companion_instructions,
             )
             if part
         )
+
+    def _format_guidance_part(self, format: Format) -> str:
+        """Its practice's documents for format (``PracticeGuidance.format_guidance``); none when it belongs to no
+        practice."""
+        practice = self.practice_guidance
+        return practice.format_guidance(format) if practice is not None else ""
 
     def _practice_parts(self) -> tuple[str, ...]:
         """What its practice says before its own words: the practice's overview, guidance, and shared rules; none when

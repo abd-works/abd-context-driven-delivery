@@ -1454,7 +1454,7 @@ with description("a session whose UX work has an information architecture, a pub
         self.repo = Path(tempfile.mkdtemp(prefix="session-ux-")).resolve()
         (self.repo / ".git").mkdir()
         self.work = self.repo / "work"
-        canvas = self.work / "design-canvas"
+        canvas = self.work / "ux" / "design-canvas"
         written = {
             self.work / "checkout" / ".context" / "information-architecture.drawio": "<mxfile/>",
             canvas / "version-1" / "project" / "canvas.json": "{}",
@@ -1474,10 +1474,14 @@ with description("a session whose UX work has an information architecture, a pub
     with it("should review the information architecture's diagram"):
         expect([entry.path for entry in self.front_end_code.session_output.written.files_to_review()["drawio"]]).to(contain("work/checkout/.context/information-architecture.drawio"))
 
+    # The canvas is kept in the UX practice's root (``ux`` under the workpath by default), as story_canvas.md says.
     with it("should review the design canvas at the link it is published at"):
         expect([(entry.path, entry.link) for entry in self.front_end_code.session_output.written.files_to_review()["claude_design"]]).to(
-            equal([("work/design-canvas/version-1/project/canvas.json", "https://claude.ai/artifact/checkout-canvas")])
+            equal([("work/ux/design-canvas/version-1/project/canvas.json", "https://claude.ai/artifact/checkout-canvas")])
         )
+
+    with it("should open the design view of the canvas in the UX root"):
+        expect(Sessions(self.repo).current().practice("ux").design_view).to(equal("https://claude.ai/artifact/checkout-canvas"))
 
     with it("should leave its view code to Clean Engineering's review"):
         reviewed = [entry.path for entries in self.front_end_code.session_output.written.files_to_review().values() for entry in entries]

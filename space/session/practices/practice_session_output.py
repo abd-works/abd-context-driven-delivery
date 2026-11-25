@@ -173,12 +173,12 @@ class PracticeSessionOutput:
     @property
     @data_field
     def design_view(self) -> str:
-        """The Claude Design link recorded for the latest version of the design canvas kept under the folder this
-        practice writes under (the UX practice's, ``CanvasVersions.in_practice_root``), which the chat bar's file viewer
+        """The Claude Design link recorded for the latest version of the design canvas kept in this practice's
+        root, the folder it writes under (the UX practice's, ``CanvasVersions.in_practice_root``), which the chat bar's file viewer
         opens; empty while the practice is off or no link is recorded."""
         if not self.enabled:
             return ""
-        latest = CanvasVersions.in_practice_root(self.output_root).latest
+        latest = CanvasVersions.in_practice_root(self.folder).latest
         return (latest.link or "") if latest is not None else ""
 
     @property
