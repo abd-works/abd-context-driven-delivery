@@ -258,6 +258,39 @@ sign-up.move_before(pet-visits)
 *Then* Discovery shows sign-up above pet-visits
 *And* Discovery still shows sign-up above pet-visits when the [board](../../../space/kanban/.context/kanban-model.md#board) is read again
 
+#### Scenario: Move a ticket above a ticket in another column
+
+*Given* the Discovery [column](../../../space/kanban/.context/kanban-model.md#column) shows the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits In progress
+*And* Hardening shows the ticket almost-shipped in its Done
+*When* the Person moves pet-visits above almost-shipped
+
+```realization
+CardPlacement.ticket("pet-visits")
+  <- pet-visits
+pet-visits.move_before(almost-shipped)
+  -> self.moves.move_beside(almost-shipped)
+  <- Hardening's Done with pet-visits above almost-shipped
+```
+
+*Then* Hardening shows pet-visits above almost-shipped in its Done
+*And* Discovery no longer shows pet-visits
+
+#### Scenario: Close a ticket by moving it above a closed ticket
+
+*Given* the Discovery [column](../../../space/kanban/.context/kanban-model.md#column) shows the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) pet-visits
+*And* Complete shows the closed ticket sign-up
+*When* the Person moves pet-visits above sign-up
+
+```realization
+CardPlacement.ticket("pet-visits")
+  <- pet-visits
+pet-visits.move_before(sign-up)
+  -> self.moves.move_beside(sign-up)
+  <- Complete with pet-visits above sign-up
+```
+
+*Then* Complete shows pet-visits above sign-up
+
 #### Scenario: Keep a backlog item where it was moved
 
 *Given* the Backlog shows the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Gift cards above Returns and refunds

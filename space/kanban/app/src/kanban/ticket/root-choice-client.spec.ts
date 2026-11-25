@@ -142,5 +142,14 @@ describe('Choose Session Root', () => {
         expect((await started()).store.state.rootChoice?.ticket?.name).toBe('gift-cards')
       })
     })
+
+    // Starting commits and opens a worktree, which takes seconds: a second press in that time finds the item gone.
+    describe('that a person has pressed to start twice before it started', () => {
+      it('should start it once', async () => {
+        const page = await asked()
+        await Promise.all([page.roots.use(), page.roots.use()])
+        expect(page.store.state.toasts.filter(toast => toast.text.endsWith('started in Discovery'))).toHaveLength(1)
+      })
+    })
   })
 })

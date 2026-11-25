@@ -527,7 +527,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> SessionHierarchy.can_take_parent
 	-> SessionHierarchy.set_parent
 + move_before(other: Ticket): Ticket
-	// `ticket.move_before`: keeps it just above other in their column; the tool names other as it names any ticket
+	// `ticket.move_before`: keeps it just above other, first moving it into other's column and list when it is elsewhere (TicketMoves.move_beside), closing it beside a closed ticket; the tool names other as it names any ticket
 	-> Card.move_before
 + violations(): Report
 	// `ticket.violations`: the rules broken on every fidelity of its stage left with violations, each naming its fidelity, a rule two fidelities share listed once; its path is the session's reports folder from the project

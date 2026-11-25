@@ -88,8 +88,7 @@ with description("a LERN project's story canvas rendered in one call, for real")
         write(root, "tests/story_tests/place-order/order-plan/order_plan_story.test.md", SCENARIOS)
         write(root, "ux/ux.json", json.dumps(UX_MAP, indent=2))
         screen = StoryScreen(title="Order Plan", story="Order Plan",
-                             markup=WrittenMarkup(head="", body="<main><p>Plan {{ order.plan }}</p></main>"),
-                             domain_input="order", positions={"Customer orders the Ace plan": [{"page": "plans"}, {"page": "order"}]})
+                             markup=WrittenMarkup(head="", body="<main><p>Plan {{ order.plan }}</p></main>"), positions={"Customer orders the Ace plan": [{"page": "plans"}, {"page": "order"}]})
         canvas = ProjectStoryCanvas(project_root=root, ux_root=root / "ux", stories_root=root / "tests" / ".context",
                                     fixtures=LernDomainDriven().canvas_fixtures(root))
         self.rendered = canvas.render({"order-plan": screen})

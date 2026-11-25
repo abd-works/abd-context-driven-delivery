@@ -152,6 +152,42 @@ describe('Move Ticket', () => {
     await ticketOn(page, OTHER).drops.dropOn('Complete')
     expect(page.board.tickets.find(ticket => ticket.name === OTHER)?.column.name).toBe('Complete')
   })
+
+  it('should let a card be dropped above a card in any stage and in Complete', async () => {
+    const { page } = await board.page()
+    const dragged = ticketOn(page, OTHER).drops
+    const closed = page.board.tickets.find(ticket => ticket.isClosed)!
+    expect([dragged.canDropAbove(ticketOn(page, 'almost-shipped')), dragged.canDropAbove(closed), dragged.canDropAbove(ticketOn(page, OTHER))]).toEqual([true, true, false])
+  })
+
+  describe('that a person has dropped above a closed ticket, and was never opened', () => {
+    async function dropped() {
+      const { page } = await board.page()
+      const closed = page.board.tickets.find(ticket => ticket.isClosed)!
+      await ticketOn(page, OTHER).drops.dropAbove(closed)
+      const names = page.board.columnNamed('Complete')!.tickets.map(ticket => ticket.name)
+      return { names, closed: closed.name }
+    }
+
+    it('should close at once and show just above that ticket in Complete', async () => {
+      const { names, closed } = await dropped()
+      expect(names.indexOf(OTHER)).toBe(names.indexOf(closed) - 1)
+    })
+  })
+
+  describe('that a person has moved above a ticket in another stage', () => {
+    async function moved() {
+      const { page } = await board.page()
+      await ticketOn(page, OTHER).moveBefore('almost-shipped')
+      const column = page.board.columnNamed('Hardening')
+      return [...(column?.inProgress ?? []), ...(column?.done ?? [])].map(ticket => ticket.name)
+    }
+
+    it("should show just above that ticket in its stage's list", async () => {
+      const names = await moved()
+      expect(names.indexOf(OTHER)).toBe(names.indexOf('almost-shipped') - 1)
+    })
+  })
 })
 
 describe('Send Next Fidelity Action', () => {

@@ -18,6 +18,7 @@ from expects import be_none, contain, equal, expect
 from space.kanban.board import TicketNotFoundError
 from space.kanban.card_name import BacklogItemTakenError, TicketNameTakenError, TitleNamesNothingError
 from space.kanban.session_board_examples import (
+    ALMOST_SHIPPED,
     BILLING_TAG,
     CHECKOUT_FLOW,
     CHECKOUT_FLOW_TEXT,
@@ -31,6 +32,7 @@ from space.kanban.session_board_examples import (
     PET_VISITS,
     PET_VISITS_TEXT,
     RETURNS_AND_REFUNDS,
+    SHIPPED_WORK,
     SIGN_UP,
     URGENT_TAG,
     idea_file_text,
@@ -207,6 +209,60 @@ def _(s):
     def _(world):
         discovery = column_in(board_of(world), "Discovery")
         expect(shown_in_order(discovery, SIGN_UP.name, PET_VISITS.name)).to(equal([SIGN_UP.name, PET_VISITS.name]))
+
+
+@shared_stories.scenario("Reorder Tickets In Column", "Move a ticket above a ticket in another column")
+def _(s):
+    @s.given('the Discovery column shows the ticket pet-visits In progress')
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
+    @s.and_('Hardening shows the ticket almost-shipped in its Done')
+    def _(world):
+        world.project.seed_session(ALMOST_SHIPPED)
+
+    @s.when('the Person moves pet-visits above almost-shipped')
+    def _(world):
+        # CardPlacement.ticket("pet-visits")
+        #   <- pet-visits
+        # pet-visits.move_before(almost-shipped)
+        #   -> self.moves.move_beside(almost-shipped)
+        #   <- Hardening's Done with pet-visits above almost-shipped
+        world.Ticket.load(PET_VISITS.name).move_before(world.Ticket.load(ALMOST_SHIPPED.name))
+
+    @s.then('Hardening shows pet-visits above almost-shipped in its Done')
+    def _(world):
+        done = column_in(board_of(world), "Hardening")["done"]
+        expect([ticket["name"] for ticket in done]).to(equal([PET_VISITS.name, ALMOST_SHIPPED.name]))
+
+    @s.and_('Discovery no longer shows pet-visits')
+    def _(world):
+        expect(names_in(column_in(board_of(world), "Discovery"))).not_to(contain(PET_VISITS.name))
+
+
+@shared_stories.scenario("Reorder Tickets In Column", "Close a ticket by moving it above a closed ticket")
+def _(s):
+    @s.given('the Discovery column shows the ticket pet-visits')
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
+    @s.and_('Complete shows the closed ticket shipped-work')
+    def _(world):
+        world.project.seed_session(SHIPPED_WORK)
+
+    @s.when('the Person moves pet-visits above shipped-work')
+    def _(world):
+        # CardPlacement.ticket("pet-visits")
+        #   <- pet-visits
+        # pet-visits.move_before(shipped-work)
+        #   -> self.moves.move_beside(shipped-work)
+        #   <- Complete with pet-visits above shipped-work
+        world.Ticket.load(PET_VISITS.name).move_before(world.Ticket.load(SHIPPED_WORK.name))
+
+    @s.then('Complete shows pet-visits above shipped-work')
+    def _(world):
+        complete = column_in(board_of(world), "Complete")
+        expect(shown_in_order(complete, PET_VISITS.name, SHIPPED_WORK.name)).to(equal([PET_VISITS.name, SHIPPED_WORK.name]))
 
 
 @shared_stories.scenario("Reorder Tickets In Column", "Keep a backlog item where it was moved")
