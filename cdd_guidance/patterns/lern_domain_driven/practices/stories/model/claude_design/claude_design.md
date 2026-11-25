@@ -8,7 +8,7 @@ LERN's part of the Claude Design channel: the fixtures bundle a canvas screen ru
 
 The bundle replays each scenario through the project's own step library, `test-utils/story-test/`, by installing a story host that records each scenario's Givens and Whens instead of running them. The LERN pattern ships that runtime as `templates/test-utils/story-test/story-test.ts`; copy it into the step library folder when the project has none. `build` checks the contract first (`StoryRuntimeContract` in `story_runtime.py`) and stops with `StoryRuntimeMissing`, naming each missing piece, before it writes anything:
 
-- `story-test.ts` exports `installStoryHost`, `withStory`, and `storyBindings`.
+- `story-test.ts` exports `installStoryHost`, `withStory`, and `storyBindings`; with `bindEntered` too (the pattern's runtime has it), a When's screen shows what the When enters.
 - The host's `it(name, fn, steps)` is given `{ whens }`, the When steps that Then runs before its body. Without them a screen past an action would show the Givens alone.
 - `repositories.ts` beside it exports `domainRepositories()`, the in-memory repositories the bundle resets and replays onto.
 
@@ -16,7 +16,7 @@ A bundle built without any of these still loads, but its fixtures skip every act
 
 ## What a screen gets
 
-- **`load(story, scenario)`** — Empties every repository and replays that scenario's Givens through the real story runtime; resolves to the repositories they filled.
+- **`load(story, scenario, actions)`** — Empties every repository and replays that scenario's Givens and its first `actions` Whens through the real story runtime, then binds what the next When enters; resolves to the repositories they filled.
 - **`scenarios(story)`** — The story's scenarios, for the standalone picker.
 - **`examples`** — Every example fixture export by name: outline rows, entered and expected values, refusal messages.
 - **`pasteFor(path)`** — Dev mode's seed paste for a screen path, its `{unique}` values filled.
@@ -28,4 +28,5 @@ A bundle built without any of these still loads, but its fixtures skip every act
 
 - **`signed-in-from-the-examples`** — A screen that needs the signed-in customer or their cart loads it with the identity the example fixtures sign in with (for example the example customer profile's id), through the repositories' own `load` operations. Do not read repository storage directly.
 - **`rebuild-with-the-stories`** — Rebuild the bundle whenever stories, examples, or domain code change, and republish it with the canvas; a stale bundle replays old Givens.
+- **`when-names-what-it-enters`** — A When where the Customer enters something names it as the step's third argument, `enters`, the objects it binds by name (`when('the Customer registers valid credentials', register, () => ({ credentials }))`). The When binds them and then acts, so its body reads them through `ctx`; the canvas binds them before the When runs, so the When's screen shows and types what the Customer enters and a press applies them. A scenario then stays written the natural way, with the entry in its When, not moved into a Given.
 - **`no-new-fixtures-for-the-canvas`** — The canvas uses the stories' fixtures only. When a screen needs data no scenario sets up, the story is missing a scenario: add it there.

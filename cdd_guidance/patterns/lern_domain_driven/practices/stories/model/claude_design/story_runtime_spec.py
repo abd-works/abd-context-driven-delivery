@@ -90,6 +90,10 @@ with description("the story runtime contract of the LERN canvas fixtures") as se
             expect((self.root / LernCanvasFixtures.work_folder).exists()).to(equal(False))
 
     with context("the template the pattern ships"):
+        with it("lets a When name what it enters and hands the host each When's entry"):
+            template = StoryRuntimeContract.template().read_text(encoding="utf-8")
+            expect(("export function bindEntered" in template, "{ whens: precedingWhens, entries: precedingEntries }" in template)).to(equal((True, True)))
+
         with it("sits in the LERN pattern's templates, at the step library folder"):
             expect(StoryRuntimeContract.template().as_posix().endswith(
                 "lern_domain_driven/templates/test-utils/story-test/story-test.ts")).to(be_true)
