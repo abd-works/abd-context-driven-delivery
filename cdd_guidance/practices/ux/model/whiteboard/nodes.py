@@ -239,7 +239,7 @@ class WhiteboardUxMap(KeepsDocumentOnBoard, UxMap):
 
     def board(self) -> Whiteboard:
         """This map as a board: its screens side by side, then its transitions."""
-        board = Whiteboard(self.name)
+        board = Whiteboard()
         left = self.first_left
         for screen in self.screens:
             screen.lay_out(left, self.first_top)
@@ -258,7 +258,6 @@ class WhiteboardUxMap(KeepsDocumentOnBoard, UxMap):
     def _take_board(self, board: Whiteboard) -> None:
         """Read board into this map: its screens left to right, each with the regions that sit in it and the controls
         that sit in each region, what each serves, and the arrows between screens as transitions."""
-        self.name = board.title.strip() or self.name
         drawn = _Drawn(board)
         with self.batch_schema_sync():
             screens: dict[str, WhiteboardScreen] = {}

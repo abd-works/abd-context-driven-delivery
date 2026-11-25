@@ -123,7 +123,7 @@ class WhiteboardStoryMap(KeepsDocumentOnBoard, DiagramStoryMap):
         return self.copy_of(canonical).board().drawn_over(str(written.previous))
 
     def board(self) -> Whiteboard:
-        board = Whiteboard("Story Map")
+        board = Whiteboard()
         for epic in self.epics:
             board.draw(epic)
         return board
@@ -146,7 +146,7 @@ class WhiteboardStoryMap(KeepsDocumentOnBoard, DiagramStoryMap):
         """This map's increments as a board, laid out as drawio lays out its thin slice: one column per sub-epic under
         the epic and sub-epic bars, each column as wide as the most stories any one increment puts in it, and one lane
         per increment stacked below each other, each a single row of its stories under the sub-epic that holds each."""
-        return _ThinSliceBoard(self, Whiteboard("Thin Slice")).board().save()
+        return _ThinSliceBoard(self, Whiteboard()).board().save()
 
     def load_thin_slice(self, text: str) -> "WhiteboardStoryMap":
         """Read a thin-slice board into this map's increments, top lane first, each delivering the map's own stories

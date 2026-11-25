@@ -49,8 +49,11 @@ canvas = ProjectStoryCanvas(
     ux_root=project_root / "{{ux root}}",
     stories_root=project_root / "{{stories root}}",
     fixtures=LernDomainDriven().canvas_fixtures(project_root),
+    # The canvas is named ux-mockup for the whole repository; name the increment, feature, epic or module it covers
+    # here to name it {scope}-ux-mockup instead.
+    scope="{{scope, or empty for the whole repository}}",
 )
 rendered = canvas.render({"{{screen slug}}": screen})
 # Fix each value a step names that a screen leaves out (rendered.walk.misses), and render again until nothing is
 # missing but what the person accepts.
-print(rendered.summary("{{Product}} Story Map"))
+print(rendered.summary())

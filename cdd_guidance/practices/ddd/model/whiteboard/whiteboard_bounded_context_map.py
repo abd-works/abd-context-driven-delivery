@@ -82,12 +82,14 @@ class WhiteboardBoundedContextMap(DrawnBoundedContextMap, WhiteboardCleanEnginee
         return WhiteboardCleanEngineeringModel.render(self, self, written)
 
     def take_board(self, board: Whiteboard) -> "WhiteboardBoundedContextMap":
-        """Read the board's modules or classes, and the map's own name from the title it was drawn under; a modules
-        view's title names its system instead, and a board of classes is titled for its view, not for the map."""
+        """Read the board's modules or classes, and the map's own name from the title label drawn over the map; a
+        modules view's title names its system instead, and a board of classes is titled for its view, not for the map.
+        The board's own title is its file's name, which names no map."""
         super().take_board(board)
         holds_classes = any(module.classes for module in self.modules)
-        if not holds_classes and not board.title.rstrip().endswith(MODULES_TITLE_ENDING):
-            self.title = board.title.strip()
+        drawn_title = next((label.text for label in board.labels if label.id == "title"), "")
+        if not holds_classes and not drawn_title.rstrip().endswith(MODULES_TITLE_ENDING):
+            self.title = drawn_title.strip()
         return self
 
     def parse(self, text: str, file: str = "") -> "WhiteboardBoundedContextMap":

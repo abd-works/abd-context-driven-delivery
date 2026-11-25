@@ -49,8 +49,16 @@ with description("Canvas versions") as self:
             expect(started.number).to(equal(2))
             expect((self.root / "version-1" / "project" / "Main.dc.html").read_text(encoding="utf-8")).to(equal("edited on the canvas"))
 
-        with it("names the published canvas after its version"):
-            expect(self.versions.start_next().title("PML Story Map")).to(equal("PML Story Map — version-2"))
+        with it("titles the published canvas ux-mockup with its version, for the whole repository"):
+            expect(self.versions.start_next().title).to(equal("ux-mockup.version-2"))
+
+        with it("puts the scope's name in front of a scoped canvas's title"):
+            expect(CanvasVersions(self.root, "ordering").start_next().title).to(equal("ordering-ux-mockup.version-2"))
+
+        with it("keeps the scope's name in the title of a version kept as a release"):
+            self.versions = CanvasVersions(self.root, "ordering")
+            (self.root / "versions.json").write_text('{"version-1": "https://claude.ai/artifact/one"}', encoding="utf-8")
+            expect(self.versions.latest.release("first-release").title).to(equal("ordering-ux-mockup.first-release"))
 
     with context("recording published links"):
         with it("remembers each version's link"):

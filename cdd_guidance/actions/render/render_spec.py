@@ -500,8 +500,14 @@ with description("Render saving what it makes beside its source") as self:
             self.results = Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
             self.board_file = self.folder / "story-map.whiteboard"
 
-        with it("should save the board file beside the markdown"):
-            expect(Whiteboard.from_text(self.board_file.read_text(encoding="utf-8")).title).to(equal("Story Map"))
+        with it("should save the board file beside the markdown, titled with the file's name"):
+            expect(Whiteboard.from_text(self.board_file.read_text(encoding="utf-8")).title).to(equal("story-map"))
+
+        with it("should answer the title the board in Claude is created with, the file's name"):
+            expect(self.results[0].title).to(equal("story-map"))
+
+        with it("should tell the agent to title the new board exactly with that name"):
+            expect(self.results[0].publish).to(contain("titled exactly title"))
 
         # The board's meta, the story map's markdown kept in one part beside it, and every element.
         with it("should answer with the writes that put the whole board on a new board in Claude"):

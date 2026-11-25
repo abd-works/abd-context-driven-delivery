@@ -63,6 +63,16 @@ with description("the CDD version a chat runs") as self:
         with it("should name its version by major and minor"):
             expect(self.checked(OriginStub("0.1.0")).version).to(equal("v0.1"))
 
+    with context("with a patch number"):
+        with before.each:
+            (self.checkout / "pyproject.toml").write_text(pyproject("0.1.2"), encoding="utf-8")
+
+        with it("should name its version by major, minor and patch"):
+            expect(self.checked(OriginStub("0.1.2")).version).to(equal("v0.1.2"))
+
+        with it("should read current against the same patch release"):
+            expect(self.checked(OriginStub("0.1.2")).standing).to(equal(VersionStanding.CURRENT))
+
     # The chat bar reads it after every turn, so a version changed on disk shows at once without asking origin each time.
     with context("read again without fetching"):
         with before.each:
@@ -81,7 +91,17 @@ with description("the CDD version a chat runs") as self:
 
     with context("that the latest release is the same version"):
         with it("should read current"):
-            expect(self.checked(OriginStub("0.1.3")).standing).to(equal(VersionStanding.CURRENT))
+            expect(self.checked(OriginStub("0.1.0")).standing).to(equal(VersionStanding.CURRENT))
+
+    with context("that the latest release is a newer patch of the same version"):
+        with it("should read behind by a patch version"):
+            expect(self.checked(OriginStub("0.1.3")).standing).to(equal(VersionStanding.BEHIND_PATCH))
+
+        with it("should name the latest release with its patch number"):
+            expect(self.checked(OriginStub("0.1.3")).latest).to(equal("v0.1.3"))
+
+        with it("should say the patch release is latest and that pressing the badge updates"):
+            expect(self.checked(OriginStub("0.1.3")).summary).to(contain("v0.1.3", "a patch update", "update and reinstall"))
 
     with context("that the latest release is a newer minor version"):
         with it("should read behind by a minor version"):

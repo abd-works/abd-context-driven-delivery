@@ -180,3 +180,20 @@ with description("a board that draws no UX screen"):
 
     with it("should not be taken for a UX map's file"):
         expect(WhiteboardUxMap.create().reads_file(Path("story-map.whiteboard"), Whiteboard("Story Map").save())).to(equal(False))
+
+
+def _saved_as(name: str, text: str) -> Whiteboard:
+    """text saved by a render as the whiteboard file called name, read back."""
+    import tempfile
+    from cdd_guidance.actions.render.rendered_file import RenderedFile
+    from harness.guidance.practice_formats import Rendered
+    from harness.markdown.format import Format
+
+    file = Path(tempfile.mkdtemp(prefix="board-title-")) / name
+    RenderedFile(file, Format("whiteboard")).save(Rendered(Format("whiteboard"), text))
+    return Whiteboard.from_text(file.read_text(encoding="utf-8"))
+
+
+with description("a UX mockup's board saved as its file") as self:
+    with it("should be titled with the file's name, the user goal it draws"):
+        expect(_saved_as("fill-cart.whiteboard", WhiteboardUxMap.create().render(mockup())).title).to(equal("fill-cart"))

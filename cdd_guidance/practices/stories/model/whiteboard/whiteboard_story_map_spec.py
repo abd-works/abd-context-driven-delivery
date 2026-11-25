@@ -3,6 +3,7 @@
 A whiteboard story map holds epics, stories, their kind, and their actors; scenarios live in the story files, as they
 do for drawio and miro."""
 
+from pathlib import Path
 from expects import be_a, be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
@@ -85,3 +86,26 @@ with description("a story map's thin slice drawn on a Claude whiteboard") as sel
         expect([(increment.name, [story.name for story in increment.stories]) for increment in read.increments]).to(equal(
             [(increment.name, [story.name for story in increment.stories]) for increment in self.story_map.increments]
         ))
+
+
+def _saved_as(name: str, text: str) -> Whiteboard:
+    """text saved by a render as the whiteboard file called name, read back."""
+    import tempfile
+    from cdd_guidance.actions.render.rendered_file import RenderedFile
+    from harness.guidance.practice_formats import Rendered
+    from harness.markdown.format import Format
+
+    file = Path(tempfile.mkdtemp(prefix="board-title-")) / name
+    RenderedFile(file, Format("whiteboard")).save(Rendered(Format("whiteboard"), text))
+    return Whiteboard.from_text(file.read_text(encoding="utf-8"))
+
+
+with description("a story map's board saved as its file") as self:
+    with it("should be titled with the file's name, story-map"):
+        expect(_saved_as("story-map.whiteboard", WhiteboardStoryMap().copy_of(round_trip_story_map()).save()).title).to(equal("story-map"))
+
+    with it("should keep a versioned file's version in its title"):
+        expect(_saved_as("story-map.version-2.whiteboard", WhiteboardStoryMap().copy_of(round_trip_story_map()).save()).title).to(equal("story-map.version-2"))
+
+    with it("should title the thin slice with its file's name, thin-slice"):
+        expect(_saved_as("thin-slice.whiteboard", WhiteboardStoryMap().copy_of(round_trip_story_map()).save_thin_slice()).title).to(equal("thin-slice"))

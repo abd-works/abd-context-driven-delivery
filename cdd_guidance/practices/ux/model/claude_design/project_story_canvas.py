@@ -1,7 +1,7 @@
 """One project's story canvas, rendered in one call: what the UX practice's mockup fidelity runs in the claude_design
 format.
 
-``ProjectStoryCanvas(project_root, ux_root, stories_root, fixtures).render(screens)``:
+``ProjectStoryCanvas(project_root, ux_root, stories_root, fixtures, scope).render(screens)``:
 
 1. reads the story map below the Stories practice's root, with each story's scenario file, and the UX map
    (``<ux root>/ux.json``);
@@ -94,8 +94,9 @@ class RenderedStoryCanvas:
     walk: WalkReport
     walk_file: Path
 
-    def summary(self, name: str) -> str:
-        """The render in a few lines: where it went, the walk's misses, and the title to publish it under."""
+    def summary(self) -> str:
+        """The render in a few lines: where it went, the walk's misses, and the title to publish it under, the
+        version's own (``CanvasVersion.title``, such as ``ux-mockup.version-7``)."""
         lines = [f"Rendered {len(self.files)} canvas files into {self.version.folder}.",
                  f"Walk: {self.walk_file} ({len(self.walk.misses)} value(s) the screens leave out)."]
         lines += [f"  - {miss}" for miss in self.walk.misses]
@@ -103,26 +104,29 @@ class RenderedStoryCanvas:
             lines.append(f"Publish it again at {self.version.link}, the canvas this project keeps updating in place, after reading "
                          f"that canvas back for edits people made there, and record the link again with version.publish_at.")
         else:
-            lines.append(f"Publish it as a new canvas titled {self.version.title(name)!r} and keep its link with version.publish_at.")
+            lines.append(f"Publish it as a new canvas titled exactly {self.version.title!r} and keep its link with version.publish_at.")
         return "\n".join(lines)
 
-    def print_summary(self, name: str, out: Optional[TextIO] = None) -> None:
+    def print_summary(self, out: Optional[TextIO] = None) -> None:
         """Print the summary to out (standard output by default), writing each character out's encoding cannot hold,
         such as a minus sign a step value quotes on a Windows console, as its escape (``\\u2212``)."""
         out = out or sys.stdout
         encoding = getattr(out, "encoding", None) or "utf-8"
-        out.write(self.summary(name).encode(encoding, "backslashreplace").decode(encoding) + "\n")
+        out.write(self.summary().encode(encoding, "backslashreplace").decode(encoding) + "\n")
 
 
 @dataclass
 class ProjectStoryCanvas:
     """A project's story canvas: the project's root, the UX practice's root (where the canvas versions and ``ux.json``
-    live), the Stories practice's root (where the story map lives), and the pattern's fixtures builder."""
+    live), the Stories practice's root (where the story map lives), the pattern's fixtures builder, and the scope the
+    canvas covers, which names it: none for the whole repository (``ux-mockup``), else the increment, feature, epic or
+    module's name (``{scope}-ux-mockup``)."""
 
     project_root: Path
     ux_root: Path
     stories_root: Path
     fixtures: CanvasFixtures
+    scope: str = ""
     walk_type: type = field(default=StoryCanvasWalk)
 
     def render(self, screens: Optional[Mapping[str, StoryScreen]] = None) -> RenderedStoryCanvas:
@@ -132,7 +136,7 @@ class ProjectStoryCanvas:
         story_map = self.story_map()
         ux_document = self._ux_document()
         self._check_on_ux_map(screens, ux_document)
-        version = CanvasVersions.in_practice_root(self.ux_root).working()
+        version = CanvasVersions.in_practice_root(self.ux_root, self.scope).working()
         project = version.folder / "project"
         self._build_fixtures(story_map, project / FIXTURES_FILE)
         self._write_screens(screens, project, ux_document)

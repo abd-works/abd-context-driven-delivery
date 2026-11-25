@@ -215,7 +215,7 @@ class Ux(PracticeGuidance):
         canvas = ProjectStoryCanvas(project_root=root, ux_root=Path(self._session_output.folder),
                                     stories_root=Path(self.session.practices["stories"].folder),
                                     fixtures=self._canvas_fixtures(root))
-        return canvas.render().summary(f"{root.name} Story Map")
+        return canvas.render().summary()
 
     def _canvas_fixtures(self, workspace: Path) -> object:
         """The fixtures builder of the first pattern the session overlays that builds canvas fixtures, else one that

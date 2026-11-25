@@ -194,3 +194,30 @@ _TWO_CONTEXTS = """# Domain Model
 + price: number
 ----
 """
+
+
+def _saved_as(name: str, text: str) -> Whiteboard:
+    """text saved by a render as the whiteboard file called name, read back."""
+    import tempfile
+    from cdd_guidance.actions.render.rendered_file import RenderedFile
+    from harness.guidance.practice_formats import Rendered
+    from harness.markdown.format import Format
+
+    file = Path(tempfile.mkdtemp(prefix="board-title-")) / name
+    RenderedFile(file, Format("whiteboard")).save(Rendered(Format("whiteboard"), text))
+    return Whiteboard.from_text(file.read_text(encoding="utf-8"))
+
+
+with description("a DDD board saved as its file"):
+    with it("should title the bounded context map with its file's name, bounded-context-map"):
+        text = WhiteboardBoundedContextMap().render(MarkdownBoundedContextMap().parse(_MAP))
+        expect(_saved_as("bounded-context-map.whiteboard", text).title).to(equal("bounded-context-map"))
+
+    with it("should title the domain model with its file's name, domain-model"):
+        text = WhiteboardBoundedContextMap().render(MarkdownBoundedContextMap().parse(_MODEL))
+        expect(_saved_as("domain-model.whiteboard", text).title).to(equal("domain-model"))
+
+    with it("should still read the map's own name back from the title drawn over it"):
+        source = MarkdownBoundedContextMap().parse(_MAP)
+        saved = _saved_as("bounded-context-map.whiteboard", WhiteboardBoundedContextMap().render(source))
+        expect(WhiteboardBoundedContextMap().parse(saved.save()).title).to(equal(source.title))

@@ -119,6 +119,9 @@ with description("a project's story canvas rendered in one call") as self:
             self.rendered = project_canvas(self.root, self.fixtures).render({"order-plan": order_screen()})
             self.project = self.rendered.version.folder / "project"
 
+        with it("should say to publish it titled exactly as the canvas and its version are named, ux-mockup.version-1"):
+            expect(self.rendered.summary()).to(contain("titled exactly 'ux-mockup.version-1'"))
+
         with it("should render into the working version of the UX root's design canvas"):
             expect(self.rendered.version.folder).to(equal(self.root / "ux" / "design-canvas" / "version-1"))
             expect((self.project / "canvas.json").is_file()).to(be_true)
@@ -166,6 +169,12 @@ with description("a project's story canvas rendered in one call") as self:
         with it("should copy the files it loads into the version"):
             expect((self.project / "domain.js").is_file()).to(be_true)
 
+    with context("when the canvas covers one scope"):
+        with it("should say to publish it titled with the scope's name in front, ordering-ux-mockup.version-1"):
+            canvas = ProjectStoryCanvas(project_root=self.root, ux_root=self.root / "ux", stories_root=self.root / "tests" / ".context",
+                                        fixtures=RecordedFixtures(), scope="ordering", walk_type=QuietWalk)
+            expect(canvas.render({"order-plan": order_screen()}).summary()).to(contain("titled exactly 'ordering-ux-mockup.version-1'"))
+
     with context("when the walk names a value a Windows console cannot print"):
         with before.each:
             canvas = ProjectStoryCanvas(project_root=self.root, ux_root=self.root / "ux", stories_root=self.root / "tests" / ".context",
@@ -175,12 +184,12 @@ with description("a project's story canvas rendered in one call") as self:
             self.console = io.TextIOWrapper(self.bytes, encoding="cp1252")
 
         with it("should print the summary to that console, writing the value as an escape"):
-            self.rendered.print_summary("Shop", self.console)
+            self.rendered.print_summary(self.console)
             self.console.flush()
             expect(self.bytes.getvalue()).to(contain(b"Then the cart reads \u2212$5.00"))
 
         with it("should keep the value as it is in the summary's text"):
-            expect(self.rendered.summary("Shop")).to(contain("\u2212$5.00"))
+            expect(self.rendered.summary()).to(contain("\u2212$5.00"))
 
     with context("when the project keeps one canvas and it is already published"):
         with before.each:
@@ -192,7 +201,7 @@ with description("a project's story canvas rendered in one call") as self:
             expect(self.rendered.version.folder).to(equal(self.root / "ux" / "design-canvas" / "version-1"))
 
         with it("should say to publish it again at the link it already has"):
-            expect(self.rendered.summary("Shop")).to(contain("https://claude.ai/artifact/one"))
+            expect(self.rendered.summary()).to(contain("https://claude.ai/artifact/one"))
 
     with context("when the fixtures cannot be built"):
         with before.each:

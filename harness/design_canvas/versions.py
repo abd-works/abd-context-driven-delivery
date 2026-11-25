@@ -32,6 +32,14 @@ _VERSION = re.compile(r"^version-(\d+)$")
 _ACCEPTED_MISSES = "accepted_misses"
 # The setting in versions.json that keeps one canvas every render updates in place, instead of a new version each time.
 KEEP_ONE = "keep_one"
+# The name of the canvas of the whole repository, the UX practice's mockup; a canvas scoped to an increment, a feature,
+# an epic or a module puts the scope's name in front, as other formats name their scoped files (``{scope}-ux-mockup``).
+CANVAS_NAME = "ux-mockup"
+
+
+def canvas_name(scope: str = "") -> str:
+    """The canvas's name: ``ux-mockup`` for the whole repository, ``{scope}-ux-mockup`` for one scoped to scope."""
+    return f"{scope}-{CANVAS_NAME}" if scope else CANVAS_NAME
 
 
 class PublishedVersion(Exception):
@@ -61,11 +69,13 @@ class UnshownStepValues(Exception):
 
 class CanvasVersion:
     """One version of a canvas: its folder, which holds ``project/`` exactly as the canvas publishes it, its number
-    (none for a version kept as a release), and the link it was published at."""
+    (none for a version kept as a release), the link it was published at, and the canvas's name, which its title
+    starts with."""
 
-    def __init__(self, folder: Path, published: PublishedLinks) -> None:
+    def __init__(self, folder: Path, published: PublishedLinks, name: str) -> None:
         self.folder = folder
         self._published = published
+        self._name = name
 
     @property
     def number(self) -> Optional[int]:
@@ -78,9 +88,11 @@ class CanvasVersion:
         """The link the version was published at; none while it is unpublished."""
         return self._published.of(self.folder.name)
 
-    def title(self, name: str) -> str:
-        """The title the version is published under: the canvas's name and the version's folder."""
-        return f"{name} — {self.folder.name}"
+    @property
+    def title(self) -> str:
+        """The title the version is published under: the canvas's name, then the version's folder, as a versioned file
+        is named (``ux-mockup.version-7``), so a person can tell canvases apart and match each to its folder."""
+        return f"{self._name}.{self.folder.name}"
 
     @property
     def accepted_misses(self) -> List[str]:
@@ -104,14 +116,17 @@ class CanvasVersion:
         target = self.folder.parent / name
         self.folder.rename(target)
         self._published.rename(self.folder.name, name)
-        return CanvasVersion(target, self._published)
+        return CanvasVersion(target, self._published, self._name)
 
 
 class CanvasVersions:
-    """The versions of the canvas kept under root (for example ``<ux root>/design-canvas``)."""
+    """The versions of the canvas kept under root (for example ``<ux root>/design-canvas``), named for scope: the whole
+    repository when scope is empty (``ux-mockup``), else the increment, feature, epic or module it names
+    (``{scope}-ux-mockup``)."""
 
-    def __init__(self, root: str | Path) -> None:
+    def __init__(self, root: str | Path, scope: str = "") -> None:
         self.root = Path(root)
+        self.name = canvas_name(scope)
         self._record = JsonFile(self.root / "versions.json")
         self.published = PublishedLinks(self._record)
 
@@ -122,10 +137,10 @@ class CanvasVersions:
         return self._record.read().get(KEEP_ONE) is True
 
     @classmethod
-    def in_practice_root(cls, practice_root: str | Path) -> CanvasVersions:
+    def in_practice_root(cls, practice_root: str | Path, scope: str = "") -> CanvasVersions:
         """The canvas the UX practice keeps in its root, the folder session.json names for it (``practices.ux.root``),
-        beside its other outputs."""
-        return cls(Path(practice_root) / DESIGN_CANVAS_FOLDER)
+        beside its other outputs, named for scope."""
+        return cls(Path(practice_root) / DESIGN_CANVAS_FOLDER, scope)
 
     @property
     def _numbers(self) -> List[int]:
@@ -135,7 +150,7 @@ class CanvasVersions:
         return sorted(int(match.group(1)) for match in found if match)
 
     def _numbered(self, number: int) -> CanvasVersion:
-        return CanvasVersion(self.root / f"version-{number}", self.published)
+        return CanvasVersion(self.root / f"version-{number}", self.published, self.name)
 
     @property
     def latest(self) -> Optional[CanvasVersion]:

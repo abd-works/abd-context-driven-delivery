@@ -362,3 +362,27 @@ with description("a board drawn over the file it replaces"):
         expect(board_of_two_cards().drawn_over("")).to(equal(board_of_two_cards().save()))
 
 
+with description("a whiteboard file's title") as self:
+    with it("should be the file's name without its .whiteboard ending"):
+        expect(Whiteboard.title_of(Path("tests/.context/story-map.whiteboard"))).to(equal("story-map"))
+
+    with it("should keep a versioned file's version"):
+        expect(Whiteboard.title_of(Path("story-map.version-2.whiteboard"))).to(equal("story-map.version-2"))
+
+    with it("should keep a scoped file's scope in front"):
+        expect(Whiteboard.title_of(Path("src/ordering/.context/ordering-model.whiteboard"))).to(equal("ordering-model"))
+
+    with context("written into the file's text"):
+        with before.each:
+            board = Whiteboard("Orders")
+            board.add(Label("title", x=0, y=-40, text="Orders"))
+            self.saved = Whiteboard.from_text(Whiteboard.titled_for(board.save(), Path("orders-model.whiteboard")))
+
+        with it("should title the board with the file's name"):
+            expect(self.saved.title).to(equal("orders-model"))
+
+        with it("should keep everything else the board holds"):
+            expect([label.text for label in self.saved.labels]).to(equal(["Orders"]))
+
+        with it("should refuse text that is no whiteboard file"):
+            expect(lambda: Whiteboard.titled_for("<mxfile/>", Path("orders-model.whiteboard"))).to(raise_error(UnreadableBoard))
