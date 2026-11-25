@@ -12,7 +12,7 @@ export const formatGlyphOf = (label: string): string => FORMAT_GLYPHS[label] ?? 
 const GAP = 1
 const HEALTH_MARK = 1
 // A list box's round border and its padding, on both sides.
-const LIST_FRAME = 4
+export const LIST_FRAME = 4
 
 // The icons after the session name at the right end, as SessionButtonsView draws them: push and push & merge, restart,
 // and close in a ticket's own chat, a gap between each.

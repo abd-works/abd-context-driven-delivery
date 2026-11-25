@@ -1,17 +1,20 @@
 // (S) Person --> Show Backlog Items In Session List
 // (S) Person --> Start Backlog Item From Session List
-// The main chat's session list holds a BACKLOG section: the Backlog's items, a parent closed to + N until the Person
-// opens it on its child items. Starting an item, parent or child, goes down the board's own way out of the Backlog:
+// The main chat's session list holds the Backlog closed, saying how many items it holds; opened, a BACKLOG box beside the
+// list shows them, in further columns where the chat has too few rows, and a parent's + N opens its child items in a
+// further box beside that. Starting an item, parent or child, goes down the board's own way out of the Backlog:
 // backlog-item.start on the folder chosen beside the new session's name, then ticket.activate, as Open Session does.
 // Scenarios: story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md
 import { expect, test } from 'claude-code/testing'
 
-const BAND = {
+// The band above the prompt, maxRows tall; a test that runs the Backlog into columns makes it shorter.
+let bandRows = 40
+const bandOf = () => ({
   plugin: 'cdd-board',
   component: 'AbovePrompt',
   requestId: 'above-prompt',
-  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: 40, bodyColumns: 120, scroll: { offset: 0, bodyRows: 40 }, view: {} },
-} as const
+  props: { hasSurvey: false, isCollapsed: false, isWorking: false, maxRows: bandRows, bodyColumns: 160, scroll: { offset: 0, bodyRows: bandRows }, view: {} },
+}) as const
 
 type TestOn = Parameters<Extract<Parameters<typeof test>[1], (...args: never[]) => unknown>>[1]
 type Engine = Parameters<Parameters<typeof test>[1]>[0]
@@ -50,7 +53,8 @@ const nameOf = (title: string) => title.toLowerCase().replace(/ /g, '-')
 
 /** The repository's own chat whose board holds items; backlog-item.start answers each item's ticket unless refused,
  * and ticket.activate opens it unless refused. Each cdd tool called is kept with its arguments, and each failure shown. */
-function mainChat(on: TestOn, items: unknown[], refused: { start?: string; activate?: string } = {}, picked = '') {
+function mainChat(on: TestOn, items: unknown[], refused: { start?: string; activate?: string } = {}, picked = '', rows = 40) {
+  bandRows = rows
   const called: Called[] = []
   const toasts: string[] = []
   const stored: Record<string, { value: unknown; version: number }> = {}
@@ -114,7 +118,7 @@ async function barAfterRead($: Engine, called: Called[]) {
   await $.turn.complete(FINISHED_TURN)
   for (let tries = 0; tries < WAITS && reads() === before; tries += 1) await new Promise(resolve => setTimeout(resolve, WAIT_MS))
   await new Promise(resolve => setTimeout(resolve, WAIT_MS))
-  return $.ui.mount({ ...BAND, surface: 'desktop' })
+  return $.ui.mount({ ...bandOf(), surface: 'desktop' })
 }
 
 type Mounted = Awaited<ReturnType<typeof barAfterRead>>
@@ -125,7 +129,7 @@ async function pressedAndDrawn($: Engine, ui: Mounted, ...keys: string[]): Promi
   for (const key of keys) {
     await drawn.press({ key })
     await drawn.unmount()
-    drawn = await $.ui.mount({ ...BAND, surface: 'desktop' })
+    drawn = await $.ui.mount({ ...bandOf(), surface: 'desktop' })
   }
   return drawn
 }
@@ -135,6 +139,14 @@ async function sessionList($: Engine, called: Called[]): Promise<Mounted> {
   return pressedAndDrawn($, await barAfterRead($, called), 'session-list-button')
 }
 
+const TOGGLE = 'session-backlog-toggle'
+
+// The session list open, with the Backlog opened beside it.
+async function backlog($: Engine, called: Called[]): Promise<Mounted> {
+  return pressedAndDrawn($, await sessionList($, called), TOGGLE)
+}
+
+const labelOf = async (ui: Mounted, key: string) => (await ui.find({ type: 'Button', key }))?.props.label
 const startKey = (title: string) => `session-backlog-start-${title}`
 const openKey = (title: string) => `session-backlog-open-${title}`
 const isShown = async (ui: Mounted, key: string) => Boolean(await ui.find({ type: 'Button', key }))
@@ -144,48 +156,85 @@ const startsOf = (called: Called[]) => called.filter(call => call.tool === 'back
 
 // Show Backlog Items In Session List
 
-test('the session list lists the Backlog items in a BACKLOG section', async ($, on) => {
+test('the session list shows the Backlog closed, saying how many items it holds', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
 
   const ui = await sessionList($, called)
 
+  expect([await labelOf(ui, TOGGLE), await isShown(ui, startKey('Payment retry'))]).toEqual(['◂ ☰ Backlog (2)', false])
+  await ui.unmount()
+})
+
+test('opening the Backlog shows its items in a BACKLOG box', async ($, on) => {
+  const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
+
+  const ui = await backlog($, called)
+
   expect([Boolean(await ui.find({ type: 'Text', text: 'BACKLOG' })), await isShown(ui, startKey('Payment retry')), await isShown(ui, startKey('Checkout flow'))]).toEqual([true, true, true])
+  await ui.unmount()
+})
+
+test('the BACKLOG box opens beside the session list, which keeps its rows', async ($, on) => {
+  const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
+
+  const ui = await backlog($, called)
+
+  expect([Boolean(await ui.find({ type: 'Box', key: 'session-backlog-box' })), Boolean(await ui.find({ type: 'Box', key: 'session-list' })), await labelOf(ui, TOGGLE)]).toEqual([true, true, '▸ ☰ Backlog (2)'])
+  await ui.unmount()
+})
+
+test('the Backlog is closed again each time the session list opens', async ($, on) => {
+  const { called } = mainChat(on, [PAYMENT_RETRY])
+
+  const ui = await pressedAndDrawn($, await backlog($, called), 'session-list-button', 'session-list-button')
+
+  expect(await isShown(ui, startKey('Payment retry'))).toBe(false)
+  await ui.unmount()
+})
+
+test('a Backlog taller than the chat has room for runs into a further column', async ($, on) => {
+  const items = Array.from({ length: 12 }, (_, place) => ({ title: `Idea ${place + 1}`, children: [] }))
+  const { called } = mainChat(on, items, {}, '', 11)
+
+  const ui = await backlog($, called)
+
+  expect([Boolean(await ui.find({ type: 'Box', key: 'session-backlog-column-1' })), Boolean(await ui.find({ type: 'Box', key: 'session-backlog-column-2' })), await isShown(ui, startKey('Idea 12'))]).toEqual([true, false, true])
   await ui.unmount()
 })
 
 test('a parent shows closed, counting its child items, which are hidden', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
 
-  const ui = await sessionList($, called)
+  const ui = await backlog($, called)
 
-  expect([(await ui.find({ type: 'Button', key: openKey('Checkout flow') }))?.props.label, await isShown(ui, startKey('Address form'))]).toEqual(['+ 2', false])
+  expect([await labelOf(ui, openKey('Checkout flow')), await isShown(ui, startKey('Address form'))]).toEqual(['+ 2', false])
   await ui.unmount()
 })
 
-test('opening a parent shows its child items under it', async ($, on) => {
+test('opening a parent lists its child items in a further box beside the BACKLOG box', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), openKey('Checkout flow'))
+  const ui = await pressedAndDrawn($, await backlog($, called), openKey('Checkout flow'))
 
-  expect([(await ui.find({ type: 'Button', key: openKey('Checkout flow') }))?.props.label, await isShown(ui, startKey('Address form')), await isShown(ui, startKey('Card form'))]).toEqual(['- 2', true, true])
+  expect([await labelOf(ui, openKey('Checkout flow')), Boolean(await ui.find({ type: 'Box', key: 'session-backlog-children-box' })), await isShown(ui, startKey('Address form')), await isShown(ui, startKey('Card form'))]).toEqual(['- 2', true, true, true])
   await ui.unmount()
 })
 
-test('closing an opened parent hides its child items again', async ($, on) => {
+test('closing an opened parent takes its box away', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), openKey('Checkout flow'), openKey('Checkout flow'))
+  const ui = await pressedAndDrawn($, await backlog($, called), openKey('Checkout flow'), openKey('Checkout flow'))
 
-  expect(await isShown(ui, startKey('Address form'))).toBe(false)
+  expect([Boolean(await ui.find({ type: 'Box', key: 'session-backlog-children-box' })), await isShown(ui, startKey('Address form'))]).toEqual([false, false])
   await ui.unmount()
 })
 
-test('an empty Backlog shows no BACKLOG section', async ($, on) => {
+test('an empty Backlog shows no Backlog row', async ($, on) => {
   const { called } = mainChat(on, [])
 
   const ui = await sessionList($, called)
 
-  expect(await ui.find({ type: 'Text', text: 'BACKLOG' })).toBeUndefined()
+  expect(await ui.find({ type: 'Button', key: TOGGLE })).toBeUndefined()
   await ui.unmount()
 })
 
@@ -194,7 +243,7 @@ test('an empty Backlog shows no BACKLOG section', async ($, on) => {
 test('starting an item starts it on the whole repository, then opens its ticket as Open Session does', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY])
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), startKey('Payment retry'))
+  const ui = await pressedAndDrawn($, await backlog($, called), startKey('Payment retry'))
 
   expect(called.filter(call => ['backlog-item.start', 'ticket.activate'].includes(call.tool)).map(call => ({ tool: call.tool, args: namedIn(call.args) }))).toEqual([
     { tool: 'backlog-item.start', args: { backlog_item: 'Payment retry' } },
@@ -206,7 +255,7 @@ test('starting an item starts it on the whole repository, then opens its ticket 
 test('starting an item closes the session list', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY])
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), startKey('Payment retry'))
+  const ui = await pressedAndDrawn($, await backlog($, called), startKey('Payment retry'))
 
   expect(await ui.find({ type: 'Text', text: 'BACKLOG' })).toBeUndefined()
   await ui.unmount()
@@ -215,7 +264,7 @@ test('starting an item closes the session list', async ($, on) => {
 test('starting an item says it started in Discovery', async ($, on) => {
   const { called, toasts } = mainChat(on, [PAYMENT_RETRY])
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), startKey('Payment retry'))
+  const ui = await pressedAndDrawn($, await backlog($, called), startKey('Payment retry'))
 
   expect(toasts).toContain('Payment retry started in Discovery')
   await ui.unmount()
@@ -225,7 +274,7 @@ test('starting an item says it started in Discovery', async ($, on) => {
 test('starting an item starts it on the folder chosen beside the new session name', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY], {}, `${FOLDER}/app/payments`)
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), 'new-session-folder', 'session-list-button', startKey('Payment retry'))
+  const ui = await pressedAndDrawn($, await sessionList($, called), 'new-session-folder', 'session-list-button', TOGGLE, startKey('Payment retry'))
 
   expect(startsOf(called)).toEqual([{ backlog_item: 'Payment retry', path: `${FOLDER}/app/payments` }])
   await ui.unmount()
@@ -234,7 +283,7 @@ test('starting an item starts it on the folder chosen beside the new session nam
 test('a started item leaves no folder chosen beside the new session name', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY], {}, `${FOLDER}/app/payments`)
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), 'new-session-folder', 'session-list-button', startKey('Payment retry'), 'session-list-button')
+  const ui = await pressedAndDrawn($, await sessionList($, called), 'new-session-folder', 'session-list-button', TOGGLE, startKey('Payment retry'), 'session-list-button')
 
   expect(await ui.find({ type: 'Text', text: 'in app/payments' })).toBeUndefined()
   await ui.unmount()
@@ -243,7 +292,7 @@ test('a started item leaves no folder chosen beside the new session name', async
 test('starting a parent starts it, and with it its child items', async ($, on) => {
   const { called } = mainChat(on, [CHECKOUT_FLOW])
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), startKey('Checkout flow'))
+  const ui = await pressedAndDrawn($, await backlog($, called), startKey('Checkout flow'))
 
   expect(startsOf(called)).toEqual([{ backlog_item: 'Checkout flow' }])
   await ui.unmount()
@@ -252,7 +301,7 @@ test('starting a parent starts it, and with it its child items', async ($, on) =
 test('starting a child item starts it alone', async ($, on) => {
   const { called } = mainChat(on, [CHECKOUT_FLOW])
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), openKey('Checkout flow'), startKey('Card form'))
+  const ui = await pressedAndDrawn($, await backlog($, called), openKey('Checkout flow'), startKey('Card form'))
 
   expect(startsOf(called)).toEqual([{ backlog_item: 'Card form' }])
   await ui.unmount()
@@ -261,7 +310,7 @@ test('starting a child item starts it alone', async ($, on) => {
 test('a start refused shows why on the failure line, and opens no ticket', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY], { start: 'BacklogItemNotFoundError: no backlog item titled Payment retry' })
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), startKey('Payment retry'))
+  const ui = await pressedAndDrawn($, await backlog($, called), startKey('Payment retry'))
 
   expect([Boolean(await ui.find({ type: 'Text', text: /Payment retry did not start/ })), called.some(call => call.tool === 'ticket.activate')]).toEqual([true, false])
   await ui.unmount()
@@ -270,7 +319,7 @@ test('a start refused shows why on the failure line, and opens no ticket', async
 test('a started item whose ticket does not open says it did not open', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY], { activate: 'WorktreeNotFoundError: the worktree is held open' })
 
-  const ui = await pressedAndDrawn($, await sessionList($, called), startKey('Payment retry'))
+  const ui = await pressedAndDrawn($, await backlog($, called), startKey('Payment retry'))
 
   expect(Boolean(await ui.find({ type: 'Text', text: /payment-retry did not open/ }))).toBe(true)
   await ui.unmount()
