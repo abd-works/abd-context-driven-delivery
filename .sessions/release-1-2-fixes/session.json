@@ -12,41 +12,53 @@
   },
   "practices": {
     "stories": {
-      "formats": {
-        "story_map": [
-          "drawio",
-          "whiteboard"
-        ]
+      "fidelities": {
+        "story_map": {
+          "formats": [
+            "drawio",
+            "whiteboard"
+          ]
+        }
       }
     },
     "ddd": {
-      "formats": {
-        "bounded_context": [
-          "drawio",
-          "whiteboard"
-        ]
+      "fidelities": {
+        "bounded_context": {
+          "formats": [
+            "drawio",
+            "whiteboard"
+          ]
+        }
       }
     },
     "ux": {
-      "formats": {
-        "ia": [
-          "drawio",
-          "whiteboard"
-        ]
+      "fidelities": {
+        "ia": {
+          "formats": [
+            "drawio",
+            "whiteboard"
+          ]
+        }
       }
     },
     "clean_engineering": {
-      "formats": {
-        "modules": [
-          "drawio",
-          "whiteboard"
-        ]
+      "fidelities": {
+        "modules": {
+          "formats": [
+            "drawio",
+            "whiteboard"
+          ]
+        }
       }
     },
     "bdd": {
-      "formats": {
-        "behavior": []
+      "fidelities": {
+        "behavior": {
+          "formats": []
+        }
       }
     }
-  }
+  },
+  "stage": "Hardening",
+  "stage_mark": "in-progress"
 }
