@@ -1,2 +1,8 @@
 2026-11-25T07:46:55Z --- 1
 2026-11-25T07:46:55Z backlog C:\dev\abd-context-driven-delivery\.sessions\_backlog\sync-design-canvas-with-production\sync-design-canvas-with-production.md
+2026-11-25T07:48:21Z tool prompt-queue.show
+2026-11-25T07:48:23Z tool prompt-queue.show
+2026-11-25T07:48:30Z tool sessions.switch 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-62
+2026-11-25T07:48:46Z tool prompt-queue.show 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-113
+2026-11-25T07:51:22Z tool session.debug_session 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-386
+2026-11-25T07:51:46Z tool prompt-queue.show 921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-sync-design-canvas-with\921c4857-e5ee-4f7a-9ff1-b4b2402f4ef7.jsonl 1-411

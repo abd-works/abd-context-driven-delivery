@@ -1371,6 +1371,23 @@ with description("the board tools") as self:
             with it("should stay as small as a ticket with no children"):
                 expect(len(json.dumps(self.overview)) < 40_000).to(be_true)
 
+        # A ticket's idea file can run to tens of thousands of characters, as a plan does; sent in the overview, it took
+        # the chat bar's answer past MCP's size limit, and the bar never draws it.
+        with context("with an active ticket whose idea file is long"):
+            with before.all:
+                def with_long_text(project: ProjectTools) -> dict:
+                    a_dozen_tickets_overview(project)
+                    (project.sessions / "ticket-0" / "ticket-0.md").write_text("# Ticket 0\n\n" + "A plan line.\n" * 5_000, encoding="utf-8")
+                    return project.call("board.overview")
+
+                self.overview = ProjectTools.answer_of(with_long_text)
+
+            with it("should leave the ticket's text out"):
+                expect(self.overview["active"]["text"]).to(equal(""))
+
+            with it("should stay as small as a ticket with no text"):
+                expect(len(json.dumps(self.overview)) < 40_000).to(be_true)
+
     with context("that are published through the cdd server"):
         with it("should name each tool after its object"):
             names = set(self.project.server.tools)

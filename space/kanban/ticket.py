@@ -734,9 +734,16 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
 
 class OverviewTicket(Ticket):
     """*OverviewTicket* is the active ticket as `board.overview` sends it to a reader such as the chat bar, whose MCP
-    answer is cut off past its size limit: the ticket whole, with each child by its name alone. Sent whole, each child
+    answer is cut off past its size limit: the ticket whole but for its text, with each child by its name alone. Sent whole, each child
     would carry its own progress, stage work, and children, so a ticket two levels of children deep would triple the
     answer; `board.show` keeps sending them whole for the board, where a stacked child shows in no column."""
+
+    @property
+    @data_field
+    def text(self) -> str:
+        """Empty: the reader draws no ticket text, and a plan kept in the idea file runs to tens of thousands of
+        characters, which took the answer past its size limit. `board.show` and `ticket.show` send it."""
+        return ""
 
     @property
     @data_field(reference=True)
