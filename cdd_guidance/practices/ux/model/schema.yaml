@@ -19,6 +19,7 @@ map:
   rules:
     - in-scope-epics-only
     - story-domain-js-imported
+    - scenario-listed-once
 
 screen:
   fidelity: ia
@@ -54,6 +55,9 @@ screen:
     - upstream-decisions-carried
     - real-frontend-not-mockup
     - real-backend-wired
+    - screen-is-a-prototype
+    - screen-follows-scenario
+    - every-scenario-has-a-state
 
 region:
   fidelity: ia

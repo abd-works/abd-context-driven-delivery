@@ -7,7 +7,17 @@ from pathlib import Path
 from mamba import description, context, it, before, after
 from expects import contain, equal, expect, be_none, raise_error
 
-from harness.design_canvas.versions import CanvasVersions, PublishedVersion
+from harness.design_canvas.versions import CanvasVersions, PublishedVersion, UnshownStepValues
+
+
+class _Walk:
+    """A walk of a version's screens, as the publish gate reads it: each step value a screen leaves out."""
+
+    def __init__(self, *misses: str) -> None:
+        self.misses = list(misses)
+
+
+_CLEAN = _Walk()
 
 
 with description("Canvas versions") as self:
@@ -46,9 +56,46 @@ with description("Canvas versions") as self:
         with it("remembers each version's link"):
             (self.root / "version-1").mkdir(parents=True)
             first = self.versions.latest
-            first.publish_at("https://claude.ai/artifact/one")
+            first.publish_at("https://claude.ai/artifact/one", _CLEAN)
             second = self.versions.start_next()
             expect((first.link, second.link)).to(equal(("https://claude.ai/artifact/one", None)))
+
+    with context("publishing a version whose screens leave out values their steps name"):
+        with before.each:
+            (self.root / "version-1" / "project").mkdir(parents=True)
+            self.version = self.versions.latest
+            self.walk = _Walk('Apply Voucher › Apply a voucher › "ALL10"', "Sign In › Wrong password › \"Invalid password\"")
+
+        with it("should refuse to record the link, naming each value left out"):
+            expect(lambda: self.version.publish_at("https://claude.ai/artifact/one", self.walk)).to(
+                raise_error(UnshownStepValues, contain('Apply Voucher › Apply a voucher › "ALL10"')))
+
+        with it("should leave the version unpublished"):
+            try:
+                self.version.publish_at("https://claude.ai/artifact/one", self.walk)
+            except UnshownStepValues:
+                pass
+            expect(self.version.link).to(be_none)
+
+        with it("should still refuse while only some of the values left out are accepted"):
+            expect(lambda: self.version.publish_at("https://claude.ai/artifact/one", self.walk, accepted_misses=[self.walk.misses[0]])).to(
+                raise_error(UnshownStepValues, contain("Invalid password")))
+
+        with context("when the person accepts every value left out"):
+            with before.each:
+                self.version.publish_at("https://claude.ai/artifact/one", self.walk, accepted_misses=self.walk.misses)
+
+            with it("should record the link"):
+                expect(self.version.link).to(equal("https://claude.ai/artifact/one"))
+
+            with it("should keep the accepted values beside the link, so the gap stays in view"):
+                expect(self.version.accepted_misses).to(equal(self.walk.misses))
+
+    with context("publishing a version whose screens show every value their steps name"):
+        with it("should keep no accepted values beside the link"):
+            (self.root / "version-1" / "project").mkdir(parents=True)
+            self.versions.latest.publish_at("https://claude.ai/artifact/one", _CLEAN)
+            expect(self.versions.latest.accepted_misses).to(equal([]))
 
     with context("choosing the version a generator writes into"):
         with before.each:
@@ -58,11 +105,11 @@ with description("Canvas versions") as self:
             expect(self.versions.working().number).to(equal(1))
 
         with it("starts the next version once the latest is published"):
-            self.versions.latest.publish_at("https://claude.ai/artifact/one")
+            self.versions.latest.publish_at("https://claude.ai/artifact/one", _CLEAN)
             expect(self.versions.working().number).to(equal(2))
 
         with it("refuses to add to a published version"):
-            self.versions.latest.publish_at("https://claude.ai/artifact/one")
+            self.versions.latest.publish_at("https://claude.ai/artifact/one", _CLEAN)
             expect(lambda: self.versions.unpublished()).to(raise_error(PublishedVersion))
 
     with context("keeping a published version as a release"):
@@ -70,7 +117,7 @@ with description("Canvas versions") as self:
             for number in (1, 2):
                 (self.root / f"version-{number}" / "project").mkdir(parents=True)
                 (self.root / f"version-{number}" / "project" / "Main.dc.html").write_text(f"version {number}", encoding="utf-8")
-                self.versions.latest.publish_at(f"https://claude.ai/artifact/{number}")
+                self.versions.latest.publish_at(f"https://claude.ai/artifact/{number}", _CLEAN)
             self.released = self.versions.latest.release("design-system-setup")
 
         with it("renames the version's folder and its link to the release"):

@@ -4,6 +4,9 @@
 People edit a published canvas directly, so a regeneration never writes over one: it starts the next version, a
 copy of the latest that the generator then renders into, and that version is published as a new canvas.
 ``versions.json`` remembers each version's published link, in the order they were published (*PublishedLinks*). A
+version is recorded as published only after a walk of its screens (*WalkedScreens*, the UX practice's story canvas
+walk) finds every value its scenarios' steps name on the screen that shows the step, or the person accepts by name each
+value left out; the accepted ones are kept beside the link, so the gap stays in view. A
 version kept as a release is renamed to the release's name (``CanvasVersion.release``); numbering then starts again at
 ``version-1``, copied from that release.
 """
@@ -13,7 +16,7 @@ from __future__ import annotations
 import re
 import shutil
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Protocol, Sequence
 
 from harness.installation.json_file import JsonFile
 from harness.installation.published_links import PublishedLinks
@@ -21,10 +24,33 @@ from harness.installation.published_links import PublishedLinks
 # The folder a canvas is kept in, under the UX practice's root, where the UX practice writes its other outputs.
 DESIGN_CANVAS_FOLDER = "design-canvas"
 _VERSION = re.compile(r"^version-(\d+)$")
+# What a published version keeps beside its link: the values its screens leave out that the person accepted.
+_ACCEPTED_MISSES = "accepted_misses"
 
 
 class PublishedVersion(Exception):
     """A generator tried to write into a version that is already published, where people may have edited it."""
+
+
+class WalkedScreens(Protocol):
+    """A walk of a version's screens, each rendered at its scenarios' steps: what it found missing. Each miss names a
+    value a step names and its screen leaves out, as ``Story › Scenario › value``."""
+
+    @property
+    def misses(self) -> Sequence[str]: ...
+
+
+class UnshownStepValues(Exception):
+    """A version was about to be recorded as published while its screens leave out values their scenarios' steps name,
+    and the person has not accepted those gaps by name."""
+
+    def __init__(self, version: str, misses: Sequence[str]) -> None:
+        listed = "\n".join(f"  - {miss}" for miss in misses)
+        super().__init__(
+            f"{version} is not recorded as published: its screens leave out {len(misses)} value(s) their steps name. Make "
+            f"each screen show them, or pass the ones the prototype cannot show as accepted_misses:\n{listed}")
+        self.version = version
+        self.misses = list(misses)
 
 
 class CanvasVersion:
@@ -50,9 +76,22 @@ class CanvasVersion:
         """The title the version is published under: the canvas's name and the version's folder."""
         return f"{name} — {self.folder.name}"
 
-    def publish_at(self, url: str) -> None:
-        """Keep url as the link the version was published at."""
-        self._published.record(self.folder.name, url)
+    @property
+    def accepted_misses(self) -> List[str]:
+        """The values its screens leave out that the person accepted when it was published."""
+        return list(self._published.beside(self.folder.name).get(_ACCEPTED_MISSES, []))
+
+    def publish_at(self, url: str, walk: WalkedScreens, accepted_misses: Sequence[str] = ()) -> None:
+        """Keep url as the link the version was published at, once walk finds every value the steps name on its
+        screens. A value left out is refused (*UnshownStepValues*) unless accepted_misses names it, because a screen
+        that ignores its scenario shows the reader a story the scenario does not tell; the accepted ones are kept
+        beside the link."""
+        accepted = set(accepted_misses)
+        unaccepted = [miss for miss in walk.misses if miss not in accepted]
+        if unaccepted:
+            raise UnshownStepValues(self.folder.name, unaccepted)
+        kept = [miss for miss in walk.misses if miss in accepted]
+        self._published.record(self.folder.name, url, {_ACCEPTED_MISSES: kept} if kept else None)
 
     def release(self, name: str) -> CanvasVersion:
         """Keep this published version as the release name: its folder and its link take the release's name."""

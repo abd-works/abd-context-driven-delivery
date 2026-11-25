@@ -24,6 +24,7 @@ from cdd_guidance.practices.ux.model.html.nodes import HtmlUxMap
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap
 from harness.design_canvas.versions import CanvasVersions, PublishedVersion
+from cdd_guidance.practices.ux.model.claude_design.screen_walk import ScreenWalkReport
 from cdd_guidance.actions.render.rendered_file import NothingToRender
 from cdd_guidance.actions.render.source_files import SourceFormatRefused
 from cdd_guidance.actions.render.render_order import RenderFailed
@@ -652,7 +653,7 @@ with description("Render asked for a path, in a session") as self:
         with context("whose canvas's latest version is published"):
             with it("should refuse to write into it"):
                 self.to_canvas()
-                CanvasVersions.in_practice_root(self.project.root).latest.publish_at("https://claude.ai/artifact/canvas")
+                CanvasVersions.in_practice_root(self.project.root).latest.publish_at("https://claude.ai/artifact/canvas", ScreenWalkReport([]))
                 expect(self.to_canvas).to(raise_error(PublishedVersion))
 
         with context("whose canvas holds a screen people ported where a prototype page goes"):

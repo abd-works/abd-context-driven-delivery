@@ -24,6 +24,23 @@ with description("the addresses a folder's design canvas versions were published
         self.links.rename("version-1", "release-1")
         expect(list(self.links.all())).to(equal(["release-1", "version-2"]))
 
+    with context("with what else is kept beside an address"):
+        with before.each:
+            self.links.record("version-3", "https://claude.ai/artifact/third", beside={"accepted_misses": ["Pay › Pay by card › \"Visa\""]})
+
+        with it("should still read the address back"):
+            expect(self.links.of("version-3")).to(equal("https://claude.ai/artifact/third"))
+
+        with it("should keep what was recorded beside it"):
+            expect(self.links.beside("version-3")).to(equal({"accepted_misses": ["Pay › Pay by card › \"Visa\""]}))
+
+        with it("should keep nothing beside an address recorded alone"):
+            expect(self.links.beside("version-1")).to(equal({}))
+
+        with it("should keep what is beside it under a new name"):
+            self.links.rename("version-3", "release-3")
+            expect(self.links.beside("release-3")).to(equal({"accepted_misses": ["Pay › Pay by card › \"Visa\""]}))
+
     with context("with a record that cannot be read"):
         with before.each:
             self.file.write_text("not json", encoding="utf-8")

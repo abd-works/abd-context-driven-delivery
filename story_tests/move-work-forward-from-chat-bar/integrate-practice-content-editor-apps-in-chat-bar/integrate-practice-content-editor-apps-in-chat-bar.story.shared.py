@@ -25,6 +25,7 @@ from __future__ import annotations
 from expects import be_a, be_none, contain, equal, expect
 
 from cdd_guidance.practices.stories.model.story_map import StoryMap
+from cdd_guidance.practices.ux.model.claude_design.screen_walk import ScreenWalkReport
 from harness.design_canvas.versions import CanvasVersions
 from harness.apps.app import AppNotStarted, AppStatus
 from space.kanban.board import BoardPractice
@@ -223,7 +224,7 @@ def _(s):
         CHECKOUT_FLOW.seed_into(world.sessions_project)
         versions = CanvasVersions.in_practice_root(world.project / CHECKOUT_FLOW_DESIGN.ux_root)
         started = [versions.start_next() for _version in range(CHECKOUT_FLOW_DESIGN.version)]
-        started[-1].publish_at(CHECKOUT_FLOW_DESIGN.link)
+        started[-1].publish_at(CHECKOUT_FLOW_DESIGN.link, ScreenWalkReport([]))
 
     @s.and_("the file viewer is open on checkout-flow")
     def _(world):

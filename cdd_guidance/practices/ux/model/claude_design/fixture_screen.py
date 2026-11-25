@@ -23,8 +23,9 @@ __EDIT_LINK__</div>
 FIXTURE_TRIES = 50
 FIXTURE_WAIT_MILLISECONDS = 100
 
-# Methods every fixture-driven screen shares. The screen supplies STORY, SCENARIO, PATH, and fromFixture(repositories, scenario)
-# returning the state that scenario shows, and paste(field) mapping one pasted field into state.
+# Methods every fixture-driven screen shares. The screen supplies STORY, SCENARIO, PATH, and fromFixture(repositories,
+# scenario, examples, step) returning the state that scenario shows at the step the explorer selects (its Then's outcome
+# once the step is a Then), and paste(field) mapping one pasted field into state.
 METHODS = '''fixtures() {
 return typeof CanvasFixtures !== 'undefined' ? CanvasFixtures : null;
 }
@@ -38,7 +39,7 @@ this.whenFixtures(() => this.forceUpdate());
 if (this.props.scenario) this.followExplorer();
 }
 componentDidUpdate(previous) {
-if (this.props.scenario && previous.scenario !== this.props.scenario) {
+if (this.props.scenario && (previous.scenario !== this.props.scenario || previous.step !== this.props.step)) {
 this.setState({ scenario: this.props.scenario });
 this.followExplorer();
 }
@@ -59,7 +60,7 @@ const story = this.storyName();
 const scenario = chosen || this.scenarioName();
 if (!fixtures) { this.setState({ source: 'fixtures not loaded' }); return; }
 fixtures.load(story, scenario)
-.then((repositories) => Promise.resolve(this.fromFixture(repositories, scenario, fixtures.examples)))
+.then((repositories) => Promise.resolve(this.fromFixture(repositories, scenario, fixtures.examples, this.props.step || '')))
 .then((state) => this.setState(Object.assign({}, state, state && state.entered, { source: story + ' › ' + scenario })))
 .catch((problem) => this.setState({ source: String(problem && problem.message || problem) }));
 }
@@ -179,7 +180,7 @@ class FixtureScreen:
         """The screen's script: the bar's shared methods, the screen's own, and the values it renders."""
         own_methods, vals, width, height = self.own_methods, self.vals, self.width, self.height
         story, scenario, path = self.source.story, self.source.scenario, self.source.path
-        return f'''<script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
+        return f'''<script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"step":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
 class Component extends DCLogic {{
 {_methods(story, scenario, path)}{own_methods}renderVals() {{
 const st = this.state || {{}};

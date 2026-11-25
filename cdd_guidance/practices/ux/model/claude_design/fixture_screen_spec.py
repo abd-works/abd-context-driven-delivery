@@ -7,6 +7,7 @@ from expects import contain, equal, expect
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.ux.model.claude_design.fixture_screen import FIXTURE_TRIES, FIXTURE_WAIT_MILLISECONDS, FixtureScreen, ScenarioSource
+from cdd_guidance.practices.ux.model.claude_design.screen_artboard import ScreenArtboard
 
 
 with description("a fixture-driven screen") as self:
@@ -40,3 +41,13 @@ with description("a fixture-driven screen") as self:
     with context("inside the story explorer"):
         with it("should link Edit to the screen's own artboard"):
             expect(self.html).to(contain('href="/screens/select-plan.dc.html"'))
+
+        with it("should declare every prop the explorer hands it"):
+            expect(ScreenArtboard(self.html).declared_props).to(equal({"story", "scenario", "step", "go", "$preview"}))
+
+        with it("should read the scenario and the step the explorer selects"):
+            artboard = ScreenArtboard(self.html)
+            expect((artboard.reads_prop("scenario"), artboard.reads_prop("step"))).to(equal((True, True)))
+
+        with it("should hand the selected step to fromFixture, so a Then can show its outcome"):
+            expect(self.script).to(contain("this.fromFixture(repositories, scenario, fixtures.examples, this.props.step || '')"))
