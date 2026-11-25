@@ -644,6 +644,26 @@ describe('Open Whiteboard In Claude Desktop', () => {
     expect(await page.openPublished(board)).toBe(false)
     expect(server.posted('/send').filter(post => post.body.kind === 'submit')).toHaveLength(0)
   })
+
+  // Pressing a whiteboard that is on a board opens that board in Claude, never a drawing of the file beside the list;
+  // requested 2026-11-25: the file list must link to the Claude whiteboard.
+  it('should open the board in Claude when a whiteboard on a board is pressed', async () => {
+    const server = new FakeFilesServer()
+    const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+    await started(page)
+    await page.press(board)
+    const asked = server.posted('/send').filter(post => post.body.kind === 'submit').map(post => String(post.body.text))
+    expect(asked).toHaveLength(1)
+    expect(asked[0]).toContain('https://claude.ai/artifact/board-2')
+  })
+
+  it('should not draw the file beside the list when a whiteboard on a board is pressed', async () => {
+    const server = new FakeFilesServer()
+    const page = new FilesPage(server, new FilesLink(STAGE_LINK))
+    await started(page)
+    await page.press(board)
+    expect(page.state.openPath).not.toBe('.context/story-map.version-2.whiteboard')
+  })
 })
 
 // Fix this one on a broken rule's banner reaches the chat the way a comment does: a comment on the place's lines,

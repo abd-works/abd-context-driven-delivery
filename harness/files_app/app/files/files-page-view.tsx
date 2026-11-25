@@ -52,15 +52,18 @@ function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
   )
 }
 
-// A whiteboard opens beside the file list as its board drawn on a canvas, never as the file's text; one published to a
-// board in Claude also offers that board, which opens in Claude Desktop's artifact panel. One not on disk says why, as
-// any file not on disk does.
+// A whiteboard on a board in Claude opens that board, in Claude Desktop's artifact panel, or in a browser when no chat
+// opened the page; one not on a board yet opens beside the file list as its board drawn on a canvas, never as the
+// file's text. One not on disk says why, as any file not on disk does.
 function WhiteboardEntryView({ page, entry, published, isOpen }: { page: FilesPage; entry: FileEntryData; published: PublishedFile; isOpen: boolean }) {
-  const hint = entry.exists ? `${entry.path}: opens the whiteboard as a canvas` : `${entry.path}: ${missingNoteOf(entry)}`
+  const hint = !entry.exists ? `${entry.path}: ${missingNoteOf(entry)}` : published.link ? `${entry.path}: opens its board in Claude` : `${entry.path}: opens the whiteboard as a canvas`
   const note = entry.exists ? (published.link ? 'whiteboard' : 'whiteboard, not on a board in Claude yet') : `whiteboard, ${missingNoteOf(entry)}`
+  const press = async () => {
+    if (!(await page.press(entry))) window.open(published.link, '_blank', 'noreferrer')
+  }
   return (
     <li className="file-entry-row">
-      <button className={entryClassesOf(entry, isOpen)} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
+      <button className={entryClassesOf(entry, isOpen)} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void press()} onContextMenu={menuOn(page, entry.path)}>
         {published.name}
         <span className="file-entry-note"> {note}</span>
       </button>

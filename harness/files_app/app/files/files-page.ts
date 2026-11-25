@@ -249,6 +249,16 @@ export class FilesPage {
     await this.refreshOpen()
   }
 
+  // A file a person presses in the list: a whiteboard on a board opens that board in Claude, since the board is the
+  // whiteboard and the file only what it was published from; any other file opens beside the list. Answers whether a
+  // whiteboard's board was asked for, false when no chat opened the page to ask.
+  async press(entry: FileEntryData): Promise<boolean> {
+    const published = publishedOf(entry)
+    if (published?.kind === 'whiteboard' && published.link) return this.openPublished(entry)
+    await this.open(entry.path)
+    return true
+  }
+
   // A file a person chooses from the list opens alone, leaving the nodes selected in the graph view.
   async open(path: string): Promise<void> {
     this.showsLinkedLine = false
