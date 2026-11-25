@@ -23,9 +23,10 @@ const chatBarView = atom(
     isRepoListOpen: false,
     repos: [],
     newSessionFolder: '',
-    openBacklogParents: [],
+    isBacklogOpen: false,
+    openBacklogParent: '',
   } as ChatBarViewJson,
-  { shape: 'chat-bar-view-12' },
+  { shape: 'chat-bar-view-13' },
 )
 
 // A press turns choice on or off; the chosen stay in the order the Ticket offers them, so a choice sent reads the same
@@ -38,8 +39,14 @@ export function currentChatBarView($: EngineInterface) {
   return read($, chatBarView)
 }
 
+// The session list opens with the Backlog closed, so it is no taller than the sessions it lists.
 export async function toggleSessionList($: EngineInterface): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, isSessionListOpen: !view.isSessionListOpen, isRepoListOpen: false, isCardOpen: false }))
+  await update($, chatBarView, view => ({ ...view, isSessionListOpen: !view.isSessionListOpen, isRepoListOpen: false, isCardOpen: false, isBacklogOpen: false, openBacklogParent: '' }))
+}
+
+// The Backlog row of the session list opens the BACKLOG box beside the list, or closes it with any parent opened in it.
+export async function toggleBacklog($: EngineInterface): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, isBacklogOpen: !view.isBacklogOpen, openBacklogParent: '' }))
 }
 
 // The repo list opens alone, so the bar below it stays in view.
@@ -61,12 +68,10 @@ export async function chooseNewSessionFolder($: EngineInterface, newSessionFolde
   await update($, chatBarView, view => ({ ...view, newSessionFolder }))
 }
 
-// A press on a Backlog parent in the session list opens it on its child items, or closes it again.
+// A press on a parent's + N in the BACKLOG box opens its child items in a further box, in place of another parent's;
+// a press on its - N closes it.
 export async function toggleBacklogParent($: EngineInterface, title: string): Promise<void> {
-  await update($, chatBarView, view => {
-    const opened = view.openBacklogParents ?? []
-    return { ...view, openBacklogParents: opened.includes(title) ? opened.filter(open => open !== title) : [...opened, title] }
-  })
+  await update($, chatBarView, view => ({ ...view, openBacklogParent: view.openBacklogParent === title ? '' : title }))
 }
 
 export async function closeSessionList($: EngineInterface): Promise<void> {
