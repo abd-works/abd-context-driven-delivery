@@ -179,6 +179,11 @@ class CanvasVersions:
         numbers = self._numbers
         return self._numbered(numbers[-1]) if numbers else None
 
+    def published_at(self, link: str) -> Optional[CanvasVersion]:
+        """The version published at link, a numbered version or a release; none when no version was published there."""
+        name = next((name for name, published in self.published.all().items() if published == link), None)
+        return CanvasVersion(self.root / name, self.published, self.name) if name is not None else None
+
     def start_next(self) -> CanvasVersion:
         """Begin the next version as a copy of the latest (screens, images, fixtures), else of the newest release,
         leaving that one untouched."""

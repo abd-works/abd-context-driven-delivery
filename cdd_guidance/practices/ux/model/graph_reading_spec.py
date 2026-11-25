@@ -17,6 +17,7 @@ from harness.graph.graph import Graph  # noqa: E402
 
 import cdd_guidance.practices  # noqa: E402, F401
 from cdd_guidance.practices.ux.rules import BY_SLUG  # noqa: E402
+from cdd_guidance.practices.ux.model.shown_places import ShownPlaces  # noqa: E402
 
 _STORY_MAP = "# (E) Sell Books\n## (E) Browse Books\n### (S) Customer --> Browse Book List\n### (S) Customer --> View Book\n"
 
@@ -299,6 +300,26 @@ with description("a UX map read into the graph") as self:
             expect([(edge.child.type, edge.child.get_fact("text")) for edge in steps]).to(
                 equal([("When", "the Customer opens the book list")])
             )
+
+        with it("should join each step a Story Demo control runs back to the control"):
+            step = next(node for node in self.shop.graph.practices.named("stories").reading.in_graph.nodes("When"))
+            expect(self.shop.linked("runBy", step)).to(equal([("StoryDemoControl", "Titles")]))
+
+        with it("should lead a step a control serves to that control's screen, with the interactions the control starts"):
+            step = next(node for node in self.shop.graph.practices.named("stories").reading.in_graph.nodes("Then"))
+            places = [(place.screen.name, place.control.name, [i.name for i in place.interactions]) for place in ShownPlaces(self.shop.graph).of(step) if place.screen.source.file == _MAP_FILE]
+            expect(places).to(equal([("Book List", "Open book", ["open"])]))
+
+        with it("should lead a step no screen names to the screens its scenario is shown on"):
+            given = next(node for node in self.shop.graph.practices.named("stories").reading.in_graph.nodes("Given"))
+            places = ShownPlaces(self.shop.graph).of(given)
+            expect(sorted({(place.screen.name, place.through.type) for place in places})).to(equal([("Book Details", "Scenario"), ("Book List", "Scenario")]))
+
+        with it("should lead a screen to the stories it shows, and to every scenario and step of them"):
+            shown = ShownPlaces(self.shop.graph).shown_on(self.shop.node("Screen", "Book List"))
+            expect([(node.type, node.name) for node in shown][:2]).to(equal([("Story", "Browse Book List"), ("Scenario", "List every book")]))
+            expect(sorted(node.get_fact("text") for node in shown if node.type in ("Given", "When", "Then"))).to(
+                equal(["a Customer", "every book is listed", "the Customer opens the book list"]))
 
         with it("should join a Story Demo control to the property its bound field names on that property's class"):
             bound = self.shop.graph.edges.from_parent("boundField", self.shop.node("StoryDemoControl", "Titles"))

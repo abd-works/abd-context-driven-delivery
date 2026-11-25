@@ -1172,3 +1172,104 @@ with description("A comment a person left on a board in Claude") as self:
             answer = AgentInstructions.for_callable(Render.answer_board_comment, self.action)
             expanded = lambda: answer.expand({"board": "https://claude.ai/artifact/Elsewhere"})
             expect(expanded).to(raise_error(RecipeLineFailed, contain(BoardNotKept.__name__, "keeps the board https://claude.ai/artifact/Elsewhere")))
+
+
+_CANVAS_LINK = "https://claude.ai/artifact/StoryCanvas"
+_CANVAS_STORY_MAP = """\
+# (E) Sell Books
+
+## (E) Browse Books
+
+### (S) Customer --> Browse Book List
+
+### (S) Customer --> Find Book
+"""
+_CANVAS_STORY_FILE = "story_tests/browse-books/browse-book-list/browse_book_list_story.test.md"
+_CANVAS_SCENARIOS = """\
+# Story: Browse Book List
+
+#### Scenario: List every book
+
+*Given* the ++shelf++ holds ++two books++
+*When* the **Customer** opens the book list
+*Then* every book is listed
+
+#### Scenario Outline: Order a number of copies
+
+*Given* the **Customer** has an empty basket
+*When* the **Customer** orders <copies> copies
+*Then* the basket holds <copies> lines
+
+#### Examples
+
+| example | copies |
+| --- | --- |
+| one copy | 1 |
+| three copies | 3 |
+"""
+# The UX map the canvas is drawn with: the book list shows its story; find book shows the scenario the comment is not on.
+_CANVAS_UX_MAP = {
+    "name": "Bookshop",
+    "screens": [
+        {"name": "Book List", "story_names": ["Browse Book List"], "prototype": "screens/book-list.dc.html", "regions": []},
+        {"name": "Search", "story_names": ["Find Book"], "regions": []},
+    ],
+}
+
+
+with description("A comment a person left on a published design canvas") as self:
+    with before.all:
+        self.project = ThrowawayProject()
+        root = self.project.root
+        files = {
+            ".context/story-map.md": _CANVAS_STORY_MAP,
+            _CANVAS_STORY_FILE: _CANVAS_SCENARIOS,
+            "ux/ux.json": json.dumps(_CANVAS_UX_MAP, indent=2),
+            "ux/design-canvas/versions.json": json.dumps({"version-1": _CANVAS_LINK}),
+            "ux/design-canvas/version-1/project/canvas.json": "{}",
+        }
+        for relative, text in files.items():
+            (root / relative).parent.mkdir(parents=True, exist_ok=True)
+            (root / relative).write_text(text, encoding="utf-8")
+        self.action = Render().for_call(ToolCall({}, root))
+        self.answer = lambda anchor: AgentInstructions.for_callable(Render.answer_board_comment, self.action).expand(
+            {"board": _CANVAS_LINK, "anchor": anchor}).instructions
+
+    with after.all:
+        self.project.close()
+
+    with context("anchored to a step's row of the story explorer, as the comment shows it"):
+        with before.all:
+            self.text = self.answer("Story explorer › row 7 of 12 › text {{row.label}}\nGiven the shelf holds two bo…")
+
+        with it("should name the step and the scenario it sits in"):
+            expect(self.text).to(contain("Step 'Given the shelf holds two books' of scenario 'List every book' in story 'Browse Book List'"))
+
+        with it("should name the scenarios file to change at the step's line"):
+            expect(self.text).to(contain(f"change {_CANVAS_STORY_FILE}#L5"))
+
+        with it("should name the screen the graph says shows the step, through its story"):
+            expect(self.text).to(contain("shown on screen Book List (ux/ux.json), drawn by screens/book-list.dc.html, through its story 'Browse Book List'"))
+
+        with it("should hand over the rules of the scenarios fidelity, which writes the step"):
+            expect(self.text).to(contain("plain-english-gwt-steps"))
+
+    with context("anchored to a scenario's name"):
+        with it("should name the scenario and the line of its heading"):
+            expect(self.answer("List every book")).to(contain("Scenario 'List every book' of story 'Browse Book List'", f"{_CANVAS_STORY_FILE}#L3"))
+
+    with context("anchored to an outline's row, by its example's name"):
+        with it("should name the example and its outline, at the line of its row"):
+            expect(self.answer("three copies")).to(contain("Outline example 'three copies' of scenario 'Order a number of copies'", f"{_CANVAS_STORY_FILE}#L20"))
+
+    with context("anchored to a step an outline fills with its row"):
+        with it("should name the outline's step the filled words say"):
+            expect(self.answer("When the Customer orders 3 copies")).to(contain("Step 'When the Customer orders <copies> copies' of scenario 'Order a number of copies'"))
+
+    with context("anchored to a row that names nothing on the story map"):
+        with it("should refuse, naming the anchor"):
+            expect(lambda: self.answer("Given a step nobody wrote")).to(raise_error(RecipeLineFailed, contain("AnchorNamesNoStory", "a step nobody wrote")))
+
+    with context("with no anchor"):
+        with it("should refuse, asking for the row the comment sits on"):
+            expect(lambda: self.answer("")).to(raise_error(RecipeLineFailed, contain("CanvasCommentNeedsAnchor", "pass anchor")))

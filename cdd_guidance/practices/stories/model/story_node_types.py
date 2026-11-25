@@ -23,7 +23,7 @@ class StoryNodeTypes(PracticeNodeTypes):
     schema_node_types = {"subEpic": "Epic", "given": "Step", "when": "Step", "then": "Step"}
     child_lists = frozenset({"decomposedInto", "background", "scenarios", "steps", "examples", "increments", "stories", "ands"})
     edge_order = {
-        "decomposedInto": 1, "background": 2, "given": 2, "scenarios": 3, "steps": 4, "demonstrates": 4, "shownOn": 4,
+        "decomposedInto": 1, "background": 2, "given": 2, "scenarios": 3, "steps": 4, "demonstrates": 4, "shownOn": 4, "runBy": 4,
         "specifiedBy": 4, "examples": 5, "increments": 6, "stories": 7, "observes": 8, "ands": 9, "uses": 9,
         "retrievedUsing": 11, "invokes": 12,
     }

@@ -63,7 +63,7 @@ Convert already-generated content into another format.
 + render(guidance: GuidanceArg, format: str, paths: list[str] | str, content: str = '', source: str | None = None): list
 	-> GuidanceAction.document_named
 + place_rendered(): str
-+ answer_board_comment(board: str): str
++ answer_board_comment(board: str, anchor: str): str
 	// the board's comment is answered in the file it was drawn from, never on the board alone
 
 ## Satisfy : GuidanceAction
