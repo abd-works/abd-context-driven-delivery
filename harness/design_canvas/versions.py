@@ -18,6 +18,7 @@ same link again. The walk before publishing still runs.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 from pathlib import Path
@@ -31,6 +32,8 @@ DESIGN_CANVAS_FOLDER = "design-canvas"
 _VERSION = re.compile(r"^version-(\d+)$")
 # What a published version keeps beside its link: the values its screens leave out that the person accepted.
 _ACCEPTED_MISSES = "accepted_misses"
+# What is kept beside a version's link: each file of its project folder as it was published, by its content's hash.
+_PUBLISHED_FILES = "published_files"
 # The setting in versions.json that keeps one canvas every render updates in place, instead of a new version each time.
 KEEP_ONE = "keep_one"
 # The name of the canvas of the whole repository, the UX practice's mockup; a canvas scoped to an increment, a feature,
@@ -111,7 +114,23 @@ class CanvasVersion:
         if unaccepted:
             raise UnshownStepValues(self.folder.name, unaccepted)
         kept = [miss for miss in walk.misses if miss in accepted]
-        self._published.record(self.folder.name, url, {_ACCEPTED_MISSES: kept} if kept else None)
+        self._published.record(self.folder.name, url, {**({_ACCEPTED_MISSES: kept} if kept else {}), _PUBLISHED_FILES: self.file_hashes()})
+
+    def file_hashes(self) -> dict[str, str]:
+        """Each file of the version's project folder, by its path there, with its content's hash."""
+        project = self.folder / "project"
+        files = sorted(path for path in project.rglob("*") if path.is_file()) if project.is_dir() else []
+        return {path.relative_to(project).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
+
+    def changed_files(self) -> List[str]:
+        """The files of the project folder that differ from the version's last publish, by their path there: each new
+        or changed one, then each one removed since; every file while the version was never published with them
+        recorded."""
+        published = self._published.beside(self.folder.name).get(_PUBLISHED_FILES)
+        now = self.file_hashes()
+        if not isinstance(published, dict):
+            return list(now)
+        return [path for path, digest in now.items() if published.get(path) != digest] + sorted(path for path in published if path not in now)
 
     def release(self, name: str) -> CanvasVersion:
         """Keep this published version as the release name: its folder and its link take the release's name."""

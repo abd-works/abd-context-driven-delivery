@@ -209,6 +209,21 @@ with description("a project's story canvas rendered in one call") as self:
         with it("should say to publish it again at the link it already has"):
             expect(self.rendered.summary()).to(contain("https://claude.ai/artifact/one"))
 
+        with it("should say to read the live canvas.json for people's edits first"):
+            expect(self.rendered.summary()).to(contain("first read that canvas's live canvas.json for edits people made there"))
+
+        with context("rendered again after that publish, with one screen changed"):
+            with before.each:
+                self.rendered.version.publish_at("https://claude.ai/artifact/one", NoMisses())
+                changed = StoryScreen(title="Order Plan", story="Order Plan", markup=WrittenMarkup(head="", body="<main>{{ order.total }}</main>"),
+                                      positions={"Customer orders the Ace plan": [{"page": "plans"}, {"page": "order"}]})
+                self.again = project_canvas(self.root, RecordedFixtures()).render({"order-plan": changed})
+
+            with it("should name exactly the files that differ from the publish, to publish those"):
+                expect(self.again.changed).to(equal(["screens/order-plan.dc.html"]))
+                expect(self.again.summary()).to(contain("Publish the 1 file(s) that changed since the last publish"))
+                expect(self.again.summary()).to(contain("  - project/screens/order-plan.dc.html"))
+
     with context("when the fixtures cannot be built"):
         with before.each:
             self.canvas = project_canvas(self.root, RefusedFixtures())

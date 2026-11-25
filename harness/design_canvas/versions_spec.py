@@ -192,3 +192,39 @@ with description("the UX practice's canvas") as self:
 
     with it("should keep them out of the session's own folder"):
         expect(str(CanvasVersions.in_practice_root(self.repo / "harness" / ".context" / "ux").root)).not_to(contain(".sessions"))
+
+
+with description("a canvas version published before, rendered again") as self:
+    with before.each:
+        self.folder = tempfile.TemporaryDirectory()
+        self.root = Path(self.folder.name) / "design-canvas"
+        project = self.root / "version-1" / "project"
+        (project / "screens").mkdir(parents=True)
+        (project / "canvas.json").write_text("{}", encoding="utf-8")
+        (project / "screens" / "cart.dc.html").write_text("cart", encoding="utf-8")
+        (project / "screens" / "old.dc.html").write_text("old", encoding="utf-8")
+        self.version = CanvasVersions(self.root).latest
+        self.version.publish_at("https://claude.ai/artifact/one", _CLEAN)
+        self.project = project
+
+    with after.each:
+        self.folder.cleanup()
+
+    with it("should name no file while nothing changed since the publish"):
+        expect(self.version.changed_files()).to(equal([]))
+
+    with it("should name each file changed or added since the publish, then each removed"):
+        (self.project / "screens" / "cart.dc.html").write_text("cart, redrawn", encoding="utf-8")
+        (self.project / "screens" / "new.dc.html").write_text("new", encoding="utf-8")
+        (self.project / "screens" / "old.dc.html").unlink()
+        expect(self.version.changed_files()).to(equal(["screens/cart.dc.html", "screens/new.dc.html", "screens/old.dc.html"]))
+
+
+with description("a canvas version never published") as self:
+    with it("should name every file of its project folder"):
+        folder = tempfile.TemporaryDirectory()
+        project = Path(folder.name) / "design-canvas" / "version-1" / "project"
+        project.mkdir(parents=True)
+        (project / "canvas.json").write_text("{}", encoding="utf-8")
+        expect(CanvasVersions(Path(folder.name) / "design-canvas").latest.changed_files()).to(equal(["canvas.json"]))
+        folder.cleanup()

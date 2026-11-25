@@ -29,7 +29,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Mapping, Optional, Protocol, Sequence, TextIO
+from typing import Dict, List, Mapping, Optional, Protocol, Sequence, TextIO
 
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.model.story_map import StoryMap
@@ -97,15 +97,25 @@ class RenderedStoryCanvas:
     walk: WalkReport
     walk_file: Path
 
+    @property
+    def changed(self) -> List[str]:
+        """The files of the version's project folder that differ from its last publish, the ones to publish."""
+        return self.version.changed_files()
+
     def summary(self) -> str:
-        """The render in a few lines: where it went, the walk's misses, and the title to publish it under, the
-        version's own (``CanvasVersion.title``, such as ``ux-mockup.version-7``)."""
+        """The render in a few lines: where it went, the walk's misses, and how to publish it: a version published
+        before gets exactly the files that changed since, after its live canvas.json is read for people's edits; a new
+        one is published whole under the version's own title (``CanvasVersion.title``, such as
+        ``ux-mockup.version-7``)."""
         lines = [f"Rendered {len(self.files)} canvas files into {self.version.folder}.",
                  f"Walk: {self.walk_file} ({len(self.walk.misses)} value(s) the screens leave out or action(s) that leave the screen as it was)."]
         lines += [f"  - {miss}" for miss in self.walk.misses]
         if self.version.link is not None:
-            lines.append(f"Publish it again at {self.version.link}, the canvas this project keeps updating in place, after reading "
-                         f"that canvas back for edits people made there, and record the link again with version.publish_at.")
+            changed = self.changed
+            lines.append(f"Publish the {len(changed)} file(s) that changed since the last publish to {self.version.link}, the canvas this "
+                         f"project keeps updating in place: first read that canvas's live canvas.json for edits people made there, "
+                         f"then publish exactly these and record the link again with version.publish_at:")
+            lines += [f"  - project/{path}" for path in changed]
         else:
             lines.append(f"Publish it as a new canvas titled exactly {self.version.title!r} and keep its link with version.publish_at.")
         return "\n".join(lines)
