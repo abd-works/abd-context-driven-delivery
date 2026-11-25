@@ -15,6 +15,6 @@ The tools it calls: harness/chat (the chat tools it checks in with, through the 
 
 ## Constraint
 
-Load it with `claude --plugin-dir harness/chat-ui/pane`, or install it from this repository's marketplace. It holds no board logic: it checks the chat in every second, runs the commands waiting for it, and reads the board for the active ticket. The chat bar shows what the Python Board, Ticket and FidelityProgress send: the tickets to switch to, whether the stage is done, each action's command, the agent context, and the choices the open and close dialogs offer.
+Load it with `claude --plugin-dir harness/chat-ui/pane`, or install it from this repository's marketplace. It holds no board logic: it checks the chat in every second, runs the commands waiting for it, and reads the board for the active ticket. The chat bar shows what the Python Board, Ticket and FidelityProgress send: the tickets to switch to, the Backlog's items to start (each by title, a parent's children under it: `ColumnOverview.items`; a start calls `backlog-item.start` on the folder chosen beside the new session's name, then `ticket.activate`, as the board's own start out of the Backlog does), whether the stage is done, each action's command, the agent context, and the choices the open and close dialogs offer.
 
 A fill waits until the chat's turn has ended, because one made during a turn can report success and show nothing.

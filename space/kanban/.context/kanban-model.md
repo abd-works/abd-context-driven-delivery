@@ -266,6 +266,38 @@ Marked `@identity("name")`, so a reference to a column is its name.
 	// data field: its cards, the tickets whose sessions are closed
 ----
 
+## ColumnOverview
+
+A column as `board.overview` sends it to a reader that draws the active session, such as the chat bar, which reads it every turn through MCP, whose answers are cut off past their size limit.
+
++ ColumnOverview(column: Column)
+------
++ name: str
+	// data field
++ kind: str
+	// data field
++ tickets: list[Ticket]
+	// data field, each by its name: a stage's cards; none in Backlog or Complete
+	-> Column.cards
++ items: list[BacklogItemOverview]
+	// data field: the Backlog's own items in the order the board keeps, which the chat bar's session list offers to start; none in a stage or Complete
+	-> Backlog.items
+----
+
+## BacklogItemOverview
+
+A backlog item as the overview sends it: its title and its children by title, without its idea's text, which across the Backlog can run past an MCP answer's size limit.
+
++ BacklogItemOverview(item: BacklogItem)
+------
++ title: str
+	// data field
+	-> BacklogItem.title
++ children: list[BacklogItem]
+	// data field, each by its title: the child items its folder keeps, which start with it
+	-> BacklogItem.children
+----
+
 ## Stage : Column
 
 Made for one `ApproachStage` of `STAGES`, which gives its title as the column's name, its scope, and its actions; the stage keeps it private.

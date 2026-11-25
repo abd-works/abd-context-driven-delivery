@@ -4,8 +4,8 @@ import { BRAND } from '../shared/brand'
 import type { ChatBarDraw } from './chat-bar-view'
 import { repoListShiftOf, sessionListShiftOf } from './bar-columns'
 import { MAIN_SESSION } from './chat-bar-client'
-import { activateTicket, chooseSessionFolder, closeSession, createSession, openRepo } from './session-client'
-import { cancelClose, chooseNewSessionFolder, losesWork, toggleLeaving } from './session-dialogs-client'
+import { activateTicket, chooseSessionFolder, closeSession, createSession, openRepo, startBacklogItem } from './session-client'
+import { cancelClose, chooseNewSessionFolder, losesWork, toggleBacklogParent, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -78,6 +78,7 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
         <Text color={BRAND.accent}>{MAIN_SESSION}</Text>
       </Box>
       {TicketChoicesView($, { Box, Button, Input, Text }, { chatBar, view })}
+      {BacklogChoicesView($, { Box, Button, Text }, { chatBar, view })}
     </Box>
   )
 }
@@ -87,7 +88,7 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
 export function sessionListRowsOf({ chatBar, view }: ChatBarDraw): number {
   if (!view.isSessionListOpen || !chatBar.isMain) return 0
   const tickets = chatBar.openTickets.length + 1 + (view.newSessionFolder ? 1 : 0)
-  return 1 + tickets + LIST_BORDER_ROWS
+  return 1 + tickets + backlogRowsOf(chatBar, view) + LIST_BORDER_ROWS
 }
 
 // Each ticket is a whole button, its stage icon in its label: a see-through Button laid over the name took no press in
@@ -103,6 +104,39 @@ function TicketChoicesView($: EngineInterface, elements: Pick<ElementTable, 'Box
       <Button key="new-session-folder" plain label="▸ folder" onPress={() => chooseSessionFolder($, chatBar)} />
     </Box>,
     NewSessionFolderView($, elements, chatBar.folder, view.newSessionFolder),
+  ]
+}
+
+// The Backlog's items shown in the session list: each item, and the child items of each parent opened.
+function shownBacklogItems(chatBar: ChatBarDraw['chatBar'], view: ChatBarDraw['view']): { title: string; isChild: boolean; children: number }[] {
+  const opened = view.openBacklogParents ?? []
+  return chatBar.backlogItems.flatMap(item => [
+    { title: item.title, isChild: false, children: item.children.length },
+    ...(opened.includes(item.title) ? item.children.map(child => ({ title: child.title, isChild: true, children: 0 })) : []),
+  ])
+}
+
+// The BACKLOG heading and a row for each item shown; none while the Backlog is empty.
+function backlogRowsOf(chatBar: ChatBarDraw['chatBar'], view: ChatBarDraw['view']): number {
+  const shown = shownBacklogItems(chatBar, view)
+  return shown.length ? 1 + shown.length : 0
+}
+
+// Under the new session's field, the Backlog's items, each a whole button that starts it as the board moves an item out
+// of the Backlog. A parent closes to + N, its count of child items, and a press on that opens it to - N with its child
+// items indented under it; a child starts on its own, its parent staying in the Backlog.
+function BacklogChoicesView($: EngineInterface, { Box, Button, Text }: Pick<ElementTable, 'Box' | 'Button' | 'Text'>, { chatBar, view }: Pick<ChatBarDraw, 'chatBar' | 'view'>) {
+  const shown = shownBacklogItems(chatBar, view)
+  if (!shown.length) return null
+  const opened = view.openBacklogParents ?? []
+  return [
+    <Text key="session-backlog-heading" color={BRAND.muted}>BACKLOG</Text>,
+    ...shown.map(({ title, isChild, children }) => (
+      <Box key={`session-backlog-row-${title}`} flexDirection="row" gap={1}>
+        {children ? <Button key={`session-backlog-open-${title}`} plain label={`${opened.includes(title) ? '-' : '+'} ${children}`} onPress={() => toggleBacklogParent($, title)} /> : null}
+        <Button key={`session-backlog-start-${title}`} plain label={`${isChild ? '  ' : ''}${stageIconOf('Backlog')} ${title}`} onPress={() => startBacklogItem($, title)} />
+      </Box>
+    )),
   ]
 }
 

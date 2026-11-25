@@ -105,6 +105,108 @@ section: body
 *When* the Person closes checkout-flow  
 *Then* the close dialog offers a handoff, and to commit and push checkout-flow
 
+## Story: Show Backlog Items In Session List
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| The person, 2026-11-25 | "Add a section to the session choices for backlog items ... A parent and child can be opened to reveal the child items" |
+| `harness/chat-ui/pane/hooks/chat-bar/session-dialogs-view.tsx` `SessionListView` | observed 2026-11-25: the session list holds main, the open tickets, and the field that names a new session with its folder button |
+| `space/kanban/backlog_item.py` `BacklogItem.children`, `Backlog.items` | a parent keeps its children in its folder; the Backlog lists its items in the order the board keeps |
+
+### Domain terms
+
+- ++[backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card)++ — an idea in the Backlog, not yet started; a parent keeps its child items with it.
+
+#### Scenario: List the Backlog's items under the sessions
+
+*Given* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds the [backlog items](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Payment retry and Checkout flow, in that order
+  *And* Checkout flow keeps the child items Address form and Card form
+*When* the Person opens the session list in the main chat
+*Then* under the field that names a new session, a BACKLOG section lists Payment retry, then Checkout flow with + 2 beside it
+  *And* Address form and Card form are not shown
+
+#### Scenario: Open a parent to show its child items
+
+*Given* the session list shows Checkout flow with + 2, its child items Address form and Card form hidden
+*When* the Person opens Checkout flow
+*Then* Address form and Card form show under Checkout flow, indented
+  *And* Checkout flow shows - 2
+*When* the Person closes Checkout flow
+*Then* Address form and Card form are hidden again
+
+#### Scenario: Show no Backlog section while the Backlog is empty
+
+*Given* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds no [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card)
+*When* the Person opens the session list in the main chat
+*Then* the list shows main, the open tickets and the new session's field, and no BACKLOG section
+
+#### Scenario: Offer no Backlog in a ticket's own chat
+
+*Given* the chat works in checkout-flow's own worktree
+  *And* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds Payment retry
+*When* the Person looks for the session list
+*Then* the chat bar offers no session list, so no Backlog item can be started from a ticket's chat
+
+## Story: Start Backlog Item From Session List
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| The person, 2026-11-25 | "If a backlog ticket is started, that is identical to moving a ticket out of the backlog ... the parent or the child can be started" |
+| `space/kanban/app/src/kanban/ticket/root-choice-client.ts` `start` | the board's way out of the Backlog: `backlog-item.start` on the folder chosen, then activation: `ticket.activate`, and a chat started in the ticket's worktree |
+| `space/kanban/backlog_item.py` `BacklogItem.start` | a parent's children start with it as story tickets that are its children; an item kept with a ticket's work brings that ticket back |
+| `harness/chat-ui/pane/hooks/chat-bar/session-client.ts` `createSession`, `activateTicket` | the session list's new session opens on the folder chosen beside its name, and opens as a ticket picked from the list does |
+
+#### Scenario: Start a Backlog item as the board moves it out of the Backlog
+
+*Given* the session list shows the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Payment retry
+  *But* no folder is chosen beside the new session's name
+*When* the Person starts Payment retry
+*Then* Payment retry is started on the whole repository, as backlog-item.start answers, and its ticket payment-retry is in Discovery
+  *And* payment-retry opens in its own worktree, with its chat started there, as Open Session does
+  *And* the session list is closed, and Payment retry is no longer in its BACKLOG section
+
+#### Scenario: Start a Backlog item on the folder chosen beside the new session's name
+
+*Given* the session list shows Payment retry
+  *And* the folder app/payments is chosen beside the new session's name
+*When* the Person starts Payment retry
+*Then* payment-retry's session works on app/payments
+  *And* no folder is chosen beside the new session's name any more
+
+#### Scenario: Start a parent with its child items
+
+*Given* the session list shows Checkout flow, which keeps the child items Address form and Card form
+*When* the Person starts Checkout flow
+*Then* the ticket checkout-flow is in Discovery, with the child tickets address-form and card-form
+  *And* checkout-flow opens in its own worktree
+
+#### Scenario: Start one child item on its own
+
+*Given* the session list shows Checkout flow opened, its child items Address form and Card form under it
+*When* the Person starts Card form
+*Then* the ticket card-form is in Discovery and opens in its own worktree
+  *And* the BACKLOG section still lists Checkout flow, now with + 1 for Address form
+
+#### Scenario: Show why a Backlog item did not start
+
+*Given* the session list shows Payment retry
+  *But* Payment retry was deleted from the Backlog on the board after the list was read
+*When* the Person starts Payment retry
+*Then* the failure line says Payment retry did not start, with backlog-item.start's reason
+  *And* no ticket is opened, and the BACKLOG section no longer lists Payment retry
+
+#### Scenario: Keep a started item's ticket when it does not open
+
+*Given* the session list shows Payment retry
+  *But* ticket.activate refuses to open payment-retry
+*When* the Person starts Payment retry
+*Then* the ticket payment-retry stays in Discovery, started
+  *And* the failure line says payment-retry did not open, with ticket.activate's reason
+
 ## Story: Debug A Failure From Chat Bar
 
 ### Evidence

@@ -52,6 +52,25 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
   }
 }
 
+// A Backlog item started from the session list leaves the Backlog as the board moves it out: backlog-item.start on the
+// folder chosen beside the new session's name, or the whole repository, then the ticket opens as one picked from the
+// list does. A parent starts with its children; a child starts alone. Python refuses an item gone from the Backlog.
+export async function startBacklogItem($: EngineInterface, title: string): Promise<void> {
+  const path = (await currentChatBarView($)).newSessionFolder
+  let started: TicketData
+  try {
+    started = await whileBusy($, `Starting ${title}`, () => callTool<TicketData>($, 'backlog-item.start', { backlog_item: title, ...(path ? { path } : {}) }))
+  } catch (failure) {
+    await closeSessionList($)
+    await shownAsFailure($, `${title} did not start`, `Starting ${title} from the session list's Backlog${path ? ` on ${path}` : ''}, calling backlog-item.start`)(failure)
+    await refreshChatBar($)
+    return
+  }
+  await chooseNewSessionFolder($, '')
+  $.ui.toast(`${title} started in Discovery`)
+  await activateTicket($, started.name)
+}
+
 // The main chat's repo button opens the repositories beside this one, read afresh each time; a list that cannot read
 // them opens empty, with the field for a new one.
 export async function toggleRepoListWithRepos($: EngineInterface): Promise<void> {
