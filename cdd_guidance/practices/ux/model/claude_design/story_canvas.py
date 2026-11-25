@@ -337,28 +337,33 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
                 "f": self.sources.get(StoryTree.key_of(scenario), "")}
 
     def _step_groups(self, story: ClaudeDesignStory, scenario: "Scenario | Background") -> tuple[List[dict], str]:
-        """The scenario's steps, grouped so each group ends on a step a screen shows, with that screen's images; and
-        the first prototype those screens name. A screen that shows the story or the scenario but names none of its
-        steps shows each step that ends an action (``one-group-per-action``)."""
+        """The scenario's steps, grouped so each group ends on a step a screen shows, with that screen's images and the
+        group's kind (``k``); and the first prototype those screens name. A screen that shows the story or the scenario
+        but names none of its steps shows each step that ends an action (``one-group-per-action``). A group's kind is
+        ``when`` when the Customer acts in it (it holds a When step), else the phase of its last step, so a screen
+        knows on which group to type in what the Customer enters."""
         groups: List[dict] = []
         waiting: List[str] = []
+        phases: List[str] = []
         prototype = ""
         unnamed = self._screens_naming_no_steps(story, scenario)
         ends = _action_ends(scenario) if unnamed else []
-        for step in _steps_of(scenario):
+        for step, phase in _phased_steps(scenario):
             indent = "    " if step.keyword in ("And", "But") else ""
             waiting.append(f"{indent}{step.keyword} {plain_words(step.text)}")
+            phases.append(phase)
             named = shown_on(step, self.screen_map.screens)
             derived = [screen for screen in unnamed if screen not in named] if any(step is end for end in ends) else []
             shown = [screen for screen in [*named, *derived] if not self._blank(screen)]
             prototype = prototype or next((artboard_stem(s.prototype) for s in shown if s.prototype), "")
             if shown:
-                groups.append({"x": "\n".join(waiting), "i": [f"../{s.image}" for s in shown if s.image]})
-                waiting = []
+                groups.append({"x": "\n".join(waiting), "i": [f"../{s.image}" for s in shown if s.image], "k": _kind_of(phases)})
+                waiting, phases = [], []
         if waiting and groups:
             groups[-1]["x"] += "\n" + "\n".join(waiting)
+            groups[-1]["k"] = _kind_of([groups[-1]["k"], *phases])
         elif waiting:
-            groups.append({"x": "\n".join(waiting), "i": []})
+            groups.append({"x": "\n".join(waiting), "i": [], "k": _kind_of(phases)})
         return groups, prototype
 
     def _screens_naming_no_steps(self, story: ClaudeDesignStory, scenario: "Scenario | Background") -> List[Screen]:
@@ -390,7 +395,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
             hint, style = (f"{size[0]}px,{size[1]}px", "display: block; width: 100%") if size else \
                 ("1280px,900px", "display: block; width: 100%; min-height: 100%")
             lines.append(f'<sc-if value="{{{{live.{Name(name).camel}}}}}" hint-placeholder-val="{{{{ false }}}}">'
-                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" step-index="{{{{stepIndex}}}}" hint-size="{hint}" style="{style}"></dc-import></sc-if>')
+                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" step-index="{{{{stepIndex}}}}" step-kind="{{{{stepKind}}}}" hint-size="{hint}" style="{style}"></dc-import></sc-if>')
         return lines
 
     def _screen_sizes(self) -> Dict[str, tuple]:
@@ -453,14 +458,25 @@ def _steps_of(scenario: "Scenario | Background") -> List[Step]:
     return found
 
 
-def _action_ends(scenario: "Scenario | Background") -> List[Step]:
-    """The steps a screen shows when the UX map names none: the step before each Then that opens a run of Thens, and
-    the scenario's last step, so each action and its outcome is one step group. An And or But takes the phase of the
+def _phased_steps(scenario: "Scenario | Background") -> List[tuple]:
+    """Each step of the scenario, in order, with its phase: given, when or then. An And or But takes the phase of the
     step it continues."""
     phased: List[tuple] = []
     for step in scenario.steps:
         phased.append((step, step.phase))
         phased.extend((extra, extra.phase or step.phase) for extra in getattr(step, "ands", []) or [])
+    return phased
+
+
+def _kind_of(phases: List[str]) -> str:
+    """A step group's kind from its steps' phases: ``when`` when it holds a When step, else its last step's phase."""
+    return "when" if "when" in phases else next((phase for phase in reversed(phases) if phase), "")
+
+
+def _action_ends(scenario: "Scenario | Background") -> List[Step]:
+    """The steps a screen shows when the UX map names none: the step before each Then that opens a run of Thens, and
+    the scenario's last step, so each action and its outcome is one step group."""
+    phased = _phased_steps(scenario)
     ends = [phased[index - 1][0] for index, (_, phase) in enumerate(phased)
             if index and phase == "then" and phased[index - 1][1] != "then"]
     if phased and not any(phased[-1][0] is end for end in ends):

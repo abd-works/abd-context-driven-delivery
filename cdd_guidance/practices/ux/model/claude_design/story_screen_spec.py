@@ -36,8 +36,8 @@ with description("a story's prototype screen") as self:
         self.script = re.search(r"data-dc-script[^>]*>(.*)</script>", self.html, re.S).group(1)
 
     with context("inside the story explorer"):
-        with it("should declare story, scenario, step, stepIndex and go"):
-            expect(ScreenArtboard(self.html).declared_props).to(equal({"story", "scenario", "step", "stepIndex", "go", "$preview"}))
+        with it("should declare story, scenario, step, stepIndex, stepKind and go"):
+            expect(ScreenArtboard(self.html).declared_props).to(equal({"story", "scenario", "step", "stepIndex", "stepKind", "go", "$preview"}))
 
         with it("should open on its first scenario"):
             expect(self.script).to(contain("'Add one more line'"))

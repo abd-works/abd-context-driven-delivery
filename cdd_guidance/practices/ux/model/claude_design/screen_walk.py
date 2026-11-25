@@ -2,7 +2,7 @@
 rendered at the scenarios it shows, and every value the scenarios' steps name is looked for on it.
 
 For each scenario the explorer lists with a prototype screen, the screen's artboard is rendered once for each step group
-the explorer lists for that scenario, with the ``story``, ``scenario``, ``step`` and ``stepIndex`` props the explorer
+the explorer lists for that scenario, with the ``story``, ``scenario``, ``step``, ``stepIndex`` and ``stepKind`` props the explorer
 hands it when the reader picks that group. A scenario with one action has two groups, its Givens and When, then its
 Thens; a scenario with two actions has three, so the outcome between them is walked too. The values each step names (*StepValues*: quoted text,
 dollar amounts, codes written in capitals with digits, phone numbers, and numbers of four or more digits) are looked
@@ -203,7 +203,8 @@ class _Stop:
     @property
     def props(self) -> dict:
         """The props the explorer hands the screen when the reader picks this step group."""
-        return {"story": self.scenario.story, "scenario": self.scenario.name, "step": "\n".join(self.lines), "stepIndex": self.index}
+        return {"story": self.scenario.story, "scenario": self.scenario.name, "step": "\n".join(self.lines), "stepIndex": self.index,
+                "stepKind": self.scenario.kind_of(self.index)}
 
 
 class StoryCanvasWalk:

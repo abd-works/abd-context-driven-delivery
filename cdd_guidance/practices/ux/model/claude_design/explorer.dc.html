@@ -252,6 +252,7 @@ go(g, at, t, x);
 scenarioName: scen.b ? (S[st.g].c.map((sc, ci) => (sc.b ? null : exampleOf(st.g, ci) || sc.n)).find(Boolean) || scen.n) : (exampleOf(st.g, st.c) || scen.n),
 stepText: step.x,
 stepIndex: scen.t[st.t] ? st.t : 0,
+stepKind: scen.b ? '' : (step.k || ''),
 showShot: !scen.p && imgs.length > 0,
 showNothing: !scen.p && imgs.length === 0,
 img: imgs[idx] || '',

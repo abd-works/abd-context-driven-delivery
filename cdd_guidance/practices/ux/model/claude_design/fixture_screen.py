@@ -6,7 +6,8 @@ both seeds the data and fills the form. Opened on its own the list starts on *Lo
 explorer it loads the explorer's scenario, and picking another moves the explorer's tree to it. ``follow(event, story)``
 moves the explorer to the next story, or lets the link open the next screen when the screen stands alone. See
 ``story_canvas.md``, the UX practice's Claude Design recipe, which builds each prototype screen as a
-*FixtureScreen*."""
+*FixtureScreen*. Inside the explorer, on a step group where the Customer acts, the screen types its filled fields
+back in a character at a time, so the reader sees what the Customer enters."""
 
 from dataclasses import dataclass
 
@@ -23,11 +24,25 @@ __EDIT_LINK__</div>
 FIXTURE_TRIES = 50
 FIXTURE_WAIT_MILLISECONDS = 100
 
+# On a step group where the Customer acts (the explorer's stepKind is 'when'), the screen types back in what its fields
+# hold: it waits this long for the step's values to be drawn, clears the fields, and types each one in, a character
+# this many milliseconds apart and a pause between fields, so the reader sees what the Customer enters.
+ENTRY_SETTLE_MILLISECONDS = 200
+ENTRY_CHARACTER_MILLISECONDS = 50
+ENTRY_FIELD_PAUSE_MILLISECONDS = 150
+# The fields a Customer types into: text-like inputs and text areas, in document order.
+ENTRY_FIELDS = ('input:not([type]), input[type="text"], input[type="email"], input[type="password"], input[type="tel"], '
+                'input[type="number"], input[type="search"], textarea')
+
 # Methods every fixture-driven screen shares. The screen supplies STORY, SCENARIO, PATH, and fromFixture(repositories,
 # scenario, examples, step, bindings) returning the state that scenario shows at the step group the explorer selects, and
 # paste(field) mapping one pasted field into state. The fixture is loaded through as many of the scenario's actions (its
 # Whens) as the step group follows (stepIndex: 0 before the first action, n after the n-th), so a Then shows what the
 # action left in the real domain; bindings are what the scenario's steps bound by name, such as a cart never stored.
+# Once a step group's state is drawn, replayEntries types the screen's filled fields back in when the Customer acts on
+# that group (stepKind 'when'): it writes only what the field shows, through the field's native value setter and with no
+# input event, so neither React nor the domain sees it, and it ends on exactly the value React drew. A redraw that
+# changes a field mid-way, a new step group, or unmounting stops it and leaves React's values; reduced motion skips it.
 METHODS = '''fixtures() {
 return typeof CanvasFixtures !== 'undefined' ? CanvasFixtures : null;
 }
@@ -40,8 +55,12 @@ componentDidMount() {
 this.whenFixtures(() => this.forceUpdate());
 if (this.props.scenario) this.followExplorer();
 }
+componentWillUnmount() {
+this.stopEntries();
+}
 componentDidUpdate(previous) {
 if (this.props.scenario && (previous.scenario !== this.props.scenario || previous.step !== this.props.step || previous.stepIndex !== this.props.stepIndex)) {
+this.stopEntries();
 this.setState({ scenario: this.props.scenario });
 this.followExplorer();
 }
@@ -67,8 +86,57 @@ const scenario = chosen || this.scenarioName();
 if (!fixtures) { this.setState({ source: 'fixtures not loaded' }); return; }
 fixtures.load(story, scenario, this.actionsTaken(fixtures, story, scenario))
 .then((repositories) => Promise.resolve(this.fromFixture(repositories, scenario, fixtures.examples, this.props.step || '', fixtures.bindings ? fixtures.bindings() : {})))
-.then((state) => this.setState(Object.assign({}, state, state && state.entered, { source: story + ' › ' + scenario })))
+.then((state) => this.setState(Object.assign({}, state, state && state.entered, { source: story + ' › ' + scenario }), () => this.replayEntries()))
 .catch((problem) => this.setState({ source: String(problem && problem.message || problem) }));
+}
+screenId() {
+if (!this.screenKey) this.screenKey = 'screen-' + Math.random().toString(36).slice(2);
+return this.screenKey;
+}
+reducedMotion() {
+try { return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (problem) { return false; }
+}
+replayEntries() {
+this.stopEntries();
+if (this.props.stepKind !== 'when' || this.reducedMotion()) return;
+const replay = { stopped: false, timer: null, fields: [] };
+this.entryReplay = replay;
+replay.timer = setTimeout(() => this.typeEntries(replay), __SETTLE__);
+}
+entryFields() {
+const frame = typeof document !== 'undefined' ? document.querySelector('[data-screen-id="' + this.screenId() + '"]') : null;
+if (!frame) return [];
+return Array.prototype.slice.call(frame.querySelectorAll('__ENTRY_FIELDS__')).filter((field) => field.value && !field.disabled && !field.readOnly);
+}
+showValue(field, value) {
+const owner = field.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement : window.HTMLInputElement;
+const described = owner && Object.getOwnPropertyDescriptor(owner.prototype, 'value');
+if (described && described.set) described.set.call(field, value); else field.value = value;
+}
+typeEntries(replay) {
+if (replay.stopped) return;
+replay.fields = this.entryFields().map((field) => ({ field: field, value: field.value, shown: '' }));
+replay.fields.forEach((entry) => this.showValue(entry.field, ''));
+let at = 0;
+const next = () => {
+if (replay.stopped) return;
+const entry = replay.fields[at];
+if (!entry) { this.entryReplay = null; return; }
+if (!entry.field.isConnected || entry.field.value !== entry.shown) { this.stopEntries(); return; }
+if (entry.shown.length >= entry.value.length) { at += 1; replay.timer = setTimeout(next, __PAUSE__); return; }
+entry.shown = entry.value.slice(0, entry.shown.length + 1);
+this.showValue(entry.field, entry.shown);
+replay.timer = setTimeout(next, __CHARACTER__);
+};
+next();
+}
+stopEntries() {
+const replay = this.entryReplay;
+this.entryReplay = null;
+if (!replay) return;
+replay.stopped = true;
+clearTimeout(replay.timer);
+replay.fields.forEach((entry) => { if (entry.field.value === entry.shown && entry.shown !== entry.value) this.showValue(entry.field, entry.value); });
 }
 pasteSeedData() {
 const paste = this.fixtures() && this.fixtures().pasteFor('__PATH__');
@@ -95,6 +163,7 @@ const names = (fixtures && fixtures.scenarios(this.storyName())) || [];
 const paste = fixtures && fixtures.pasteFor('__PATH__');
 const options = (names.length ? names : [this.scenarioName()]).map((name) => ({ value: name, label: name }));
 return {
+screenId: this.screenId(),
 inExplorer: Boolean(this.props.scenario),
 scenario: (this.state && this.state.scenario) || this.props.scenario || '',
 scenarioOptions: [{ value: '', label: 'Load a scenario…' }].concat(options, paste ? [{ value: 'dev-seed', label: 'Dev seed: ' + paste.title }] : []),
@@ -118,7 +187,9 @@ def _bar(artboard: str = "") -> str:
 
 def _methods(story: str, scenario: str, path: str) -> str:
     """The shared methods for a screen of *story*, opening on *scenario*, whose dev seed paste is the one for *path*."""
-    named = METHODS.replace("__TRIES__", str(FIXTURE_TRIES)).replace("__WAIT__", str(FIXTURE_WAIT_MILLISECONDS))
+    named = (METHODS.replace("__TRIES__", str(FIXTURE_TRIES)).replace("__WAIT__", str(FIXTURE_WAIT_MILLISECONDS))
+             .replace("__SETTLE__", str(ENTRY_SETTLE_MILLISECONDS)).replace("__CHARACTER__", str(ENTRY_CHARACTER_MILLISECONDS))
+             .replace("__PAUSE__", str(ENTRY_FIELD_PAUSE_MILLISECONDS)).replace("__ENTRY_FIELDS__", ENTRY_FIELDS))
     return named.replace("__STORY__", story).replace("__SCENARIO__", scenario).replace("__PATH__", path)
 
 
@@ -149,7 +220,7 @@ body{{margin:0}}
 a.button-primary{{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}}
 </style>
 </helmet>
-<div class="{root_class}">
+<div class="{root_class}" data-screen-id="{{{{screenId}}}}">
 {bar}{body}
 </div>
 </x-dc>
@@ -187,7 +258,7 @@ class FixtureScreen:
         """The screen's script: the bar's shared methods, the screen's own, and the values it renders."""
         own_methods, vals, width, height = self.own_methods, self.vals, self.width, self.height
         story, scenario, path = self.source.story, self.source.scenario, self.source.path
-        return f'''<script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"step":{{"editor":null}},"stepIndex":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
+        return f'''<script type="text/x-dc" data-dc-script data-props='{{"story":{{"editor":null}},"scenario":{{"editor":null}},"step":{{"editor":null}},"stepIndex":{{"editor":null}},"stepKind":{{"editor":null}},"go":{{"editor":null}},"$preview":{{"width":{width},"height":{height}}}}}'>
 class Component extends DCLogic {{
 {_methods(story, scenario, path)}{own_methods}renderVals() {{
 const st = this.state || {{}};

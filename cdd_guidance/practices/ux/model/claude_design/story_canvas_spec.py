@@ -104,6 +104,10 @@ with description("a Claude Design story map") as self:
         with it("hands each screen the position of the selected step group, so a scenario with several actions shows each outcome"):
             expect(self.files["project/screens/explorer.dc.html"]).to(contain('step-index="{{stepIndex}}"'))
 
+        with it("hands each screen the kind of the selected step group, so it types what the Customer enters on a When"):
+            explorer = self.files["project/screens/explorer.dc.html"]
+            expect((explorer.count('step-kind="{{stepKind}}"'), explorer.count("stepKind: scen.b ? '' : (step.k || '')"))).to(equal((1, 1)))
+
     with context("rendered from a scenario with two actions, on a screen that names its story but no steps"):
         with before.each:
             story_map = _story_map()
@@ -123,7 +127,7 @@ with description("a Claude Design story map") as self:
                 "Then the catalog lists the plans\nWhen the Customer picks Atlas",
                 "Then the cart holds Atlas",
             ]
-            expect(self.explorer).to(contain(json.dumps([{"x": group, "i": []} for group in groups])))
+            expect(self.explorer).to(contain(json.dumps([{"x": group, "i": [], "k": kind} for group, kind in zip(groups, ("when", "when", "then"))])))
 
     with context("rendered from a scenario with two actions, on a screen that names the first action and the last outcome"):
         with before.each:
@@ -144,7 +148,7 @@ with description("a Claude Design story map") as self:
                 "Given the Customer has no account\nWhen the Customer opens My Paradise",
                 "Then the catalog lists the plans\nWhen the Customer picks Atlas\nThen the cart holds Atlas",
             ]
-            expect(self.explorer).to(contain(json.dumps([{"x": group, "i": []} for group in groups])))
+            expect(self.explorer).to(contain(json.dumps([{"x": group, "i": [], "k": "when"} for group in groups])))
 
     with context("rendered from steps that mark their terms"):
         with before.each:

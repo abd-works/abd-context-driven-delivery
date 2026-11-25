@@ -25,14 +25,20 @@ class ExplorerTreeUnreadable(ValueError):
 @dataclass(frozen=True)
 class ExplorerScenario:
     """One scenario as the explorer lists it under its story: its name, whether it is the story's Background, the
-    prototype screen it plays (the artboard's stem, empty when it plays none), and its step groups, each the lines the
-    reader picks at once, in order."""
+    prototype screen it plays (the artboard's stem, empty when it plays none), its step groups, each the lines the
+    reader picks at once, in order, and each group's kind (``when`` where the Customer acts, else ``given`` or
+    ``then``)."""
 
     story: str
     name: str
     background: bool
     screen: str
     groups: tuple = ()
+    kinds: tuple = ()
+
+    def kind_of(self, index: int) -> str:
+        """The kind of the step group at index, empty when the explorer names none."""
+        return self.kinds[index] if index < len(self.kinds) else ""
 
 
 class CanvasExplorer:
@@ -67,7 +73,8 @@ class CanvasExplorer:
             for sub_epic in epic.get("u", []):
                 for story in sub_epic.get("s", []):
                     yield story["n"], [ExplorerScenario(story["n"], scenario["n"], bool(scenario.get("b")), scenario.get("p", ""),
-                                                        tuple(group["x"] for group in scenario.get("t", [])))
+                                                        tuple(group["x"] for group in scenario.get("t", [])),
+                                                        tuple(group.get("k", "") for group in scenario.get("t", [])))
                                        for scenario in story.get("c", [])]
 
     def scenarios(self) -> Iterator[ExplorerScenario]:
