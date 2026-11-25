@@ -1,0 +1,32 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-25T01:12:13.319527+00:00",
+  "prompts": [
+    {
+      "id": "557d65fd52fa",
+      "text": "Make a project's chats see only the CDD server of its own lane: a project pinned to the dev lane gets the dev server's tools alone, never the stable plugin's as well.",
+      "steps": [
+        {
+          "text": "Find how a project turns the cdd plugin off in Claude Code",
+          "state": "in_progress"
+        },
+        {
+          "text": "Try it for real in this worktree: one cdd server listed after reload",
+          "state": "pending"
+        },
+        {
+          "text": "Installer: dev-lane project turns the cdd plugin off; stable-lane project turns it back on",
+          "state": "pending"
+        },
+        {
+          "text": "Heavy installer spec for both lanes; run it",
+          "state": "pending"
+        },
+        {
+          "text": "Commit, push, repin dev",
+          "state": "pending"
+        }
+      ]
+    }
+  ]
+}
