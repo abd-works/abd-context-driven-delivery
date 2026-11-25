@@ -62,6 +62,8 @@ const DRAG_STEPS = 10
 export type DragPlaces = { grab?: { x: number; y: number }; onTop?: boolean; onBottom?: boolean }
 const NEAR_THE_TOP_EDGE = 4
 const BELOW_THE_LAST_CARD = 24
+// How far inside the page's side edges a drag grabs and drops, so the mouse never rests on the edge itself.
+const SIDEWAYS_MARGIN = 20
 
 // The links of the new chats the cdd server opened since the spec started watching. The run's cdd server keeps each one
 // in the file CDD_OPENED_CHATS names (see playwright.config.ts) instead of handing it to the system, which would open a
@@ -113,6 +115,7 @@ export async function holdOver(page: Page, dragged: Locator, target: Locator, { 
   const labels = target.locator(':scope.card-list > .list-label')
   if (await labels.count()) await labels.first().scrollIntoViewIfNeeded()
   await dragged.scrollIntoViewIfNeeded()
+  await showBothSideways(page, dragged, target, grab)
   const from = (await dragged.boundingBox())!
   await page.mouse.move(from.x + grab.x, from.y + grab.y)
   await page.mouse.down()
@@ -129,6 +132,25 @@ export async function holdOver(page: Page, dragged: Locator, target: Locator, { 
   const down = onTop ? NEAR_THE_TOP_EDGE : onBottom ? to.height - NEAR_THE_TOP_EDGE : isList ? await belowTheLastCard(target, to) : Math.min(to.height / 2, 60)
   const y = isLabelShown ? label!.y + label!.height / 2 : Math.max(top, Math.min(to.y + down, bottom))
   await page.mouse.move(to.x + to.width / 2, y, { steps: DRAG_STEPS })
+}
+
+// The board is wider than the page and scrolls sideways, so a person dragging to a column off the page's edge scrolls
+// first: the board region is scrolled until the point the card is grabbed at and the middle of the target, where it is
+// dropped, are both on the page. A drop past the page's edge is never dropped at all.
+async function showBothSideways(page: Page, dragged: Locator, target: Locator, grab: { x: number }): Promise<void> {
+  const region = page.locator('.board-region')
+  const shown = await region.boundingBox()
+  const from = await dragged.boundingBox()
+  const to = await target.boundingBox()
+  if (!shown || !from || !to) return
+  const grabbed = from.x + grab.x
+  const dropped = to.x + to.width / 2
+  const left = Math.max(shown.x, 0) + SIDEWAYS_MARGIN
+  const right = Math.min(shown.x + shown.width, page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) - SIDEWAYS_MARGIN
+  const lowest = Math.min(grabbed, dropped)
+  const highest = Math.max(grabbed, dropped)
+  const scroll = highest > right ? Math.min(highest - right, lowest - left) : lowest < left ? -Math.min(left - lowest, right - highest) : 0
+  if (scroll !== 0) await region.evaluate((element, by) => element.scrollBy({ left: by }), scroll)
 }
 
 // The part of the board region on screen, so a drop never lands above the board or on the details below it.

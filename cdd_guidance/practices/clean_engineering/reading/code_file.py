@@ -18,12 +18,11 @@ from __future__ import annotations
 
 import keyword
 import re
-from functools import cache, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, NamedTuple
 
 from cdd_guidance.practices.clean_engineering.model import CONSTRUCTOR_NAMES, MODULE_FUNCTION_HOLDER
-from cdd_guidance.practices.clean_engineering.reading.function_text import closing_bracket, named_pattern, python_function, script_function
+from cdd_guidance.practices.clean_engineering.reading.function_text import closing_bracket, python_function, script_function
 from cdd_guidance.practices.clean_engineering.reading.receiver_causes import (
     ON_OUTSIDE_OBJECTS,
     ON_UNTYPED_VALUES,
@@ -193,10 +192,8 @@ class CodeSpan(NamedTuple):
     creates: str = CREATED_ON_EACH_CALL
 
     @staticmethod
-    @lru_cache(maxsize=8192)
     def code_of(text: str) -> str:
-        """The code of text: without the calls the source view marks, doc strings, or comments. A read asks it of the
-        same spans many times over, so the latest answers are kept."""
+        """The code of text: without the calls the source view marks, doc strings, or comments."""
         return _NOT_CODE.sub(_code_kept, _CALL_MARKER.sub("", text))
 
 
@@ -402,9 +399,6 @@ class CodeFile:
         self._imports = imports
         self._whole = whole
         self._causes: ReceiverCauses | None = None
-        # The files this file's imports name, by the name asked about (None for every name), worked out once: a read of
-        # the whole working copy asks it hundreds of thousands of times of the same few files.
-        self._imported_files: dict[str | None, frozenset[str]] = {}
         # What the type hints this file writes say a value is.
         self.hints = _HintTypes(self, index)
 
@@ -499,7 +493,7 @@ class CodeFile:
             return self._only(imported)
         return self._only([member for member in members if self._beside(member.source.file)])
 
-    def _in_files(self, members: "list[Node]", files: "set[str] | frozenset[str]") -> "list[Node]":
+    def _in_files(self, members: "list[Node]", files: set[str]) -> "list[Node]":
         """The members of members declared in one of files."""
         return [member for member in members if member.source.file in files]
 
@@ -517,18 +511,15 @@ class CodeFile:
             return member
         return self.getter_of(member) or member
 
-    def imported_files_of(self, name: str | None = None) -> frozenset[str]:
+    def imported_files_of(self, name: str | None = None) -> set[str]:
         """The files this file's imports name, those naming name alone when given, in this file's own language; an
         import of a generated language adapter names the Python module it is generated from."""
-        found = self._imported_files.get(name)
-        if found is None:
-            found = self._imported_files[name] = frozenset(
-                path
-                for reference in self._imports if name is None or name in reference.names()
-                for path in reference.files()
-                if reference.through_adapter() or _language_of(path) == _language_of(self.relative)
-            )
-        return found
+        return {
+            path
+            for reference in self._imports if name is None or name in reference.names()
+            for path in reference.files()
+            if reference.through_adapter() or _language_of(path) == _language_of(self.relative)
+        }
 
     def _in_reach(self, candidates: "list[Node]", name: str) -> "Node | None":
         own = next((node for node in candidates if node.source.file == self.relative), None)
@@ -669,7 +660,7 @@ class MemberAnswers:
             if declared.type != "Property" or declared.get_fact("is_property") or declared.get_fact("owner") != holder.name or declared.source.file != holder.source.file:
                 continue
             code = CodeSpan.code_of(declared.source.text)
-            initialized = named_pattern(_INITIALIZED, name).search(code)
+            initialized = re.search(_INITIALIZED.format(name=re.escape(name)), code)
             if initialized is not None:
                 read = _SpanCalls(file, self._index, CodeSpan(code, holder)).expressions.typed_at(initialized.end())
                 self._field_causes.setdefault((holder.node_id, name), read.cause)
@@ -701,10 +692,10 @@ class MemberAnswers:
 
     def _module_value(self, relative: str, name: str) -> "Typed | None":
         text = CodeSpan.code_of(self.text_of(relative))
-        match = named_pattern(_MODULE_ASSIGNMENT, name).search(text)
+        match = re.search(_MODULE_ASSIGNMENT.format(name=re.escape(name)), text)
         file = self._index.file(relative)
         if match is None:
-            declared = named_pattern(_MODULE_DECLARATION, name).search(text) if file.is_script else None
+            declared = re.search(_MODULE_DECLARATION.format(name=re.escape(name)), text) if file.is_script else None
             return file.hints.typed(declared.group(1)) if declared is not None else None
         if match.group(1):
             self._module_causes[(relative, name)] = file.receiver_causes.of_hint(match.group(1))
@@ -777,7 +768,7 @@ class _TypeArguments:
         bound = self._bound(value) if written else {}
         used = [parameter for parameter in bound if _names_word(written, parameter)]
         for parameter in used:
-            written = named_pattern(_WORD_OF, parameter).sub(bound[parameter][0], written)
+            written = re.sub(_WORD_OF.format(name=re.escape(parameter)), bound[parameter][0], written)
         return self._index.file(bound[used[0]][1]).hints.typed(written, value.of) if used else None
 
     def _bound(self, value: Typed) -> "dict[str, tuple[str, str]]":
@@ -1757,7 +1748,7 @@ def _specialised_bases(declared: "Node") -> "list[tuple[str, list[str]]]":
 
 def _names_word(written: str, name: str) -> bool:
     """Whether a hint names name as a whole word."""
-    return named_pattern(_WORD_OF, name).search(written) is not None
+    return re.search(_WORD_OF.format(name=re.escape(name)), written) is not None
 
 
 def _one_of_many(held: Typed) -> Typed:
@@ -1820,7 +1811,6 @@ def _is_local_name(head: str) -> bool:
     return head[:1].islower() and head not in _OWN_OBJECT and head not in _BASE_OBJECT
 
 
-@cache
 def _language_of(file: str) -> str:
     """The language family a file is written in, by its extension: every script extension is one family."""
     suffix = "." + file.rsplit(".", 1)[-1].lower()

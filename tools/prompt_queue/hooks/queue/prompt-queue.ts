@@ -681,7 +681,7 @@ function sentNoteOf(chat: string, working: string | undefined, goals: QueuedProm
     `The person sent this message in this chat, chat "${chat}"; it is on no card of the queue. Decide what it is before any other work:`,
     `1. Only talk (a question, an answer, a complaint or a comment): answer it, and put nothing on the queue.`,
     `2. Work for a goal on the queue${working ? `, such as the one being worked, [${working}]` : ''}: file it there with prompt-queue.add_interruption, as a short clean step.`,
-    '3. New work no goal covers: queue it with prompt-queue.add as a card of its own, titled as a short statement of the goal in plain words, with the typing mistakes and any venting left out.',
+    '3. New work no goal covers: queue it with prompt-queue.add as a card of its own, titled as a short statement of the goal in plain words, with the typing mistakes and any venting left out, and, when its work has clear parts, give it its steps with prompt-queue.set_steps as you add it.',
     `Pass chat "${chat}" to every prompt-queue call. A block the Claude app puts before the message, such as <artifact-view-context>, is a viewer's state, not the person's words: never put any of it in a title or a step.`,
     'Then call prompt-queue.show and check that what you placed stands once, where you meant it. The goals on the queue:',
     ...goals.map(goalLineOf),
@@ -703,6 +703,7 @@ function robotsNoteOf(robots: SubAgentTask[], goals: QueuedPrompt[]): string[] {
     "Sub-agent mode is on. You decide where this message goes: do it yourself; make it a task of an item in a robot's queue with prompt-queue.add_interruption;",
     'or give it to a robot as a new item: prompt-queue.add, then prompt-queue.assign with the robot\'s name, so it stands in that robot\'s queue alone. Take it off this goal when it goes elsewhere,',
     "then call prompt-queue.show and check each card stands once, in the robot's queue you meant.",
+    "When you add a card whose work has clear parts, give it its steps with prompt-queue.set_steps as you add it, so the queue shows the plan before anyone starts.",
     "Work that waits on a robot's result goes to that robot, after the card it waits on, so no robot waits on another or hands its result over; start a new robot only for work that can run at the same time.",
     "A robot works only the words this chat sends it, and says when it finished: send it new work with SendMessage to its robot name. The robots' queues:",
     ...robots.map((robot, place) => `${agentNameOf(robot, place)}: ${robotPromptsOf(goals, robot, place).map(goal => `[${goal.id}] ${goal.text.slice(0, GOAL_TITLE_COLUMNS)}`).join('; ')}`),
@@ -993,6 +994,8 @@ function handOutOf(handed: { robot: string; card: QueuedPrompt }[], agents: Reco
     "Hand out the robots' next cards. Send each robot its card's words exactly as written below, followed by one line: " +
       `"Before you start, break card [<card id>] into a discrete task list of your own plan, and put it on the card with prompt-queue.set_steps(chat=\\"${chat}\\", prompt=\\"<card id>\\", steps=[...]); ` +
       'keep it as your own task list too, and as you finish each task tick it with prompt-queue.step_done(chat, prompt, step=N), so the queue shows your progress."',
+    'When a card already has steps, work them, adding or changing steps with prompt-queue.set_steps as the robot learns more.',
+    'Tell each robot too: fix every failing test you meet, including one that failed before your change, and never report a failure as left because it was already there.',
     'When a robot tells you it finished, mark its card done with prompt-queue.done; its next card follows.',
     ...handed.map(({ robot, card }) => {
       const how = agents[robot]

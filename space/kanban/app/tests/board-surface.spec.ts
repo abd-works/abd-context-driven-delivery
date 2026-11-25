@@ -13,7 +13,8 @@ async function openCloseDialog(page: Page): Promise<void> {
 // what changes the view, and this file sorts first, before any spec connects a chat.
 const SAME_LINE_PIXELS = 20
 const PAGE_FOOTER_PIXELS = 160
-// The canvas's stage is 24fr of 1488px with 10px gaps, and a stage's card is half of what the stage leaves inside.
+// The canvas's stage is 24fr of the 124fr across 1846px less its five 10px gaps, and a stage's card is half of what the stage
+// leaves inside.
 const CANVAS_STAGE_PIXELS = 347
 const CANVAS_CARD_PIXELS = 157
 const CANVAS_HEADER_PIXELS = 58
