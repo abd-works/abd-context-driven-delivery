@@ -25,6 +25,8 @@ export type Tile = { ticket: TicketClient; place: string; stage: ColumnClient; f
 // worktree that nobody committed, with Python's warning that deleting the worktree or branch without a commit loses them.
 export type Closing = {
   ticket: TicketClient
+  // The closed ticket it was dropped above, which it is put above once it has closed; none for any other close.
+  above: string | null
   leaving: string[]
   offeredLeaving: string[]
   leavingBranch: string
