@@ -178,14 +178,14 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         canvas = self.canvas
         canvas.add_page(self.story_map_page, "Story map")
         canvas.add_page(self.screens_page, "Story explorer")
-        for page in self.screen_map.pages(self._screen_files()):
+        for page in self.screen_map.pages(self._screen_files(), reserved=2):
             canvas.add_page(page["id"], page["name"])
         story_map = self._story_map()
         canvas.add(story_map, {"x": 0, "y": 0, "w": story_map.width, "h": story_map.height, "page": self.story_map_page,
                                "title": "Story map", "is_interactive": True, "expand": "fill"})
         canvas.place(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": self.explorer_width, "h": self.explorer_height, "page": self.screens_page,
                                                                  "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
-        for name, board in self.screen_map.boards(self._screen_files()).items():
+        for name, board in self.screen_map.boards(self._screen_files(), reserved=2).items():
             canvas.place(name, board)
             self._add_context_panel(name)
         return canvas
@@ -202,7 +202,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
             return
         board = self.canvas.placed(name)
         self.canvas.add(self._context_panel(focus, board["h"], f"{self.context_folder}/{artboard_stem(name)}.dc.html"),
-                        {"x": board["w"] + self.context_gap, "y": 0, "w": self.context_width, "h": board["h"], "page": board["page"], "title": "Stories"})
+                        {"x": board["x"] + board["w"] + self.context_gap, "y": board["y"], "w": self.context_width, "h": board["h"], "page": board["page"], "title": "Stories"})
 
     def _stories_shown_on(self, name: str) -> List[str]:
         """The stories whose screen is this artboard: the story-level edges of the screens that prototype it."""

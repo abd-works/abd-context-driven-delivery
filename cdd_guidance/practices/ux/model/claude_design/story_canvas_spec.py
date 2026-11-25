@@ -103,6 +103,30 @@ with description("a Claude Design story map") as self:
         with it("gives that story no thumbnail"):
             expect(self.files["project/Main.dc.html"]).not_to(contain("story=Create%20Credentials"))
 
+    with context("rendered with more screens than Claude Design keeps pages for"):
+        with before.each:
+            screens = []
+            for number in range(45):
+                screen = Screen(f"Screen {number}", number + 1)
+                screen.prototype = f"screens/screen-{number}.dc.html"
+                screen.show_story("Choose Plan")
+                screens.append(screen)
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map(*screens))).render(_story_map()))
+            self.canvas = json.loads(files["project/canvas.json"])
+
+        with it("keeps within the 40 pages a canvas holds"):
+            expect(len(self.canvas["pages"]) <= 40).to(be(True))
+
+        with it("puts every board on a page the canvas has, so none falls back onto the story map"):
+            pages = {page["id"] for page in self.canvas["pages"]}
+            expect([name for name, board in self.canvas["boards"].items() if board["page"] not in pages]).to(equal([]))
+
+        with it("lays the boards that share a page side by side, none covering another"):
+            boards = list(self.canvas["boards"].values())
+            covering = [(a["title"], b["title"]) for i, a in enumerate(boards) for b in boards[i + 1:]
+                        if a["page"] == b["page"] and a["x"] < b["x"] + b["w"] and b["x"] < a["x"] + a["w"] and a["y"] < b["y"] + b["h"] and b["y"] < a["y"] + a["h"]]
+            expect(covering).to(equal([]))
+
     with context("rendered into a project whose prototype screen loads its design system's scripts"):
         with before.each:
             workspace = Path(tempfile.mkdtemp(prefix="cdd-story-canvas-"))

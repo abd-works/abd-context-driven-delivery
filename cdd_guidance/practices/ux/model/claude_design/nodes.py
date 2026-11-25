@@ -155,7 +155,23 @@ class ClaudeDesignUxMap(UxMap):
         """Each screen's own canvas page: the editor shows it alone there, so leaving Play lands on it to edit."""
         return ("screen-" + Path(name).name.removesuffix(".dc.html"))[:PAGE_ID_LENGTH]
 
-    def pages(self, files: Iterable[str] = ()) -> List[dict]:
+    # Claude Design keeps at most this many pages on a canvas; a board on a page it does not keep falls back onto the
+    # first page, on top of what is there.
+    max_pages = 40
+    shared_page = "screen-boards"
+    shared_columns = 4
+    # Room beside each screen on the shared page for the story panel a story canvas puts there.
+    beside_room = 760
+    shared_gap = 160
+
+    def shares_a_page(self, files: Iterable[str] = (), reserved: int = 0) -> bool:
+        """Whether the screens are too many for a page each beside the reserved pages, so they share one page."""
+        return len(self.names(files)) + reserved > self.max_pages
+
+    def pages(self, files: Iterable[str] = (), reserved: int = 0) -> List[dict]:
+        """A page per screen; one page the screens share when a page each would pass the canvas's limit."""
+        if self.shares_a_page(files, reserved):
+            return [{"id": self.shared_page, "name": "Screens"}]
         return [{"id": self.page_of(name), "name": self.title(name)} for name in self.names(files)]
 
     def _board_of(self, name: str, title: str) -> CanvasBoard:
@@ -163,6 +179,16 @@ class ClaudeDesignUxMap(UxMap):
         return {"x": 0, "y": 0, "w": self.width, "h": self.height, "page": self.page_of(name), "title": title,
                 "is_interactive": True}
 
-    def boards(self, files: Iterable[str] = ()) -> Dict[str, CanvasBoard]:
-        """One board per prototype screen, alone on its own page at a desktop size."""
-        return {name: self._board_of(name, self.title(name)) for name in self.names(files)}
+    def _shared_board_of(self, name: str, title: str, place: int) -> CanvasBoard:
+        """The board of the screen artboard name at place on the shared page: in rows, with room beside it."""
+        column, row = place % self.shared_columns, place // self.shared_columns
+        return {"x": column * (self.width + self.beside_room), "y": row * (self.height + self.shared_gap), "w": self.width,
+                "h": self.height, "page": self.shared_page, "title": title, "is_interactive": True}
+
+    def boards(self, files: Iterable[str] = (), reserved: int = 0) -> Dict[str, CanvasBoard]:
+        """One board per prototype screen: alone on its own page at a desktop size, or in rows on the shared page when
+        the screens share one."""
+        names = self.names(files)
+        if self.shares_a_page(files, reserved):
+            return {name: self._shared_board_of(name, self.title(name), place) for place, name in enumerate(names)}
+        return {name: self._board_of(name, self.title(name)) for name in names}
