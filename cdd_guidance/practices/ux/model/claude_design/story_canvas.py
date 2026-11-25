@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from functools import cached_property
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
@@ -343,8 +344,12 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
             if image and not any(group["i"] for group in groups):
                 groups[0]["i"] = [f"../{image}"]
         background = scenario in story.backgrounds
-        return {"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,
-                "f": self.sources.get(StoryTree.key_of(scenario), "")}
+        entry = {"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,
+                 "f": self.sources.get(StoryTree.key_of(scenario), "")}
+        rows = _outline_rows(scenario, groups)
+        if rows:
+            entry["r"] = rows
+        return entry
 
     def _step_groups(self, story: ClaudeDesignStory, scenario: "Scenario | Background") -> tuple[List[dict], str]:
         """The scenario's steps, grouped so each group ends on a step a screen shows, with that screen's images and the
@@ -466,6 +471,19 @@ def _steps_of(scenario: "Scenario | Background") -> List[Step]:
         found.append(step)
         found.extend(getattr(step, "ands", []) or [])
     return found
+
+
+_PLACEHOLDER = re.compile(r"\$?\{[^}]+\}|<[^>]+>")
+
+
+def _outline_rows(scenario: "Scenario | Background", groups: List[dict]) -> Dict[str, Dict[str, str]]:
+    """An outline's Examples table as the explorer fills its steps from it: each row, by its name (its ``example``
+    column), with every column's value in plain words. A scenario whose steps name no placeholder has none."""
+    examples = getattr(scenario, "examples", None) or {}
+    if not examples or not any(_PLACEHOLDER.search(group["x"]) for group in groups):
+        return {}
+    return {plain_words(example.name): {column: plain_words(value) for column, value in example.row.items()}
+            for example in examples.values()}
 
 
 def _phased_steps(scenario: "Scenario | Background") -> List[tuple]:

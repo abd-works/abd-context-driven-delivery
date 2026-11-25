@@ -52,6 +52,23 @@ def _ux_map(*screens: Screen) -> UxMap:
     return ux_map
 
 
+def _outline_map() -> StoryMap:
+    """Create Credentials with an outline whose steps name its columns, and two rows in its Examples table."""
+    story_map = StoryMap()
+    epic = Epic("Create Account", 1)
+    story = Story("Create Credentials", 1)
+    outline = Scenario("Enter Invalid credentials", 1)
+    outline.steps.append(Step("the Customer has entered {example}", StepType.GIVEN, 1))
+    outline.steps.append(Step("the Customer registers the credentials", StepType.WHEN, 2))
+    outline.steps.append(Step("the {message} message is shown", StepType.THEN, 3))
+    outline.examples["missing email"] = {"message": "++email required++"}
+    outline.examples["password missing letters"] = {"message": "password rule"}
+    story.scenarios.append(outline)
+    epic.stories.append(story)
+    story_map.epics.append(epic)
+    return story_map
+
+
 with description("a Claude Design story map") as self:
     with before.each:
         self.files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map(_catalog_screen()))).render(_story_map()))
@@ -181,6 +198,15 @@ with description("a Claude Design story map") as self:
 
         with it("keeps the stories an epic holds beside its sub-epics"):
             expect([story["n"] for story in self.tree[0]["e"][0]["s"]]).to(equal(["View Cart"]))
+
+    with context("rendered from an outline whose steps name its Examples columns"):
+        with it("writes each row's values by its name, in plain words, so a picked row can fill the steps"):
+            explorer = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map())).render(_outline_map()))["project/screens/explorer.dc.html"]
+            tree = json.loads(explorer.split("tree() {\nreturn ", 1)[1].split(";\n}", 1)[0])
+            expect(tree[0]["s"][0]["c"][0]["r"]).to(equal({
+                "missing email": {"example": "missing email", "message": "email required"},
+                "password missing letters": {"example": "password missing letters", "message": "password rule"},
+            }))
 
     with context("rendered from steps that mark their terms"):
         with before.each:

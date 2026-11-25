@@ -117,6 +117,36 @@ def _ux_map() -> UxMap:
     return ux_map
 
 
+def _outline_map() -> StoryMap:
+    """Create Credentials with an outline whose steps name its columns, and two rows in its Examples table."""
+    story_map = StoryMap()
+    epic = Epic("Create Account", 1)
+    story = Story("Create Credentials", 1)
+    outline = Scenario("Enter Invalid credentials", 1)
+    outline.steps.append(Step("the Customer has entered {example}", StepType.GIVEN, 1))
+    outline.steps.append(Step("the Customer registers the credentials", StepType.WHEN, 2))
+    outline.steps.append(Step("the {message} message is shown", StepType.THEN, 3))
+    outline.examples["missing email"] = {"message": "++email required++"}
+    outline.examples["password missing letters"] = {"message": "password rule"}
+    story.scenarios.append(outline)
+    epic.stories.append(story)
+    story_map.epics.append(epic)
+    return story_map
+
+
+def _outline_steps(*calls: list, rows: bool = True) -> dict:
+    """The step rows and the step text the explorer shows for the outline after calls, its rows listed by the fixtures
+    bundle when rows."""
+    listed = "['Enter Invalid credentials: missing email', 'Enter Invalid credentials: password missing letters']" if rows else "[]"
+    run = _RUN.replace("const explorer = new Component();", f"globalThis.CanvasFixtures = {{ scenarios: () => {listed} }};\nconst explorer = new Component();").replace(
+        "console.log(JSON.stringify({ step: shown.stepText, index: shown.stepIndex }));",
+        "console.log(JSON.stringify({ steps: shown.rows.filter((row) => /^(Given|Then)/.test(row.label || '')).map((row) => row.label), step: shown.stepText }));")
+    files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=UxMap.create())).render(_outline_map()))
+    code = re.search(r'<script type="text/x-dc"[^>]*>([\s\S]*?)</script>', files["project/screens/explorer.dc.html"]).group(1)
+    answer = subprocess.run(["node", "-e", run, json.dumps(list(calls))], input=code, capture_output=True, text=True, check=True)
+    return json.loads(answer.stdout)
+
+
 with description("a story explorer that a screen moves") as self:
     with it("should move to the step a screen names, after the screen's action"):
         expect(_shown_step("Add Line To Cart", "Add one more line", "Then")).to(equal("Then the cart holds Atlas and Ace"))
@@ -195,3 +225,13 @@ with description("a story explorer that a screen moves") as self:
             code = re.search(r'<script type="text/x-dc"[^>]*>([\s\S]*?)</script>', files["project/screens/explorer.dc.html"]).group(1)
             answer = subprocess.run(["node", "-e", closed, "[]"], input=code, capture_output=True, text=True, check=True)
             expect(json.loads(answer.stdout)).to(equal(["Onboard A Customer", "Choose Lines", "Pick Plans"]))
+
+    with context("whose outline has a row picked"):
+        with it("should show the picked row's values in the steps, as its Examples table gives them"):
+            shown = _outline_steps(["Create Credentials", "Enter Invalid credentials: password missing letters"])
+            expect(shown).to(equal({"steps": ["Given the Customer has entered password missing letters\nWhen the Customer registers the credentials\nThen the password rule message is shown"], "step": "Given the Customer has entered password missing letters\nWhen the Customer registers the credentials\nThen the password rule message is shown"}))
+
+    with context("whose outline has no row to pick"):
+        with it("should show the outline's placeholders"):
+            shown = _outline_steps(["Create Credentials", "Enter Invalid credentials"], rows=False)
+            expect(shown["step"]).to(equal("Given the Customer has entered {example}\nWhen the Customer registers the credentials\nThen the {message} message is shown"))
