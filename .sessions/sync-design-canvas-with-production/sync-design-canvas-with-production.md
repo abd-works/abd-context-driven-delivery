@@ -212,7 +212,7 @@ The multi-line canvas, from the pml-web built features chat on 2026-11-25:
 
 | What | Where |
 |---|---|
-| Canvas | `C:/dev/paradise-mobile/pml-web/ux/design-canvas/version-6/project/` (`Main.dc.html`, `screens/`, `canvas.json`); versions in `ux/design-canvas/versions.json`. Not yet published; version-5 (`https://claude.ai/artifact/VnncHtBz97QjjdjWDhtqjw`) ignores scenarios, so do not use it |
+| Canvas | `C:/dev/paradise-mobile/pml-web/ux/design-canvas/version-6/project/` (`Main.dc.html`, `screens/`, `canvas.json`); versions in `ux/design-canvas/versions.json`. Published as `https://claude.ai/artifact/1zLwTyxmspnoJZcgAAE82o` (private; play links `#play-screens-add-line-to-cart` and `#play-screens-view-cart`); read only, the pml-web chat may republish it to the same link. version-5 (`https://claude.ai/artifact/VnncHtBz97QjjdjWDhtqjw`) ignores scenarios, so do not use it |
 | Screens | `screens/display-plans.dc.html` (catalog), `screens/add-line-to-cart.dc.html` (*Add the first line*, *Add one more line*), `screens/view-cart.dc.html` (*View the cart with several lines*). Each wraps `screens/flow.dc.html`, Leo's prototype, at the story's state from `ux/prototype/multi-line/story-screens.json` |
 | What the screens run | The prototype's markup over the real domain bundle `project/pml-domain.js` (`window.PMLDomain`), `multiline.js` and `ds/pmlapp` |
 | Production views | `src/revenue/cart/plan-catalog.tsx` (`PlanCatalogView`, still single-line, takes `onSignUp`), `select-plan.tsx` (`SelectPlanView`), `checkout.tsx` (`CheckoutView`). The domain is built (`Cart`/`Line` in `cart.ts`; `CartClient.addLineToCart`/`removeLine` in `cart-client.tsx`) |
