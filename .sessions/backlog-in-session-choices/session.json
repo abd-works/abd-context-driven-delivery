@@ -5,7 +5,8 @@
       "unit": "claude plugin test"
     },
     "space/kanban": {
-      "unit": "mamba"
+      "unit": "mamba",
+      "server": "mamba"
     }
   }
 }
