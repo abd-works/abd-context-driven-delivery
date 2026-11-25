@@ -206,7 +206,23 @@ Option G is the delivery route. **Done:** CSS and assets are byte-identical to t
 
 **The real duplication is the screens.** About 3,700 lines of generators and patch scripts sit in `pml-web/.sessions/design-canvas/tools`. They are outside CDD, session-bound, and hard-code `C:/dev/paradise-mobile/pml-web` (`paradise_screens.py`, `render_pml_canvas.py`). They re-state markup and behaviour that already exist in 44 production `.tsx` files. A substring check of `select-plan.dc.html` found 41 of its 42 class names in the matching TSX, so the port is faithful today. Nothing keeps it that way.
 
-**Phase 0: spike on the first multi-line screens (decides everything else).** Use pml-web's new multi-line canvas (`ux/prototype/multi-line-domain`, ported by `port_multiline_screens.py`), on a scratch canvas, and take only its first few screens, enough to test: **add a line**, **add another line**, and **check the cart** (the `add-line-to-cart` story's *Add the first line* and *Add one more line* scenarios, then the cart they open). Each gate has a pass test, and each gate is the first check of the story named beside it.
+**Phase 0: spike on the first multi-line screens (decides everything else).** Use pml-web's new multi-line canvas (`ux/prototype/multi-line-domain`, ported by `port_multiline_screens.py`), on a scratch canvas, and take only its first few screens, enough to test: **add a line**, **add another line**, and **check the cart** (the `add-line-to-cart` story's *Add the first line* and *Add one more line* scenarios, then the cart they open).
+
+The multi-line canvas, from the pml-web built features chat on 2026-11-25:
+
+| What | Where |
+|---|---|
+| Canvas | `C:/dev/paradise-mobile/pml-web/ux/design-canvas/version-6/project/` (`Main.dc.html`, `screens/`, `canvas.json`); versions in `ux/design-canvas/versions.json`. Not yet published; version-5 (`https://claude.ai/artifact/VnncHtBz97QjjdjWDhtqjw`) ignores scenarios, so do not use it |
+| Screens | `screens/display-plans.dc.html` (catalog), `screens/add-line-to-cart.dc.html` (*Add the first line*, *Add one more line*), `screens/view-cart.dc.html` (*View the cart with several lines*). Each wraps `screens/flow.dc.html`, Leo's prototype, at the story's state from `ux/prototype/multi-line/story-screens.json` |
+| What the screens run | The prototype's markup over the real domain bundle `project/pml-domain.js` (`window.PMLDomain`), `multiline.js` and `ds/pmlapp` |
+| Production views | `src/revenue/cart/plan-catalog.tsx` (`PlanCatalogView`, still single-line, takes `onSignUp`), `select-plan.tsx` (`SelectPlanView`), `checkout.tsx` (`CheckoutView`). The domain is built (`Cart`/`Line` in `cart.ts`; `CartClient.addLineToCart`/`removeLine` in `cart-client.tsx`) |
+| Build | `.sessions/design-canvas/tools/port_multiline_screens.py`, then `render_pml_canvas.py`, with the CDD venv, cwd `abd-context-driven-delivery`, `PYTHONPATH=".;cdd_guidance;cdd_guidance/practices"`. The `LernCanvasFixtures` step (`node build-canvas-fixtures.mjs`) fails today; these screens do not use it |
+
+**Finding that changes the spike:** no production view renders the multi-line cart yet (the lines list with add and remove). The add-a-line and cart screens exist only in the prototype, so there is nothing in production to mount for them. The spike therefore splits:
+
+- **Mount gates (1, 2, 4, 5, 6)** run on the catalog in front of them, `PlanCatalogView`, the one production view these screens reach.
+- **Data gate (3)** runs add a line, add another line, and check the cart through the real domain: `CartClient.addLineToCart` and `Cart`/`Line`, answered from fixture routes, which the prototype already exercises through `window.PMLDomain`.
+- **Add a line and check the cart as mounted screens** wait until pml-web builds their views. Until then they stay prototype screens, marked as having no production view: the detached state of Redesign A Screen By Detaching It. Each gate has a pass test, and each gate is the first check of the story named beside it.
 
 | Gate | Question | Pass | Story |
 |---|---|---|---|
