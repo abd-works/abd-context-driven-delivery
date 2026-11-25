@@ -3,5 +3,6 @@
   "title": "Bots integrated with the Claude pane's background tasks",
   "scope": "story",
   "stage": "Implementation",
-  "stage_mark": "in-progress"
+  "stage_mark": "in-progress",
+  "dropped_work": []
 }
