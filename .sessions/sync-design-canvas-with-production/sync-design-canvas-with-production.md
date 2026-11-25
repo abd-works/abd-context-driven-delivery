@@ -4,7 +4,7 @@ Session `claud_design_enhancements`. Analysis and planning only: nothing here is
 
 | Increment | Epic → feature on the story map | Depends on | First slice |
 |---|---|---|---|
-| **11: Sync Design Canvas With Production** | Build Design Canvas Screens → Reuse Production Assets On The Canvas, with its four sub-features: Trace Canvas Files To Production (Phase 1), Install Production Design System On The Canvas (Phase 2), Mount Production Views As Screens (Phases 0, 3, 5), Redesign A Screen By Detaching It (Phase 4) | Nothing; comes before every other design canvas increment | Phase 0 spike on `select-plan` |
+| **11: Sync Design Canvas With Production** | Build Design Canvas Screens → Reuse Production Assets On The Canvas, with its four sub-features: Trace Canvas Files To Production (Phase 1), Install Production Design System On The Canvas (Phase 2), Mount Production Views As Screens (Phases 0, 3, 5), Redesign A Screen By Detaching It (Phase 4) | Nothing; comes before every other design canvas increment | Phase 0 spike on the multi-line canvas's first screens: add a line, add another line, check the cart |
 
 The other design canvas increments: [Integrate Stories With The Canvas Explorer](integrate-stories-with-the-canvas-explorer.md), [Draw Linked Models On The Canvas](draw-linked-models-on-the-canvas.md).
 
@@ -206,11 +206,11 @@ Option G is the delivery route. **Done:** CSS and assets are byte-identical to t
 
 **The real duplication is the screens.** About 3,700 lines of generators and patch scripts sit in `pml-web/.sessions/design-canvas/tools`. They are outside CDD, session-bound, and hard-code `C:/dev/paradise-mobile/pml-web` (`paradise_screens.py`, `render_pml_canvas.py`). They re-state markup and behaviour that already exist in 44 production `.tsx` files. A substring check of `select-plan.dc.html` found 41 of its 42 class names in the matching TSX, so the port is faithful today. Nothing keeps it that way.
 
-**Phase 0: spike on one screen (decides everything else).** Use `select-plan` in pml-web, as a throwaway on a scratch canvas. Each gate has a pass test, and each gate is the first check of the story named beside it.
+**Phase 0: spike on the first multi-line screens (decides everything else).** Use pml-web's new multi-line canvas (`ux/prototype/multi-line-domain`, ported by `port_multiline_screens.py`), on a scratch canvas, and take only its first few screens, enough to test: **add a line**, **add another line**, and **check the cart** (the `add-line-to-cart` story's *Add the first line* and *Add one more line* scenarios, then the cart they open). Each gate has a pass test, and each gate is the first check of the story named beside it.
 
 | Gate | Question | Pass | Story |
 |---|---|---|---|
-| 1. Mount | Does `x-import` resolve a bundle global from `project/ds/`? | `SelectPlanView` renders in a published canvas | Mount Production View In A Thin Screen |
+| 1. Mount | Does `x-import` resolve a bundle global from `project/ds/`? | The add-a-line view renders in a published canvas, and adding a second line and opening the cart work on it | Mount Production View In A Thin Screen |
 | 2. React | Does React 19 source run on 18.3.1 with classic JSX? | Renders and handles clicks. A grep found no `use(`, `useActionState`, `useOptimistic`, `useFormStatus` or `forwardRef`; ref-as-prop was not checked | Bundle Product Views For The Canvas |
 | 3. Data | Can the real routes run in the browser? | `createCartRoutes` takes its repositories as parameters, which suits a small router stand-in, but `*-node` is stubbed today and those routes call `CartNode.fromRequest`. Pass: a real route answers a fixture. Otherwise fall back to a thin fetch table over the in-memory repositories | Answer Screen Requests From Fixture Routes |
 | 4. Navigation | Does the `define` seam hold? | `followStepIfNeeded` moves the explorer through `go`, and the artboard stays put | Keep Explorer Navigation Inside The Artboard |
