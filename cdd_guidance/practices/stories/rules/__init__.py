@@ -17,7 +17,6 @@ from cdd_guidance.practices.stories.rules.scenarios import (
     GwtStepsTraceToDomainOperations,
     OutlineRequiresManyPermutations,
     PlainEnglishGwtSteps,
-    ScenarioNamesContinuation,
     ScenariosNameAStoryOnTheMap,
     ScenariosShape,
     ThenObservesAnExample,
@@ -59,7 +58,6 @@ RULES: tuple = (
     FlaggedWritesIntendedGwt(),
     BranchOnMechanicalUniqueness(),
     GivenNamesComplexStateRootFirst(),
-    ScenarioNamesContinuation(),
     ScenariosNameAStoryOnTheMap(),
     ThenObservesAnExample(),
 )

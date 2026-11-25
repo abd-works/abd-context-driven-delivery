@@ -79,7 +79,6 @@ scenario:
     - steps match given+ (when then+)+
     - shownOn is the screen whose showsScenarios holds this scenario; with none, the scenario shows its story's screen
     - outline when examples count > 2
-    - a later then names the next story
     - examples cover every domain concept the steps name
     - invokes is the union of invokes on these steps
   rules:
@@ -153,7 +152,7 @@ then:
   rules:
     - then-observes-an-example
     - behavioral-and-system-observable-outcomes
-    - scenario-names-continuation
+    - main-flow-first
     - browser-then-asserts-screen-widgets
     - assert-domain-behavior-not-seeded-state
 
