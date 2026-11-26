@@ -10,6 +10,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Clea
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import DiagramArrow
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import CLASSES_ON_ONE_PAGE
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramClass
+from harness.guidance.practice_formats import Written
 from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
@@ -334,6 +335,37 @@ with description("a class view whose links between pages are drawn card to card 
 
     with it("should give the link the sides it leaves and reaches its cards by"):
         expect(bool(self.across.from_side and self.across.to_side)).to(be_true)
+
+
+def _checkout(files: dict) -> Path:
+    """A git checkout on branch main whose origin is github.com/org/shop, holding files."""
+    import subprocess
+    import tempfile
+
+    root = Path(tempfile.mkdtemp())
+    for relative, text in files.items():
+        (root / relative).write_text(text, encoding="utf-8")
+    subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=True)
+    subprocess.run(["git", "-C", str(root), "remote", "add", "origin", "https://github.com/org/shop.git"], check=True)
+    return root
+
+
+with description("a class model drawn on a Claude whiteboard in a folder of a git checkout that holds its model document") as self:
+    with before.all:
+        self.source = orders_class_model()
+        self.root = _checkout({"orders-model.md": "# orders\n\n## Cart <<Aggregate Root>>\n\n## Line\n"})
+        self.text = WhiteboardCleanEngineeringModel().render(self.source, Written(folder=self.root))
+        self.cards = cards_of(Whiteboard.from_text(self.text))
+
+    # A board opens only a web address, so the heading is linked where the checkout's origin shows the document.
+    with it("should end a class's card with a link to its heading in the model document"):
+        expect(self.cards["Cart"].text.splitlines()[-1]).to(equal("[orders-model.md](https://github.com/org/shop/blob/main/orders-model.md#cart-aggregate-root)"))
+
+    with it("should draw no link on the card of a class the model document has no heading for"):
+        expect("](" in self.cards["PricedLine"].text).to(equal(False))
+
+    with it("should read back every module, class, property, operation and base"):
+        expect(summary(WhiteboardCleanEngineeringModel().parse(self.text))).to(equal(summary(self.source)))
 
 
 with description("a modules view drawn on a Claude whiteboard") as self:

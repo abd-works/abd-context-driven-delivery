@@ -14,6 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     path_parent,
 )
 from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
+from cdd_guidance.practices.clean_engineering.model.diagram.class_links import ClassModelLinks, ClassPlace
 from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     CELL_MIN_HEIGHT,
@@ -61,6 +62,10 @@ _INTERACTION_WORDS = re.compile('«[^»]*»')
 
 class DiagramClass(OoadClass, DiagramNode):
     """OoadClass on a page: name, members, height. Channel fills the label."""
+
+    drawn_from: Optional[ClassPlace] = None
+    """Where the class is described, which its card links to: its heading in the model document beside the diagram, or
+    the code it was read from; none when the diagram is drawn in no folder, or the class has neither."""
 
     def __init__(self, name: str = '', sequential_order: int = 1, intent: str = '') -> None:
         OoadClass.__init__(self, name, sequential_order, intent)
@@ -272,6 +277,8 @@ class DiagramCleanEngineeringModel(CleanEngineeringModel):
     """Shared diagram channel. Draw.io extends this model."""
 
     writes_prose = False
+    class_links: Optional[ClassModelLinks] = None
+    """Where the class cards of a diagram written in a folder link, set when it is rendered there."""
 
     def load_module_cell(self, source: Module) -> DiagramModule:
         """A module of this channel's own kind for a container module the containment forest made, filled from it."""

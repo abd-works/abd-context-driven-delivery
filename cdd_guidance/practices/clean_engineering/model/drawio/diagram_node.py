@@ -42,9 +42,16 @@ class DrawioVertex:
     """A placed node written as one Draw.io vertex cell: its HTML label, its style, and its box."""
 
     def append_to(self, root_el: ET.Element) -> ET.Element:
-        cell = ET.SubElement(root_el, 'mxCell')
-        cell.set('id', self.cell_id)
-        cell.set('value', self.html())
+        """The vertex's cell; inside a UserObject that carries its id, words and link when it links to where it is
+        described."""
+        place = getattr(self, 'drawn_from', None)
+        if place is not None:
+            holder = ET.SubElement(root_el, 'UserObject', attrib={'label': self.html(), 'link': place.link, 'id': self.cell_id})
+            cell = ET.SubElement(holder, 'mxCell')
+        else:
+            cell = ET.SubElement(root_el, 'mxCell')
+            cell.set('id', self.cell_id)
+            cell.set('value', self.html())
         cell.set('style', self.style())
         cell.set('vertex', '1')
         cell.set('parent', self.parent_id)

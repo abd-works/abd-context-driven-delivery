@@ -276,3 +276,17 @@ with description("DrawIOBoundedContextMap"):
                 expect([item.name for item in self.cart.root_card.operations]).to(
                     equal([item.name for item in self.written.root_card.operations])
                 )
+
+
+with description("an aggregate view drawn in a folder that holds its domain model"):
+    with before.all:
+        from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import class_name_in
+        from harness.guidance.practice_formats import Written
+
+        folder = Path(tempfile.mkdtemp())
+        (folder / "domain-model.md").write_text(_MODEL, encoding="utf-8")
+        xml = DrawIOBoundedContextMap().render(MarkdownBoundedContextMap().parse(_MODEL), Written(folder=folder))
+        self.links = {class_name_in(holder.get("label", "")): holder.get("link", "") for holder in ET.fromstring(xml).iter("UserObject") if holder.get("link")}
+
+    with it("should link each class card to its class's heading in the domain model"):
+        expect(self.links["CustomerProfile"]).to(equal("domain-model.md#customerprofile-aggregate-root-entity"))

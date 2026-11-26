@@ -286,9 +286,13 @@ class ClassViewPage:
     def _card_node(self, cell_id: str) -> DiagramClass:
         writer = self._writer
         oclass = writer.classes_by_cell[cell_id]
+        links = writer.channel.class_links
         if cell_id in self._import_ids:
-            return writer.channel.imported_class(oclass, writer.module_labels.get(cell_id, 'other'))
+            imported = writer.channel.imported_class(oclass, writer.module_labels.get(cell_id, 'other'))
+            imported.drawn_from = links.place_of(oclass) if links is not None else None
+            return imported
         node = oclass
+        node.drawn_from = links.place_of(oclass) if links is not None else None
         node.fill_color = writer.module_fills.get(writer.module_labels.get(cell_id, ''), '')
         node.owning_module = writer.module_of[id(oclass)].name.strip() if id(oclass) in writer.module_of else ''
         return node

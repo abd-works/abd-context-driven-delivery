@@ -30,7 +30,7 @@ class ClassDiagramPage:
         self.page = page
         self.file_path = file_path
         self.name = page.name
-        self.cells = [cell.element for cell in page.cells]
+        self.cells = [_as_one_cell(cell) for cell in page.cells]
         self.vertices = [cell for cell in self.cells if cell.get('vertex') == '1']
         self.edges = [cell for cell in self.cells if cell.get('edge') == '1']
         self.boxes: dict[str, Box] = {}
@@ -104,6 +104,17 @@ class ClassDiagramPage:
             return ([(start[0], end[1]), end], 'h')
         return ([(end[0], start[1]), end], 'v')
 
+
+
+def _as_one_cell(cell: DrawioCell) -> ET.Element:
+    """The cell as one mxCell with its id and words on it: a linked cell keeps them on the UserObject round it, so it is
+    read as a copy that carries them, and every reader of the page reads both kinds alike."""
+    element = cell.element
+    if element.get('id') is not None:
+        return element
+    whole = ET.Element('mxCell', attrib={**element.attrib, 'id': cell.id, 'value': cell.label})
+    whole.extend(list(element))
+    return whole
 
 
 def class_title_in(cell_label: str) -> str | None:

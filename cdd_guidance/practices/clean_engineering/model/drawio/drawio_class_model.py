@@ -36,6 +36,7 @@ from typing import Dict, List, Optional, Tuple
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in
 from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import ArrowRouter, CardSpacing, DiagramArrow
+from cdd_guidance.practices.clean_engineering.model.diagram.class_links import ClassModelLinks
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import (
     DEPENDENCY_LABEL,
     ClassView,
@@ -137,6 +138,7 @@ class DrawIOCleanEngineeringModel(KeepsDocumentInDrawing, DiagramCleanEngineerin
         it, the diagram this model keeps positions from, when it keeps them."""
         if canonical is not self:
             self.translate_from(canonical)
+        self.class_links = ClassModelLinks(written.folder) if written.folder is not None else None
         if self.is_modules_view:
             return _ModulesDiagramWriter(self, written.previous or self.previous).write()
         return self.class_diagram_type(self, written.previous or self.kept_previous()).write()

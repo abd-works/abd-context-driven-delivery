@@ -34,7 +34,10 @@ from cdd_guidance.practices.clean_engineering.model.diagram.geometry import MODU
 from cdd_guidance.practices.clean_engineering.model.diagram.module_layout import ModuleLayout
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from harness.catalog_generator.git_citation import GitCitation
 from harness.guidance.practice_formats import Written
+from harness.markdown.markdown import link_words
+from cdd_guidance.practices.clean_engineering.model.diagram.class_links import ClassModelLinks
 
 SPLIT = "– – –"
 """The short dashed line between a class card's properties and its operations."""
@@ -90,7 +93,7 @@ def _element(role: str, *names: str, parts: Tuple[str, ...] = ()) -> ElementId:
 
 def _text_box(text: str) -> Tuple[float, float]:
     """The width and height a block needs for text in the board's small words."""
-    lines = text.splitlines() or [""]
+    lines = link_words(text).splitlines() or [""]
     width = max(MIN_WIDTH, max(len(line) for line in lines) * LETTER_ROOM + TEXT_PAD)
     return (math.ceil(width / WIDTH_STEP) * WIDTH_STEP, len(lines) * LINE_ROOM + TEXT_PAD)
 
@@ -187,7 +190,14 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
         for folded in self.folded:
             lines.append("")
             lines.extend(folded.own_lines())
+        lines.extend(self.place_lines())
         return "\n".join(lines)
+
+    def place_lines(self) -> List[str]:
+        """The link to where the class is described, named by its file, on a line of its own under the rest; none when
+        it is described nowhere the board can open."""
+        place = self.drawn_from
+        return [f"[{place.path.name}]({place.link})"] if place is not None else []
 
     def own_lines(self) -> List[str]:
         """Its stereotypes, its name in bold, its properties, a few dashes, then its operations: the whole card, or
@@ -239,6 +249,7 @@ class WhiteboardImportedClass(ImportedClass, WhiteboardClass):
     def shown_text(self) -> str:
         lines = [f"*«from: {self.from_module}»*", f"**{self.name}**"]
         lines.extend(f"+ {item.name}{(': ' + item.type_hint) if item.type_hint else ''}" for item in self.key_properties())
+        lines.extend(self.place_lines())
         return "\n".join(lines)
 
     def card(self, element_id: str) -> BoardElement:
@@ -655,6 +666,8 @@ class WhiteboardCleanEngineeringModel(KeepsDocumentOnBoard, DiagramCleanEngineer
         board held stay where people put them."""
         if canonical is not self:
             self.translate_from(canonical)
+        citation = GitCitation.from_branch(written.folder) if written.folder is not None else None
+        self.class_links = ClassModelLinks(written.folder, citation) if citation is not None else None
         return self.board().drawn_over(str(written.previous))
 
     def board(self) -> Whiteboard:

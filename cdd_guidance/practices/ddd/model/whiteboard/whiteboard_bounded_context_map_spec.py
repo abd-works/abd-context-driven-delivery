@@ -221,3 +221,22 @@ with description("a DDD board saved as its file"):
         source = MarkdownBoundedContextMap().parse(_MAP)
         saved = _saved_as("bounded-context-map.whiteboard", WhiteboardBoundedContextMap().render(source))
         expect(WhiteboardBoundedContextMap().parse(saved.save()).title).to(equal(source.title))
+
+
+with description("an aggregate view drawn on a Claude whiteboard in a folder of a git checkout that holds its domain model"):
+    with before.all:
+        import subprocess
+        import tempfile
+
+        from harness.guidance.practice_formats import Written
+
+        folder = Path(tempfile.mkdtemp())
+        (folder / "domain-model.md").write_text(_MODEL, encoding="utf-8")
+        subprocess.run(["git", "init", "-q", "-b", "main", str(folder)], check=True)
+        subprocess.run(["git", "-C", str(folder), "remote", "add", "origin", "https://github.com/org/shop.git"], check=True)
+        board = Whiteboard.from_text(WhiteboardBoundedContextMap().render(MarkdownBoundedContextMap().parse(_MODEL), Written(folder=folder)))
+        self.cards = {element.text.split("**")[1]: element.text for element in board.elements if isinstance(element, Shape) and element.role == "class"}
+
+    with it("should end each class card with a link to its class's heading in the domain model, where the checkout's origin shows it"):
+        expect(self.cards["CustomerProfile"].splitlines()[-1]).to(equal(
+            "[domain-model.md](https://github.com/org/shop/blob/main/domain-model.md#customerprofile-aggregate-root-entity)"))

@@ -13,6 +13,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base
 from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from harness.guidance.practice_formats import Written
 
 
 def _shop() -> CleanEngineeringModel:
@@ -198,3 +199,42 @@ with description("a class model written in markdown"):
 
         with it("should bring back every class card as it was written"):
             expect(_cards(self.back)).to(equal(_cards(_ORDERS_MODEL)))
+
+
+_SHOP_MODEL = """# Shop model
+
+## sales
+
+### Order <<Aggregate Root>>
+
++ number: str
+
+### Order
+
+A second heading of the same words, so the anchor of the class's own heading is told apart from it.
+"""
+
+
+def _linked_by_name(text: str) -> dict:
+    """Each linked class card's name with the link it carries."""
+    from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import class_name_in
+
+    return {class_name_in(holder.attrib.get("label", "")): holder.attrib.get("link", "") for holder in ET.fromstring(text).iter("UserObject") if holder.attrib.get("link")}
+
+
+with description("a class diagram drawn in a folder that holds its model document") as self:
+    with before.all:
+        self.folder = Path(tempfile.mkdtemp())
+        (self.folder / "shop-model.md").write_text(_SHOP_MODEL, encoding="utf-8")
+        self.text = DrawIOCleanEngineeringModel().render(_shop(), Written(folder=self.folder))
+        self.links = _linked_by_name(self.text)
+
+    with it("should link a class card to its class's heading in the model document beside the diagram"):
+        expect(self.links["Order"]).to(equal("shop-model.md#order-aggregate-root"))
+
+    with it("should leave a class the model document has no heading for unlinked"):
+        expect("OrderLine" in self.links).to(equal(False))
+
+    with it("should read a linked card back as its class"):
+        read = DrawIOCleanEngineeringModel().parse(self.text)
+        expect([oclass.name for module in read.modules for oclass in module.classes]).to(equal(["Order", "OrderLine"]))
