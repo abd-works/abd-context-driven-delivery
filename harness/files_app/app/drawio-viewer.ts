@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { connect } from 'node:net'
 import { join } from 'node:path'
 
-import { DRAWIO_PORT, drawioEditorUrl } from './files/files-paths'
+import { DRAWIO_PORT, drawioEditorUrl, type DrawioOpener } from './files/files-paths'
 
 const HOST = '127.0.0.1'
 const STARTED_WITHIN_MILLISECONDS = 10_000
@@ -47,9 +47,10 @@ export class DrawioViewer {
 
   // The editor's address for path, a file named from project's root (this repository's when none is named), the viewer
   // started first when it is down.
-  async urlOf(path: string, project = ''): Promise<string> {
+  // opened names the Files server the diagram's links to files go through, and the chat and ticket they open for.
+  async urlOf(path: string, project = '', opened?: DrawioOpener): Promise<string> {
     if (!(await answers(this.port))) await this.start()
-    return drawioEditorUrl(path, project, this.port)
+    return drawioEditorUrl(path, project, this.port, opened)
   }
 
   private async start(): Promise<void> {

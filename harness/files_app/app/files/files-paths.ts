@@ -6,6 +6,9 @@ export const FILES_HEADER = 'x-cdd-files'
 // tab on to it. A link is a navigation the browser always allows, where a tab opened from a script can be refused.
 export const DRAWIO_PAGE = '/drawio/page'
 export const DRAWIO_PORT = 8791
+// Where the draw.io viewer sends a press on a diagram's link to a file, such as a story's own file from the story map:
+// the Files server shows the file in the Files app at the heading the link names, or tells the chat it is not there.
+export const DRAWIO_LINK = '/drawio/link'
 // The route that shows a file or folder in the system's file browser, on the machine the Files server runs on.
 export const REVEAL_PATH = '/reveal'
 // Where an HTML page of the page's project finds its own scripts, styles and images: the server serves each project
@@ -29,8 +32,8 @@ export const isWhiteboard = (path: string): boolean => path.toLowerCase().endsWi
 // The address a .drawio file's link opens: the Files server's draw.io page on the file, naming the chat that opened the
 // page so a viewer that does not start is told to that chat, as every failure of the page is, and the page's project,
 // whose file it is.
-export const drawioPageOf = (path: string, chat: string, project = ''): string => {
-  const query = new URLSearchParams({ path, ...(chat ? { chat } : {}), ...(project ? { project } : {}) })
+export const drawioPageOf = (path: string, chat: string, project = '', ticket = ''): string => {
+  const query = new URLSearchParams({ path, ...(chat ? { chat } : {}), ...(project ? { project } : {}), ...(ticket ? { ticket } : {}) })
   return `${API_ROOT}${DRAWIO_PAGE}?${query.toString()}`
 }
 
@@ -39,9 +42,15 @@ const isWholePath = (path: string): boolean => /^([a-zA-Z]:)?[\\/]/.test(path)
 // The draw.io editor on a file named from its project's root. One viewer serves every project, rooted at whichever
 // started it, so a file of a named project is sent as its whole path (.claude/rules/drawio-viewer.md). The viewer
 // answers on DRAWIO_PORT, unless it was started on a port of its own, as a spec's viewer is.
-export const drawioEditorUrl = (path: string, project = '', port = DRAWIO_PORT): string => {
+// Its links to files go through the Files server named as opener, for the project, the chat and the ticket named.
+export type DrawioOpener = { opener: string; chat?: string; ticket?: string }
+
+export const drawioEditorUrl = (path: string, project = '', port = DRAWIO_PORT, opened?: DrawioOpener): string => {
   const file = project && !isWholePath(path) ? `${project.replace(/[\\/]+$/, '')}/${path}` : path
-  return `http://127.0.0.1:${port}/edit?f=${encodeURIComponent(file)}`
+  const url = `http://127.0.0.1:${port}/edit?f=${encodeURIComponent(file)}`
+  if (!opened) return url
+  const named = { opener: opened.opener, project, chat: opened.chat ?? '', ticket: opened.ticket ?? '' }
+  return `${url}&${new URLSearchParams(Object.entries(named).filter(([, value]) => value)).toString()}`
 }
 
 // What the menu calls showing a file in the system's file browser, by the platform the page runs on, as

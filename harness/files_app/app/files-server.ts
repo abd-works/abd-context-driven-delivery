@@ -15,12 +15,14 @@ import { sessionRoutes } from '@cdd/space/session/session'
 
 import { DrawioViewer } from './drawio-viewer'
 import { FileExplorer } from './file-explorer'
-import { API_ROOT, DRAWIO_PAGE, FILES_HEADER, PAGE_FILES, REVEAL_PATH } from './files/files-paths'
+import { API_ROOT, DRAWIO_LINK, DRAWIO_PAGE, FILES_HEADER, PAGE_FILES, REVEAL_PATH } from './files/files-paths'
+import { DrawioLink } from './drawio-link'
 import { PageFiles } from './page-files'
 
 const CHANGING_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']
 const BAD_REQUEST = 400
 const FORBIDDEN = 403
+const NOT_FOUND = 404
 const FAILED = 500
 
 // The one chat route the page needs: telling the chat that opened it a failure, and sending it a failure's fix. The stages, practices and formats
@@ -107,12 +109,21 @@ export function createFilesApp(projects: ProjectConnections, port: number, stati
   app.get(`${API_ROOT}${DRAWIO_PAGE}`, async (request, response) => {
     const path = String(request.query.path ?? '')
     try {
-      response.redirect(302, await drawio.urlOf(path, String(request.query.project ?? '')))
+      const opened = { opener: `http://127.0.0.1:${port}`, chat: String(request.query.chat ?? ''), ticket: String(request.query.ticket ?? '') }
+      response.redirect(302, await drawio.urlOf(path, String(request.query.project ?? ''), opened))
     } catch (failure) {
       const said = `${path} did not open in the draw.io viewer: ${textOf(failure)}`
       response.status(FAILED).type('text/plain').send(said)
       await tellChat(projects, request, { failure: said, context: `Opening ${path} from the Files app` })
     }
+  })
+  // A press on a link in a diagram the draw.io viewer shows: the file it names opens in the Files app at the heading its
+  // anchor names. A file that is not there is shown in the tab and told to the chat, whose bar offers to fix it.
+  app.get(`${API_ROOT}${DRAWIO_LINK}`, async (request, response) => {
+    const link = new DrawioLink(String(request.query.diagram ?? ''), String(request.query.link ?? ''), String(request.query.project ?? '') || process.cwd())
+    if (link.isThere) return response.redirect(302, link.pageOf(String(request.query.ticket ?? ''), String(request.query.chat ?? '')))
+    response.status(NOT_FOUND).type('text/plain').send(`${link.missing}. The chat that opened the diagram has been told, and its chat bar can fix the link.`)
+    await tellChat(projects, request, { failure: link.missing, context: `Pressing the link ${link.link} in the diagram ${link.diagram}, in the draw.io viewer` })
   })
   // A file or folder the page names, from the project its header names, shown in the system's file browser here, on the
   // person's own machine, which only this machine's page reaches.

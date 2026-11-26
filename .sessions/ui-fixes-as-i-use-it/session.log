@@ -15,3 +15,21 @@
 2026-11-26T16:36:07Z tool call-outcomes.close_month
 2026-11-26T16:36:07Z tool call-outcomes.close_month
 2026-11-26T16:36:12Z tool prompt-queue.show 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-957
+2026-11-26T16:39:12Z tool prompt-queue.show 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1056
+2026-11-26T16:39:24Z tool call-outcomes.close_month
+2026-11-26T16:39:24Z tool call-outcomes.close_month
+2026-11-26T16:40:19Z tool prompt-queue.show 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1075
+2026-11-26T16:44:52Z tool prompt-queue.switch_on 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1075
+2026-11-26T16:45:17Z tool prompt-queue.switch_off 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1084
+2026-11-26T16:45:31Z tool prompt-queue.show 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1084
+2026-11-26T16:45:46Z tool prompt-queue.show 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1098
+2026-11-26T16:46:09Z tool prompt-queue.show 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1126
+2026-11-26T16:55:03Z tool ticket.choose_overlays 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1131
+2026-11-26T16:55:16Z tool ticket.choose_overlays 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1131
+2026-11-26T16:55:17Z tool ticket.choose_overlays 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1131
+2026-11-26T16:55:19Z tool ticket.choose_overlays 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1131
+2026-11-26T16:55:27Z tool prompt-queue.show 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1131
+2026-11-26T16:55:36Z tool generate.generate 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1177
+2026-11-26T16:56:03Z generate C:\dev\abd-cdd-ui-fixes-as-i-use-it stories, stories, clean_engineering, clean_engineering, stories, clean_engineering, clean_engineering, clean_engineering, stories, clean_engineering acceptance_tests, acceptance_tests, code, code, acceptance_tests, code, code, code, acceptance_tests, code python, python, python, python, python, python, python, python, python, python 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1177
+2026-11-26T17:34:33Z tool prompt-queue.show 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1281
+2026-11-26T17:34:34Z tool prompt-queue.show 82179ef0-da0c-4b49-a11d-f0d46aafce7e C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\82179ef0-da0c-4b49-a11d-f0d46aafce7e.jsonl 1-1283
