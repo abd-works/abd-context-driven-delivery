@@ -30,7 +30,7 @@ from cdd_guidance.practices.source_code import CodeBody, WrittenBlock
 from .name_facts import NameFacts
 from .opened_story_map import OpenedStoryMap, StoryMapEditRefused, UnopenedStoryMap
 from .story_copies import StoryCopies
-from .story_map_files import source_at
+from .story_map_files import is_own_story_file, source_at
 from .story_recording import StoryRecording, StorySources, file_of
 from harness.guidance.practice_formats import FormatAdapter
 
@@ -1529,8 +1529,13 @@ class StoryTestScenarios:
         """Give the scenarios and backgrounds of each of stories, read from the story test file, to every Story of the
         same name, each scenario keeping the story test as its source. The first story test a Story takes replaces the
         scenarios the map itself gave it; each later one adds its own after them, so a story written in a shared story
-        file and a screen spec holds the scenarios of both."""
+        file and a screen spec holds the scenarios of both. A Story whose scenarios its own markdown file holds, named
+        for it (``display_plans_story.test.md``), keeps them and takes none: that file specifies the story, and the
+        story test in code is it written again. A sub-epic's scenarios file does not hold them so; and at a fidelity
+        that reads code alone the map's scenarios are dropped before any story test is taken."""
         for read, story in self._same_named(stories, file):
+            if self._written_in_its_own_file(story):
+                continue
             if id(story) in self._specified:
                 story.scenarios = [*story.scenarios, *read.scenarios]
                 continue
@@ -1544,6 +1549,10 @@ class StoryTestScenarios:
         for story in self._story_map.descendants.stories():
             story.scenarios = []
             story.backgrounds = []
+
+    def _written_in_its_own_file(self, story: "Story") -> bool:
+        """Whether a scenario of story was read from story's own markdown file."""
+        return any(scenario.source is not None and is_own_story_file(scenario.source.file or "", story.name) for scenario in story.scenarios)
 
     def _same_named(self, stories: List["Story"], file: str) -> List[tuple]:
         """Each read story beside each Story of the map with its name, its scenarios placed in file."""

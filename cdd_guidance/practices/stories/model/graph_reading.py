@@ -241,14 +241,20 @@ class StoriesReading(PracticeReading):
             read = read or model
         return read
 
+    def _beside_a_story_map(self, path: Path) -> bool:
+        """Whether the file at path sits in the story_tests of a project whose story map is kept beside it."""
+        return any(StoryMapFiles(folder).holds_story_tests_of_a_map() for folder in path.parents)
+
     @property
     def _script_readers(self) -> list[ScriptStoryMap]:
         """The script languages the practice reads story tests in, in the order it lists its formats."""
         return [reader for reader in self._story_files().code_readers if isinstance(reader, ScriptStoryMap)]
 
     def _script_texts(self, reader: ScriptStoryMap) -> dict[str, str]:
-        """The text of each file of reader's language the story tests are read from, by its path from the root."""
-        sources = self._script_files(reader)
+        """The text of each file of reader's language the story tests are read from, by its path from the root: none in
+        the story_tests a project keeps beside the story map in its .context, whose story tests give that map's
+        stories their scenarios and are no map of their own."""
+        sources = [path for path in self._script_files(reader) if not self._beside_a_story_map(path)]
         files: dict[str, str] = {}
         for index, path in enumerate(sources, start=1):
             relative = os.path.relpath(path, self.root).replace("\\", "/")

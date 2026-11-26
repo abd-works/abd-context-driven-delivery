@@ -51,6 +51,13 @@ def is_story_map_file(path: Path | str) -> bool:
     return path.suffix.lower() in STORY_MAP_SUFFIXES and (stem == "story-map" or stem.endswith("-story-map"))
 
 
+def is_own_story_file(file: str, story: str) -> bool:
+    """Whether file is the markdown file of story's own, named for it (`display_plans_story.test.md` for Display Plans),
+    rather than a sub-epic's file of scenarios holding several stories."""
+    name = PurePosixPath(str(file).replace("\\", "/")).name
+    return any(name == f"{Name(story).snake}{suffix}" for suffix in STORY_FILE_SUFFIXES)
+
+
 def preferred_maps(paths: List[Path]) -> List[Path]:
     """One file for each story map among paths: its markdown before its drawio, in the order STORY_MAP_SUFFIXES lists
     them, since each holds the whole map and reading both would put every Epic and Story in twice."""
@@ -91,6 +98,11 @@ class StoryMapFiles:
                 markdown = [path for path in maps if path.suffix.lower() == _MARKDOWN]
                 return (markdown or maps)[0]
         return None
+
+    def holds_story_tests_of_a_map(self) -> bool:
+        """Whether this folder is the `story_tests` a project keeps beside its story map, in the project's folder or
+        its `.context`: the story tests there give that map's stories their scenarios."""
+        return self.folder.name == STORY_TESTS_FOLDER and bool(self._maps_in(self.folder.parent))
 
     def story_graph(self) -> Optional[Path]:
         """The story map this folder holds saved as JSON (``story-graph.json``); none when it holds none."""
