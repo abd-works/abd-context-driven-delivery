@@ -2,7 +2,6 @@
 interpreter keeps answering every other chat, and the graph then holds what a build in the server would have made. The
 call says where its build runs; a call made in process builds in its own process."""
 
-import json
 import shutil
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
@@ -15,6 +14,7 @@ from harness.graph.graph import Graph
 from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.graph.graph_build import GraphBuildFailed, WorkerBuild
 from harness.graph.saved_graph import SavedGraph
+from harness.graph.spec_support import graph_state
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
 
@@ -122,25 +122,8 @@ class _SerialisedHere:
         SavedGraph.from_graph = self._from_graph
 
 
-def _practice_state(graph: Graph, key: str) -> dict:
-    """One practice's nodes where they sit with their facts, its edges, and its violations, as a build leaves them."""
-    part = graph.practices.named(key).reading.in_graph
-    found = part.nodes()
-    return {
-        "nodes": sorted((node.node_id, node.type, node.source.file, node.source.start_line, node.source.end_line, _facts(node)) for node in found),
-        "root": _facts(part.root),
-        "edges": sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in part.edge_index.of()),
-        "violations": sorted((violation.rule, violation.node_id, violation.message) for node in found for violation in node.rules.violations),
-    }
-
-
-def _facts(node) -> str:
-    """The node's facts as the saved graph writes them."""
-    return json.dumps(node.facts, sort_keys=True)
-
-
 def _states_after_each_refresh(refreshed: dict[str, Graph], key: str) -> dict[str, dict]:
-    return {file: _practice_state(graph, key) for file, graph in refreshed.items()}
+    return {file: graph_state(graph)[key] for file, graph in refreshed.items()}
 
 
 def _each_file(state: dict) -> dict[str, dict]:
@@ -275,7 +258,7 @@ with description("a graph built for a chat's call"):
             practices = {key: "." for key in _EVERY_PRACTICE}
             fresh = Graph()
             fresh.load_working_copy(str(self.every), practices, overlays=["lern_domain_driven"], force=True)
-            self.fresh = {key: _practice_state(fresh, key) for key in _EVERY_PRACTICE}
+            self.fresh = graph_state(fresh)
             self.reopened = Graph()
             self.reopened.reads.open_saved(self.every)
             # Each refresh opens a graph of its own and saves nothing, so their workers run side by side.
@@ -292,7 +275,7 @@ with description("a graph built for a chat's call"):
             shutil.rmtree(self.every.parent, ignore_errors=True)
 
         with it("should hold every practice as the build that saved it held it"):
-            expect({key: _practice_state(self.reopened, key) for key in _EVERY_PRACTICE}).to(equal(self.fresh))
+            expect(graph_state(self.reopened)).to(equal(self.fresh))
 
         with context("that is refreshed in a worker with a file one practice reads"):
             with it("should give Stories what a fresh build gives it, whichever practice's file it refreshed"):
@@ -347,7 +330,7 @@ with description("a graph built for a chat's call"):
                 expect(self.counted.takes).to(equal(len(_READ_BY_EACH_PRACTICE) - 1))
 
             with it("should hold every practice as a fresh build gives it"):
-                expect({key: _practice_state(self.chained, key) for key in _EVERY_PRACTICE}).to(equal(self.fresh))
+                expect(graph_state(self.chained)).to(equal(self.fresh))
 
     with context("whose worker reports its progress"):
         with before.all:
