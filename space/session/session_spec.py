@@ -33,6 +33,7 @@ from tools.prompt_queue.prompt_queue import PromptQueue
 from space.repo.repo import Repo
 from space.session import Session, Sessions
 from space.session.practices.guidance_selection import UnknownSelectionName, UnknownSelectionPart
+from space.session.practices.practice_session_output import LastFormatLeftOut
 from harness.agent_tools.chat_pointer import ChatPointer
 from space.session.session_log import LogLine, LoopNotFoundError
 from space.session.open_sessions import SessionNameRequiredError
@@ -1634,6 +1635,19 @@ with description("a session's guidance selection") as self:
             with it("should refuse it, naming the parts"):
                 expect(lambda: self.session.toggle_guidance("colour", "red")).to(raise_error(UnknownSelectionPart))
 
+        # Reported 2026-11-26 (pip-4): pressing the only lit chip off wrote the story map no format at all, which
+        # choose_format refuses, so a fidelity always writes in at least one format whichever control is pressed.
+        with context("that has the story map's only chosen format pressed off"):
+            with it("should refuse it, naming the format left"):
+                expect(lambda: self.session.toggle_guidance("format", "markdown")).to(raise_error(LastFormatLeftOut, contain("markdown is the only format chosen for story_map")))
+
+            with it("should keep markdown chosen for the story map"):
+                try:
+                    self.session.toggle_guidance("format", "markdown")
+                except LastFormatLeftOut:
+                    pass
+                expect(Sessions(self.repo).current().practice("stories").guidance.fidelities.entries["story_map"].session_output.chosen_formats).to(equal(["markdown"]))
+
         # Reported 2026-11-26 (pip-2): a name no chip, practice or stage has changed nothing, yet raised the version and
         # answered as if the press landed.
         with context("that has a name pressed that no chip, practice or stage has"):
@@ -1664,8 +1678,8 @@ with description("a session's guidance selection") as self:
             with it("should name the same chosen formats for sketch, iterate and document as for generate"):
                 expect([self.selected.command(action).rsplit(" ", 1)[-1] for action in ("sketch", "iterate", "document")]).to(equal(["format=markdown"] * 3))
 
-            with it("should name no format once none is chosen"):
-                self.session.toggle_guidance("format", "markdown")
+            with it("should name no format while no chip is chosen for every fidelity selected"):
+                self.session.toggle_guidance("practice", "ux")
                 expect(self.session.guidance.command("generate")).not_to(contain("format="))
 
             with it("should name no format for an action that takes none"):

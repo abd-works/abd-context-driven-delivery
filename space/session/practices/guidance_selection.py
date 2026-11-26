@@ -16,6 +16,7 @@ from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.guidance.stages import STAGES
 from harness.installation.data_class import data_field
 from space.session.practices.file_listing import FileListing
+from space.session.practices.practice_session_output import LastFormatLeftOut
 from harness.markdown.format import Format
 from harness.process.answer_reads import HeldForAnswer
 
@@ -336,7 +337,8 @@ class GuidanceSelection:
     def _format_fields(self, groups: dict[str, FormatGroup], formats: list[str]) -> dict[tuple[str, str], list[str]]:
         """The formats each fidelity offering a group keeps chosen once exactly the groups called formats are chosen,
         by its practice and name: a group chosen adds what each fidelity would use from it, one left out takes away
-        what each has chosen from it."""
+        what each has chosen from it. Refused when that would leave a fidelity no format chosen (*LastFormatLeftOut*),
+        as choosing its formats one by one is, so a fidelity always writes in at least one."""
         chosen: dict[tuple[str, str], list[str]] = {}
         for label, group in groups.items():
             is_chosen = label in formats
@@ -347,7 +349,10 @@ class GuidanceSelection:
                 kept = chosen.get(key, list(fidelity.session_output.chosen_formats))
                 in_group = group.in_group(fidelity)
                 wanted = fidelity.session_output.formats.wanted_from(in_group)
-                chosen[key] = [name for name in kept if name not in in_group] + (wanted if is_chosen else [])
+                left = [name for name in kept if name not in in_group] + (wanted if is_chosen else [])
+                if not left:
+                    raise LastFormatLeftOut(fidelity, kept)
+                chosen[key] = left
         return chosen
 
     def changed(self) -> None:

@@ -99,3 +99,12 @@ Evidence still missing: the chat bar's TypeScript story tests were removed in co
   *But* checkout-flow's guidance selection and its version are not changed
 
 Intended (pip-2, 2026-11-26): as `ticket.choose_formats` refuses a label no chip has; a stage pressed by its title (Discovery) or a practice by any name but its key (Stories) is refused the same way.
+
+#### Scenario: Refuse a format press that would leave a fidelity no format
+
+*Given* checkout-flow's session works on Stories in Discovery, with markdown the only format chosen for the story map  
+*When* the Person presses the markdown chip off on the chat bar  
+*Then* the press is refused, saying markdown is the only format chosen for the story map  
+  *But* the story map keeps markdown chosen, and the markdown chip stays chosen
+
+Intended (pip-4, 2026-11-26): as `FidelitySessionOutput.choose_format` refuses leaving out a fidelity's last format (*LastFormatLeftOut*), so a fidelity writes in at least one format whichever control the person presses.
