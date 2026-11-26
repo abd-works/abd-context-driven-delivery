@@ -3,5 +3,7 @@
   "title": "ui-fixes-as-i-use-it",
   "scope": "feature",
   "branch": "ui-fixes-as-i-use-it",
-  "worktree": "C:\\dev\\abd-cdd-ui-fixes-as-i-use-it"
+  "worktree": "C:\\dev\\abd-cdd-ui-fixes-as-i-use-it",
+  "stage": "Implementation",
+  "stage_mark": "in-progress"
 }
