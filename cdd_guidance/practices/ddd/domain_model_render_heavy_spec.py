@@ -94,4 +94,4 @@ with description("a domain model rendered to code through a cdd server") as self
             expect(_saved(self.project.root, self.answers["javascript"])).to(equal((False, ["ordering/cart/cart.js", "ordering/order/order.js"])))
 
         with it("should write the aggregate root with the building blocks it is, and no types"):
-            expect((self.project.root / "ordering" / "cart" / "cart.js").read_text(encoding="utf-8")).to(contain("<<Aggregate Root>> <<Entity>> */\nclass Cart {", "  total() {"))
+            expect((self.project.root / "ordering" / "cart" / "cart.js").read_text(encoding="utf-8")).to(contain(" * <<Aggregate Root>> <<Entity>>\n */\nclass Cart {", "  total() {"))
