@@ -53,7 +53,8 @@ class StorySection:
 
 
 class RealizationFence:
-    """A ```realization fence under a When or Then step, read as that step's call graph."""
+    """A ```realization fence under a Given, When, or Then step group, a Background's Givens among them, read as the
+    call graph of the step that opens the group."""
 
     def __init__(self) -> None:
         self.target: Optional[Step] = None

@@ -24,8 +24,9 @@
  *
  * ## Scenario realizations (default on unless the user says "no realizations")
  *
- * Add a ```realization``` block under each When in `{story_snake}_story.test.md`.
- * Spec data and story tests round-trip `realization` via `practices/stories/model`.
+ * Add a ```realization``` block after each Given group and each When group in `{story_snake}_story.test.md`:
+ * code-like statements (`cart = new Cart(customerProfile)`, `CartRepository.create(cart)`), which story tests
+ * carry as `//` comments at the top of the step and `practices/stories/model` reads back.
  *
  * ## Outcome chaining (`then-and-chaining`)
  *

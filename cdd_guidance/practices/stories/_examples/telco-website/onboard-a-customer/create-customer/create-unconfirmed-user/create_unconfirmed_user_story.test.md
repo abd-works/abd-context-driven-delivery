@@ -45,6 +45,16 @@ example-of: shared-example-fixtures
 *Given* the plan catalog contains purchasable plans  
   *And* the User has selected ++plan++ ++Essentials++ on the Telco Website
 
+```realization
+// the plan catalog contains purchasable plans
+essentials = new Plan(Essentials.id, Essentials.name, Essentials.monthlyPrice)
+PlanRepository.create(essentials)
+dataFreedom = new Plan(DataFreedom.id, DataFreedom.name, DataFreedom.monthlyPrice)
+PlanRepository.create(dataFreedom)
+// the User has selected plan Essentials on the Telco Website
+selection = new PlanSelection(essentials.id)
+```
+
 ### Behaviors
 
 #### Scenario: Initial Create Account state
@@ -58,10 +68,23 @@ example-of: shared-example-fixtures
 
 #### Scenario: Valid account credentials
 
-*When* the User validates ++account credentials++ ++valid account credentials++  
+*When* the User validates ++account credentials++ ++valid account credentials++
+
+```realization
+credentials = new AccountCredentials(ValidAccountCredentials.email, ValidAccountCredentials.password, ValidAccountCredentials.confirmPassword)
+missing = credentials.missingRequirements()
+```
+
 *Then* ++account credentials++ are validated continuously  
   *And* the Create account operation is available  
-*When* the User clicks on Create account  
+*When* the User clicks on Create account
+
+```realization
+user = UnconfirmedUser.register(credentials, selection.planId)
+  -> [IdentityProvider] signUp(credentials.email, credentials.password)
+UnconfirmedUserRepository.create(user)
+```
+
 *Then* the system creates an unconfirmed ++identity provider user++  
   *And* the User is forwarded to check their email
 

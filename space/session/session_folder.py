@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -75,25 +76,22 @@ class SessionFolder:
 
     def remove(self) -> None:
         """Delete this session's record folder and its work folder, log, files, and all; its sessions no longer hold it.
-        A record folder a running program holds open raises ``SessionFolderHeldError`` with every file still in it."""
+        A record folder a running program holds open raises ``SessionFolderHeldError`` with every file still in it. Once
+        the folder is set aside the session is removed whatever happens next: a file that cannot be removed stays in the
+        set-aside folder, which no board lists, and the next removal of a session of that name clears it."""
         session = self._session
-        _remove_files_of(self._set_aside(session.record_folder))
+        _removed_whole(self._set_aside(session.record_folder))
         if session.work_folder != session.record_folder and session.work_folder.is_dir():
-            _remove_files_of(session.work_folder)
+            _removed_whole(session.work_folder)
         session.sessions.held.removed(session)
         session.record.saved("removed")
 
     def _set_aside(self, record_folder: Path) -> Path:
         """Rename record_folder out from among the sessions and answer where it is now. The operating system renames a
         folder whole or not at all, and refuses one a running program holds open, so the refusal comes before any file is
-        deleted; deleting file by file would stop halfway and leave a session with a folder and no record. A folder an
-        earlier removal left set aside under the same name is removed first, since a rename onto it is refused."""
-        aside = record_folder.with_name(f"{_BEING_REMOVED}{record_folder.name}")
-        if aside.exists():
-            _remove_files_of(aside)
+        deleted; deleting file by file would stop halfway and leave a session with a folder and no record."""
+        aside = _free_name_beside(record_folder)
         try:
-            if aside.exists():
-                aside.rmdir()
             record_folder.rename(aside)
         except PermissionError as held:
             raise SessionFolderHeldError(record_folder) from held
@@ -117,12 +115,35 @@ class SessionFolder:
         return session
 
 
-def _remove_files_of(folder: Path) -> None:
-    """Remove folder and everything in it. Windows refuses to remove a folder another process has open, as a file watcher
-    does for a moment; once every file inside is gone the session is removed all the same, and the empty folders left
-    behind hold nothing a session reads. A file still there is refused, naming it."""
+def _free_name_beside(record_folder: Path) -> Path:
+    """The name record_folder takes while it is removed, free to rename onto: the folder an earlier removal left under
+    that name is removed first, and where some of it cannot be, the name takes a number."""
+    aside = record_folder.with_name(f"{_BEING_REMOVED}{record_folder.name}")
+    if not aside.exists() or _removed_whole(aside):
+        return aside
+    taken = 2
+    while aside.with_name(f"{aside.name}-{taken}").exists():
+        taken += 1
+    return aside.with_name(f"{aside.name}-{taken}")
+
+
+def _removed_whole(folder: Path) -> bool:
+    """Remove folder and everything in it, and answer whether nothing of it is left. Windows refuses to remove a folder
+    another process has open, as a file watcher does for a moment, and a file a program holds open; what it refuses
+    stays, and the session it belonged to is removed all the same. The folder is removed by its extended-length path,
+    since setting it aside lengthens every path in it, and Windows refuses to remove a file whose path is over 260
+    characters when it is named the ordinary way."""
     try:
-        shutil.rmtree(folder)
-    except PermissionError:
-        if any(inner.is_file() for inner in folder.rglob("*")):
-            raise
+        shutil.rmtree(_extended_length(folder))
+    except OSError:
+        return not folder.exists()
+    return True
+
+
+# What Windows puts before a path to lift its 260 character limit.
+_EXTENDED_LENGTH_PREFIX = "\\\\?\\"
+
+
+def _extended_length(folder: Path) -> Path:
+    """folder as Windows reads a path of any length; folder itself on any other system."""
+    return Path(f"{_EXTENDED_LENGTH_PREFIX}{folder.resolve()}") if os.name == "nt" else folder

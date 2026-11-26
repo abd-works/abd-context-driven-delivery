@@ -95,16 +95,19 @@ class CodeStepsInvokeCode(PracticeGraphRule):
     steps have bodies is at acceptance tests, and the read records what each step's calls reach (its calls_reach fact,
     cdd_guidance/practices/stories/model/graph_reading.py): a When that calls nothing, or only the story test's own
     helpers and seeds, fails; one whose calls name code the graph has not read is left unjudged. A story at scenarios is
-    asked only of a When with a realization, once a model is read beside it (its realization_reach fact,
+    asked only of a Given or When with a realization, once a model is read beside it (its realization_reach fact,
     cdd_guidance/practices/stories/model/realization_links.py): a realization that names no operation of the model the
-    step's domain terms link to fails; a When with no realization calls nothing yet and is left out."""
+    step's domain terms link to fails; a step with no realization calls nothing yet and is left out. A Given of a story
+    test seeds the state its When acts on and is asked only of its realization."""
 
     slug = "code-steps-invoke-code"
-    node_types = ("When",)
+    node_types = ("Given", "When")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.is_read_at(ACCEPTANCE_TESTS_FIDELITY):
             return self._check_realization(node)
+        if node.type != "When":
+            return []
         reach = node.get_fact("calls_reach")
         if reach == CALLS_REACH_NONE:
             return [Finding(node, f"When {node.name!r} calls nothing: call the domain operation it tests in the step.")]
@@ -113,10 +116,12 @@ class CodeStepsInvokeCode(PracticeGraphRule):
         return []
 
     def _check_realization(self, node: Node) -> list[Finding]:
-        if node.get_fact(REALIZATION_REACH_FACT) != REALIZATION_REACHES_NONE:
+        # Its own fact only: an And or But step chained onto the step that holds the realization would read that
+        # step's fact as its ancestor's.
+        if not node.has_fact(REALIZATION_REACH_FACT) or node.get_fact(REALIZATION_REACH_FACT) != REALIZATION_REACHES_NONE:
             return []
         return [Finding(node, (
-            f"When {node.name!r} has a realization that names no operation of the model its domain terms link to: link the "
-            "step's domain terms to the classes the realization calls, and name in the realization an operation the model "
-            "declares."
+            f"{node.type} {node.name!r} has a realization that names no operation of the model its domain terms link to: "
+            "link the step's domain terms to the classes the realization calls, and name in the realization an operation "
+            "the model declares."
         ))]

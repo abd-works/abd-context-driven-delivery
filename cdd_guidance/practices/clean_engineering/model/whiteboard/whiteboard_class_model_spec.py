@@ -112,10 +112,32 @@ with description("a class model drawn on a Claude whiteboard") as self:
         self.board = Whiteboard.from_text(self.text)
         self.cards = cards_of(self.board)
 
-    with it("should draw each class with its module, stereotypes, properties and operations"):
+    with it("should draw each class with its module, stereotypes, properties and operations, a few dashes between them"):
         expect(self.cards["Cart"].text.splitlines()).to(equal([
-            "`orders`", "*«Aggregate Root»*", "**Cart**", "---", "+ lines: List[Line]", "---", "+ checkout(payment: Payment): Order",
+            "`orders`", "*«Aggregate Root»*", "**Cart**", "+ lines: List[Line]", "– – –", "+ checkout(payment: Payment): Order",
         ]))
+
+    with context("with a class folded into another's card"):
+        with before.each:
+            self.source = orders_class_model()
+            cart = self.source.modules[0].classes[0]
+            repository = _class_with("CartRepository", 4, [Property(name="carts", type_hint="List[Cart]")])
+            repository.operations = [Operation.from_signature("load(id: str): Cart")]
+            repository.stereotypes = ["Repository"]
+            cart.fold(repository)
+            self.text = WhiteboardCleanEngineeringModel().render(self.source)
+
+        with it("should leave a blank line between the classes on the card"):
+            expect(cards_of(Whiteboard.from_text(self.text))["Cart"].text.splitlines()).to(equal([
+                "`orders`", "*«Aggregate Root»*", "**Cart**", "+ lines: List[Line]", "– – –", "+ checkout(payment: Payment): Order",
+                "", "*«Repository»*", "**CartRepository**", "+ carts: List[Cart]", "– – –", "+ load(id: str): Cart",
+            ]))
+
+        with it("should read back each class on the card with its own properties and operations"):
+            cart = WhiteboardCleanEngineeringModel().parse(self.text).modules[0].classes[0]
+            expect([(item.name, [prop.name for prop in item.properties], [op.name for op in item.operations]) for item in [cart, *cart.folded]]).to(equal([
+                ("Cart", ["lines"], ["checkout"]), ("CartRepository", ["carts"], ["load"]),
+            ]))
 
     with it("should place a base above the classes that derive from it, as the drawio class view does"):
         expect(self.cards["PricedLine"].box.y).to(be_above(self.cards["Line"].box.y))

@@ -153,5 +153,8 @@ def step_block_lines(steps: List[Step]) -> List[str]:
         lines.extend(_CONTINUATION_INDENT + step_line(extra) for extra in step.ands)
         if getattr(step, "call_graph", None):
             lines.extend(["", "```realization", step.call_graph.block(), "```", ""])
+    # A fence that closes the steps, as under a Background's Givens, is followed by what follows the steps, not a blank.
+    if lines and lines[-1] == "":
+        lines.pop()
     return [line + _LINE_BREAK if STEP_LINE.match(line) and index + 1 < len(lines) and STEP_LINE.match(lines[index + 1]) else line for index, line in enumerate(lines)]
 

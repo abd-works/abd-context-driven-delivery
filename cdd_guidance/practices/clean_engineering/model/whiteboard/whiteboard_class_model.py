@@ -35,7 +35,10 @@ from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from harness.guidance.practice_formats import Written
 
+SPLIT = "– – –"
+"""The short dashed line between a class card's properties and its operations."""
 RULE = "---"
+"""The rule a board drawn before SPLIT parts a card's name, properties and operations with, still read back."""
 LINE_ROOM = 21
 """The height one line of small text takes on a board, with room to spare: a board grows a block too small for its
 words over its neighbours."""
@@ -124,20 +127,33 @@ class _BoardText:
     def terms(self) -> List[str]:
         return [line[2:].strip() for line in self.lines[self.at + 1:] if line.startswith("- ") and line[2:].strip() != "..."]
 
-    def folded_parts(self) -> List["_BoardText"]:
-        """The words of each class drawn inside this card below its own operations: each from its italic stereotype
-        line, or its bold name, to the next one's."""
+    def _folded_starts(self) -> List[int]:
+        """Where each class drawn inside this card below its own operations starts: at its italic stereotype line, or
+        its bold name."""
         names = [index for index, line in enumerate(self.lines) if index > self.at >= 0 and self.BOLD.match(line)]
-        starts = [index - 1 if self.ITALIC.match(self.lines[index - 1]) else index for index in names]
+        return [index - 1 if self.ITALIC.match(self.lines[index - 1]) else index for index in names]
+
+    def folded_parts(self) -> List["_BoardText"]:
+        """The words of each class drawn inside this card below its own operations, each to the next one's start."""
+        starts = self._folded_starts()
         return [_BoardText("\n".join(self.lines[start:end])) for start, end in zip(starts, [*starts[1:], len(self.lines)])]
 
     def members(self, part: int) -> List[str]:
-        """The member lines under rule number part (0 for the properties, 1 for the operations), without their mark."""
-        rules = [index for index, line in enumerate(self.lines) if line == RULE]
-        if len(rules) <= part:
-            return []
-        end = rules[part + 1] if len(rules) > part + 1 else len(self.lines)
-        return [line[2:] for line in self.lines[rules[part] + 1:end] if line[:2] in ("+ ", "- ")]
+        """The member lines of this card's own class in part (0 for the properties, 1 for the operations), without
+        their mark: the parts are parted by a dashed line, or, on a board drawn before it, by rules, the first of them
+        under the name."""
+        end = (self._folded_starts() or [len(self.lines)])[0]
+        own = self.lines[self.at + 1:end]
+        if own[:1] == [RULE]:
+            own = own[1:]
+        parts: List[List[str]] = [[]]
+        for line in own:
+            if line in (SPLIT, RULE):
+                parts.append([])
+            else:
+                parts[-1].append(line)
+        found = parts[part] if len(parts) > part else []
+        return [line[2:] for line in found if line[:2] in ("+ ", "- ")]
 
 
 class _PlacedOnBoard(WhiteboardNode):
@@ -162,17 +178,18 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
         lines = [f"`{self.owning_module}`"] if self.owning_module else []
         lines.extend(self.own_lines())
         for folded in self.folded:
-            lines.append(RULE)
+            lines.append("")
             lines.extend(folded.own_lines())
         return "\n".join(lines)
 
     def own_lines(self) -> List[str]:
-        """Its stereotypes, its name in bold, then its properties and its operations, each part under a rule: the
-        whole card, or its part of the card of a class it is folded into."""
+        """Its stereotypes, its name in bold, its properties, a few dashes, then its operations: the whole card, or
+        its part of the card of a class it is folded into. A board draws a line of three hyphens as a rule across the
+        card, which reads as a box border, so the parts are parted by a short dashed line instead."""
         lines = [f"*{' '.join(f'«{item}»' for item in self.stereotypes)}*"] if self.stereotypes else []
-        lines.extend([f"**{self.name}**", RULE])
+        lines.append(f"**{self.name}**")
         lines.extend(self.property_lines())
-        lines.append(RULE)
+        lines.append(SPLIT)
         lines.extend(
             f"{'- ' if item.name.startswith('_') else '+ '}{item.name}({', '.join(parameter.save() for parameter in item.parameters)})"
             f"{(': ' + item.return_type) if item.return_type else ''}"
@@ -213,9 +230,8 @@ class WhiteboardImportedClass(ImportedClass, WhiteboardClass):
 
     @property
     def shown_text(self) -> str:
-        lines = [f"*«from: {self.from_module}»*", f"**{self.name}**", RULE]
+        lines = [f"*«from: {self.from_module}»*", f"**{self.name}**"]
         lines.extend(f"+ {item.name}{(': ' + item.type_hint) if item.type_hint else ''}" for item in self.key_properties())
-        lines.append(RULE)
         return "\n".join(lines)
 
     def card(self, element_id: str) -> BoardElement:

@@ -7,6 +7,7 @@ is matched to a block by its name.
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from functools import cached_property
 from pathlib import Path
@@ -18,6 +19,24 @@ from cdd_guidance.practices.stories.model.story_map_files import source_at
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.code_story_map import CodeStoryMap
     from cdd_guidance.practices.stories.model.story_map import Background, Scenario, Story
+
+
+# A statement a realization writes at the top of a step: a call, its value named first when what it returns matters next
+# (``line = cart.addLine(plan)``, ``cart = new Cart(customerProfile)``).
+_STATEMENT = re.compile(r"^(?:[A-Za-z_$][\w$]*\s*=\s*)?(?:new\s+)?[A-Za-z_$][\w$.]*\s*\(.*\)\s*;?$")
+
+
+def _realization_statement(text: str) -> bool:
+    """Whether a comment line is a statement or a comment of a realization, not a sentence about the step."""
+    return text.startswith("//") or _STATEMENT.match(text.strip()) is not None
+
+
+def _is_realization(graph: CallGraph) -> bool:
+    """Whether the comments a step opens with are its realization: an arrow among them, or every line a statement."""
+    calls = [entry for entry in graph if entry.kind == "call"]
+    if any(entry.kind in ("out", "in") for entry in graph):
+        return True
+    return bool(calls) and all(_STATEMENT.match(entry.text) for entry in calls)
 
 
 class StoryBlock(ABC):
@@ -60,19 +79,23 @@ class StoryBlock(ABC):
         """The language its file is written in."""
 
     def realization(self) -> CallGraph:
-        """The call graph a step block opens with as comments, as a story file writes a step's realization: a call,
-        then the lines indented under it, at least one an arrow (``-> Book.reserve(1)``). Empty when it opens with
-        none, such as a block holding only a comment that says the step is not written yet."""
+        """The call graph a step block opens with as comments, as a story file writes a step's realization: the
+        statements of the flow, each a call such as ``cart = new Cart(customerProfile)`` or ``CartRepository.update(cart)``
+        or a ``//`` comment naming the Given they set up, with the calls a statement makes indented under it
+        (``-> Book.reserve(1)``). Empty when it opens with none, such as a block holding only a comment that says the
+        step is not written yet."""
         sign = self.language.line_comment
         lines = [line.strip() for line in self.body_text.splitlines() if line.strip()]
         written: List[str] = []
         for line in lines:
             text = line[len(sign):].removeprefix(" ") if line.startswith(sign) else None
-            if text is None or not text.strip() or (written and not text.startswith(" ")):
+            if text is None or not text.strip():
+                break
+            if written and not text.startswith(" ") and not _realization_statement(text):
                 break
             written.append(text)
         graph = CallGraph().read("\n".join(written))
-        return graph if any(entry.kind != "call" for entry in graph) else CallGraph()
+        return graph if _is_realization(graph) else CallGraph()
 
 
     @property

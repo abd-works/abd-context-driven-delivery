@@ -49,8 +49,9 @@
 # from shop.accounts.account_credentials_examples import valid_account_credentials
 #
 # Scenario realizations (default on unless the user says "no realizations"):
-# After GWT is agreed, add a ```realization``` block under each When (see templates/md/scenarios.md).
-# The stories model round-trips that block into spec `realization` data and `# ->` comments here.
+# After GWT is agreed, add a ```realization``` block after each Given group and each When group (see
+# templates/md/scenarios.md): code-like statements, such as `# cart = Cart(customer_profile)` then
+# `# CartRepository.create(cart)`, which the stories model reads from the comments at the top of the step.
 #
 # Pattern: GWT structure only — replace pass with real code under each with.
 #

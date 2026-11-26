@@ -115,6 +115,7 @@ step:
     - but-marks-missing-state
     - domain-terms-link-to-model
     - step-says-more-than-an-example-name
+    - repositories-called-only-by-the-flow
 
 given:
   fidelity: scenarios
@@ -122,9 +123,12 @@ given:
   id: dotPath
   order: number
   examples?: [example]
+  invokes?: [operation | property]
   where:
     - id is the text slugs from the root to this node, joined by dots
+    - a realization's invokes are the model operations its calls name, matched through the step's domain-term links
   rules:
+    - code-steps-invoke-code
     - given-only-what-the-system-checks
     - given-names-complex-state-root-first
     - seed-prior-story-as-given
