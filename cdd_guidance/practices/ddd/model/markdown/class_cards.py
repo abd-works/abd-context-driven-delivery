@@ -7,14 +7,10 @@ its root's card, and the **Invariants** a card lists."""
 
 from __future__ import annotations
 
-import re
-
-from cdd_guidance.practices.clean_engineering.model.markdown.class_card import ClassCard
+from cdd_guidance.practices.clean_engineering.model.markdown.class_card import REPOSITORY_IN_ROOT, ClassCard
 from cdd_guidance.practices.ddd.model.building_blocks import DomainClass
 
 CARD = "#### "
-# A repository written inside its root's card, below the root's own lines: `**CartRepository** «Repository»`.
-_REPOSITORY_IN_ROOT = re.compile(r"^\*\*([A-Za-z_]\w*)\*\*\s*(?:«|<<)\s*Repository\s*(?:»|>>)$")
 # A building block's card writes no constructor line: its members start at the properties.
 _MEMBERS = ClassCard([], writes_constructor=False)
 
@@ -33,7 +29,7 @@ class CardSection:
         cards = [DomainClass.from_heading(section[0].strip()[len(CARD):])]
         bodies: list[list[str]] = [[]]
         for line in (raw.strip() for raw in section[1:] if raw.strip()):
-            in_root = _REPOSITORY_IN_ROOT.match(line)
+            in_root = REPOSITORY_IN_ROOT.match(line)
             if in_root is None:
                 bodies[-1].append(line)
                 continue
