@@ -1608,6 +1608,28 @@ with description("a session's guidance selection") as self:
             with it("should turn Stories off, leaving no practice selected"):
                 expect([practice.key for practice in self.session.toggle_guidance("practice", "stories").practices if practice.is_selected]).to(equal([]))
 
+        # Reported 2026-11-26 (pip-1): two presses at the same moment, from two chats or the chat bar and the Files app,
+        # each worked out the selection from what it read before the other wrote, so the second put the first back.
+        with context("that has two format chips pressed at the same moment"):
+            with before.each:
+                other_chat = Sessions(self.repo).current()
+                record = self.session.record
+                write = record.update
+                pressed = []
+
+                def pressed_by_the_other_chat_first(change, said) -> None:
+                    if not pressed:
+                        pressed.append(other_chat.toggle_guidance("format", "diagram"))
+                    write(change, said)
+
+                record.update = pressed_by_the_other_chat_first
+                self.session.toggle_guidance("format", "markdown")
+                record.update = write
+
+            with it("should keep both presses, diagram on and markdown off"):
+                chips = {group.label: group.is_selected for group in Sessions(self.repo).current().guidance_selection().formats}
+                expect(chips).to(equal({"diagram": True, "markdown": False}))
+
         with context("that has a part pressed there is none of"):
             with it("should refuse it, naming the parts"):
                 expect(lambda: self.session.toggle_guidance("colour", "red")).to(raise_error(UnknownSelectionPart))

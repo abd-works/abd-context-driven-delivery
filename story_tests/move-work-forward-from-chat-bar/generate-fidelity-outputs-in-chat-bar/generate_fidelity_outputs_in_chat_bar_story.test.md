@@ -73,3 +73,20 @@ Evidence still missing: the chat bar's TypeScript story tests were removed in co
 *Given* checkout-flow's session overlays none
 *When* Claude Code validates stories-acceptance-tests
 *Then* the report names no pattern overlay
+
+## Story: Choose Format
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `harness/chat-ui/pane/hooks/chat-bar/guidance-client.ts` | a format chip's press calls `session.toggle_guidance` with part format and the chip's group, such as markdown |
+| `space/session/practices/guidance_selection.py` `GuidanceSelection.toggle` | the press selects the format group beside those selected, or no longer, saved in session.json |
+| `.sessions/ui-fixes-as-i-use-it/exploratory-testing/defects/pip-1-two-format-toggles-at-once-lose-one.md` | Reported 2026-11-26: two presses on different chips at the same moment kept only one |
+
+#### Scenario: Keep two format presses made at the same moment
+
+*Given* checkout-flow's session works on Stories in Discovery, with the markdown chip chosen and the diagram chip not  
+*When* the Person presses the markdown chip on the chat bar while another chat presses the diagram chip on the same session  
+*Then* checkout-flow's format chips show diagram chosen and markdown not  
+  *And* the guidance selection's version is raised once for each press

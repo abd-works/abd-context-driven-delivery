@@ -273,13 +273,14 @@ class GuidanceSelection:
 
     def toggle(self, part: SelectionPart, name: str) -> GuidanceSelection:
         """Select the stage, practice, or format group called name beside those selected, or no longer; before anyone
-        chose stages, a stage toggles beside the one the session's ticket stands in."""
+        chose stages, a stage toggles beside the one the session's ticket stands in. The selection it toggles is read
+        while session.json is held, so a press another chat or page makes at the same moment is kept beside this one."""
         if part == "stage":
-            self.select(_toggled([stage.name for stage in self.stages if stage.is_selected], name), None, None)
+            self._select_while_held(lambda: (_toggled([stage.name for stage in self.stages if stage.is_selected], name), None, None), f"guidance stage {name} toggled")
         elif part == "practice":
-            self.select(None, _toggled([practice.key for practice in self.practices if practice.is_selected], name), None)
+            self._select_while_held(lambda: (None, _toggled([practice.key for practice in self.practices if practice.is_selected], name), None), f"guidance practice {name} toggled")
         elif part == "format":
-            self.select(None, None, _toggled([group.label for group in self.formats if group.is_selected], name))
+            self._select_while_held(lambda: (None, None, _toggled([group.label for group in self.formats if group.is_selected], name)), f"guidance format {name} toggled")
         else:
             raise UnknownSelectionPart(part)
         return self
@@ -287,10 +288,20 @@ class GuidanceSelection:
     def select(self, stages: list[str] | None, practices: list[str] | None, formats: list[str] | None) -> None:
         """Select exactly these stages, practices, and format groups, each list in place of what was selected and a list
         left out unchanged, in one write of the session's record, raising the version once for the whole change."""
-        groups = {group.label: group for group in self.formats} if formats is not None else {}
-        chosen_formats = self._format_fields(groups, formats or [])
+        self._select_while_held(lambda: (stages, practices, formats), f"guidance stages {stages}, practices {practices}, formats {formats}")
+
+    def _select_while_held(self, choice: Callable[[], tuple[list[str] | None, list[str] | None, list[str] | None]], said: str) -> None:
+        """Select the stages, practices, and format groups choice answers, each list in place of what was selected and
+        None left unchanged, in one write of the session's record, raising the version once. choice, and the formats
+        each fidelity keeps, are worked out from session.json as the held change reads it, never from a read before."""
 
         def selected(fields) -> None:
+            # Read the selection again from the file the change holds: another press may have written since this
+            # answer last read it.
+            self._session.record.read_again()
+            stages, practices, formats = choice()
+            groups = {group.label: group for group in self.formats} if formats is not None else {}
+            chosen_formats = self._format_fields(groups, formats or [])
             if practices is not None:
                 for output in self._outputs:
                     fields.practice(output.name).enabled = output.name in practices
@@ -299,7 +310,7 @@ class GuidanceSelection:
             for (practice, fidelity), chosen in chosen_formats.items():
                 fields.practice(practice).fidelity(fidelity).formats = chosen
 
-        self._session.record.update(selected, f"guidance stages {stages}, practices {practices}, formats {formats}")
+        self._session.record.update(selected, said)
         self.changed()
 
     def _format_fields(self, groups: dict[str, FormatGroup], formats: list[str]) -> dict[tuple[str, str], list[str]]:

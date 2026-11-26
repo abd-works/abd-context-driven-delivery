@@ -34,3 +34,15 @@ The markdown press answered "markdown on" (v18), then the diagram press wrote ma
 ## Tier that should catch it
 
 Unit: `space/session/session_spec.py` or a `guidance_selection` spec, with two toggles interleaved (the second computed before the first writes, e.g. by toggling on two `Session` objects loaded before either writes). No test exercises two toggles on one session; every spec presses once and reads.
+
+## Triage
+
+- **Status:** confirmed. **Severity:** wrong result. **Triaged by:** Latch.
+- Reproduced on a copy of Pip's sandbox (two processes started on one clock tick) and in a unit example: `GuidanceSelection.toggle` worked out the toggled list and each fidelity's formats from the selection read before `record.update` held session.json, so the second press wrote back what the first changed.
+
+## Fix
+
+- **Scenario:** Keep two format presses made at the same moment (`story_tests/move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/generate_fidelity_outputs_in_chat_bar_story.test.md`, story Choose Format).
+- **Test (unit):** `space/session/session_spec.py`, a session's guidance selection › that has Discovery and Stories selected › that has two format chips pressed at the same moment › it should keep both presses, diagram on and markdown off. The other chat's press lands just before this press's write; seen failing (`{'diagram': False, 'markdown': False}`), then passing.
+- **Fix:** `space/session/practices/guidance_selection.py`: `toggle` and `select` go through `_select_while_held`, which reads the selection again inside the held change (`record.read_again`) and only then works out the toggled list, the practices, the stages and each fidelity's formats. Re-run across two processes on Pip's driver: both chips flipped (v39 -> v41).
+- **Commit:** see below.
