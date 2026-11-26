@@ -134,7 +134,7 @@ class SessionFileTools:
     @agent_tool
     @noSessionLog
     def check_changed_artifact(self, path: str) -> ChangedArtifact:
-        """Run the graph rules on path, a file just edited, named as read_file names it, with no explicit validate: Validate runs on the file alone for each fidelity the session's guidance selection shows, of a practice the session works on, that declares it, saving a report and logging its validate line, so the chat bar's violation count follows the edit. Returns the file and the slug of each fidelity checked; none for a file no such fidelity declares, or one outside the session's roots. The chat bar calls it after each edit the agent makes."""
+        """Run the graph rules on path, a file just edited or a file or folder the Files app's file menu validates, named as read_file names it, with no explicit validate: Validate runs on that path alone for each fidelity the session's guidance selection shows, of a practice the session works on, that declares it (for a folder, any file in it), saving a report and logging its validate line, so the chat bar's violation count follows the edit. Returns the file and the slug of each fidelity checked; none for a file no such fidelity declares, or one outside the session's roots. The chat bar calls it after each edit the agent makes."""
         return ChangedArtifact(self, path).check()
 
     @long_call

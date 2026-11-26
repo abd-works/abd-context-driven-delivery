@@ -3,6 +3,7 @@ that declares it, with no explicit validate, so the chat bar's violation count f
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.installation.data_class import data_field
@@ -29,7 +30,7 @@ class ChangedArtifact:
     @property
     @data_field
     def path(self) -> str:
-        """The changed file, as the edit named it: from the project's root, or absolute."""
+        """The changed file or folder, as the edit or the Files app's file menu named it: from the project's root, or absolute."""
         return self._path
 
     @property
@@ -48,11 +49,15 @@ class ChangedArtifact:
         return self
 
     def _declaring(self) -> list[FidelityGuidance]:
-        """Each fidelity the session shows, of a practice it works on, that declares the file; none for a file that is
-        gone or lies outside the session's roots, which Validate would refuse."""
-        file = self._session.paths.path_named(self._path)
-        if not file.is_file() or not self._session.session_files.in_root(file):
+        """Each fidelity the session shows, of a practice it works on, that declares the file, or for a folder any file
+        in it; none for a path that is gone or lies outside the session's roots, which Validate would refuse."""
+        path = self._session.paths.path_named(self._path)
+        if not path.exists() or not self._session.session_files.in_root(path):
             return []
-        written = self._session.paths.from_project(file)
+        written = [self._session.paths.from_project(file) for file in self._files_at(path)]
         shown = self._session.guidance.covered
-        return [fidelity for fidelity in shown if fidelity.session_output.is_enabled and fidelity.declared.includes(written)]
+        return [fidelity for fidelity in shown if fidelity.session_output.is_enabled and any(fidelity.declared.includes(file) for file in written)]
+
+    def _files_at(self, path: Path) -> list[Path]:
+        """The file path names, or every file in the folder it names."""
+        return [path] if path.is_file() else [file for file in path.rglob("*") if file.is_file()]
