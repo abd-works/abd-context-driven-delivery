@@ -48,4 +48,4 @@ Unit: a plugin test of + then send with a viewer block and an attachment; a serv
   - `tools/prompt_queue/hooks/register.test.tsx` (plugin): "the task sent from a board viewer is only the person's words" and "a message that is only a board viewer's state is no task, and + still waits". **Not run:** no `claude` CLI on this machine; type-checked against the claude-code stubs with no new error in the test file.
   - **The image is not tested:** `$.prompt.media` is not an event `claude-code/testing` lets a test answer (the stubs list no `prompt.media` operation), so no plugin test can hand the mod a pasted item's bytes. The Alt+Enter path that shares `attachAll` has no plugin test for the same reason.
 - **Scenarios:** "Add only the person's words and pasted items of a task sent while + waits" (Edit Prompt Steps) and "Keep only the person's words of a step" (Set Steps Of Queued Prompt) in `nest_prompt_steps_in_queue_story.test.md`.
-- **Commit:** (filled below)
+- **Commit:** 87a5aeeb4
