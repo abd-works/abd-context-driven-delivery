@@ -3,6 +3,7 @@
 from cdd_guidance.practices.ddd.rules.tactical import (
     EveryClassCarriesDddStereotype,
     DomainConceptsNotTechnicalNames,
+    DomainOperationsCallNoRepository,
     FlaccidDataObject,
     LoadWithIdentityInHand,
     NoOrphanedObjects,
@@ -21,6 +22,7 @@ RULES: tuple = (
     RepositoryIsCollectionLifecycle(),
     LoadWithIdentityInHand(),
     NoOrphanedObjects(),
+    DomainOperationsCallNoRepository(),
     ScreenInterfaceNotADomainObject(),
 )
 

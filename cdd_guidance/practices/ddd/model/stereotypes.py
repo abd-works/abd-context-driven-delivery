@@ -66,6 +66,27 @@ def root_kept_by(class_name: str) -> Optional[str]:
     return None
 
 
+# A call as a realization or an operation's body writes it, an assignment before it left out: what it is called on
+# (``cart``, ``self._book_repository``, ``BookRepository``), and the operation it calls, with or without its arguments.
+_CALL = re.compile(r"^(?:[A-Za-z_$][\w$]*\s*=\s*)?(?P<receiver>.+?)\.(?P<operation>[A-Za-z_$][\w$]*)\s*(?:\(|$)")
+
+
+def calls_a_repository(call: str) -> bool:
+    """Whether call is made on a repository: the last name of what it is called on names one (``CartRepository``,
+    ``self.cart_repository``), in any case."""
+    found = _CALL.match(call.strip())
+    return found is not None and _REPOSITORY.casefold() in found.group("receiver").rsplit(".", 1)[-1].casefold()
+
+
+# A call a body makes on something it names: each dotted name before an opening bracket (``self._books.load(``).
+_CALL_IN_BODY = re.compile(r"(?<![\w$.])((?:[A-Za-z_$][\w$]*\.)+[A-Za-z_$][\w$]*)\s*\(")
+
+
+def repository_calls_in(body: str) -> List[str]:
+    """Each call body makes on a repository, as written, once each, in order."""
+    return list(dict.fromkeys(call for call in _CALL_IN_BODY.findall(body) if calls_a_repository(call)))
+
+
 def kind_named_by(stereotypes: Iterable[str]) -> Optional[str]:
     """The building block a list of stereotypes names; None for none, or for a class marked as another system's."""
     lowered = {item.lower() for item in stereotypes}

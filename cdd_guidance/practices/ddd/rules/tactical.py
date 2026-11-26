@@ -153,3 +153,19 @@ class ScreenInterfaceNotADomainObject(PracticeGraphRule):
         if not node.has_fact("operation_shapes") or not node.get_fact("drives_a_screen", False):
             return []
         return [Finding(node, f"'{node.name}' behaves like a UI driver (open/isShowing); put the action on the owning aggregate.")]
+
+
+class DomainOperationsCallNoRepository(PracticeGraphRule):
+    """The flow a scenario realizes loads each aggregate from its repository, calls the domain operation, and stores
+    the aggregate back. A domain operation that calls a repository, its own aggregate's or another's, hides the storage
+    its behaviour depends on, so it cannot run without it: the flow loads the aggregate and hands it to the operation."""
+
+    slug = "domain-operations-call-no-repository"
+    node_types = ("EntityRoot", "Entity", "ValueObject")
+
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [
+            Finding(node, f"Domain operation '{node.name}.{operation}' calls a repository ({call!r}): call the repository "
+            "from the flow that calls the operation, and hand the operation the aggregate the flow loads.")
+            for operation, call in node.get_fact("repository_calls", [])
+        ]

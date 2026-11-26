@@ -93,6 +93,7 @@ aggregate:
 entityRoot:
   rules:
     - domain-concepts-not-technical-names
+    - domain-operations-call-no-repository
     - private-method-naming
     - flaccid-data-object-no-behavior
     - no-orphaned-objects
@@ -100,6 +101,7 @@ entityRoot:
 entity:
   rules:
     - domain-concepts-not-technical-names
+    - domain-operations-call-no-repository
     - private-method-naming
     - flaccid-data-object-no-behavior
     - no-orphaned-objects
@@ -107,6 +109,7 @@ entity:
 valueObject:
   rules:
     - domain-concepts-not-technical-names
+    - domain-operations-call-no-repository
     - private-method-naming
     - no-orphaned-objects
     - screen-interface-not-a-domain-object

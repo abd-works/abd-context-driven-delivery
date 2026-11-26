@@ -269,9 +269,9 @@ In the fence, a single word is a property; a line with parameters, a `()`, or an
 
    -> {Member}.{operation}
 
-{operationNeedingAnotherAggregate} {param}
+{operationNeedingAnotherAggregate} {otherRoot} {param}
 
-   -> {OtherRoot}Repository.load({otherRootId})
+   -> {OtherRoot}.{operation}
 
 Invariant: {what this root must keep true}
 

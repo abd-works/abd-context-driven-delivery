@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
 
+from cdd_guidance.practices.ddd.model.stereotypes import calls_a_repository
 from cdd_guidance.practices.stories.model.modelled_areas import MODEL_WRITTEN_FACT
 from cdd_guidance.practices.stories.model.story_map import ACTORS_FACT, NOT_ON_STORY_MAP, STORY_KIND_FACT, StoryType
 
@@ -589,11 +590,6 @@ class PersonStoriesShowThePersonActing(StepRule):
         return any(marked == actor.casefold() or opening.startswith(actor.casefold()) for actor in actors)
 
 
-# A call a realization writes: what it is called on, then the operation's name and its opening bracket, after any name
-# the statement gives what the call returns (``line = cart.addLine(plan)``).
-_CALL_RECEIVER = re.compile(r"^(?:[A-Za-z_$][\w$]*\s*=\s*)?(?P<receiver>.+?)\.(?P<operation>[A-Za-z_$][\w$]*)\s*\(")
-
-
 class RepositoriesCalledOnlyByTheFlow(StepRule):
     """A realization's statements at the top are the flow: it loads an aggregate from its repository, calls the domain
     operation, and stores the aggregate back, each a statement of its own. A call written under another call is what a
@@ -605,7 +601,7 @@ class RepositoriesCalledOnlyByTheFlow(StepRule):
     node_types = ("Step", "Given", "When", "Then")
 
     def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
-        nested = [call for call in node.get_fact("realization_nested_calls") or [] if self._calls_a_repository(call)]
+        nested = [call for call in node.get_fact("realization_nested_calls") or [] if calls_a_repository(call)]
         if not nested:
             return []
         said = ", ".join(repr(call) for call in nested)
@@ -614,7 +610,3 @@ class RepositoriesCalledOnlyByTheFlow(StepRule):
             "repository from the flow as a statement of its own, and hand the domain operation the aggregate it loads."
         ))]
 
-    @staticmethod
-    def _calls_a_repository(call: str) -> bool:
-        found = _CALL_RECEIVER.match(call.strip())
-        return found is not None and "repository" in found.group("receiver").rsplit(".", 1)[-1].casefold()

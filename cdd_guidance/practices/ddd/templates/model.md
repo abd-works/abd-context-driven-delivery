@@ -21,7 +21,7 @@ extends: practices/clean_engineering/templates/class-model.md
 2. **Repository** — `#### {{Root}}Repository <<Repository>>` directly under the root. Rendered views draw it **inside the root's card**, below the domain operations. Collection operations only: `create`, `load`, `update`, plus `search` / `retire` when the business does them.
 3. **Members** — `#### {{Member}} <<Entity>>` or `#### {{Value}} <<Value Object>>`, composed by the root (or by the member that owns them).
 
-Dependencies on other aggregates are properties held by identity, `<< association >>` to the target root, with the call on the operation that uses it (`-> {{OtherRoot}}Repository.load({{otherId}})` or `-> {{OtherRoot}}.{{operation}}`). Across contexts, keep the arc from the bounded-context map under **Integrations:** on the aggregate.
+Dependencies on other aggregates are properties held by identity, `<< association >>` to the target root, with the call on the operation that uses it (`-> {{OtherRoot}}.{{operation}}`). The operation takes the other root as a parameter: the flow loads it from its repository and hands it in, because a domain operation never calls a repository. Across contexts, keep the arc from the bounded-context map under **Integrations:** on the aggregate.
 
 ---
 
@@ -42,8 +42,8 @@ Dependencies on other aggregates are properties held by identity, `<< associatio
 ----
 + {{domainOperation}}({{parameters}}): {{ReturnType}}
 	-> {{Member}}.{{operation}}
-+ {{operationNeedingAnotherAggregate}}({{parameters}}): {{ReturnType}}
-	-> {{OtherRoot}}Repository.load({{otherRootId}})
++ {{operationNeedingAnotherAggregate}}({{otherRoot}}: {{OtherRoot}}, {{parameters}}): {{ReturnType}}
+	-> {{OtherRoot}}.{{operation}}
 	// {{what crosses and why}}
 
 **Invariants**

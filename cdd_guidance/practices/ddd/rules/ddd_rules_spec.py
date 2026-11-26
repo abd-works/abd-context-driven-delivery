@@ -12,7 +12,8 @@ from mamba import before, context, description, it
 
 from cdd_guidance.practices.ddd.rules import BY_SLUG
 from cdd_guidance.practices.ddd.rules.rule_examples import DddExamplePair, ddd_fixture, violations_for_ddd_rule
-from harness.graph.rule_fixture import SchemaRuleRun
+from cdd_guidance.practices.ddd.ddd import Ddd
+from harness.graph.rule_fixture import RuleFixture, SchemaRuleRun
 
 # A toolkit folder with no DDD model, shaped like the harness folders the scanner once misread: a class whose name ends
 # in a value object's word, and a class beside a peer named as its repository.
@@ -228,6 +229,36 @@ export class DeviceWalletMerchantCredentialRepository {
 
         with it("should flag LonelyType and accept related Cart"):
             self.pair.check()
+
+    with context("domain-operations-call-no-repository"):
+        # The pair's two fixtures are read once; the example checks what the rule reported on them.
+        with before.all:
+            self.pair = DddExamplePair("domain-operations-call-no-repository", "Cart")
+
+        with it("should flag a root whose operation loads another aggregate, and accept one handed that aggregate"):
+            self.pair.check()
+
+        with it("should name the operation and the repository call it makes"):
+            expect(self.pair.fault_hits).to(equal([
+                "Domain operation 'Cart.add_book' calls a repository ('self._book_repository.load'): call the repository "
+                "from the flow that calls the operation, and hand the operation the aggregate the flow loads."
+            ]))
+
+        with context("written in a domain model"):
+            with before.all:
+                model = (
+                    "# Domain Model — Shop\n\n## Sales | custom\n\n### Cart\n\n#### Cart <<Aggregate Root>> <<Entity>>\n\n"
+                    "------\n+ total: int\n----\n+ addBook(bookId: BookId): Cart\n\t-> BookRepository.load(bookId)\n\n"
+                    "#### CartRepository <<Repository>>\n\n------\n----\n+ load(id: str): Cart\n"
+                )
+                fixture = RuleFixture(Ddd, {"src/.context/domain-model.md": model})
+                self.hits = SchemaRuleRun(BY_SLUG["domain-operations-call-no-repository"], fixture.context).hits()
+
+            with it("should flag the operation whose call arrow names a repository"):
+                expect(self.hits).to(equal([
+                    "Domain operation 'Cart.addBook' calls a repository ('BookRepository.load(bookId)'): call the "
+                    "repository from the flow that calls the operation, and hand the operation the aggregate the flow loads."
+                ]))
 
     with context("screen-interface-not-a-domain-object"):
         # The pair's two fixtures are read once; the example checks what the rule reported on them.

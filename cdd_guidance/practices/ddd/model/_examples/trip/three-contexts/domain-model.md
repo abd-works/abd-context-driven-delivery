@@ -26,14 +26,14 @@ A cart holds one line per book and its total is the sum of its lines.
 + << association >> bookId: BookId
 	// held by identity — Book lives in Catalogue · Book
 ----
-+ addBook(bookId: BookId, quantity: Quantity): CartLine
-	-> BookRepository.load(bookId)
-	// the title and price cross at the moment the book is added
++ addBook(book: Book, quantity: Quantity): CartLine
+	-> Book.price
+	// the title and price cross at the moment the book is added; the flow loads the book
 + removeBook(bookId: BookId): void
 + total(): Money
 	-> CartLine.subtotal
-+ checkOut(): Order
-	-> OrderRepository.create(cart)
++ checkOut(): void
+	// the flow then creates the order from the checked-out cart
 
 **Invariants**
 
@@ -176,9 +176,9 @@ A shipment is dispatched once, for one paid order.
 	// held by identity — Order lives in Ordering · Order
 ----
 + pack(parcel: Parcel): void
-+ dispatch(): TrackingCode
-	-> OrderRepository.load(orderId)
-	// the Shop Clerk ships only a paid order
++ dispatch(order: Order): TrackingCode
+	-> Order.payment
+	// the Shop Clerk ships only a paid order; the flow loads the order by its orderId
 
 **Invariants**
 

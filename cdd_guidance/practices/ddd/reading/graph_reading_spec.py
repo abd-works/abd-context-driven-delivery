@@ -241,7 +241,7 @@ with description("DDD's reading of a bounded context map and a domain model no c
 
     with it("should relate a root to the classes its members are typed by and the classes its operations call"):
         cart = next(root for root in ddd_nodes(self.fixture, "EntityRoot") if root.name == "Cart")
-        expect(reached(self.fixture, "dependsOn", cart)).to(equal(["BookRepository", "CartLine", "Order", "OrderRepository"]))
+        expect(reached(self.fixture, "dependsOn", cart)).to(equal(["Book", "CartLine"]))
 
     with it("should find the model conforms to the schema: a root is not required to associate with another"):
         expect(SchemaRuleRun(FRAMEWORK_RULES["conforms-to-schema"], self.fixture.context).hits()).to(equal([]))

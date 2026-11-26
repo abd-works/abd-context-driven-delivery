@@ -35,7 +35,7 @@ from cdd_guidance.practices.source_code import HoldsProjectTestCode
 from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContextMap
 from cdd_guidance.practices.ddd.model.building_blocks import DomainEvent
 from cdd_guidance.practices.ddd.model.nodes import TARGET_SEGMENT, Aggregate, AggregateLink, BoundedContext, ContextMapping, Integration
-from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, KIND_OF_STEREOTYPE, TacticalClass, kind_named_by, marks_another_system, root_kept_by
+from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, KIND_OF_STEREOTYPE, TacticalClass, calls_a_repository, kind_named_by, repository_calls_in, marks_another_system, root_kept_by
 
 if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
@@ -90,6 +90,7 @@ class BuildingBlock(Node):
         "public_operation_names",
         "lifecycle_operations",
         "drives_a_screen",
+        "repository_calls",
     )
 
     def __init__(self, practice: PracticeGuidance, tactical: TacticalClass, kind: str) -> None:
@@ -136,6 +137,13 @@ class BuildingBlock(Node):
     def lifecycle_operations(self) -> list[str]:
         """The public operations that add to, find in, or remove from a collection."""
         return [name for name in self.public_operation_names if _REPOSITORY_LIFECYCLE.search(name)]
+
+    @property
+    def repository_calls(self) -> list[list[str]]:
+        """Each operation of the class that calls a repository, with the call: an operation's body in code, its call
+        arrows (``-> BookRepository.load(bookId)``) in a domain model."""
+        return [[op.name, call] for op in self.ooad_class.operations
+                for call in dict.fromkeys([*(callee for callee in op.callees if calls_a_repository(callee)), *repository_calls_in(op.body.text)])]
 
     @property
     def drives_a_screen(self) -> bool:
