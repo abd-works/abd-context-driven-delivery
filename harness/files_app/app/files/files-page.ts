@@ -2,6 +2,7 @@ import type { CddApi } from '@cdd/cdd-shared'
 import { ChatClientGenerated } from '@cdd/harness/chat/chat'
 import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
 import { SessionClientGenerated, type FileEntryData, type SessionFileData } from '@cdd/space/session/session'
+import type { SourceCallout } from '@source-view/source-callouts'
 
 import { ChatContext } from './chat-context'
 import { FileBar, publishedOf } from './file-bar'
@@ -17,6 +18,7 @@ import { isDrawio, isWhiteboard } from './files-paths'
 import { FilesStore, type FidelityFiles, type SelectedNode } from './files-state'
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
+import { LinkedFile, followsALink } from './linked-file'
 import { OpenFiles } from './open-files'
 import { PageFrames } from './page-frames'
 import { reasonOf } from './reason'
@@ -34,6 +36,8 @@ export class FilesPage {
   readonly store = new FilesStore()
   readonly session: SessionClientGenerated
   readonly comments: FileCommentsActions
+  // The comments on the file a link opened beside the open file, kept on that file's lines.
+  readonly linkedComments: FileCommentsActions
   readonly fileBar = new FileBar(this.store)
   readonly guidance: GuidanceSelector
   readonly notices: FilesNotices
@@ -44,6 +48,7 @@ export class FilesPage {
   readonly foldKeys: FilesFoldKeys
   readonly callouts: FileCallouts
   readonly frames: PageFrames
+  readonly linkedFile: LinkedFile
   private refreshTimer: ReturnType<typeof setTimeout> | null = null
   // The link's line shows in the file the link opens until the person opens another file or selects a node.
   private showsLinkedLine = true
@@ -59,7 +64,9 @@ export class FilesPage {
     this.frames = new PageFrames(api)
     this.chatContext = new ChatContext(this.session, link.chat, this.notices)
     this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
-    this.comments = new FileCommentsActions(this)
+    this.comments = new FileCommentsActions(this, () => this.state.file?.path ?? '')
+    this.linkedComments = new FileCommentsActions(this, () => this.state.linked?.file?.path ?? '')
+    this.linkedFile = new LinkedFile(this.store, this.callouts, this.notices)
     this.graph = new FilesGraph(this.store, this.session, this.api, this.fileBar, this.notices, selected => this.showNodes(selected), link.chat)
     this.guidance = new GuidanceSelector(this)
   }
@@ -83,7 +90,7 @@ export class FilesPage {
     if (this.link.namesFiles) void this.foldKeys.read()
     if (this.link.namesFiles && !this.link.isFolder) void this.readRootFiles()
     const stopFollowing = this.follow()
-    const reread = () => void this.refreshOpen()
+    const reread = () => void this.refreshShown()
     window.addEventListener('focus', reread)
     return () => {
       window.removeEventListener('error', onError)
@@ -127,7 +134,7 @@ export class FilesPage {
 
   // The open file and each file open beside it, read again as the session answers them now.
   private async readOpenAgain(): Promise<void> {
-    await this.refreshOpen()
+    await this.refreshShown()
     const beside = this.state.moreFiles.map(file => file.path)
     if (!beside.length) return
     const read = await Promise.all(beside.map(path => this.readBeside(path)))
@@ -238,14 +245,14 @@ export class FilesPage {
   // file is read again with them.
   async toggleRules(): Promise<void> {
     this.store.change(({ reads }) => ({ reads: { ...reads, rules: !reads.rules } }))
-    await this.refreshOpen()
+    await this.refreshShown()
   }
 
   // Turns on or off the rules only the whole working copy finds in the open file, linking files and practices, which
   // takes far longer; apart from its own rules, which Rules turns on.
   async toggleCrossFile(): Promise<void> {
     this.store.change(({ reads }) => ({ reads: { ...reads, crossFile: !reads.crossFile } }))
-    await this.refreshOpen()
+    await this.refreshShown()
   }
 
   // A file a person presses in the list: a whiteboard on a board opens that board in Claude, since the board is the
@@ -264,6 +271,28 @@ export class FilesPage {
     this.showsLinkedLine = false
     this.store.change(({ graph }) => ({ moreFiles: [], graph: { ...graph, selected: [] } }))
     await this.openAt(path)
+  }
+
+  // Go to file on a callout, or a press on a link: a link opens the file it names beside the file it was followed from,
+  // replacing the one a link opened before; a call, class or example opens in its own file, as the graph view opens it.
+  async goTo(callout: SourceCallout): Promise<void> {
+    if (followsALink(callout)) return this.linkedFile.open(callout)
+    await this.graph.goToFile(callout)
+  }
+
+  closeLinked(): void {
+    this.linkedFile.close()
+  }
+
+  // Closes the open file while a link opened another beside it: that file becomes the one open, at the heading its link
+  // named, alone. With nothing beside it the open file stays, since the page always shows a file once one is chosen.
+  closeOpen(): void {
+    const linked = this.state.linked
+    if (!linked) return
+    this.showsLinkedLine = false
+    this.stopRefreshing()
+    this.store.change(({ graph }) => ({ openPath: linked.path, file: linked.file, openAnchor: linked.anchor, linked: null, moreFiles: [], graph: { ...graph, selected: [] } }))
+    void this.refreshOpen()
   }
 
   // The files of the nodes selected in the graph view, each once, in the order they were selected: the first is the open
@@ -301,10 +330,15 @@ export class FilesPage {
     const entry = this.fileBar.entries.find(each => each.path === path)
     const published = entry ? publishedOf(entry) : null
     if (entry && published?.kind === 'whiteboard' && published.link && (await this.openPublished(entry))) return
-    this.store.change(() => ({ openPath: path, file: null }))
+    this.store.change(() => ({ openPath: path, file: null, openAnchor: '' }))
     // A .drawio file shows in the draw.io editor beside the file list, which reads the file itself.
     if (isDrawio(path)) return this.stopRefreshing()
     await this.refreshOpen()
+  }
+
+  // The open file and the file a link opened beside it, read again through the session.
+  private async refreshShown(): Promise<void> {
+    await Promise.all([this.refreshOpen(), this.linkedFile.readAgain()])
   }
 
   // The open file read again through the session: its text, comments, folds, violations and the chat's changes.
@@ -360,7 +394,7 @@ export class FilesPage {
       this.notices.fail(`${what}: ${reasonOf(failure)}`, 'A press on a comment in the Files app')
       return false
     } finally {
-      await this.refreshOpen()
+      await this.refreshShown()
     }
   }
 }

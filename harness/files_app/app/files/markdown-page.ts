@@ -128,3 +128,22 @@ export function markdownPage(text: string, markedLines: number[] = [], firstLine
   const drawn = DOMPurify.sanitize(pages.parse(page) as string)
   return `${factsShown(facts)}${drawn.replace(MARKED_LINE, markShown)}`
 }
+
+// The anchor a link names a heading by, as GitHub writes it from the words the heading shows and as the session reads it
+// (harness/markdown heading_anchor): lower case, its punctuation dropped, each space a hyphen, so `Book <<Entity>>` is
+// `book-entity`.
+export const anchorOf = (heading: string): string => heading.trim().toLowerCase().replace(/[^\p{L}\p{N}_\- ]/gu, '').replace(/ /g, '-')
+
+// The words a drawn heading shows: its text and its links' words, without the marks of its callouts.
+function wordsOf(heading: Element): string {
+  const words = heading.cloneNode(true) as Element
+  words.querySelectorAll(`.${RENDERED_CALLOUT_MARK}`).forEach(mark => mark.remove())
+  return words.textContent ?? ''
+}
+
+// The heading of a drawn page whose anchor a link names, which a file a link opens is scrolled to; none for no anchor or
+// one no heading has.
+export function headingAnchored(page: Element, anchor: string): HTMLElement | null {
+  if (!anchor) return null
+  return [...page.querySelectorAll<HTMLElement>('h1, h2, h3, h4, h5, h6')].find(heading => anchorOf(wordsOf(heading)) === anchor) ?? null
+}
