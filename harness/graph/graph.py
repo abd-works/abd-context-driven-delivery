@@ -32,7 +32,7 @@ from harness.graph.pattern_overlays import GraphChecks, GraphOverlay, PatternOve
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.schema_edges import SchemaEdges
 from harness.graph.schema_rules import PracticeSchema
-from harness.graph.saved_graph import GRAPH_FILE_NAME, FactValue, NodeFacts, NodeIdentity, PracticeChanges, SavedGraph, SavedGraphFile, SavedNode, SavedPractice
+from harness.graph.saved_graph import GRAPH_FILE_NAME, WRITTEN_IN_FACT, FactValue, NodeFacts, NodeIdentity, PracticeChanges, SavedGraph, SavedGraphFile, SavedNode, SavedPractice
 
 if TYPE_CHECKING:
     from harness.agent_tools.tool_call import ToolCall
@@ -57,9 +57,6 @@ class Call:
 MARKDOWN_SUFFIXES = frozenset({".md", ".markdown"})
 # The fact a node keeps the fidelity it was read at under (``Node.read_at``).
 READ_AT_FIDELITY = "read_at_fidelity"
-# The fact a node keeps of where it is written in each format besides its own file's (``Node.written_at``): by the
-# format's name, the file, its first line and its last.
-WRITTEN_IN_FACT = "written_in"
 
 
 class _BracketDepth:

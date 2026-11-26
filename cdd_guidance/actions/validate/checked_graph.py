@@ -127,7 +127,8 @@ class CheckedGraph:
         files only when the call asks for the judged pass."""
         keys = [checked.fidelity.practice_guidance.key for checked in self._checked_fidelities]
         found = self._checked.violations(keys) if self._checked is not None else []
-        found = [violation for violation in found if violation.is_reported_for(self._built_from, self._judge_all)]
+        written_in_paths = self._nodes_written_in_paths(keys)
+        found = [violation for violation in found if violation.is_reported_for(self._built_from, self._judge_all) or violation.node_id in written_in_paths]
         found = self._on_session_stories(found)
         return self._in_one_format(found)
 
@@ -174,8 +175,21 @@ class CheckedGraph:
             return []
         keys = [checked.fidelity.practice_guidance.key for checked in self._checked_fidelities]
         practices = [self._checked.practices[key] for key in keys if key in self._checked.practices]
-        files = {node.file.replace("\\", "/") for practice in practices for node in practice.nodes}
-        return [path for path in self._edited if not any(file == path or file.startswith(f"{path}/") for file in files)]
+        return [path for path in self._edited if not any(node.is_in([path]) for practice in practices for node in practice.nodes)]
+
+    def _nodes_written_in_paths(self, keys: list[str]) -> set[str]:
+        """The ids of the nodes of the practices keys names that are written in one of the files the graph was built
+        from besides their own file (``SavedNode.files``), such as a scenario its markdown writes and a story test the
+        call names writes again, and of every node held under them, such as that scenario's steps: their violations are
+        the named file's too. None for a graph built from no paths."""
+        if not self._built_from or self._checked is None:
+            return set()
+        practices = [self._checked.practices[key] for key in keys if key in self._checked.practices]
+        return {
+            node_id
+            for practice in practices
+            for node_id in practice.held_under({node.node_id for node in practice.nodes if node.is_in(self._built_from)})
+        }
 
     @property
     def held_beside(self) -> list[str]:

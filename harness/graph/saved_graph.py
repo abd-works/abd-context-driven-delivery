@@ -25,6 +25,9 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
 
 GRAPH_FILE_NAME = "graph.json"
+# The fact a node keeps of where it is written in each format besides its own file's (``Node.written_at``): by the
+# format's name, the file, its first line and its last.
+WRITTEN_IN_FACT = "written_in"
 # The shape this code writes. A saved graph of any other shape is read as no saved graph, so the next load replaces it.
 # Shape 6 names the story map's class StoryMap, where shape 5 named it StoryModel; shape 7 keeps each edge's facts, such
 # as how a class reaches the class it depends on, which a graph saved in shape 6 lacks.
@@ -114,6 +117,19 @@ class SavedNode:
     def location(self) -> Location:
         """The lines the node sits on in its file."""
         return Location(self.file, self.line, self.end_line)
+
+    @property
+    def files(self) -> list[str]:
+        """Each file the node is written in: its own, then the file of each other format it is written in
+        (``Node.written_at``), such as the story test that writes again a scenario its markdown writes."""
+        others = [str(place[0]) for place in (self.facts.get(WRITTEN_IN_FACT) or {}).values() if place]
+        return [self.file, *[file for file in others if file and file != self.file]]
+
+    def is_in(self, paths: list[str]) -> bool:
+        """Whether one of the files the node is written in is one of paths or sits under one."""
+        folders = [str(path).replace("\\", "/").strip("/") for path in paths if str(path).strip()]
+        files = [file.replace("\\", "/") for file in self.files]
+        return any(file == folder or file.startswith(f"{folder}/") for file in files for folder in folders)
 
     @classmethod
     def from_node(cls, node: Node) -> SavedNode:
@@ -388,11 +404,22 @@ class SavedFiles:
         self._named = None if files is None else [entry.replace("\\", "/").rstrip("/") for entry in files]
 
     def reads(self, node: Node) -> bool:
-        """Whether node was read from one of the files."""
+        """Whether node was read from one of the files, or it or a node above it is written in one of them besides its
+        own file (``Node.places``), as a scenario its markdown writes, with its steps, is written again in a story test."""
         if self._named is None:
             return True
-        file = (node.source.file or "").replace("\\", "/")
-        return any(file == item or file.startswith(f"{item}/") for item in self._named)
+        if self._names((node.source.file or "").replace("\\", "/")):
+            return True
+        above: Node | None = node
+        while above is not None:
+            if any(self._names(place.file.replace("\\", "/")) for place in list(above.places.values())[1:] if place.file):
+                return True
+            above = above.parent
+        return False
+
+    def _names(self, file: str) -> bool:
+        """Whether file is one of the named files or sits under a named folder."""
+        return any(file == item or file.startswith(f"{item}/") for item in self._named or [])
 
     def keeps_node(self, node: Node) -> bool:
         """Whether a save keeps node: one read from the files, or one holding a violation of a rule that runs over the
