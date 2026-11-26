@@ -243,3 +243,18 @@ Built 2026-11-24 (commit b123d6925).
 *And* ++Sparky++'s queue closes, leaving the robots alone
 
 Evidence: plugin tests "pressing the open robot goes back to the main conversation" and "pressing the open robot closes its queue, leaving the robots alone".
+
+## Story: Send Queued Prompts To Another Chat
+
+Built 2026-11-26 on `ui-fixes-as-i-use-it` (`prompt-queue.send_to_chat`); scenarios written in the hardening round from Rivet's defect reports. No story of the story map holds it yet: it belongs beside Assign Queued Prompt To Robot, and the map needs the story added.
+
+#### Scenario: Take the sent cards off this queue only once the other chat has them
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a), ++Run the unit tier++ (b) and Report the defect, and another chat, Fixes, is connected
+*But* the queue archive cannot be written, or Fixes stops being connected as the cards are sent
+*When* the lead sends ++Write the scenarios++ to Fixes
+*Then* the send is refused with the failure
+*And* Fixes has no message waiting
+*And* this queue still holds all three cards, with no copy of ++Write the scenarios++ in the queue archive
+
+Evidence: `prompt_queue_spec.py` "whose queue archive cannot be written" and "that the other chat stops being connected as the cards are sent".

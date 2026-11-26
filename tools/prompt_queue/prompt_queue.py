@@ -16,7 +16,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import noCatalog
-from harness.chat.chat import CHATS_FOLDER, Chat
+from harness.chat.chat import CHATS_FOLDER, Chat, ChatNotConnectedError
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.mcp_annotations import mcp
@@ -630,11 +630,15 @@ class PromptQueue:
         with self._file.held():
             held = self.prompts
             sent = self._to_send(held, prompts, to_chat)
-            themes = self.themes
-            cards = "\n".join(card.handed_over(place, themes.get(card.robot, "")) for place, card in enumerate(sent, start=1))
-            Chat(_chat_folder(to_chat)).send("submit", _SENT_CARDS_NOTE.format(chat=self._chat, cards=cards))
-            self._archive(sent)
-            return self._keep([item for item in held if item not in sent])
+            message = self._sent_cards_message(sent)
+            archived = self._archive(sent)
+            self._keep([item for item in held if item not in sent])
+            try:
+                Chat(_chat_folder(to_chat)).send("submit", message)
+            except (ChatNotConnectedError, OSError):
+                self._undo_send(held, archived)
+                raise
+            return self
 
     @mcp
     @agent_tool
@@ -762,6 +766,19 @@ class PromptQueue:
         named = {self._found(held, prompt).id for prompt in prompts}
         return [item for item in held if item.id in named]
 
+    def _sent_cards_message(self, sent: list[QueuedPrompt]) -> str:
+        """The message that hands sent to another chat: word to file each card, then each card, numbered in order."""
+        themes = self.themes
+        cards = "\n".join(card.handed_over(place, themes.get(card.robot, "")) for place, card in enumerate(sent, start=1))
+        return _SENT_CARDS_NOTE.format(chat=self._chat, cards=cards)
+
+    def _undo_send(self, held: list[QueuedPrompt], archived: Path | None) -> None:
+        """Put the queue back as held and take the archive's copy archived off, after a send the other chat never got:
+        cards leave the queue only once they are sent, so a retry sends each once. Its caller holds the file."""
+        self._keep(held)
+        if archived is not None:
+            archived.unlink(missing_ok=True)
+
     def _robot_as_spelled(self, robot: str) -> str:
         """robot as the queue first spelled it: the robot of the first card whose name is robot's, with no regard to case
         or outer spaces; robot without its outer spaces when no card has it. Its caller holds the queue's file."""
@@ -791,16 +808,17 @@ class PromptQueue:
             prompt.delete_attachments(self._attachments_folder)
         self._archive(prompts)
 
-    def _archive(self, prompts: list[QueuedPrompt]) -> None:
+    def _archive(self, prompts: list[QueuedPrompt]) -> Path | None:
         """Keeps a JSON copy of prompts taken off the queue in the chat's queue archive, one file for each time, named
-        for when they were taken off; nothing taken off writes nothing."""
+        for when they were taken off, and answers the copy; nothing taken off writes nothing."""
         if not prompts:
-            return
+            return None
         taken_off = datetime.now(timezone.utc)
         self._archive_folder.mkdir(parents=True, exist_ok=True)
         saved = self._archive_folder / f"{taken_off.strftime('%Y%m%dT%H%M%S%fZ')}.json"
         kept = {"chat": self._chat, "taken_off": taken_off.isoformat(), "prompts": [prompt.record for prompt in prompts]}
         saved.write_text(json.dumps(kept, indent=2), encoding="utf-8")
+        return saved
 
     def _take_off_done(self) -> PromptQueue:
         """Take the done prompts off the queue into its archive and keep the rest in order. Its caller holds the file."""

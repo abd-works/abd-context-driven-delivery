@@ -609,6 +609,28 @@ with describe(PromptQueue):
             with it("names the file in the message"):
                 expect(self.sent_messages()[0]["text"]).to(contain(f"attachments: {self.attached}"))
 
+        with context("whose queue archive cannot be written"):
+            with before.each:
+                blocked = self.folder / "not-a-folder"
+                blocked.write_text("x", encoding="utf-8")
+                self.blocked_queue = PromptQueue("chat-1", self.folder / "prompt-queue.json", archive=blocked)
+
+            with it("sends nothing, so a send that fails never leaves the card on both queues"):
+                expect(lambda: self.blocked_queue.send_to_chat([self.first], "chat-2")).to(raise_error(OSError))
+                expect(self.sent_messages()).to(equal([]))
+
+            with it("keeps every card on this queue"):
+                expect(lambda: self.blocked_queue.send_to_chat([self.first], "chat-2")).to(raise_error(OSError))
+                expect(len(self.queue.prompts)).to(equal(3))
+
+        with context("that the other chat stops being connected as the cards are sent"):
+            with before.each:
+                (self.other_chat / "chat.json").write_text(json.dumps({"name": "Fixes", "seen": 0}), encoding="utf-8")
+
+            with it("keeps no copy of the cards in the queue archive, since none left the queue"):
+                expect(lambda: self.queue.send_to_chat([self.first], "chat-2")).to(raise_error(ChatNotConnectedError))
+                expect(list((self.folder / "queue-archive").glob("*.json"))).to(equal([]))
+
         with it("refuses a card the queue does not hold, sending nothing and taking nothing off"):
             expect(lambda: self.queue.send_to_chat([self.first, "gone"], "chat-2")).to(raise_error(PromptNotQueued))
             expect([len(self.sent_messages()), len(self.queue.prompts)]).to(equal([0, 3]))

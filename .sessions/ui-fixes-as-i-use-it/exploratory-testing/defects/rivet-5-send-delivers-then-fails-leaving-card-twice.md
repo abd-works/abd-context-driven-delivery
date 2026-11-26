@@ -30,3 +30,17 @@ Either the card is sent and leaves this queue, or the call fails and nothing is 
 Unit: a send whose archive or keep fails, checking the other chat's mailbox is empty (or the message is withdrawn).
 
 ## Also seen by
+
+## Triage
+
+- **Status:** confirmed: reproduced with the report's archive that cannot be made (a file in its place) in a throwaway chats folder; the message waited in `chat-2`'s mailbox and the card stayed on `chat-1`.
+- **Severity:** wrong result (rare trigger; a retry delivers the card twice).
+- **Triaged by:** Cue
+
+## Fix
+
+- **Choice:** the cards leave the queue first and are sent last. `send_to_chat` now builds the message, archives the cards and keeps the queue without them, and only then hands the message to the other chat's mailbox; when that send fails (`ChatNotConnectedError` or `OSError`), `_undo_send` keeps the queue as it was and takes the archive copy off, then the failure is raised. A failure of the archive or the queue write now happens before anything is sent.
+- **Code:** `tools/prompt_queue/prompt_queue.py`: `PromptQueue.send_to_chat`, new `_sent_cards_message` and `_undo_send`; `_archive` answers the copy it wrote.
+- **Tests:** `tools/prompt_queue/prompt_queue_spec.py` (unit): "whose queue archive cannot be written / it sends nothing ..." (seen failing first: the message was waiting) and "it keeps every card on this queue"; "that the other chat stops being connected as the cards are sent / it keeps no copy of the cards in the queue archive" guards the undo. 118 examples pass.
+- **Scenario:** "Take the sent cards off this queue only once the other chat has them", new story Send Queued Prompts To Another Chat in `story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md`. The story map (root `.context/story-map.md`, outside this robot's area) does not hold the story yet: for the supervisor.
+- **Commit:** (filled below)
