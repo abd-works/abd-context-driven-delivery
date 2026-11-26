@@ -352,19 +352,26 @@ function AgentRobotView($: EngineInterface, e: AbovePromptEvent, state: QueueSta
     ? <elements.Svg key={`robot-${number}`} source={robotSvgOf(place)} alt={`${name}, a robot`} width={ROBOT_PIXELS} height={ROBOT_PIXELS} />
     : <Text key={`robot-${number}`} color={LOOK.accent}>🤖</Text>
 
+  const progress = `${items.filter(item => item.is_done).length}/${items.length}`
+  // The see-through Button lies over the whole row, robot, name and count, so a press anywhere on it opens the queue.
+  const rowBlanks = ' '.repeat(ROBOT_COLUMNS + 1 + [...name].length + 1 + progress.length)
+
   return (
     <Box key={`agent-robot-${number}`} flexDirection="row" alignItems="center" gap={1}>
       <Box key={`robot-box-${number}`} flexShrink={0}>
         {picture}
-        <Box position="absolute" top={0} left={0}>
-          <Button key={`collapse-agent-${number}`} plain label=" " onPress={() => toggleAgentQueue($, place)} />
-        </Box>
       </Box>
       <Text bold color={isOpen ? LOOK.accent : LOOK.muted}>{name}</Text>
-      <Text key={`agent-progress-${number}`} color={LOOK.muted}>{`${items.filter(item => item.is_done).length}/${items.length}`}</Text>
+      <Text key={`agent-progress-${number}`} color={LOOK.muted}>{progress}</Text>
+      <Box position="absolute" top={0} left={0}>
+        <Button key={`collapse-agent-${number}`} plain label={rowBlanks} onPress={() => toggleAgentQueue($, place)} />
+      </Box>
     </Box>
   )
 }
+
+/** The text columns a robot's picture takes, so the row's press area reaches past it to the name and the count. */
+const ROBOT_COLUMNS = 3
 
 /** About two lines tall, in the desktop's pixels: a robot stands out over its column. */
 const ROBOT_PIXELS = 28

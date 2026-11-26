@@ -43,3 +43,9 @@ Fixed 2026-11-26 on `ui-fixes-as-i-use-it` (6ab5a3cda, bc97a2c27): the viewer se
 Reported 2026-11-26 from pml-web. A press on a format chip, in "all" mode above all, took a while to filter and nothing said it was working, so a second press was easy.
 
 Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: on the chat bar the pressed chip shows the busy wheel and the bar says "filtering by markdown…" until the answer lands, and a press while one runs starts nothing (`pressedGuidance` in `guidance-client.ts`; `format-chip-busy.test.ts`, not run: the mod harness does not run from a shell). The Files app says "Filtering by …" in place of the list until it is read again, and ignores a press while one filters (`files-page.spec.ts`). The slowness itself, the graph rebuilt on each change, is a separate item.
+
+## A robot's row in the queue band takes a click only on a narrow strip
+
+Reported 2026-11-26. In sub-agent mode, the robot rows ("Sparky 0/1") opened their queue only when the click landed on the robot picture's first cell: the see-through Button over it was one blank wide.
+
+Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: the Button lies over the whole row, robot, name and count, one blank per column (`AgentRobotView` in `tools/prompt_queue/hooks/queue/queue-view.tsx`). The tests press it by its key, unchanged. Not seen live: not repinned while the person demos pml-web on the dev lane.
