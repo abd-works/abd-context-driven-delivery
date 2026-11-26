@@ -42,4 +42,4 @@ Unit: a `class_cards` example over a template-shaped heading and language; the e
 - **Test (unit):** `cdd_guidance/practices/ux/model/claude_design/class_cards_spec.py` over a template-shaped section (`### **Cart** <<Aggregate Root>>`, `*Cart*`, `- **Lines.** …`, a rule and a member). Seen failing first (2 of 2).
 - **Scenario:** none written: no story on the map (`.context/story-map.md`, epic Explore Stories In Story UI) covers the class card a step's term opens, and the map is outside this fix's area. Recommended: a story "Open A Step's Domain Term As Its Class Card" under Navigate The Story Tree, whose scenario this spec observes.
 - **Fix:** `class_cards.py` `ClassCard.from_section` writes the title and each line as a reader says them, through the Stories markup's `plain_words` (no bold, italic, underline, code or link marks); bullets, paragraphs, rules and members stay.
-- **Commit:** pending
+- **Commit:** 865e408ef
