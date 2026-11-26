@@ -86,8 +86,10 @@
     }
   },
   "guidance": {
-    "version": 39,
-    "stages": []
+    "version": 40,
+    "stages": [
+      "hardening"
+    ]
   },
   "overlays": [
     "cdd_claude_mod",
