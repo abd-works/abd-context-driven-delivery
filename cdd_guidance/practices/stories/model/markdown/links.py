@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from harness.annotations.name import Name
 
@@ -97,11 +97,14 @@ class StoryMapLinks:
 
     def story_file(self, story: "Story") -> str:
         """Relative path to the story's own scenario file, else to its acceptance test; ``""`` when it has neither."""
+        path = self.story_path(story)
+        return self._relative(path) if path is not None else ""
+
+    def story_path(self, story: "Story") -> Optional[Path]:
+        """The story's own scenario file, else its acceptance test; none when it has neither."""
         slug = self._slug(story.name)
         path = self._story_files.get(slug) or self._story_tests.get(slug)
-        if path is None or not path.is_file():
-            return ""
-        return self._relative(path)
+        return path if path is not None and path.is_file() else None
 
     def _by_story(self, paths: List[Path], suffixes: tuple) -> Dict[str, Path]:
         """Each of paths by the slug of the story its name, without suffixes, names; the first of each story's."""

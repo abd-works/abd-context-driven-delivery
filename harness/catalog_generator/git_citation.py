@@ -5,7 +5,7 @@ import inspect
 from collections.abc import Callable
 from pathlib import Path
 
-from harness.git.git import Git
+from harness.git.git import Git, RepoConnectError
 
 # A function, method, or class whose definition a citation points at, by its source file and lines.
 type CitedDefinition = Callable[..., object] | type
@@ -14,22 +14,34 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 class GitCitation:
-    """Git blob URLs, the only source citation catalog pages give. An SSH remote and a trailing ``.git`` are written
-    as the plain https address of the repository."""
+    """Git blob URLs, the only source citation catalog pages give, and the only link to a file a board in Claude opens.
+    An SSH remote and a trailing ``.git`` are written as the plain https address of the repository. A path is cited
+    from the root of the checkout it is in."""
 
-    def __init__(self, repo_url: str = "", ref: str = "") -> None:
+    def __init__(self, repo_url: str = "", ref: str = "", root: Path = _REPO_ROOT) -> None:
         self.repo_url = self._https(repo_url)
         self.ref = ref
+        self.root = Path(root).resolve()
 
     @classmethod
     def from_checkout(cls, repo_root: Path | None = None) -> GitCitation:
         """The checkout's origin and the commit it has checked out."""
         git = Git(repo_root or _REPO_ROOT)
-        return cls(git.run("remote", "get-url", "origin"), git.run("rev-parse", "HEAD"))
+        return cls(git.run("remote", "get-url", "origin"), git.run("rev-parse", "HEAD"), repo_root or _REPO_ROOT)
+
+    @classmethod
+    def from_branch(cls, folder: Path) -> GitCitation | None:
+        """The origin of the checkout folder is in and the branch it has checked out, so a link follows the branch as
+        it is pushed; none when folder is in no checkout, or its checkout has no origin."""
+        git = Git(folder)
+        try:
+            return cls(git.run("remote", "get-url", "origin"), git.run("symbolic-ref", "--short", "HEAD"), Path(git.run("rev-parse", "--show-toplevel")))
+        except RepoConnectError:
+            return None
 
     def blob_url(self, path: Path, lines: tuple[int, int] | None = None) -> str:
         try:
-            relative = path.resolve().relative_to(_REPO_ROOT)
+            relative = path.resolve().relative_to(self.root)
         except ValueError:
             relative = path
         url = f"{self.repo_url.rstrip('/')}/blob/{self.ref}/{relative.as_posix()}"

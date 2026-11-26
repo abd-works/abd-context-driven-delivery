@@ -7,6 +7,7 @@ from pathlib import Path
 from expects import be_a, be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
+from harness.guidance.practice_formats import Written
 from harness.whiteboard.whiteboard import UnreadableBoard, Whiteboard
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
 from cdd_guidance.practices.stories.model.diagram_story_map import DiagramIncrement
@@ -60,6 +61,51 @@ with description("a story map drawn on a Claude whiteboard") as self:
     with context("that is read from a board with no story-map elements"):
         with it("should refuse the board"):
             expect(lambda: WhiteboardStoryMap().parse(Whiteboard("Empty").save())).to(raise_error(UnreadableBoard))
+
+
+_LINKED_MAP = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+### (S) Customer --> Activate Sim
+"""
+
+
+def _checkout(files: dict) -> Path:
+    """A git checkout on branch main whose origin is github.com/org/shop, holding files."""
+    import subprocess
+    import tempfile
+
+    root = Path(tempfile.mkdtemp())
+    for relative, text in files.items():
+        (root / relative).parent.mkdir(parents=True, exist_ok=True)
+        (root / relative).write_text(text, encoding="utf-8")
+    subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=True)
+    subprocess.run(["git", "-C", str(root), "remote", "add", "origin", "https://github.com/org/shop.git"], check=True)
+    return root
+
+
+with description("a story map drawn on a Claude whiteboard in a folder of a git checkout") as self:
+    with before.all:
+        from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
+
+        self.root = _checkout({
+            "story-map.md": _LINKED_MAP,
+            "onboard/get-sim/select_sim_story.test.md": "## Story: Select Sim\n",
+        })
+        self.text = WhiteboardStoryMap().render(MarkdownStoryMap().parse(_LINKED_MAP), Written(folder=self.root))
+        self.cards = {line.splitlines()[-1]: line for line in (element.text for element in Whiteboard.from_text(self.text).elements if element.role == "story")}
+
+    # A board opens only a web address, so a story's file is linked where its checkout's origin shows it.
+    with it("should link a story's name on its card to its scenario file where the checkout's origin shows it"):
+        expect(self.cards["[Select Sim](https://github.com/org/shop/blob/main/onboard/get-sim/select_sim_story.test.md)"]).to(equal(
+            "*Customer*\n[Select Sim](https://github.com/org/shop/blob/main/onboard/get-sim/select_sim_story.test.md)"))
+
+    with it("should leave the name of a story with no file of its own as words"):
+        expect("Activate Sim" in self.cards).to(equal(True))
+
+    with it("should read a linked card back as its story's name"):
+        stories = WhiteboardStoryMap().parse(self.text).epics[0].epics[0].stories
+        expect([story.name for story in stories]).to(equal(["Select Sim", "Activate Sim"]))
 
 
 with description("a story map's thin slice drawn on a Claude whiteboard") as self:

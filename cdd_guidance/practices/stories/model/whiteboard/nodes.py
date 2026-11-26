@@ -11,7 +11,7 @@ a shared board.
 from __future__ import annotations
 
 import re
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from harness.whiteboard import BoardElement, Box, ElementId, KeepsDocumentOnBoard, Section, Shape, Whiteboard, WhiteboardNode
 
@@ -29,7 +29,9 @@ from cdd_guidance.practices.stories.model.diagram_story_map import (
     ThinSliceSurface,
 )
 from cdd_guidance.practices.stories.model.story_map import Epic, Increment, Story, StoryMap
+from harness.catalog_generator.git_citation import GitCitation
 from harness.guidance.practice_formats import Written
+from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks, unlink
 
 class _BoardStoryNode(WhiteboardNode):
     """A story-map node drawn on a board, keyed by its path from the map's root."""
@@ -62,15 +64,25 @@ class WhiteboardStory(LaidOutStory, _BoardStoryNode):
     row_y = 280
     actor_height = 0
     actor_gap = 0
+    file_link = ""
+    """Where the board opens the story's own file, its scenarios or else its acceptance test: the web address its
+    checkout's origin shows it at, since a board opens no other link; empty when the story has no file or none is known."""
 
     def board_box(self) -> Box:
         return Box(self.x, self.y, self.card_width, self.size)
 
     @property
     def card_text(self) -> str:
-        """The card's words: its actor in italics on the first line, when it has one, then its name."""
+        """The card's words: its actor in italics on the first line, when it has one, then its name, linked to its own
+        file when it has one."""
         actor = self.actors[0].strip() if self.actors else ""
-        return f"*{actor}*\n{self.name}" if actor else self.name
+        name = f"[{self.name}]({self.file_link})" if self.file_link else self.name
+        return f"*{actor}*\n{name}" if actor else name
+
+    def take_file_link(self, links: StoryMapLinks, citation: GitCitation) -> None:
+        """Link the story's name to its own file, where citation's checkout shows it, when links find one."""
+        path = links.story_path(self)
+        self.file_link = citation.blob_url(path) if path is not None else ""
 
     def board_elements(self) -> List[BoardElement]:
         return [self.board_shape(self.element_id("story", self.story_type.value), kind="rounded", color="yellow", size="small", text=self.card_text)]
@@ -119,8 +131,15 @@ class WhiteboardStoryMap(KeepsDocumentOnBoard, DiagramStoryMap):
     increment_class = DiagramIncrement
 
     def render(self, canonical: StoryMap, written: Written = Written()) -> str:
-        """Draw canonical as a board; the elements a previous board held stay where people put them."""
-        return self.copy_of(canonical).board().drawn_over(str(written.previous))
+        """Draw canonical as a board; the elements a previous board held stay where people put them. Written in a
+        folder of a checkout with an origin, each story's name links to its own file there."""
+        drawn = self.copy_of(canonical)
+        citation = GitCitation.from_branch(written.folder) if written.folder is not None else None
+        if citation is not None:
+            links = StoryMapLinks(drawn, str(written.folder))
+            for story in drawn.descendants.stories():
+                story.take_file_link(links, citation)
+        return drawn.board().drawn_over(str(written.previous))
 
     def board(self) -> Whiteboard:
         board = Whiteboard()
@@ -229,5 +248,5 @@ class _BoardCell(DiagramStoryCell):
         lines = [line.strip() for line in element.text.strip().splitlines() if line.strip()]
         actor = re.match(r"^\*([^*].*)\*$", lines[0]) if self.role == "story" and len(lines) > 1 else None
         self.actor = actor.group(1).strip() if actor else ""
-        self.text = " ".join(lines[1:] if actor else lines)
+        self.text = unlink(" ".join(lines[1:] if actor else lines))
         self.x, self.y, self.width, self.height = element.box.x, element.box.y, element.box.w, element.box.h
