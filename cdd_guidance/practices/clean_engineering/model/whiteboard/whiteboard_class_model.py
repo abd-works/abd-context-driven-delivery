@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Tuple
 from harness.whiteboard import MAX_SIDE, Arrow, BoardElement, Box, ElementId, KeepsDocumentOnBoard, Label, Section, UnreadableBoard, Whiteboard, WhiteboardNode
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
-from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import PAGE_MARGIN, ArrowRouter, DiagramArrow
+from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import GRID_STEP, PAGE_MARGIN, ArrowRouter, DiagramArrow, Point
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import DEPENDENCY_LABEL, ClassView, ClassViewPage
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
@@ -72,6 +72,10 @@ ABOUT_INSET_X = 16
 ABOUT_INSET_Y = 12
 """How far in from a section's left and top edges its purpose and seam terms are written, below its title."""
 INHERITANCE = "inheritance"
+BOARD_PORT_SPACING = 2 * GRID_STEP
+"""How far apart a board spreads the ends of the arrows that share one side of a card, around the side's middle."""
+BOARD_PORT_ROOM = 12
+"""How far in from each corner of a side a board keeps the ends it spreads along it."""
 KINDS = ("inheritance", "composition", "aggregation", "association", "dependency")
 
 
@@ -316,6 +320,29 @@ class WhiteboardModule(DiagramModule, _PlacedOnBoard):
         return self
 
 
+class BoardArrowRouter(ArrowRouter):
+    """The shared router, ending arrows where a board ends them: at the middle of the side each meets, the arrows
+    that share a side spread a little either way of it, so each arrow's way is found from where the board starts it
+    and none is drawn along another. A straight line joins two cards only when their middles are in line, since a
+    board ends an arrow nowhere else."""
+
+    def _port(self, card: Box, side: str, position: int, count: int) -> Point:
+        vertical = side in ("top", "bottom")
+        middle_index = (count - 1) / 2
+        room = max(0.0, (card.w if vertical else card.h) / 2 - BOARD_PORT_ROOM)
+        spacing = BOARD_PORT_SPACING if middle_index == 0 else min(BOARD_PORT_SPACING, room / middle_index)
+        middle = card.center[0] if vertical else card.center[1]
+        along = int(round((middle + (position - middle_index) * spacing) / GRID_STEP) * GRID_STEP)
+        if vertical:
+            return (along, int(card.y + (card.h if side == "bottom" else 0)))
+        return (int(card.x + (card.w if side == "right" else 0)), along)
+
+    def _shared_middle(self, source: Box, target: Box, across: bool) -> Optional[int]:
+        """The line through both cards' middles, when they are in line; else none."""
+        axis = 0 if across else 1
+        return int(source.center[axis]) if source.center[axis] == target.center[axis] else None
+
+
 class _WhiteboardModuleLayout(ModuleLayout):
     """The modules layout, with room between modules stacked in a column for the title a section writes above its box."""
 
@@ -467,7 +494,7 @@ class _ClassBoardPage(ClassViewPage):
     def draw_on(self, board: Whiteboard, corner: Box) -> Box:
         """Draw the page with its top-left corner at corner, and answer the box it fills."""
         cards, arrows = self._laid
-        routed = ArrowRouter(list(cards.values()), arrows).route()
+        routed = BoardArrowRouter(list(cards.values()), arrows).route()
         if not cards:
             return Box(corner.x, corner.y, 0, 0)
         # The routes are written from the cards' middles, so they are worked out before the page moves.

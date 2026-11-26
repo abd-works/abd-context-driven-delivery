@@ -834,7 +834,7 @@ class ArrowRouter:
             card = self._cards[cell_id].geometry
             users.sort(key=lambda user: self._far_end_position(user, side))
             for position, (arrow, leaving) in enumerate(users):
-                point = self._port(card, side, (position + 1) / (len(users) + 1))
+                point = self._port(card, side, position, len(users))
                 if leaving:
                     arrow.exit_point = point
                 else:
@@ -874,8 +874,10 @@ class ArrowRouter:
         far_end = self._cards[arrow.target if leaving else arrow.source].geometry.center
         return far_end[0 if side in _VERTICAL_SIDES else 1]
 
-    def _port(self, card: Box, side: str, fraction: float) -> Point:
-        """On the grid along the side, so the arrow's first run stays straight wherever a person left the card."""
+    def _port(self, card: Box, side: str, position: int, count: int) -> Point:
+        """Where the arrow at position of the count sharing a side meets it: spread evenly along the side, on the grid,
+        so the arrow's first run stays straight wherever a person left the card."""
+        fraction = (position + 1) / (count + 1)
         if side in _VERTICAL_SIDES:
             along = round((card.x + card.w * fraction) / GRID_STEP) * GRID_STEP
             return (int(along), int(card.y + (card.h if side == "bottom" else 0)))

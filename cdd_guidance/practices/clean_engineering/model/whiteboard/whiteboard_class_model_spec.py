@@ -7,11 +7,14 @@ from mamba import before, context, description, it
 
 from harness.whiteboard.whiteboard import Arrow, Label, Section, Shape, UnreadableBoard, Whiteboard
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
+from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import DiagramArrow
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import CLASSES_ON_ONE_PAGE
+from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import DiagramClass
+from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import WhiteboardCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import BoardArrowRouter, WhiteboardCleanEngineeringModel
 
 
 def _class_with(name: str, sequential_order: int, properties: list) -> OoadClass:
@@ -214,6 +217,45 @@ with description("a class model whose cards hang one under another on a Claude w
         legs = [level_leg(self.cards, arrow) for (start, _end), arrow in self.arrows.items() if start == self.cards["Credentials"].id and arrow.bends]
         overlapping = [(first, second) for index, first in enumerate(legs) for second in legs[index + 1:] if first[0] == second[0] and min(first[2], second[2]) > max(first[1], second[1])]
         expect(overlapping).to(equal([]))
+
+
+def placed_card(name: str, box: tuple) -> DiagramClass:
+    """A card a person left at box."""
+    card = DiagramClass(name=name)
+    card.cell_id = name
+    card.geometry = Box(*box)
+    return card
+
+
+def drawn_leg(arrow: DiagramArrow, start: Box, end: Box) -> tuple:
+    """The level leg a board draws for an arrow that goes down from one card, across, and down into the next: a board
+    starts it at the middle of the card it leaves and ends it over the middle of the card it reaches, at the height
+    its bends give."""
+    bends = arrow.bends_from_middles(start, end)
+    ends = sorted((start.center[0], end.center[0]))
+    return (start.center[1] + bends[1], ends[0], ends[1])
+
+
+with description("arrows routed for a board from one side of a card a person placed") as self:
+    with before.all:
+        self.cards = {card.cell_id: card for card in (
+            placed_card("Credentials", (430, 140, 580, 860)),
+            placed_card("Token", (50, 1150, 220, 170)),
+            placed_card("Validation", (410, 1150, 500, 400)),
+            placed_card("PasswordReset", (1070, 1150, 320, 280)),
+        )}
+        self.arrows = [DiagramArrow("Credentials", name, "composition") for name in ("Token", "Validation", "PasswordReset")]
+        BoardArrowRouter(list(self.cards.values()), self.arrows).route()
+        self.legs = [drawn_leg(arrow, self.cards[arrow.source].geometry, self.cards[arrow.target].geometry) for arrow in self.arrows]
+
+    # A board starts every arrow leaving one side near its middle, so two level legs at one height, both running from
+    # the middle the same way, are drawn one over the other.
+    with it("should give each arrow a level leg no other runs along as the board draws it"):
+        overlapping = [(first, second) for index, first in enumerate(self.legs) for second in self.legs[index + 1:] if first[0] == second[0] and min(first[2], second[2]) > max(first[1], second[1])]
+        expect(overlapping).to(equal([]))
+
+    with it("should leave the card at a point of its own for each arrow"):
+        expect(len({arrow.exit_point for arrow in self.arrows})).to(equal(3))
 
 
 with description("a modules view drawn on a Claude whiteboard") as self:
