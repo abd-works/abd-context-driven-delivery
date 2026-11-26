@@ -31,7 +31,7 @@ from cdd_guidance.practices.stories.model.diagram_story_map import (
     DiagramStory,
     DiagramStoryMap,
 )
-from cdd_guidance.practices.stories.model.story_map import Background, Scenario, Step, StoryMap, StoryNode
+from cdd_guidance.practices.stories.model.story_map import Background, Scenario, Step, Story, StoryMap, StoryNode
 from harness.graph.graph import Graph
 from cdd_guidance.practices.ux.model.nodes import Screen
 from harness.guidance.practice_formats import Written
