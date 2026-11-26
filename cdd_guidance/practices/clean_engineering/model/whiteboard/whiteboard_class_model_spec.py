@@ -46,6 +46,26 @@ def orders_class_model() -> CleanEngineeringModel:
     return model
 
 
+def credentials_class_model() -> CleanEngineeringModel:
+    """Credentials holding a token, a validation and a password reset, each its own card below it, and the password
+    reset holding the temporary password it sent, on a card of its own below that; the cards are as wide as their
+    words, so none is as wide as the card above it."""
+    model = CleanEngineeringModel("customer")
+    module = Module("credentials", 1)
+    held = {
+        "Credentials": [("token", "Token"), ("validation", "Validation"), ("passwordReset", "PasswordReset")],
+        "PasswordReset": [("sent", "TemporaryPassword"), ("requestedAtTheMomentTheCustomerAsked", "Instant")],
+    }
+    for order, name in enumerate(("Credentials", "Token", "Validation", "PasswordReset", "TemporaryPassword"), start=1):
+        oclass = _class_with(name, order, [Property(name=field, type_hint=kind) for field, kind in held.get(name, [("value", "str")])])
+        module.classes.append(oclass)
+        for prop in oclass.properties:
+            if prop.type_hint != "Instant":
+                prop.arrow.take_kind("composition")
+    model.modules.append(module)
+    return model
+
+
 def two_module_model(classes_each: int) -> CleanEngineeringModel:
     """Two modules of classes_each classes, the first module's first class holding the second module's first."""
     model = CleanEngineeringModel("big")
@@ -139,6 +159,39 @@ with description("a class model drawn on a Claude whiteboard") as self:
 
         with it("should read back each module with only its own classes"):
             expect(summary(WhiteboardCleanEngineeringModel().parse(self.text))).to(equal(summary(self.source)))
+
+
+def level_leg(cards: dict, arrow: Arrow) -> tuple:
+    """The level leg of an arrow a board draws down from a card and across to the card below it: its height, and where
+    it runs from and to, from the middle of the card it leaves to the middle of the card it reaches."""
+    by_id = {card.id: card.box for card in cards.values()}
+    start, end = by_id[arrow.from_id], by_id[arrow.to_id]
+    height = start.y + start.h / 2 + arrow.bends[1]
+    ends = sorted((start.x + start.w / 2, end.x + end.w / 2))
+    return (height, ends[0], ends[1])
+
+
+with description("a class model whose cards hang one under another on a Claude whiteboard") as self:
+    with before.all:
+        self.board = Whiteboard.from_text(WhiteboardCleanEngineeringModel().render(credentials_class_model()))
+        self.cards = cards_of(self.board)
+        self.arrows = {(element.from_id, element.to_id): element for element in self.board.elements if isinstance(element, Arrow)}
+
+    # A board ends an arrow at the middle of a card's side, so a straight line needs the two middles in line.
+    with it("should stand a card in line under the one card above it that holds it"):
+        reset, sent = self.cards["PasswordReset"].box, self.cards["TemporaryPassword"].box
+        expect(sent.x + sent.w / 2).to(equal(reset.x + reset.w / 2))
+
+    with it("should draw the arrow between them straight, with no bends"):
+        arrow = self.arrows[(self.cards["PasswordReset"].id, self.cards["TemporaryPassword"].id)]
+        expect((arrow.from_side, arrow.to_side, arrow.bends)).to(equal(("bottom", "top", None)))
+
+    # Arrows leaving one side of a card start by its middle, so two whose level legs ran at one height the same way
+    # would be drawn one over the other.
+    with it("should give each arrow leaving one side of a card a level leg no other runs along"):
+        legs = [level_leg(self.cards, arrow) for (start, _end), arrow in self.arrows.items() if start == self.cards["Credentials"].id and arrow.bends]
+        overlapping = [(first, second) for index, first in enumerate(legs) for second in legs[index + 1:] if first[0] == second[0] and min(first[2], second[2]) > max(first[1], second[1])]
+        expect(overlapping).to(equal([]))
 
 
 with description("a modules view drawn on a Claude whiteboard") as self:

@@ -265,6 +265,43 @@ class CardPlacement:
         return max(widest, math.sqrt(area * PAGE_WIDTH_BIAS))
 
     def _set_positions(self, rows: List[List[str]]) -> None:
+        """Rows top to bottom, each centred on the widest, cards in a row spaced by the arrows between them; then each
+        card stood in line under the one card above it that it is joined to, where the room beside it allows."""
+        self._set_rows(rows)
+        for upper, lower in zip(rows, rows[1:]):
+            for index in range(len(lower)):
+                self._line_up(lower, index, upper)
+
+    def _line_up(self, row: List[str], index: int, upper: List[str]) -> None:
+        """Move the card at index in row so its middle is under the middle of the one card of the row above it is
+        joined to, so the arrow between them runs straight down; a card joined to several, or with a neighbour in the
+        way, stays where it is."""
+        cell_id = row[index]
+        joined = [other for other in upper if any({link.source, link.target} == {cell_id, other} for link in self._links)]
+        if len(joined) != 1:
+            return
+        card = self._by_id[cell_id]
+        wanted = round((self._by_id[joined[0]].geometry.center[0] - card.geometry.w / 2) / GRID_STEP) * GRID_STEP
+        if not self._room_for(row, index, wanted):
+            return
+        card.geometry = card.geometry.moved_to(wanted, card.geometry.y)
+
+    def _room_for(self, row: List[str], index: int, left: float) -> bool:
+        """Whether the card at index in row can stand at left, keeping the page's margin and the gap to each neighbour."""
+        width = self._by_id[row[index]].geometry.w
+        if left < PAGE_MARGIN:
+            return False
+        if index > 0:
+            before = self._by_id[row[index - 1]].geometry
+            if left < before.x + before.w + self._spacing.gap_between(row[index - 1], row[index], across=True):
+                return False
+        if index + 1 < len(row):
+            after = self._by_id[row[index + 1]].geometry
+            if left + width + self._spacing.gap_between(row[index], row[index + 1], across=True) > after.x:
+                return False
+        return True
+
+    def _set_rows(self, rows: List[List[str]]) -> None:
         """Rows top to bottom, each centred on the widest, cards in a row spaced by the arrows between them."""
         widths = [self._row_width(row) for row in rows]
         page_width = max(widths)
