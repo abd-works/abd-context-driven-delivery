@@ -312,9 +312,8 @@ class ClassViewPage:
 
 
 def is_weaker_than_opposite(pair: Tuple[str, str], arrows: Dict[Tuple[str, str], DiagramArrow]) -> bool:
-    """A field drawn both ways keeps the stronger end. A dependency says what one class does to the other, so it stays."""
-    if arrows[pair].kind == 'dependency':
-        return False
+    """A field drawn both ways keeps the stronger end. A dependency is the weakest of all, so a solid line the other way
+    between the same two classes already joins them and the dotted one is left out; two dependencies both stay."""
     opposite = arrows.get((pair[1], pair[0]))
     return opposite is not None and RELATIONSHIP_STRENGTH[opposite.kind] > RELATIONSHIP_STRENGTH[arrows[pair].kind]
 

@@ -8,6 +8,7 @@ from mamba import before, context, description, it
 from harness.whiteboard.whiteboard import Arrow, Label, Section, Shape, UnreadableBoard, Whiteboard
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import CLASSES_ON_ONE_PAGE
+from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import WhiteboardCleanEngineeringModel
@@ -109,6 +110,19 @@ with description("a class model drawn on a Claude whiteboard") as self:
 
     with it("should read back every module, class, property, operation and base"):
         expect(summary(WhiteboardCleanEngineeringModel().parse(self.text))).to(equal(summary(self.source)))
+
+    with context("where a class depends on the class that holds it"):
+        with before.each:
+            line = self.source.modules[0].classes[1]
+            line.dependencies.append(Relationship(target="Cart", kind="dependency", label="totals"))
+            self.board = Whiteboard.from_text(WhiteboardCleanEngineeringModel().render(self.source))
+            self.cards = cards_of(self.board)
+
+        # A solid line already joins the two cards; a dotted one beside it says nothing more and tangles the page.
+        with it("should draw only the solid relationship between the two classes"):
+            pair = {self.cards["Cart"].id, self.cards["Line"].id}
+            joining = [element.role for element in self.board.elements if isinstance(element, Arrow) and {element.from_id, element.to_id} == pair]
+            expect(joining).to(equal(["composition"]))
 
     with context("that is too big for one page"):
         with before.each:
