@@ -14,7 +14,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import equal, expect
 from mamba import before, context, description, it
 
-from tools.drawio_viewer.drawio_viewer import DiagramLinks
+from tools.drawio_viewer.drawio_viewer import DiagramLinks, DiagramOpening, links_written_back
 
 STORY_LINK = "../story_tests/register/register_story.test.md"
 DIAGRAM = '<mxfile><UserObject label="Register" link="{story}" id="1"/><UserObject label="Map" link="story-map.md#e-register" id="2"/><UserObject label="Web" link="https://example.org/a?b=1&amp;c=2" id="3"/><UserObject label="Page" link="#data-page" id="4"/></mxfile>'.format(story=STORY_LINK)
@@ -29,7 +29,7 @@ def _link_of(xml: str, cell: str) -> str:
 
 with description("a diagram opened in the draw.io viewer") as self:
     with before.each:
-        self.links = DiagramLinks("C:/dev/shop/.context/story-map.drawio", "http://127.0.0.1:8783", "C:/dev/shop", "chat-1", "ui-fixes")
+        self.links = DiagramLinks("C:/dev/shop/.context/story-map.drawio", DiagramOpening("http://127.0.0.1:8783", "C:/dev/shop", "chat-1", "ui-fixes"))
         self.shown = self.links.sent_through_files(DIAGRAM)
 
     with context("with a link to a story file beside it"):
@@ -58,9 +58,9 @@ with description("a diagram opened in the draw.io viewer") as self:
 
     with context("that is saved"):
         with it("should write every link back exactly as the diagram held it"):
-            expect(self.links.written_back(self.shown)).to(equal(DIAGRAM))
+            expect(links_written_back(self.shown)).to(equal(DIAGRAM))
 
     with context("opened by hand, with no chat or ticket named"):
         with it("should send the link without them"):
-            shown = DiagramLinks("C:/dev/shop/.context/story-map.drawio", "http://127.0.0.1:8783", "C:/dev/shop").sent_through_files(DIAGRAM)
+            shown = DiagramLinks("C:/dev/shop/.context/story-map.drawio", DiagramOpening("http://127.0.0.1:8783", "C:/dev/shop")).sent_through_files(DIAGRAM)
             expect(sorted(urllib.parse.parse_qs(urllib.parse.urlparse(_link_of(shown, "1")).query))).to(equal(["diagram", "link", "project"]))

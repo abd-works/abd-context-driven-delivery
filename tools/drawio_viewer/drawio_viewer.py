@@ -17,6 +17,7 @@ import json
 import re
 import sys
 import urllib.parse
+from typing import NamedTuple
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -71,39 +72,50 @@ def files_origin() -> str:
     return f"http://127.0.0.1:{port}"
 
 
-class DiagramLinks:
-    """The links to files a diagram's cells carry, sent through the Files server while the diagram is open in the viewer
-    and written back as they were when it is saved, so the file never holds the viewer's addresses."""
+class DiagramOpening(NamedTuple):
+    """How the viewer was asked to open a diagram: the Files server its links to files go through, the project whose
+    file it is, the chat that opened it, which a broken link is told to, and the ticket whose files the Files app lists."""
 
-    def __init__(self, diagram: str, opener: str, project: str, chat: str = "", ticket: str = "") -> None:
+    opener: str
+    project: str
+    chat: str = ""
+    ticket: str = ""
+
+
+class DiagramLinks:
+    """The links to files a diagram's cells carry, sent through the Files server while the diagram is open in the
+    viewer, so a press on one opens its file in the Files app (``links_written_back`` restores them on save)."""
+
+    def __init__(self, diagram: str, opening: DiagramOpening) -> None:
         self._diagram = diagram
-        self._opener = opener.rstrip("/")
-        self._project = project
-        self._chat = chat
-        self._ticket = ticket
+        self._opening = opening
 
     def sent_through_files(self, xml: str) -> str:
         """xml with each cell link to a file beside the diagram sent to the Files server; every other link as it is."""
         return LINK_ATTRIBUTE.sub(self._sent, xml)
 
-    def written_back(self, xml: str) -> str:
-        """xml with each link sent to a Files server written back as the link the diagram held."""
-        return LINK_ATTRIBUTE.sub(self._restored, xml)
-
     def _sent(self, match: re.Match) -> str:
         link = html.unescape(match.group(2))
         if not link or WHOLE_LINK.match(link):
             return match.group(0)
-        query = {"diagram": self._diagram, "project": self._project, "chat": self._chat, "ticket": self._ticket, "link": link}
-        sent = f"{self._opener}{LINK_ROUTE}?{urllib.parse.urlencode({key: value for key, value in query.items() if value})}"
+        opening = self._opening
+        query = {"diagram": self._diagram, "project": opening.project, "chat": opening.chat, "ticket": opening.ticket, "link": link}
+        sent = f"{opening.opener.rstrip('/')}{LINK_ROUTE}?{urllib.parse.urlencode({key: value for key, value in query.items() if value})}"
         return f"{match.group(1)}{html.escape(sent)}{match.group(3)}"
 
-    def _restored(self, match: re.Match) -> str:
-        url = urllib.parse.urlparse(html.unescape(match.group(2)))
-        if url.path != LINK_ROUTE or url.hostname != "127.0.0.1":
-            return match.group(0)
-        link = urllib.parse.parse_qs(url.query).get("link", [""])[0]
-        return f"{match.group(1)}{html.escape(link)}{match.group(3)}" if link else match.group(0)
+
+def links_written_back(xml: str) -> str:
+    """xml with each link the viewer sent to a Files server written back as the link the diagram held, so the file
+    never holds the viewer's addresses."""
+    return LINK_ATTRIBUTE.sub(_restored, xml)
+
+
+def _restored(match: re.Match) -> str:
+    url = urllib.parse.urlparse(html.unescape(match.group(2)))
+    if url.path != LINK_ROUTE or url.hostname != "127.0.0.1":
+        return match.group(0)
+    link = urllib.parse.parse_qs(url.query).get("link", [""])[0]
+    return f"{match.group(1)}{html.escape(link)}{match.group(3)}" if link else match.group(0)
 
 
 class DrawioFiles:
@@ -151,7 +163,7 @@ class DrawioViewerHandler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         try:
             path = self.files.resolve(body["f"])
-            path.write_text(self._links_of(path, {}).written_back(body["xml"]), encoding="utf-8")
+            path.write_text(links_written_back(body["xml"]), encoding="utf-8")
         except (ValueError, OSError) as error:
             return self.reply(400, str(error), "text/plain")
         self.reply(200, "saved", "text/plain")
@@ -192,7 +204,8 @@ class DrawioViewerHandler(BaseHTTPRequestHandler):
         """The links of the diagram at path, sent to the Files server the editor link names, for its project, chat and
         ticket; the Files app's usual server and the viewer's root when the link names none."""
         named = {key: values[0] for key, values in query.items() if values}
-        return DiagramLinks(str(path), named.get("opener") or files_origin(), named.get("project") or str(self.files.root), named.get("chat", ""), named.get("ticket", ""))
+        opening = DiagramOpening(named.get("opener") or files_origin(), named.get("project") or str(self.files.root), named.get("chat", ""), named.get("ticket", ""))
+        return DiagramLinks(str(path), opening)
 
 
 def handler_for(files: DrawioFiles, port: int) -> type[DrawioViewerHandler]:

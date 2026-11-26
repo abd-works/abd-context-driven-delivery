@@ -109,8 +109,8 @@ export function createFilesApp(projects: ProjectConnections, port: number, stati
   app.get(`${API_ROOT}${DRAWIO_PAGE}`, async (request, response) => {
     const path = String(request.query.path ?? '')
     try {
-      const opened = { opener: `http://127.0.0.1:${port}`, chat: String(request.query.chat ?? ''), ticket: String(request.query.ticket ?? '') }
-      response.redirect(302, await drawio.urlOf(path, String(request.query.project ?? ''), opened))
+      const opening = { project: String(request.query.project ?? ''), opener: `http://127.0.0.1:${port}`, chat: String(request.query.chat ?? ''), ticket: String(request.query.ticket ?? '') }
+      response.redirect(302, await drawio.urlOf(path, opening))
     } catch (failure) {
       const said = `${path} did not open in the draw.io viewer: ${textOf(failure)}`
       response.status(FAILED).type('text/plain').send(said)

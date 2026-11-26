@@ -29,28 +29,31 @@ export const isDrawio = (path: string): boolean => path.toLowerCase().endsWith('
 // A whiteboard file, which the page draws on a canvas rather than showing its text.
 export const isWhiteboard = (path: string): boolean => path.toLowerCase().endsWith('.whiteboard')
 
+// How a diagram is opened: the project whose file it is, the chat that opened it, which a failure is told to, the ticket
+// whose files the Files app lists, the Files server its links to files go through (opener), and the viewer's port.
+export type DrawioOpening = { project?: string; chat?: string; ticket?: string; opener?: string; port?: number }
+
+const namedOnly = (named: Record<string, string | undefined>): URLSearchParams =>
+  new URLSearchParams(Object.entries(named).filter((entry): entry is [string, string] => Boolean(entry[1])))
+
 // The address a .drawio file's link opens: the Files server's draw.io page on the file, naming the chat that opened the
-// page so a viewer that does not start is told to that chat, as every failure of the page is, and the page's project,
-// whose file it is.
-export const drawioPageOf = (path: string, chat: string, project = '', ticket = ''): string => {
-  const query = new URLSearchParams({ path, ...(chat ? { chat } : {}), ...(project ? { project } : {}), ...(ticket ? { ticket } : {}) })
-  return `${API_ROOT}${DRAWIO_PAGE}?${query.toString()}`
-}
+// page so a viewer that does not start is told to that chat, as every failure of the page is, the page's project,
+// whose file it is, and its ticket.
+export const drawioPageOf = (path: string, opening: DrawioOpening = {}): string =>
+  `${API_ROOT}${DRAWIO_PAGE}?${namedOnly({ path, chat: opening.chat, project: opening.project, ticket: opening.ticket }).toString()}`
 
 const isWholePath = (path: string): boolean => /^([a-zA-Z]:)?[\\/]/.test(path)
 
 // The draw.io editor on a file named from its project's root. One viewer serves every project, rooted at whichever
 // started it, so a file of a named project is sent as its whole path (.claude/rules/drawio-viewer.md). The viewer
-// answers on DRAWIO_PORT, unless it was started on a port of its own, as a spec's viewer is.
-// Its links to files go through the Files server named as opener, for the project, the chat and the ticket named.
-export type DrawioOpener = { opener: string; chat?: string; ticket?: string }
-
-export const drawioEditorUrl = (path: string, project = '', port = DRAWIO_PORT, opened?: DrawioOpener): string => {
+// answers on DRAWIO_PORT, unless it was started on a port of its own, as a spec's viewer is. Opened by a Files server,
+// it names that server, the project, the chat and the ticket, so the diagram's links to files open in the Files app.
+export const drawioEditorUrl = (path: string, opening: DrawioOpening = {}): string => {
+  const project = opening.project ?? ''
   const file = project && !isWholePath(path) ? `${project.replace(/[\\/]+$/, '')}/${path}` : path
-  const url = `http://127.0.0.1:${port}/edit?f=${encodeURIComponent(file)}`
-  if (!opened) return url
-  const named = { opener: opened.opener, project, chat: opened.chat ?? '', ticket: opened.ticket ?? '' }
-  return `${url}&${new URLSearchParams(Object.entries(named).filter(([, value]) => value)).toString()}`
+  const url = `http://127.0.0.1:${opening.port ?? DRAWIO_PORT}/edit?f=${encodeURIComponent(file)}`
+  if (!opening.opener) return url
+  return `${url}&${namedOnly({ opener: opening.opener, project, chat: opening.chat, ticket: opening.ticket }).toString()}`
 }
 
 // What the menu calls showing a file in the system's file browser, by the platform the page runs on, as
