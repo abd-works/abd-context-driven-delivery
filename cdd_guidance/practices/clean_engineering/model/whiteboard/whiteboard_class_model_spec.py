@@ -436,3 +436,23 @@ with description("a Clean Engineering board saved as its file") as self:
         modules.modules = [_module_card("orders", 1, "Takes orders.", ["Order"], [])]
         board = _saved_as("modules.whiteboard", WhiteboardCleanEngineeringModel().render(modules))
         expect([label.text for label in board.labels if label.id == "title"]).to(equal(["Shop - Modules Context"]))
+
+
+def _ledger_and_entry() -> CleanEngineeringModel:
+    """A ledger and an entry that no field joins, the ledger's operation both calling the entry and naming it."""
+    model = CleanEngineeringModel("books")
+    module = Module("books", 1)
+    ledger, entry = OoadClass("Ledger", 1), OoadClass("Entry", 2)
+    post = Operation.from_signature("post(entry: Entry): None")
+    post.callees = ["Entry.validate"]
+    ledger.operations = [post]
+    module.classes.extend([ledger, entry])
+    model.modules.append(module)
+    return model
+
+
+with description("a class model whose classes only an operation joins, drawn on a Claude whiteboard") as self:
+    # The operation that calls the entry also names it, so both ways of finding the join find the same one.
+    with it("should draw the join between the two classes once"):
+        board = Whiteboard.from_text(WhiteboardCleanEngineeringModel().render(_ledger_and_entry()))
+        expect([element.role for element in board.elements if isinstance(element, Arrow)]).to(equal(["dependency"]))

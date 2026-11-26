@@ -237,12 +237,13 @@ class ClassViewPage:
     def _arrows_for_unlinked_classes(self, arrows: Dict[Tuple[str, str], DiagramArrow]) -> List[DiagramArrow]:
         """A class no field reaches still belongs to the model, so its first use in an operation draws it in, dashed."""
         linked = {cell_id for pair in arrows for cell_id in pair}
-        found = []
+        found: Dict[Tuple[str, str], DiagramArrow] = {}
         for cell_id in sorted(self._page_ids - linked):
             arrow = self._operation_arrow(cell_id)
+            # Two unlinked classes can each find the same operation joining them; it is drawn once.
             if arrow is not None:
-                found.append(arrow)
-        return found
+                found.setdefault((arrow.source, arrow.target), arrow)
+        return list(found.values())
 
     def _operation_arrow(self, cell_id: str) -> Optional[DiagramArrow]:
         oclass = self._writer.classes_by_cell[cell_id]
