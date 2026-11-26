@@ -41,4 +41,4 @@ Unit (`harness/chat/chat_spec.py`): resend between take and confirm. The specs r
 - **Test:** `harness/chat/chat_spec.py` (unit), "that a person resends while the chat may still be showing it" and "that a person resends once the chat has had time to show it" / "that the chat confirms it showed after all". Seen failing first: 4 examples.
 - **Fix:** `harness/chat/chat.py`: `take_ready` keeps `taken_at` in the message; `resend` of a message taken less than `SHOWING_SECONDS` (10) ago raises *ChatMessageMayBeShowing*, naming the message, and leaves it taken; `confirm` also finds a message resent since (in waiting), so a late confirm still counts and the chat is not given it twice. Model (`chat-model.md`, `chat-model.drawio`) and `module-context.md` updated.
 - **Not changed (outside the area):** the board's Resend button (`space/kanban/app/src/kanban/chat/chat-messages-view.tsx`) still shows on a taken message; a press within 10 seconds now gets the refusal instead of a second delivery.
-- **Commit:** see below.
+- **Commit:** 0bb38fc26.
