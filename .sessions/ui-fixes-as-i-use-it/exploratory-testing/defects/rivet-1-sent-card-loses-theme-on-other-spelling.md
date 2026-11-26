@@ -40,3 +40,17 @@ Also the reverse: set_theme on a robot whose cards were all cleared or sent stor
 Unit (`prompt_queue_spec.py`): its send_to_chat examples set the theme with the card's own spelling after assigning, so the spelling mismatch is never exercised.
 
 ## Also seen by
+
+## Triage
+
+- **Status:** confirmed: set_theme("Gizmo") then assign(card, "gizmo") kept the card as gizmo beside the theme Gizmo, and send_to_chat sent `robot: gizmo` with no theme (both reproduced as spec examples on a throwaway queue and chats folder).
+- **Severity:** wrong result.
+- **Triaged by:** Cue
+
+## Fix
+
+- **Choice:** one spelling, and a match that ignores case where two spellings are already kept. `_robot_as_spelled` now looks at the robots of the cards and then at the robots the themes are kept for, so assign after set_theme keeps the theme's spelling (and the reverse already held). The message `send_to_chat` writes looks a card's robot up among the themes with no regard to case, so a queue file kept before this fix, with two spellings, still sends the theme.
+- **Code:** `tools/prompt_queue/prompt_queue.py`: `PromptQueue._robot_as_spelled`, `PromptQueue._sent_cards_message`.
+- **Tests:** `tools/prompt_queue/prompt_queue_spec.py` (unit): "gives a card the spelling of a robot the queue holds only a theme for, matching the name with no regard to case" and "names the theme of a card's robot that the queue spells otherwise, matching the name with no regard to case"; both seen failing first, now pass (123 examples).
+- **Scenarios:** "Give a card to a robot the queue holds only a theme for by the theme's spelling" (Assign Queued Prompt To Robot) and "Send a card with its robot's theme however the queue spells the robot" (Send Queued Prompts To Another Chat), in `share_queue_among_robots_story.test.md`.
+- **Commit:** (filled below)

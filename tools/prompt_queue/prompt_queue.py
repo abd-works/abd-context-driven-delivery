@@ -782,9 +782,11 @@ class PromptQueue:
         return [item for item in held if item.id in named]
 
     def _sent_cards_message(self, sent: list[QueuedPrompt]) -> str:
-        """The message that hands sent to another chat: word to file each card, then each card, numbered in order."""
-        themes = self.themes
-        cards = "\n".join(card.handed_over(place, themes.get(card.robot, "")) for place, card in enumerate(sent, start=1))
+        """The message that hands sent to another chat: word to file each card, then each card, numbered in order, each
+        with its robot's theme, the robot matched with no regard to case, since a queue kept before robots were matched
+        so may spell one robot two ways."""
+        themes = {robot.casefold(): theme for robot, theme in self.themes.items()}
+        cards = "\n".join(card.handed_over(place, themes.get(card.robot.casefold(), "")) for place, card in enumerate(sent, start=1))
         return _SENT_CARDS_NOTE.format(chat=self._chat, cards=cards)
 
     def _undo_send(self, held: list[QueuedPrompt], archived: Path | None) -> None:
@@ -795,10 +797,12 @@ class PromptQueue:
             archived.unlink(missing_ok=True)
 
     def _robot_as_spelled(self, robot: str) -> str:
-        """robot as the queue first spelled it: the robot of the first card whose name is robot's, with no regard to case
-        or outer spaces; robot without its outer spaces when no card has it. Its caller holds the queue's file."""
+        """robot as the queue first spelled it: the robot of the first card, else of the first theme, whose name is
+        robot's, with no regard to case or outer spaces; robot without its outer spaces when neither has it, so a robot
+        given its theme before its first card keeps one spelling. Its caller holds the queue's file."""
         named = robot.strip()
-        return next((item.robot for item in self.prompts if item.robot.casefold() == named.casefold()), named)
+        held = [*(item.robot for item in self.prompts), *self.themes]
+        return next((spelled for spelled in held if spelled.casefold() == named.casefold()), named)
 
     def _new_prompts(self, texts: list[str]) -> list[QueuedPrompt]:
         """One prompt, with an id of its own, for each of texts that holds more than spaces and a board viewer's state."""

@@ -123,6 +123,14 @@ Evidence: plugin tests "switching sub-agent mode off takes every robot off the q
 
 Evidence: `prompt_queue_spec.py` "gives a card a robot already on the queue by its first spelling" and the plugin test "a card given to a robot spelled in another case stands in that robot's queue, not in a second robot's".
 
+#### Scenario: Give a card to a robot the queue holds only a theme for by the theme's spelling
+
+*Given* the lead gave the robot Gizmo the theme Files menu, and no card is given to Gizmo yet
+*When* the cdd server is asked to give ++Write the scenarios++ (a) to " gizmo"
+*Then* the queue answers ++Write the scenarios++ with the robot Gizmo, the spelling its theme holds
+
+Evidence: `prompt_queue_spec.py` "gives a card the spelling of a robot the queue holds only a theme for".
+
 #### Scenario: Take a card off its robot
 
 *Given* ++Write the scenarios++ (a) is given to ++Bolt++
@@ -268,3 +276,11 @@ Evidence: `prompt_queue_spec.py` "whose queue archive cannot be written" and "th
 *And* the message tells Fixes that a line starting > goes on from the line above it, never a card of its own
 
 Evidence: `prompt_queue_spec.py` "whose card's text and step hold several lines".
+
+#### Scenario: Send a card with its robot's theme however the queue spells the robot
+
+*Given* the chat's prompt queue holds ++Run the unit tier++ (b) given to gizmo, and keeps the theme Files menu for Gizmo, as a queue kept before robots were matched with no regard to case may
+*When* the lead sends ++Run the unit tier++ to Fixes
+*Then* the message names the card's robot as gizmo - Files menu
+
+Evidence: `prompt_queue_spec.py` "names the theme of a card's robot that the queue spells otherwise".

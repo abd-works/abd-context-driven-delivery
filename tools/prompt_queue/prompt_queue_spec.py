@@ -89,6 +89,11 @@ with describe(PromptQueue):
             self.queue.set_theme("Bolt", "  ")
             expect(self.queue.themes).to(equal({}))
 
+    with it("gives a card the spelling of a robot the queue holds only a theme for, matching the name with no regard to case"):
+        self.queue.set_theme("Gizmo", "Files menu")
+        self.queue.assign(self.queue.prompts[0].id, " gizmo")
+        expect(self.queue.prompts[0].robot).to(equal("Gizmo"))
+
     with it("holds no theme for a robot nobody gave one"):
         expect(self.queue.themes).to(equal({}))
 
@@ -608,6 +613,14 @@ with describe(PromptQueue):
 
             with it("names the file in the message"):
                 expect(self.sent_messages()[0]["text"]).to(contain(f"attachments: {self.attached}"))
+
+        with it("names the theme of a card's robot that the queue spells otherwise, matching the name with no regard to case"):
+            kept = JsonFile(self.folder / "prompt-queue.json")
+            held = kept.read()
+            held["prompts"][1]["robot"] = "gizmo"
+            kept.write({**held, "themes": {"Gizmo": "Files menu"}})
+            self.queue.send_to_chat([self.second], "chat-2")
+            expect(self.sent_messages()[0]["text"]).to(contain("robot: gizmo - Files menu"))
 
         with context("whose card's text and step hold several lines"):
             with before.each:
