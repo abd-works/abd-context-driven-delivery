@@ -78,5 +78,8 @@
       "specification",
       "implementation"
     ]
-  }
+  },
+  "overlays": [
+    "lern_domain_driven"
+  ]
 }
