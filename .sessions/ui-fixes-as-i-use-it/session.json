@@ -10,40 +10,50 @@
     "stories": {
       "fidelities": {
         "acceptance_tests": {
-          "formats": []
+          "formats": [
+            "python"
+          ]
         }
       }
     },
     "ddd": {
       "fidelities": {
         "tactics": {
-          "formats": []
+          "formats": [
+            "python"
+          ]
         }
       }
     },
     "ux": {
       "fidelities": {
         "front_end_code": {
-          "formats": []
+          "formats": [
+            "typescript"
+          ]
         }
       }
     },
     "clean_engineering": {
       "fidelities": {
         "code": {
-          "formats": []
+          "formats": [
+            "python"
+          ]
         }
       }
     },
     "bdd": {
       "fidelities": {
         "development": {
-          "formats": []
+          "formats": [
+            "python"
+          ]
         }
       }
     }
   },
   "guidance": {
-    "version": 1
+    "version": 2
   }
 }
