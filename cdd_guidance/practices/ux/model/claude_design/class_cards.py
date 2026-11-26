@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Iterable, Optional
 
 from cdd_guidance.practices.stories.model.markdown.links import DomainTermLinks
-from cdd_guidance.practices.stories.model.markdown.markup import MarkdownStep
+from cdd_guidance.practices.stories.model.markdown.markup import MarkdownStep, plain_words
 from cdd_guidance.practices.stories.model.story_map import Step
 from harness.markdown.markdown import MarkdownText
 
@@ -34,9 +34,10 @@ class ClassCard:
 
     @classmethod
     def from_section(cls, lines: list[str]) -> "ClassCard":
-        """The card of a section's lines, its heading first: each rule shown as a short dashed line, tabs as spaces."""
-        title = _HEADING_MARKS.sub("", lines[0]).strip().replace("<<", "«").replace(">>", "»")
-        body = [RULE_MARK if _RULE.match(line) else line.replace("\t", _TAB_AS_SPACES) for line in lines[1:]]
+        """The card of a section's lines, its heading first, as a reader says them (``plain_words``: no bold, italic or
+        link marks): each rule shown as a short dashed line, tabs as spaces."""
+        title = plain_words(_HEADING_MARKS.sub("", lines[0])).strip().replace("<<", "«").replace(">>", "»")
+        body = [RULE_MARK if _RULE.match(line) else plain_words(line).replace("\t", _TAB_AS_SPACES) for line in lines[1:]]
         return cls(title, "\n".join(body).strip("\n"))
 
     def shown(self) -> Dict[str, str]:
