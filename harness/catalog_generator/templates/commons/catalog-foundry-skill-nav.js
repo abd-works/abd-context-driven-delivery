@@ -148,20 +148,6 @@
     saveList(COLLAPSED_COLS_KEY, cols);
   }
 
-  function familyFromTicket(link) {
-    var row = link.closest('.aad-skill-row[data-family]');
-    return row ? row.getAttribute('data-family') : null;
-  }
-
-  function collectSelectedFamilies(surface) {
-    var out = [];
-    surface.querySelectorAll('.foundry-family-toggle.is-selected').forEach(function (btn) {
-      var f = btn.getAttribute('data-family');
-      if (f && out.indexOf(f) === -1) out.push(f);
-    });
-    return out;
-  }
-
   function pageBasename() {
     var path = window.location.pathname || '';
     var parts = path.split('/');

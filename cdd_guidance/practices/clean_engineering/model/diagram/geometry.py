@@ -1,47 +1,10 @@
-"""Axis-aligned box for a placed diagram node, and whether two straight lines cross. The layout writer and the
-draw.io layout scanners both measure diagrams with these."""
+"""Whether two straight lines cross, and the sizes a diagram's cards are drawn at. A placed node's box is the
+framework's one rectangle, harness/whiteboard's *Box*; the layout writer and the draw.io layout scanners both measure
+diagrams with these."""
 from __future__ import annotations
-
-from typing import NamedTuple
 
 Point = tuple[float, float]
 Segment = tuple[Point, Point]
-
-
-class Geometry(NamedTuple):
-    """x, y, width, height of one placed node."""
-
-    x: float
-    y: float
-    width: float
-    height: float
-
-    def overlaps(self, other: 'Geometry') -> bool:
-        return not (
-            self.x + self.width <= other.x
-            or other.x + other.width <= self.x
-            or self.y + self.height <= other.y
-            or other.y + other.height <= self.y
-        )
-
-    def shifted(self, rightward: float, downward: float) -> 'Geometry':
-        return Geometry(self.x + rightward, self.y + downward, self.width, self.height)
-
-    def moved_to(self, left: float, top: float) -> 'Geometry':
-        return Geometry(left, top, self.width, self.height)
-
-    def clear_gap_to(self, other: 'Geometry') -> float:
-        """The empty space between this box and other, corner to corner when they are apart both ways; 0 when they
-        touch or overlap."""
-        across = max(0.0, self.x - (other.x + other.width), other.x - (self.x + self.width))
-        down = max(0.0, self.y - (other.y + other.height), other.y - (self.y + self.height))
-        if across == 0.0 or down == 0.0:
-            return across + down
-        return (across ** 2 + down ** 2) ** 0.5
-
-    @property
-    def center(self) -> Point:
-        return (self.x + self.width / 2, self.y + self.height / 2)
 
 
 def segments_cross(first: Segment, second: Segment) -> bool:
@@ -52,6 +15,20 @@ def segments_cross(first: Segment, second: Segment) -> bool:
         _turns_left(first_start, second) != _turns_left(first_end, second)
         and _turns_left(second_start, first) != _turns_left(second_end, first)
     )
+
+
+def flowed(sizes: list[tuple[float, float]], row_width: float, gap: float) -> list[tuple[float, float]]:
+    """The top-left corner of each box of sizes, laid left to right gap apart, a new row gap under the last when a box
+    would run the row wider than row_width; the first box at (0, 0)."""
+    corners: list[tuple[float, float]] = []
+    left, top, row_bottom = 0.0, 0.0, 0.0
+    for width, height in sizes:
+        if left > 0 and left + width > row_width:
+            left, top = 0.0, row_bottom + gap
+        corners.append((left, top))
+        left += width + gap
+        row_bottom = max(row_bottom, top + height)
+    return corners
 
 
 def _turns_left(point: Point, line: Segment) -> bool:

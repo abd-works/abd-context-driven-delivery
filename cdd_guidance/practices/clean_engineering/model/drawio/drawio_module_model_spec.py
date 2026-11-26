@@ -23,6 +23,7 @@ from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model im
 from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import (
     MarkdownCleanEngineeringModel,
 )
+from harness.guidance.practice_formats import Written
 
 _MODULES_MD = '# checks\n\nFoundation check resolution.\n\n- **Purpose:** Resolve d20 + trait against difficulty.\n- **Seam (terms):** Trait, Check, CheckResult\n- **Dependencies (one-way):** *(none)*\n\n# character\n\nOwns the hero sheet and ISource.\n\n- **Purpose:** Character sheet ownership and ISource.\n- **Seam (terms):** Character, Ability, ISource\n- **Dependencies (one-way):** checks\n'
 _NESTED_POWERS_MD = '# powers\n\nOwns Effect shared base.\n\n- **Purpose:** Shared Effect seam on the parent.\n- **Seam (terms):** Effect\n- **Dependencies (one-way):** character, checks\n\n# powers/attack\n\nAttack-typed effects.\n\n- **Purpose:** Specialize Effect for attack-type powers.\n- **Seam (terms):** AttackEffect\n- **Dependencies (one-way):** powers, checks\n\n# checks\n\nFoundation.\n\n- **Purpose:** Resolve checks.\n- **Seam (terms):** Trait, Check\n- **Dependencies (one-way):** *(none)*\n\n# character\n\nSheet.\n\n- **Purpose:** Sheet ownership.\n- **Seam (terms):** Character, ISource\n- **Dependencies (one-way):** checks\n'
@@ -363,6 +364,18 @@ with description('a Draw.io class diagram'):
 
             with it('should not place the new class on top of the kept class'):
                 expect(_cell_xy(self.xml, _INVOICE) == (500.0, 300.0)).to(be_false)
+
+        with context('with the drawing it replaces handed to its render, as a render of a saved file does'):
+            with before.all:
+                self.channel = DrawIOCleanEngineeringModel()
+                first = self.channel.render(_shop_model())
+                self.xml = self.channel.render(_shop_model(), Written(_set_cell_xy(first, _CART, 500, 300)))
+
+            with it('should keep the class where the person put it'):
+                expect(_cell_xy(self.xml, _CART)).to(equal((500.0, 300.0)))
+
+            with it('should lay the next render out afresh, since the drawing was handed to that render only'):
+                expect(_cell_xy(self.channel.render(_shop_model()), _CART) == (500.0, 300.0)).to(be_false)
 
         with context('with a new relationship added to the model'):
             with before.all:

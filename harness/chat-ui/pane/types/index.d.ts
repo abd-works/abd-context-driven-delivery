@@ -15,8 +15,12 @@ export type HealthViewJson = { areDetailsOpen: boolean }
 // One run of a test tier the cdd server runs on a cadence, as server-health.report lists it under test_runs.
 export type TestRunJson = { name: string; state: 'running' | 'passed' | 'failed' | 'abandoned'; run_id: string; started: string; summary: string; is_new_failure: boolean }
 
-// The runs whose new failure the chat has raised a toast for, so each is raised once.
-export type ToastedRunsJson = { runIds: string[] }
+// The runs whose new failure the chat has raised a toast for, so each is raised once; and the steps a scheduled e2e
+// run's screen review judged missed by the tests, named `<review_id> <step>`, toasted once each the same way.
+export type ToastedRunsJson = { runIds: string[]; missedSteps?: string[] }
+
+// The latest scheduled e2e run's screen review, as server-health.report gives it under e2e_review.
+export type E2eReviewJson = { run: string; sub_epics: number; steps: number; changed_steps: string[]; unjudged_steps: string[]; missed_steps: string[]; report: string; review_id: string }
 
 export type InstallJson = { state: 'idle' | 'running' | 'installed' | 'failed'; error: string | null }
 
@@ -42,6 +46,11 @@ export type ChatBarJson = { board: object | null; problem: string | null }
 // or dismisses it, so a refresh never hides it.
 export type FailureJson = object | null
 
+// The prompt queue's latest failure, as the prompt-queue plugin keeps it: the queue is a plugin of its own and only its
+// owner writes a value, so the board reads it and shows it on this one failure line. id grows with each failure, so a
+// newer failure shows again after an older one was fixed or dismissed.
+export type QueueFailureJson = { id: number; failure: string; context: string } | null
+
 // Which of the chat bar's boxes is open above the line. closing holds the branch the active session's work is on,
 // checked out, whose work the close dialog offers to commit and push, or null. leaveChoices is what the Python Ticket
 // offers the close dialog, in its order; leaving is what the dialog has chosen of them, as ticket.close takes them.
@@ -54,6 +63,10 @@ export type ChatBarViewJson = {
   leaveBranch: string
   // The session's own branch, which merge and delete branch act on, checked out or not; empty while git has none.
   leaveOwnBranch: string
+  // The files in the session's worktree that nobody committed, and the Ticket's warning that deleting the worktree or the
+  // branch without a commit loses them; none and empty when nothing would be lost.
+  leaveUnsavedWork: string[]
+  leaveWarning: string
   leaving: string[]
   // Whether the repo list, opened from its own button beside the session list's +, is open.
   isRepoListOpen: boolean
@@ -62,6 +75,8 @@ export type ChatBarViewJson = {
   // The folder of the repository a new session will work on, chosen with the folder picker beside the new session's
   // name; empty for the whole repository.
   newSessionFolder: string
+  // The Backlog items the session list shows opened on their child items, by title.
+  openBacklogParents: string[]
 }
 
 // One repository in the repos folder, as repos.siblings answers it.
@@ -82,6 +97,11 @@ export type FidelityHelpJson = { fidelity: string; markdown: string } | null
 // What the chat bar is doing while a ticket opens or closes, which the band shows with a turning wheel; empty when idle.
 export type BusyJson = { doing: string; frame: number }
 
+// The chat's own turns, which tell the board when a message it sent is done: whether a turn runs, how many have
+// started, the check-in clock's ticks since the chat last worked, and each message still worked on with the turns
+// started before it arrived.
+export type ChatTurnsJson = { isBusy: boolean; turnsStarted: number; idleCheckIns: number; unfinished: Record<string, number> }
+
 declare module 'claude-code' {
   interface PluginState {
     'cdd-board': {
@@ -94,12 +114,22 @@ declare module 'claude-code' {
       appOpening: AppOpeningJson
       chatBar: ChatBarJson
       failure: FailureJson
+      // The id of the prompt queue's failure that Fix or ✕ last handled, which the line no longer shows.
+      handledQueueFailure: number
       chatBarView: ChatBarViewJson
       actionPicker: ActionPickerJson
       fidelityHelp: FidelityHelpJson
       guidance: object | null
       overlayChoices: OverlayChoicesJson
       busy: BusyJson
+      chatTurns: ChatTurnsJson
+      // The name a person reads for this chat in the board's chat picker.
+      chatName: string
+      // The check-ins with cdd failed in a row, which the bar shows once they reach ten.
+      failedCheckIns: number
+    }
+    'prompt-queue': {
+      failure: QueueFailureJson
     }
   }
 }

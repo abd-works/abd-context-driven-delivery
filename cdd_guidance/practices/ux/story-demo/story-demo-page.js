@@ -7,7 +7,6 @@
 
 import { PlayDualRunner } from "./play-dual-runner/play-dual-runner.js";
 import { ExplorerFrame } from "./explorer-frame.js";
-import { PaintReflect } from "./paint-reflect.js";
 import { StoryDemoFrame } from "./story-demo-frame.js";
 import { ThenFeedback } from "./then-feedback.js";
 
@@ -15,16 +14,14 @@ export class StoryDemoPage {
   /**
    * Every collaborator can be given; one left out is the page's own, made on the frames it holds.
    * @param {{ mode?: 'Play' | 'Interactive', storyDemoFrame?: StoryDemoFrame, explorerFrame?: ExplorerFrame,
-   *   paintReflect?: PaintReflect, thenFeedback?: ThenFeedback, runner?: PlayDualRunner }} [demoSetup]
+   *   thenFeedback?: ThenFeedback, runner?: PlayDualRunner }} [demoSetup]
    */
-  constructor({ mode = "Play", storyDemoFrame, explorerFrame, paintReflect, thenFeedback, runner } = {}) {
+  constructor({ mode = "Play", storyDemoFrame, explorerFrame, thenFeedback, runner } = {}) {
     this.mode = mode;
     this.storyDemoFrame = storyDemoFrame ?? new StoryDemoFrame();
     this.explorerFrame = explorerFrame ?? new ExplorerFrame();
-    this.paintReflect = paintReflect ?? new PaintReflect(this.storyDemoFrame);
     this.thenFeedback = thenFeedback ?? new ThenFeedback(this.explorerFrame, this.storyDemoFrame);
     this.runner = runner ?? new PlayDualRunner({
-      paintReflect: this.paintReflect,
       thenFeedback: this.thenFeedback,
       storyDemoFrame: this.storyDemoFrame,
       explorerFrame: this.explorerFrame,
@@ -45,7 +42,7 @@ export class StoryDemoPage {
    * @param {(collectMode: string) => void} createStory
    * @param {string} collectMode — the mode the story function is collected in
    * @param {{ mode?: 'Play' | 'Interactive', storyDemoFrame?: StoryDemoFrame, explorerFrame?: ExplorerFrame,
-   *   paintReflect?: PaintReflect, thenFeedback?: ThenFeedback, runner?: PlayDualRunner }} [demoSetup]
+   *   thenFeedback?: ThenFeedback, runner?: PlayDualRunner }} [demoSetup]
    */
   static load(createStory, collectMode, demoSetup = {}) {
     const page = new StoryDemoPage(demoSetup);
@@ -93,21 +90,19 @@ export class StoryDemoPage {
   }
 
   /**
-   * Interactive — product control runs When via story_steps.
+   * Interactive — product control runs When via storySteps.
    * @returns {boolean} true when a When ran
    */
   onControlTrigger(control, root) {
     if (this.mode !== "Interactive") return false;
     const scenario = this.runner.scenario;
     if (!scenario) return false;
-    const whenStep = scenario.stepMatching(control.story_steps, { kind: "when" });
+    const whenStep = scenario.stepMatching(control.storySteps, { kind: "when" });
     if (!whenStep) return false;
     this._playGivensBefore(scenario, whenStep);
     this._takeInputs(scenario, control, root);
     whenStep.fn();
-    const snapshot = scenario.expose();
-    this.paintReflect.apply(snapshot);
-    this.storyDemoFrame.bind(snapshot);
+    this.storyDemoFrame.bind(scenario.expose());
     return true;
   }
 

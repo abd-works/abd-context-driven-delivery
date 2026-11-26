@@ -9,6 +9,8 @@ from urllib.parse import parse_qs, urlsplit
 from expects import be, be_false, be_none, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
+from harness.agent_tools.chat_pointer import ChatPointer
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
@@ -20,16 +22,15 @@ from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
 from harness.catalog_generator.catalog_practice import CatalogPractice  # noqa: E402
 from space.work_state import WorkState
-from space.session.sessions import BoardPractices  # noqa: E402
+from space.kanban.board_practices import BoardPractices  # noqa: E402
+from space.session.sessions import Sessions  # noqa: E402
 from harness.guidance.guidance import FidelityGuidance  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
-import space.kanban.backlog_item as backlog_item_module  # noqa: E402
 from space.kanban.backlog_item import BacklogNestingError  # noqa: E402
 from space.kanban.board import Board, Card, ColumnNotFoundError, Help, RequiredFidelity  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
-from space.kanban.ticket_checkout import TicketCheckout  # noqa: E402
-from space.repo.repo import Repo  # noqa: E402
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: E402
+from space.kanban.ticket_checkout import TicketCheckout, UnknownLeavingStepError  # noqa: E402
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: E402
 
 
 class SessionsFolder:
@@ -80,24 +81,33 @@ with description("a board") as self:
             board = Board.load(SessionsFolder().project)
             expect(board.repo).to(be(board.sessions.repo))
 
+        # The open session is each chat's own, so a board read for one chat names that chat's ticket active, not the
+        # one another chat or the checkout folder has open.
+        with it("should name active the ticket the call's chat has open"):
+            folder = SessionsFolder()
+            folder.session("pet-visits")
+            WorkState(folder.project, "board-chat").session = "pet-visits"
+            call = ToolCall(request=ToolRequest(ChatPointer("board-chat", Path(folder.project) / "t.jsonl", "1")))
+            expect([Board.load(folder.project, call).active.name, Board.load(folder.project).active.name]).to(equal(["pet-visits", "main"]))
+
     # (S) Board App --> Display Board
     with context("with Stories, DDD, and UX chosen"):
         with before.each:
-            self.board = Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+            self.board = Board(Sessions.of_project(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
             self.discovery = self.board.column("Discovery")
 
-        with it("should have the columns Backlog, Discovery, Specification, Implementation, and Complete, in that order"):
-            expect(names(self.board.columns)).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
+        with it("should have the columns Backlog, Discovery, Specification, Implementation, Hardening, and Complete, in that order"):
+            expect(names(self.board.columns)).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Hardening", "Complete"]))
 
         with it("should have story_map, bounded_context, and ia as Discovery's work required"):
             expect([fidelity.name for fidelity in self.discovery.work_required]).to(equal(["story_map", "bounded_context", "ia"]))
 
         with it("should give every stage Generate, then Validate"):
-            expect([self.board.column(name).steps for name in ("Discovery", "Specification", "Implementation")]).to(equal([["generate", "validate"]] * 3))
+            expect([self.board.column(name).steps for name in ("Discovery", "Specification", "Implementation", "Hardening")]).to(equal([["generate", "validate"]] * 4))
 
     with context("with BDD chosen"):
         with before.each:
-            self.board = Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Bdd()])))
+            self.board = Board(Sessions.of_project(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Bdd()])))
 
         with it("should have behavior as Discovery's work required"):
             expect([fidelity.name for fidelity in self.board.column("Discovery").work_required]).to(equal(["behavior"]))
@@ -168,7 +178,7 @@ with description("a board") as self:
 
     with context("with no session saved as open"):
         with it("should make main the active ticket"):
-            expect(Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Stories()]))).active.name).to(equal("main"))
+            expect(Board(Sessions.of_project(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Stories()]))).active.name).to(equal("main"))
 
     # (S) Board App --> Display Ticket Card, Display Backlog Items As Tickets
     with context("with a sessions folder of work sessions, closed sessions, default, backlog items, and archived sessions"):
@@ -182,7 +192,7 @@ with description("a board") as self:
                 sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
                 sessions.folder("_archive/old-spike")
                 sessions.current("pet-visits")
-                return Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+                return Board(Sessions.of_project(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
             # What the board sends is read once, on a folder of its own, for the examples that only look at it.
             board = every_kind()
@@ -230,10 +240,10 @@ with description("a board") as self:
             expect([card.column.name for card in self.board.cards]).to(equal(["Discovery", "Discovery", "Discovery", "Complete", "Backlog"]))
 
         with it("should list every column with its tickets or items"):
-            expect([column["name"] for column in self.sent["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Complete"]))
+            expect([column["name"] for column in self.sent["columns"]]).to(equal(["Backlog", "Discovery", "Specification", "Implementation", "Hardening", "Complete"]))
 
         with it("should send each column's kind"):
-            expect([column["kind"] for column in self.sent["columns"]]).to(equal(["backlog", "stage", "stage", "stage", "complete"]))
+            expect([column["kind"] for column in self.sent["columns"]]).to(equal(["backlog", "stage", "stage", "stage", "stage", "complete"]))
 
         with it("should read its tickets once for every column"):
             expect(self.board.column("Discovery").cards[0]).to(be(self.board.tickets[0]))
@@ -253,7 +263,7 @@ with description("a board") as self:
     with context("with help open on a fidelity the catalog has no page for"):
         with before.each:
             stories = Stories()
-            board = Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([stories])))
+            board = Board(Sessions.of_project(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([stories])))
             required = RequiredFidelity(board.stage("Discovery"), FidelityGuidance("unpublished", "discovery"))
             self.help = Help(stories, board.catalogued_practices.of(Stories), required)
 
@@ -263,7 +273,7 @@ with description("a board") as self:
     # (S) Board App --> Display Board: a tile shows the fidelity's label and its skill, which Python names.
     with context("sent with UX chosen"):
         with before.each:
-            self.sent = data_of(Board(Repo(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Ux()]))))["fidelities"]
+            self.sent = data_of(Board(Sessions.of_project(SessionsFolder().project), BoardPractices(CatalogPractice.of_practices([Ux()]))))["fidelities"]
 
         with it("should send each fidelity's label as the catalog names it"):
             expect([fidelity["label"] for fidelity in self.sent]).to(equal(["information-architecture", "mockup", "front-end-code"]))
@@ -279,7 +289,7 @@ with description("a board") as self:
         with before.each:
             self.sessions = SessionsFolder()
             (self.sessions.root / "_board.json").write_text(json.dumps({"pinned": ["pet-visits"]}), encoding="utf-8")
-            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories()])))
+            self.board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories()])))
 
         with context("that a person sets a stage's limit"):
             with before.each:
@@ -314,7 +324,7 @@ with description("a backlog item") as self:
         with before.each:
             self.sessions = SessionsFolder()
             self.item_path = self.sessions.backlog_item("returns-and-refunds.md", "Returns and refunds")
-            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+            self.board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should be in the Backlog"):
             expect(self.board.backlog_items[0].column.name).to(equal("Backlog"))
@@ -323,19 +333,19 @@ with description("a backlog item") as self:
         with context("that a person drops on a ticket"):
             with before.each:
                 self.sessions.session("checkout-flow")
-                board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+                board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
                 self.child = board.backlog_items[0].start_under(board.placement.ticket("checkout-flow"))
 
             with it("should start it with that ticket as its parent"):
                 expect(self.child.session.parent).to(equal("checkout-flow"))
 
             with it("should not offer its parent as a place to drop it"):
-                board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+                board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
                 expect(board.placement.ticket(self.child.name).parent_choices).not_to(contain("checkout-flow"))
 
             # A parent moves only with its children, so it waits for them before it can go to Complete.
             with it("should not let its parent be dropped on Complete while it is open"):
-                board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+                board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
                 expect(board.placement.ticket("checkout-flow").drop_targets).not_to(contain("Complete"))
 
         with context("that has been started"):
@@ -362,7 +372,7 @@ with description("a backlog item") as self:
             (folder / "gift-cards.md").write_text("# Gift cards\n\nSell them at the till.\n", encoding="utf-8")
             (folder / "session.log").write_text("2026-10-31T01:00:00Z generate /work stories story_map markdown stories no-chat\n", encoding="utf-8")
             (folder / "session.json").write_text(json.dumps({"name": "gift-cards", "title": "Gift cards"}), encoding="utf-8")
-            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+            self.board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should be in the Backlog under the heading of that file"):
             expect([item.title for item in self.board.backlog_items]).to(equal(["Gift cards"]))
@@ -387,9 +397,9 @@ with description("a backlog item") as self:
             self.sessions = SessionsFolder()
             folder = self.sessions.session("pet-visits", "move Specification", title="Pet visits")
             (folder / "pet-visits.md").write_text("# Pet visits\n\nBook a vet visit online.\n", encoding="utf-8")
-            board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+            board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
             board.placement.ticket("pet-visits").move_to("Backlog")
-            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+            self.board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should be in the Backlog"):
             expect([item.title for item in self.board.backlog_items]).to(equal(["Pet visits"]))
@@ -410,7 +420,7 @@ with description("a backlog item") as self:
                 sessions = SessionsFolder()
                 sessions.backlog_item("checkout.md", "Checkout")
                 sessions.backlog_item("gift-cards.md", "Gift cards")
-                board = Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+                board = Board(Sessions.of_project(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
                 board.reads.backlog_item_called("Gift cards").nest_under(board.reads.backlog_item_called("Checkout"))
                 return sessions, board
 
@@ -454,6 +464,13 @@ with description("a backlog item") as self:
         with it("should refuse to make the parent a child of its own child"):
             expect(lambda: self.board.reads.backlog_item_called("Checkout").nest_under(self.board.reads.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
 
+        # The page drops an item only where Python says it can go, so the nesting rule is written once.
+        with it("should offer an item of its own as a parent to another plain idea, and the parent to none"):
+            self.sessions.backlog_item("returns.md", "Returns")
+            self.board.placement.reread()
+            choices = [self.board.reads.backlog_item_called(title).parent_choices for title in ("Returns", "Checkout")]
+            expect(choices).to(equal([["Checkout"], []]))
+
         with context("that a person drags back out onto the Backlog"):
             with before.each:
                 self.board.reads.backlog_item_called("Gift cards").leave_parent()
@@ -477,23 +494,6 @@ with description("a backlog item") as self:
             with it("should leave no folder behind in the Backlog"):
                 expect((self.backlog / "checkout").exists()).to(be_false)
 
-    # (S) Person --> Display Backlog Items As Tickets: the link under an item's text opens its file.
-    with context("whose file a person opens from its card"):
-        with before.each:
-            self.sessions = SessionsFolder()
-            self.path = self.sessions.backlog_item("checkout.md", "Checkout")
-            self.opened = []
-            self.system_opener = backlog_item_module.open_with_system
-            backlog_item_module.open_with_system = self.opened.append
-            board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
-            board.reads.backlog_item_called("Checkout").open_file()
-
-        with after.each:
-            backlog_item_module.open_with_system = self.system_opener
-
-        with it("should hand its file to the app the computer opens it with"):
-            expect([path.resolve() for path in self.opened]).to(equal([self.path.resolve()]))
-
     with context("that a person drops on a ticket moved back into the Backlog"):
         with before.each:
             self.sessions = SessionsFolder()
@@ -501,7 +501,7 @@ with description("a backlog item") as self:
             folder = self.sessions.folder("_backlog/gift-cards")
             (folder / "gift-cards.md").write_text("# Gift cards\n\nSell them at the till.\n", encoding="utf-8")
             (folder / "session.json").write_text(json.dumps({"name": "gift-cards", "title": "Gift cards"}), encoding="utf-8")
-            self.board = Board(Repo(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+            self.board = Board(Sessions.of_project(self.sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
         with it("should refuse it, since that folder keeps the ticket's work"):
             expect(lambda: self.board.reads.backlog_item_called("Returns").nest_under(self.board.reads.backlog_item_called("Gift cards"))).to(raise_error(BacklogNestingError))
@@ -525,7 +525,7 @@ def board_with(lines: list):
     sessions = SessionsFolder()
     sessions.session("pawplace", title="PawPlace")
     sessions.session("pet-visits", *lines, title="Pet visits", scope="feature", parent="pawplace")
-    return sessions.root, Board(Repo(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+    return sessions.root, Board(Sessions.of_project(sessions.project), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
 
 def ticket_with(lines: list):
@@ -555,7 +555,7 @@ with description("a ticket") as self:
             expect((self.ticket.title, self.ticket.session.scope, self.ticket.session.parent)).to(equal(("Pet visits", "feature", "pawplace")))
 
         with it("should name Generate on story_map as next"):
-            expect((self.ticket.next_fidelity.fidelity.slug, self.ticket.next_fidelity.remaining_actions[0])).to(equal(("stories-story-map", "generate")))
+            expect((self.ticket.next_fidelity.fidelity.slug, self.ticket.next_fidelity.next_action)).to(equal(("stories-story-map", "generate")))
 
         with it("should tell the agent the ticket, its stage, its next guidance, and the steps each fidelity goes through"):
             expect(self.ticket.agent_context).to(equal(
@@ -563,8 +563,15 @@ with description("a ticket") as self:
                 "Each fidelity goes through generate, then validate, and is done once its latest validate passes."
             ))
 
-        with it("should command an action on its next fidelity in its own session, naming no format so the fidelity's kept format holds"):
-            expect(self.ticket.next_fidelity.commands["generate"]).to(equal("/actions-generate stories-story-map session=.sessions/pet-visits/session.json"))
+        with it("should command an action on its next fidelity in its own session, naming the formats chosen for it there"):
+            expect(self.ticket.next_fidelity.commands["generate"]).to(equal("/actions-generate stories-story-map session=.sessions/pet-visits/session.json format=markdown"))
+
+        # Before anyone chose stages for its session, the chat bar and the Files app show the stage it stands in.
+        with it("should show its stage selected in its session's guidance selection"):
+            expect([stage.title for stage in self.ticket.session.guidance.stages if stage.is_selected]).to(equal([self.ticket.column.name]))
+
+        with it("should command an action that takes no formats naming none"):
+            expect(self.ticket.next_fidelity.commands["validate"]).to(equal("/actions-validate stories-story-map session=.sessions/pet-visits/session.json"))
 
         with it("should command every action its stage offers"):
             expect(list(self.ticket.next_fidelity.commands)).to(equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"]))
@@ -572,7 +579,7 @@ with description("a ticket") as self:
         # (S) Chat bar --> status line, Open App From Health Panel: the status line names the folder the chat's session
         # works in, and the Graph app opens on it.
         with it("should give its session's path as its repository's whole folder while its session works in the whole repository"):
-            expect(data_of(self.ticket)["session_path"]).to(equal(str(Path(self.ticket.session.repo_path).resolve())))
+            expect(data_of(self.ticket)["session_path"]).to(equal(str(Path(self.ticket.session.checkout.root).resolve())))
 
         # (S) Chat bar, Board App --> Open Ticket Chat: the Claude app opens a new chat from the link, and the person sends it.
         with it("should offer no link to a new chat while it has no worktree"):
@@ -593,6 +600,10 @@ with description("a ticket") as self:
             with it("should ask that chat to switch to its session before anything else"):
                 expect(parse_qs(self.link.query)["q"][0]).to(contain("First call sessions.switch with name pet-visits"))
 
+            # Requested 2026-11-17: activating a ticket sets up its session's roots before any work starts.
+            with it("should ask that chat to set up the session's roots with session.set_up_roots when the switch says they are unchecked"):
+                expect(parse_qs(self.link.query)["q"][0]).to(contain("set them up with session.set_up_roots before generating anything"))
+
     # (S) Board App --> Display Ticket Card, Place Ticket In Column
     with context("with its first logged work on a Specification fidelity"):
         with it("should be in Specification"):
@@ -605,29 +616,29 @@ with description("a ticket") as self:
             self.lines = [GENERATE_STORY_MAP]
 
         with it("should show Generate done and Validate remaining for that fidelity"):
-            expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal(["validate"]))
+            expect(story_map(ticket_with(self.lines)).next_action).to(equal("validate"))
 
         with context("with log lines whose paths hold spaces and commas"):
             with it("should still find the practice and fidelity by name"):
                 ticket = ticket_with(["generate C:\\My Work, D:\\other files stories story_map markdown stories no-chat"])
-                expect(story_map(ticket).done_actions).to(equal(["generate"]))
+                expect(data_of(story_map(ticket).action_states)["generate"]).to(equal("done"))
 
         with context("that has a validate naming graph-rule violations"):
             with before.each:
                 self.lines.append(VALIDATE_STORY_MAP_WITH_VIOLATIONS)
 
             with it("should still need Validate for that fidelity"):
-                expect(story_map(ticket_with(self.lines)).remaining_actions).to(equal(["validate"]))
+                expect(story_map(ticket_with(self.lines)).next_action).to(equal("validate"))
 
         with context("that has a validate with no violations"):
             with before.each:
                 self.lines.append(VALIDATE_STORY_MAP)
 
             with it("should show Validate done for that fidelity"):
-                expect(story_map(ticket_with(self.lines)).done_actions).to(equal(["generate", "validate"]))
+                expect(data_of(story_map(ticket_with(self.lines)).action_states)).to(equal({"generate": "done", "validate": "done"}))
 
             with it("should match the practice's class name in the validate line to its folder name"):
-                expect([progress.fidelity.slug for progress in ticket_with(self.lines).progress if progress.done_actions]).to(equal(["stories-story-map"]))
+                expect([progress.fidelity.slug for progress in ticket_with(self.lines).progress if progress.state != "not_started"]).to(equal(["stories-story-map"]))
 
             with it("should show the fidelity done"):
                 expect(story_map(ticket_with(self.lines)).is_done).to(be_true)
@@ -697,7 +708,8 @@ with description("a ticket") as self:
                 expect((self.ticket.column.name, self.ticket.is_done)).to(equal(("Discovery", True)))
 
             with it("should keep its done mark in its session.json"):
-                expect((self.ticket.session.record.fields["stage"], self.ticket.session.record.fields["stage_mark"])).to(equal(("Discovery", "done")))
+                kept = self.ticket.session.record.extra("ticket")
+                expect((kept.get("stage"), kept.get("stage_mark"))).to(equal(("Discovery", "done")))
 
             with it("should have no next"):
                 expect(self.ticket.next_fidelity).to(be_none)
@@ -767,6 +779,22 @@ with description("a ticket") as self:
 
         with it("should have its folder in closed"):
             expect((self.root / "_complete" / "pet-visits" / "session.log").is_file()).to(be_true)
+
+    # A misspelt step was once ignored, so a person's choice silently did nothing; it is refused before anything changes.
+    with context("that a close names a step leaving does not take"):
+        with before.each:
+            self.root, board = board_with([GENERATE_STORY_MAP])
+            self.ticket = board.placement.ticket("pet-visits")
+
+        with it("should refuse the close, naming the step"):
+            expect(lambda: self.ticket.close(["comit"])).to(raise_error(UnknownLeavingStepError, contain("comit")))
+
+        with it("should leave the ticket open"):
+            try:
+                self.ticket.close(["comit"])
+            except UnknownLeavingStepError:
+                pass
+            expect((self.root / "pet-visits" / "session.log").is_file()).to(be_true)
 
     # (S) Person --> Archive Ticket
     with context("that has been archived"):

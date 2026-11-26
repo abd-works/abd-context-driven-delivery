@@ -1,0 +1,60 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T04:06:42.402071+00:00",
+  "prompts": [
+    {
+      "id": "34e44150ac1d",
+      "text": "Run9 fruit, part 1: write 3 fruit names of different lengths to .sessions/simple-queue-enhancements/demo/run9/fruit.md",
+      "robot": "Sparky",
+      "is_done": true
+    },
+    {
+      "id": "3eacc905ad07",
+      "text": "Run9 fruit, part 2: in .sessions/simple-queue-enhancements/demo/run9/fruit.md, write each fruit's letter count beside it",
+      "robot": "Sparky",
+      "is_done": true
+    },
+    {
+      "id": "deb1617ff812",
+      "text": "Run9 fruit, part 3: put a line at the top of .sessions/simple-queue-enhancements/demo/run9/fruit.md naming the longest fruit",
+      "robot": "Sparky",
+      "is_done": true
+    },
+    {
+      "id": "b723517fec40",
+      "text": "Run9 timer, part 1: write the current time to .sessions/simple-queue-enhancements/demo/run9/timer.md, wait about 10 seconds, and write the time again",
+      "robot": "Bolt",
+      "is_done": true
+    },
+    {
+      "id": "0f0f08ce4ef6",
+      "text": "Run9 timer, part 2: add the seconds between the two times in .sessions/simple-queue-enhancements/demo/run9/timer.md as a third line",
+      "robot": "Bolt",
+      "is_done": true
+    },
+    {
+      "id": "88474e1824b5",
+      "text": "Run9 timer, part 3: add a line to .sessions/simple-queue-enhancements/demo/run9/timer.md saying the timer strand finished, with the time",
+      "robot": "Bolt",
+      "is_done": true
+    },
+    {
+      "id": "878b7dc09633",
+      "text": "Run9 hooks, part 1: list the .ts and .tsx files under tools/prompt_queue/hooks in .sessions/simple-queue-enhancements/demo/run9/hooks.md",
+      "robot": "Gizmo",
+      "is_done": true
+    },
+    {
+      "id": "40bc6dee7e5f",
+      "text": "Run9 hooks, part 2: beside each file in .sessions/simple-queue-enhancements/demo/run9/hooks.md, write how many lines it holds",
+      "robot": "Gizmo",
+      "is_done": true
+    },
+    {
+      "id": "b95e2b5fde9f",
+      "text": "Run9 hooks, part 3: put a line at the top of .sessions/simple-queue-enhancements/demo/run9/hooks.md naming the longest file",
+      "robot": "Gizmo",
+      "is_done": true
+    }
+  ]
+}

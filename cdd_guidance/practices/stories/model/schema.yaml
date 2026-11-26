@@ -22,12 +22,12 @@ epic:
   decomposedInto: [subEpic | story]
   where:
     - id is the text slugs from the root to this node, joined by dots
-    - decomposedInto count 4..9 warn 3,10
+    - decomposedInto count 2..6 when it holds a subEpic, else 4..9
     - uses is the home module of a demonstrated class or an invoked member
   rules:
     - verb-noun-format
     - branch-on-mechanical-uniqueness
-    - four-to-nine-children
+    - child-count-fits-layer
 
 subEpic:
   fidelity: story_map
@@ -36,12 +36,12 @@ subEpic:
   decomposedInto: [subEpic | story]
   where:
     - id is the text slugs from the root to this node, joined by dots
-    - decomposedInto count 4..9 warn 3,10
+    - decomposedInto count 2..6 when it holds a subEpic, else 2..9
     - examples belong on this sub-epic, not on the epic
   rules:
     - verb-noun-format
     - branch-on-mechanical-uniqueness
-    - four-to-nine-children
+    - child-count-fits-layer
 
 story:
   fidelity: story_map
@@ -53,7 +53,7 @@ story:
   shownOn?: [screen]
   where:
     - id is the text slugs from the root to this node, joined by dots
-    - scenarios count 1..4; more than 4 and the story is huge
+    - scenarios count 0..7; more than 7 and the story is huge, and a story with none is waiting for its scenarios (story-scenarios-at-most-seven)
     - background only when scenarios share its given
     - one observable interaction at one system boundary
     - invokes is the union of invokes on the steps this story owns
@@ -61,9 +61,10 @@ story:
     - verb-noun-format
     - story-name-captures-system-mechanic
     - right-size-story-nodes
-    - behaviours-not-one-time-tasks
+    - behaviours-not-build-tasks
     - story-scenarios-at-most-seven
     - kebab-case-paths
+    - scenarios-name-a-story-on-the-map
 
 scenario:
   fidelity: scenarios
@@ -78,7 +79,6 @@ scenario:
     - steps match given+ (when then+)+
     - shownOn is the screen whose showsScenarios holds this scenario; with none, the scenario shows its story's screen
     - outline when examples count > 2
-    - a later then names the next story
     - examples cover every domain concept the steps name
     - invokes is the union of invokes on these steps
   rules:
@@ -97,15 +97,18 @@ step:
   belongsTo: scenario
   ands?: [step]
   shownOn?: [screen]
+  names?: [class]
   where:
     - id is the text slugs from the root to this node, joined by dots
     - ands continue the step they follow
+    - names is the domain model class each domain term the step links names; a step with no linked term has none
     - shownOn is the screen whose showsSteps holds this step
     - but marks a missing state
   rules:
     - plain-english-gwt-steps
     - gwt-steps-trace-to-domain-operations
     - but-marks-missing-state
+    - domain-terms-link-to-model
 
 given:
   fidelity: scenarios
@@ -125,11 +128,14 @@ when:
   is: step
   id: dotPath
   order: number
-  invokes: [operation | property]
+  invokes?: [operation | property]
   where:
     - id is the text slugs from the root to this node, joined by dots
+    - invokes is required only of a When backed by code, a story test's or a realization's (code-steps-invoke-code)
+    - a realization's invokes are the model operations its calls name, matched through the step's domain-term links
   rules:
     - when-holds-the-operation
+    - code-steps-invoke-code
     - when-names-intent-not-interface-gesture
     - expressive-system-interactions
 
@@ -138,12 +144,15 @@ then:
   is: step
   id: dotPath
   order: number
-  observes: example
+  observes?: [example]
   where:
     - id is the text slugs from the root to this node, joined by dots
+    - observes is the examples its own text names and those the Givens of its scenario and of its story's Background name; an example of a markdown scenarios file is observed only by the steps of that file
+    - observes is required only where a model is written for the story's area of the map (then-observes-an-example)
   rules:
+    - then-observes-an-example
     - behavioral-and-system-observable-outcomes
-    - scenario-names-continuation
+    - main-flow-first
     - browser-then-asserts-screen-widgets
     - assert-domain-behavior-not-seeded-state
 
@@ -167,6 +176,7 @@ example:
   retrievedUsing: [operation | property]
   where:
     - id is the text slugs from the root to this node, joined by dots
+    - demonstrates and retrievedUsing are required only where a model is written for the story's area of the map
   rules:
     - examples-declare-seed-vs-interaction
     - examples-trace-domain-model

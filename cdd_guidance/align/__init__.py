@@ -1,0 +1,1 @@
+"""Format alignment: whether the formats a session chose say the same thing, and bringing them in step through the Render action. Import its classes from their modules, such as cdd_guidance.align.format_alignment."""

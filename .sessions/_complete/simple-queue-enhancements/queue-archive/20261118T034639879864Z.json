@@ -1,0 +1,54 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:46:39.879864+00:00",
+  "prompts": [
+    {
+      "id": "ae2d504a7fcc",
+      "text": "Run7 colours, part 1: write 3 colour names of different lengths to .sessions/simple-queue-enhancements/demo/run7/colours.md",
+      "robot": "Sparky",
+      "steps": [
+        {
+          "text": "Write 3 colour names of different lengths to colours.md",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "f8db5ff98d0c",
+      "text": "Run7 timer, part 1: write the current time to .sessions/simple-queue-enhancements/demo/run7/timer.md, wait about 10 seconds, and write the time again",
+      "robot": "Bolt",
+      "steps": [
+        {
+          "text": "Write the current time to timer.md",
+          "state": "done"
+        },
+        {
+          "text": "Wait about 10 seconds",
+          "state": "done"
+        },
+        {
+          "text": "Write the time again",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "3dca0499916e",
+      "text": "Run7 specs, part 1: list the *_spec.py files directly under tools/prompt_queue in .sessions/simple-queue-enhancements/demo/run7/specs.md",
+      "robot": "Gizmo",
+      "steps": [
+        {
+          "text": "Find the *_spec.py files directly under tools/prompt_queue",
+          "state": "done"
+        },
+        {
+          "text": "Write them to demo/run7/specs.md",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

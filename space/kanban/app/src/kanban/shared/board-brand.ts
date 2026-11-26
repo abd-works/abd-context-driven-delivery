@@ -19,11 +19,12 @@ export const ACTION_STANDINGS: Record<string, { mark: string; color: string; lab
 export const STEP_FAILED = '✕'
 
 // The size the board draws each stage's scope at, by the shape Python names: wide and shallow for the whole solution,
-// narrow and deep for one story.
+// narrow and deep for one story, and wide and deep for the whole release that Hardening makes ready for production.
 export const SCOPE_SIZES: Record<string, { width: number; height: number }> = {
   solution: { width: 36, height: 12 },
   sprint: { width: 16, height: 22 },
   story: { width: 11, height: 28 },
+  release: { width: 36, height: 28 },
 }
 
 export const countOf = (count: number, noun: string): string => `${count} ${count === 1 ? noun : `${noun}s`}`

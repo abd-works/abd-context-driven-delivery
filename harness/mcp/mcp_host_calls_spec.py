@@ -18,21 +18,21 @@ from mcp.server.lowlevel.server import request_ctx
 from mcp.shared.context import RequestContext
 from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 from harness.mcp.mcp_address import CHAT_HEADER, CHAT_PROCESS_HEADER, PROJECT_HEADER
-from harness.mcp.mcp_server import CALL_SECONDS, LONG_CALL_SECONDS, McpHost, ToolNotEnrolled
+from harness.mcp.mcp_server import CALL_SECONDS, LONG_CALL_SECONDS, ChatProtocol, McpHost, ToolNotEnrolled
 
 _CALL_OUTCOMES = "harness.mcp._examples.call_outcomes.call_outcomes:CallOutcomes"
 _MOVED_CHAT = "7a2d9c4e-1111-2222-3333-444455556666"
 _CHAT_PROCESS = "40364"
 
 
-def _call(host: McpHost, name: str, project: Path, chat_id: str = "", chat_process: str = "", client: tuple[str, int] | None = None) -> types.CallToolResult:
+def _call(chat: ChatProtocol, name: str, project: Path, chat_id: str = "", chat_process: str = "", client: tuple[str, int] | None = None) -> types.CallToolResult:
     """Send one tools/call request to the host's protocol handler, as a chat that started on project sends it; with
     chat_id, as the Claude Code chat of that id; with chat_process, from the Claude Code process of that id; with
     client, over the connection whose caller's end is that address."""
-    handler = host._protocol.request_handlers[types.CallToolRequest]
+    handler = chat.protocol.request_handlers[types.CallToolRequest]
     request = types.CallToolRequest(method="tools/call", params=types.CallToolRequestParams(name=name, arguments={}))
     headers = {
         PROJECT_HEADER: str(project),
@@ -47,8 +47,8 @@ def _call(host: McpHost, name: str, project: Path, chat_id: str = "", chat_proce
         request_ctx.reset(token)
 
 
-def _list(host: McpHost) -> list[str]:
-    handler = host._protocol.request_handlers[types.ListToolsRequest]
+def _list(chat: ChatProtocol) -> list[str]:
+    handler = chat.protocol.request_handlers[types.ListToolsRequest]
     return [tool.name for tool in asyncio.run(handler(types.ListToolsRequest(method="tools/list"))).root.tools]
 
 
@@ -57,17 +57,18 @@ with description("a cdd server answering a chat's tool calls") as self:
     with before.each:
         self.project = ThrowawayProject().root
         self.host = McpHost.from_refs((_CALL_OUTCOMES,), repo=str(_REPO), project=str(self.project))
+        self.chat = ChatProtocol(self.host)
 
     with after.each:
         OPEN_PROJECTS.close_all()
 
     with context("with a tool that answers"):
         with it("should answer with what the tool returned"):
-            expect(_call(self.host, "cdd.ping", self.project).content[0].text).to(equal("pong"))
+            expect(_call(self.chat, "cdd.ping", self.project).content[0].text).to(equal("pong"))
 
     with context("from a chat that started on the project"):
         with it("should work on that project"):
-            expect(_call(self.host, "call-outcomes.ledger_folder", self.project).content[0].text).to(equal(str(self.project.resolve())))
+            expect(_call(self.chat, "call-outcomes.ledger_folder", self.project).content[0].text).to(equal(str(self.project.resolve())))
 
     with context("from a Claude Code chat that moved to another checkout after it started"):
         with before.each:
@@ -87,7 +88,7 @@ with description("a cdd server answering a chat's tool calls") as self:
                 os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
 
         with it("should work on the checkout the chat moved to"):
-            answer = _call(self.host, "call-outcomes.ledger_folder", self.project, _MOVED_CHAT).content[0].text
+            answer = _call(self.chat, "call-outcomes.ledger_folder", self.project, _MOVED_CHAT).content[0].text
             expect(answer).to(equal(str(self.moved_to.resolve())))
 
     with context("from a Claude Code chat process whose session moved out of the spare folder it started in"):
@@ -107,11 +108,11 @@ with description("a cdd server answering a chat's tool calls") as self:
                 os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
 
         with it("should work on the folder the session works in now, though the chat names no transcript"):
-            answer = _call(self.host, "call-outcomes.ledger_folder", self.project, "unnamed", _CHAT_PROCESS).content[0].text
+            answer = _call(self.chat, "call-outcomes.ledger_folder", self.project, "unnamed", _CHAT_PROCESS).content[0].text
             expect(answer).to(equal(str(self.moved_to.resolve())))
 
         with it("should answer for the session that process runs now"):
-            expect(_call(self.host, "call-outcomes.clerk", self.project, "unnamed", _CHAT_PROCESS).content[0].text).to(equal(_MOVED_CHAT))
+            expect(_call(self.chat, "call-outcomes.clerk", self.project, "unnamed", _CHAT_PROCESS).content[0].text).to(equal(_MOVED_CHAT))
 
     # Right after the desktop app moves a chat, its process can still record the spare folder while its transcript
     # already records the folder it moved to.
@@ -138,11 +139,11 @@ with description("a cdd server answering a chat's tool calls") as self:
                 os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
 
         with it("should work on the folder the transcript records, not the spare folder"):
-            answer = _call(self.host, "call-outcomes.ledger_folder", self.spare, "unnamed", _CHAT_PROCESS).content[0].text
+            answer = _call(self.chat, "call-outcomes.ledger_folder", self.spare, "unnamed", _CHAT_PROCESS).content[0].text
             expect(answer).to(equal(str(self.moved_to.resolve())))
 
         with it("should write nothing in the spare folder"):
-            _call(self.host, "call-outcomes.ledger_folder", self.spare, "unnamed", _CHAT_PROCESS)
+            _call(self.chat, "call-outcomes.ledger_folder", self.spare, "unnamed", _CHAT_PROCESS)
             expect((self.spare / ".sessions").exists()).to(equal(False))
 
     # The desktop app can connect a chat while it is still in its spare folder, before it records the chat's id or
@@ -172,11 +173,11 @@ with description("a cdd server answering a chat's tool calls") as self:
                 os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
 
         with it("should work on the folder the process holding the connection works in now"):
-            answer = _call(self.host, "call-outcomes.ledger_folder", self.spare, "unnamed", client=self.client).content[0].text
+            answer = _call(self.chat, "call-outcomes.ledger_folder", self.spare, "unnamed", client=self.client).content[0].text
             expect(answer).to(equal(str(self.moved_to.resolve())))
 
         with it("should answer for the session that process runs now"):
-            expect(_call(self.host, "call-outcomes.clerk", self.spare, "unnamed", client=self.client).content[0].text).to(equal(_MOVED_CHAT))
+            expect(_call(self.chat, "call-outcomes.clerk", self.spare, "unnamed", client=self.client).content[0].text).to(equal(_MOVED_CHAT))
 
     with context("from a chat that names only a desktop spare folder"):
         with before.each:
@@ -193,18 +194,18 @@ with description("a cdd server answering a chat's tool calls") as self:
                 os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
 
         with it("should refuse the call rather than work in the spare folder"):
-            result = _call(self.host, "call-outcomes.ledger_folder", self.spare)
+            result = _call(self.chat, "call-outcomes.ledger_folder", self.spare)
             expect(result.isError).to(equal(True))
             expect((self.spare / ".sessions").exists()).to(equal(False))
 
     # Two chats in one checkout each keep their own open session, so the call is answered for the chat that sent it.
     with context("from a chat its request names, though its arguments do not"):
         with it("should answer for that chat"):
-            expect(_call(self.host, "call-outcomes.clerk", self.project, _MOVED_CHAT).content[0].text).to(equal(_MOVED_CHAT))
+            expect(_call(self.chat, "call-outcomes.clerk", self.project, _MOVED_CHAT).content[0].text).to(equal(_MOVED_CHAT))
 
     with context("with a tool that fails"):
         with before.each:
-            self.result = _call(self.host, "call-outcomes.post_entry", self.project)
+            self.result = _call(self.chat, "call-outcomes.post_entry", self.project)
 
         with it("should mark the answer as an error"):
             expect(self.result.isError).to(equal(True))
@@ -218,13 +219,13 @@ with description("a cdd server answering a chat's tool calls") as self:
 
     with context("with a tool annotated as a long call"):
         with it("should wait the long call's time for it"):
-            expect(self.host.checkout_server.call_seconds("call-outcomes.reconcile")).to(equal(LONG_CALL_SECONDS))
+            expect(self.host.checkout_toolsets.call_seconds("call-outcomes.reconcile")).to(equal(LONG_CALL_SECONDS))
 
         with it("should wait the usual time for any other tool"):
-            expect(self.host.checkout_server.call_seconds("call-outcomes.balance")).to(equal(CALL_SECONDS))
+            expect(self.host.checkout_toolsets.call_seconds("call-outcomes.balance")).to(equal(CALL_SECONDS))
 
     with context("with a tool list asked for twice"):
         with it("should record nothing as skipped"):
-            _list(self.host)
-            _list(self.host)
-            expect(self.host.checkout_server.skipped.as_data).to(equal([]))
+            _list(self.chat)
+            _list(self.chat)
+            expect(self.host.checkout_toolsets.skipped.as_data).to(equal([]))

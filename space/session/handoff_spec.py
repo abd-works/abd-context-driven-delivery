@@ -16,17 +16,19 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
 from expects import contain, equal, expect, match, raise_error
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentToolSet, SubAgentAnnotation
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+from harness.agent_tools.agent_tools import ToolsetReference, AgentToolSet, SubAgentAnnotation
+from space.session.handoffs import Handoffs
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 from space.work_state import WorkState
 
 
 def _open_session(root: Path, name: str = "my-session") -> Path:
     work = root / "work"
     work.mkdir(parents=True, exist_ok=True)
-    Sessions(root).switch(name, work)
+    Sessions(root).switch(name, work, create=True)
     return work
 
 
@@ -36,24 +38,37 @@ def _save_current(root: Path, name: str) -> None:
 
 with description("a session's handoff tools"):
     with it("should offer write_handoff as a tool"):
-        tools = AgentToolSet.instantiate(Session).tools
+        tools = ToolsetReference.of(Session).made().tools
         expect(tools["write_handoff"].kind).to(equal("tool"))
 
     with it("should offer handoff_session as instructions"):
-        tools = AgentToolSet.instantiate(Session).tools
+        tools = ToolsetReference.of(Session).made().tools
         expect(tools["handoff_session"].kind).to(equal("instructions"))
 
     with it("should read the handoff format, then call write_handoff, when running the handoff_session instructions"):
-        tools = AgentToolSet.instantiate(Session).tools["handoff_session"].tools
+        tools = ToolsetReference.of(Session).made().tools["handoff_session"].tools
         expect(tools).to(equal(["read_handoff_format", "write_handoff"]))
 
     with it("should run handoff_session on a sub-agent"):
-        tool = AgentToolSet.instantiate(Session).tools["handoff_session"]
+        tool = ToolsetReference.of(Session).made().tools["handoff_session"]
         expect(SubAgentAnnotation.annotates(tool.callable)).to(equal(True))
 
     with it("should tell the sub-agent to commit and push the handoff"):
-        prompt = "\n".join(AgentToolSet.instantiate(Session).tools["handoff_session"].prompt)
+        prompt = "\n".join(ToolsetReference.of(Session).made().tools["handoff_session"].prompt)
         expect(prompt).to(contain("repo.push_commit"))
+
+    with context("with the next agent's steps for where the work goes live"):
+        with it("should send a ticket branch's finished work to the dev lane by repinning it from the worktree"):
+            format_text = Session.read_handoff_format(None)
+            expect(format_text).to(contain("## Where The Work Goes Live", "dev lane", "--pin-runtime", "app.open"))
+
+        with it("should have the next agent read the session's practice guidance before it generates anything"):
+            format_text = Session.read_handoff_format(None)
+            expect(format_text).to(contain("## Guidance To Read First", "before generating", "tdd.md"))
+
+        with it("should never offer a merge to main unless the person asked for one"):
+            format_text = Session.read_handoff_format(None)
+            expect(format_text).to(contain("Never list a merge to main"))
 
 
 with description("a session writing a handoff"):
@@ -135,7 +150,7 @@ with description("a handoff asked for a board ticket's session"):
             folder.mkdir(parents=True)
             (folder / "session.json").write_text(json.dumps({"name": name}), encoding="utf-8")
         _save_current(self.root, "billing-report")
-        self.tool = AgentToolSet.instantiate(Session).tools["write_handoff"]
+        self.tool = ToolsetReference.of(Session).made().tools["write_handoff"]
 
     with after.each:
         OPEN_PROJECTS.close_all()
@@ -167,3 +182,30 @@ with description("a handoff asked for a board ticket's session"):
     with context("through its MCP tool"):
         with it("should take the session as the tool's first argument"):
             expect(list(self.tool.input_schema["properties"])[0]).to(equal("session"))
+
+
+# Seed: a handoff whose Approach for Next Agent lists three steps, one continued on a second line, before another section
+# whose numbered lines are no steps.
+_HANDOFF = """# Handoff
+
+## Approach for Next Agent
+
+1. Read this handoff
+2) Run the unit tier
+   in the background
+3. Fix what it finds
+
+## Outstanding
+
+1. Not a step
+"""
+
+
+with description("a handoff a session wrote") as self:
+    with before.each:
+        self.folder = Path(tempfile.mkdtemp(prefix="cdd-handoff-"))
+        (self.folder / "handoff-20261121T000000.md").write_text(_HANDOFF, encoding="utf-8")
+        self.handoff = Handoffs(self.folder).latest
+
+    with it("should read the numbered steps of its Approach for Next Agent, each with the lines that continue it"):
+        expect(self.handoff.next_steps).to(equal(["Read this handoff", "Run the unit tier in the background", "Fix what it finds"]))

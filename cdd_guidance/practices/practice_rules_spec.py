@@ -9,20 +9,22 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import equal, expect
+from expects import contain, equal, expect
 from mamba import before, description, it
 
 import cdd_guidance.practices  # noqa: F401  (registers the practices)
 from harness.graph.schema_rules import PracticeSchema
-from harness.guidance.practice_reading import rules_in
+from harness.graph.practice_reading import rules_in
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
+from cdd_guidance.practices.tdd.tdd import Tdd
 
 
 def _unlisted(practice) -> list[str]:
     """Each of the practice's own rules, with each node type its check judges that the practice's schema does not list
     the rule on."""
     listed = PracticeSchema(practice).applicable
-    own = rules_in(f"{practice.reading.package}.rules")
+    package = type(practice).__module__.rsplit(".", 1)[0]
+    own = rules_in(f"{package}.rules")
     return sorted(
         f"{practice.key}: {slug} on {node_type}"
         for slug, rule in own.items()
@@ -48,11 +50,68 @@ with description("the fidelities of every practice CDD ships") as self:
     with before.all:
         self.practices = PRACTICE_CATALOGUE.create_all()
 
-    with it("should each give a Scaffold, which a partition at that fidelity indexes by"):
+    # A fidelity with no Overview and no Guidance of its own, such as Stories' and BDD's hardening, is held empty until
+    # the person writes it, so it has no Scaffold yet.
+    with it("should each give a Scaffold once written, which a partition at that fidelity indexes by"):
         missing = sorted(
             f"{practice.key}: {fidelity.name}"
             for practice in self.practices
             for fidelity in practice.fidelities
-            if not fidelity.scaffold
+            if (fidelity.overview or fidelity.guidance) and not fidelity.scaffold
         )
         expect(missing).to(equal([]))
+
+
+_SAYS_HOW_DECIDED = ("stories", "bdd", "ddd", "ux", "clean_engineering")
+
+
+def _marker_of(slug: str) -> str:
+    return "{{decided." + slug.replace("-", "_") + "}}"
+
+
+def _rule_lines(practice) -> dict[str, str]:
+    """Each rule of the practice's document as it is typed there, by slug: the bullet that opens with the slug."""
+    typed = {}
+    for line in practice.domain_markdown_path.read_text(encoding="utf-8").splitlines():
+        opening = line.lstrip("-* ").lstrip("*`")
+        slug = opening.split("`", 1)[0]
+        if line.lstrip().startswith(("-", "*")) and slug and slug not in typed:
+            typed[slug] = line
+    return typed
+
+
+def _own_checks(practice) -> dict:
+    package = type(practice).__module__.rsplit(".", 1)[0]
+    return rules_in(f"{package}.rules")
+
+
+# A rule a program decides is checked; a rule that needs a reading is judged, and its check only lists candidates
+# (`requires_judge` on its PracticeGraphRule). The rule's text says which, from that property, so it is typed once.
+with description("how each graph rule of a practice is decided, as its rule text says it") as self:
+    with before.all:
+        # TDD is a supplement, so the catalogue's five practices do not hold it; its rules are marked the same way.
+        self.practices = [practice for practice in PRACTICE_CATALOGUE.create_all() if practice.key in _SAYS_HOW_DECIDED] + [Tdd()]
+        self.bodies = {rule.slug: rule.body for practice in self.practices for rule in practice.every_rule}
+        self.checks = {slug: check for practice in self.practices for slug, check in _own_checks(practice).items()}
+
+    with it("should be marked in the document on every rule a graph rule checks, not typed there"):
+        unmarked = sorted(
+            f"{practice.key}: {slug}"
+            for practice in self.practices
+            for slug in _own_checks(practice)
+            if slug in _rule_lines(practice) and _marker_of(slug) not in _rule_lines(practice)[slug]
+        )
+        expect(unmarked).to(equal([]))
+
+    with it("should say a rule a program decides is checked"):
+        expect(self.bodies["story-scenarios-at-most-seven"]).to(contain("Checked: the graph decides this rule"))
+
+    with it("should say a rule that requires a judge is judged"):
+        expect(self.bodies["when-names-intent-not-interface-gesture"]).to(contain("Judged: the graph only lists candidates"))
+
+    with it("should say judged for exactly the rules that require a judge"):
+        said = sorted(slug for slug, body in self.bodies.items() if slug in self.checks and "Judged: the graph only lists candidates" in body)
+        expect(said).to(equal(sorted(slug for slug, check in self.checks.items() if check.requires_judge and slug in self.bodies)))
+
+    with it("should leave no marker unfilled in any rule's text"):
+        expect(sorted(slug for slug, body in self.bodies.items() if "{{decided." in body)).to(equal([]))

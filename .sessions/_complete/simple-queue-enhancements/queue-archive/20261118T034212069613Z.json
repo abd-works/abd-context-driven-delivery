@@ -1,0 +1,12 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:42:12.069613+00:00",
+  "prompts": [
+    {
+      "id": "1580212a271e",
+      "text": "[interruption] Yes, queue it",
+      "robot": "Sparky",
+      "is_done": true
+    }
+  ]
+}

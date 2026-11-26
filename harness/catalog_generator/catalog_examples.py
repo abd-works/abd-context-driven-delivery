@@ -19,6 +19,7 @@ from harness.catalog_generator.stage_columns import STAGE_COLUMNS, BoardLabel, S
 
 if TYPE_CHECKING:
     from harness.catalog_generator.catalog_practice import CatalogPractice
+    from harness.guidance.guidance import FidelityGuidance
 
 EXAMPLES_FOLDER = "catalog-examples"
 # The formats an example is shown by kind in, rather than as its source: prose as HTML, a page in a frame, a diagram in
@@ -260,7 +261,7 @@ class CatalogFidelity:
     ticket, and approach panel reads the same one. The fidelity page and the approach panel both start from these
     files, so a file shown on one is never missing from the other."""
 
-    def __init__(self, fidelity, practice: CatalogPractice) -> None:
+    def __init__(self, fidelity: FidelityGuidance, practice: CatalogPractice) -> None:
         self.fidelity = fidelity
         self.practice = practice
 

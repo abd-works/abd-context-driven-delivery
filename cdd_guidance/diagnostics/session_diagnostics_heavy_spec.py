@@ -1,0 +1,57 @@
+"""Session diagnostics — writes the session section in diagnostics.json."""
+import json
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.installation.installer import Installer
+from harness.mcp.mcp_server import McpInstallation
+
+RepositoryToolsets(_REPO_ROOT).ensure_import_path()
+
+from expects import contain, equal, expect
+from mamba import description, it
+
+from cdd_guidance.diagnostics.session_diagnostics import SessionDiagnostics
+from cdd_guidance.diagnostics.session_probe import SessionProbe
+
+
+with description("session diagnostics"):
+    with it("should probe session.log for generate and validate in a temp session"):
+        result = SessionProbe().run()
+        expect(result.get("color")).to(equal("green"))
+        expect(result.get("checks", {}).get("generate_line")).to(equal(True))
+        expect(result.get("checks", {}).get("validate_line")).to(equal(True))
+        expect(result.get("checks", {}).get("chat_pointer")).to(equal(True))
+
+    with it("should install session-diagnostics as a slash command with MCP invoke"):
+        tree = Path(tempfile.mkdtemp())
+        try:
+            mcp = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT).install([SessionDiagnostics()]).of(McpInstallation)
+            command_path = tree / "commands" / "diagnostics" / "session-diagnostics.md"
+            expect(command_path.is_file()).to(equal(True))
+            text = command_path.read_text(encoding="utf-8")
+            expect(text).to(contain("session-diagnostics.session_diagnostics"))
+            expect(text).to(contain("diagnostics.json"))
+            names = [op.mcp_name for op in mcp.mcp_operations]
+            expect(names).to(contain("session-diagnostics.session_diagnostics"))
+        finally:
+            shutil.rmtree(tree, ignore_errors=True)
+
+    with it("should write the session section to diagnostics.json"):
+        tree = Path(tempfile.mkdtemp())
+        try:
+            installer = Installer.create(ide="Cursor", path=tree, repo=_REPO_ROOT)
+            report = SessionDiagnostics().write_to(installer.diagnostics)
+            expect(report.startswith("green\n")).to(equal(True))
+            data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
+            expect("session" in data).to(equal(True))
+            expect(data["session"].get("color")).to(equal("green"))
+        finally:
+            shutil.rmtree(tree, ignore_errors=True)

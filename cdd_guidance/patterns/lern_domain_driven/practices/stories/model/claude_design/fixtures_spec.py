@@ -46,6 +46,14 @@ with description("LERN canvas fixtures") as self:
         with it("gives screens no seed pastes when the workspace has no seed overlay"):
             expect(self.fixtures.entry(["Choose Plan"])).to(contain("const seedPastes = (): unknown[] => [];"))
 
+        with it("loads a scenario through its first actions, so a step group past an action shows that action's outcome"):
+            entry = self.fixtures.entry(["Choose Plan"])
+            expect(entry).to(contain("export async function load(story: string, scenario: string, actions = 0)"))
+            expect(entry).to(contain(".slice(0, actions)) await action();"))
+
+        with it("hands a screen what the scenario's steps bound, such as a cart that is never stored"):
+            expect(self.fixtures.entry(["Choose Plan"])).to(contain("export function bindings(): Record<string, unknown>"))
+
         with it("resets the other test state it is given with the repositories"):
             fixtures = LernCanvasFixtures(self.fixtures.workspace, resettables=["src/payment/payment#paymentGateway"])
             entry = fixtures.entry(["Choose Plan"])

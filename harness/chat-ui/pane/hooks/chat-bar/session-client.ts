@@ -52,6 +52,25 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
   }
 }
 
+// A Backlog item started from the session list leaves the Backlog as the board moves it out: backlog-item.start on the
+// folder chosen beside the new session's name, or the whole repository, then the ticket opens as one picked from the
+// list does. A parent starts with its children; a child starts alone. Python refuses an item gone from the Backlog.
+export async function startBacklogItem($: EngineInterface, title: string): Promise<void> {
+  const path = (await currentChatBarView($)).newSessionFolder
+  let started: TicketData
+  try {
+    started = await whileBusy($, `Starting ${title}`, () => callTool<TicketData>($, 'backlog-item.start', { backlog_item: title, ...(path ? { path } : {}) }))
+  } catch (failure) {
+    await closeSessionList($)
+    await shownAsFailure($, `${title} did not start`, `Starting ${title} from the session list's Backlog${path ? ` on ${path}` : ''}, calling backlog-item.start`)(failure)
+    await refreshChatBar($)
+    return
+  }
+  await chooseNewSessionFolder($, '')
+  $.ui.toast(`${title} started in Discovery`)
+  await activateTicket($, started.name)
+}
+
 // The main chat's repo button opens the repositories beside this one, read afresh each time; a list that cannot read
 // them opens empty, with the field for a new one.
 export async function toggleRepoListWithRepos($: EngineInterface): Promise<void> {
@@ -78,22 +97,16 @@ export async function openRepo($: EngineInterface, name: string): Promise<void> 
   }
 }
 
-// repos.open_folder opens any folder as it is, git or not, in a new top-level chat, where the person opens its main
-// session; nothing is created there.
-export async function openFolder($: EngineInterface, path: string): Promise<void> {
-  await closeRepoList($)
+// repo.make_repository makes the plain folder this chat works in a git repository on main, so its tickets get branches,
+// worktrees and chats of their own; the bar is read again, and then draws the session in place of the request.
+export async function makeRepository($: EngineInterface): Promise<void> {
   try {
-    const answer = await whileBusy($, `Opening folder ${path}`, () => callToolText($, 'repos.open_folder', { path }))
+    const answer = await whileBusy($, 'Making this folder a git repository', () => callToolText($, 'repo.make_repository', {}))
     $.ui.toast(answer)
   } catch (failure) {
-    await shownAsFailure($, `${path} did not open`, `Opening folder ${path}, calling repos.open_folder`)(failure)
+    await shownAsFailure($, 'The folder was not made a git repository', 'Making a git repository from the chat bar, calling repo.make_repository')(failure)
   }
-}
-
-// The folder button asks the system's folder picker; cancelling it leaves the list open as it was.
-export async function chooseFolder($: EngineInterface): Promise<void> {
-  const path = await chosenFolder($).catch(shownAsFailure($, 'The folder picker did not open', 'The folder button in the repository list'))
-  if (path) await openFolder($, path)
+  await refreshChatBar($)
 }
 
 // The folder button beside the new session's name asks the system's folder picker, opened at the repository's top, for
@@ -120,15 +133,17 @@ export async function closeSession($: EngineInterface, chatBar: ChatBarClient): 
 }
 
 async function closedSession($: EngineInterface, chatBar: ChatBarClient, leaving: string[]): Promise<ChatBarClient | CloseRefused> {
+  let closed: TicketData
   try {
-    await callTool<TicketData>($, 'ticket.close', { ticket: chatBar.sessionName, leaving })
+    closed = await callTool<TicketData>($, 'ticket.close', { ticket: chatBar.sessionName, leaving })
   } catch (failure) {
     await refreshChatBar($)
     await shownAsFailure($, `${chatBar.title} did not close`, `Closing ${chatBar.sessionName}${leaving.length ? ` leaving ${leaving.join(', ')}` : ''}, calling ticket.close`)(failure)
     return new CloseRefused(reasonOf(failure))
   }
   const left = leaving.map(step => LEFT_STEPS[step] ?? step)
-  $.ui.toast(`${left.length ? `${chatBar.title}: ${left.join(', ')} · ` : ''}Session ${chatBar.title} closed`)
+  const dropped = closed.dropped_work.length ? `uncommitted work lost in ${closed.dropped_work.join(', ')} · ` : ''
+  $.ui.toast(`${left.length ? `${chatBar.title}: ${left.join(', ')} · ` : ''}${dropped}Session ${chatBar.title} closed`)
   await refreshChatBar($)
   return currentChatBar($)
 }

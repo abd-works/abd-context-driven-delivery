@@ -18,7 +18,7 @@ const EVERY_LEVEL = 100;
 
 // Where each markdown heading's section runs: from its heading to the line before the next heading of its level or
 // above, a heading in a code block being no heading.
-export function headingRanges(lines: string[]): SourceLines[] {
+function headingRanges(lines: string[]): SourceLines[] {
   const open: { level: number; start: number }[] = [];
   const ranges: SourceLines[] = [];
   const close = (level: number, end: number) => {
@@ -58,15 +58,31 @@ export function foldMarkdownHeadings(monacoApi: Monaco): void {
   });
 }
 
-// The folds around the lines asked to show open and every other fold closes, as Monaco's own Fold All and Unfold with
-// its levels up do; with no lines asked, the folds stay as the person left them.
+// A decorator line, such as a Python story test's `@s.given("a ticket on the board")` above its step's function.
+const DECORATOR_LINE = /^\s*@/;
+
+// The lines, from 1, whose folds open for the lines asked to show: each node's first line, and, when that line is a
+// decorator, the first line of what it decorates, so a step or an operation written under its decorators shows its
+// own body, not only the folds around it.
+export function linesToUnfold(text: string, openAround: SourceLines[]): number[] {
+  const lines = text.split(/\r?\n/);
+  const unfold = openAround.flatMap(({ start, end }) => {
+    const decorated = lines.slice(start - 1, end).findIndex((line) => !DECORATOR_LINE.test(line));
+    return decorated > 0 ? [start, start + decorated] : [start];
+  });
+  return [...new Set(unfold)];
+}
+
+// The folds around the lines asked to show open, each node's own fold with them (linesToUnfold), and every other fold
+// closes, as Monaco's own Fold All and Unfold with its levels up do; with no lines asked, the folds stay as the person
+// left them.
 export function useOpenAround(editor: FoldEditor | null, openAround: SourceLines[], text: string): void {
   const key = openAround.map((lines) => `${lines.start}-${lines.end}`).join(',');
   useEffect(() => {
     if (!editor || !openAround.length) return;
     void (async () => {
       await editor.getAction('editor.foldAll')?.run();
-      editor.trigger('source-view', 'editor.unfold', { selectionLines: openAround.map((lines) => lines.start - 1), direction: 'up', levels: EVERY_LEVEL });
+      editor.trigger('source-view', 'editor.unfold', { selectionLines: linesToUnfold(text, openAround).map((line) => line - 1), direction: 'up', levels: EVERY_LEVEL });
     })();
   }, [editor, key, text]);
 }

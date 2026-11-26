@@ -7,12 +7,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { PROJECT_HEADER } from '@cdd/cdd-shared'
-import type { StoryModelData } from '@cdd/practices/stories/model/story-model'
+import type { StoryMapData } from '@cdd/practices/stories/model/story-map'
 
 import { SERVER_DOWN, StoryMapApi, type Send } from './story-map-api'
 import { StoryMapClient } from './story-map-client'
 import { StoryMapFailures } from './story-map-failures'
-import { StoryMapViewModel } from './story-map-view-models'
 import { StoryMapFailureView, StoryMapWorkspaceView } from './story-map-views'
 
 const FILE = '.context/story-map.md'
@@ -23,15 +22,15 @@ const TRACE_STORY = `${SUB_EPIC}.trace-story-through-artifacts`
 const INCREMENT = `${FILE}#increment:integrate-practice-content-editor-apps`
 
 // The checkout-flow story map as the story map tools send it.
-const CHECKOUT_FLOW: StoryModelData = {
+const CHECKOUT_FLOW: StoryMapData = {
   node: `${FILE}#`,
-  name: 'StoryModel',
+  name: 'StoryMap',
   description: '',
   file: FILE,
   refusal: '',
   scope: [],
   increments: [{ node: INCREMENT, name: 'Integrate Practice Content Editor Apps', description: '**Outcome:** the editor apps open on the ticket.', stories: [OPEN_STORY_UI] }],
-  formats: { session_file: '.sessions/checkout-flow/session.json', practice_name: 'stories', name: 'story_map', offered_formats: ['markdown', 'drawio'], chosen_formats: ['markdown', 'drawio'] },
+  formats: { session_file: '.sessions/checkout-flow/session.json', practice_name: 'stories', name: 'story_map', offered_formats: ['markdown', 'drawio'], chosen_formats: ['markdown', 'drawio'], root_paths: [] },
   epics: [
     {
       node: `${FILE}#move-work-forward-from-chat-bar`,
@@ -56,7 +55,7 @@ const EXAMPLE = `${SCENARIO}.example:story-ui-editor`
 const STORY_TEST = 'move-work-forward-from-chat-bar/open_story_ui_side_panel_from_chat_bar_story.test.py'
 const CHAT = 'ad6c04ab-chat'
 // The checkout-flow story map with a scenario of the Story UI story, its examples, and an acceptance-test file.
-const WITH_EXAMPLES: StoryModelData = {
+const WITH_EXAMPLES: StoryMapData = {
   ...CHECKOUT_FLOW,
   epics: [{
     ...CHECKOUT_FLOW.epics[0]!,
@@ -72,6 +71,11 @@ const WITH_EXAMPLES: StoryModelData = {
 }
 
 type Posted = { path: string; body: Record<string, unknown> }
+
+// The map the Story UI holds for state, answering nothing: its nodes as the page makes them.
+const mapOf = (state: StoryMapData, send: Send = serverAnswering({}), posted?: Posted[]) => new StoryMapClient(new StoryMapApi(() => {}, posted ? serverAnswering({}, posted) : send), state)
+const rowsOf = (client: StoryMapClient) => client.epicsOnPage[0]!.subEpics
+const storyNamed = (client: StoryMapClient, name: string) => rowsOf(client).flatMap(row => row.stories).find(each => each.name === name)!
 
 // The board's server as the page reaches it: it answers each path from answers, and refuses the rest as down.
 function serverAnswering(answers: Record<string, unknown>, posted: Posted[] = []) {
@@ -90,38 +94,53 @@ afterEach(() => {
 
 describe('the story map the Story UI draws', () => {
   it('should draw each sub-epic under its epic', () => {
-    const map = StoryMapViewModel.of(CHECKOUT_FLOW)
-    expect(map.epics[0]!.sub_epics.map(sub => sub.name)).toEqual(['Integrate Practice Content Editor Apps In Chat Bar'])
+    expect(rowsOf(mapOf(CHECKOUT_FLOW)).map(sub => sub.name)).toEqual(['Integrate Practice Content Editor Apps In Chat Bar'])
   })
 
   it('should draw each story under its sub-epic, named by the node its tools take', () => {
-    const map = StoryMapViewModel.of(CHECKOUT_FLOW)
-    expect(map.epics[0]!.sub_epics[0]!.stories.map(each => each.id)).toEqual([`${SUB_EPIC}.open-story-ui-side-panel-from-chat-bar`, `${SUB_EPIC}.trace-story-through-artifacts`])
+    expect(rowsOf(mapOf(CHECKOUT_FLOW))[0]!.stories.map(each => each.id)).toEqual([`${SUB_EPIC}.open-story-ui-side-panel-from-chat-bar`, `${SUB_EPIC}.trace-story-through-artifacts`])
+  })
+
+  it('should make its nodes once from each answer, so reading them again draws the same nodes', () => {
+    const client = mapOf(CHECKOUT_FLOW)
+    expect(client.epicsOnPage).toBe(client.epicsOnPage)
   })
 })
 
 // The person's decisions of 2026-11-12: the story model's descriptions, increments and examples, and the ticket's scope.
 describe('the story model the Story UI draws', () => {
   it("should draw each node's description as the story map says it", () => {
-    expect(StoryMapViewModel.of(CHECKOUT_FLOW).epics[0]!.sub_epics[0]!.description).toBe('Requested (2026-11-06): the chat bar opens the editor apps.')
+    expect(rowsOf(mapOf(CHECKOUT_FLOW))[0]!.description).toBe('Requested (2026-11-06): the chat bar opens the editor apps.')
   })
 
-  it('should draw the increments the story model holds, with the stories each delivers', () => {
-    expect(StoryMapViewModel.of(CHECKOUT_FLOW).increments.map(each => [each.name, each.stories])).toEqual([['Integrate Practice Content Editor Apps', [OPEN_STORY_UI]]])
+  it('should draw the increments the story model holds, each knowing the stories it delivers', () => {
+    const client = mapOf(CHECKOUT_FLOW)
+    const [increment] = client.incrementsOnPage
+    expect([increment!.name, rowsOf(client)[0]!.stories.filter(story => increment!.delivers(story)).map(story => story.id)]).toEqual(['Integrate Practice Content Editor Apps', [OPEN_STORY_UI]])
+  })
+
+  it('should give each story the increment that delivers it', () => {
+    const client = mapOf(CHECKOUT_FLOW)
+    expect([storyNamed(client, 'Open Story UI Side Panel From Chat Bar').increment?.id, storyNamed(client, 'Trace Story Through Artifacts').increment]).toEqual([INCREMENT, undefined])
   })
 
   it("should draw a scenario's examples as the story model's one table, each row by the node its tools take", () => {
-    expect(StoryMapViewModel.of(WITH_EXAMPLES).epics[0]!.sub_epics[0]!.stories[0]!.scenarios[0]!.examples).toEqual({ columns: ['example', 'status'], rows: [{ id: EXAMPLE, fields: { example: 'Story UI editor', status: 'running' } }] })
+    const scenario = rowsOf(mapOf(WITH_EXAMPLES))[0]!.stories[0]!.scenarios[0]!
+    expect([scenario.exampleColumns, scenario.examples.map(example => [example.id, example.fields])]).toEqual([['example', 'status'], [[EXAMPLE, { example: 'Story UI editor', status: 'running' }]]])
   })
 
   it("should draw only the stories the ticket's session names, scoped", () => {
-    const scoped = StoryMapViewModel.of({ ...CHECKOUT_FLOW, scope: [TRACE_STORY] }, true)
-    expect(scoped.epics.flatMap(epic => epic.sub_epics.flatMap(sub => sub.stories.map(each => each.name)))).toEqual(['Trace Story Through Artifacts'])
+    const scoped = mapOf({ ...CHECKOUT_FLOW, scope: [TRACE_STORY] }).epicsShown(true)
+    expect(scoped.flatMap(epic => epic.subEpics.flatMap(sub => sub.stories.map(each => each.name)))).toEqual(['Trace Story Through Artifacts'])
+  })
+
+  it('should keep editing a scoped sub-epic through the sub-epic itself', () => {
+    const scoped = mapOf({ ...CHECKOUT_FLOW, scope: [TRACE_STORY] }).epicsShown(true)
+    expect(scoped[0]!.subEpics[0]!.id).toBe(SUB_EPIC)
   })
 
   it('should draw the whole map when the session names no story', () => {
-    const scoped = StoryMapViewModel.of(CHECKOUT_FLOW, true)
-    expect(scoped.epics[0]!.sub_epics[0]!.stories.length).toBe(2)
+    expect(mapOf(CHECKOUT_FLOW).epicsShown(true)[0]!.subEpics[0]!.stories.length).toBe(2)
   })
 })
 
@@ -129,21 +148,21 @@ describe('an edit through the story map tools', () => {
   it("should change a story's description through its own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/edit-description': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
-    await client.nodeAt(TRACE_STORY, 'story').describe('Requested: one trace view.')
+    await storyNamed(client, 'Trace Story Through Artifacts').describe('Requested: one trace view.')
     expect(posted).toEqual([{ path: `/api/story/${encodeURIComponent(TRACE_STORY)}/edit-description`, body: { description: 'Requested: one trace view.' } }])
   })
 
   it("should give a story to an increment through the increment's own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/add-story': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
-    await client.incrementAt(INCREMENT).deliver(TRACE_STORY)
+    await client.incrementsOnPage[0]!.deliver(storyNamed(client, 'Trace Story Through Artifacts'))
     expect(posted).toEqual([{ path: `/api/increment/${encodeURIComponent(INCREMENT)}/add-story`, body: { story: TRACE_STORY } }])
   })
 
   it('should rename the story through its own tool', async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/rename': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
-    await client.nodeAt(`${SUB_EPIC}.trace-story-through-artifacts`, 'story').rename('Trace Story Across Artifacts')
+    await storyNamed(client, 'Trace Story Through Artifacts').rename('Trace Story Across Artifacts')
     expect(posted).toEqual([{ path: `/api/story/${encodeURIComponent(`${SUB_EPIC}.trace-story-through-artifacts`)}/rename`, body: { name: 'Trace Story Across Artifacts' } }])
   })
 
@@ -151,29 +170,56 @@ describe('an edit through the story map tools', () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/move-before': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
     const [first, second] = [`${SUB_EPIC}.open-story-ui-side-panel-from-chat-bar`, `${SUB_EPIC}.trace-story-through-artifacts`]
-    await client.reorder([first, second], [second, first], 'story')
+    await client.reorder(rowsOf(client)[0]!.stories, [second, first])
     expect(posted.map(each => [each.path, each.body])).toEqual([[`/api/story/${encodeURIComponent(second)}/move-before`, { other: first }]])
   })
 
   it("should change a cell of an example's row through that example's own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/edit-field': WITH_EXAMPLES }, posted)), WITH_EXAMPLES)
-    await client.exampleAt(EXAMPLE).editField('status', 'not running')
+    await rowsOf(client)[0]!.stories[0]!.scenarios[0]!.examples[0]!.editField('status', 'not running')
     expect(posted).toEqual([{ path: `/api/example/${encodeURIComponent(EXAMPLE)}/edit-field`, body: { field: 'status', text: 'not running' } }])
   })
 
   it("should remove an example through its own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/remove': WITH_EXAMPLES }, posted)), WITH_EXAMPLES)
-    await client.exampleAt(EXAMPLE).remove()
+    await rowsOf(client)[0]!.stories[0]!.scenarios[0]!.examples[0]!.remove()
     expect(posted).toEqual([{ path: `/api/example/${encodeURIComponent(EXAMPLE)}/remove`, body: {} }])
   })
 
   it("should change an epic's description through its own tool", async () => {
     const posted: Posted[] = []
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/edit-description': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
-    await client.nodeAt(SUB_EPIC, 'sub-epic').describe('Requested: the editor apps open from the chat bar.')
+    await rowsOf(client)[0]!.describe('Requested: the editor apps open from the chat bar.')
     expect(posted).toEqual([{ path: `/api/epic/${encodeURIComponent(SUB_EPIC)}/edit-description`, body: { description: 'Requested: the editor apps open from the chat bar.' } }])
+  })
+
+  it('should add a story before the story it is added ahead of, moving the new story there', async () => {
+    const posted: Posted[] = []
+    const added = `${SUB_EPIC}.new-story`
+    const withNew: StoryMapData = { ...CHECKOUT_FLOW, epics: [{ ...CHECKOUT_FLOW.epics[0]!, epics: [{ ...CHECKOUT_FLOW.epics[0]!.epics[0]!, stories: [...CHECKOUT_FLOW.epics[0]!.epics[0]!.stories, story('new-story', 'New Story')] }] }] }
+    const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/new-story': withNew, '/move-before': withNew }, posted)), CHECKOUT_FLOW)
+    const row = rowsOf(client)[0]!
+    await row.newStory('New Story', row.stories[1])
+    expect(posted.map(each => [each.path, each.body])).toEqual([
+      [`/api/epic/${encodeURIComponent(SUB_EPIC)}/new-story`, { name: 'New Story' }],
+      [`/api/story/${encodeURIComponent(added)}/move-before`, { other: TRACE_STORY }],
+    ])
+  })
+
+  it('should add a story last when it is added ahead of none', async () => {
+    const posted: Posted[] = []
+    const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/new-story': CHECKOUT_FLOW }, posted)), CHECKOUT_FLOW)
+    await rowsOf(client)[0]!.newStory('New Story')
+    expect(posted.map(each => each.path)).toEqual([`/api/epic/${encodeURIComponent(SUB_EPIC)}/new-story`])
+  })
+
+  it("should write a new And step as a Then, through its scenario's own tool", async () => {
+    const posted: Posted[] = []
+    const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({ '/new-step': WITH_EXAMPLES }, posted)), WITH_EXAMPLES)
+    await rowsOf(client)[0]!.stories[0]!.scenarios[0]!.newStep('and', 'the editor shows')
+    expect(posted).toEqual([{ path: `/api/scenario/${encodeURIComponent(SCENARIO)}/new-step`, body: { step_type: 'then', text: 'the editor shows' } }])
   })
 
   it('should turn a format off for the fidelity in the session', async () => {
@@ -193,7 +239,7 @@ describe('a Story UI opened on a repository', () => {
       headers.push(init.headers ?? {})
       return new Response(JSON.stringify(CHECKOUT_FLOW), { status: 200 })
     }
-    await new StoryMapApi(() => {}, send, 'C:/dev/checkout').post('/story-model/show', {})
+    await new StoryMapApi(() => {}, send, 'C:/dev/checkout').post('/story-map/show', {})
     expect(headers[0]).toMatchObject({ [PROJECT_HEADER]: 'C:/dev/checkout' })
   })
 })
@@ -259,6 +305,22 @@ describe("an epic's description on the page", () => {
   })
 })
 
+// A story's name is a field edited in place, so double-clicking its card puts the caret in that name with all of it
+// selected, as double-clicking an epic's or an increment's name does.
+describe('a story card double-clicked on the page', () => {
+  it("should select the whole of the story's name, ready to be typed over", async () => {
+    await openedPage({}, CHAT)
+    const failures: unknown[] = []
+    const recordFailure = (failure: ErrorEvent) => { failures.push(failure.error); failure.preventDefault() }
+    window.addEventListener('error', recordFailure)
+    const header = screen.getAllByText('STORY')[0]!.closest('.story-card-header')!
+    fireEvent.doubleClick(header)
+    window.removeEventListener('error', recordFailure)
+    const name = header.querySelector('.story-name-input')!
+    expect([failures, document.activeElement === name, window.getSelection()?.toString()]).toEqual([[], true, 'Open Story UI Side Panel From Chat Bar'])
+  })
+})
+
 describe('with the cdd server not answering', () => {
   it('should say the cdd server is not answering and how to start it', async () => {
     const failures: string[] = []
@@ -268,8 +330,8 @@ describe('with the cdd server not answering', () => {
 
   it('should keep the story map as Python last sent it', async () => {
     const client = new StoryMapClient(new StoryMapApi(() => {}, serverAnswering({})), CHECKOUT_FLOW)
-    await client.nodeAt(`${SUB_EPIC}.trace-story-through-artifacts`, 'story').rename('Trace Story Across Artifacts')
-    expect(StoryMapViewModel.of(client.toJSON()).epics[0]!.sub_epics[0]!.stories[1]!.name).toBe('Trace Story Through Artifacts')
+    await storyNamed(client, 'Trace Story Through Artifacts').rename('Trace Story Across Artifacts')
+    expect(rowsOf(client)[0]!.stories[1]!.name).toBe('Trace Story Through Artifacts')
   })
 
   it('should show the page what failed, still showing the story as it was', async () => {

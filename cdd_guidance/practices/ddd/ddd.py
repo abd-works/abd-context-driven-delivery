@@ -8,15 +8,15 @@ from harness.agent_tools.agent_tools import agent_toolset
 from harness.guidance.guidance import PracticeGuidance
 
 from cdd_guidance.practices.ddd.ddd_formats import DddFormats
-from cdd_guidance.practices.ddd.model.graph_reading import DddReading
-from cdd_guidance.practices.ddd.model.nodes import DomainNode
+from cdd_guidance.practices.ddd.reading.graph_reading import DddReading
+from cdd_guidance.practices.ddd.model.building_blocks import DomainNode
 from cdd_guidance.practices.ddd.model.sketch.sketch_ddd_model import SketchDddModel
-from cdd_guidance.practices.ddd.model.graph_reading import BOUNDED_CONTEXT_MARKER
+from cdd_guidance.practices.ddd.reading.graph_reading import BOUNDED_CONTEXT_MARKER, DOMAIN_MODEL_NAMES
 from cdd_guidance.practices.ddd.model.stereotypes import carries_a_stereotype, names_a_building_block
 
 
 # The words a path holds when it is a domain model or a bounded context, written with a hyphen or an underscore.
-_DOMAIN_NAMES = ("domain-model", "domain_model", "bounded-context", "bounded_context")
+_DOMAIN_NAMES = (*DOMAIN_MODEL_NAMES, "bounded-context", "bounded_context")
 # The code files whose classes say whether a folder holds a domain.
 _CODE_SUFFIXES = (".py", ".ts", ".tsx", ".js", ".jsx")
 # The model each format reads and writes, by format name: its module and its class.
@@ -29,6 +29,10 @@ _FORMATS = {
     "typescript": (
         "cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model",
         "TypeScriptCleanEngineeringModel",
+    ),
+    "javascript": (
+        "cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model",
+        "JavaScriptCleanEngineeringModel",
     ),
 }
 
@@ -46,6 +50,15 @@ class Ddd(PracticeGuidance):
     SHORT_NAME = "DDD"
     COLOUR = "#6C5CE7"
 
+    @property
+    def markdown_values(self) -> dict[str, str]:
+        """Whether each of its graph rules is checked or judged, for the marker the rule's text carries in its document
+        (``{{decided.<rule>}}``): the rule's own ``requires_judge`` says which, so it is typed in no document."""
+        from cdd_guidance.practices.ddd.rules import RULES
+        from harness.graph.practice_rule import decided_values
+
+        return decided_values(RULES)
+
     # How the catalog shows this practice; the generator discovers it like the installer does.
     catalog_card = {
         "name": "Domain-Driven Design",
@@ -57,6 +70,12 @@ class Ddd(PracticeGuidance):
         "blurb": "Organize the code around domain state, domain logic, and domain rules.",
         "spec_blurb": "An aggregate model of the core domain, then the building blocks that implement it",
     }
+
+    claims_some_code = True
+
+    def is_production_code(self, file: str) -> bool:
+        """Code its tactics write, not a spec, a test, or test support (its reading's ``test_code``, the project's one answer)."""
+        return not self.reading.test_code.is_test_code(file)
 
     def claims(self, file: Path) -> bool:
         """DDD's files are a domain's: a file whose path names a domain model or a bounded context, code declaring a

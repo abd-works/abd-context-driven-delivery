@@ -36,8 +36,8 @@ aggregate:
       - is: entity
       - name: string
       - belongsTo: aggregate
-      - associates: [entity]
-      - identity: property
+      - associates?: [entity]
+      - identity?: property
       - path: "{aggregate}"
   - valueObject:
       - fidelity: model
@@ -50,7 +50,7 @@ aggregate:
       - is: class
       - name: string
       - belongsTo: aggregate
-      - associates: [entity]
+      - associates?: [entity]
       - path: "{aggregate}"
   - repository:
       - fidelity: model

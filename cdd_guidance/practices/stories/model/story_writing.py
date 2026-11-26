@@ -12,10 +12,18 @@ from __future__ import annotations
 import json
 import re
 import textwrap
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeLanguage, WrittenBlock, WrittenKey
-from cdd_guidance.practices.stories.model.story_model import Background, Epic, Scenario, Step, Story, StoryType
+from cdd_guidance.practices.source_code import CodeLanguage, WrittenBlock, WrittenKey
+from cdd_guidance.practices.stories.model.story_map import Background, Epic, Scenario, Step, Story, StoryType
+
+# The comment that carries a scenario's example rows in a story file, by whether the scenario is an outline.
+SCENARIO_EXAMPLES = "scenario-examples"
+OUTLINE_EXAMPLES = "outline-examples"
+# A name Python, TypeScript and JavaScript can all import.
+_IMPORTABLE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
 
 class StepClause:
     """One step, the verb it opens with, and the steps a language chains onto it."""
@@ -27,12 +35,38 @@ class StepClause:
 
 
 def example_names_of(stories: List[Story]) -> List[str]:
-    """Each example the stories' scenarios use, once, in order: what a new story file imports."""
+    """Each example the stories' scenarios use whose name a language can import, once, in order: what a new story file
+    imports. An example named in words, as a table row of a scenarios file is, is no name in code, so it stays on the
+    scenario's examples comment."""
     names: List[str] = []
     for story in stories:
         for scenario in story.scenarios:
-            names.extend(name for name in scenario.examples if name not in names)
+            names.extend(name for name in scenario.examples if name not in names and _IMPORTABLE.fullmatch(name))
     return names
+
+
+@dataclass(frozen=True)
+class StoryFilePlace:
+    """Where the stories of one story file are written: the epic or sub-epic that holds them, the stories, the
+    epic's folder, and the examples folder of the top-level epic above them, each folder named from the workspace
+    root. A story file not read from code holds one story, in a folder of the story's own under its epic's, as the
+    acceptance tests fidelity declares it (``{epic}/{sub-epic}/{story}/{story_snake}_story.test``)."""
+
+    epic: Epic
+    stories: List[Story]
+    epic_folder: str
+    examples_folder: str
+
+    @property
+    def folder(self) -> str:
+        """The folder a new story file is written in: the first story's own, under its epic's."""
+        return f"{self.epic_folder}/{self.stories[0].slug}"
+
+    @property
+    def orders(self) -> str:
+        """Where the file comes among the story files of the map: its epic's order, then its first story's place
+        among the epic's stories, so the files are read back in the map's order whatever their names."""
+        return f"{self.epic.order_path()}.{self.epic.stories.index(self.stories[0]) + 1}"
 
 
 def as_read(written: Optional[WrittenBlock], language: Optional[CodeLanguage], key: WrittenKey) -> Optional[WrittenBlock]:
@@ -52,6 +86,18 @@ def story_description(story: Story, prefix: str) -> List[str]:
     return lines
 
 
+# The marks a story's comment writes its front matter and its notes under, one line each, as its scenarios file holds them.
+FRONT_MATTER_MARK = "^"
+NOTES_MARK = "|"
+
+
+def story_notes_lines(story: Story, prefix: str) -> List[str]:
+    """The story's front matter and notes as lines of its comment, each line under its mark, so a scenarios file
+    rendered to code and back keeps what a person wrote about the story; none when it holds neither."""
+    marked = [(FRONT_MATTER_MARK, story.front_matter), (NOTES_MARK, story.notes)]
+    return [f"{prefix}{mark} {line}".rstrip() for mark, text in marked if text for line in text.split("\n")]
+
+
 def background_examples_line(story: Story, prefix: str) -> List[str]:
     """The examples the story's background holds, as the one comment line a story file carries them on; none when it
     holds none."""
@@ -61,11 +107,36 @@ def background_examples_line(story: Story, prefix: str) -> List[str]:
     return [f"{prefix}background-examples: {json.dumps(payload, ensure_ascii=False)}"]
 
 
+def scenario_examples_lines(scenario: Scenario) -> List[str]:
+    """The examples of scenario as the comment lines a story file carries them on: their names, then, when a row
+    holds values or the scenario is an outline, each row by its name, marked as an outline's rows or a scenario's.
+    None for a scenario with no examples."""
+    if not scenario.examples:
+        return []
+    rows = {name: example.cells() for name, example in scenario.examples.items()}
+    names = ["examples: " + ", ".join(scenario.examples)]
+    if not scenario.is_outline and not any(rows.values()):
+        return names
+    kind = OUTLINE_EXAMPLES if scenario.is_outline else SCENARIO_EXAMPLES
+    return [*names, f"{kind}: {json.dumps(rows, ensure_ascii=False)}"]
+
+
+def own_backgrounds(scenario: Scenario) -> List[Background]:
+    """The backgrounds scenario holds that its story does not already write once for all its scenarios: those with
+    steps the story's own backgrounds do not hold."""
+    shared = [_step_texts(background) for background in getattr(scenario.parent, "backgrounds", [])]
+    return [background for background in scenario.backgrounds if background.steps and _step_texts(background) not in shared]
+
+
+def _step_texts(background: Background) -> List[tuple]:
+    return [(step.keyword.lower(), step.text) for step in background.steps]
+
+
 class StoryWriting:
     """How one language writes stories: the generic render, and the spelling the language gives as data."""
 
     file_name_template = "{snake}"
-    """A sub-epic's story file name, from the sub-epic's `snake` or `pascal` name."""
+    """A story's file name, from the story's `snake` or `pascal` name."""
     scenario_indent = "  "
     scenario_gap = [""]
     """The blank lines between two generic scenarios; Python writes them back to back."""
@@ -99,29 +170,27 @@ class StoryWriting:
         self.language = language
 
     heading_template: List[str] = []
-    """The lines that open a new story file, from the sub-epic's `name` and its `orders`."""
+    """The lines that open a new story file, from its epic's `name` and the file's `orders`."""
 
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
+    def file_header(self, place: StoryFilePlace) -> List[str]:
         """The lines that open a new story file; a language whose file imports its helpers adds them."""
-        return [self._filled(line, name=epic.name, orders=epic.order_path()) for line in self.heading_template]
+        return [self._filled(line, name=place.epic.name, orders=place.orders) for line in self.heading_template]
 
-    def story_file(self, epic: Epic, parent: str, written: Optional[WrittenBlock]) -> Tuple[str, str]:
-        """The path and text of the story file holding a sub-epic's stories, written under the folder parent: back to
-        the path it was read from with the code above and below its stories as read, else named for the sub-epic and
-        opened with the file header. Each story renders itself."""
+    def story_file(self, place: StoryFilePlace, written: Optional[WrittenBlock]) -> Tuple[str, str]:
+        """The path and text of the story file holding place's stories: back to the path they were read from with the
+        code above and below them as read, else named for its one story, in that story's own folder, and opened with
+        the file header. Each story renders itself."""
         if written is not None:
             path, lines = written.path, list(written.inside)
         else:
-            path = f"{parent}/{self._filled(self.file_name_template, snake=epic.snake(), pascal=epic.pascal())}"
-            lines = self.file_header(epic, parent)
+            story = place.stories[0]
+            path = f"{place.folder}/{self._filled(self.file_name_template, snake=story.snake())}"
+            lines = self.file_header(place)
         opened = len(lines)
-        for story in epic.stories:
+        for story in place.stories:
             gap = [] if len(lines) == opened else [""]
             lines = (lines if self._is_as_read(story) else self._spaced(lines, gap)) + self.story_lines(story)
         return path, "\n".join(lines + (written.closing if written is not None else [""]))
-
-    def story_text(self, story: "Story") -> str:
-        return "\n".join(self.story_lines(story) + [""])
 
     def story_lines(self, story: "Story") -> List[str]:
         """Read in this language and unchanged: every line as read. Each scenario decides for itself."""
@@ -157,7 +226,16 @@ class StoryWriting:
         return clauses
 
     def _verb(self, step: "Step") -> str:
-        return self.verbs.get(step.keyword) or self.default_verb or step.keyword.lower()
+        return self._listed_verb(step) or step.keyword.lower()
+
+    def verb_alone(self, step: "Step") -> str:
+        """The verb step opens with when it is written as a statement of its own: the verb the language lists for its
+        keyword, else the verb of its phase, since a step the scenarios chain with And has no clause to chain onto."""
+        return self._listed_verb(step) or step.step_type.value
+
+    def _listed_verb(self, step: "Step") -> str:
+        """The verb the language lists for step's keyword, else its default verb; empty when it has neither."""
+        return self.verbs.get(step.keyword) or self.default_verb
 
     def _step_lines(self, clause: StepClause, indent: str) -> List[str]:
         """One step and the steps chained onto it, each with its body. A body not written yet gets the placeholder."""
@@ -182,7 +260,8 @@ class StoryWriting:
 
     def _story_head(self, story: "Story") -> List[str]:
         lines = self.story_open(story) + story.setup.lines_in(self.language, self.language.indent, "")
-        for background in story.backgrounds:
+        # A background with no steps holds only the examples its story's comment carries, so it writes no block.
+        for background in (background for background in story.backgrounds if background.steps):
             lines.extend(self.story_background_lines(background))
         return lines
 
@@ -201,10 +280,9 @@ class StoryWriting:
         inner = indent + self.language.indent
         lines = [self._filled(self.scenario_opening, indent=indent, name=self._quoted(scenario.name))]
         lines += scenario.setup.lines_in(self.language, inner, "")
-        for background in scenario.backgrounds:
+        for background in own_backgrounds(scenario):
             lines.extend(self.scenario_background_lines(background, inner))
-        if scenario.examples:
-            lines.append(f"{inner}{self.language.comment('examples: ' + ', '.join(scenario.examples))}")
+        lines.extend(f"{inner}{self.language.comment(line)}" for line in scenario_examples_lines(scenario))
         for clause in self._clauses(scenario.steps):
             lines.extend(self._step_lines(clause, inner))
         if not scenario.steps and scenario.setup.is_empty:

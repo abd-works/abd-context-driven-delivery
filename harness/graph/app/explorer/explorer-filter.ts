@@ -1,19 +1,18 @@
-import { useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
-import type { ExplorerEntryData, FilterData } from '@cdd/harness/graph/graph';
+import { useRef, useState, type MutableRefObject } from 'react';
+import type { Held } from './held';
+import type { FilterChoicesData } from '@cdd/harness/graph/graph';
 import { NO_CHOICES, NO_FILTER, chosen, nodeFilter, type FilterSelection } from '../filter/filter-selection';
-import { reasonOf } from '../graph/graph-failures';
+import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures, graphs } from '../graph/graph-page';
-import { withBranch } from '../graph/graph-selection';
+import { ExplorerTrees } from '../graph/explorer-trees';
 import type { LoadStatus } from './load-status';
 import type { PageFolder } from './page-folder';
 
 
-type Held<T> = [T, Dispatch<SetStateAction<T>>];
-
 interface ExplorerFilterState {
   selection: Held<FilterSelection>;
-  trees: Held<ExplorerEntryData[]>;
-  choices: Held<FilterData>;
+  trees: Held<ExplorerTrees>;
+  choices: Held<FilterChoicesData>;
   // The filter the trees on the page were read with, which a branch opened later is read with too.
   shown: MutableRefObject<FilterSelection>;
   folder: PageFolder;
@@ -34,12 +33,12 @@ export class ExplorerFilter {
     return this.state.folder;
   }
 
-  get trees(): ExplorerEntryData[] {
+  get trees(): ExplorerTrees {
     return this.state.trees[0];
   }
 
   // The node types, relationships, and rules the filter offers for the selection.
-  get offered(): FilterData {
+  get offered(): FilterChoicesData {
     return this.state.choices[0];
   }
 
@@ -49,7 +48,7 @@ export class ExplorerFilter {
 
   // The node types the practices hold, and the relationships and rules of the node types chosen. practicesBefore names
   // the practices chosen before a change of practice.
-  async offerChoices(next: FilterSelection, practicesBefore?: string[]): Promise<FilterData> {
+  async offerChoices(next: FilterSelection, practicesBefore?: string[]): Promise<FilterChoicesData> {
     const choices = (await graphs.filterChoices(next.practices, next.node_types, practicesBefore)) ?? NO_CHOICES;
     this.state.choices[1](choices);
     return choices;
@@ -59,14 +58,14 @@ export class ExplorerFilter {
   async show(resolved: FilterSelection): Promise<void> {
     this.state.selection[1](resolved);
     this.state.shown.current = resolved;
-    this.state.trees[1]((await graphs.explorerTrees(nodeFilter(resolved))) ?? []);
+    this.state.trees[1](new ExplorerTrees((await graphs.explorerTrees(nodeFilter(resolved))) ?? []));
   }
 
   // The entries a closed entry left out, read with the filter the trees were read with, put in its place.
   async openBranch(nodeId: string): Promise<void> {
     try {
       const branch = await graphs.explorerBranch(nodeId, nodeFilter(this.state.shown.current));
-      if (branch) this.state.trees[1]((current) => withBranch(current, branch));
+      if (branch) this.state.trees[1]((current) => current.withBranch(branch));
     } catch (cause) {
       failures.fail(reasonOf(cause), `Opening ${nodeId} in the Graph app's tree`);
     }
@@ -97,8 +96,8 @@ export class ExplorerFilter {
 export function useExplorerFilter(folder: PageFolder, status: LoadStatus): ExplorerFilter {
   return new ExplorerFilter({
     selection: useState<FilterSelection>(NO_FILTER),
-    trees: useState<ExplorerEntryData[]>([]),
-    choices: useState<FilterData>(NO_CHOICES),
+    trees: useState<ExplorerTrees>(ExplorerTrees.NONE),
+    choices: useState<FilterChoicesData>(NO_CHOICES),
     shown: useRef<FilterSelection>(NO_FILTER),
     folder,
     status,

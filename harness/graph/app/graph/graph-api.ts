@@ -4,7 +4,7 @@ const API_ROOT = '/api';
 
 type Failure = { error?: string; diagnosis?: string };
 
-export class GraphCallFailure extends Error {
+class GraphCallFailure extends Error {
   constructor(diagnosis: string) {
     super(diagnosis);
     this.name = 'GraphCallFailure';

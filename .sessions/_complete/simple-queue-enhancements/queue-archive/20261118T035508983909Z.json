@@ -1,0 +1,54 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:55:08.983909+00:00",
+  "prompts": [
+    {
+      "id": "f70ed36fc631",
+      "text": "Run8 fruit, part 2: in demo/run8/fruit.md, write each fruit's letter count beside it",
+      "robot": "Sparky",
+      "steps": [
+        {
+          "text": "Write each fruit's letter count beside it in demo/run8/fruit.md",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "263d7dceec6b",
+      "text": "Run8 timer, part 1: write the current time to .sessions/simple-queue-enhancements/demo/run8/timer.md, wait about 10 seconds, and write the time again",
+      "robot": "Bolt",
+      "steps": [
+        {
+          "text": "Write the current time to timer.md",
+          "state": "done"
+        },
+        {
+          "text": "Wait about 10 seconds",
+          "state": "done"
+        },
+        {
+          "text": "Write the time again",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "db3c9044e999",
+      "text": "Run8 hooks, part 1: list the .ts and .tsx files under tools/prompt_queue/hooks in .sessions/simple-queue-enhancements/demo/run8/hooks.md",
+      "robot": "Gizmo",
+      "steps": [
+        {
+          "text": "List .ts and .tsx files under tools/prompt_queue/hooks",
+          "state": "done"
+        },
+        {
+          "text": "Write the list to demo/run8/hooks.md",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

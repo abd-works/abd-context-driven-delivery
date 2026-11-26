@@ -187,8 +187,8 @@ export class TicketChat {
     return this.chats.opening.begin(this.ticket)
   }
 
-  // The new chat opens on the worktree given, which can have been opened only now.
-  start(worktree: string): Promise<void> {
-    return this.chats.opening.startFor(this.ticket, worktree)
+  // The new chat opens on the worktree given, which can have been opened only now, with the prompt the ticket wrote.
+  start(worktree: string, prompt: string): Promise<void> {
+    return this.chats.opening.startFor(this.ticket, worktree, prompt)
   }
 }

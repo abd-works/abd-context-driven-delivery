@@ -12,10 +12,10 @@ from cdd_guidance.practices.ux.model.nodes import (
     Region,
     Screen,
     StoryDemoControl,
+    StoryStep,
     Transition,
 )
 from cdd_guidance.practices.ux.model.ux_map import UxMap
-from cdd_guidance.practices.ux.model.nodes import story_steps_from
 
 
 def made(node_type: type, name: str, sequential_order: int, graph: Any = None, **fields: Any) -> Any:
@@ -70,7 +70,7 @@ class OrderingMap:
         browse.states = ["primary"]
         browse.append_interaction(made(Interaction, "open cart", 0, trigger="click", effect="shows the cart", destination=cart))
         region.append_control(browse)
-        region.append_control(made(StoryDemoControl, "Products", 1, control_type="bound-list", label="Products", bound_field="catalog.products", story_steps=story_steps_from([{"kind": "given", "label": "the catalog lists Products"}]), set_input="product", item_story_steps=story_steps_from([{"kind": "when", "label": "the Customer selects a Product"}]), item_value="name", item_label="{name}"))
+        region.append_control(made(StoryDemoControl, "Products", 1, control_type="bound-list", label="Products", bound_field="catalog.products", story_steps=StoryStep.from_values([{"kind": "given", "label": "the catalog lists Products"}]), set_input="product", item_story_steps=StoryStep.from_values([{"kind": "when", "label": "the Customer selects a Product"}]), item_value="name", item_label="{name}"))
         return region
 
 

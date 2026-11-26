@@ -9,9 +9,10 @@
  * `.sessions/`, where Validate saves its reports and writes its validate lines; a chat is `FakeChat`, which checks in
  * through the board's server as the cdd-board mod does.
  */
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { card, expect, FakeChat, fixtureRoot, generatedLine, openBoard, receivedBy, resetSessions, seedActive, test, validatedLine, waitForChat, writeInto, writeSession } from '../../../../space/kanban/app/tests/story-ui'
+import { catchFilesAppLinks, card, expect, FakeChat, fixtureRoot, generatedLine, openBoard, receivedBy, resetSessions, seedActive, step, test, validatedLine, waitForChat, writeInto, writeSession } from '../../../../space/kanban/app/tests/story-ui'
 import type { Locator, Page } from '../../../../space/kanban/app/tests/story-ui'
 
 const REPORTS = join(fixtureRoot, '.sessions', 'checkout-flow', 'validation-reports')
@@ -21,14 +22,42 @@ const STORY_MAP_REPORT = 'stories-story-map-20261101T100000'
 const JUDGED_REPORT = '# Graph rule validation\n\n## Judgment — `.context/story-map.md`\n\n### `do-not-invent-requirements` — Fail\n- story-map.md:7 `Confirm Order`: no source names this story.\n'
 const CLEAN_REPORT = 'stories-story-map-20261101T120000'
 const CLEAN_STAMP = '2026-11-01T12:00:00Z'
-// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 5).
+// A graph validate saved with no hits, in the shape harness/graph/saved_graph.py writes (SAVED_SHAPE_VERSION 6).
 const CLEAN_GRAPH = {
-  version: 5,
+  version: 7,
   overlays: [],
   practices: { stories: { source_root: '', root_facts: {}, nodes: [{ node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: '.context/story-map.md', line: 6, end_line: 6, stage: '', facts: {} }], edges: [], violations: [] } },
 }
 
+// What the project keeps of the violations a person accepted (space/session/validation/accepted_violations.py).
+const ACCEPTED_FILE = join(fixtureRoot, '.context', 'violations-accepted.json')
+const acceptedInProject = (): { rule: string; node_id: string; message: string }[] => JSON.parse(readFileSync(ACCEPTED_FILE, 'utf8')).accepted
+// A later validate of the story map that finds the same rule on the same node, saying something else.
+const REWORDED_REPORT = 'stories-story-map-20261101T120000'
+const REWORDED_STAMP = '2026-11-01T12:00:00Z'
+const REWORDED_GRAPH = {
+  version: 7,
+  overlays: [],
+  practices: {
+    stories: {
+      source_root: '',
+      root_facts: {},
+      nodes: [{ node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: '.context/story-map.md', line: 6, end_line: 6, stage: '', facts: {} }],
+      edges: [],
+      violations: [{ rule: 'verb-noun-format', message: 'Name the story with a verb and a noun', practice: 'stories', node_id: 'node-1', location: '.context/story-map.md', line: 6, end_line: 6 }],
+    },
+  },
+}
+
 const report = (page: Page) => page.locator('[data-panel="report"]')
+const storyMapTile = (page: Page) => page.locator('.details-body [data-tile="stories-story-map"]')
+
+async function acceptStoryMapViolation(page: Page): Promise<Locator> {
+  const opened = await openStoryMapReport(page)
+  await opened.getByRole('button', { name: 'Accept .context/story-map.md:6' }).click()
+  await expect(opened.getByText('1 accepted violation left out')).toBeVisible()
+  return opened
+}
 
 async function openStoryMapReport(page: Page): Promise<Locator> {
   await page.locator('.details-body [data-tile="stories-story-map"]').getByRole('button', { name: 'violations' }).click()
@@ -66,15 +95,11 @@ test.describe('with no chat connected', () => {
 
   test.describe('Open Validation Report', () => {
     test.describe("Open a violation's file at its line", () => {
-      test.beforeEach(async ({ page }) => {
+      test('Then the Files app opens .context/story-map.md at line 6', async ({ page }) => {
+        const opened = await catchFilesAppLinks(page)
         await openBoard(page)
         await (await openStoryMapReport(page)).getByRole('button', { name: '.context/story-map.md:6', exact: true }).click()
-      })
-
-      test('Then the files panel shows .context/story-map.md with line 6 marked', async ({ page }) => {
-        const files = page.locator('[data-panel="files"]')
-        await expect(files.getByRole('tab', { name: 'story-map.md' })).toBeVisible()
-        await expect(files.locator('.code-line.is-failing .line-number')).toHaveText('6')
+        await expect.poll(async () => (await opened()).map(url => [url.searchParams.get('file'), url.searchParams.get('line')])).toEqual([['.context/story-map.md', '6']])
       })
     })
   })
@@ -201,6 +226,75 @@ test.describe('with a chat connected', () => {
       test('Then validate is off', async ({ page }) => {
         await expect((await openBillingStoryMap(page)).getByRole('button', { name: 'validate', exact: true })).toBeDisabled()
       })
+    })
+  })
+})
+
+// Accepting needs no chat: the board's Python keeps the acceptance, and the page draws the report it answers.
+test.describe('Accept Report Violation', () => {
+  test('Accept a violation as it is', async ({ page }) => {
+    let opened: Locator
+    await step(page, "Given checkout-flow's story_map report lists verb-noun-format at .context/story-map.md line 6, on the story node-1, saying Name the story with a verb", async () => {
+      await openBoard(page)
+      opened = await openStoryMapReport(page)
+      await expect(opened.locator('.violation-actions').getByRole('button')).toHaveText(['Fix', 'False', 'Accept'])
+    })
+    await step(page, 'When the Person accepts that violation', async () => {
+      await opened.getByRole('button', { name: 'Accept .context/story-map.md:6' }).click()
+    })
+    await step(page, 'Then .context/violations-accepted.json keeps verb-noun-format on node-1 with the message Name the story with a verb', async () => {
+      await expect.poll(() => acceptedInProject().map(entry => [entry.rule, entry.node_id, entry.message])).toEqual([['verb-noun-format', 'node-1', 'Name the story with a verb']])
+    })
+    await step(page, 'And the story_map report lists no rules and says it leaves out 1 accepted violation', async () => {
+      await expect(opened.getByText('No open violations. The fidelity is done.')).toBeVisible()
+      await expect(opened.locator('.report-rule')).toHaveCount(0)
+      await expect(opened.getByText('1 accepted violation left out')).toBeVisible()
+    })
+    await step(page, 'And the story_map tile marks Validate ✓ with no violations', async () => {
+      await expect(storyMapTile(page).getByRole('button', { name: 'violations' })).toHaveCount(0)
+      await expect(page.getByRole('status', { name: "Active ticket's violations" })).toHaveCount(0)
+    })
+  })
+
+  test('Show an accepted violation again once its finding changes', async ({ page }) => {
+    let opened: Locator
+    await step(page, 'Given the Person accepted verb-noun-format on node-1 saying Name the story with a verb', async () => {
+      await openBoard(page)
+      opened = await acceptStoryMapViolation(page)
+    })
+    await step(page, 'When Claude Code validates the story map again and finds verb-noun-format on node-1 saying Name the story with a verb and a noun', () => {
+      writeInto(join(REPORTS, `${REWORDED_REPORT}.md`), '# Graph rule validation\n')
+      writeInto(join(REPORTS, `${REWORDED_REPORT}.json`), JSON.stringify(REWORDED_GRAPH))
+      writeSession(fixtureRoot, { name: 'checkout-flow', title: 'Checkout flow', log: [generatedLine('stories', 'story_map'), `${REWORDED_STAMP} validate Stories story_map graph-rule verb-noun-format .context/story-map.md:6 no-chat`] })
+    })
+    await step(page, 'Then the story_map report lists verb-noun-format with one violation again', async () => {
+      await expect(opened.getByText('Name the story with a verb and a noun')).toBeVisible({ timeout: 10_000 })
+      await expect(opened.getByText('accepted violation left out')).toHaveCount(0)
+    })
+    await step(page, 'And the story_map tile marks Validate as violations', async () => {
+      await expect(storyMapTile(page).getByRole('button', { name: 'violations' })).toBeVisible()
+    })
+  })
+
+  test('Take an acceptance back', async ({ page }) => {
+    let opened: Locator
+    await step(page, 'Given the Person accepted verb-noun-format on node-1 saying Name the story with a verb', async () => {
+      await openBoard(page)
+      opened = await acceptStoryMapViolation(page)
+    })
+    await step(page, 'And the story_map report lists that violation among the accepted ones', async () => {
+      await opened.getByText('1 accepted violation left out').click()
+      await expect(opened.locator('.accepted-violation')).toContainText('Name the story with a verb')
+    })
+    await step(page, 'When the Person takes that acceptance back', async () => {
+      await opened.getByRole('button', { name: 'Take back verb-noun-format .context/story-map.md:6' }).click()
+    })
+    await step(page, 'Then the story_map report lists verb-noun-format with one violation again', async () => {
+      await expect(opened.getByRole('button', { name: 'Accept .context/story-map.md:6' })).toBeVisible()
+      await expect(opened.getByText('accepted violation left out')).toHaveCount(0)
+    })
+    await step(page, 'And .context/violations-accepted.json keeps no acceptance', async () => {
+      await expect.poll(() => acceptedInProject()).toEqual([])
     })
   })
 })

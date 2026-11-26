@@ -3,12 +3,13 @@
 import tempfile
 from pathlib import Path
 
-from expects import contain, expect
+from expects import contain, equal, expect, raise_error
 from mamba import before, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
-from harness.installation.installer import Installer
-import harness.hooks  # noqa: F401 - registers the hook server's installation with the Installer, as the cdd server does
+from harness.installation.install_record import InstallRecord
+from harness.installation.installer import Installer, ServerChannels, ServersNotRegistered
+import harness.hooks  # noqa: F401 - registers the hook installation with the Installer, as the cdd server does
 import harness.mcp.mcp_server  # noqa: F401 - registers the MCP server's installation with the Installer
 
 _REPO = Path(__file__).resolve().parents[2]
@@ -21,3 +22,22 @@ with description("the installer's diagnose-install instructions"):
 
     with it("should say how the install compares with the last one, asked with no arguments"):
         expect(self.text).to(contain("installed"))
+
+
+with description("the installer of a checkout into a project's own IDE folder"):
+    with before.each:
+        # A folder outside the temporary folder, in one that exists, as a project's IDE folder is; making its installer
+        # writes nothing into it.
+        self.folder = Path.home() / ".claude-of-no-such-project"
+        self.installer = Installer.create(ide="Claude", path=self.folder, repo=_REPO)
+
+    with it("should keep the record of what it wrote in that folder, so each folder's install is known by itself"):
+        expect(self.installer.record.path).to(equal(self.folder / InstallRecord.NAME))
+
+    with it("should hold the one lock of that folder, so a second install into it waits"):
+        expect(self.installer.lock.folder).to(equal(self.folder))
+
+
+with description("the server channels of a process where no server installation registered"):
+    with it("should refuse to list them, so an install never writes a project with no MCP entry and no hooks"):
+        expect(lambda: ServerChannels().kinds).to(raise_error(ServersNotRegistered, contain("no server installation is registered")))

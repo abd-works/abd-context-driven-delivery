@@ -10,6 +10,7 @@ there and its example fails.
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 
 from harness.graph.rule_fixture import RuleFixture, SchemaRuleRun
@@ -19,10 +20,6 @@ from cdd_guidance.practices.ddd.ddd import Ddd
 from cdd_guidance.practices.ddd.rules import BY_SLUG
 
 _EXAMPLES = Path(__file__).resolve().parents[1] / "model" / "python" / "_examples"
-
-
-def ddd_rule_by_slug(slug: str):
-    return BY_SLUG[slug]
 
 
 # The bounded-context card that marks the fixture's folder as a domain's.
@@ -63,7 +60,7 @@ class DddExamplePair:
 
     def __init__(self, slug: str, fault_class: str | None = None, *, clean_class: str | None = None) -> None:
         root = _EXAMPLES / slug
-        rule = ddd_rule_by_slug(slug)
+        rule = BY_SLUG[slug]
         self.slug, self.fault_class = slug, fault_class
         self.fault_hits = violations_for_ddd_rule(rule, (root / "faulty" / "faultyAsset.py").read_text(encoding="utf-8"), class_name=fault_class)
         self.clean_hits = violations_for_ddd_rule(rule, (root / "repaired" / "repairedAsset.py").read_text(encoding="utf-8"), class_name=clean_class or fault_class)
@@ -79,3 +76,12 @@ class DddExamplePair:
 def assert_ddd_example_pair(slug: str, fault_class: str | None = None, *, clean_class: str | None = None) -> None:
     """The rule flags the example's faulty asset and passes its repaired one: on the classes named, else anywhere."""
     DddExamplePair(slug, fault_class, clean_class=clean_class).check()
+
+
+def _has_both_sides(slug: str) -> bool:
+    return (_EXAMPLES / slug / "faulty" / "faultyAsset.py").is_file() and (_EXAMPLES / slug / "repaired" / "repairedAsset.py").is_file()
+
+
+# What proves each rule flags its failing asset and passes its repaired one, for the spec every practice shares: a
+# rule has a pair once its example folder holds a faulty and a repaired asset.
+EXAMPLE_PAIRS = {slug: partial(assert_ddd_example_pair, slug) for slug in BY_SLUG if _has_both_sides(slug)}

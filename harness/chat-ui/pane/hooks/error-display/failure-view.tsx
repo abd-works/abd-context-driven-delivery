@@ -20,7 +20,7 @@ export function FailureView($: EngineInterface, elements: ElementTable, failure:
         ) : (
           <Button key="fix-failure" label="Fix" variant="primary" onPress={() => fixFailure($, failure)} />
         )}
-        {GlyphButtonView(elements, 'dismiss-failure', '✕', BRAND.muted, () => dismissFailure($))}
+        {GlyphButtonView(elements, 'dismiss-failure', '✕', BRAND.muted, () => dismissFailure($, failure))}
       </Box>
       <Text key="failure-context" color={BRAND.muted}>{failure.context}</Text>
     </Box>

@@ -59,6 +59,18 @@ class Origin:
         self._repo.git.run("fetch", "origin")
 
 
+class MergeRefusedError(RepoConnectError):
+    """Raised when git refuses to merge one branch into the branch a checkout has checked out, such as when both changed
+    the same lines. The merge is undone before this is raised, so the checkout is as it was. It names both branches and
+    carries git's own words, which say where they disagree."""
+
+    def __init__(self, branch: str, into: str, refusal: str) -> None:
+        super().__init__(f"{branch} does not merge into {into}; the merge was undone and nothing changed. Merge {into} into {branch} where {branch} is checked out, settle what they disagree on there, and try again. git said: {refusal}")
+        self.branch = branch
+        self.into = into
+        self.refusal = refusal
+
+
 class Merges:
     """How one checkout merges a branch into the one it has checked out. Every branch appends to the same session logs,
     so those merge by keeping the lines of both sides instead of stopping the merge on a conflict."""
@@ -76,22 +88,20 @@ class Merges:
 
     def merge(self, ref: str, message: str) -> None:
         """Merge ref into the current branch. A merge left half done blocks every later checkout and commit, so a merge
-        that fails is aborted and the checkout goes back as it was."""
+        that fails is aborted, the checkout goes back as it was, and ``MergeRefusedError`` names the two branches."""
         repo = self._repo
-        self.prepare()
+        self.keep_session_logs_by_union()
         with repo.writing_index:
             try:
                 repo.git.run("merge", ref, *(["-m", message] if message else ["--no-edit"]))
-            except RepoConnectError:
+            except RepoConnectError as refused:
                 repo.git.succeeds("merge", "--abort")
-                raise
+                raise MergeRefusedError(ref, repo.current_branch.name, str(refused)) from refused
 
-    def prepare(self) -> None:
+    def keep_session_logs_by_union(self) -> None:
         """Tell git, in this repository's own attributes file, which no checkout commits, to merge session logs by
         union: each line either side wrote is kept."""
-        repo = self._repo
-        common = Path(repo.git.run("rev-parse", "--git-common-dir"))
-        attributes = (common if common.is_absolute() else repo.root / common) / "info" / "attributes"
+        attributes = self._repo.checkout.facts.common_folder() / "info" / "attributes"
         written = attributes.read_text(encoding="utf-8") if attributes.is_file() else ""
         missing = [line for line in _UNION_MERGED_LOGS if line not in written.splitlines()]
         if not missing:

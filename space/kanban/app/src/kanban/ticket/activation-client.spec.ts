@@ -1,8 +1,11 @@
+import { join } from 'node:path'
+
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { BoardOnProject, ticketOn, type Asked } from 'test-utils/board-page-support'
+import { writeInto } from 'test-utils/fixture-repo'
 
-import { closingHeading } from './activation-client'
+import { closingHeading, losesWork } from './activation-client'
 
 // checkout-flow is the active ticket; billing-report is the one a person activates.
 const ACTIVE = 'checkout-flow'
@@ -121,7 +124,7 @@ describe('Close Active Session', () => {
     async function pressed() {
       board.openWorktree(CHOSEN)
       const { page } = await board.page()
-      await ticketOn(page, CHOSEN).prompts.startClose()
+      await ticketOn(page, CHOSEN).chatPrompts.startClose()
       return page
     }
 
@@ -151,6 +154,68 @@ describe('Close Active Session', () => {
     it('should send nothing', async () => {
       const { asked } = await cancelled()
       expect(asked.filter(request => request.path === `/api/ticket/${ACTIVE}/close`)).toEqual([])
+    })
+  })
+})
+
+// Deleting a worktree or a branch without a commit takes the work nobody committed with it, so the Close dialog warns
+// while those are the choices made, and the toast after the close names the files that went.
+describe('Protect Work When Closing Session', () => {
+  async function closing() {
+    const worktree = board.openWorktree(ACTIVE)
+    writeInto(join(worktree, 'notes.txt'), 'A note nobody committed.\n')
+    const { page } = await board.page()
+    await page.activation.startClosing(ticketOn(page, ACTIVE))
+    return page
+  }
+
+  it('should hold the files in its worktree that nobody committed', async () => {
+    expect((await closing()).store.state.closing?.unsavedWork).toEqual(['notes.txt'])
+  })
+
+  it('should hold the warning that deleting the worktree without a commit loses them', async () => {
+    expect((await closing()).store.state.closing?.warning).toContain("Deleting checkout-flow's worktree or branch without a commit loses the work")
+  })
+
+  it('should not warn while nothing that removes the worktree is chosen', async () => {
+    expect(losesWork((await closing()).store.state.closing!)).toBe(false)
+  })
+
+  it('should warn once deleting the worktree is chosen', async () => {
+    const page = await closing()
+    page.activation.toggleLeaving('delete_worktree')
+    expect(losesWork(page.store.state.closing!)).toBe(true)
+  })
+
+  it('should warn once deleting the branch is chosen', async () => {
+    const page = await closing()
+    page.activation.toggleLeaving('delete_branch')
+    expect(losesWork(page.store.state.closing!)).toBe(true)
+  })
+
+  it('should not warn once committing is chosen as well', async () => {
+    const page = await closing()
+    page.activation.toggleLeaving('delete_worktree')
+    page.activation.toggleLeaving('commit')
+    expect(losesWork(page.store.state.closing!)).toBe(false)
+  })
+
+  describe('that is closed deleting only its worktree', () => {
+    it('should name the files whose work went with the worktree', async () => {
+      const page = await closing()
+      page.activation.toggleLeaving('delete_worktree')
+      await page.activation.confirm()
+      expect(page.store.state.toasts.at(-1)?.text).toBe('Checkout flow: worktree deleted · uncommitted work lost in notes.txt · Session Checkout flow closed')
+    })
+  })
+
+  describe('with a worktree that holds nothing uncommitted', () => {
+    it('should not warn even with deleting the worktree chosen', async () => {
+      board.openWorktree(ACTIVE)
+      const { page } = await board.page()
+      await page.activation.startClosing(ticketOn(page, ACTIVE))
+      page.activation.toggleLeaving('delete_worktree')
+      expect(losesWork(page.store.state.closing!)).toBe(false)
     })
   })
 })

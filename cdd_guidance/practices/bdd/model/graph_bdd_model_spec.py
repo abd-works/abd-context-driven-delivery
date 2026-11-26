@@ -26,6 +26,7 @@ export class Cart {
 
 _CART_SPEC = """\
 import { beforeEach, describe, it } from 'vitest'
+import { Cart } from './cart'
 
 describe('a cart', () => {
   it('should start empty', () => {})
@@ -65,7 +66,7 @@ with description("a saved graph of a spec and the code it tests"):
         (self.folder / "src" / ".context" / "cart-model.md").write_text(_CART_MODEL, encoding="utf-8")
         graph = Graph()
         graph.load_files(str(self.folder), ["bdd", "clean_engineering"], ["src"])
-        self.clean = graph.practice("clean_engineering")
+        self.clean = graph.practices.named("clean_engineering")
         self.saved = SavedGraph.from_graph(graph).text
 
     with after.all:
@@ -84,7 +85,7 @@ with description("a saved graph of a spec and the code it tests"):
 
     with context("that is rendered as a bdd realization"):
         with before.all:
-            self.rendered = Bdd(fidelity="realization").render("markdown", self.saved, source="graph")["content"]
+            self.rendered = Bdd(fidelity="realization").render("markdown", self.saved, source="graph").content
 
         with it("should draw the setup's call, then the interaction the model gives it, then what each returns"):
             expect(self.rendered).to(

@@ -12,6 +12,8 @@ from harness.installation.json_file import JsonFile
 from harness.mcp.cdd_home import CddHome
 
 SESSIONS_FOLDER = ".sessions"
+# The folder of the sessions folder that keeps the closed sessions.
+COMPLETE_FOLDER = "_complete"
 OPEN_SESSIONS_NAME = "open-sessions.json"
 E2E_RESULTS_FOLDER = "e2e-test-results"
 # A chat id the server could not name is not a chat of its own.
@@ -25,21 +27,12 @@ _WRITING = threading.Lock()
 class WorkState:
     """The open session of one chat in the repository's own folder, or of one checkout folder for a call that names no
     chat; a chat in a ticket's own worktree works on that ticket whatever is kept here. Nothing it keeps is written under
-    the checkout; ``sessions_folder`` is only where the checkout's sessions live."""
+    the checkout."""
 
     def __init__(self, repo_root: Path | str, chat: str = "", home: Path | str | None = None) -> None:
         self.root = Path(repo_root).resolve()
         self.chat = "" if (chat or "").strip() in _NO_CHAT else chat.strip()
         self._file = JsonFile(Path(home).resolve() / OPEN_SESSIONS_NAME if home else CddHome().folder / OPEN_SESSIONS_NAME)
-
-    @property
-    def sessions_folder(self) -> Path:
-        return self.root / SESSIONS_FOLDER
-
-    @property
-    def path(self) -> Path:
-        """The file under ``~/.cdd`` that keeps every chat's open session."""
-        return self._file.path
 
     @property
     def key(self) -> str:

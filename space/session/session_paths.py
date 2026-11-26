@@ -48,11 +48,24 @@ class SessionPaths:
                 return candidate.parent / ".context"
         return folder / ".context"
 
+    def sketch(self, module: str = "") -> Path:
+        """The session's sketch, in the .context folder of its root or of a module under it: a session is named for the
+        subject it works on, so its sketch is too, and one file holds every practice's section."""
+        return self.context_folder(module) / self._sketch_name
+
+    def is_sketch(self, file: Path) -> bool:
+        """Whether file is the session's sketch, of its root or of a module under it."""
+        return file.name == self._sketch_name and file.parent.name == ".context"
+
+    @property
+    def _sketch_name(self) -> str:
+        return f"{self._session.name or 'main'}-sketch.md"
+
     def path_named(self, named: str | Path) -> Path:
         """named as a path in this session's project, the way its agent writes one: from the project's root, or
         absolute."""
         path = Path(named)
-        return path.resolve() if path.is_absolute() else (self._session.repo_path / path).resolve()
+        return path.resolve() if path.is_absolute() else (self._session.checkout.root / path).resolve()
 
     def document_named(self, content: str = "", paths: list[str] | str | None = None) -> str:
         """The document a call names: content, or the files at paths, read from this session's project."""
@@ -68,5 +81,5 @@ class SessionPaths:
     def in_project(self, paths: list[str]) -> list[str]:
         """paths, named from the project, as the graph view's graph names its files, which it reads from the project's
         top; any outside the project left out."""
-        project = self._session.repo_path.resolve()
+        project = self._session.checkout.root.resolve()
         return [found.relative_to(project).as_posix() for found in map(self.path_named, paths) if found.is_relative_to(project)]

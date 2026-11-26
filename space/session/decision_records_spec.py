@@ -16,23 +16,24 @@ for _cat in ("tools", "cdd_guidance/practices"):
 from expects import be_a, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentInstructions, AgentToolSet
+import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
+from harness.agent_tools.agent_tools import ToolsetReference, AgentInstructions, AgentToolSet
 from space.session.session import Session, SessionNotFoundError
 from space.session.sessions import Sessions
 
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 
 def _open_session(root: Path) -> Path:
     work = root / "work"
     work.mkdir(parents=True, exist_ok=True)
-    Sessions(root).switch("decisions", work)
+    Sessions(root).switch("decisions", work, create=True)
     return work
 
 
 def _expanded(action_name: str) -> str:
     """Expand the instructions' body and return all prose joined."""
-    session = AgentToolSet.instantiate(Session)
+    session = ToolsetReference.of(Session).made()
     body = AgentInstructions.for_callable(getattr(Session, action_name), session)
     return "\n".join(body.prompt)
 
@@ -142,7 +143,7 @@ with description("decision records asked for a board ticket's session"):
             json.dumps({"name": "checkout-flow", "workpath": str(self.ticket_work)}), encoding="utf-8"
         )
         self.open_work = _open_session(self.root)
-        self.tool = AgentToolSet.instantiate(Session).tools["write_cdr"]
+        self.tool = ToolsetReference.of(Session).made().tools["write_cdr"]
 
     with after.each:
         OPEN_PROJECTS.close_all()

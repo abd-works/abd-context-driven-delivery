@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from harness.git.checkout import Checkout
+
 # The name Claude Code's own executable runs under, without its extension.
 CLAUDE_EXECUTABLE = "claude"
 # How far up the process tree the connect script looks for the Claude Code process it was started by: Claude Code may
@@ -49,6 +51,15 @@ def is_desktop_spare(folder: Path) -> bool:
     spares = (claude_config_folder() / "spares").resolve()
     resolved = folder.resolve()
     return resolved == spares or spares in resolved.parents
+
+
+class ClaudeSessionFileUnreadable(ValueError):
+    """The session file Claude Code keeps for a chat process holds text that is not JSON. Read as no session, the chat's
+    tool calls would work in the folder its headers named when it connected, which may not be the one it works in now."""
+
+    def __init__(self, session_file: Path, error: ValueError) -> None:
+        super().__init__(f"Claude Code's session file {session_file} is not JSON: {error}")
+        self.session_file = session_file
 
 
 class ClaudeChatProcess:
@@ -92,8 +103,7 @@ class ClaudeChatProcess:
     @property
     def session_file(self) -> Path:
         """The file Claude Code keeps for this process while it runs."""
-        config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
-        return config / "sessions" / f"{self.pid}.json"
+        return claude_config_folder() / "sessions" / f"{self.pid}.json"
 
     @property
     def working_folder(self) -> Path | None:
@@ -103,8 +113,7 @@ class ClaudeChatProcess:
         folder = Path(recorded) if recorded else None
         if folder is None or not folder.is_dir() or is_desktop_spare(folder):
             return None
-        resolved = folder.resolve()
-        return next((above for above in (resolved, *resolved.parents) if (above / ".git").exists()), resolved)
+        return Checkout.holding(folder).folder
 
     @property
     def session_id(self) -> str:
@@ -112,13 +121,17 @@ class ClaudeChatProcess:
         return self._recorded("sessionId")
 
     def _recorded(self, field: str) -> str:
-        """One field of the session file; empty when the file is gone, unreadable, or does not hold it."""
-        if not self.session_file.is_file():
+        """One field of the session file; empty when the file is gone or does not hold it. A file that is not JSON
+        raises *ClaudeSessionFileUnreadable*."""
+        try:
+            text = self.session_file.read_text(encoding="utf-8")
+        except OSError:
             return ""
         try:
-            value = json.loads(self.session_file.read_text(encoding="utf-8")).get(field)
-        except (OSError, ValueError):
-            return ""
+            recorded = json.loads(text)
+        except ValueError as unreadable:
+            raise ClaudeSessionFileUnreadable(self.session_file, unreadable) from unreadable
+        value = recorded.get(field) if isinstance(recorded, dict) else None
         return value if isinstance(value, str) else ""
 
 

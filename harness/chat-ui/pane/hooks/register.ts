@@ -1,11 +1,12 @@
 import type { EngineInterface, Register } from 'claude-code'
 
 import { keepInTouch } from './chat-bar/check-in-client'
-import { isCheckInDue, turnCompleted, turnStarted } from './board-chat/chat-turns'
+import { chatStarted, isCheckInDue, turnCompleted, turnStarted } from './board-chat/chat-turns'
 import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
 import { currentChatBar, readChatBarUntilAnswered, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
+import { changedArtifactOf, checkChangedArtifact } from './chat-bar/changed-artifact-client'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { currentFormatChips } from './chat-bar/format-choices-client'
@@ -21,6 +22,7 @@ import {
   currentInstall,
   currentServerHealth,
   hideDetails,
+  installWhenMissing,
   openDetails,
   reconnect,
   refreshHealth,
@@ -66,6 +68,8 @@ async function readActive($: EngineInterface): Promise<void> {
 
 // The hooks below hand the event on first and then call one of these without waiting, so a failure shows on the failure line.
 async function readBoardAfterStart($: EngineInterface): Promise<void> {
+  // The install runs beside the board's first read: a chat with no skills or commands of CDD's may have no cdd server either.
+  void installWhenMissing($).catch(shownAsFailure($, 'CDD was not installed into the folder the chat works in', 'Starting the chat, looking for .claude/skills and .claude/commands'))
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Starting the chat, reading its name'))
   await readActive($).catch(shownAsFailure($, 'The board did not load', 'Starting the chat, calling board.show'))
   readChatBarUntilAnswered($, () => readActive($).catch(shownAsFailure($, 'The board did not load', 'Opening the chat while cdd connects, calling board.show')))
@@ -89,12 +93,13 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'board', description: 'Open the CDD session board, starting it when it is not running' })
     await clearBusy($)
+    await chatStarted($)
     const chat = await $.session.id()
     // The cdd server can still be connecting at session start, or restarting for a repin; a check-in that keeps failing
     // shows on the bar.
-    $.clock.every(CHECK_IN_MILLISECONDS, () => void keepInTouch($, chat, isCheckInDue()))
+    $.clock.every(CHECK_IN_MILLISECONDS, () => void isCheckInDue($).then(isDue => keepInTouch($, chat, isDue)))
     // The stages, practices and formats selected: the session's guidance selection, followed with one waiting read.
-    void followGuidance($, async () => (await currentChatBar($)).sessionFile, async () => (await currentChatBar($)).stage)
+    void followGuidance($, async () => (await currentChatBar($)).sessionFile)
     // The chat opens first and the bar fills in after it, so a slow or still-connecting cdd server never holds the chat up.
     const started = await next(e)
     void readBoardAfterStart($)
@@ -104,7 +109,7 @@ export const register: Register = on => {
   on('command.run', { command: 'board' }, async $ => ({ text: await openedBoard($) }))
 
   on('turn.start', async ($, e, next) => {
-    if (!e.agentId) turnStarted()
+    if (!e.agentId) await turnStarted($)
     return next(e)
   })
 
@@ -117,12 +122,16 @@ export const register: Register = on => {
 
   // A cdd tool call names this chat for session.log. The agent changes the board through cdd's tools without telling
   // the mod, so a cdd tool call that finishes reads it again.
+  // An edit the agent made is checked against the graph rules without holding the agent up; the bar reads the board again
+  // once the check is done.
   on('tool.call', async ($, e, next) => {
     const ran = await next(await withChatNamed($, e))
     if (CDD_TOOL.test(e.tool)) {
       await refreshChatBar($)
       await showStatus($)
     }
+    const changed = changedArtifactOf(e, ran)
+    if (changed) void checkChangedArtifact($, await currentChatBar($), changed)
     return ran
   })
 
@@ -178,13 +187,14 @@ export const register: Register = on => {
           return projectPageUrl($, url, query)
         }),
     }
-    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }
     const elements = $.ui.resolve(e)
-    const version = await currentCddVersion($)
     const versionActions = { askToUpdate: () => askToUpdate($), cancelUpdate: () => cancelUpdate($), updateToLatest: () => updateToLatest($) }
-    const repo = await currentRepo($)
     const pushActions = { pushWork: () => pushWork($), ask: () => askToPush($), cancel: () => cancelPush($), pushToMain: () => pushToMain($) }
+    // Every read of the draw sits inside the guard: a read that throws outside it skips the hook, leaving no bar and no reason.
     try {
+    const band = { health: await currentServerHealth($), view: await currentHealthView($), install: await currentInstall($), opening: await currentAppOpening($), actions }
+    const version = await currentCddVersion($)
+    const repo = await currentRepo($)
     const chatBar = await currentChatBar($)
     return ChatBarView($, elements, {
       chatBar,

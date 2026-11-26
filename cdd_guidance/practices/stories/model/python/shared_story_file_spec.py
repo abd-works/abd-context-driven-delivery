@@ -8,8 +8,7 @@ from expects import contain, equal, expect
 from mamba import after, before, description, it
 
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
-from cdd_guidance.practices.stories.model.python.nodes import PythonStory
-from cdd_guidance.practices.stories.model.python.shared_story_file import SharedStoryFile
+from cdd_guidance.practices.stories.model.python.python_story_map import PythonStoryMap
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 
 _EXAMPLES = '''\
@@ -81,7 +80,7 @@ with description("a Python shared story file"):
     with before.each:
         self.folder = _project()
         self.root = Path(self.folder.name)
-        story = SharedStoryFile(_SHARED, [self.root]).stories(PythonStory)[0]
+        story = PythonStoryMap().story_file("edit-ticket-text.story.shared.py", _SHARED, self.root).stories[0]
         self.scenario = story.scenarios[0]
 
     with after.each:
@@ -117,11 +116,12 @@ with description("a Python shared story file"):
             root = Path(folder.name)
             practice = PRACTICE_CATALOGUE.create("stories", fidelity="scenarios")
             paths = [str(root / "shop" / "edit-ticket-text.story.shared.py"), str(root / "story-map.md")]
-            self.markdown = str(practice.fidelities.current.render_files("markdown", paths, "python")["content"])
+            # The render answers a scenarios file for each story; the examples read them one after another.
+            self.markdown = "\n".join(practice.fidelities.current.render_files("markdown", paths, "python").content.values())
             folder.cleanup()
 
         with it("should write the scenario's steps"):
             expect(self.markdown).to(contain("*When* the Person opens the board"))
 
-        with it("should write the examples its fixtures give"):
-            expect(self.markdown).to(contain("| CHECKOUT_FLOW | SessionSeed | checkout-flow | Checkout flow |"))
+        with it("should write the examples its fixtures give under the kind of fixture they are"):
+            expect(self.markdown).to(contain("#### SessionSeed\n\n| example | name | title |\n| --- | --- | --- |\n| CHECKOUT_FLOW | checkout-flow | Checkout flow |"))

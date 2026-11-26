@@ -15,6 +15,11 @@ from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
 from cdd_guidance.practices.ux.ux import Ux  # noqa: E402
 
 
+def is_written(fidelity) -> bool:
+    """Whether the fidelity holds an Overview or Guidance of its own; one with neither is still to be written."""
+    return bool(fidelity.overview or fidelity.guidance)
+
+
 with description("a fidelity's declared outputs") as self:
     with context("with the story map loaded from its practice"):
         with before.each:
@@ -24,26 +29,38 @@ with description("a fidelity's declared outputs") as self:
             expect(self.outputs).to(equal({
                 "markdown": ".context/story-map.md", "drawio": ".context/story-map.drawio",
                 "whiteboard": ".context/story-map.whiteboard",
-                "thin_slice": [".context/thin-slice.md", ".context/thin-slice.drawio"],
+                "thin_slice": [".context/thin-slice.md", ".context/thin-slice.drawio", ".context/thin-slice.whiteboard"],
             }))
 
     with context("with a fidelity that writes several files for one format"):
         with before.each:
             self.outputs = Stories().fidelities["acceptance_tests"].outputs
 
-        with it("should list every file pattern for that format"):
-            expect(len(self.outputs["python"])).to(equal(3))
+        with it("should list the sub-epic's three tier files and a story's one runnable file first"):
+            expect([path.rsplit("/", 1)[-1] for path in self.outputs["python"][:4]]).to(equal([
+                "{sub_epic_slug}.story.shared.py", "{sub_epic_slug}.story.domain.spec.py",
+                "{sub_epic_slug}.story.server.spec.py", "{story_snake}_story.test.py",
+            ]))
+
+        with it("should list the same four files for an epic that holds its stories directly, then the examples files and the step library"):
+            expect(self.outputs["python"][4:]).to(equal([
+                "story_tests/{epic}/{epic_slug}.story.shared.py", "story_tests/{epic}/{epic_slug}.story.domain.spec.py",
+                "story_tests/{epic}/{epic_slug}.story.server.spec.py", "story_tests/{epic}/{story}/{story_snake}_story.test.py",
+                "{module}/{concept}_examples.py", "story_tests/**/story_test.py",
+            ]))
 
     with context("with every practice loaded"):
         with before.each:
             self.practices = [Stories(), Ddd(), Ux(), CleanEngineering(), Bdd()]
 
-        with it("should leave no fidelity without declared outputs"):
+        # A fidelity with no Overview and no Guidance of its own, such as Stories' and BDD's hardening, is held empty until
+        # the person writes it, so it declares no outputs yet.
+        with it("should leave no written fidelity without declared outputs"):
             missing = [
                 f"{type(practice).__name__}.{name}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
-                if not fidelity.outputs
+                if is_written(fidelity) and not fidelity.outputs
             ]
             expect(missing).to(be_empty)
 
@@ -56,22 +73,53 @@ with description("a fidelity's declared outputs") as self:
             ]
             expect(rooted).to(be_empty)
 
-        with it("should keep every markdown and drawio output in a .context folder, or a scenario file in story_tests"):
+        with it("should keep every markdown, drawio and whiteboard output in a .context folder or a scenario file in story_tests"):
             outside = [
                 f"{type(practice).__name__}.{name}.{label}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
-                for label, path in fidelity.outputs.items()
-                if label in ("markdown", "drawio", "realization") and ".context/" not in path and not path.startswith("story_tests/")
+                for label, paths in fidelity.outputs.items()
+                for path in ([paths] if isinstance(paths, str) else paths)
+                if label in ("markdown", "drawio", "whiteboard", "realization") and ".context/" not in path and not path.startswith("story_tests/")
             ]
             expect(outside).to(be_empty)
 
-        with it("should give every specification and implementation fidelity a code format"):
+        # The person, 2026-11-20: "yes diagram is both drawio and whiteboard".
+        with it("should write a whiteboard beside the drawing in every fidelity that writes a drawing, so the diagram chip chooses both"):
+            alone = [
+                f"{type(practice).__name__}.{name}"
+                for practice in self.practices
+                for name, fidelity in practice.fidelities.entries.items()
+                if ("drawio" in fidelity.outputs) != ("whiteboard" in fidelity.outputs)
+            ]
+            expect(alone).to(be_empty)
+
+        # r3-gizmo-05: UX front_end_code's default format was html, which it does not write, and neither format it
+        # writes had an adapter, so a person was offered formats nothing renders to or from.
+        with it("should make every fidelity's default format one of its outputs"):
+            strays = [
+                f"{type(practice).__name__}.{name}: {fidelity.default_format}"
+                for practice in self.practices
+                for name, fidelity in practice.fidelities.entries.items()
+                if fidelity.default_format and fidelity.default_format.name not in fidelity.outputs
+            ]
+            expect(strays).to(be_empty)
+
+        with it("should give each format a fidelity writes an adapter that reads and writes it"):
+            lacking = [
+                f"{type(practice).__name__}.{name}: {gap}"
+                for practice in self.practices
+                for name, fidelity in practice.fidelities.entries.items()
+                for gap in practice.formats.lacking(fidelity.declared)
+            ]
+            expect(lacking).to(be_empty)
+
+        with it("should give every written specification and implementation fidelity a code format"):
             without_code = [
                 f"{type(practice).__name__}.{name}"
                 for practice in self.practices
                 for name, fidelity in practice.fidelities.entries.items()
-                if fidelity.stage != "discovery"
+                if fidelity.stage != "discovery" and is_written(fidelity)
                 and not set(fidelity.outputs) & {"python", "typescript", "html"}
             ]
             expect(without_code).to(be_empty)
@@ -82,6 +130,10 @@ with description("a fidelity's declared outputs") as self:
 
         with it("should write mockups as html beside the front end's code"):
             expect(self.ux.fidelities["mockup"].outputs["html"]).to(equal("{epic}/{user_goal}.html"))
+
+        with it("should draw the mockup's drawing and its board beside each other in the epic's .context"):
+            outputs = self.ux.fidelities["mockup"].outputs
+            expect((outputs["drawio"], outputs["whiteboard"])).to(equal(("{epic}/.context/{user_goal}.drawio", "{epic}/.context/{user_goal}.whiteboard")))
 
         with it("should also offer the mockup as a Claude Design canvas, each version's canvas.json in its root"):
             expect(self.ux.fidelities["mockup"].outputs["claude_design"]).to(equal("design-canvas/{version}/project/canvas.json"))

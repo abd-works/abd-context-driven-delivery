@@ -4,7 +4,7 @@ from __future__ import annotations
 from harness.graph.violation import Violation
 
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
-    DrawioPage,
+    ClassDiagramPage,
     Segment,
     share_inheritance_trunk,
 )
@@ -22,7 +22,7 @@ X_AXIS, Y_AXIS = 0, 1
 class EdgesDoNotOverlapEdgesScanner(DrawioScanner):
     RULE = "edges-do-not-overlap-edges"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         """Each pair of edges that run on top of each other, except subclasses joined into one shared line to their base."""
         routes = [(edge, page.describe(edge), page.segments(edge)[0]) for edge in page.edges]
         violations = []

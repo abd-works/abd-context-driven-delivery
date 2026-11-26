@@ -4,12 +4,13 @@ and the fields that hold a path in the workspace. A language adapter types the d
 sends an object's data by them (`data_of`)."""
 from __future__ import annotations
 
+import dataclasses
 import functools
 import inspect
 from enum import Enum
 from pathlib import Path
 from collections.abc import Mapping, Sequence
-from typing import Any, Generic, TypeAlias, TypeVar, Union
+from typing import Any, Generic, TypeAlias, TypeVar, Union, get_type_hints
 
 from harness.agent_tools.parameter_schema import is_built_in
 from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation
@@ -30,7 +31,6 @@ class LanguageAdapter(Annotation):
     """
 
     flag = "_language_adapters"
-    file_views_flag = "_language_adapter_file_views"
     copied = False
 
     def __new__(cls: type[LanguageAdapter], *, language: str, shares_file_views: bool = False) -> LanguageAdapter:
@@ -38,13 +38,15 @@ class LanguageAdapter(Annotation):
 
     def __init__(self, *, language: str, shares_file_views: bool = False) -> None:
         self.language = language
+        self.languages: tuple[str, ...] = (language,)
         self.shares_file_views = shares_file_views
 
     def annotate(self, toolset: type) -> type:
-        setattr(toolset, self.flag, (*getattr(toolset, self.flag, ()), self.language))
-        if self.shares_file_views:
-            setattr(toolset, self.file_views_flag, True)
-        return toolset
+        """Record itself on toolset, after the languages of any adapter the class already carries."""
+        earlier = LanguageAdapter.recorded_on(toolset)
+        if earlier is not None:
+            self.languages = (*earlier.languages, self.language)
+        return super().annotate(toolset)
 
 
 language_adapter = LanguageAdapter
@@ -95,7 +97,6 @@ class DataField(Annotation):
     """
 
     flag = "_data_field"
-    reference_flag = "_data_field_reference"
     copied = False
 
     def __new__(
@@ -109,12 +110,36 @@ class DataField(Annotation):
         return annotation
 
     def annotate(self, getter: Annotatable) -> Annotatable:
-        setattr(getter, self.flag, self.key or getter.__name__)
-        setattr(getter, self.reference_flag, self.reference)
-        return getter
+        """Record itself on getter, sent by the key it names, else by the getter's own name."""
+        self.key = self.key or getter.__name__
+        return super().annotate(getter)
 
 
 data_field = DataField
+
+
+class DataFields(Annotation):
+    """Annotate a dataclass whose fields are all its data, as `@data_field` marks each property of any other class: a
+    record such as a board element, whose fields are what it is, so naming each again as a property would only copy
+    it. A subclass's own fields are its data too, and a property it annotates `@data_field` joins them."""
+
+    flag = "_data_fields"
+    copied = False
+
+
+data_fields = DataFields
+
+
+def _field_reader(name: str, hint: Any) -> property:
+    """A property reading the dataclass field name, typed hint, so a dataclass field is read and typed as an annotated
+    property is."""
+
+    def read(instance: Any) -> Any:
+        return getattr(instance, name)
+
+    read.__name__ = name
+    read.__annotations__ = {"return": hint}
+    return property(DataField(read))
 
 
 class DataClass(Generic[Described]):
@@ -145,13 +170,24 @@ class DataClass(Generic[Described]):
     @functools.cached_property
     def fields(self) -> dict[str, property]:
         """The properties the class annotates as its data, by the name each takes in the data; a base class's come first.
-        A subclass that overrides an annotated property, such as a card's title, is read through its own."""
+        A subclass that overrides an annotated property, such as a card's title, is read through its own. A dataclass
+        annotated `@data_fields` sends its fields first, each typed as the dataclass declares it."""
         attributes: dict[str, str] = {}
         for klass in reversed(self.data_class.__mro__):
             for attribute, member in vars(klass).items():
                 if isinstance(member, property) and DataField.annotates(member.fget):
-                    attributes[getattr(member.fget, DataField.flag)] = attribute
-        return {key: inspect.getattr_static(self.data_class, attribute) for key, attribute in attributes.items()}
+                    attributes[DataField.recorded_on(member.fget).key] = attribute
+        annotated = {key: inspect.getattr_static(self.data_class, attribute) for key, attribute in attributes.items()}
+        return {**self._dataclass_fields, **annotated}
+
+    @property
+    def _dataclass_fields(self) -> dict[str, property]:
+        """The fields of a dataclass annotated `@data_fields`, each read through a property typed as the field is; none
+        for any other class. A field whose name starts with an underscore is the class's own."""
+        if not (isinstance(self.data_class, type) and DataFields.annotates(self.data_class) and dataclasses.is_dataclass(self.data_class)):
+            return {}
+        hints = get_type_hints(self.data_class, include_extras=True)
+        return {item.name: _field_reader(item.name, hints[item.name]) for item in dataclasses.fields(self.data_class) if not item.name.startswith("_")}
 
     @property
     def identity(self) -> tuple[str, ...]:
@@ -161,12 +197,14 @@ class DataClass(Generic[Described]):
     @property
     def languages(self) -> tuple[str, ...]:
         """The languages the class's language adapters are written in."""
-        return tuple(getattr(self.data_class, LanguageAdapter.flag, ()))
+        adapter = LanguageAdapter.recorded_on(self.data_class)
+        return adapter.languages if adapter is not None else ()
 
     @property
     def shares_file_views(self) -> bool:
         """Whether the shared file views read files through this class's generated client."""
-        return bool(vars(self.data_class).get(LanguageAdapter.file_views_flag, False))
+        adapter = vars(self.data_class).get(LanguageAdapter.flag)
+        return adapter is not None and adapter.shares_file_views
 
     def edited_by(self, operation: Annotatable) -> tuple[str, ...]:
         """The fields of this class's data that operation's `@edits` annotation names, or none."""
@@ -174,7 +212,8 @@ class DataClass(Generic[Described]):
 
     def sends_by_identity(self, field: property) -> bool:
         """Whether field sends the object it holds by that object's identity alone."""
-        return bool(getattr(field.fget, DataField.reference_flag, False))
+        recorded = DataField.recorded_on(field.fget)
+        return recorded is not None and recorded.reference
 
     @functools.cached_property
     def _sent(self) -> tuple[tuple[str, Any, bool], ...]:

@@ -129,11 +129,11 @@ UxMap
  // for that layout's areas and appends the real Regions itself
   ----
  UxMap formats                        // each a UxMap subclass
-      parse content
+      parse text file
        -> UxMap
-      render ux_map
-      from_workspace root
-       -> parse the format's file in root
+      render ux_map written
+      read_file path project
+       -> parse the file's text
   ----
  DrawioUxMap : UxMap
       // render via drawio-ux CLI → Detailed IA + Site Map
@@ -146,7 +146,7 @@ UxMap
  JsonUxMap : UxMap
   ----
  ClaudeDesignUxMap : UxMap
-      // screen boards on the canvas; never parsed back
+      // a prototype page per screen and canvas.json placing them; parse joins the pages back into one map
   ----
  Ux
       fidelity

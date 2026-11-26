@@ -91,12 +91,11 @@ test.describe('with no chat connected', () => {
         await details(page).getByRole('button', { name: 'Actions for Discovery' }).click()
       })
 
-      test('Then the bar shows a diagram chip, a markdown chip and a thin_slice chip', async ({ page }) => {
+      test('Then the bar shows a diagram chip and a markdown chip', async ({ page }) => {
         const bar = details(page).locator('.expansion').first()
-        await expect(bar.locator('.format-icon')).toHaveCount(3)
+        await expect(bar.locator('.format-icon')).toHaveCount(2)
         await expect(chip(bar, 'diagram')).toBeVisible()
         await expect(chip(bar, 'markdown')).toBeVisible()
-        await expect(chip(bar, 'thin_slice')).toBeVisible()
       })
 
       test('And the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected', async ({ page }) => {
@@ -106,6 +105,9 @@ test.describe('with no chat connected', () => {
       })
     })
 
+  })
+
+  test.describe('Run Chosen Formats', () => {
     test.describe('Keep Run off with no chat', () => {
       test.beforeEach(async ({ page }) => {
         await openBoard(page)
@@ -140,7 +142,8 @@ test.describe('with a chat connected', () => {
   }
 
   test.describe('Choose Action And Formats', () => {
-    test.describe('Keep Run off with no format picked', () => {
+    // Exploratory testing, widget-13: a fidelity keeps at least one format chosen, so unpicking its last chip is refused.
+    test.describe('Keep the last format picked', () => {
       test.beforeEach(async ({ page }) => {
         writeInto(DECLARED_STORY_MAP, '# Check Out Order\n')
         await openWithChat(page)
@@ -148,15 +151,18 @@ test.describe('with a chat connected', () => {
         await turnOffActiveSessionOnly(page)
       })
 
-      test('Then Run is off', async ({ page }) => {
+      test('Then a toast says markdown is the only format chosen and the chip stays picked', async ({ page }) => {
         const bar = await openStoryMapTile(page)
         await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'true')
         await chip(bar, 'markdown').click()
-        await expect(bar.locator('[aria-pressed="true"]')).toHaveCount(0)
-        await expect(runOf(bar)).toBeDisabled()
+        await expect(toast(page, 'markdown is the only format chosen for story_map').first()).toBeVisible()
+        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'true')
       })
     })
 
+  })
+
+  test.describe('Run Chosen Formats', () => {
     test.describe('Keep Run off on a render with nothing to render', () => {
       test.beforeEach(async ({ page }) => {
         await openWithChat(page)
@@ -209,18 +215,19 @@ test.describe('with a chat connected', () => {
         await openWithChat(page)
         const bar = await openStoryMapTile(page)
         await bar.getByRole('combobox', { name: 'Action' }).selectOption('render')
-        // The markdown the map is already in stays picked until the Person unpicks it; each press waits for the session's
-        // answer, so Run sends the formats it chose.
+        // The markdown the map is already in stays picked until the Person unpicks it, and a fidelity keeps at least one
+        // format chosen (widget-13), so the diagram is picked before markdown is unpicked; each press waits for the
+        // session's answer, so Run sends the formats it chose.
         await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'true')
-        await chip(bar, 'markdown').click()
-        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'false')
         await chip(bar, 'diagram').click()
         await expect(chip(bar, 'diagram')).toHaveAttribute('aria-pressed', 'true')
+        await chip(bar, 'markdown').click()
+        await expect(chip(bar, 'markdown')).toHaveAttribute('aria-pressed', 'false')
         await runOf(bar).click()
       })
 
-      test('Then the chat receives the command /actions-render stories-story-map format=drawio', async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio')
+      test('Then the chat receives the command /actions-render stories-story-map format=drawio,whiteboard', async () => {
+        await expect.poll(() => receivedBy(chat)).toContain('/actions-render stories-story-map session=.sessions/billing-report/session.json format=drawio,whiteboard')
       })
     })
 
@@ -255,7 +262,7 @@ test.describe('with a chat connected', () => {
 
       // Each command also names the ticket's session.json, because a command runs in whichever chat it is sent to.
       test('Then the chat receives the command /actions-sketch stories-story-map', async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('/actions-sketch stories-story-map session=.sessions/billing-report/session.json')
+        await expect.poll(() => receivedBy(chat)).toContain('/actions-sketch stories-story-map session=.sessions/billing-report/session.json format=markdown')
       })
 
       test.describe('the Person runs iterate on story_map', () => {
@@ -264,7 +271,7 @@ test.describe('with a chat connected', () => {
         })
 
         test('Then the chat receives the command /actions-iterate stories-story-map', async () => {
-          await expect.poll(() => receivedBy(chat)).toContain('/actions-iterate stories-story-map session=.sessions/billing-report/session.json')
+          await expect.poll(() => receivedBy(chat)).toContain('/actions-iterate stories-story-map session=.sessions/billing-report/session.json format=markdown')
         })
 
         test.describe('the Person runs document on story_map', () => {
@@ -273,7 +280,7 @@ test.describe('with a chat connected', () => {
           })
 
           test('Then the chat receives the command /actions-document stories-story-map', async () => {
-            await expect.poll(() => receivedBy(chat)).toContain('/actions-document stories-story-map session=.sessions/billing-report/session.json')
+            await expect.poll(() => receivedBy(chat)).toContain('/actions-document stories-story-map session=.sessions/billing-report/session.json format=markdown')
           })
         })
       })
@@ -312,7 +319,7 @@ test.describe('with a chat connected', () => {
 
         // The toast names the chat and the whole command, the session it runs on included.
         test('Then a toast says Sent to the chat: /actions-sketch stories-story-map', async ({ page }) => {
-          await expect(toast(page, 'Sent to Generate chat: /actions-sketch stories-story-map session=.sessions/billing-report/session.json')).toBeVisible()
+          await expect(toast(page, 'Sent to Generate chat: /actions-sketch stories-story-map session=.sessions/billing-report/session.json format=markdown')).toBeVisible()
         })
       })
     })

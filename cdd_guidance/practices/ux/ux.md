@@ -6,7 +6,7 @@ UX maps how users see and act on the product: screens, regions, controls, and th
 
 **Canonical model.** Reuse `UxMap` → `Screen` → `Region` → `Control` → `Interaction`, plus `Transition`, `ContentType`, and `NavComponent` on the map. Optional `UxContext` holds notes and invariants that are not visible on screens. Do not invent a second page or control model in freehand HTML.
 
-**Primary path.** Start from grill and sketch. Draw information architecture in drawio, deepen to html mockups, then ship real frontend at **front_end_code**. Markdown is optional context (thinking, invariants, interaction notes), not the main artifact. Channels are drawio, html, markdown, json, and claude_design — peers at the same fidelity; `transform` moves sideways. The html channel deepens in place: interactions and optional brand at **mockup**, production UI at **front_end_code**. Templates for generate live under `templates/`. Scanners read the canonical model, never file syntax.
+**Primary path.** Start from grill and sketch. Draw information architecture in drawio, deepen to html mockups, then ship real frontend at **front_end_code**. Markdown is optional context (thinking, invariants, interaction notes), not the main artifact. Channels are drawio, whiteboard, html, markdown, json, and claude_design — peers at the same fidelity; `transform` moves sideways. The html channel deepens in place: interactions and optional brand at **mockup**, production UI at **front_end_code**. Templates for generate live under `templates/`. Scanners read the canonical model, never file syntax.
 
 **Layout (mirror Stories; colocated):**
 
@@ -17,6 +17,8 @@ sandbox/<epic>/
   <sub-epic>/…_stories.py|.js
   .context/
     information-architecture.drawio        <- ia (drawio-ux CLI: Detailed IA + Site Map)
+    information-architecture.whiteboard    <- ia, the same map as a Claude Whiteboard board
+    <user-goal>.drawio / .whiteboard       <- mockup+ diagram: the screens, controls, and the stories each serves
     ux-sketch.md                           <- scratch sketch
     ux-context.md                          <- optional notes/invariants
 ```
@@ -33,15 +35,15 @@ Sketch and context markdown stay in `.context/`. Story and object-model JS stay 
 - `specifications/abd-works/` — the same layouts as brand-styled HTML sharing `abd-works-brand.css`. Use this folder when the screen needs the abd.works brand (`brand-is-opt-in`).
 - Add further sibling folders for other brands the same way; each folder stays self-contained.
 
-Before sketching ASCII, drawio regions, or brand-layer html, open the matching file in the folder that applies (`generic/` unless a brand is asked for or already established), read its areas, and adapt that file. Do not draw from scratch when a specification already covers the shape. `Screen.apply_layout(layout_id)` records the layout name; append real `Region`s from the areas you just read.
+Before drawing a screen's artboard in the design canvas, drawio regions, or brand-layer html, open the matching file in the folder that applies (`generic/` unless a brand is asked for or already established), read its areas, and adapt that file. Do not draw from scratch when a specification already covers the shape. `Screen.apply_layout(layout_id)` records the layout name; append real `Region`s from the areas you just read.
 
 **Fidelities.**
 
 | Fidelity | Default format | Output |
 |---|---|---|
-| **ia** | drawio | Site map + per-screen regions/nav (html optional via transform) |
-| **mockup** | html | Wired greybox; one HTML per concrete user goal; drawio remains a peer channel |
-| **front_end_code** | html (or host FE stack) | Production UI wired to a real backend |
+| **ia** | drawio | Site map + per-screen regions/nav, drawn as a diagram: the draw.io file and the whiteboard beside it (html optional via transform) |
+| **mockup** | html | Wired greybox; one HTML per concrete user goal; the diagram (a draw.io file and a whiteboard in the epic's `.context`, picked together) shows the stories each screen and control serves |
+| **front_end_code** | typescript | Production UI wired to a real backend; a view renders between typescript and javascript |
 
 ## Shared rules
 
@@ -53,8 +55,8 @@ globs: "**/*-sketch.md"
 Whenever you name screens, attach stories, or import domain terms on the UX surface, or change later UI work that forces that vocabulary to move. Follow these rules.
 
 - **`tab-states-are-separate-screens`** — N tabs → N screens; chrome shared via `chrome_of` / inactive tabs.
-- **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition.
-- **`screen-names-use-domain-terms`** — Screen labels trace to domain language when it exists.
+- **`screen-story-budget`** — ~4 user stories per screen; more signals missed decomposition. {{decided.screen_story_budget}}
+- **`screen-names-use-domain-terms`** — Screen labels trace to domain language when it exists. {{decided.screen_names_use_domain_terms}}
 - **`ia-named-regions-only`** — At IA, regions are named areas; no control detail yet.
 - **`story-domain-js-imported`** — At mockup+, when practices/stories/domain exist, JS modules are present (transform if needed) and imported by the html surface; import the real modules rather than inventing a UX-only adapter shape.
 
@@ -69,7 +71,14 @@ default_format: drawio
 stage: discovery
 outputs:
   drawio: "{epic}/.context/information-architecture.drawio"
+  whiteboard: "{epic}/.context/information-architecture.whiteboard"
   markdown: "{epic}/.context/ux-context.md"
+  json: ["{epic}/ux-map.json", "ux/ux.json"]
+example: "model/_examples/trip/ordering-ux-map.json"
+leaves_out:
+  drawio: "the map's name, scope, notes, invariants and references; a screen's description, image and prototype; a control's states, interactions, bound field and story steps, so a Story Demo control reads back as a plain control. They stay in ux-map.json"
+  whiteboard: "a screen's layout, and the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in ux-map.json"
+  markdown: "everything but the map's scope, notes and invariants. ux-context.md is the map's context, and the screens stay in ux-map.json and the drawing"
 ```
 
 #### Overview
@@ -129,7 +138,13 @@ default_format: html
 stage: specification
 outputs:
   html: "{epic}/{user_goal}.html"
+  drawio: "{epic}/.context/{user_goal}.drawio"
+  whiteboard: "{epic}/.context/{user_goal}.whiteboard"
   claude_design: "design-canvas/{version}/project/canvas.json"
+example: "model/_examples/trip/ordering-ux-map.json"
+leaves_out:
+  drawio: "the map's name, scope, notes, invariants and references; a screen's description, image and prototype; a control's states, interactions, bound field and story steps, so a Story Demo control reads back as a plain control. They stay in the mockup's HTML"
+  whiteboard: "a screen's layout, and the map's scope, notes, invariants and references; a screen's description, image and prototype; a control's label, states, interactions and story steps; content types and navigation components. They stay in the mockup's HTML"
 ```
 
 #### Overview
@@ -138,11 +153,25 @@ Lock screens as runnable greybox — typed controls and key interactions.
 
 **In Claude Design, the canvas is the default.** When the session runs in Claude Design, generate this fidelity with `format=claude_design` unless the person names another format: the screens become prototype screens on a Claude Design canvas with the story explorer (step 10), not greybox html, which a Claude Design session cannot show. Before designing a canvas, look for an existing one in context (the UX root's `design-canvas/`, and `.dc.html` artboards and canvas links in the `.context/` of the modules the work touches) and update it; design a new canvas only when none exists or the person asks for one.
 
+Rendering the html mockup to `claude_design` writes one prototype page for each screen, `screens/<slug>.dc.html`, each a mockup page of that screen, and `canvas.json` placing each on a canvas page of its own, into the canvas version being prepared in the UX practice's root (`<ux root>/design-canvas/version-N/project/`): the latest while it is unpublished, the first when there is none. A published version is refused, because people edit it; ask the person, then start the next version. Rendering `canvas.json` back to html answers the same mockup, so the html and the canvas stay one map.
+
 #### Sketch
 
 Ask what the person does on this screen to accomplish the outcome, and what they need to see there. Write the controls from those answers.
 
 #### Guidance
+
+**Say which stories each screen and each control serves.** A screen or a control serves a story, a scenario, or a step when a person does or sees that part of the story there. Write each one as a markdown link whose text names it and whose target is the place it is written, so the knowledge graph follows the link to that story, scenario, or step instead of guessing from a name that two stories may share:
+
+- a story: `[Add Book To Cart](../story_tests/sell-books/fill-cart/fill_cart_story.test.md#story-add-book-to-cart)`, linked to its heading in its story file or in the story map;
+- a scenario: `[Add Book To Cart › Add one book](../story_tests/sell-books/fill-cart/fill_cart_story.test.md#scenario-add-one-book)`, its story's name, then ` › `, then its own, linked to the scenario's heading;
+- a step: `[Add Book To Cart › Add one book › the Customer adds 2 copies](../story_tests/sell-books/fill-cart/fill_cart_story.test.md#scenario-add-one-book)`, the same with the step's text last, linked to its scenario's heading, since a step has no heading of its own.
+
+Write the target as any markdown link's: the path from the folder of the file you are writing in, or from the project's root. The drawing and the whiteboard are saved in the epic's `.context` and keep the links as the mockup wrote them, so a link there is also read from the epic's folder. For story tests written in code, which have no headings, link the file alone (`[Add Book To Cart › Add one book](../story_tests/sell-books/fill-cart/fill_cart_story.test.py)`), and the scenario with that name in that file is the one meant. A name with no link is still read, and is joined to the story, scenario, or step with exactly that key.
+
+Every format keeps these links. In the UX map's JSON they are `story_names`, `scenario_names`, and `step_names` on a screen and on a control. On the whiteboard a screen's card and each control's card list them under `Stories:`, `Scenarios:`, and `Steps:`, separated by ` · `; a person can add or change a line on a card and the next read takes it. The drawio drawing lists the same under each screen, one line for the screen and one line for each control (`Add To Cart › Quantity serves steps: …`). The drawing and the whiteboard show screens, regions, controls with their types, transitions, and these links; the drawing also keeps, beside each control's label, its name where the two differ, so the callout's `Region › Control` lines find it again. They hold no state, interaction, bound field, story step, or description, which stay in the html and the JSON.
+
+Steps 1–9 write the greybox in the html format; in the claude_design format, follow step 10 and the canvas guidance these instructions give (`claude_design.md` and `story_canvas.md`) in their place.
 
 1. Ensure story/domain JS via Stories / CE `transform` when missing (`ensure_javascript`).
 2. Deepen regions with typed controls, states, and interactions.
@@ -159,7 +188,7 @@ Ask what the person does on this screen to accomplish the outcome, and what they
    - Brand/css tokens already exist somewhere in the workspace (check before deciding).
    Do not invent brand. When active, pick the sibling folder under `specifications/` for the brand that applies (e.g. `specifications/abd-works/`) and start from its matching page rather than inventing tokens; if no named brand applies, `specifications/generic/` (no brand layer) is the default. Fall back to whatever brand/css tokens already exist in the workspace when neither covers it. Add a thin css layer to the greybox html; keep the Story Demo shell fully functional. Brand applied here carries forward to **front_end_code** automatically — do not re-apply.
 9. Document every faked behaviour explicitly — list all stubs; no silent pretence of production services.
-10. **Claude Design channel.** When the session runs in Claude Design, use `format=claude_design` by default. First look for an existing canvas in context and update it rather than designing a new one (`model/claude_design/story_canvas.md` `update-the-existing-canvas`). Port each story's screen as a prototype screen on the canvas instead of a greybox: the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next story. Follow `model/claude_design/story_canvas.md` § Prototype screens.
+10. **Claude Design channel.** When the session runs in Claude Design, use `format=claude_design` by default. First look for an existing canvas in context and update it rather than designing a new one (`model/claude_design/story_canvas.md` `update-the-existing-canvas`). Build each story's screen as a prototype screen on the canvas instead of a greybox (`StoryScreen`): the product's own markup and stylesheets, data from the stories' fixtures, real domain logic, the shared fixture bar, and buttons that move the story explorer to the next Then. Write the markup from scratch, or take it from an existing app the project can reach; porting another Claude Design canvas is an option when the person hands one over. Never use a screenshot as a screen (`real-screens-not-screenshots`). When the fixtures bundle or the domain bundle cannot be built, say so and stop (`stop-when-fixtures-fail`). Walk the version's screens before publishing it (`walk-before-publish`). Render the canvas in one call, `ProjectStoryCanvas(...).render(screens)` or the UX practice's `render_story_canvas` operation, which reads the story map and `ux.json` from the session's roots, builds the fixtures, writes the screens, renders into the working version, and writes the walk. Follow the Prototype screens and Steps of `story_canvas.md`, given in full with these instructions when the format is claude_design.
 
 #### Scaffold
 
@@ -181,22 +210,29 @@ If this change will not stay here, follow `practices/ux/ux-ia.mdc`.
 - **`controls-match-interaction-decisions`** — Exact control types; no invented affordances.
 - **`key-interactions-wired`** — Nav/tabs via `data-goto` / interactions; story tracing via Story Demo mount (not bespoke product stubs).
 - **`story-demo-control-for-gwt`** — GWT-bound controls are `StoryDemoControl` in the model so HTML gets `data-story-steps`.
-- **`shell-from-template`** — Use `mockup_shell.html` / render channel; do not drop the explorer when generating screens.
+- **`shell-from-template`** — In the html format, use `mockup_shell.html` / render channel; do not drop the explorer when generating screens. In the claude_design format the story explorer is the canvas's own (`story_canvas.md`).
 - **`in-scope-epics-only`** — Screens and `data-goto` targets follow the in-scope epics. A deferred epic in `ux-context.md` does not get screens or buttons.
 - **`brand-is-opt-in`** — Do not add css / design tokens / brand unless asked or pre-existing. Greybox is the default output.
 - **`stub-catalogue-honest`** — Every faked behaviour is listed in the html or a companion context note.
+- **`screen-is-a-prototype`** — On a Claude Design story canvas, each screen's artboard is the prototype's own screen, ported with its markup, components and logic, because a screenshot shows one moment and cannot follow the scenario the explorer selects. {{decided.screen_is_a_prototype}}
+- **`screen-follows-scenario`** — Each screen artboard declares `story`, `scenario`, `step` and `go` in its `data-props`, and its logic reads `props.scenario` and `props.step` (and `props.stepIndex`, the step group's position, where a scenario has more than one action), so the screen shows the state of the step the reader picks instead of one state for the whole story. {{decided.screen_follows_scenario}}
+- **`every-scenario-has-a-state`** — Every scenario of the stories a screen shows has a state on its artboard, or a fixture the screen loads from the canvas's fixtures bundle, so no scenario opens on another scenario's data. A scenario another screen shows is that screen's to load. {{decided.every_scenario_has_a_state}}
+- **`scenario-listed-once`** — The canvas's story explorer lists each scenario once under its story; read each story's scenario file once when rendering the canvas, because a scenario listed twice makes the reader walk it twice and splits comments between the copies. {{decided.scenario_listed_once}}
 
 ---
 
 ### front_end_code
 
 ```yaml
-default_format: html
+default_format: typescript
 stage: implementation
 outputs:
   typescript: "**/*View.tsx"
   javascript: "**/*View.jsx"
 reviews_files_of: [ia, mockup]
+example: "model/_examples/trip/CheckoutView.tsx"
+leaves_out:
+  javascript: "type annotations, interfaces and type imports. They stay in the .tsx view"
 ```
 
 #### Overview
@@ -213,6 +249,9 @@ Ask what the person can complete here against the real product, what they see wh
 - Call CE **code**-fidelity backend / Production collaborators — not Fake factory or in-browser demo domain alone.
 - Story Demo may still exist as a review/exploration shell; it is not the product UI at this fidelity.
 - Carry IA vocabulary and control decisions forward; do not redecide screens under a new product name.
+- A render onto a view file that is already there edits the file and loses none of its lines. A component both hold keeps its body, with the comments, types and helpers a person wrote. A prop, a hook, or a handler the source gained arrives in the file empty (a handler before what the component returns, a hook after the component's hooks, a prop beside its props). One the source lost stays where it is under a comment that says it is `no longer in the model`; move its body into the member that replaced it, then delete it and its comment. The render's result lists each kept member with the added ones that may have replaced it.
+- A render onto a UX context, a drawing, or a whiteboard that is already there keeps what only that file holds. The UX context keeps every line a person wrote, with new invariants and notes added after its own. The whiteboard keeps each card, screen and note the mockup does not draw, each element where a person put it, and what a person wrote on a card. The drawing keeps each screen, region, control, transition, story and domain term only it showed, but is laid out again, so where a person moved a box and any shape of their own are not kept.
+- Write each view in one of the two formats and render it to the other when the project needs both (`render` with `format=javascript` from a `*View.tsx`, or `format=typescript` from a `*View.jsx`). To JavaScript the type annotations are dropped and the components, their props, and their handlers stay as written. To TypeScript the JavaScript is kept as it is, since no annotation can be known from it; add the types by hand. A view that declares an enum, a namespace, or a constructor parameter marked `private` or `readonly` is refused, because dropping the type would drop code the view runs; write those as plain values first.
 
 #### Scaffold
 

@@ -1,0 +1,308 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T21:01:28.887115+00:00",
+  "prompts": [
+    {
+      "id": "3ac9fa999fde",
+      "text": "when deleting a queue (eg clear all) mae sure we save a copy of the json so we have a narchive of the wrk",
+      "steps": [
+        {
+          "text": "Write failing specs: clear and remove archive what they take off",
+          "state": "done"
+        },
+        {
+          "text": "Archive taken-off prompts as JSON in the chat's folder",
+          "state": "done"
+        },
+        {
+          "text": "Story map, commit, push, repin dev",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "aa4d4741ae2a",
+      "text": "/repin",
+      "is_done": true
+    },
+    {
+      "id": "90b76f4a6e10",
+      "text": "Nested steps: the agent's task list is copied onto the prompt being worked, and each card shows its progress and opens its steps.",
+      "is_done": true
+    },
+    {
+      "id": "645c4af96e8b",
+      "text": "Queue errors show on CDD's shared error line, with its Fix and \u2715.",
+      "is_done": true
+    },
+    {
+      "id": "9547ab96f0d6",
+      "text": "Cards fill the chat box with rounded ends; a long prompt wraps inside its card.",
+      "is_done": true
+    },
+    {
+      "id": "81704fcb8e61",
+      "text": "Done prompts stay on the queue, dim; play and the count pass over them, and clear takes them off first.",
+      "is_done": true
+    },
+    {
+      "id": "64c3c0cb644d",
+      "text": "Never go idle: when the agent ends a turn asking the person something, play waits a minute; with no answer, the agent puts that prompt back marked [decision required] and takes the next, and play passes over marked prompts.",
+      "steps": [
+        {
+          "text": "Write failing tests for decision wait",
+          "state": "done"
+        },
+        {
+          "text": "Build decision wait and flag in play",
+          "state": "done"
+        },
+        {
+          "text": "Add never-go-idle story to the map",
+          "state": "done"
+        },
+        {
+          "text": "Commit, push, repin dev",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "81447a13a241",
+      "text": "Fix steps: finishing a turn marks every step of the prompt done, even ones only planned; keep each step as the task list last left it. Steps also land on whatever prompt the person last sent, not the item being worked.",
+      "steps": [
+        {
+          "text": "Write failing tests: set_steps picks working prompt",
+          "state": "done"
+        },
+        {
+          "text": "Follow set_steps calls in the plugin",
+          "state": "done"
+        },
+        {
+          "text": "Tell the agent to name the item it takes",
+          "state": "done"
+        },
+        {
+          "text": "Story map, commit, push, repin dev",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "09fbd811ae92",
+      "text": "Let the person edit a prompt's steps: the progress button (2/5) opens the steps, each with + to add one, \u2715 to remove it, and \u2191 \u2193 to reorder, as the queue's own cards do.",
+      "steps": [
+        {
+          "text": "Write failing tests for step add, remove, reorder",
+          "state": "done"
+        },
+        {
+          "text": "Build step buttons in the steps view",
+          "state": "done"
+        },
+        {
+          "text": "Story map, commit, push, repin dev",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "3eabf9ba9cfb",
+      "text": "Handle messages sent mid-work: a short correction or comment about the prompt being worked becomes a step of that prompt, marked as the person's interruption, instead of a new card on the queue.",
+      "steps": [
+        {
+          "text": "Write failing tests for mid-work messages",
+          "state": "done"
+        },
+        {
+          "text": "Turn mid-work messages into interruption steps",
+          "state": "done"
+        },
+        {
+          "text": "Keep interruption steps when the task list changes",
+          "state": "done"
+        },
+        {
+          "text": "Story map, commit, push, repin dev",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "c944e9b43b6d",
+      "text": "Show sub-agents as columns: each sub-agent gets its own queue column with a name (fun names allowed) and its own Claude-orange robot on top.",
+      "steps": [
+        {
+          "text": "Read how sub-agent mode groups and shows tasks",
+          "state": "done"
+        },
+        {
+          "text": "Place sent messages above the next item, as interruptions",
+          "state": "done"
+        },
+        {
+          "text": "Draw a column per sub-agent with its robot",
+          "state": "done"
+        },
+        {
+          "text": "Write failing tests for named columns with robots",
+          "state": "done"
+        },
+        {
+          "text": "Rename a sub-agent from the prompt box",
+          "state": "done"
+        },
+        {
+          "text": "Story map, commit, push, repin dev",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "f885bd465899",
+      "text": "Make a queue item's tasks easy to add, reorder and remove",
+      "steps": [
+        {
+          "text": "Explain how to add a task to an item",
+          "state": "done"
+        },
+        {
+          "text": "Task button on every card: 2/5, or + with none",
+          "state": "done"
+        },
+        {
+          "text": "\u2191 \u2193 \u2715 on a task only on hover",
+          "state": "done"
+        },
+        {
+          "text": "Buttons are just +",
+          "state": "done"
+        },
+        {
+          "text": "Line cards up; no extra + under a card",
+          "state": "done"
+        },
+        {
+          "text": "Ignore system notices instead of queueing them",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "3d39c507420b",
+      "text": "Organize the person's messages into one card for each goal",
+      "steps": [
+        {
+          "text": "Test first: queue tells the agent one card per goal",
+          "state": "done"
+        },
+        {
+          "text": "Add the organizing instructions",
+          "state": "done"
+        },
+        {
+          "text": "Gather today's interruptions into goal cards",
+          "state": "done"
+        },
+        {
+          "text": "Commit, push, repin dev",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] why didn't you group messages: two TDD messages were left as separate cards; grouped under Follow the TDD flow rule properly",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] yes, file between-turn messages under the goal last worked, in the backend: prompt-queue.add_interruption on the cdd server, called by the mod",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] why did you do that, you need better organizing instructions (messages were filed under the last goal and not moved to their own goal)",
+          "state": "done"
+        },
+        {
+          "text": "Test first: the filed-message note says decide where it belongs first, and lists the goals",
+          "state": "done"
+        },
+        {
+          "text": "Write the note",
+          "state": "done"
+        },
+        {
+          "text": "Commit, push, repin dev",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] will play still reach the bottom items if a goal in the middle reopens? yes: play takes the first goal not done",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] keep a reopened goal where it is, among the done ones: no change",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "2be115fb80a8",
+      "text": "Clearing the queue: keep a copy of the chat log too? (the person: no, it's fine)",
+      "steps": [
+        {
+          "text": "[interruption] to confirm clearing saves the chat log right? / meant / what i meant",
+          "state": "done"
+        },
+        {
+          "text": "Answer: clearing archives the queue's prompts, not the chat log",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] its fine: started spec undone, nothing changed",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "7f3ef1fbf97f",
+      "text": "Merge simple-queue-enhancements to main",
+      "steps": [
+        {
+          "text": "Merge the branch into main (a87b7d7b9)",
+          "state": "done"
+        },
+        {
+          "text": "Push main",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "215a629cf8ff",
+      "text": "Remove the Alt \u21b5 hint from the empty queue",
+      "steps": [
+        {
+          "text": "Take the Alt \u21b5 key caps off the empty queue; delete the unused key-cap drawing",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] why wasn't this added as an item: filed under the last goal and not moved out; given its own card",
+          "state": "done"
+        },
+        {
+          "text": "Commit, push, repin dev",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

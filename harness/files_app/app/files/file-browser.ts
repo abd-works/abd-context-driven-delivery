@@ -2,8 +2,7 @@ import type { CddApi } from '@cdd/cdd-shared'
 
 import type { FilesNotices } from './files-notices'
 import { REVEAL_PATH } from './files-paths'
-
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
+import { reasonOf } from './reason'
 
 // The system's file browser on this machine, which the Files server starts: Explorer, Finder, or the desktop's file
 // manager.

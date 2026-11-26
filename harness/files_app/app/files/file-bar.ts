@@ -17,6 +17,36 @@ const byName = (one: string, other: string): number => one.localeCompare(other, 
 
 const emptyFolder = (path: string): FileFolder => ({ path, name: nameOf(path), folders: [], files: [] })
 
+// A file that stands for something published in Claude, which pressing it opens instead of the file: a `.whiteboard`
+// file its board, and a design canvas version's `canvas.json` its canvas. Named as the person knows it, kept in the folder
+// it lives in, and at the link the session answers for it, none while it is not published yet.
+export type PublishedFile = { kind: 'whiteboard' | 'design canvas'; name: string; folder: string; link: string }
+
+const WHITEBOARD_SUFFIX = '.whiteboard'
+// A design canvas version as the UX mockup writes it: `<design-canvas>/version-N/project/canvas.json`, its versions'
+// links kept in `<design-canvas>/versions.json` (harness/design_canvas/versions.py).
+const CANVAS_VERSION = /^(?:(.*)\/)?design-canvas\/([^/]+)\/project\/canvas\.json$/
+
+// The session answers what a file is published as (`published_kind`, space/session's FileEntry); the page names it so and
+// places it in the tree.
+export function publishedOf(entry: FileEntryData): PublishedFile | null {
+  if (entry.published_kind === 'whiteboard') return { kind: 'whiteboard', name: nameOf(entry.path).slice(0, -WHITEBOARD_SUFFIX.length), folder: folderOf(entry.path), link: entry.link }
+  if (entry.published_kind !== 'design canvas') return null
+  const canvas = CANVAS_VERSION.exec(entry.path)
+  if (canvas) return { kind: 'design canvas', name: canvas[2] ?? '', folder: canvas[1] ? `${canvas[1]}/design-canvas` : 'design-canvas', link: entry.link }
+  return { kind: 'design canvas', name: nameOf(entry.path), folder: folderOf(entry.path), link: entry.link }
+}
+
+// The classes of a file's entry in the file bar: a whiteboard marked as one, open, not on disk, and changed on the
+// session's branch. A file not on disk is marked missing whatever it is, so the bar never shows it as one to open.
+export function entryClassesOf(entry: FileEntryData, isOpen: boolean): string {
+  const isWhiteboard = publishedOf(entry)?.kind === 'whiteboard'
+  return ['file-entry', isWhiteboard ? 'is-whiteboard' : '', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
+}
+
+// The folder the tree lists a file in: a design canvas in its design-canvas folder, where its versions' links are kept.
+const placeOf = (entry: FileEntryData): string => publishedOf(entry)?.folder ?? folderOf(entry.path)
+
 function folderAt(top: FileFolder, path: string): FileFolder {
   let folder = top
   for (const segment of path.split('/').filter(Boolean)) {
@@ -45,7 +75,7 @@ function compacted(folder: FileFolder): FileFolder {
 // The tree of the folders the files are in. Its top holds no name: the folders under it are the tree's first rows.
 export function treeOf(entries: FileEntryData[]): FileFolder {
   const top = emptyFolder('')
-  for (const entry of entries) folderAt(top, folderOf(entry.path)).files.push(entry)
+  for (const entry of entries) folderAt(top, placeOf(entry)).files.push(entry)
   return { ...top, folders: top.folders.map(compacted).sort((one, other) => byName(one.name, other.name)), files: [...top.files].sort((one, other) => byName(nameOf(one.path), nameOf(other.path))) }
 }
 
@@ -61,16 +91,16 @@ const STORED_WIDTH = 'cdd-files-bar-width'
 export class FileBar {
   constructor(private readonly store: FilesStore) {}
 
-  // The files the bar lists: in This session, the ones the session's branch changed, its own work, and a design canvas,
-  // which opens at its link; in All session files, every one.
+  // The files the bar lists: in This session, the session's own work and a design canvas, which opens at its link; in
+  // All session files, every one.
   get entries(): FileEntryData[] {
     const { entries, scope } = this.store.state
-    return scope === 'session' ? entries.filter(entry => entry.is_changed || entry.link) : entries
+    return scope === 'session' ? entries.filter(entry => entry.is_session_work || entry.link) : entries
   }
 
-  // How many files the session's branch changed among those the page lists, for the This session button.
-  get changedCount(): number {
-    return this.store.state.entries.filter(entry => entry.is_changed).length
+  // How many of the files the page lists are the session's own work, as the session says, for the This session button.
+  get sessionWorkCount(): number {
+    return this.store.state.entries.filter(entry => entry.is_session_work).length
   }
 
   // The folder tree of the files the bar lists.

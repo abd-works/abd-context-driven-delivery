@@ -18,10 +18,10 @@ The *Files app* shows the files a link names and turns a person's reading into w
 - The page follows the chat bar of the chat that opened it: while fidelities it lists are selected there (the chat bar's dots), it shows only their files and its toggles show their practices, disabled, `isFollowingChatBar`; with none selected, the practices turned on. `isShown(practice)` says which a toggle shows.
   - -> Chat.show (`selected_fidelities`: the one selection cdd holds for the chat; the chat bar's dots write it through `Chat.select` and draw it from `Chat.show` at each check-in)
 - `guidance` (*GuidanceSelector*, `files/guidance-selector.ts`) follows the session's guidance selection, the stages, practices, and format groups selected, which the chat bar's stage buttons, practice dots, and format chips show too. One waiting read (`Session.guidance_selection_after(version)`) answers as soon as a change anywhere raises the version. The page's stage, practice, and format buttons call it directly (`toggleStage`, `togglePractice`, `toggleFormat`). A press draws at once, then sends one `Session.update_guidance_selection`; an answer older than the version drawn is ignored, so a late read never undoes a press. The page lists the files of the selection's fidelities (before any stage is chosen, the link's), reading a stage's files the first time it shows, and only those in the format groups selected while any is.
-  - -> Session.guidance_selection, Session.guidance_selection_after, Session.update_guidance_selection
+  - -> Session.guidance_selection, Session.guidance_selection_after, Session.toggle_guidance (`toggle(part, name)`: one press, one tool; the session works out the selection)
 - `showScope(scope)`: All session files (▤) lists every file under the session's root, read once as the page opens (`Ticket.root_files`), with the files the fidelities listed declare but have not generated yet; This session (Δ with its count), the default, lists those the session's branch changed against main and any design canvas published at a link. The stages, practices and formats selected narrow both: a file shows in a format selected while any is, and when it belongs to a fidelity listed; a file of no fidelity shows only while no practice is selected (`rootFilesShown`). The two buttons sit first along the top, before the stages, orange while selected. Nothing is read again.
   - -> Ticket.root_files (each file's format and the fidelities it belongs to come from Python)
-- `toggleRules()` and `toggleCrossFile()` each turn one read of the open file on or off, both off by default so browsing never reads a graph: Rules reads the file on its own and shows its folds and its own broken rules, under a second (`FileGraphs.file_alone`); Cross-file shows only the rules the whole working copy finds beyond those, linking files and practices, which takes far longer (`FileGraphs.file_in_whole`).
+- `toggleRules()` and `toggleCrossFile()` each turn one read of the open file on or off, both off by default so browsing never reads a graph: Rules reads the file on its own and shows its folds and its own broken rules, under a second (`SessionGraph.alone`, a *DocumentGraph*); Cross-file shows only the rules the whole working copy finds beyond those, linking files and practices, which takes far longer (`SessionGraph.holding`).
   - -> Session.file(path, rules, cross_file)
 - `refreshOpen()` (private) reads the open file again, and again every two seconds while a comment on it is sent.
 - `attempt(what, work)` runs a call a person started; its failure is a toast naming what failed, and the open file is read again after it.
@@ -56,6 +56,10 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 - The system's file browser on this machine: Explorer, Finder, or the desktop's file manager. `reveal(path)` has the Files server start it on the file or folder (`/reveal`, `app/file-explorer.ts`); a browser that does not open is a failure told to the chat.
 
+### PageFrames (`files/page-frames.ts`)
+
+- The frames an HTML page of the session shows in. `pageOf(path, html)` gives the page a base address in its own folder of the project, under the key the Files server made for the project (`/page-files`, asked once), so the scripts, styles and images it names, and a UX mockup's Story Demo scripts, come from the Files server; the frame runs them with no origin, apart from the page.
+
 ### ChatContext (`files/chat-context.ts`)
 
 - The context of the chat that opened the page. `add(path, lines?)` has the session put a file, or lines of it, in that chat's prompt box, to go with the person's next prompt; the source view's Add to context calls it for the selected lines.
@@ -70,8 +74,8 @@ The *Files app* shows the files a link names and turns a person's reading into w
 
 - One fidelity's files as the link names them, kept apart so a practice turned off hides its own. A session folder is one *FidelityFiles* of no fidelity.
 - The files of a fidelity are the ones a person reviews for it (`FidelityProgress.files`): UX's front-end code lists its IA's and mockup's files, not its view code, which Clean Engineering's code lists with every other code file the branch changed. A design canvas's `canvas.json` comes with the link its version is published at, and the file bar shows it as a link that opens the canvas in Claude Design.
-- `filesShown(byFidelity, practices)` is every file of the fidelities whose practice is on, each once; a fidelity no practice owns is shown.
-  - -> PracticeSessionOutput.fidelity_slugs
+- The page restates no rule of what it lists: each file the session answers says whether the page lists it for the stages, practices and formats selected and the fidelities the link names (`is_listed`), and whether it is the session's own work, which This session lists (`is_session_work`). The page asks for the files of the fidelities its link names and those the selection covers (`asked`), and reads them again whenever the selection changes.
+  - -> Ticket.fidelity_files(fidelities, linked), Ticket.root_files(linked), FileListing (space/session)
 
 ### FilesStore (`files/files-state.ts`)
 

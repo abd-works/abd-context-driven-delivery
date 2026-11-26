@@ -1,5 +1,7 @@
 # UX — Procedural Guidance (mockup fidelity)
 
+This guidance writes the greybox in the html format. In the claude_design format, follow the canvas guidance these instructions give (`claude_design.md` and `story_canvas.md`) in its place: the screens are prototype screens on the story canvas, not a Story Demo shell.
+
 ## How to build mockups
 
 Mockups deepen IA regions into typed controls with key interactions, running inside the Story Demo shell:
@@ -7,8 +9,9 @@ Mockups deepen IA regions into typed controls with key interactions, running ins
 1. **Ensure story/domain JS exists** — if Stories or CE haven't emitted JavaScript modules yet, run `transform` first. The mockup imports real domain modules, not UX-only adapters.
 2. **Deepen regions with controls** — each IA region gets concrete control types: text input, dropdown, button, list, tabs.
 3. **Wire GWT-bound controls** — controls that participate in story Given/When/Then use `StoryDemoControl` with `bound_field` (the expose path) and `story_steps` (matching step text exactly). This generates `data-story-steps` attributes for the Story Demo explorer.
-4. **One HTML per user goal** — not one file per screen, not one mega-file per epic. Each concrete user goal the user can demo gets its own HTML file.
-5. **Match the IA scope** — screens and `data-goto` targets follow the in-scope epics on the IA. A deferred epic in `ux-context.md` does not get screens, stories, or buttons on the mockup.
+4. **Say what each screen and control serves** — give every screen and every control the stories, scenarios, and steps a person does or sees there, each as a markdown link to where it is written (`ux.md`, mockup, Guidance). The whiteboard and the drawing show them, and the knowledge graph joins the screen or control to each one.
+5. **One HTML per user goal** — not one file per screen, not one mega-file per epic. Each concrete user goal the user can demo gets its own HTML file.
+6. **Match the IA scope** — screens and `data-goto` targets follow the in-scope epics on the IA. A deferred epic in `ux-context.md` does not get screens, stories, or buttons on the mockup.
 
 ## Interactive controls thinking
 

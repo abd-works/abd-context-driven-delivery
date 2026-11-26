@@ -10,16 +10,16 @@ Agentic tools that bring agile product, delivery, and engineering practices to A
 - `cdd_guidance/rules/` — always-on rules, installed into every IDE. `cdd_guidance/references/` — reference docs installed to `<ide>/references/`.
 - `cdd_guidance/agents/` — Discoverer, Specification, Implementation, Context agents.
 - `harness/` — the framework. From the bottom up, as the imports run: `annotations` (the decorator annotations, and *Name*, the one case conversion every published name goes through), `markdown`, `agent_tools` (toolsets and the per-call `ToolCall`), `installation` (the Installer and what it publishes with; `mcp` and `hooks` register their installations with it), `process` (beside them, importing nothing), `hooks`, `mcp`, `guidance` (practice and action catalogues, and the stages in `stages.py`), `guidance_actions`, `graph`; then `diagnostics` (server health and the install probes), `chat` (reaching a live Claude Code chat), `catalog_generator`, `design_canvas`, and the `chat-ui` plugin.
-- `harness/` imports nothing from `space/`, `tools/`, or `cdd_guidance/`. They register with the framework instead: `space/session` with `ToolCall.open_sessions_with`, the prompt notifier with `HookServer.show_toasts_with`, and the practices, actions, and patterns from their package `__init__.py` with `PRACTICE_CATALOGUE.register`, `ACTION_CATALOGUE.register`, and `REGISTERED_PATTERNS.register`, each an instance of one *ClassRegistry* mechanism the process holds once; a session makes the practices' instances once and gives its knowledge graph. Keep it that way, so the framework can change and be tested without the code built on it.
+- `harness/` imports nothing from `space/`, `tools/`, or `cdd_guidance/`. They register with the framework instead: `space/session` with `SESSION_OPENING.open_with`, the prompt notifier with `HOOK_TOASTS.show_with`, and the practices, actions, and patterns from their package `__init__.py` with `PRACTICE_CATALOGUE.register`, `ACTION_CATALOGUE.register`, and `REGISTERED_PATTERNS.register`, each an instance of one *ClassRegistry* mechanism the process holds once; a session makes the practices' instances once and gives its knowledge graph. Keep it that way, so the framework can change and be tested without the code built on it.
 - `space/` — the work: `session` (sessions, their log, their files and the file manager that reads them, handoffs, and decision records), `repo` (branches, commits, worktrees), and the CDD Kanban (`space/kanban`). `tools/` — one module of independent toolsets, one package each (sub-agent hand-off, echo, Granola, prompt log, prompt notify), sharing the card `tools/.context/module-context.md`.
 
-| Practice | Discovery | Specification | Implementation |
-|---|---|---|---|
-| Stories | story_map | scenarios | acceptance_tests |
-| DDD | bounded_context | model | tactics |
-| UX | ia | mockup | front_end_code |
-| Clean Engineering | modules | model | code |
-| BDD | behavior | realization | development |
+| Practice | Discovery | Specification | Implementation | Hardening |
+|---|---|---|---|---|
+| Stories | story_map | scenarios | acceptance_tests | hardening |
+| DDD | bounded_context | model | tactics | |
+| UX | ia | mockup | front_end_code | |
+| Clean Engineering | modules | model | code | |
+| BDD | behavior | realization | development | hardening |
 
 ## Where context lives
 
@@ -40,8 +40,10 @@ python scripts/install.py --ide Claude     # or Cursor, "VS Code", Kilo
 
 ```
 python -m venv .venv && .venv/bin/pip install -e .     # Windows: .venv\Scripts\pip
-.venv/bin/mamba --format documentation path/to/thing_spec.py
+PYTHONUTF8=1 .venv/bin/mamba --format documentation path/to/thing_spec.py
 ```
+
+Run a spec file with `PYTHONUTF8=1` (PowerShell: `$env:PYTHONUTF8 = "1"`), as `scripts/test.ps1` does: Mamba reads each spec file with the system's encoding, so on Windows without it the spec's own text, such as a `—` or a byte-order mark, reads as Windows-1252 and examples fail that pass in the suite.
 
 `scripts/test.ps1` runs one of three tiers. Cloud sessions run `scripts/cloud-setup.sh`.
 

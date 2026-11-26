@@ -1,0 +1,115 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:40:33.576497+00:00",
+  "prompts": [
+    {
+      "id": "bf757a62a13b",
+      "text": "Run5 words, part 1 (read only): write the 5 longest words in AGENTS.md to .sessions/simple-queue-enhancements/demo/run5/words.md, then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856 with prompt-queue.done.",
+      "robot": "Sparky",
+      "is_done": true,
+      "steps": [
+        {
+          "text": "Check words.md still lists the 5 longest words",
+          "state": "done"
+        },
+        {
+          "text": "[decision required] dfdd: no work it names; keep it or take it off?",
+          "state": "pending"
+        }
+      ]
+    },
+    {
+      "id": "e042a60e11d5",
+      "text": "[interruption] dissaster whole thng choked try 2 agednt 3 rabdiomn tasks",
+      "is_done": true,
+      "steps": [
+        {
+          "text": "[interruption] Running it",
+          "state": "pending"
+        }
+      ]
+    },
+    {
+      "id": "1cb87711d625",
+      "text": "Robots as a plain list: each robot's queue opens only when its robot is pressed",
+      "is_done": true
+    },
+    {
+      "id": "3e195f5c941e",
+      "text": "Run5 words, part 2: after demo/run5/words.md has its 5 words, add each word's letter count beside it, then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856 with prompt-queue.done.",
+      "robot": "Sparky",
+      "is_done": true,
+      "steps": [
+        {
+          "text": "[decision required] ewe: no work it names; keep it or take it off?",
+          "state": "pending"
+        }
+      ]
+    },
+    {
+      "id": "06e558d89319",
+      "text": "[interruption] add taks doesnt worl",
+      "is_done": true
+    },
+    {
+      "id": "e43be319ce9a",
+      "text": "[interruption] much better - but the bots under neatch each thoer that way itesm cant atel file height and itemsd astart to left of botrs",
+      "steps": [
+        {
+          "text": "[interruption] ony expand 1 at a tikme",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] open quieut TO THER LEFT",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] you lost allthe buttons  tomovew current chat 3/7   ot +",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] LEFT side",
+          "state": "done"
+        },
+        {
+          "text": "The person checks the layout after a reload",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] orange border and current yp dpwn m ssing",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] also open up taks hiow",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Gizmo"
+    },
+    {
+      "id": "820b72b9cc03",
+      "text": "Run5 words, part 3: after the letter counts are in demo/run5/words.md, write the total letters as its first line, then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856 with prompt-queue.done.",
+      "robot": "Rivet",
+      "is_done": true
+    },
+    {
+      "id": "caac38211b75",
+      "text": "Run5 clock, part 1: write the current time to .sessions/simple-queue-enhancements/demo/run5/clock.md, wait about 10 seconds, write the time again, then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856 with prompt-queue.done.",
+      "robot": "Bolt",
+      "is_done": true
+    },
+    {
+      "id": "ab0d600f118e",
+      "text": "Run5 clock, part 2: after demo/run5/clock.md has two times, add the seconds between them as a third line, then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856 with prompt-queue.done.",
+      "robot": "Bolt",
+      "is_done": true
+    },
+    {
+      "id": "ebaea6db02d9",
+      "text": "Run5 clock, part 3: after demo/run5/clock.md has its gap, add one line saying the clock strand finished and when, then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856 with prompt-queue.done.",
+      "robot": "Bolt",
+      "is_done": true
+    }
+  ]
+}

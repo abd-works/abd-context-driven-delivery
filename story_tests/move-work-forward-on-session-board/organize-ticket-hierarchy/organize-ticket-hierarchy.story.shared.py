@@ -31,6 +31,7 @@ from space.kanban.session_board_examples import (
     PET_VISITS,
     PULLED_OUT_TITLE,
 )
+from space.kanban.card_name import TicketNameTakenError
 from space.kanban.story_test import SharedStories, children_in, column_in, expect_placed, expect_refused, refusal_of, ticket_in
 from space.kanban.ticket_tree import ParentLoopError, ParentMovesWithChildrenError
 
@@ -70,7 +71,7 @@ def _(s):
         # CardPlacement.ticket("checkout-flow")
         #   <- checkout-flow
         # checkout-flow.add_child("Enter card details")
-        #   -> self.session.hierarchy.open_child("Enter card details", scope="story")
+        #   -> self.session.hierarchy.open_child("enter-card-details", "Enter card details", scope="story")
         #   <- enter-card-details In progress in Discovery, its parent checkout-flow
         world.child = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).add_child(title=ENTER_CARD_DETAILS.title))
 
@@ -246,7 +247,7 @@ def _(s):
 
     @s.when('the Person starts Gift cards as a child of checkout-flow')
     def _(world):
-        # BoardReads.backlog_item("Gift cards")
+        # BoardReads.backlog_item_called("Gift cards")
         #   <- Gift cards
         # CardPlacement.ticket("checkout-flow")
         #   <- checkout-flow
@@ -359,3 +360,28 @@ def _(s):
     def _(world):
         expect_refused(world.refusal, ParentMovesWithChildrenError, "checkout-flow has child tickets; a parent moves only with its children")
         expect_placed(card_of(world, CHECKOUT_FLOW.name), "Discovery", is_done=False)
+
+
+@shared_stories.scenario("Add Child Ticket", "Refuse a child whose title makes the name of a ticket already there")
+def _(s):
+    @s.given("the ticket checkout-flow is on the board")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+
+    @s.when("the Person adds the child ticket CHECKOUT FLOW to checkout-flow")
+    def _(world):
+        # CardPlacement.ticket("checkout-flow")
+        #   <- checkout-flow
+        # checkout-flow.add_child("CHECKOUT FLOW")
+        #   -> CardPlacement.free_name_for("CHECKOUT FLOW")
+        #   <- TicketNameTakenError: a ticket named checkout-flow already exists
+        world.refusal = refusal_of(lambda: world.Ticket.load(CHECKOUT_FLOW.name).add_child(title=CHECKOUT_FLOW.title.upper()))
+
+    @s.then("the board says a ticket named checkout-flow already exists")
+    def _(world):
+        expect_refused(world.refusal, TicketNameTakenError, "a ticket named checkout-flow already exists; give 'CHECKOUT FLOW' another title")
+
+    @s.and_("checkout-flow has no parent")
+    def _(world):
+        saved = json.loads((world.project.sessions / CHECKOUT_FLOW.name / "session.json").read_text(encoding="utf-8"))
+        expect(saved.get("parent", "")).to(equal(""))

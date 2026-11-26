@@ -15,27 +15,21 @@ from typing import Any, Callable, ClassVar, Iterator, Mapping, get_type_hints
 from harness.annotations.class_folder import class_folder
 from harness.annotations.name import Name
 from harness.agent_tools.parameter_schema import ParameterSchema, TypeHint, is_built_in
-from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
+from harness.agent_tools.tool_call import ToolCall
 from harness.markdown.markdown import Markdown, MarkdownCollection, operation_property
-from harness.annotations.annotation import Annotatable, Annotation, NamesAnnotation, annotation_kinds
+from harness.annotations.annotation import Annotatable, Annotation, DestinationKind, NamesAnnotation, annotation_kinds
 from harness.agent_tools.recipe import ExpansionMode, ExpansionResult, RecipeExpansion, RecipePlaceholders, RecipeSource, RecipeTarget
 
-ContextDocument = dict[str, Any]
-ArgumentDocument = dict[str, Any]
 # A child a toolset collection holds by name, such as a fidelity, a rule, or a child toolset. A collection reads its
 # entries only through their attributes, so an entry may be an object of any class.
 type CollectionEntry = object
-# What configuration names a toolset by: a ``<module>:<Class>`` reference, ``{"toolset": reference, "context": {...}}``
-# with the constructor's arguments, the constructor's arguments alone, a toolset class, or a toolset already made.
-type ToolsetConfiguration = str | type | dict[str, object] | AgentToolSetOrigin | None
+
 # A member of a toolset class as its class declares it: a function, the function a static or class method wraps, or a
 # property's getter.
 type ClassMember = Callable[..., Any]
 # What a class annotation such as ``@toolset_collection`` decorates: a class it joins with its framework base, or a
 # property it marks.
 type JoinedTarget = Annotatable | property
-LISTED_INSTRUCTIONS_NOTE = "Call this tool for the full instructions."
-
 SUB_AGENT_CALLER_PREAMBLE = """Hand work to a background sub-agent and continue without waiting.
 
 Do not perform the delegated work in this conversation. Do not wait for the
@@ -75,6 +69,18 @@ class AgentToolValidationError(Exception):
         super().__init__(f"{detail} (line {lineno})" if lineno is not None else detail)
 
 
+@dataclass(frozen=True)
+class InstalledName:
+    """Where install puts the files of one tool of a toolset, and what it names them. ``folder`` is the folder the
+    toolset's files go in, as the toolset knows it; ``stem`` is the name the toolset's files are named by within it,
+    none for a toolset whose files are named by its own folder; and ``is_own`` says the tool is the toolset's own, such
+    as a guidance's whole instructions, named after the toolset alone rather than after the tool."""
+
+    folder: Path
+    stem: str | None = None
+    is_own: bool = False
+
+
 class AgentToolSetOrigin:
     """Where a toolset lives and what it is called."""
 
@@ -106,9 +112,9 @@ class AgentToolSetOrigin:
         return class_folder(type(self))
 
     @property
-    def registration_name(self) -> str:
+    def reference(self) -> ToolsetReference:
         """The ``module:Class`` reference configuration and the installer name this toolset by."""
-        return str(ToolsetReference.of(type(self)))
+        return ToolsetReference.of(type(self))
 
     @property
     def description(self) -> str:
@@ -133,11 +139,6 @@ class AgentToolSetOrigin:
     parameter_notes: ClassVar[dict[str, str]] = {}
     """What an agent reads about a parameter, by its name, after the description of every tool on this toolset that
     takes it; a guidance action explains its ``guidance`` parameter this way."""
-
-    def schema_guide(self) -> str:
-        """The schema this toolset's instructions tell an agent to conform its output to, which an installed skill of
-        its instructions carries; none unless the toolset has one, as a practice does."""
-        return ""
 
     @functools.cached_property
     def class_markdown(self) -> Markdown:
@@ -357,7 +358,7 @@ class ToolsetMembers:
         return AgentToolAnnotation.annotates(member) or AgentInstructionsAnnotation.annotates(member) or annotation_kinds.enlisting(member)
 
     def _is_rules(self, member: ClassMember) -> bool:
-        return annotation_kinds.annotated_for(InstallDestination.RULE, member)
+        return annotation_kinds.marking_a_collection(member)
 
     def _return_type(self, member: ClassMember) -> TypeHint:
         """The type member says it returns, its name resolved in the module that defines it, else the class's."""
@@ -383,29 +384,48 @@ class ToolsetMembers:
 
 
 class ToolsetReference:
-    """A toolset named the way configuration and the installer name it: ``<module>:<Class>``. A module whose folder
-    names use hyphens on disk, such as ``agent-bdd``, is found by its underscored name too, under each folder on the
-    import path: the repository's toolsets put their checkout's import folders there, so this reference searches the
-    same folders the installer and the servers load from."""
+    """The one name of a toolset: its class, by its module and its own name. It is text, ``<module>:<Class>``, only
+    where it crosses a process, such as configuration, a ``hook-handlers.json``, or a skill's shell command, and is
+    parsed back there (`parsed`). It names its class (`toolset_class`) and makes the toolset (`made`). A module whose
+    folder names use hyphens on disk, such as ``agent-bdd``, is found by its underscored name too, under each folder on
+    the import path: the repository's toolsets put their checkout's import folders there, so this reference searches
+    the same folders the installer and the servers load from."""
 
-    def __init__(self, reference: str) -> None:
-        self._module_name, _, self._class_name = reference.partition(":")
-        if not self._class_name:
-            raise ValueError(f"expected <module>:<Class>, got {reference!r}")
-        self._reference = reference
+    def __init__(self, module_name: str, class_name: str, toolset_class: type | None = None) -> None:
+        self._module_name = module_name
+        self._class_name = class_name
+        # The class, when the reference was made from it, so a class no module import finds again, such as one a spec
+        # defines, is still the class it names.
+        self._held_class = toolset_class
 
     @classmethod
     def of(cls, toolset_class: type) -> ToolsetReference:
         """The reference that names toolset_class: its module's full name and its own."""
-        return cls.in_module(toolset_class.__module__, toolset_class.__name__)
+        return cls(toolset_class.__module__, toolset_class.__name__, toolset_class)
 
     @classmethod
-    def in_module(cls, module: str, class_name: str) -> ToolsetReference:
-        """The reference to the class class_name defined in module, named the one way references are written."""
-        return cls(f"{module}:{class_name}")
+    def parsed(cls, text: str) -> ToolsetReference:
+        """The reference text names, written ``<module>:<Class>``; raises ValueError for text that names no class."""
+        module_name, _, class_name = str(text).partition(":")
+        if not class_name:
+            raise ValueError(f"expected <module>:<Class>, got {text!r}")
+        return cls(module_name, class_name)
 
     def __str__(self) -> str:
-        return self._reference
+        return f"{self._module_name}:{self._class_name}"
+
+    def __repr__(self) -> str:
+        return f"ToolsetReference({str(self)!r})"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, ToolsetReference) and str(other) == str(self)
+
+    def __hash__(self) -> int:
+        return hash(str(self))
+
+    def made(self, **context: object) -> AgentToolSet:
+        """The toolset this reference names, made with context, the constructor's arguments a configuration gives."""
+        return ToolsetMembers.of(self.toolset_class).subject_loader.made(dict(context))
 
     @property
     def module_name(self) -> str:
@@ -415,9 +435,9 @@ class ToolsetReference:
     @property
     def toolset_class(self) -> type:
         """The ``@agent_toolset`` class the reference names. Raises TypeError for a class that is not one."""
-        loaded = getattr(self._module, self._class_name)
+        loaded = self._held_class or getattr(self._module, self._class_name)
         if not (isinstance(loaded, type) and AgentToolSetAnnotation.annotates(loaded)):
-            raise TypeError(f"{self._reference} is not a @agent_toolset class")
+            raise TypeError(f"{self} is not a @agent_toolset class")
         return loaded
 
     @property
@@ -581,35 +601,10 @@ class AgentToolSet(AgentToolSetOrigin):
     def mode(self, new_mode: str | ExpansionMode) -> None:
         self._mode = ExpansionMode(str(new_mode)).value
 
-    @classmethod
-    def instantiate(cls, toolset: ToolsetConfiguration = None) -> AgentToolSet:
-        """A toolset made from what configuration names: a ``<module>:<Class>`` reference, ``{"toolset": reference,
-        "context": {...}}`` with the constructor's arguments, a toolset class, or a toolset already made."""
-        if toolset is None:
-            return cls()
-        if isinstance(toolset, dict) and "toolset" in toolset:
-            context = dict(toolset.get("context") or {})
-            for key, value in toolset.items():
-                if key not in {"toolset", "context"}:
-                    context.setdefault(key, value)
-            return ToolsetMembers.of(ToolsetReference(str(toolset["toolset"])).toolset_class).subject_loader.made(context)
-        if isinstance(toolset, dict):
-            return cls(**toolset)
-        if isinstance(toolset, str):
-            return ToolsetMembers.of(ToolsetReference(toolset).toolset_class).subject_loader.made({})
-        if isinstance(toolset, type):
-            return ToolsetMembers.of(toolset).subject_loader.made({})
-        return toolset
-
-    @classmethod
-    def from_items(cls, items: list[Any], *, context: dict[str, object] | None = None) -> list[Any]:
-        """One toolset for each item ``instantiate`` takes, the first of each class only; a reference string is made
-        with context."""
-        made: dict[type, Any] = {}
-        for item in items:
-            toolset = cls.instantiate({"toolset": item, "context": dict(context)} if isinstance(item, str) and context is not None else item)
-            made.setdefault(type(toolset), toolset)
-        return list(made.values())
+    def made(self, **context: object) -> AgentToolSet:
+        """This toolset, already made: a server or install that loads toolsets from their references takes one made
+        already, such as a spec's fake, the same way."""
+        return self
 
     # -- the tools this toolset publishes -------------------------------------------------------------------------
 
@@ -664,15 +659,29 @@ class AgentToolSet(AgentToolSetOrigin):
         merged.update(self._discover_collection_tools())
         return merged
 
-    def tools_for(self, destination: str) -> list[AgentTool]:
-        return [tool for tool in self.tools.values() if tool.install_to(destination)]
+    def tools_published_to(self, destination: DestinationKind | None) -> list[AgentTool]:
+        """Every tool install publishes to destination; none when destination's publisher was never imported."""
+        return [tool for tool in self.tools.values() if tool.is_published_to(destination)]
 
-    @property
-    def is_part_of_practice(self) -> bool:
-        """Whether this toolset is one part of a practice, such as one of its fidelities: its files and commands sit in
-        its practice's folder, named after its own slug, and its own instructions are published under that slug. A
-        toolset is a whole of its own unless it says otherwise."""
-        return False
+    def published_name(self, tool: AgentTool) -> str:
+        """The name MCP publishes tool, one of this toolset's, under and the session log records it by:
+        ``{slug}.{name}``, unless the toolset names its tools otherwise."""
+        return f"{self.slug}.{tool.name}"
+
+    def installed_as(self, tool: AgentTool) -> InstalledName:
+        """Where install puts tool's files and what it names them: in this toolset's install folder, named by the
+        tool, unless the toolset names its files otherwise."""
+        return InstalledName(self.install_folder)
+
+    def listed_parts(self) -> list[AgentToolSet]:
+        """The parts the file of this toolset's own tool lists, each with the call to its own tool; none unless the
+        toolset says."""
+        return []
+
+    def instructions_type(self, name: str) -> type[AgentInstructions]:
+        """The kind of tool the ``@agent_instructions`` member called name is published as: an *AgentInstructions*,
+        unless the toolset publishes one of its own members as another kind."""
+        return AgentInstructions
 
     @property
     def is_served_on_mcp(self) -> bool:
@@ -717,16 +726,16 @@ class AgentToolSet(AgentToolSetOrigin):
         return subject_loader.on_subject(member)
 
     def _discover_instruction_members(self) -> dict[str, AgentInstructions]:
-        return self._members_as(AgentInstructions, AgentInstructionsAnnotation.annotates)
+        return self._members_as(self.instructions_type, AgentInstructionsAnnotation.annotates)
 
     def _discover_enlisted_members(self) -> dict[str, AgentTool]:
-        return self._members_as(AgentTool, annotation_kinds.enlisting)
+        return self._members_as(lambda _name: AgentTool, annotation_kinds.enlisting)
 
-    def _members_as[T: AgentTool](self, kind: type[T], is_one: Callable[[ClassMember], bool]) -> dict[str, T]:
-        """Each annotated member that is_one accepts, as a tool of kind on this toolset, by its name."""
+    def _members_as[T: AgentTool](self, kind_of: Callable[[str], type[T]], is_one: Callable[[ClassMember], bool]) -> dict[str, T]:
+        """Each annotated member that is_one accepts, as a tool of the kind kind_of names for it, by its name."""
         members = self._members
         return {
-            name: kind(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
+            name: kind_of(name)(name=name, callable=members.declared.callable_on(self, name, member), toolset=self)
             for name, member in members.annotated if is_one(member)
         }
 
@@ -910,47 +919,19 @@ class _OperationOnSubject:
         return param.replace(annotation=str, default=default)
 
 
-class InstallDestination:
-    """The channels a member is published to, in the order a tool lists them. Each channel's annotation is a *Destination*
-    its publisher defines (harness/installation, harness/mcp, harness/hooks), so this module names the channels and
-    never imports the publishers."""
-
-    MCP = "mcp"
-    HOOK = "hook"
-    SKILL = "skill"
-    COMMAND = "command"
-    RULE = "rules"
-    LISTED = (MCP, SKILL, COMMAND, RULE, HOOK)
-
-
 class AgentToolDestination:
-    """Which install destinations this tool is annotated for."""
+    """Where install publishes this tool: each destination, a *DestinationKind* its publisher defines (harness/installation,
+    harness/mcp, harness/hooks), which this module asks through ``annotation_kinds`` and never imports."""
 
     callable: Callable[..., Any]
 
     @property
-    def install_to_mcp(self) -> bool:
-        return self.install_to(InstallDestination.MCP)
+    def destinations(self) -> tuple[DestinationKind, ...]:
+        return annotation_kinds.destinations_of(self.callable)
 
-    @property
-    def install_to_hook(self) -> bool:
-        return self.install_to(InstallDestination.HOOK)
-
-    @property
-    def hook_event(self) -> str:
-        """The IDE event this tool's ``@Hook`` annotation names, or empty when the tool is not a hook."""
-        return annotation_kinds.name_given_for(InstallDestination.HOOK, self.callable)
-
-    @property
-    def install_to_skill(self) -> bool:
-        return self.install_to(InstallDestination.SKILL)
-
-    def install_to(self, destination: str) -> bool:
-        return annotation_kinds.publishes(destination, self.callable)
-
-    @property
-    def destinations(self) -> list[str]:
-        return [destination for destination in InstallDestination.LISTED if self.install_to(destination)]
+    def is_published_to(self, destination: DestinationKind | None) -> bool:
+        """Whether install publishes this tool to destination; never when destination's publisher was never imported."""
+        return destination is not None and destination.publishes(self.callable)
 
 
 def names_alike(called: str, published: str) -> bool:
@@ -996,25 +977,16 @@ class AgentTool(AgentToolDestination):
     def slug(self) -> str:
         return self.toolset.slug
 
-    @property
-    def registration_name(self) -> str:
-        return self.toolset.registration_name
 
     @property
     def deploy_name(self) -> str:
-        return (
-            annotation_kinds.name_given_for(InstallDestination.COMMAND, self.callable)
-            or annotation_kinds.name_given_for(InstallDestination.SKILL, self.callable)
-            or self.name
-        )
+        return annotation_kinds.deploy_name_of(self.callable) or self.name
 
     @property
     def mcp_name(self) -> str:
-        """The name MCP publishes this tool under and the session log records it by: ``{toolset slug}.{name}``. A
-        practice's own instructions are published under the practice's slug alone."""
-        if self.toolset.is_part_of_practice and self.name == "instructions":
-            return self.slug
-        return f"{self.slug}.{self.name}"
+        """The name MCP publishes this tool under and the session log records it by, as its toolset names it
+        (``AgentToolSet.published_name``)."""
+        return self.toolset.published_name(self)
 
     def is_called(self, called: str) -> bool:
         """Whether called, the name a client sent, names this tool: its MCP name as published (``generate.generate``),
@@ -1052,10 +1024,9 @@ class AgentTool(AgentToolDestination):
     def answer(self, call: ToolCall) -> Any:
         """Answer call on its toolset made for it: log the call in the session it works in, then call the tool with each
         argument in the type its parameter declares."""
-        with CALLS_BEING_ANSWERED.answering(call):
-            tool = self._on(self.toolset.for_call(call))
-            tool.log_session_invocation(call)
-            return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
+        tool = self._on(self.toolset.for_call(call))
+        tool.log_session_invocation(call)
+        return tool.callable(**self.parameter_schema.coerced(call.arguments), **tool._from_the_call(call))
 
     def _on(self, toolset: AgentToolSet) -> AgentTool:
         """This tool on toolset, a toolset of the same class made for one call; the tool as it is when toolset is its
@@ -1080,7 +1051,7 @@ class AgentTool(AgentToolDestination):
             return False
         if AgentToolAnnotation.annotates(self.callable):
             return True
-        return self.install_to_mcp
+        return self.is_published_to(annotation_kinds.answering_calls)
 
     def log_session_invocation(self, call: ToolCall) -> None:
         """Log call in the session its toolset works in for it: a guidance action's own session, which a board command
@@ -1090,7 +1061,7 @@ class AgentTool(AgentToolDestination):
         session = self.toolset.session_for(call)
         if session is None:
             return
-        session.log.by(call.request.chat).tool(self.mcp_name, call.named_paths)
+        session.log_tool(call, self.mcp_name)
 
     @property
     def kind(self) -> str:
@@ -1127,27 +1098,24 @@ class AgentTool(AgentToolDestination):
         body = (text or "").strip()
         return f"{preamble}\n\n{body}" if body else preamble
 
-    @functools.cached_property
+    @property
     def listed_description(self) -> str:
-        """What the MCP tool list says of this tool, which every chat carries each turn the tool is loaded. An
-        instructions tool returns its whole guidance when called, so the list gives only its opening paragraph."""
-        if self.name != "instructions":
-            return self.description
-        paragraphs = [part.strip() for part in self.description.split("\n\n") if part.strip()]
-        prose = [part for part in paragraphs if not part.startswith("#")]
-        if len(prose) <= 1:
-            return "\n\n".join(prose) or self.description
-        return f"{prose[0]}\n\n{LISTED_INSTRUCTIONS_NOTE}"
+        """What the MCP tool list says of this tool, which every chat carries each turn the tool is loaded: its
+        description."""
+        return self.description
 
     @functools.cached_property
     def description(self) -> str:
         """What the tool does, expanded from its docstring once: the skill and the MCP prompt carry it whole."""
         expanded = self.toolset.class_markdown.expand_docstring(self.docstring)
-        if expanded:
-            return expanded
-        if self.name == "instructions" and (self.toolset.overview or "").strip():
-            return self.toolset.overview.strip()
-        return self.docstring or self.callable.__name__
+        return expanded or self.docstring or self.callable.__name__
+
+    @property
+    def served_body(self) -> str:
+        """What the file installed for this tool says above the call to it, when a server answers that call: its
+        docstring, unless an ``\"\"\"overview\"\"\"`` docstring names the section the server returns, which is no
+        body text."""
+        return "" if self.docstring.strip() == "overview" else self.docstring
 
 
 @dataclass
@@ -1192,8 +1160,6 @@ class AgentInstructions(AgentTool):
         """The instructions an agent follows for call, expanded with its arguments by the toolset made for it."""
         tool = self._on(self.toolset.for_call(call))
         tool.log_session_invocation(call)
-        if tool.name == "instructions":
-            return tool.toolset.instructions
         return tool._expanded_reply(call.arguments)
 
     def _expanded_reply(self, arguments: dict[str, Any]) -> str:
@@ -1348,7 +1314,7 @@ class _ClassJoiningAnnotation(Annotation):
         joined.__doc__ = target.__doc__
         joined.__module__ = target.__module__
         joined.__qualname__ = target.__qualname__
-        setattr(joined, self.flag, True)
+        setattr(joined, self.flag, self)
         return joined
 
 
@@ -1379,7 +1345,7 @@ class ToolSetCollectionAnnotation(_ClassJoiningAnnotation):
     def annotate(self, target: JoinedTarget) -> JoinedTarget:
         if inspect.isclass(target):
             return self._joined(target, ToolSetCollection)
-        setattr(getattr(target, "fget", target), self.flag, True)
+        setattr(getattr(target, "fget", target), self.flag, self)
         return target
 
 

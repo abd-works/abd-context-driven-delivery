@@ -27,7 +27,23 @@
   <div id="shell">
     <section id="story-demo-frame">
       <main id="mockup">
-        <!-- screens / regions / controls — emit data-story-steps on StoryDemoControls -->
+        <!-- screens / regions / controls — emit data-story-steps on StoryDemoControls.
+             The sample below is one screen with one control, written out so you can see a filled-in page: replace
+             the Cart screen, its "order actions" region and its "Place order" button with your own, add a screen
+             for each screen of the user goal, and keep the map in the ux-map-json comment at the end of the page
+             the same as the markup, since that comment is what CDD reads back. -->
+        <article class="screen" data-slug="cart" data-layout="stack">
+          <h2>Cart</h2>
+          <p class="layout">stack</p>
+          <div class="regions">
+            <section class="region" data-area="body" data-region="order actions">
+              <h3>order actions</h3>
+              <button type="button" class="control button primary" data-name="Place order" data-trigger="click"
+                      data-effect="places the order for the books in the cart">Place order</button>
+            </section>
+          </div>
+          <p class="screen-stories">Stories: -</p>
+        </article>
       </main>
     </section>
     <section id="explorer-frame">
@@ -40,5 +56,36 @@
   <script type="module" src="{{STORY_MODULE}}" data-ux-story-ref></script>
   <script type="module" src="{{DOMAIN_MODULE}}" data-ux-object-ref></script>
   <script type="module" src="/practices/ux/story-demo/mount-generated-mockup.js"></script>
+  <!-- ux-map-json:
+{
+  "name": "place-order",
+  "scope": "Place Order",
+  "screens": [
+    {
+      "name": "Cart",
+      "slug": "cart",
+      "layout": "stack",
+      "description": "The books the customer is about to order",
+      "regions": [
+        {
+          "name": "order actions",
+          "area": "body",
+          "controls": [
+            {
+              "name": "Place order",
+              "control_type": "button",
+              "label": "Place order",
+              "states": ["primary"],
+              "interactions": [
+                {"name": "place the order", "trigger": "click", "effect": "places the order for the books in the cart", "destination": ""}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+  -->
 </body>
 </html>

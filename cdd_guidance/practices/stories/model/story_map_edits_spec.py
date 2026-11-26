@@ -13,27 +13,31 @@ from pathlib import Path
 from expects import contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[4]).ensure_import_path()
 
 import cdd_guidance.practices  # noqa: E402,F401 - registers the practices with the practice catalogue
+from cdd_guidance.practices.stories.model.opened_story_map import StoryMapEditRefused  # noqa: E402
+from cdd_guidance.practices.stories.model.story_map import StoryNodeNotFound  # noqa: E402
 from cdd_guidance.practices.stories.stories import Stories  # noqa: E402
+from space.session.practices.practice_session_output import FormatNotOfferedError  # noqa: E402
 from harness.guidance.practice_formats import RenderRequest  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
 from harness.markdown.format import Format  # noqa: E402
-from harness.mcp.mcp_server import McpServer  # noqa: E402
-from space.session.throwaway_project import ThrowawayProject  # noqa: E402
+from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
+from space.session.spec_support.throwaway_project import ThrowawayProject  # noqa: E402
 
 TOOLSETS = (
-    "cdd_guidance.practices.stories.model.story_model:StoryModel",
-    "cdd_guidance.practices.stories.model.story_model:Epic",
-    "cdd_guidance.practices.stories.model.story_model:Story",
-    "cdd_guidance.practices.stories.model.story_model:Scenario",
-    "cdd_guidance.practices.stories.model.story_model:Step",
-    "cdd_guidance.practices.stories.model.story_model:Example",
-    "cdd_guidance.practices.stories.model.story_model:Increment",
-    "space.session.practice_session_output:FidelitySessionOutput",
+    "cdd_guidance.practices.stories.model.story_map:StoryMap",
+    "cdd_guidance.practices.stories.model.story_map:Epic",
+    "cdd_guidance.practices.stories.model.story_map:Story",
+    "cdd_guidance.practices.stories.model.story_map:Scenario",
+    "cdd_guidance.practices.stories.model.story_map:Step",
+    "cdd_guidance.practices.stories.model.story_map:Example",
+    "cdd_guidance.practices.stories.model.story_map:Increment",
+    "space.session.practices.practice_session_output:FidelitySessionOutput",
     "space.session.sessions:Sessions",
 )
 # A snapshot of this repository's story map, its thin slice, and the chat bar's scenario file, taken before its stories
@@ -91,7 +95,7 @@ def _laid_out(text: str) -> str:
     """text as the markdown format writes a story map, so saving it changes nothing but an edit."""
     stories = Stories()
     model = stories.formats.parse(Format("markdown"), text)
-    return stories.formats.render(RenderRequest(Format("markdown"), model))["content"]
+    return stories.formats.render(RenderRequest(Format("markdown"), model)).content
 
 
 def _changed(before: str, after: str) -> tuple[list[str], list[str]]:
@@ -108,7 +112,7 @@ def _node(path: str) -> str:
 
 class StoryMapProject:
     """A throwaway project holding the checkout-flow session and its story map, whose story map tools run on an
-    McpServer, as the Story UI's server reaches them."""
+    ProjectToolsets, as the Story UI's server reaches them."""
 
     def __init__(self, map_text: str = "") -> None:
         self.root = ThrowawayProject().root
@@ -118,10 +122,10 @@ class StoryMapProject:
         (session / "session.json").write_text(json.dumps({"name": "checkout-flow"}), encoding="utf-8")
         (self.root / ".context").mkdir()
         self.map.write_text(map_text or _laid_out(HAND_WRITTEN_MAP), encoding="utf-8")
-        self.server = McpServer(project=self.root)
-        self.server.start(TOOLSETS)
+        self.server = ProjectToolsets(project=self.root)
+        self.server.start([ToolsetReference.parsed(text) for text in TOOLSETS])
         # The Story UI works in the session open in the project, as the board's server reaches the cdd server.
-        self.call("sessions.switch", name="checkout-flow")
+        self.call("sessions.switch", name="checkout-flow", create=True)
 
     @property
     def map(self) -> Path:
@@ -182,7 +186,7 @@ def _scenario_project() -> tuple[StoryMapProject, str, dict, dict]:
     Refactor Story UI App To Web Domain Access story."""
     project = StoryMapProject()
     written = project.copy(STORIES / CHAT_BAR_FOLDER / "integrate_practice_content_editor_apps_in_chat_bar_story.test.md", SCENARIO_FILE)
-    shown = project.call("story-model.show", file=SCENARIO_FILE)
+    shown = project.call("story-map.show", file=SCENARIO_FILE)
     return project, written, shown, project.story_at(shown, "Refactor Story UI App To Web Domain Access")
 
 
@@ -190,7 +194,7 @@ def _named_examples_project() -> tuple[StoryMapProject, dict]:
     """A project holding a scenario file whose examples are named: the project and its scenario as shown."""
     project = StoryMapProject()
     project.write(NAMED_EXAMPLES_FILE, NAMED_EXAMPLES)
-    shown = project.call("story-model.show", file=NAMED_EXAMPLES_FILE)
+    shown = project.call("story-map.show", file=NAMED_EXAMPLES_FILE)
     return project, project.story_at(shown, "Open Story UI Side Panel From Chat Bar")["scenarios"][0]
 
 
@@ -214,7 +218,7 @@ with description("a story map edited through its tools") as self:
     # (S) Deploy Story UI App With Board State: the editor follows the session open in the project.
     with context("opened on the session open in the project"):
         with before.all:
-            self.opened = StoryMapProject().call("story-model.open_in_session")
+            self.opened = StoryMapProject().call("story-map.open_in_session")
 
         with it("should show that session's story map"):
             expect(self.opened["file"]).to(equal(MAP_FILE))
@@ -222,7 +226,7 @@ with description("a story map edited through its tools") as self:
     with context("opened on story-map.md"):
         with before.all:
             self.project = StoryMapProject()
-            self.shown = self.project.call("story-model.show", file=MAP_FILE)
+            self.shown = self.project.call("story-map.show", file=MAP_FILE)
 
         with it("should show the stories story-map.md holds"):
             expect(self.project.story_names(self.shown)).to(equal(["Open Story UI Side Panel From Chat Bar", "Open Kanban Side Panel From Chat Bar", "Trace Story Through Artifacts"]))
@@ -231,7 +235,7 @@ with description("a story map edited through its tools") as self:
             expect(self.shown["file"]).to(equal(MAP_FILE))
 
         with it("should show the formats its fidelity offers and the ones chosen"):
-            expect((self.shown["formats"]["offered_formats"], self.shown["formats"]["chosen_formats"])).to(equal((["markdown", "drawio", "whiteboard", "thin_slice"], ["markdown"])))
+            expect((self.shown["formats"]["offered_formats"], self.shown["formats"]["chosen_formats"])).to(equal((["markdown", "drawio", "whiteboard"], ["markdown"])))
 
         with it("should take edits"):
             expect(self.shown["refusal"]).to(equal(""))
@@ -279,7 +283,7 @@ with description("a story map edited through its tools") as self:
         with before.all:
             self.project = StoryMapProject()
             self.project.call("story.rename", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), name="Trace Story Across Artifacts")
-            self.read = self.project.call("story-model.show", file=MAP_FILE)
+            self.read = self.project.call("story-map.show", file=MAP_FILE)
 
         with it("should show the renamed story on the next read"):
             expect(self.project.story_names(self.read)).to(contain("Trace Story Across Artifacts"))
@@ -287,7 +291,7 @@ with description("a story map edited through its tools") as self:
     with context("with each edit"):
         with context("that adds an epic"):
             with before.all:
-                self.story_map = StoryMapProject().call("story-model.new_epic", file=MAP_FILE, name="Deploy Story UI App")
+                self.story_map = StoryMapProject().call("story-map.new_epic", file=MAP_FILE, name="Deploy Story UI App")
 
             with it("should add an epic after the map's epics"):
                 expect([epic["name"] for epic in self.story_map["epics"]]).to(equal(["Move Work Forward From Chat Bar", "Deploy Story UI App"]))
@@ -317,7 +321,15 @@ with description("a story map edited through its tools") as self:
                 self.moving = _failure(lambda: project.call("story.move_before", node=_node(f"{SUB_EPIC}.trace-story-through-artifacts"), other=_node(SUB_EPIC)))
 
             with it("should refuse to move a story before an epic"):
-                expect(lambda: _again(self.moving)).to(raise_error(Exception, contain("not a Story")))
+                expect(lambda: _again(self.moving)).to(raise_error(StoryMapEditRefused, contain("not a Story")))
+
+        with context("that renames a story the map does not hold"):
+            with before.all:
+                project = StoryMapProject()
+                self.renaming = _failure(lambda: project.call("story.rename", node=_node(f"{SUB_EPIC}.no-such-story"), name="Anything"))
+
+            with it("should refuse, naming the node it could not find"):
+                expect(lambda: _again(self.renaming)).to(raise_error(StoryNodeNotFound, contain("no-such-story")))
 
         # A story map keeps its stories; their scenarios are kept in each story's scenario file.
         with context("that adds a scenario to a story"):
@@ -326,7 +338,7 @@ with description("a story map edited through its tools") as self:
                 self.adding = _failure(lambda: project.call("story.new_scenario", node=_node(f"{SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"), name="Press opens the editor"))
 
             with it("should refuse a scenario on a story map, which does not read one back"):
-                expect(lambda: _again(self.adding)).to(raise_error(Exception, contain("would not keep the edit")))
+                expect(lambda: _again(self.adding)).to(raise_error(StoryMapEditRefused, contain("would not keep the edit")))
 
     # (S) Refactor Story UI App To Web Domain Access: a story map laid out by hand is edited, not read only.
     with context("opened on a story map laid out by hand"):
@@ -410,7 +422,7 @@ with description("a story map edited through its tools") as self:
     with context("sliced into increments by the thin slice beside it"):
         with before.all:
             self.sliced = (STORIES / "thin-slice.md").read_text(encoding="utf-8")
-            self.shown = _snapshot_project().call("story-model.show", file=MAP_FILE)
+            self.shown = _snapshot_project().call("story-map.show", file=MAP_FILE)
 
         with it("should show its increments in order"):
             expect([increment["name"] for increment in self.shown["increments"]][:3]).to(equal(["Built Today", "Maintain Tickets On Board", "Integrate Practice Content Editor Apps"]))
@@ -424,7 +436,7 @@ with description("a story map edited through its tools") as self:
         with context("with an increment added and given a story"):
             with before.all:
                 self.project = _snapshot_project()
-                self.project.call("story-model.new_increment", file=MAP_FILE, name="Edit Story Maps In Story UI")
+                self.project.call("story-map.new_increment", file=MAP_FILE, name="Edit Story Maps In Story UI")
                 self.added = self.project.call("increment.add_story", node=_node("increment:edit-story-maps-in-story-ui"), story=_node(CHAT_BAR_STORY))
 
             with it("should write the increment after the last one in thin-slice.md"):
@@ -497,14 +509,14 @@ with description("a story map edited through its tools") as self:
                 self.editing = _failure(lambda: self.project.call("example.edit_field", node=self.trace["examples"][0]["node"], field="owner", text="Person"))
 
             with it("should refuse a column the example's row does not have"):
-                expect(lambda: _again(self.editing)).to(raise_error(Exception, contain("has no owner column")))
+                expect(lambda: _again(self.editing)).to(raise_error(StoryMapEditRefused, contain("has no owner column")))
 
         with context("with an example moved before another"):
             with before.all:
                 self.moving = _failure(lambda: self.project.call("example.move_before", node=self.trace["examples"][1]["node"], other=self.trace["examples"][0]["node"]))
 
             with it("should refuse to move an example, which keeps the place its table gives it"):
-                expect(lambda: _again(self.moving)).to(raise_error(Exception, contain("keeps the place its table gives it")))
+                expect(lambda: _again(self.moving)).to(raise_error(StoryMapEditRefused, contain("keeps the place its table gives it")))
 
     # (S) Refactor Story UI App To Web Domain Access: an example named by its example column is renamed in that cell.
     with context("opened on a scenario file whose examples are named"):
@@ -533,7 +545,7 @@ with description("a story map edited through its tools") as self:
         with before.all:
             self.project = StoryMapProject()
             self.project.write(STORY_TEST_FILE, STORY_TEST)
-            self.shown = self.project.call("story-model.show", file=MAP_FILE)
+            self.shown = self.project.call("story-map.show", file=MAP_FILE)
 
         with it("should link the story to that file"):
             expect(self.project.story_at(self.shown, "Open Story UI Side Panel From Chat Bar")["acceptance_tests"]).to(equal([STORY_TEST_FILE]))
@@ -546,14 +558,14 @@ with description("a story map edited through its tools") as self:
         with before.all:
             project = StoryMapProject()
             project.write(".sessions/checkout-flow/checkout-flow.md", "# Checkout flow\n\n## Story: Open Story UI Side Panel From Chat Bar\n\n## Story: Open Kanban Side Panel From Chat Bar\n")
-            self.shown = project.call("story-model.open_in_session")
+            self.shown = project.call("story-map.open_in_session")
 
         with it("should scope the map to the stories the session names"):
             expect(self.shown["scope"]).to(equal([_node(f"{SUB_EPIC}.open-story-ui-side-panel-from-chat-bar"), _node(f"{SUB_EPIC}.open-kanban-side-panel-from-chat-bar")]))
 
     with context("opened in a session that names no story"):
         with before.all:
-            self.shown = StoryMapProject().call("story-model.show", file=MAP_FILE)
+            self.shown = StoryMapProject().call("story-map.show", file=MAP_FILE)
 
         with it("should scope the map to none of its stories, so the whole map shows"):
             expect(self.shown["scope"]).to(equal([]))
@@ -564,4 +576,4 @@ with description("a story map edited through its tools") as self:
             self.choosing = _failure(lambda: project.choose("python", True))
 
         with it("should refuse a format the story map does not write"):
-            expect(lambda: _again(self.choosing)).to(raise_error(Exception, contain("does not write python")))
+            expect(lambda: _again(self.choosing)).to(raise_error(FormatNotOfferedError, contain("does not write python")))

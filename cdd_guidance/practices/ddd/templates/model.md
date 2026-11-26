@@ -68,6 +68,7 @@ Dependencies on other aggregates are properties held by identity, `<< associatio
 ------
 + {{identity}}: {{Type}}
 + {{property}}: {{Type}}
++ << composition >> {{value}}: {{Value}}
 ----
 + {{memberOperation}}({{parameters}}): {{ReturnType}}
 

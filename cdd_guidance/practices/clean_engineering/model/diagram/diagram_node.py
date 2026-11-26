@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import re
 from typing import Dict, List, Optional
 
 from harness.graph.graph import Graph
@@ -13,6 +14,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     path_parent,
 )
 from cdd_guidance.practices.clean_engineering.model.type_refs import pascal_type_names
+from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     CELL_MIN_HEIGHT,
     CELL_WIDTH,
@@ -24,7 +26,6 @@ from cdd_guidance.practices.clean_engineering.model.diagram.geometry import (
     MODULE_MAX_SEAM_BULLETS,
     MODULE_PURPOSE_MAX_CHARS,
     SECTION_PAD,
-    Geometry,
 )
 
 # The class name band at the top of a card, above its members.
@@ -44,7 +45,7 @@ class DiagramNode(ABC):
 
     def __init__(self, width: float = CELL_WIDTH) -> None:
         # The box starts as wide as its kind of card and as tall as what it holds; placement moves it.
-        self.geometry = Geometry(0, 0, width, float(self.height()))
+        self.geometry = Box(0, 0, width, float(self.height()))
         self.cell_id = ''
         self.parent_id = '1'
         self.group = ''
@@ -54,12 +55,19 @@ class DiagramNode(ABC):
         ...
 
 
+# The interactions an arrow's label names after the properties it stands for, as `lines «prices»`.
+_INTERACTION_WORDS = re.compile('«[^»]*»')
+
+
 class DiagramClass(OoadClass, DiagramNode):
     """OoadClass on a page: name, members, height. Channel fills the label."""
 
     def __init__(self, name: str = '', sequential_order: int = 1, intent: str = '') -> None:
         OoadClass.__init__(self, name, sequential_order, intent)
         DiagramNode.__init__(self)
+        # The properties whose written relationship no arrow on the drawing shows, because the class their type names
+        # has no card: the card writes the relationship on their line, so reading the drawing brings it back.
+        self.marked_on_card: set[str] = set()
 
     def width(self) -> int:
         """The width of the card before the arrows it carries widen it; a format whose words need more sets its own."""
@@ -67,16 +75,29 @@ class DiagramClass(OoadClass, DiagramNode):
 
     def height(self) -> int:
         member_count = len(self.properties) + len(self.operations)
-        return max(CELL_MIN_HEIGHT, CLASS_TITLE_HEIGHT + member_count * LINE_HEIGHT + 2 * SECTION_PAD)
+        folded = sum(CLASS_TITLE_HEIGHT + (len(item.properties) + len(item.operations)) * LINE_HEIGHT + 2 * SECTION_PAD for item in self.folded)
+        return max(CELL_MIN_HEIGHT, CLASS_TITLE_HEIGHT + member_count * LINE_HEIGHT + 2 * SECTION_PAD + folded)
 
-    def take_arrow(self, target: str, kind: str) -> None:
-        """An arrow of kind drawn to target is the property whose type names the target. Inheritance and a dependency
-        stand for no property."""
+    def property_lines(self) -> List[str]:
+        """Each property as its card writes it, with the relationship written on it when no arrow can show it."""
+        return [f"+ {item.marked_signature() if item.name in self.marked_on_card else item.save()}" for item in self.properties]
+
+    def take_arrow(self, target: str, kind: str, label: str = '', unmarked: str = '') -> None:
+        """An arrow of kind drawn to target is the properties its label names, of those whose type names the target; an
+        arrow whose label names none of them is every property whose type names the target. A property the arrow lists
+        as unmarked stays as it is: nobody wrote a relationship on it, and the arrow only shows what its type already
+        says. Inheritance and a dependency stand for no property."""
         if (kind or "").lower() in {"inheritance", "dependency"}:
             return
-        for prop in self.properties:
-            if target in pascal_type_names(prop.type_hint or ""):
+        named = self._names_in(_INTERACTION_WORDS.sub('', label))
+        reaching = [prop for prop in self.properties if target in pascal_type_names(prop.type_hint or "")]
+        for prop in [prop for prop in reaching if prop.name in named] or reaching:
+            if prop.name not in self._names_in(unmarked):
                 prop.arrow.take_kind(kind)
+
+    def _names_in(self, listed: str) -> List[str]:
+        """The property names an arrow lists, written `lines, history`."""
+        return [name.strip() for name in listed.split(',') if name.strip()]
 
 
 class ImportedClass(DiagramClass):
@@ -249,6 +270,8 @@ class ContainmentForest:
 
 class DiagramCleanEngineeringModel(CleanEngineeringModel):
     """Shared diagram channel. Draw.io extends this model."""
+
+    writes_prose = False
 
     def load_module_cell(self, source: Module) -> DiagramModule:
         """A module of this channel's own kind for a container module the containment forest made, filled from it."""

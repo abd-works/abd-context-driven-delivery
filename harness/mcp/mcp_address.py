@@ -7,6 +7,9 @@ import http.client
 import json
 import os
 import socket
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Protocol
 
 SERVER_PORT_ENV = "CDD_SERVER_PORT"
 DEFAULT_SERVER_PORT = 47800
@@ -20,6 +23,12 @@ PING_PATH = "/ping"
 MCP_PATH = "/mcp"
 # Where the stable lane's server sends a dev-lane chat's tool call for the dev lane's server to answer.
 LANE_CALL_PATH = "/lane-call"
+# What one lane's server asks the other for when a chat of the other's lists its tools: the tools it serves, as data.
+BUILTIN_LIST_TOOLS = "cdd.list_tools"
+# The dev lane's home sits inside the stable lane's, in this folder, so one ``CDD_HOME`` names both.
+DEV_LANE_FOLDER = "dev"
+# The dev lane answers on the port after the stable lane's, so a throwaway pair from a spec stays a pair.
+DEV_PORT_AFTER_STABLE = 1
 # How long a connection to the loopback port may take before nothing is taken to listen there.
 _CONNECT_SECONDS = 0.5
 
@@ -32,6 +41,46 @@ class LaneUnreachable(Exception):
         self.port = port
 
 
+class PingReplyUnreadable(Exception):
+    """A ping whose reply is not JSON: the program answering on the port is no cdd server, or not one this code can
+    read. Read as nothing answering, the next start would try the port another program holds and fail for a reason
+    nobody sees."""
+
+    def __init__(self, port: int, reply: str) -> None:
+        super().__init__(f"the program answering on port {port} is no cdd server this code can read: its ping reply is not JSON: {reply[:200]!r}")
+        self.port = port
+        self.reply = reply
+
+
+class SentCall(Protocol):
+    """A tool call one lane's server can hand the other's: it writes itself as JSON data (``ToolCall.as_sent``)."""
+
+    def as_sent(self) -> dict[str, Any]: ...
+
+
+@dataclass(frozen=True)
+class LaneReply:
+    """What the other lane's server answered a call it was handed: the tool's answer, or the failure that stopped it,
+    named by its kind and message, so the chat sees the failure it would have seen there."""
+
+    answer: Any = None
+    failure: dict[str, str] = field(default_factory=dict)
+
+    @classmethod
+    def failed(cls, failure: BaseException) -> LaneReply:
+        """The reply naming failure by its class and message."""
+        return cls(failure={"kind": type(failure).__name__, "message": str(failure)})
+
+    @classmethod
+    def read(cls, data: dict[str, Any]) -> LaneReply:
+        """The reply the other lane wrote as JSON (``as_data``)."""
+        return cls(data.get("answer"), dict(data.get("failure") or {}))
+
+    @property
+    def as_data(self) -> dict[str, Any]:
+        return {"failure": self.failure} if self.failure else {"answer": self.answer}
+
+
 class McpAddress:
     """The loopback port the one cdd server listens on: the ``CDD_SERVER_PORT`` a spec or a throwaway server sets, else
     the default."""
@@ -41,34 +90,49 @@ class McpAddress:
     def __init__(self, port: int | None = None) -> None:
         self.port = port or int(os.environ.get(SERVER_PORT_ENV) or DEFAULT_SERVER_PORT)
 
+    @classmethod
+    def of_home(cls, folder: Path) -> McpAddress:
+        """The address of the server that runs from the cdd home in folder: the dev lane's, on the port after the
+        stable lane's, when folder is the dev lane's home; else the stable lane's."""
+        stable = cls()
+        return cls(stable.port + DEV_PORT_AFTER_STABLE) if Path(folder).name == DEV_LANE_FOLDER else stable
+
     @property
     def url(self) -> str:
         return f"http://{self.HOST}:{self.port}{MCP_PATH}"
 
     def ping_answer(self, reply_seconds: float) -> dict | None:
         """What the server says about itself when pinged, or ``None`` when nothing answers on the port within
-        reply_seconds."""
+        reply_seconds; a reply that is not JSON raises *PingReplyUnreadable*."""
         connection = http.client.HTTPConnection(self.HOST, self.port)
         try:
             connection.sock = socket.create_connection((self.HOST, self.port), timeout=_CONNECT_SECONDS)
             connection.sock.settimeout(reply_seconds)
             connection.request("GET", PING_PATH)
             reply = connection.getresponse()
-            answer = json.loads(reply.read().decode("utf-8")) if reply.status == 200 else None
-        except (OSError, http.client.HTTPException, json.JSONDecodeError):
+            text = reply.read().decode("utf-8", errors="replace") if reply.status == 200 else ""
+        except (OSError, http.client.HTTPException):
             return None
         finally:
             connection.close()
+        answer = self._ping_reply(text) if text else None
         return answer if isinstance(answer, dict) and answer.get("ok") else None
 
-    def send_lane_call(self, lane_call: dict, reply_seconds: float) -> dict:
-        """Hand a tool call to the server on this port and wait up to reply_seconds for its reply: ``answer`` holds the
-        tool's answer, or ``failure`` names what failed."""
+    def _ping_reply(self, text: str) -> Any:
+        """The ping reply text read as JSON; a reply that is not JSON raises *PingReplyUnreadable*."""
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as unreadable:
+            raise PingReplyUnreadable(self.port, text) from unreadable
+
+    def send_lane_call(self, call: SentCall, reply_seconds: float) -> LaneReply:
+        """Hand call to the server on this port and wait up to reply_seconds for its reply: the tool's answer, or the
+        failure that stopped it."""
         connection = http.client.HTTPConnection(self.HOST, self.port, timeout=reply_seconds)
         try:
-            connection.request("POST", LANE_CALL_PATH, body=json.dumps(lane_call), headers={"Content-Type": "application/json"})
+            connection.request("POST", LANE_CALL_PATH, body=json.dumps(call.as_sent()), headers={"Content-Type": "application/json"})
             reply = connection.getresponse()
-            return json.loads(reply.read().decode("utf-8"))
+            return LaneReply.read(json.loads(reply.read().decode("utf-8")))
         except (OSError, http.client.HTTPException, json.JSONDecodeError) as failure:
             raise LaneUnreachable(self.port, str(failure)) from failure
         finally:

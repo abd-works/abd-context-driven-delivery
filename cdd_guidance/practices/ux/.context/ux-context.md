@@ -16,11 +16,11 @@ Primary sketch: `story-runner-sketch.md` (themes; ce → bdd → ux).
 - `PlayDualRunner.collect(create{Story}Story, mode)` then `start` / `playNext`.
 - Same step `fn`s as node tests; story declares GWT only — runner owns `steps[]`.
 - **Only explorer Play next invokes Play** — product `StoryDemoControl`s are not triggered.
-- After each `playNext`: `step.fn()` → `PaintReflect` / `StoryDemoFrame.bind(expose())` via `bound_field` → emphasize via `story_steps` (kind+label) → if Then, `ThenFeedback`.
+- After each `playNext`: `step.fn()` → `StoryDemoFrame.bind(expose())` via `bound_field` → emphasize via `story_steps` (kind+label) → if Then, `ThenFeedback`.
 - Stories mode wiring as is: `create{Story}Story(mode)`; `helper.given*({ mode })` only inside step fn bodies.
 
 **Paint vs Then**
-- `PaintReflect` → `StoryDemoFrame.bind(snapshot)` — controls update from `bound_field`; do not own domain.
+- `StoryDemoFrame.bind(snapshot)` — controls update from `bound_field`, once for each snapshot; they do not own domain.
 - `ThenFeedback` → Explorer mark/message + `StoryDemoFrame.tintFailed` — peer to paint.
 - Emphasize: explorer owns step list; `StoryDemoFrame` matches `story_steps` to current step kind+label.
 

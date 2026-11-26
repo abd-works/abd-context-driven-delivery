@@ -107,3 +107,9 @@ with description("a MernDomainDriven generator"):
         with it("should list inject_rules on tools so hook install can enroll it"):
             expect("inject_rules" in self.tool.tools).to(equal(True))
             expect("inject_rules" in self.rules.tools).to(equal(True))
+
+
+with description("the MERN pattern applied as an overlay"):
+    with it("should give the graph the overlay every pattern has, named for its folder"):
+        pattern = MernDomainDriven()
+        expect((pattern.graph_overlay.pattern is pattern, pattern.graph_overlay.name)).to(equal((True, "mern_domain_driven")))

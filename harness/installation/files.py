@@ -1,21 +1,16 @@
-"""The skill, command, and rule annotations, and the installation that writes their markdown files."""
+"""The skill, command, and rule annotations, and the installations that write their markdown files."""
 from __future__ import annotations
-
-from dataclasses import dataclass
 
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol
+from typing import Protocol
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, InvokeLine
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstalledName, InvokeLine
 from harness.annotations.name import Name
 from harness.installation.destination import Installation
 from harness.markdown.front_matter import FrontMatter
-from harness.annotations.annotation import Annotatable, Destination
-
-if TYPE_CHECKING:
-    from harness.installation.install_target import InstallTarget
+from harness.annotations.annotation import Annotatable, Destination, annotation_kinds
 
 
 class NamedDestination(Destination):
@@ -33,19 +28,28 @@ class NamedDestination(Destination):
         return annotation
 
 
-class Skill(NamedDestination):
-    flag = "_skill"
-    channel = InstallDestination.SKILL
-
-
 class Command(NamedDestination):
+    """``@command``: install writes the operation as a slash command. Defined before *Skill*, so a command's name is
+    the name an operation annotated as both is installed under."""
+
     flag = "_command"
-    channel = InstallDestination.COMMAND
+    channel = "command"
+
+
+class Skill(NamedDestination):
+    """``@skill``: install writes the operation as a skill."""
+
+    flag = "_skill"
+    channel = "skill"
 
 
 class Rules(Destination):
+    """``@rules``: install writes what the member answers as a rules file; the member holds a collection of its
+    toolset's tools, such as a practice's rules."""
+
     flag = "_rules"
-    channel = InstallDestination.RULE
+    channel = "rules"
+    marks_a_collection = True
 
 
 skill = Skill
@@ -89,82 +93,53 @@ class InstructionsUnreadableAtInstall(Exception):
         )
 
 
-@dataclass(frozen=True)
-class FileChannel:
-    """The channel a file installation writes: skills, slash commands, or rules (``destination``), and whether the
-    operations it writes are also served on MCP, so each file tells the agent to call the MCP tool rather than run a
-    shell command (``served_on_mcp``). An install keeps one file installation per channel."""
-
-    destination: str = ""
-    served_on_mcp: bool = False
-
-
 class FileInstallation(Installation):
-    """Write the markdown files of one channel — skills, slash commands, or rules — where the IDE reads them."""
+    """Write the markdown files of one file channel where the IDE reads them: *SkillInstallation*,
+    *CommandInstallation*, and *RulesInstallation* each say where a tool's file goes (`relative_path`), the front
+    matter that opens it (`front_matter`), and its body (`body`). A tool also published where a server answers an
+    agent's calls, as MCP does, gets a file that tells the agent to call that tool rather than run a shell command."""
 
-    channel = "markdown"
-    # Operations whose file is the practice's or fidelity's own, named after it rather than after the operation.
-    _GUIDANCE_OWN_OPERATIONS = frozenset({"instructions", "rules-markdown"})
     _REFERENCE_LINK = re.compile(r"\]\((?:\.\./)+references/([\w.-]+\.md)\)")
     _RULE_FILE_NAME = re.compile(r"`(practices/[\w/.-]+)\.mdc`")
 
     # The line before the command a skill or command without MCP runs, which a skill's description leaves out.
     _SHELL_INVOKE = "Run from the repository root with the Shell tool:"
+    # Whether a tool's file on this channel tells the agent how to run it: a skill's and a command's do.
+    tells_how_to_run = True
 
-    # The channels a file installation writes, in the order a tool's files are written.
-    CHANNELS = (InstallDestination.SKILL, InstallDestination.COMMAND, InstallDestination.RULE)
+    def relative_path(self, tool: AgentTool) -> Path:
+        """Where the file for tool goes, from the IDE folder, named as its toolset says (``installed_as``)."""
+        raise NotImplementedError
 
-    def __init__(self, target: InstallTarget, channel: FileChannel = FileChannel(), repo: Path | str | None = None) -> None:
-        super().__init__(target.layout, target.path, repo=repo)
-        self.channel = channel
+    def front_matter(self, tool: AgentTool, relative: Path, parts: list[str], text: str) -> str:
+        """The front matter that opens the file for tool at relative, with its parts and text; none by default."""
+        return ""
 
-    def relative_path(self, toolset: AgentToolSet, name: str) -> Path:
-        """Where the file for toolset's operation name goes, from the IDE folder."""
-        folder = self._kebab_folder(self.folder_for(toolset))
-        operation = Name(name).kebab
-        if self.channel.destination == InstallDestination.SKILL:
-            skill_folder = self._skill_folder(toolset, operation)
-            return Path("skills") / (skill_folder if self.layout.nests_skills else self._flat_skill_folder(skill_folder)) / "SKILL.md"
-        if self.channel.destination == InstallDestination.COMMAND:
-            parent = folder.parent if toolset.is_part_of_practice and folder.name else folder
-            return Path(self.layout.commands_folder) / parent / f"{self._command_stem(toolset, operation)}.md"
-        if self.channel.destination == InstallDestination.RULE:
-            return self._rule_path(toolset, folder)
-        return self.folder_for(toolset) / name
+    def body(self, tool: AgentTool) -> str:
+        """The body of the file for tool when it is not answered by a server: its instructions, expanded on the live
+        toolset, or its docstring."""
+        if tool.kind == "instructions":
+            return self._instructions_at_install(tool)
+        return tool.docstring
 
     def write(self, tool: AgentTool) -> None:
-        if not self.channel.destination or (tool.kind == "tool" and self.channel.destination not in self.CHANNELS):
-            return
         parts = self._parts(tool)
-        relative = self.relative_path(tool.toolset, tool.deploy_name)
+        relative = self.relative_path(tool)
         body = "\n\n".join(part for part in parts if part).rstrip()
         text = f"{body}\n" if body else ""
-        if self.channel.destination == InstallDestination.RULE:
-            text = self._rules_front_matter(text, self._published_rules(tool)) + text
-        elif self.channel.destination == InstallDestination.SKILL:
-            text = self._skill_front_matter(relative.parent.name, self._skill_overview(tool.toolset, parts)) + text
-        self._write_file(self.path / relative, text)
+        self._write_file(self.path / relative, self.front_matter(tool, relative, parts, text) + text)
 
-    def write_standing_rule(self, source: Path) -> None:
-        """Install one always-on rule from ``cdd_guidance/rules``: ``.md`` scoped by ``paths`` for
-        Claude Code, the source front matter as written for every other IDE."""
-        front_matter = FrontMatter.of_file(source)
-        text = front_matter.text
-        if self.layout.scopes_rules_by_paths:
-            fields, body = front_matter.fields, front_matter.content
-            globs = "" if fields.get("alwaysApply") == "true" else fields.get("globs", "")
-            text = self._claude_rules_front_matter(fields.get("description", source.stem), globs) + body
-        self._write_file(Path(self.path) / "rules" / f"{source.stem}{self.layout.rule_suffix}", text)
+    def _served(self, tool: AgentTool) -> bool:
+        """Whether a server answers an agent's calls to tool, as MCP does."""
+        return tool.is_published_to(annotation_kinds.answering_calls)
 
     def _parts(self, tool: AgentTool) -> list[str]:
-        """The body, the practice's schema, and the line that tells the agent how to run the operation."""
+        """The body, then the line that tells the agent how to run the operation: for a toolset's own tool, a line for
+        each part the toolset lists, with the call to that part's own tool."""
         parts = [self._body_for(tool)]
-        schema = self._schema_guide(tool)
-        if schema and schema not in parts[0]:
-            parts.append(schema)
-        if self.channel.served_on_mcp:
-            fidelity_parts = self._fidelity_invoke_parts(tool.toolset) if tool.name == "instructions" else []
-            parts.extend(fidelity_parts or [tool.invoke_line.text])
+        if self._served(tool):
+            listed = self._listed_part_lines(tool.toolset) if self._installed_as(tool).is_own else []
+            parts.extend(listed or [tool.invoke_line.text])
         elif self._needs_shell_invoke(tool):
             parts.append(self._shell_invoke_line(tool))
         return parts
@@ -172,26 +147,15 @@ class FileInstallation(Installation):
     def _write_file(self, dest: Path, text: str) -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(self._with_installed_references(text, dest), encoding="utf-8")
-        self.track_write(dest)
+        self.wrote(dest)
 
-    def _guidance_slug(self, toolset: AgentToolSet) -> str | None:
-        """The kebab slug of a practice or fidelity's guidance toolset, whose files are named after it; none for any
-        other toolset."""
-        if not toolset.is_part_of_practice:
-            return None
-        return Name(toolset.slug).kebab if toolset.slug else None
+    def _installed_as(self, tool: AgentTool) -> InstalledName:
+        """Where tool's toolset puts its files and what it names them."""
+        return tool.toolset.installed_as(tool)
 
-    def _rule_path(self, toolset: AgentToolSet, folder: Path) -> Path:
-        suffix = self.layout.rule_suffix
-        if not toolset.is_part_of_practice:
-            return Path("rules") / folder.with_suffix(suffix)
-        parent = folder.parent if folder.name else folder
-        return Path("rules") / parent / f"{self._guidance_slug(toolset) or self._command_stem(toolset, folder.name)}{suffix}"
-
-    def _flat_skill_folder(self, folder: Path) -> Path:
-        """Claude Code only discovers ``skills/<name>/SKILL.md``, so nested folders join into one name."""
-        parts = [part for part in folder.parts if part not in {".", "/", "\\"}]
-        return Path("-".join(parts) or "toolset")
+    def _installed_folder(self, name: InstalledName) -> Path:
+        """The folder name says, from the repository, in kebab case."""
+        return self._kebab_folder(self.relative_folder(name.folder))
 
     def _kebab_folder(self, folder: Path) -> Path:
         parts = [
@@ -200,31 +164,12 @@ class FileInstallation(Installation):
         ]
         return Path(*parts) if parts else folder
 
-    def _command_stem(self, toolset: AgentToolSet, operation: str) -> str:
-        slug = self._guidance_slug(toolset)
-        if slug is None:
+    def _stem(self, name: InstalledName, operation: str) -> str:
+        """The file name of operation within name's folder: its toolset's stem, joined to the operation unless the
+        tool is the toolset's own; the operation alone for a toolset named by its folder."""
+        if name.stem is None:
             return operation
-        return slug if operation in self._GUIDANCE_OWN_OPERATIONS else f"{slug}-{operation}"
-
-    def _skill_operations(self, toolset: AgentToolSet) -> list[str]:
-        return [Name(tool.deploy_name).kebab for tool in toolset.tools.values() if tool.install_to_skill]
-
-    def _skill_folder(self, toolset: AgentToolSet, operation: str) -> Path:
-        folder = self._kebab_folder(self.folder_for(toolset))
-        shares_folder = len(self._skill_operations(toolset)) > 1
-        slug = self._guidance_slug(toolset)
-        if slug is not None:
-            leaf = (folder.parent if folder.name else folder) / slug
-            return leaf / operation if shares_folder and operation not in self._GUIDANCE_OWN_OPERATIONS else leaf
-        if operation in self._GUIDANCE_OWN_OPERATIONS or (not shares_folder and operation == folder.name):
-            return folder
-        return folder / operation
-
-    def _schema_guide(self, tool: AgentTool) -> str:
-        """Practice schema joined into instructions, including a fidelity skill."""
-        if tool.name != "instructions":
-            return ""
-        return tool.toolset.schema_guide().strip()
+        return name.stem if name.is_own else f"{name.stem}-{operation}"
 
     def _instructions_at_install(self, tool: AgentTool) -> str:
         """Expand ``@agent_instructions`` on the live toolset when writing slash markdown."""
@@ -237,23 +182,12 @@ class FileInstallation(Installation):
         return tool.docstring
 
     def _body_for(self, tool: AgentTool) -> str:
-        if self.channel.served_on_mcp:
-            # An ``"""overview"""`` docstring names the section the MCP tool returns; it is not body text.
-            return "" if tool.docstring.strip() == "overview" else tool.docstring
-        if tool.kind == "instructions":
-            return self._instructions_at_install(tool)
-        if self.channel.destination == InstallDestination.RULE:
-            published = self._published_rules(tool)
-            return published.prose.strip() or published.formatted().strip()
-        return tool.docstring
+        return tool.served_body if self._served(tool) else self.body(tool)
 
-    def _published_rules(self, tool: AgentTool) -> PublishedRules:
-        """What the ``@rules`` member tool publishes answers, read from its toolset."""
-        return getattr(tool.toolset, tool.name)
-
-    def _fidelity_one_liner(self, child: AgentToolSet) -> str:
-        name = child.name or ""
-        overview = (child.overview or "").strip()
+    def _part_summary(self, part: AgentToolSet) -> str:
+        """A part's name and the first line of prose of its overview."""
+        name = part.name or ""
+        overview = (part.overview or "").strip()
         summary = next(
             (line.strip() for line in overview.splitlines() if line.strip() and not line.strip().startswith(("#", "**"))),
             "",
@@ -266,27 +200,27 @@ class FileInstallation(Installation):
         script = self.repo / "scripts" / f"{tool.deploy_name}.py" if self.repo is not None else None
         if script is not None and script.is_file():
             return f'python "{script.resolve()}"'
-        call = f'AgentToolSet.instantiate("{tool.registration_name}").{tool.name}()'
-        code = f"from harness.agent_tools.agent_tools import AgentToolSet; print({call})"
+        call = f'ToolsetReference.parsed("{tool.toolset.reference}").made().{tool.name}()'
+        code = f"from harness.agent_tools.agent_tools import ToolsetReference; print({call})"
         escaped = code.replace("\\", "\\\\").replace('"', '\\"')
         return f'python -c "{escaped}"'
 
     def _needs_shell_invoke(self, tool: AgentTool) -> bool:
         """``@agent_tool`` on skill/command without ``@mcp`` gets a Shell/python tail."""
-        return self.channel.destination in {InstallDestination.SKILL, InstallDestination.COMMAND} and tool.kind == "tool" and not tool.install_to_mcp
+        return self.tells_how_to_run and tool.kind == "tool" and not self._served(tool)
 
     def _shell_invoke_line(self, tool: AgentTool) -> str:
         return f"{self._SHELL_INVOKE}\n\n```text\n{self._shell_command(tool)}\n```"
 
-    def _fidelity_invoke_parts(self, toolset: AgentToolSet) -> list[str]:
-        """One line for each part a toolset holds in its collections, such as each fidelity of a practice: its name and
-        summary, then the MCP tool its instructions are published as, written by that tool."""
-        parts: list[str] = []
-        for child in toolset.child_toolsets():
-            published = child.tools.get("instructions")
-            invoke = published.invoke_line.text if published is not None and published.install_to_mcp else ""
-            parts.append("\n\n".join(piece for piece in (self._fidelity_one_liner(child), invoke) if piece))
-        return parts
+    def _listed_part_lines(self, toolset: AgentToolSet) -> list[str]:
+        """One line for each part toolset lists, such as each fidelity of a practice: its name and summary, then the
+        MCP tool its own tool is published as, written by that tool."""
+        lines: list[str] = []
+        for part in toolset.listed_parts():
+            own = next((tool for tool in part.tools.values() if part.installed_as(tool).is_own), None)
+            invoke = own.invoke_line.text if own is not None and self._served(own) else ""
+            lines.append("\n\n".join(piece for piece in (self._part_summary(part), invoke) if piece))
+        return lines
 
     def _with_installed_references(self, text: str, dest: Path) -> str:
         """Point links into ``cdd_guidance/references`` at the copy in ``<ide>/references``, and name
@@ -304,8 +238,56 @@ class FileInstallation(Installation):
         if source is not None and source.is_file():
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-            self.track_write(target)
+            self.wrote(target)
         return Path(os.path.relpath(target, dest.parent)).as_posix()
+
+    def _claude_rules_front_matter(self, description: str, globs: str) -> str:
+        """Claude Code rules scope by ``paths``; a rule without paths loads in every session."""
+        lines = ["---", f'description: "{description}"']
+        patterns = [item.strip() for item in globs.split(",") if item.strip()]
+        if patterns:
+            lines.append("paths:")
+            lines.extend(f'  - "{pattern}"' for pattern in patterns)
+        lines.append("---")
+        return "\n".join(lines) + "\n\n"
+
+
+class SkillInstallation(FileInstallation):
+    """Write each ``@skill`` operation as a skill, ``skills/<name>/SKILL.md``, opened by its name and the first
+    paragraph of its toolset's overview."""
+
+    destination = Skill
+
+    def relative_path(self, tool: AgentTool) -> Path:
+        skill_folder = self._skill_folder(tool)
+        return Path("skills") / (skill_folder if self.layout.nests_skills else self._flat_skill_folder(skill_folder)) / "SKILL.md"
+
+    def front_matter(self, tool: AgentTool, relative: Path, parts: list[str], text: str) -> str:
+        description = self._skill_overview(tool.toolset, parts).strip() or relative.parent.name
+        indented = "\n".join(f"  {line}" if line else "  " for line in description.splitlines())
+        return f"---\nname: {relative.parent.name}\ndescription: >-\n{indented}\n---\n\n"
+
+    def _flat_skill_folder(self, folder: Path) -> Path:
+        """Claude Code only discovers ``skills/<name>/SKILL.md``, so nested folders join into one name."""
+        parts = [part for part in folder.parts if part not in {".", "/", "\\"}]
+        return Path("-".join(parts) or "toolset")
+
+    def _skill_operations(self, toolset: AgentToolSet) -> list[str]:
+        return [Name(tool.deploy_name).kebab for tool in toolset.tools.values() if tool.is_published_to(Skill)]
+
+    def _skill_folder(self, tool: AgentTool) -> Path:
+        """The skill's folder: the toolset's own tool is its toolset's folder, or its stem's within it; another tool's
+        has a folder of its own beneath that when the toolset publishes more than one skill."""
+        name = self._installed_as(tool)
+        operation = Name(tool.deploy_name).kebab
+        folder = self._installed_folder(name)
+        shares_folder = len(self._skill_operations(tool.toolset)) > 1
+        if name.stem is not None:
+            leaf = folder / name.stem
+            return leaf / operation if shares_folder and not name.is_own else leaf
+        if name.is_own or (not shares_folder and operation == folder.name):
+            return folder
+        return folder / operation
 
     def _skill_overview(self, toolset: AgentToolSet, parts: list[str]) -> str:
         overview = (toolset.overview or "").strip()
@@ -331,10 +313,54 @@ class FileInstallation(Installation):
                 lines.append(line)
         return "\n".join(lines).strip()
 
-    def _skill_front_matter(self, name: str, overview: str) -> str:
-        description = overview.strip() or name
-        indented = "\n".join(f"  {line}" if line else "  " for line in description.splitlines())
-        return f"---\nname: {name}\ndescription: >-\n{indented}\n---\n\n"
+
+class CommandInstallation(FileInstallation):
+    """Write each ``@command`` operation as a slash command in the IDE's commands folder."""
+
+    destination = Command
+
+    def relative_path(self, tool: AgentTool) -> Path:
+        name = self._installed_as(tool)
+        stem = self._stem(name, Name(tool.deploy_name).kebab)
+        return Path(self.layout.commands_folder) / self._installed_folder(name) / f"{stem}.md"
+
+
+class RulesInstallation(FileInstallation):
+    """Write what each ``@rules`` member answers as a rules file, and the always-on rules of ``cdd_guidance/rules``,
+    each opened by front matter that says which files it applies to."""
+
+    destination = Rules
+    tells_how_to_run = False
+
+    def relative_path(self, tool: AgentTool) -> Path:
+        name = self._installed_as(tool)
+        folder = self._installed_folder(name)
+        suffix = self.layout.rule_suffix
+        if name.stem is None:
+            return Path("rules") / folder.with_suffix(suffix)
+        return Path("rules") / folder / f"{name.stem}{suffix}"
+
+    def front_matter(self, tool: AgentTool, relative: Path, parts: list[str], text: str) -> str:
+        return self._rules_front_matter(text, self._published_rules(tool))
+
+    def body(self, tool: AgentTool) -> str:
+        published = self._published_rules(tool)
+        return published.prose.strip() or published.formatted().strip()
+
+    def write_standing_rule(self, source: Path) -> None:
+        """Install one always-on rule from ``cdd_guidance/rules``: ``.md`` scoped by ``paths`` for
+        Claude Code, the source front matter as written for every other IDE."""
+        front_matter = FrontMatter.of_file(source)
+        text = front_matter.text
+        if self.layout.scopes_rules_by_paths:
+            fields, body = front_matter.fields, front_matter.content
+            globs = "" if fields.get("alwaysApply") == "true" else fields.get("globs", "")
+            text = self._claude_rules_front_matter(fields.get("description", source.stem), globs) + body
+        self._write_file(Path(self.path) / "rules" / f"{source.stem}{self.layout.rule_suffix}", text)
+
+    def _published_rules(self, tool: AgentTool) -> PublishedRules:
+        """What the ``@rules`` member tool publishes answers, read from its toolset."""
+        return getattr(tool.toolset, tool.name)
 
     def _rules_front_matter(self, body: str, published: PublishedRules) -> str:
         description = next(
@@ -354,13 +380,3 @@ class FileInstallation(Installation):
         if globs:
             lines.append(f"globs: {globs}")
         return "\n".join([*lines, "---"]) + "\n\n"
-
-    def _claude_rules_front_matter(self, description: str, globs: str) -> str:
-        """Claude Code rules scope by ``paths``; a rule without paths loads in every session."""
-        lines = ["---", f'description: "{description}"']
-        patterns = [item.strip() for item in globs.split(",") if item.strip()]
-        if patterns:
-            lines.append("paths:")
-            lines.extend(f'  - "{pattern}"' for pattern in patterns)
-        lines.append("---")
-        return "\n".join(lines) + "\n\n"

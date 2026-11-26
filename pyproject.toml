@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "abd-context-driven-delivery"
-version = "1.1.0"
+version = "1.2.1"
 requires-python = ">=3.12"
 dependencies = [
   "expects>=0.9.0",
@@ -33,6 +33,19 @@ dependencies = [
   "markitdown[docx,pdf,pptx]>=0.1.8",
   "requests>=2.32",
   "playwright>=1.50",
+]
+
+[project.optional-dependencies]
+# The outside tool Clean Engineering's code measures name in a project's .context/config.json (code_measures.tools).
+# A validate of code fails by name while a chosen tool is missing: pip install -e ".[measures]"
+measures = [
+  "lizard>=1.26",
+  "radon>=6",
+]
+# The checker that every name the code calls or imports still exists (scripts/names_exist) reads undefined Python
+# names with ruff: pip install -e ".[checks]"
+checks = [
+  "ruff>=0.6",
 ]
 
 [tool.setuptools.packages.find]

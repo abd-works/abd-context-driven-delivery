@@ -1,6 +1,6 @@
 # The sketch and draw.io maps read into the markdown context and aggregate
 
-**Status:** decided, round 6 (finding M1).
+**Status:** replaced by cdr 0004 (every format reads into the base nodes); decided, round 6 (finding M1).
 
 ## Decision
 

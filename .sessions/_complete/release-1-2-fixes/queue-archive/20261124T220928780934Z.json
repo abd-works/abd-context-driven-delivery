@@ -1,0 +1,210 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T22:09:28.780934+00:00",
+  "prompts": [
+    {
+      "id": "f35acdc649d4",
+      "text": "Merge release-1-2-fixes into main: merge main into release-1-2-fixes, settle the conflicts (story map, thin slice, the module model docs and drawings, harness/mcp, space/session, the session folder, the e2e spec), run the unit tier, push, then repo.merge_to_main and push main.",
+      "steps": [
+        {
+          "text": "Finish the heavy run and the report card first",
+          "state": "done"
+        },
+        {
+          "text": "Merge main into release-1-2-fixes in a separate worktree and list the conflicts",
+          "state": "done"
+        },
+        {
+          "text": "Settle the code conflicts: keep main's structure, port this branch's fixes",
+          "state": "done"
+        },
+        {
+          "text": "Settle the docs, story map, thin slice and session folder conflicts, keeping both sides",
+          "state": "done"
+        },
+        {
+          "text": "Render again each model doc and drawing both sides added, from the merged code",
+          "state": "done"
+        },
+        {
+          "text": "Run the unit tier on the merge and fix what fails",
+          "state": "done"
+        },
+        {
+          "text": "Pull, push release-1-2-fixes",
+          "state": "done"
+        },
+        {
+          "text": "repo.merge_to_main and push main",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Widget"
+    },
+    {
+      "id": "c19594c31eab",
+      "text": "Put the heavy tier result already in (77 of 77 files on the code before the merge; no heavy run on the merged code) into section 7 of the release report, commit, push and merge to main.",
+      "steps": [
+        {
+          "text": "Rewrite section 7 to list only what is still open (279f63e72)",
+          "state": "done"
+        },
+        {
+          "text": "Mark finished cards closed",
+          "state": "done"
+        },
+        {
+          "text": "Add Widget's unit and heavy results",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Widget"
+    },
+    {
+      "id": "c6433415ce8f",
+      "text": "Speed up every heavy spec under cdd_guidance/, story_tests/ and tools/ (slowest first: fidelity_differences 347 s, repository_scan 284 s, render_saves_beside_source 61 s, format_alignment 32 s), keeping every behaviour they check. Commit and push.",
+      "steps": [
+        {
+          "text": "Time render_saves_beside_source and format_alignment alone as they are now",
+          "state": "done"
+        },
+        {
+          "text": "Render once per context in render_saves_beside_source_heavy_spec.py",
+          "state": "done"
+        },
+        {
+          "text": "Align once per context in format_alignment_heavy_spec.py",
+          "state": "done"
+        },
+        {
+          "text": "Run both alone again, compare times, commit and push",
+          "state": "done"
+        },
+        {
+          "text": "fidelity_differences_heavy_spec.py: already loads the repository once; its time is the graph load (harness/graph, Bolt's)",
+          "state": "done"
+        },
+        {
+          "text": "repository_scan_heavy_spec.py: already scans once; its time is the graph load (harness/graph, Bolt's)",
+          "state": "done"
+        },
+        {
+          "text": "Set up once per context in context_setup, drawio_ux_map, render_record_board and context_links_alignment",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push after each file or two",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "f89d544d80e2",
+      "text": "Speed up every heavy spec under harness/ outside harness/graph/, and under scripts/ (slowest first: installer 261 s, names_exist 151 s, release test_runs 104 s, install_record 37 s, mcp_server_host 21 s), keeping every behaviour they check. Commit and push.",
+      "steps": [
+        {
+          "text": "installer_heavy_spec: install once per context (291 s to 92 s), pushed",
+          "state": "done"
+        },
+        {
+          "text": "names_exist: worker processes and read-once caches (151 s to 53 s), pushed",
+          "state": "done"
+        },
+        {
+          "text": "test_runs: set up once per context, first run released when waited on (102 s to 52 s), pushed",
+          "state": "done"
+        },
+        {
+          "text": "install_record: install once per context (39 s to 15 s), pushed",
+          "state": "done"
+        },
+        {
+          "text": "mcp_server_host: worktrees and connect script once (22 s to 15 s); server_owner (14 s to 9 s), pushed",
+          "state": "done"
+        },
+        {
+          "text": "release_heavy_spec once per context (16 s to 9 s), pushed; the rest of harness/ and scripts/ take 7 s or less with no repeated setup worth sharing",
+          "state": "done"
+        },
+        {
+          "text": "Report each file's time before and after",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Gizmo"
+    },
+    {
+      "id": "2dfa82a39de4",
+      "text": "Speed up every heavy spec under space/ (slowest first: ticket_work 63 s, repo 62 s, kanban_tools_git 49 s), keeping every behaviour they check. Commit and push.",
+      "steps": [
+        {
+          "text": "Time every space/ heavy spec alone and find each one's repeated setup",
+          "state": "done"
+        },
+        {
+          "text": "ticket_work_heavy_spec.py (67 s): no repeated setup; 55 s is the server's real ticket work (13 git runs per activate) and a new MCP session per call (harness/mcp/spec_support.py, Gizmo's)",
+          "state": "done"
+        },
+        {
+          "text": "repo_heavy_spec.py: one built clone copied per example, release kept once, stale takeown example checks FolderDeletion: 57 s to 23 s (d1d127f2b)",
+          "state": "done"
+        },
+        {
+          "text": "kanban_tools_git_heavy_spec.py: read-only ticket opened once: 46 s to 35 s (ed738590a)",
+          "state": "done"
+        },
+        {
+          "text": "Remaining space/ heavy specs are 13 s or less and already share setup; leave them",
+          "state": "done"
+        },
+        {
+          "text": "names_exist_heavy_spec.py alone passes (2 of 2) with the takeown example fixed",
+          "state": "done"
+        },
+        {
+          "text": "Report each file's time before and after",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "aa7fed591ce8",
+      "text": "Keep one server connection open per spec chat: SpecChat.call in harness/mcp/spec_support.py opens a new connection for every call, which slows every heavy spec that calls the cdd server (ticket_work_heavy_spec.py spends most of its 63 s there). Time the specs that use it before and after; commit and push.",
+      "steps": [
+        {
+          "text": "Find the heavy specs that use SpecChat and time them as they are",
+          "state": "done"
+        },
+        {
+          "text": "Measure how much of a call is opening the connection (0.2 s against 0.015 s)",
+          "state": "done"
+        },
+        {
+          "text": "Keep one connection open per SpecChat, closed when the spec ends",
+          "state": "done"
+        },
+        {
+          "text": "Run and time the same specs again; all pass (ticket_work 74 to 60 s)",
+          "state": "done"
+        },
+        {
+          "text": "Commit, pull, push (e4d13c3d8); report before and after",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Gizmo"
+    }
+  ]
+}

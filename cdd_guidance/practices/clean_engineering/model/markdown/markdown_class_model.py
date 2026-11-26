@@ -34,20 +34,18 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import parse_arrow_line
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import marks_in, without_marks
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     CleanEngineeringModel,
     Module,
     OoadClass,
-    is_interface_name,
 )
-from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
-from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+from cdd_guidance.practices.clean_engineering.model.markdown.class_card import ClassCard
+from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleMeta, listed_terms
+from cdd_guidance.practices.source_code import split_top_level
+from harness.guidance.practice_formats import Written
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph
@@ -56,16 +54,14 @@ if TYPE_CHECKING:
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _CARD_HEADING = re.compile(r"^(#{2,6})\s+\*\*([^*]+)\*\*(.*?)\s*$")
 _FENCE = re.compile(r"^\s*(```|~~~)")
+# An HTML comment written after a heading's words, as a template marks the fidelities that write the heading
+# (`## {ClassName}   <!-- Md -->`): no part of what the heading names.
+_HEADING_COMMENT = re.compile(r"\s*<!--.*?-->\s*$")
 
 
-def _listed_terms(raw: str) -> List[str]:
-    """The terms a bullet lists, separated by commas or semicolons, without their backticks and bold; none for
-    `*(none)*`."""
-    text = re.sub(r"^\*\(?none\)?\*$", "", raw.strip(), flags=re.IGNORECASE).strip()
-    if text.lower() in {"*(none)*", "(none)", "none", "-"}:
-        return []
-    found = (re.sub(r"^\*\*?|\*\*?$", "", part.strip().strip("`").strip()).strip() for part in re.split(r"[,;]", text))
-    return [term for term in found if term]
+def _heading_words(heading: str) -> str:
+    """A heading's words, without the comment written after them."""
+    return _HEADING_COMMENT.sub("", heading).strip()
 
 
 @dataclass
@@ -83,7 +79,7 @@ class ClassHeading:
 
     @classmethod
     def read(cls, raw: str) -> "ClassHeading":
-        text = raw.strip()
+        text = _heading_words(raw)
         bold = re.match(r"^\*\*([^*]+)\*\*", text)
         if bold is None:
             name, _, bases = without_marks(text.replace("**", "")).partition(" : ")
@@ -126,42 +122,13 @@ class MarkdownOoadClass(OoadClass):
         if self.intent:
             lines.extend([self.intent, ""])
         if self.properties or self.operations or self.dependencies:
-            lines.extend(self._member_lines())
+            lines.extend(ClassCard([]).lines_of(self))
         lines.append("")
         return "\n".join(lines)
 
     def heading(self, known_names: List[str]) -> ClassHeading:
         """The class's heading: its stereotypes, then the bases its declaration names."""
         return ClassHeading(self.name, list(self.stereotypes), self.declared_bases(known_names), self._card_note)
-
-    def _member_lines(self) -> List[str]:
-        constructors = [operation for operation in self.operations if operation.name in {self.name, "constructor"}]
-        methods = [operation for operation in self.operations if operation.name not in {self.name, "constructor"}]
-        lines = [self._public_line(self._constructor_line(constructors))]
-        for operation in constructors:
-            lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
-        lines.append("------")
-        for prop in self.properties:
-            lines.append(self._property_line(prop))
-            lines.extend(self._notes_under(prop.callees, prop.notes()))
-        lines.append("----")
-        for operation in methods:
-            if is_interface_name(self.name) and operation.name.startswith("_"):
-                continue
-            lines.append(self._public_line(operation.save()))
-            lines.extend(self._notes_under(operation.callees, operation.invariant_lines()))
-        lines.extend(line for item in self.dependencies for line in item.lines())
-        return lines
-
-    def _constructor_line(self, constructors: List[Operation]) -> str:
-        if constructors:
-            return self._constructor_signature(constructors[0])
-        params = ", ".join(f"{prop.name}: {prop.type_hint}" if prop.type_hint else prop.name for prop in self.properties)
-        return f"{self.name}({params})"
-
-    def _notes_under(self, callees: List[str], notes: List[str]) -> List[str]:
-        """The call-graph arrows and invariant notes written under a member, indented."""
-        return [f"\t-> {callee}" for callee in callees] + [f"\t// {note}" for note in notes]
 
     def keep_card(self, card: str, heading: ClassHeading) -> None:
         """Remember the card this class was read from, so an unchanged class writes it back as is."""
@@ -176,41 +143,6 @@ class MarkdownOoadClass(OoadClass):
         body = self.render().split("\n", 1)[1]
         return f"{'#' * level} {self.heading([]).card_text()}\n{body}\n"
 
-    def _constructor_signature(self, operation: Operation) -> str:
-        """Markdown names the constructor after the class. Code channels keep the word constructor."""
-        body = operation.save()
-        if operation.name == "constructor" and body.startswith("constructor"):
-            return f"{self.name}{body[len('constructor'):]}"
-        return body
-
-    def _public_line(self, body: str) -> str:
-        """Public members lead with +. A leading - is already the private mark."""
-        if body.startswith("+") or body.startswith("-"):
-            return body
-        return f"+ {body}"
-
-    def _property_line(self, prop: Property) -> str:
-        """Public field, with << composition|aggregation|association >> when an edge names its type."""
-        kind = (prop.stereotype or "").lower()
-        if kind not in {"composition", "aggregation", "association"}:
-            kind = self._relationship_kind(prop.type_hint)
-        stereo = f"<< {kind} >> " if kind else ""
-        return self._public_line(f"{stereo}{prop.save()}")
-
-    def _relationship_kind(self, type_hint: str) -> str:
-        if not type_hint:
-            return ""
-        by_target = {
-            relationship.target: (relationship.kind or "").lower()
-            for relationship in self.relationships
-            if relationship.kind
-        }
-        for name in re.findall(r"\b([A-Z][A-Za-z0-9]*)\b", type_hint):
-            kind = by_target.get(name, "")
-            if kind in {"composition", "aggregation", "association"}:
-                return kind
-        return ""
-
     @classmethod
     def read_card(cls, heading: ClassHeading, body: str, sequential_order: int) -> "MarkdownOoadClass":
         """The class a card shows: named and marked by its heading, filled from its body."""
@@ -221,148 +153,9 @@ class MarkdownOoadClass(OoadClass):
         return loaded
 
     def read_body(self, body: str) -> None:
-        """Read this class's card body: its intent, its constructor, its properties and operations, and the
-        dependencies it names."""
-        text_lines, dependencies = Relationship.split_off(body.splitlines())
-        head, members = self._split_once(r"(?m)^-{6}\s*$", "\n".join(text_lines))
-        props_text, ops_text = self._split_once(r"(?m)^-{4}\s*$", members)
-        intent, constructor_line, constructor_notes = self._read_head(head)
-        self.intent = intent
-        self.properties = self._read_properties(props_text)
-        for prop in self.properties:
-            prop.arrow.derive()
-        self.operations = self._constructors(constructor_line, constructor_notes) + self._read_operations(ops_text)
-        for relationship in dependencies:
-            self.arrows.place(relationship)
-
-    def _split_once(self, separator: str, text: str) -> Tuple[str, str]:
-        """The text before the first separator line and the text after it; all of it before when there is none."""
-        parts = re.split(separator, text, maxsplit=1)
-        return parts[0], parts[1] if len(parts) > 1 else ""
-
-    def _read_head(self, head: str) -> Tuple[str, str, List[str]]:
-        """The card's intent, its constructor line, and the notes under the constructor, from the part above the
-        constructor / properties rule."""
-        intent_lines: List[str] = []
-        notes: List[str] = []
-        constructor_line = ""
-        seen_signature = False
-        for line in head.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("//") and seen_signature:
-                notes.append(stripped[2:].strip())
-            if not stripped or stripped.startswith("//"):
-                continue
-            signature = self._constructor_line_in(stripped)
-            if signature is not None:
-                seen_signature = True
-                constructor_line = signature
-            elif not seen_signature:
-                intent_lines.append(stripped)
-        return "\n".join(intent_lines), constructor_line, notes
-
-    def _constructor_line_in(self, stripped: str) -> Optional[str]:
-        """The constructor signature a head line writes (a `+`, `-`, or `->` line, or `Name(`); none for intent."""
-        if stripped.startswith(("+", "-")) or re.match(r"^\w[\w\s]*\(", stripped):
-            return stripped
-        return None
-
-    def _constructors(self, constructor_line: str, notes: List[str]) -> List[Operation]:
-        constructors = self._read_operations(constructor_line) if constructor_line else []
-        for constructor in constructors:
-            for note in notes:
-                constructor.add_invariant(note)
-        return constructors
-
-    _CE_STEREOTYPE_KINDS = {
-        "composition": "composition",
-        "aggregation": "aggregation",
-        "association": "association",
-    }
-
-    def _strip_ce_prefix(self, line: str) -> tuple[str, str | None]:
-        """A member line without its leading `+` and its `<< composition >>` stereotype, and the relationship kind that
-        stereotype names: composition, aggregation, association, or none."""
-        if line.startswith("+"):
-            line = line[1:].strip()
-        marked = re.match(r"^<<\s*(\w+)\s*>>\s*", line)
-        if marked is None:
-            return line, None
-        return line[marked.end():].strip(), self._CE_STEREOTYPE_KINDS.get(marked.group(1).lower())
-
-    def _read_properties(self, text: str) -> List[Property]:
-        """The properties a card lists. ``+ << composition >> identity: Identity`` is a property whose stereotype
-        names the relationship it stands for."""
-        props: List[Property] = []
-        for line in text.splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            if stripped.startswith(("//", "->")):
-                self._note_on_property(props[-1] if props else None, stripped)
-                continue
-            prop = self._property_in(stripped)
-            if prop is not None:
-                props.append(prop)
-        return props
-
-    def _note_on_property(self, prop: Optional[Property], stripped: str) -> None:
-        """A `//` note or `->` call written under the property above it."""
-        if prop is None:
-            return
-        if stripped.startswith("//"):
-            prop.take_note(stripped[2:])
-        else:
-            prop.callees.append(stripped[2:].strip())
-
-    def _property_in(self, stripped: str) -> Optional[Property]:
-        """The property a member line writes; none for an operation, or for a stereotype that names no relationship.
-        An optional property may be written `name?: Type` or `name: Type | null`."""
-        bare, kind = self._strip_ce_prefix(stripped)
-        if ("<<" in stripped and kind is None) or not bare or re.match(r"^_?\w+\s*\(", bare):
-            return None
-        prop = Property.from_signature(bare)
-        if prop is None:
-            return Property(name=bare) if re.match(r"^\w+$", bare) else None
-        if kind:
-            prop.stereotype = kind
-        return prop
-
-    def _read_operations(self, text: str) -> List[Operation]:
-        """The operations a card lists, with the call-graph arrows and invariant notes written under each."""
-        ops: List[Operation] = []
-        for line in text.splitlines():
-            stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
-                continue
-            if stripped.startswith(("//", "->", "→")):
-                self._note_on_operation(ops[-1] if ops else None, stripped)
-                continue
-            operation = self._operation_in(stripped)
-            if operation is not None:
-                ops.append(operation)
-        return ops
-
-    def _note_on_operation(self, operation: Optional[Operation], stripped: str) -> None:
-        """A `//` invariant or `->` call written under the operation above it."""
-        if operation is None:
-            return
-        if stripped.startswith("//"):
-            operation.add_invariant(stripped[2:])
-            return
-        arrow = parse_arrow_line(stripped)
-        callee = arrow[1] if arrow else stripped[2:].strip()
-        if callee and callee not in operation.callees:
-            operation.callees.append(callee)
-
-    def _operation_in(self, stripped: str) -> Optional[Operation]:
-        """The operation a member line writes; a `- ` line is private, so its name gets a leading underscore."""
-        private = stripped.startswith("- ")
-        body, _kind = self._strip_ce_prefix(stripped[2:].strip() if private else stripped)
-        operation = Operation.from_signature(body)
-        if operation is not None and private and not operation.name.startswith("_"):
-            operation.name = f"_{operation.name}"
-        return operation
+        """Read this class's card body in the class-card notation: its intent, its constructor, its properties and
+        operations, and the dependencies it names."""
+        ClassCard(body.splitlines()).read_into(self)
 
 
 class MarkdownModule(Module):
@@ -372,7 +165,7 @@ class MarkdownModule(Module):
 
     class_type = MarkdownOoadClass
 
-    _META_HEADINGS = frozenset({"seam", "dependencies", "modules fidelity", "purpose"})
+    _META_HEADINGS = frozenset({"seam", "dependencies", "modules fidelity", "purpose", "constraint"})
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -380,6 +173,10 @@ class MarkdownModule(Module):
         # none for a module no card document held.
         self._card_parts: Optional[list] = None
         self._card_name = ""
+        # The text a plain document wrote it as, and the module as the model wrote it when that text was read; none
+        # for a module no plain document held.
+        self._read_text: Optional[str] = None
+        self._read_as = ""
 
     def start_card(self, heading: str) -> None:
         """Begin the module as a card document writes it, under its heading line."""
@@ -412,23 +209,38 @@ class MarkdownModule(Module):
             self.classes.append(MarkdownOoadClass.read_card(class_heading, class_block[heading.end():].lstrip("\n"), class_order))
             class_order += 1
 
+    def keep_text(self, text: str) -> None:
+        """Remember the text a plain document wrote this module as, so an unchanged module writes it back as it was:
+        the model holds a card's facts, not every word of it."""
+        self._read_text = text
+        self._read_as = self._from_model()
+
     def take_preamble(self, text: str) -> None:
         """The module's description, seam terms, and dependencies, from the prose and bullets under its heading."""
         if not text:
             return
         meta = ModuleMeta(text)
         self.description = meta.purpose or meta.leftover or text
+        self.language = meta.language
         self.seam_terms = meta.seam_terms
         self.dependencies = meta.dependencies
         if meta.seam_terms and not self.seam:
             self.seam = ", ".join(meta.seam_terms)
 
     def render(self) -> str:
+        """The module as its document wrote it while the model has not changed it; otherwise written from the model."""
+        written = self._from_model()
+        return self._read_text if self._read_text is not None and written == self._read_as else written
+
+    def _from_model(self) -> str:
+        bullets = self._modules_fidelity_lines()
+        opening = (self.language if bullets else self.description).strip()
         lines: List[str] = [f"# {self.name}", ""]
-        if self.description:
-            lines.append(self.description)
-            lines.append("")
-        lines.extend(self._modules_fidelity_lines())
+        if opening:
+            lines.extend([opening, ""])
+        lines.extend(bullets)
+        if self.constraint:
+            lines.extend(["## Constraint", "", self.constraint, ""])
         known = [loaded.name for loaded in self.classes]
         for loaded in self.classes:
             lines.append(loaded.render(known_names=known))
@@ -492,7 +304,7 @@ class MarkdownModule(Module):
             heading = re.match(r"^##\s+(.+)", class_block) if class_block else None
             if heading is None:
                 continue
-            class_name = heading.group(1).strip()
+            class_name = _heading_words(heading.group(1))
             if class_name.lower() in self._META_HEADINGS:
                 self._take_section(class_name.lower(), class_block[heading.end():])
             elif re.search(r"(?m)^###\s+\*\*", class_block):
@@ -509,8 +321,12 @@ class MarkdownModule(Module):
             "seam": self._take_seam,
             "dependencies": self._take_dependencies,
             "purpose": self._take_purpose,
+            "constraint": self._take_constraint,
         }
         takers[key](body)
+
+    def _take_constraint(self, body: str) -> None:
+        self.constraint = body.strip()
 
     def _take_purpose(self, body: str) -> None:
         self.description = body.strip()
@@ -525,7 +341,7 @@ class MarkdownModule(Module):
         """A "**Formal (modules):** a, b" line names them; else the section's first line lists them."""
         formal = re.search(r"\*\*Formal\s*\(modules\):\*\*\s*(.+)", body, re.IGNORECASE)
         first = next((line.strip() for line in body.splitlines() if line.strip()), "")
-        self.dependencies = _listed_terms(formal.group(1) if formal else first)
+        self.dependencies = listed_terms(formal.group(1) if formal else first)
 
     def _take_fidelity_bullets(self, body: str) -> None:
         meta = ModuleMeta(body)
@@ -536,41 +352,6 @@ class MarkdownModule(Module):
             self.seam = self.seam or ", ".join(meta.seam_terms)
         if meta.dependencies:
             self.dependencies = meta.dependencies
-
-
-class ModuleMeta:
-    """<<Value Object>> The Purpose, Seam, and Dependencies bullets of a modules-fidelity block, and the prose left
-    beside them."""
-
-    _PURPOSE = re.compile(r"^-?\s*\*\*Purpose:\*\*\s*(.+)$", re.IGNORECASE)
-    _SEAM = re.compile(r"^-?\s*\*\*Seam(?:\s*\(terms\))?:\*\*\s*(.+)$", re.IGNORECASE)
-    _DEPENDENCIES = re.compile(r"^-?\s*\*\*Dependencies(?:\s*\(one-way\))?:\*\*\s*(.+)$", re.IGNORECASE)
-    # Lines that frame the bullets and say nothing of the module: a build order, a nested module's or the block's heading.
-    _FRAMING = re.compile(r"^-?\s*\*\*Build order:\*\*|^###\s+Module\s+|^##\s+Modules fidelity", re.IGNORECASE)
-
-    def __init__(self, text: str) -> None:
-        self.purpose = ""
-        self.seam_terms: List[str] = []
-        self.dependencies: List[str] = []
-        leftover: List[str] = []
-        for line in text.splitlines():
-            if not self._take_bullet(line.strip()):
-                leftover.append(line)
-        self.leftover = "\n".join(leftover).strip()
-        # A nested "### Module `path`" block often puts its purpose only in its prose.
-        prose = [line.strip() for line in self.leftover.splitlines() if line.strip() and not line.strip().startswith("- **")]
-        self.purpose = self.purpose or (prose[0] if prose else "")
-
-    def _take_bullet(self, stripped: str) -> bool:
-        """Keep the bullet this line is; true when the line is a bullet or framing, false for prose."""
-        purpose, seam, dependencies = (pattern.match(stripped) for pattern in (self._PURPOSE, self._SEAM, self._DEPENDENCIES))
-        if purpose:
-            self.purpose = purpose.group(1).strip()
-        elif seam:
-            self.seam_terms = _listed_terms(seam.group(1))
-        elif dependencies:
-            self.dependencies = _listed_terms(dependencies.group(1))
-        return bool(purpose or seam or dependencies or self._FRAMING.match(stripped))
 
 
 class CardDocument:
@@ -645,7 +426,7 @@ class CardDocument:
     def _module_at(self, index: int) -> MarkdownModule:
         """The module whose heading is the line at index, with the preamble under its heading."""
         heading = self._lines[index]
-        module = MarkdownModule(name=_HEADING.match(heading).group(2), sequential_order=len(self._model.modules) + 1)
+        module = MarkdownModule(name=_heading_words(_HEADING.match(heading).group(2)), sequential_order=len(self._model.modules) + 1)
         module.start_card(heading)
         self._model.modules.append(module)
         self._parts.append(module)
@@ -678,13 +459,13 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
         # The card document it was read from; none for a plain model document.
         self._cards: Optional[CardDocument] = None
 
-    def parse(self, text: str) -> "MarkdownCleanEngineeringModel":
+    def parse(self, text: str, file: str = "") -> "MarkdownCleanEngineeringModel":
         """Read a card document or a plain model document into this model's own modules, and return it."""
         headings = self._headings(text)
         card_levels = [level for _index, level, raw in headings if _CARD_HEADING.match(raw)]
         self.modules = []
         self._cards = None
-        if card_levels and min(card_levels) - 2 >= 2:
+        if card_levels and min(card_levels) - 2 >= 1:
             self._cards = CardDocument(self, min(card_levels))
             self._cards.read(text, headings)
         else:
@@ -697,8 +478,9 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
             heading = re.match(r"^#\s+(.+)", block.strip())
             if heading is None:
                 continue
-            module = MarkdownModule(name=heading.group(1).strip(), sequential_order=len(self.modules) + 1)
+            module = MarkdownModule(name=_heading_words(heading.group(1)), sequential_order=len(self.modules) + 1)
             module.read_body(block.strip()[heading.end():].lstrip("\n"))
+            module.keep_text(block.rstrip("\n") + "\n")
             self.modules.append(module)
 
     def _headings(self, text: str) -> List[tuple]:
@@ -714,12 +496,25 @@ class MarkdownCleanEngineeringModel(CleanEngineeringModel):
                 found.append((index, len(heading.group(1)), line))
         return found
 
-    def render(self, canonical: Optional[CleanEngineeringModel] = None) -> str:
-        """Write this model; handed another model, a markdown one writes itself and any other is translated in first."""
-        if canonical is not None and canonical is not self:
-            if isinstance(canonical, MarkdownCleanEngineeringModel):
-                return canonical.render()
-            self.translate_from(canonical)
+    def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
+        """Write this model; handed another model, a markdown one writes itself and any other is written by a model
+        of its own, read from previous, the file this render replaces, so the file keeps its own text around the
+        classes canonical changed. A practice keeps one model per format and renders every model through it, so
+        another model is never translated into this one, whose classes would keep the names and the prose of the
+        model rendered before."""
+        if isinstance(canonical, MarkdownCleanEngineeringModel):
+            return canonical._written()
+        own = type(self)()
+        own.parse(written.previous or "")
+        # Translation overwrites the parsed objects in place, so the words the document held are kept apart first.
+        earlier = own.clone()
+        own.translate_from(canonical)
+        if not canonical.writes_prose:
+            own.take_words_from(earlier)
+        return own._written()
+
+
+    def _written(self) -> str:
         if self._cards is not None:
             return self._cards.render()
         return "\n".join(module.render() for module in self.modules)

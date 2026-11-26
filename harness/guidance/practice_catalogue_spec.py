@@ -9,7 +9,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import be, be_none, contain, equal, expect, raise_error
 from mamba import before, description, it
 
-from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE, UnknownPractice
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE, PracticeCatalogue, PracticesNotRegistered, UnknownPractice
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
@@ -90,3 +90,8 @@ with description("the practice catalogue"):
 
         with it("should list every slug its practices and fidelities go by"):
             expect(self.set.slugs).to(contain("stories", "stories-story-map", "clean-engineering-code"))
+
+
+with description("a practice catalogue no package has registered practices with"):
+    with it("should refuse to name its practices, saying none are registered"):
+        expect(lambda: PracticeCatalogue().names).to(raise_error(PracticesNotRegistered))

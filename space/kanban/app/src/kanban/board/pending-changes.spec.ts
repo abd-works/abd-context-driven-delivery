@@ -11,7 +11,7 @@ const ticket = (name: string, column: string, isDone = false, text = ''): Ticket
 
 const stage = (name: string, inProgress: TicketData[], done: TicketData[] = []): ColumnData => ({ name, kind: 'stage', in_progress: inProgress, done })
 
-const boardOf = (...columns: ColumnData[]): BoardData => ({ project: 'pets', practices: [], open_tickets: [], active: null, columns, fidelities: [], sends_fixes_directly: false, unsaved: null })
+const boardOf = (...columns: ColumnData[]): BoardData => ({ project: 'pets', practices: [], open_tickets: [], active: null, columns, fidelities: [], sends_fixes_directly: false, unsaved: null, unreadable: [] })
 
 // Discovery holds checkout-flow and pet-visits In progress; Specification holds nothing yet.
 const read = (): BoardData => boardOf(stage('Discovery', [ticket('checkout-flow', 'Discovery'), ticket('pet-visits', 'Discovery')]), stage('Specification', []))

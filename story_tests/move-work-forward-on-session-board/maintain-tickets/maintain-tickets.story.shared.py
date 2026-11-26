@@ -16,7 +16,9 @@ import json
 from expects import be_none, contain, equal, expect
 
 from space.kanban.board import TicketNotFoundError
+from space.kanban.card_name import BacklogItemTakenError, TicketNameTakenError, TitleNamesNothingError
 from space.kanban.session_board_examples import (
+    ALMOST_SHIPPED,
     BILLING_TAG,
     CHECKOUT_FLOW,
     CHECKOUT_FLOW_TEXT,
@@ -30,6 +32,7 @@ from space.kanban.session_board_examples import (
     PET_VISITS,
     PET_VISITS_TEXT,
     RETURNS_AND_REFUNDS,
+    SHIPPED_WORK,
     SIGN_UP,
     URGENT_TAG,
     idea_file_text,
@@ -135,7 +138,7 @@ def _(s):
 
     @s.when("the Person edits Gift cards' text to Sell gift cards at the till.")
     def _(world):
-        # BoardReads.backlog_item("Gift cards")
+        # BoardReads.backlog_item_called("Gift cards")
         #   <- Gift cards
         # Gift cards.edit_text("Sell gift cards at the till.")
         #   <- Gift cards with the text Sell gift cards at the till.
@@ -176,7 +179,7 @@ def _(s):
     def _(world):
         expect(idea_file(world, CONFIRM_ORDER_CHILD)).to(equal(idea_file_text(CONFIRM_ORDER_CHILD.title, EDITED_CONFIRM_ORDER_TEXT)))
 
-    @s.and_("confirm-order's tooltip in checkout-flow's card shows Show the order, then take the payment.")
+    @s.and_("opening confirm-order from checkout-flow's card shows Show the order, then take the payment.")
     def _(world):
         children = ticket_in(board_of(world), CHECKOUT_FLOW.name)["children"]
         expect([(child["name"], child["text"]) for child in children]).to(equal([(CONFIRM_ORDER_CHILD.name, EDITED_CONFIRM_ORDER_TEXT)]))
@@ -208,6 +211,60 @@ def _(s):
         expect(shown_in_order(discovery, SIGN_UP.name, PET_VISITS.name)).to(equal([SIGN_UP.name, PET_VISITS.name]))
 
 
+@shared_stories.scenario("Reorder Tickets In Column", "Move a ticket above a ticket in another column")
+def _(s):
+    @s.given('the Discovery column shows the ticket pet-visits In progress')
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
+    @s.and_('Hardening shows the ticket almost-shipped in its Done')
+    def _(world):
+        world.project.seed_session(ALMOST_SHIPPED)
+
+    @s.when('the Person moves pet-visits above almost-shipped')
+    def _(world):
+        # CardPlacement.ticket("pet-visits")
+        #   <- pet-visits
+        # pet-visits.move_before(almost-shipped)
+        #   -> self.moves.move_beside(almost-shipped)
+        #   <- Hardening's Done with pet-visits above almost-shipped
+        world.Ticket.load(PET_VISITS.name).move_before(world.Ticket.load(ALMOST_SHIPPED.name))
+
+    @s.then('Hardening shows pet-visits above almost-shipped in its Done')
+    def _(world):
+        done = column_in(board_of(world), "Hardening")["done"]
+        expect([ticket["name"] for ticket in done]).to(equal([PET_VISITS.name, ALMOST_SHIPPED.name]))
+
+    @s.and_('Discovery no longer shows pet-visits')
+    def _(world):
+        expect(names_in(column_in(board_of(world), "Discovery"))).not_to(contain(PET_VISITS.name))
+
+
+@shared_stories.scenario("Reorder Tickets In Column", "Close a ticket by moving it above a closed ticket")
+def _(s):
+    @s.given('the Discovery column shows the ticket pet-visits')
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
+    @s.and_('Complete shows the closed ticket shipped-work')
+    def _(world):
+        world.project.seed_session(SHIPPED_WORK)
+
+    @s.when('the Person moves pet-visits above shipped-work')
+    def _(world):
+        # CardPlacement.ticket("pet-visits")
+        #   <- pet-visits
+        # pet-visits.move_before(shipped-work)
+        #   -> self.moves.move_beside(shipped-work)
+        #   <- Complete with pet-visits above shipped-work
+        world.Ticket.load(PET_VISITS.name).move_before(world.Ticket.load(SHIPPED_WORK.name))
+
+    @s.then('Complete shows pet-visits above shipped-work')
+    def _(world):
+        complete = column_in(board_of(world), "Complete")
+        expect(shown_in_order(complete, PET_VISITS.name, SHIPPED_WORK.name)).to(equal([PET_VISITS.name, SHIPPED_WORK.name]))
+
+
 @shared_stories.scenario("Reorder Tickets In Column", "Keep a backlog item where it was moved")
 def _(s):
     @s.given('the Backlog shows the backlog item Gift cards above Returns and refunds')
@@ -217,7 +274,7 @@ def _(s):
 
     @s.when('the Person moves Returns and refunds above Gift cards')
     def _(world):
-        # BoardReads.backlog_item("Returns and refunds")
+        # BoardReads.backlog_item_called("Returns and refunds")
         #   <- Returns and refunds
         # Returns and refunds.move_before(Gift cards)
         #   <- the Backlog with Returns and refunds above Gift cards
@@ -259,7 +316,7 @@ def _(s):
 
 @shared_stories.scenario("Delete Ticket", "Refuse to delete a ticket the board does not have")
 def _(s):
-    @s.given('the board shows no ticket named no-such-ticket')
+    @s.given("the board still shows no-such-ticket's card, but its session folder is gone")
     def _(world):
         world.project.seed_session(PET_VISITS)
         world.folders = sorted(path.name for path in world.project.sessions.iterdir())
@@ -274,9 +331,75 @@ def _(s):
     def _(world):
         expect_refused(world.refusal, TicketNotFoundError, "no ticket named 'no-such-ticket' on the board")
 
-    @s.and_('deleting no-such-ticket removes no session folder')
+    @s.and_("deleting no-such-ticket removes no other ticket's session folder")
     def _(world):
         expect(sorted(path.name for path in world.project.sessions.iterdir())).to(equal(world.folders))
+
+
+@shared_stories.scenario("Delete Ticket", "Delete a backlog item and its file")
+def _(s):
+    @s.given("the Backlog shows the backlog items Gift cards and Returns and refunds")
+    def _(world):
+        world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG)
+        world.project.seed_backlog_file(RETURNS_AND_REFUNDS)
+
+    @s.when("the Person deletes Gift cards")
+    def _(world):
+        # BoardReads.backlog_item_called("Gift cards")
+        #   <- Gift cards
+        # Gift cards.delete()
+        #   -> self._place.remove()
+        #   <- the Backlog without Gift cards
+        world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading).delete()
+
+    @s.then("the Backlog shows Returns and refunds and not Gift cards")
+    def _(world):
+        expect_backlog(board_of(world), [RETURNS_AND_REFUNDS.heading])
+
+    @s.and_(".sessions/_backlog/gift-cards.md is gone")
+    def _(world):
+        expect((world.project.sessions / "_backlog" / GIFT_CARDS_IN_BACKLOG.file_name).exists()).to(equal(False))
+
+
+@shared_stories.scenario("Delete Ticket", "Delete a parent backlog item with its children")
+def _(s):
+    @s.given("the backlog item Gift cards holds its child Returns and refunds")
+    def _(world):
+        world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG, folder="gift-cards")
+        world.project.seed_backlog_file(RETURNS_AND_REFUNDS, folder="gift-cards")
+
+    @s.when("the Person deletes Gift cards")
+    def _(world):
+        world.BacklogItem.load(GIFT_CARDS_IN_BACKLOG.heading).delete()
+
+    @s.then("the Backlog shows neither Gift cards nor Returns and refunds")
+    def _(world):
+        expect_backlog(board_of(world), [])
+
+    @s.and_(".sessions/_backlog/gift-cards is gone")
+    def _(world):
+        expect((world.project.sessions / "_backlog" / "gift-cards").exists()).to(equal(False))
+
+
+@shared_stories.scenario("Delete Ticket", "Delete a child backlog item, keeping its parent")
+def _(s):
+    @s.given("the backlog item Gift cards holds its child Returns and refunds")
+    def _(world):
+        world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG, folder="gift-cards")
+        world.project.seed_backlog_file(RETURNS_AND_REFUNDS, folder="gift-cards")
+
+    @s.when("the Person deletes Returns and refunds")
+    def _(world):
+        world.BacklogItem.load(RETURNS_AND_REFUNDS.heading).delete()
+
+    @s.then("the Backlog shows Gift cards with no children")
+    def _(world):
+        items = column_in(board_of(world), "Backlog")["items"]
+        expect([(item["title"], item["children"]) for item in items]).to(equal([(GIFT_CARDS_IN_BACKLOG.heading, [])]))
+
+    @s.and_(".sessions/_backlog/gift-cards/gift-cards.md is still there")
+    def _(world):
+        expect((world.project.sessions / "_backlog" / "gift-cards" / GIFT_CARDS_IN_BACKLOG.file_name).is_file()).to(equal(True))
 
 
 @shared_stories.scenario("Tag Ticket Session", "Tag a ticket's session")
@@ -323,3 +446,66 @@ def _(s):
     @s.then("pet-visits' card shows the tags billing and urgent")
     def _(world):
         expect(ticket_in(board_of(world), PET_VISITS.name)["tags"]).to(equal([BILLING_TAG, URGENT_TAG]))
+
+
+@shared_stories.scenario("Add Backlog Item", "Refuse an idea whose title another idea's file has")
+def _(s):
+    @s.given("the Backlog keeps the idea Gift cards, with the text Sell gift cards.")
+    def _(world):
+        world.kept = world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG)
+
+    @s.when("the Person adds an idea titled Gift cards with another text")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.BacklogItem.create(title=GIFT_CARDS_IN_BACKLOG.heading, text=EDITED_GIFT_CARDS_TEXT))
+
+    @s.then("the board says the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md")
+    def _(world):
+        expect_refused(world.refusal, BacklogItemTakenError, "the Backlog already keeps an idea in .sessions/_backlog/gift-cards.md; give 'Gift cards' another title")
+
+    @s.and_("that file still says Sell gift cards.")
+    def _(world):
+        expect(world.kept.read_text(encoding="utf-8")).to(contain(GIFT_CARDS_IN_BACKLOG.text))
+
+
+@shared_stories.scenario("Add Backlog Item", "Refuse an idea whose title gives its file no name")
+def _(s):
+    @s.given("the board shows the Backlog")
+    def _(world):
+        world.project.seed_backlog_file(GIFT_CARDS_IN_BACKLOG)
+
+    @s.when("the Person adds an idea whose title is empty, or 日本語")
+    def _(world):
+        world.refusals = [refusal_of(lambda title=title: world.BacklogItem.create(title=title, text="idea")) for title in ("", "日本語")]
+
+    @s.then("the board says the title gives no name")
+    def _(world):
+        expect([type(refusal) for refusal in world.refusals]).to(equal([TitleNamesNothingError, TitleNamesNothingError]))
+
+    @s.and_("no file named .md is written in the Backlog")
+    def _(world):
+        expect((world.project.sessions / "_backlog" / ".md").exists()).to(equal(False))
+
+
+@shared_stories.scenario("Start Backlog Item", "Refuse to start an idea whose name a ticket already has")
+def _(s):
+    @s.given("the ticket pet-visits is on the board")
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
+    @s.and_("the Backlog keeps an idea titled Pet visits")
+    def _(world):
+        world.kept = world.project.sessions / "_backlog" / f"{PET_VISITS.name}.md"
+        world.kept.parent.mkdir(parents=True, exist_ok=True)
+        world.kept.write_text(idea_file_text(PET_VISITS.title, PET_VISITS_TEXT), encoding="utf-8")
+
+    @s.when("the Person starts that idea")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.BacklogItem.load(PET_VISITS.title).start())
+
+    @s.then("the board says a ticket named pet-visits already exists")
+    def _(world):
+        expect_refused(world.refusal, TicketNameTakenError, "a ticket named pet-visits already exists; give 'Pet visits' another title")
+
+    @s.and_("the idea stays in the Backlog")
+    def _(world):
+        expect(world.kept.is_file()).to(equal(True))

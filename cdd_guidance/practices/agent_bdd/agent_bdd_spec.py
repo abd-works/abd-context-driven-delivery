@@ -10,14 +10,16 @@ from mamba import after, before, context, description, it
 from cdd_guidance.practices.agent_bdd.agent import agent
 from cdd_guidance.practices.agent_bdd.agent_bdd_common import (
     AgentHarnessError,
+    AgentSession,
     ToolRunDeadline,
     ToolsetInvoke,
     ToolsetRequest,
     ToolRunTimedOut,
     ToolsRunYaml,
 )
+from cdd_guidance.practices.agent_bdd.cursor_cli import CursorCli
 from space.session.sessions import Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 import cdd_guidance.actions.sketch.sketch  # noqa: F401 - imported once here, not by the first run request that names it
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -31,6 +33,13 @@ def _slow_run() -> str:
 
 def _failing_run() -> str:
     raise KeyError("unknown tool")
+
+
+class _ChatWithoutAnAgent(CursorCli):
+    """A cursor-agent command line whose new chat is a fixed id, so no agent is started."""
+
+    def create_chat(self, workspace: str) -> str:
+        return "3f2a1b4c-0000-4000-8000-000000000001"
 
 
 with description("an agent spec file"):
@@ -81,7 +90,7 @@ with description("an in-process toolset run with a timeout"):
 with description("a toolset run request") as self:
     with before.each:
         self.project = ThrowawayProject()
-        Sessions(self.project.root).switch("checkout-flow")
+        Sessions(self.project.root).switch("checkout-flow", create=True)
         Sessions(self.project.root).switch("main")
 
     with after.each:
@@ -126,3 +135,22 @@ with description("a toolset run request") as self:
                 self.project.root,
             )
             expect(invoke.toolset.session.name).to(equal("checkout-flow"))
+
+
+with description("an agent session") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        self.session_file = self.project.root / "agent-session.json"
+
+    with after.each:
+        self.project.close()
+
+    with context("that has no session file yet"):
+        with before.each:
+            self.session = AgentSession.from_workspace(self.session_file, self.project.root, _ChatWithoutAnAgent())
+
+        with it("should hold the chat the command line created"):
+            expect(self.session.chat_id).to(equal("3f2a1b4c-0000-4000-8000-000000000001"))
+
+        with it("should save that chat, so the next run resumes it"):
+            expect(AgentSession.load(self.session_file).chat_id).to(equal("3f2a1b4c-0000-4000-8000-000000000001"))

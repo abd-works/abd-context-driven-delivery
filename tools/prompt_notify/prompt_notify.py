@@ -21,11 +21,15 @@ from typing import Callable, ClassVar
 from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, agent_toolset
 from harness.annotations.name import Name
 from harness.annotations.annotation import noCatalog
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
+from harness.guidance.guidance import FidelityGuidance
+from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.hooks.hook_server import HOOK_TOASTS, TOAST_ARROW, HookPayload, rules_toast
 from harness.hooks.hooks import Toast, hook
 from harness.installation.ide_layout import installed_guidance_kind
-from space.session.session_log import LogTimestamp
+from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
+from harness.process.log_timestamp import LogTimestamp
 
 TOAST_NOTICE = ".cursor/prompt-notify-toast.json"
 IDE_TOAST_EXTENSION = "cdd.prompt-notify-0.0.1"
@@ -46,6 +50,11 @@ class PromptNotify:
     # Each hook event is handled by the hook server's one instance, so nothing about one event is kept on it: two
     # events at once would read each other's values.
 
+    def __init__(self, echo_toolsets: list | None = None) -> None:
+        """A notifier that looks for @Toast annotations on echo_toolsets; given none, on the toolsets of the CDD
+        checkout it runs from, loaded the first time a tool call asks."""
+        self._given_echo_toolsets = echo_toolsets
+
     @property
     def catalog(self) -> list[tuple[str, str]]:
         """Every name a tool call can mention, longest first, with its kind: each practice and fidelity CDD has, each
@@ -59,8 +68,6 @@ class PromptNotify:
     def _practice_names(self) -> dict[str, str]:
         """Each practice's slug, each fidelity's slug, and each practice rule file's name, which joins the two
         (``bdd-bdd-behavior``)."""
-        from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
-
         names: dict[str, str] = {}
         for practice in PRACTICE_CATALOGUE.create_all():
             names[practice.slug] = "practice"
@@ -71,40 +78,33 @@ class PromptNotify:
 
     def _action_names(self) -> dict[str, str]:
         """Each action in the action catalogue, such as generate, grill, and create-rule."""
-        from harness.guidance.action_catalogue import ACTION_CATALOGUE
-
         return {self._compact(name): "action" for name in ACTION_CATALOGUE.names}
 
     @hook("preToolUse")
     def on_pre_tool_use(self, payload: HookPayload) -> dict:
         """Toast what the tool call uses in every workspace folder of the chat that made it."""
         self.install_ide_toast_extension()
-        result = self.handle(payload, toolsets=self.echo_toolsets)
+        result = self.handle(payload)
         message = result.get("user_message")
         if message:
             self.show_toast(str(message), payload.workspace_roots)
         return result
 
-    def handle(self, payload: HookPayload, toolsets: list | None = None) -> dict:
+    def handle(self, payload: HookPayload) -> dict:
         if not payload.tool_name:
             return {"permission": "allow"}
-        detected = self._detected(payload, toolsets)
+        detected = self.detect_echo(payload) or self.detect(payload)
         if not detected:
             return {"permission": "allow"}
         kind, label = detected
         self._log_echo(payload.tool_name, kind, label)
         return {"permission": "allow", "user_message": f"{kind.title()}{TOAST_ARROW}{label}"}
 
-    def detect_echo(
-        self, payload: HookPayload, toolsets: list | None = None
-    ) -> tuple[str, str] | None:
+    def detect_echo(self, payload: HookPayload) -> tuple[str, str] | None:
         invoked = payload.invoked_tool
         if not invoked:
             return None
-        searched = self._walk_toolsets(
-            toolsets if toolsets is not None else self.echo_toolsets
-        )
-        for toolset in searched:
+        for toolset in self._walk_toolsets(self.echo_toolsets):
             found = self._echo_on_toolset(invoked, toolset)
             if found is not None:
                 return found
@@ -120,21 +120,17 @@ class PromptNotify:
         annotations say which tool calls toast whichever project the event came from; loaded once by the
         hook server's one notifier. A toolset that fails to load raises, so a broken toolset is seen rather than silently
         not toasting."""
-        from harness.agent_tools.agent_tools import AgentToolSet
-        from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
-
+        if self._given_echo_toolsets is not None:
+            return self._given_echo_toolsets
         references = RepositoryToolsets(RUNNING_CHECKOUT).references()
-        return AgentToolSet.from_items([reference.toolset_class for reference in references])
+        return [reference.made() for reference in references]
 
-    def show_toast(self, toast: str, workspace_roots: list[Path]) -> list[Path]:
-        """Show toast in every workspace folder of the chat it is for, the toast files written. The hook server hands
-        each hook's toast here, so a hook names its toast and never this notifier."""
-        return self.show_ide_toast(toast, workspace_roots)
-
-    def show_ide_toast(self, echo: str, workspace_roots: list[Path | str]) -> list[Path]:
-        """Write echo as the toast of each workspace folder, joined with a toast written there in the same burst."""
+    def show_toast(self, toast: str, workspace_roots: list[Path | str]) -> list[Path]:
+        """Show toast in every workspace folder of the chat it is for, joined with a toast written there in the same
+        burst, and answer the toast files written. The hook server hands each hook's toast here, so a hook names its
+        toast and never this notifier."""
         now = datetime.now(timezone.utc)
-        return [ToastFile(folder).show(echo, now) for folder in self._toast_folders(workspace_roots)]
+        return [ToastFile(folder).show(toast, now) for folder in self._toast_folders(workspace_roots)]
 
     def install_ide_toast_extension(self) -> Path:
         """Every preToolUse asks for this, so copy the tree once per process."""
@@ -146,13 +142,6 @@ class PromptNotify:
         shutil.copytree(source, dest, dirs_exist_ok=True)
         type(self)._installed_extension = dest
         return dest
-
-    def _detected(self, payload: HookPayload, toolsets: list | None) -> tuple[str, str] | None:
-        if toolsets is not None:
-            annotated = self.detect_echo(payload, toolsets=toolsets)
-            if annotated:
-                return annotated
-        return self.detect(payload)
 
     def _log_echo(self, tool_name: str, kind: str, label: str) -> None:
         stamp = LogTimestamp.now()
@@ -236,7 +225,7 @@ class PromptNotify:
     def _echo_kind_label(self, tool: AgentTool) -> tuple[str, str]:
         toolset = tool.toolset
         if tool.name == "instructions":
-            if toolset.is_part_of_practice:
+            if isinstance(toolset, FidelityGuidance) and toolset.practice_guidance is not None:
                 return "fidelity", tool.slug
             return "practice", getattr(toolset, "slug", tool.name)
         if tool.name == "begin":
@@ -256,9 +245,7 @@ class PromptNotify:
     def _mcp_aliases(self, tool: AgentTool) -> set[str]:
         toolset = tool.toolset
         slug = str(getattr(toolset, "slug", "") or "")
-        names = {f"{slug}.{tool.name}", f"{slug}_{tool.name}", tool.name}
-        if toolset.is_part_of_practice:
-            names.add(tool.slug)
+        names = {f"{slug}.{tool.name}", f"{slug}_{tool.name}", tool.name, tool.mcp_name}
         if tool.name == "instructions" and slug:
             names.add(slug)
             names.add(f"{slug}.instructions")

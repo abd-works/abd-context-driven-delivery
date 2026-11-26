@@ -6,16 +6,12 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
-from cdd_guidance.practices.stories.model.markdown.markup import TABLE_LINE, strip_markup
-from cdd_guidance.practices.stories.model.story_model import Background, Scenario, Step, Story
+from harness.graph.graph import Source
 
-# Where a read scenarios document had a heading or a step line. Every other line is kept as written.
-HEADING_LINE = "heading"
-STEP_LINE = "step"
-# One part of a read scenarios document, in the order the document gives them: the heading marker, a line kept as
-# written, a (STEP_LINE, owner) pair where a step line was, an example row, a story section, or a scenario.
-type DocumentPart = object
+from cdd_guidance.practices.source_code import CallGraph
+from cdd_guidance.practices.stories.model.markdown.markup import TABLE_LINE, strip_markup
+from cdd_guidance.practices.stories.model.markdown.read_lines import HeadingLine, ReadLine
+from cdd_guidance.practices.stories.model.story_map import Background, Scenario, Step, Story
 
 
 class StorySection:
@@ -23,15 +19,33 @@ class StorySection:
     file links its scenarios to their story only by this section's name; once a story takes them, each scenario's story
     is its parent."""
 
-    def __init__(self, name: str, heading: Optional[str], line: int = 0) -> None:
+    def __init__(self, name: str, heading: Optional[str], line: int = 0, file: str = "") -> None:
         self.name = name
         self.heading = heading
+        # The scenarios file the section was read from, named as its reading names it.
+        self.file = file
         # The line of the file the heading is on (line, where the section opens); 0 for a section with no heading.
-        self.line, self.parts = (line, [HEADING_LINE]) if heading is not None else (0, [])
+        self.line = line if heading is not None else 0
+        # The heading as read, which names the story the section becomes once that story is made.
+        self.heading_line = HeadingLine(None, name, heading) if heading is not None else None
+        # The section's lines as read, its heading first.
+        self.lines: List[ReadLine] = [self.heading_line] if self.heading_line is not None else []
         self.background = Background("background", 1)
         self.scenarios: list = []
         # The story's own background (`### Story Background`), which the story that takes this section takes too.
         self.story_backgrounds: Optional[List[Background]] = None
+        # The front matter above the file's first story heading, and the lines under this section's heading before its
+        # examples, backgrounds and scenarios, which the story that takes this section keeps as written.
+        self.front_matter: List[str] = []
+        self.notes: List[str] = []
+        self.is_taking_notes = heading is not None
+
+    def give_notes(self, story: Story) -> None:
+        """Give story the front matter and the notes this section was read with, unless it already holds some."""
+        if not story.front_matter and self.front_matter:
+            story.front_matter = "\n".join(self.front_matter)
+        if not story.notes and self.notes:
+            story.notes = "\n".join(self.notes).strip("\n")
 
     def names(self, story: Story) -> bool:
         """Whether this section holds story's scenarios: it is headed with the story's name."""
@@ -120,9 +134,11 @@ class ExamplesTable:
 
     def label(self, fields: Dict[str, str], index: int, shared: bool) -> str:
         """The name an example row is kept under: its example or name column, else, for an example the story's
-        scenarios share, its first column or its group, else its place."""
+        scenarios share, its first column or its group, and for a scenario's own row, such as a row of a Scenario
+        Outline, its scenario column; else its place."""
         first = str(fields.get(self.headers[0], "")).strip("+ ") if shared and self.headers else ""
-        return str(fields.get("example") or fields.get("name") or first or (self.group if shared else "") or f"example-{index}")
+        own = "" if shared else fields.get("scenario")
+        return str(fields.get("example") or fields.get("name") or first or (self.group if shared else "") or own or f"example-{index}")
 
 
 class BackgroundReading:
@@ -143,15 +159,18 @@ class BackgroundReading:
         self.shared, self.local, self.story = shared, None, None
         self.took_step = self.open = self.story_open = False
 
-    def heading(self, kind: str, name: str, in_scenario: bool) -> None:
-        """A heading of kind: a Story Background (called name) opens the story's own; a Background opens a scenario's
-        own under its heading, else the one its story's scenarios share; a scenario heading ends both; any other
-        heading ends the background being read, while the story's own stays open."""
+    def heading(self, kind: str, name: str, in_scenario: bool, read_at: Source) -> None:
+        """A heading of kind, read at read_at: a Story Background (called name) opens the story's own; a Background
+        opens a scenario's own under its heading, else the one its story's scenarios share; a scenario heading ends
+        both; any other heading ends the background being read, while the story's own stays open. A background names
+        the line of the heading that opens it as where it was read, so it is found there and not on its first step."""
         if kind == "story-background":
             self.story, self.story_open, self.open = Background(name, 1), True, False
+            self.story.source = read_at
         elif kind == "background":
             self.open, self.took_step = True, False
             self.local = Background("background", 1) if in_scenario else self.local
+            (self.local if in_scenario else self.shared).source = read_at
         else:
             self.open = False
             self.story_open = self.story_open and kind != "scenario"
@@ -195,4 +214,10 @@ class BackgroundReading:
             if not local.examples and self.shared.examples:
                 local.examples = self.shared.examples.clone(local)
             return [local]
-        return [self.shared.clone()] if self.shared.steps or self.shared.examples else []
+        return [self._shared_copy()] if self.shared.steps or self.shared.examples else []
+
+    def _shared_copy(self) -> Background:
+        """A copy of the shared background for one scenario, read where the shared one was."""
+        copy = self.shared.clone()
+        copy.source = self.shared.source
+        return copy

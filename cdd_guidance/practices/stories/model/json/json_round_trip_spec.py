@@ -7,8 +7,9 @@ from expects import equal, expect, raise_error
 from mamba import before, context, description, it
 
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
-from cdd_guidance.practices.stories.model.json.nodes import JsonParseError, JsonStoryModel
-from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.json.nodes import JsonParseError, JsonStoryMap
+from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles
+from cdd_guidance.practices.stories.model.story_map import StoryMap
 
 
 with description("a story map saved as story-graph.json") as self:
@@ -16,7 +17,7 @@ with description("a story map saved as story-graph.json") as self:
         self.story_map = round_trip_story_map()
         self.story_map.examples["open account"] = {"balance": "120"}
         self.story_map.epics[0].examples["due bill"] = {"amount": "40"}
-        self.read = JsonStoryModel().parse(JsonStoryModel().render(self.story_map))
+        self.read = JsonStoryMap().parse(JsonStoryMap().render(self.story_map))
 
     with it("should read back every epic, story, kind, actor, background step, and scenario step"):
         expect(outline(self.read)).to(equal(outline(self.story_map)))
@@ -33,8 +34,8 @@ with description("a story map saved as story-graph.json") as self:
             (self.folder / "story-graph.json").write_text("{not json", encoding="utf-8")
 
         with it("should fail naming the file rather than read as no story map"):
-            expect(lambda: JsonStoryModel.from_workspace(self.folder)).to(raise_error(JsonParseError))
+            expect(lambda: JsonStoryMap().read_file(self.folder / "story-graph.json", self.folder)).to(raise_error(JsonParseError))
 
     with context("that a folder does not hold"):
         with it("should read as no story map"):
-            expect(JsonStoryModel.from_workspace(Path(tempfile.mkdtemp()))).to(equal(None))
+            expect(StoryMapFiles(Path(tempfile.mkdtemp())).story_graph()).to(equal(None))

@@ -13,7 +13,8 @@ async function openCloseDialog(page: Page): Promise<void> {
 // what changes the view, and this file sorts first, before any spec connects a chat.
 const SAME_LINE_PIXELS = 20
 const PAGE_FOOTER_PIXELS = 160
-// The canvas's stage is 24fr of 1488px with 10px gaps, and a stage's card is half of what the stage leaves inside.
+// The canvas's stage is 24fr of the 124fr across 1846px less its five 10px gaps, and a stage's card is half of what the stage
+// leaves inside.
 const CANVAS_STAGE_PIXELS = 347
 const CANVAS_CARD_PIXELS = 157
 const CANVAS_HEADER_PIXELS = 58
@@ -57,6 +58,26 @@ test.describe('the session board on the page', () => {
       expect(await region.evaluate(element => element.scrollLeft)).toBe(300)
     })
 
+    // Found by the e2e judge pass: Checkout flow's title wrapped as 'Checkou' / 't flow'.
+    test("should break a card's title only between words", async ({ page }) => {
+      const broken = await page.locator('.ticket-title').evaluateAll(titles =>
+        titles.flatMap(title => {
+          const text = title.firstChild
+          if (!text || text.nodeType !== Node.TEXT_NODE) return []
+          const words = [...(text.textContent ?? '').matchAll(/\S+/g)]
+          return words
+            .filter(word => {
+              const range = document.createRange()
+              range.setStart(text, word.index!)
+              range.setEnd(text, word.index! + word[0].length)
+              return new Set([...range.getClientRects()].map(line => Math.round(line.top))).size > 1
+            })
+            .map(word => word[0])
+        }),
+      )
+      expect(broken).toEqual([])
+    })
+
     test('should draw a card at the canvas width', async ({ page }) => {
       const stage = await page.locator('.board-column[data-column="Discovery"]').boundingBox()
       const shown = await card(page, 'checkout-flow').boundingBox()
@@ -81,6 +102,14 @@ test.describe('the session board on the page', () => {
       })
     })
 
+    // Found by the e2e judge pass: an opened card ran past its column's right edge.
+    test('should keep the opened card inside its column', async ({ page }) => {
+      const opened = await page.locator('.card-open').boundingBox()
+      const lanes = await page.locator('.board-column[data-column="Discovery"] .card-lists').boundingBox()
+      expect(opened!.x).toBeGreaterThanOrEqual(lanes!.x)
+      expect(opened!.x + opened!.width).toBeLessThanOrEqual(lanes!.x + lanes!.width)
+    })
+
     test('should show the whole opened card', async ({ page }) => {
       const opened = await page.locator('.card-open').boundingBox()
       const region = await page.locator('.board-region').boundingBox()
@@ -90,19 +119,19 @@ test.describe('the session board on the page', () => {
     })
   })
 
-  test.describe('with the files button pressed on a card', () => {
-    test('should open the files list beside the board', async ({ page }) => {
-      await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
-      const panel = page.locator('[data-panel="files"]')
-      await expect(panel.getByRole('tab', { name: 'story-map.md', exact: true })).toBeVisible()
+  test.describe('with the report panel open', () => {
+    test('should open the report beside the board', async ({ page }) => {
+      await card(page, 'checkout-flow').locator('.card-violations').click()
+      const panel = page.locator('[data-panel="report"]')
+      await expect(panel).toBeVisible()
       const board = await page.locator('.board-main').boundingBox()
       const beside = await panel.boundingBox()
       expect(beside!.x).toBeGreaterThanOrEqual(board!.x + board!.width - 1)
     })
 
     test('should keep the header on one line', async ({ page }) => {
-      await card(page, 'checkout-flow').getByRole('button', { name: 'files', exact: true }).first().click()
-      await expect(page.locator('[data-panel="files"]')).toBeVisible()
+      await card(page, 'checkout-flow').locator('.card-violations').click()
+      await expect(page.locator('[data-panel="report"]')).toBeVisible()
       const header = await page.locator('.board-header').boundingBox()
       expect(header!.height).toBeLessThanOrEqual(CANVAS_HEADER_PIXELS)
     })

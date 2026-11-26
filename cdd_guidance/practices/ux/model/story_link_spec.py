@@ -12,20 +12,22 @@ if str(_REPO) not in sys.path:
 
 from harness.graph.graph import Graph
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, Story, StoryModel
-from cdd_guidance.practices.ux.model.nodes import Screen
-from cdd_guidance.practices.ux.model.story_link import key_of
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, Story, StoryMap
+from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
+from cdd_guidance.practices.stories.model.story_tree import StoryTree
+from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.ux import Ux
 
 _STORY_TESTS = _REPO / "cdd_guidance/practices/stories/model/_examples/actual/from-typescript/to-typescript/tests/onboard-a-customer/create-customer"
 
 
 def edge_pairs(graph, practice, kind):
-    return [(edge.parent.name, edge.child.name) for edge in graph.practice(practice).reading.in_graph.edge_index.of(kind)]
+    return [(edge.parent.name, edge.child.name) for edge in graph.practices.named(practice).reading.in_graph.edge_index.of(kind)]
 
 
 def story_map_on(graph):
-    story_map = StoryModel(graph=graph)
+    story_map = StoryMap(graph=graph)
     epic = Epic("Place New Order", 0)
     story = Story("Browse Product Catalog", 0)
     scenario = Scenario("Products are listed", 0)
@@ -112,10 +114,10 @@ with description("a screen that shows stories"):
             fresh = Graph()
             fresh.load_working_copy(str(self.working_copy), {"stories": "."})
             fresh.save_json()
-            stories = fresh.practice("stories")
+            stories = fresh.practices.named("stories")
             self.scenario = stories.reading.in_graph.nodes("Scenario")[0]
             self.step = stories.reading.story_tree.steps(self.scenario)[0]
-            self.keys = (key_of(self.scenario), key_of(self.step))
+            self.keys = (StoryTree.key_of(self.scenario), StoryTree.key_of(self.step))
             self.reopened = Graph()
             self.reopened.reads.open_saved(self.working_copy)
             self.screen = Screen("Catalog", 0, graph=self.reopened)
@@ -144,3 +146,46 @@ with description("a screen that shows stories"):
 
         with it("should list the copy by its key"):
             expect(self.screen.lists(self.copy)).to(be(True))
+
+
+_SCENARIO_LINK = "[Browse Product Catalog › Products are listed](story_tests/browse/browse_story.test.md#scenario-products-are-listed)"
+
+with description("a control that serves stories"):
+    with context("that is given a story by name, a scenario as a markdown link, and a step by its key"):
+        with before.each:
+            self.control = Control("Products", 0)
+            self.control.show_story("Browse Product Catalog")
+            self.control.show_scenario(_SCENARIO_LINK)
+            self.control.show_step("Browse Product Catalog › Products are listed › the Customer opens the catalog")
+
+        with it("should write the story by its name"):
+            expect(self.control.story_keys).to(equal(["Browse Product Catalog"]))
+
+        with it("should write the scenario as the link it was given, with its target"):
+            expect(self.control.scenario_keys).to(equal([_SCENARIO_LINK]))
+
+        with it("should write the step by its key"):
+            expect(self.control.step_keys).to(equal(["Browse Product Catalog › Products are listed › the Customer opens the catalog"]))
+
+        with it("should serve an association it is given twice only once"):
+            self.control.show_scenario(_SCENARIO_LINK)
+            expect(len(self.control.scenario_keys)).to(equal(1))
+
+    with context("that is copied into a map of another format"):
+        with before.each:
+            source = UxMap.create()
+            screen = Screen("Catalog", 0)
+            region = Region("product list", 0)
+            control = Control("Products", 0)
+            control.show_scenario(_SCENARIO_LINK)
+            region.append_control(control)
+            screen.append_region(region)
+            screen.show_scenario(_SCENARIO_LINK)
+            source.append_screen(screen)
+            self.copy = JsonUxMap.create().parse(JsonUxMap.create().render(source))
+
+        with it("should keep the scenario the control serves, with its target"):
+            expect(self.copy.screens[0].regions[0].controls[0].scenario_keys).to(equal([_SCENARIO_LINK]))
+
+        with it("should keep the scenario the screen serves, with its target"):
+            expect(self.copy.screens[0].scenario_keys).to(equal([_SCENARIO_LINK]))

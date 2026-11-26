@@ -8,11 +8,12 @@ from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.reading.code_read import CODE_FIDELITY
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
     from harness.graph.rule_context import RuleCheckContext
+    from harness.graph.violation import Finding
 
 
 class ProductionCodeRule(PracticeGraphRule):
@@ -21,10 +22,22 @@ class ProductionCodeRule(PracticeGraphRule):
     judges the whole practice at once reads only the facts the build compared across the graph, which it records on
     production code alone (``model/compared_facts.py``)."""
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
-        if is_test_code(node.source.file):
+    # True for a rule the practice's document states at the code fidelity and at no other: it judges bodies, so it
+    # leaves out every node that is not read at the code fidelity, such as a class whose operations have no bodies yet.
+    code_fidelity_only = False
+
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
+        """Judge node unless it is test code, as the project tells it through the reading of the node's practice."""
+        if node.practice.reading.test_code.is_test_code(node.source.file):
+            return []
+        if self.code_fidelity_only and not self.is_judged(node):
             return []
         return self.check_production(node, context)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def is_judged(self, node: "Node") -> bool:
+        """Whether a rule of the code fidelity alone judges node: a node read at the code fidelity, such as a class one
+        of whose operations has a body."""
+        return node.is_read_at(CODE_FIDELITY)
+
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         return []

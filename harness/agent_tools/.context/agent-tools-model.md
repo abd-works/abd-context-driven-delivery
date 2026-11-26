@@ -36,8 +36,8 @@ slug: str
 description: str
 	Interaction:
 		return (self.__class__.__doc__ or "").strip()
-registration_name: str
-	// "{module}:{Class}", the ref installers and the hook server load by
+reference: ToolsetReference
+	// the toolset's one name, its class; written "{module}:{Class}" where installers and the hook server pass it between processes
 install_folder: Path
 << composition >> operations: dict[str, AgentOperation]
 	// every @agent_tool on this instance, each made once with toolset=self
@@ -53,23 +53,25 @@ mode: ExpansionMode
 	// classes whose tools run only through the practice or toolset that holds them; install and the hook server skip them
 parameter_notes: dict[str, str]
 	// parameter name -> note added after the description of each tool that takes it; every toolset origin has one
-schema_guide(): str
-	// the schema its instructions conform to; empty unless the toolset has one, as a practice does
-is_part_of_practice: bool
-	// false; a fidelity its practice holds says true, so installs and MCP name it after its own slug in its practice's folder
 is_served_on_mcp: bool
 	// true; a fidelity made apart from any practice says false, so the cdd server skips it
 ----
 instruction(name: str): AgentInstructions
 	// the @agent_instructions member called name; a recipe names its members by name in its source
-tools_for(destination: str): list[AgentTool]
-	-> AgentTool.install_to
+published_name(tool: AgentTool): str
+	// "{slug}.{name}"; a fidelity its practice holds publishes its own instructions under its slug alone
+installed_as(tool: AgentTool): InstalledName
+	// in its install folder, named by the tool; a guidance names its own instructions after itself, a fidelity after its slug in its practice's folder
+listed_parts(): list[AgentToolSet]
+	// the parts the file of its own tool lists, each with the call to its own tool; none, and a guidance's child toolsets
+instructions_type(name: str): type[AgentInstructions]
+	// AgentInstructions; a guidance publishes its own instructions member as a GuidanceInstructions
+tools_published_to(destination: DestinationKind | None): list[AgentTool]
+	// none when destination's publisher was never imported
+	-> AgentTool.is_published_to
 child_toolsets(): Iterator[AgentToolSet]
-instantiate(toolset: ToolsetConfiguration = None): AgentToolSet
-	// toolset is None, a "{module}:{Class}" ref, a {toolset, context} dict, a class, or an instance
-	-> ToolsetReference.toolset_class
-from_items(items: list, context: dict | None = None): list[AgentToolSet]
-	// one instance per toolset class
+made(**context): AgentToolSet
+	// this toolset, already made, so a reader that makes toolsets from their references takes a made one the same way
 for_call(call: ToolCall): AgentToolSet
 	// this toolset as the call works on it; self unless the toolset keeps state of one call (a guidance action)
 session_for(call: ToolCall): Session | None
@@ -93,28 +95,33 @@ toolset: AgentToolSet
 	Invariant: the toolset instance that made this member
 slug: str
 	// the toolset's slug
-registration_name: str
-	// the toolset's registration_name
 deploy_name: str
-	// the name a @command or @skill annotation gives, else name
+	// the name a destination's annotation gives for its installed file, such as a @command's name, else name
+	-> annotation_kinds.deploy_name_of(callable)
 mcp_name: str
-	// "{toolset slug}.{name}"; a practice's own instructions publish under the practice slug alone
+	-> toolset.published_name(self)
 kind: str
 	// "tool", "instructions", or "none"
 docstring: str
 description: str
 	// the docstring expanded once through the toolset's class_markdown
+listed_description: str
+	// what the MCP tool list says: its description; a GuidanceInstructions lists its opening paragraph
+served_body: str
+	// what its installed file says above the call to it: its docstring, unless "overview" names the section the server returns
 parameters: dict[str, str]
 response: str | None
 << composition >> parameter_schema: ParameterSchema
 	// made once from callable
 input_schema: dict
 	-> parameter_schema.json_schema
-install_to_mcp, install_to_hook, install_to_skill, install_to_command, install_to_rule: bool
-hook_event: str
-destinations: list[str]
+destinations: tuple[DestinationKind, ...]
+	// where install publishes this tool, in the order the destinations were defined
+	-> annotation_kinds.destinations_of(callable)
 ----
-install_to(destination: str): bool
+is_published_to(destination: DestinationKind | None): bool
+	// never when destination's publisher was never imported
+	-> destination.publishes(callable)
 invoke_line(): str
 	// the "Use MCP tool:" line a skill or command ends with
 invoke(arguments: dict | None = None, *, project: Path | None = None): Any
@@ -150,13 +157,22 @@ chat: ChatPointer | None
 session: Session | None
 	// the session saved as open in the project's checkout, read once for this call; none when the call names no project or no opener is registered
 	-> SessionOpening.open_in(self)
+reporter: Callable[[str], None] | None
+	// whoever listens to the call's progress, such as the MCP host's notifications; none for a call made in process, which reports nowhere
 ----
+report_progress(message: str): None
+	// tells reporter; nothing when no one listens. The function report_progress(message) reports to CALLS_BEING_ANSWERED.current, and a call
+	// answered inside another that has no reporter of its own reports to the other's
 sent(arguments: dict | None, project: Path | None): ToolCall
 	// the chat named in the arguments is taken out and kept as the call's chat
 	-> ChatPointer.taken_from
 session_named(session_file: str): Session
 	// the session a board command names by its session.json
 	-> SessionOpening.named_in(session_file, self)
+as_sent(): dict
+	// the call as one lane's server hands it to the other's: tool, arguments, project, chat
+from_sent(sent: dict, mcp_host: AnsweringMcpHost): ToolCall
+	// the call another lane handed this one, which mcp_host answers for the chat that sent it
 
 ## SessionOpening                                                <!-- Md -->
 
@@ -238,6 +254,19 @@ parent_recipe(): AgentInstructions | None
 	// the same-named recipe on the nearest class above defining_class, holding the class that defines it, for a recipe
 	// that defers to its parent
 
+## InstalledName                                                  <!-- Md -->
+
+Where install puts the files of one tool of a toolset, and what it names them; the toolset answers it (`installed_as`), so an installation names no practice or fidelity.
+
+InstalledName(folder: Path, stem: str | None = None, is_own: bool = False)
+------
+folder: Path
+	// the folder the toolset's files go in, as the toolset knows it
+stem: str | None
+	// the name its files are named by within folder; none for a toolset named by its own folder
+is_own: bool
+	// the toolset's own tool, named after the toolset alone
+
 ## RecipeExpansion                                                <!-- Md -->
 
 One expansion of one recipe for one call's arguments; made per expansion, so two calls never share what it collects.
@@ -314,11 +343,20 @@ callable_on(instance, name, member): Callable
 
 ## ToolsetReference                                               <!-- Md -->
 
-ToolsetReference(reference: str)
+The one name of a toolset: its class, by its module and its own name. It is text, `{module}:{Class}`, only where it crosses a process (configuration, a `hook-handlers.json`, a skill's shell command), and is parsed back there.
+
+ToolsetReference(module_name: str, class_name: str, toolset_class: type | None = None)
 ------
 toolset_class: type
+	// the class it was made from, else imported from its module
 	// raises TypeError for a class that is not an @agent_toolset
 ----
+of(toolset_class: type): ToolsetReference
+parsed(text: str): ToolsetReference
+	// raises ValueError for text that names no class
+made(**context): AgentToolSet
+	// the toolset, made with the constructor's arguments a configuration gives
+	-> ToolsetMembers.of(toolset_class).subject_loader.made(context)
 
 ## ToolsetValidator                                               <!-- Md -->
 
@@ -359,20 +397,6 @@ tools: list[str]
 result: str
 ----
 
-## InstallDestination                                             <!-- Md -->
-
-The channels a member is published to, in the order a tool lists them. Each channel's annotation is a *Destination* its publisher defines, so this module names the channels and never imports the publishers.
-
-InstallDestination
-------
-MCP = "mcp"
-HOOK = "hook"
-SKILL = "skill"
-COMMAND = "command"
-RULE = "rules"
-LISTED: tuple[str, ...]
-----
-
 ## ToolSetCollection                                              <!-- Md -->
 
 Named child toolsets, iterated in entry order. The collection itself may have tools.
@@ -383,7 +407,7 @@ entries: dict[str, AgentToolSet]
 parent: Any
 name: str
 slug: str
-registration_name: str
+reference: ToolsetReference
 tools: dict[str, AgentTool]
 	// tools declared on the collection, not on its entries
 ----
@@ -393,7 +417,7 @@ attach(instance: Any, name: str | None = None): None
 
 `@collect` on a collection property: the same-named property gathered across the collection's children, joined as text or wrapped in the return type.
 
-Collect(fn: Callable): property
+Collect(operation: Callable): property
 ------
 ----
 of(collection: Any, name: str, return_type: Any): Any
@@ -445,7 +469,7 @@ lineno: int
 
 | Concern | Owner | Reads from this module |
 | ------- | ----- | ---------------------- |
-| Skill, command, and rules markdown | `FileInstallation` | live toolset: `description`, `tools_for(destination)`; `AgentTool.invoke_line`; `AgentInstructions.expand` |
-| MCP enrollment | `McpInstallation.write` (records each operation), `McpServer` (enrolls it at start) | each member's `mcp_name`, `kind`, `description`, `parameters` |
-| Runtime call | `McpServer` | `AgentTool.invoke(arguments, project=...)`, the project of the runtime the call's project names |
-| Hooks | `HookInstallation`, `HookDaemon`, `HookServer` | `tools_for("hook")`, `hook_event`, `@hosted_only` |
+| Skill, command, and rules markdown | `SkillInstallation`, `CommandInstallation`, `RulesInstallation` (each a `FileInstallation`) | live toolset: `description`, `tools_published_to(destination)`; `AgentTool.is_published_to`, `AgentTool.invoke_line`; `AgentInstructions.expand` |
+| MCP enrollment | `McpInstallation.write` (records each operation), `ProjectToolsets` (enrolls it at start) | each member's `mcp_name`, `kind`, `description`, `parameters` |
+| Runtime call | `ProjectToolsets` | `AgentTool.invoke(arguments, project=...)`, the project of the runtime the call's project names |
+| Hooks | `HookInstallation`, `HookDaemon`, `HookServer` | `tools_published_to(Hook)`, `AgentTool.is_published_to(Hook)`, `Hook.name_given(tool.callable)` for the event, `@hosted_only` |

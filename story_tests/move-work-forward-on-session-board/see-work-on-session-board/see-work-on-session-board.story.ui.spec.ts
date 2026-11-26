@@ -1,7 +1,7 @@
 /**
  * See Work On Session Board at the browser tier: the scenarios whose behaviour lives only in the board app.
  *
- * Scenarios: story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md; Restrict Actions To Active Session is in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md. The Python tiers replay
+ * Scenarios: story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md and story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md; Restrict Actions To Active Session is in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md. The Python tiers replay
  * the rest from see-work-on-session-board.story.shared.py.
  *
  * Each scenario runs against the board app built and served on the throwaway fixture project
@@ -9,7 +9,11 @@
  * A Given seeds the fixture project's `.sessions/`, where the board reads it; a When does what the person does on the
  * page; a Then reads what the person sees.
  *
- * Left out here: "Install the board again" and "Say why the board's install failed" (an install really runs npm install
+ * Display Board Server Health's scenarios "Say the cdd server is not connected" and "Show a failing tool in a toast" run
+ * here too, though their scenarios are in
+ * story_tests/move-work-forward-on-session-board/check-cdd-server-health-on-board/check_cdd_server_health_on_board_story.test.md.
+ *
+ * Left out here: Update Board And CDD's "Install the board again" and "Say why the board's install failed" (an install really runs npm install
  * and build in the board's folder; board-client.spec drives the page with the install's answer given), "Keep the newer board when an older read answers late" (a browser cannot hold one answer back;
  * board-client.spec drives the page's reads in order), and "Find the board from a chat" and "Name the active ticket on
  * the chat's status line" (the cdd-board mod in harness/chat-ui, not the board app, does them).
@@ -17,7 +21,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { ACCENT, BOARD_POST_HEADERS, card, dragCard, expect, FakeChat, fixtureRoot, generatedLine, openBoard, openCard, openCardOf, resetSessions, seedActive, startBoard, test, toast, turnOffActiveSessionOnly, validatedLine, waitForChat, writeInto, writeSession } from '../../../space/kanban/app/tests/story-ui'
+import { catchFilesAppLinks, ACCENT, BOARD_POST_HEADERS, card, dragCard, expect, FakeChat, fixtureRoot, generatedLine, openBoard, openCard, openCardOf, resetSessions, seedActive, startBoard, test, toast, turnOffActiveSessionOnly, validatedLine, waitForChat, writeInto, writeSession } from '../../../space/kanban/app/tests/story-ui'
 import type { Page } from '../../../space/kanban/app/tests/story-ui'
 
 const PAGE_HEIGHT = 900
@@ -48,6 +52,8 @@ async function resizePanelTo(page: Page, kind: string, wanted: number): Promise<
 
 const openFilesOf = (page: Page, ticket: string) => card(page, ticket).getByRole('button', { name: 'files', exact: true }).first().click()
 const openReportOf = (page: Page, ticket: string) => card(page, ticket).locator('.card-violations').click()
+// The active ticket's story map help, from its tile in the details, as its ? opens it.
+const openHelpOf = (page: Page) => page.locator('.details-body [data-tile="stories-story-map"]').getByRole('button', { name: /^Help for/ }).click()
 
 test.beforeEach(() => resetSessions(fixtureRoot))
 test.afterAll(() => resetSessions(fixtureRoot))
@@ -69,7 +75,7 @@ test.describe('Open Board', () => {
   })
 })
 
-test.describe('Display Board', () => {
+test.describe('Display Board Server Health', () => {
   test.describe('Say the cdd server is not connected', () => {
     // A board of its own whose cdd cannot start, because the program it names does not exist.
     let stop: () => void = () => undefined
@@ -94,18 +100,52 @@ test.describe('Display Board', () => {
   })
 
   test.describe('Show a failing tool in a toast', () => {
+    // The Person adds a child titled Billing report to checkout-flow: billing-report is a ticket already.
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
-      writeInto(join(fixtureRoot, '.sessions', 'broken', 'session.json'), '{broken')
+      await card(page, 'checkout-flow').getByRole('button', { name: 'Add child' }).first().click()
+      await page.getByLabel('Child title').fill('Billing report')
+      await page.getByLabel('Child title').press('Enter')
     })
 
-    test('Then a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))', async ({ page }) => {
-      await expect(toast(page, /^cdd board\.show failed: JsonFileUnreadable: .*[\\/]\.sessions[\\/]broken[\\/]session\.json is not a readable JSON object \(Expecting property name enclosed in double quotes: line 1 column 2 \(char 1\)\)/).first()).toBeVisible({ timeout: 8_000 })
+    test("Then a toast says cdd ticket.add_child failed: TicketNameTakenError: a ticket named billing-report already exists; give 'Billing report' another title", async ({ page }) => {
+      await expect(toast(page, "cdd ticket.add_child failed: TicketNameTakenError: a ticket named billing-report already exists; give 'Billing report' another title").first()).toBeVisible({ timeout: 8_000 })
     })
 
     test('But no band says the cdd server is lost', async ({ page }) => {
-      await expect(toast(page, /board\.show failed/).first()).toBeVisible({ timeout: 8_000 })
+      await expect(toast(page, /ticket\.add_child failed/).first()).toBeVisible({ timeout: 8_000 })
       await expect(page.locator('.band-failure')).toHaveCount(0)
+    })
+  })
+
+})
+
+test.describe('Display Board', () => {
+  test.describe("Show the other tickets when one ticket's session file does not read", () => {
+    const notice = (page: Page) => page.getByRole('alert', { name: 'Session files not read' })
+
+    test.beforeEach(async ({ page }) => {
+      writeInto(join(fixtureRoot, '.sessions', 'broken', 'session.json'), '{broken')
+      await openBoard(page)
+    })
+
+    test('Then billing-report shows on the board', async ({ page }) => {
+      await expect(notice(page)).toBeVisible()
+      await expect(card(page, 'billing-report').first()).toBeVisible()
+    })
+
+    test('And no column shows broken', async ({ page }) => {
+      await expect(notice(page)).toBeVisible()
+      await expect(card(page, 'broken')).toHaveCount(0)
+    })
+
+    test('And the board names .sessions/broken/session.json as a file it could not read, with what is wrong in it', async ({ page }) => {
+      await expect(notice(page)).toContainText(/\.sessions\/broken\/session\.json was not read.*is not a readable JSON object \(Expecting property name enclosed in double quotes: line 1 column 2 \(char 1\)\)/)
+    })
+
+    test('But no band says the cdd server is not answering', async ({ page }) => {
+      await expect(notice(page)).toBeVisible()
+      await expect(page.locator('.band-failure').filter({ hasText: 'not answering' })).toHaveCount(0)
     })
   })
 
@@ -270,7 +310,9 @@ test.describe('Display Ticket Details', () => {
       await expect(page.locator('.details-bar')).toContainText('Activate this session to run actions')
     })
   })
+})
 
+test.describe('Expand Ticket From Empty Area', () => {
   test.describe("Expand one ticket's card at a time", () => {
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
@@ -297,10 +339,8 @@ test.describe('Display Ticket Details', () => {
       await expect(openCard(page, 'billing-report').locator('[data-tile="stories-story-map"] .expansion')).toBeVisible()
     })
   })
-})
 
-// Scenarios: see_work_on_session_board_story.test.md, story Expand Ticket From Empty Area; one test per scenario.
-test.describe('Expand Ticket From Empty Area', () => {
+  // Scenarios: arrange_board_and_ticket_details_story.test.md, story Expand Ticket From Empty Area; one test per scenario.
   test('Expand a card from an empty area', async ({ page }) => {
     await openBoard(page)
     await expect(openCard(page, 'checkout-flow')).toHaveCount(0)
@@ -311,11 +351,12 @@ test.describe('Expand Ticket From Empty Area', () => {
 
   // The card's own controls each do their work without opening the card. The scenario names the stories tile; a
   // collapsed card holds no tiles, and its segments open the card on purpose (Open a card on the fidelity of a pressed
-  // segment), so this presses the card's folder control, which opens the files panel on the card's fidelities.
+  // segment), so this presses the card's folder control, which opens the Files app on the card's fidelities.
   test("Leave a card's controls to do their own work", async ({ page }) => {
+    const links = await catchFilesAppLinks(page)
     await openBoard(page)
     await openFilesOf(page, 'checkout-flow')
-    await expect(page.locator('[data-panel="files"]')).toBeVisible()
+    await expect.poll(async () => (await links()).length).toBe(1)
     await expect(openCard(page, 'checkout-flow')).toHaveCount(0)
   })
 })
@@ -345,22 +386,22 @@ test.describe('Arrange Side Panel', () => {
   test.describe("Set a panel's width", () => {
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
-      await openFilesOf(page, 'checkout-flow')
-      await expect(page.locator('[data-panel="files"]')).toBeVisible()
-      await resizePanelTo(page, 'files', 700)
+      await openHelpOf(page)
+      await expect(page.locator('[data-panel="help"]')).toBeVisible()
+      await resizePanelTo(page, 'help', 700)
     })
 
-    test('Then the files panel is 700 pixels wide', async ({ page }) => {
-      expect((await page.locator('[data-panel="files"]').boundingBox())!.width).toBe(700)
+    test('Then the help panel is 700 pixels wide', async ({ page }) => {
+      expect((await page.locator('[data-panel="help"]').boundingBox())!.width).toBe(700)
     })
 
-    test.describe('the Person narrows the files panel to 10 pixels', () => {
+    test.describe('the Person narrows the help panel to 10 pixels', () => {
       test.beforeEach(async ({ page }) => {
-        await resizePanelTo(page, 'files', 10)
+        await resizePanelTo(page, 'help', 10)
       })
 
-      test('Then the files panel stops at 360 pixels', async ({ page }) => {
-        expect((await page.locator('[data-panel="files"]').boundingBox())!.width).toBe(360)
+      test('Then the help panel stops at 360 pixels', async ({ page }) => {
+        expect((await page.locator('[data-panel="help"]').boundingBox())!.width).toBe(360)
       })
     })
   })
@@ -369,15 +410,15 @@ test.describe('Arrange Side Panel', () => {
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
       await openReportOf(page, 'checkout-flow')
-      await openFilesOf(page, 'checkout-flow')
+      await openHelpOf(page)
       await page.getByRole('button', { name: 'Expand report' }).click()
-      await page.getByRole('button', { name: 'Expand files' }).click()
+      await page.getByRole('button', { name: 'Expand help' }).click()
     })
 
-    test("Then the files panel takes the board's width less the other open panels", async ({ page }) => {
-      const files = (await page.locator('[data-panel="files"]').boundingBox())!.width
+    test("Then the help panel takes the board's width less the other open panels", async ({ page }) => {
+      const help = (await page.locator('[data-panel="help"]').boundingBox())!.width
       const report = (await page.locator('[data-panel="report"]').boundingBox())!.width
-      expect(Math.round(files + report)).toBe(1600)
+      expect(Math.round(help + report)).toBe(1600)
     })
 
     test('And the report panel is no longer expanded', async ({ page }) => {
@@ -401,12 +442,12 @@ test.describe('Arrange Side Panel', () => {
   test.describe("Keep the columns' width when a panel opens", () => {
     test.beforeEach(async ({ page }) => {
       await openBoard(page)
-      await openFilesOf(page, 'checkout-flow')
-      await expect(page.locator('[data-panel="files"]')).toBeVisible()
+      await openReportOf(page, 'checkout-flow')
+      await expect(page.locator('[data-panel="report"]')).toBeVisible()
     })
 
     // The canvas's five columns are 1488 pixels wide together.
-    test('Then the columns keep their width and scroll sideways beside the files panel', async ({ page }) => {
+    test('Then the columns keep their width and scroll sideways beside the report panel', async ({ page }) => {
       const scrolls = await page.locator('.board-region').evaluate(element => element.scrollWidth > element.clientWidth)
       expect([scrolls, (await page.locator('.column-grid').first().boundingBox())!.width >= 1488]).toEqual([true, true])
     })
@@ -449,13 +490,16 @@ test.describe('Restrict Actions To Active Session', () => {
   })
 
   test.describe('Keep information and moves open on a locked ticket', () => {
+    let links: () => Promise<URL[]>
+
     test.beforeEach(async ({ page }) => {
+      links = await catchFilesAppLinks(page)
       await openBoard(page)
       await openFilesOf(page, 'billing-report')
     })
 
-    test("Then the files panel lists billing-report's files", async ({ page }) => {
-      await expect(page.locator('[data-panel="files"] .files-subject')).toContainText('billing-report')
+    test("Then the Files app opens on billing-report's files", async () => {
+      await expect.poll(async () => (await links()).map(url => url.searchParams.get('files'))).toEqual(['billing-report'])
     })
 
     test.describe('the Person moves billing-report to Specification', () => {

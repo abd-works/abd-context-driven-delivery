@@ -1,6 +1,6 @@
 # Test code is known by its name
 
-The Clean Engineering rules judge production code only, so each rule has to know which files are specs or what specs use. `production_code.py` decides that from the file's path alone (`TestFileName`): a test folder (`tests`, `test`, `__tests__`, `test-utils`, `fixtures`, `_examples`), a dotted role in the name (`.spec.`, `.test.`, `.e2e.`, `.feature.`, `.story.`, `.page-driver.`, `.examples.`), or the words of the name (`*_spec`, pytest's `test_*`, Java's `*Test`, and support named `*_test`, `*_fixture`, `*_examples`, `*_tiers`, `spec_helpers`, `spec_support`, `testUtils`). The BDD practice reads its spec files through the same `is_spec_file`.
+The Clean Engineering rules judge production code only, so each rule has to know which files are specs or what specs use. `test_files.py` of `practices/source_code` (once `clean_engineering/model/production_code.py`) decides that from the file's path alone (`TestFileName`): a test folder (`tests`, `test`, `__tests__`, `test-utils`, `fixtures`, `_examples`), a dotted role in the name (`.spec.`, `.test.`, `.e2e.`, `.feature.`, `.story.`, `.page-driver.`, `.examples.`), or the words of the name (`*_spec`, pytest's `test_*`, Java's `*Test`, and support named `*_test`, `*_fixture`, `*_examples`, `*_tiers`, `spec_helpers`, `spec_support`, `testUtils`). The BDD practice reads its spec files through the same `is_spec_file`.
 
 ## Considered options
 
@@ -12,4 +12,4 @@ The Clean Engineering rules judge production code only, so each rule has to know
 
 - A name decides, so a file is judged the same way whether a whole folder or only that file is loaded.
 - A production module whose name ends in a support word is read as test code. `harness/catalog_generator/catalog_examples.py` is one: it holds the example files the catalog shows, and its name ends in `examples`. The rules pass it until it is renamed for what it does (for example `catalog_example_files.py`); that rename belongs to the catalog generator's owner.
-- A support module whose name says nothing about tests is read as production code. `space/session/throwaway_project.py` ("a project for a spec to work in") is one; naming it as support (for example `throwaway_project_fixture.py`) lets the rules pass it.
+- A support module whose name says nothing about tests is read as production code. `space/session/spec_support/throwaway_project.py` ("a project for a spec to work in") is one; naming it as support (for example `throwaway_project_fixture.py`) lets the rules pass it.

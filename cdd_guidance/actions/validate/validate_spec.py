@@ -11,6 +11,8 @@ for _cat in ("cdd_guidance/practices", "tools", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 import json
+import os
+import stat
 import shutil
 import tempfile
 import threading
@@ -21,15 +23,15 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
-import space.session.practice_session_output as session_output_module
+import space.session.validation.validation_report as validation_report_module
 from harness.graph.saved_graph import SavedGraph
-from cdd_guidance.actions.validate.checked_graph import CheckedGraph
-from space.session.session_files import NamedPathNotFoundError
-from cdd_guidance.actions.validate.validate import Validate
+from cdd_guidance.actions.validate.report_files import ReportFiles
+from space.session.files.session_files import EmptyPathNamedError, NamedPathNotFoundError
+from cdd_guidance.actions.validate.validate import UnknownRule, Validate
 from cdd_guidance.actions.validate.validate_examples import ENTITY_ROOT_FILE, SPEC_FILE, STORY_FILE, SampleWorkingCopy, working_in
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
@@ -38,8 +40,29 @@ import cdd_guidance.actions  # noqa: F401 - registers the actions with the actio
 
 # Five parameters, over the three limit-operation-parameters allows.
 _OVER_LIMIT = "export class {name} {{\n  place(a: string, b: string, c: string, d: string, e: string): void {{}}\n}}\n"
+# A BDD sketch, which no graph reading reads a node from.
+_BDD_SKETCH = """Fidelity: behavior
+
+## behavior driven development:
+
+### a cart
+
+#### when the cart is new
+
+```
+it should hold no lines
+```
+"""
 # "Boarding Stuff" opens with a gerund, which verb-noun-format rejects. A word missing from the verb list passes, so the fixture needs an opening the rule flags.
 _STORY_MAP = "# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n\n### (S) Person --> Boarding Stuff\n"
+# A story map no checked rule fails, whose story Handle Ticket opens with a generic verb: a rule that requires a judge
+# lists it as a candidate.
+_MAP_WITH_A_CANDIDATE = (
+    "# (E) Move Work On Board\n\n"
+    "## (E) Display Board\n\n### (S) Person --> Open Board\n\n### (S) Person --> Close Board\n\n"
+    "## (E) Change Ticket\n\n### (S) Person --> Handle Ticket\n\n### (S) Person --> Archive Ticket\n\n"
+    "## (E) Review Report\n\n### (S) Person --> Read Report\n\n### (S) Person --> Accept Violation\n"
+)
 # The scenarios of the story map's Open Board story, in the file a story's heading links to.
 _EMPTY_DRAWIO = '<mxfile><diagram name="Story Map"><mxGraphModel><root><mxCell id="0" /></root></mxGraphModel></diagram></mxfile>\n'
 _OPEN_BOARD_SCENARIOS ="""from story_test import given, scenario, story, then, when
@@ -82,17 +105,17 @@ class _StoryMapFolder:
 
     _MAP = "board/.context/story-map.md"
 
-    def __init__(self, root: str = "", declared: bool = False, drawio: bool = False) -> None:
+    def __init__(self, root: str = "", declared: bool = False, drawio: bool = False, story_map: str = _STORY_MAP) -> None:
         self.project = ThrowawayProject()
         self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
-        _write(self.folder, self._MAP, _STORY_MAP)
+        _write(self.folder, self._MAP, story_map)
         if drawio:
             _write(self.folder, "board/.context/story-map.drawio", _EMPTY_DRAWIO)
         self.action = Validate(session=working_in(self.project, self.folder, self.folder / root))
-        self.session = Path(self.action.session.session_path)
+        self.session = Path(self.action.session.work_folder)
         if declared:
             outputs = {"markdown": [str(self.folder / self._MAP)], "drawio": [str(self.folder / "board/.context/story-map.drawio")]}
-            self.action.session.practice("stories").guidance.fidelities.entries["story_map"].declared.output_paths = lambda: outputs
+            self.action.session.practice("stories").guidance.fidelities.entries["story_map"].session_output.written.output_paths = lambda: outputs
 
     def validate(self, guidance: str = "stories-story-map", paths: list[str] | None = None) -> str:
         return self.action.validate(guidance=[guidance], paths=paths or [self._MAP])
@@ -130,11 +153,23 @@ with description("a validate action on practice guidance") as self:
             report = self.action.validate(guidance=[self.guidance])
             expect(report).to(contain("sample-rule-one"))
 
-    with context("with one rule passed"):
-        with it("should return validate instructions for that rule only"):
-            rule = self.guidance.rules.entries["sample-rule-one"]
-            report = self.action.validate(guidance=[self.guidance], rule=rule)
-            expect(report).to(contain("sample-rule-one"))
+    with context("with one rule named"):
+        with it("should return validate instructions for that rule"):
+            report = self.action.validate(guidance=["stories-story-map"], rule="verb-noun-format")
+            expect(report).to(contain("Evaluate the current context against this rule (verb-noun-format)"))
+
+        with it("should leave the fidelity's other rules out"):
+            report = self.action.validate(guidance=["stories-story-map"], rule="verb-noun-format")
+            expect(report).not_to(contain("Evaluate the current context against this rule (vocabulary-traces-to-domain-source)"))
+
+    with context("with a rule named that no listed guidance has"):
+        with it("should refuse the rule by name"):
+            validate = lambda: self.action.validate(guidance=["stories-story-map"], rule="no-such-rule")
+            expect(validate).to(raise_error(UnknownRule, contain("no rule 'no-such-rule'")))
+
+        with it("should list the rules there are"):
+            validate = lambda: self.action.validate(guidance=["stories-story-map"], rule="no-such-rule")
+            expect(validate).to(raise_error(UnknownRule, contain("verb-noun-format")))
 
     with context("with a fidelity active"):
         with it("should pass that fidelity's rules with the shared rules"):
@@ -164,7 +199,7 @@ with description("a validate action on practice guidance") as self:
 
     with context("with graph JSON paths"):
         with it("should append a graph-rule report from summary JSON and still include AI rules"):
-            fixture = Path(__file__).with_name("fixtures") / "sample-graph-violations.json"
+            fixture = Path(__file__).resolve().with_name("fixtures") / "sample-graph-violations.json"
             report = self.action.validate(
                 guidance=[self.guidance],
                 graph=str(fixture),
@@ -180,7 +215,7 @@ with description("a validate action on practice guidance") as self:
             expect(report).not_to(contain("[src\\example.ts]"))
 
         with it("should return the graph-rule report when the MCP prompt expands validate"):
-            fixture = Path(__file__).with_name("fixtures") / "sample-graph-violations.json"
+            fixture = Path(__file__).resolve().with_name("fixtures") / "sample-graph-violations.json"
             prose = _expanded_validate(
                 self.action,
                 {"guidance": [self.guidance], "graph": str(fixture)},
@@ -189,11 +224,16 @@ with description("a validate action on practice guidance") as self:
             expect(prose).to(contain("[src/example.ts]("))
             expect(prose).to(contain("sample-rule-one"))
 
+    with context("with a graph named by a path that is not there"):
+        with it("should refuse the path by name, read from the project"):
+            validate = lambda: self.action.validate(guidance=["clean-engineering-code"], graph="no/such/graph.json")
+            expect(validate).to(raise_error(NamedPathNotFoundError, contain("nothing at no/such/graph.json")))
+
     with context("with the saved graph"):
         with before.each:
-            self.folder = Path(__file__).with_name("fixtures") / "saved-graph"
+            self.folder = Path(__file__).resolve().with_name("fixtures") / "saved-graph"
             self.action = Validate(session=working_in(self.project, self.folder, self.folder))
-            self.session = Path(self.action.session.session_path)
+            self.session = Path(self.action.session.work_folder)
             # A session's graph is the one created for it in its own folder, so the fixture's graph is put there.
             self.session.mkdir(parents=True, exist_ok=True)
             shutil.copy(self.folder / ".context" / "graph.json", self.session / "graph.json")
@@ -216,9 +256,9 @@ with description("a validate action on practice guidance") as self:
         with before.each:
             self.folder = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
             self.action = Validate(session=working_in(self.project, self.folder, self.folder))
-            self.session = Path(self.action.session.session_path)
+            self.session = Path(self.action.session.work_folder)
             self.session.mkdir(parents=True, exist_ok=True)
-            shutil.copy(Path(__file__).with_name("fixtures") / "sample-graph-violations.json", self.session / "clean-engineering-violations.json")
+            shutil.copy(Path(__file__).resolve().with_name("fixtures") / "sample-graph-violations.json", self.session / "clean-engineering-violations.json")
 
         with after.each:
             shutil.rmtree(self.folder, ignore_errors=True)
@@ -246,11 +286,48 @@ with description("a validate action on practice guidance") as self:
             expect(self.edited_report).to(contain("limit-operation-parameters"))
             expect(self.edited_report).to(contain("[src/orders/order.ts]("))
 
-        with it("should leave files outside the edited paths out of the report"):
-            expect(self.edited_report).not_to(contain("src/billing/invoice.ts"))
+        # A rule of scope all runs over the whole working copy whatever paths are given, and what it finds outside them is
+        # reported, marked: Invoice, which nothing uses, is reported by delete-unused-classes, which judges the model
+        # fidelity too since one thing is one node. Every other finding in a file outside the paths is left out.
+        with it("should leave each finding in files outside the edited paths out, but a whole working copy rule's"):
+            outside = [line for line in self.edited_report.splitlines() if "src/billing/invoice.ts" in line]
+            expect([line for line in outside if "*(outside the paths this validate was given)*" not in line]).to(equal([]))
+
+        with it("should mark a whole working copy rule's finding outside the edited paths as outside them"):
+            expect(self.edited_report).to(contain("delete it with its specs. No class uses it or is used by it, nothing calls into it, and none of the `code_reach` ways its `.context/config.json` names reaches it. *(outside the paths this validate was given)*"))
 
         with it("should not write the workspace graph"):
             expect((self.edited / ".context" / "graph.json").exists()).to(equal(False))
+
+    # Exploratory testing, r3-rivet-02 and r3-widget-08: a file the graph read no node from validated as "All scanned
+    # graph rules passed", the same words a file with 26 checked nodes gets.
+    with context("with an edited file the graph reads no node from"):
+        with before.all:
+            self.unread_project = ThrowawayProject()
+            self.unread = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
+            _write(self.unread, "specs/bookshop-sketch.md", _BDD_SKETCH)
+            _write(self.unread, "src/orders/order.ts", _OVER_LIMIT.format(name="Order"))
+            action = Validate(session=working_in(self.unread_project, self.unread, self.unread))
+            self.unread_report = action.validate(guidance=["clean-engineering-code"], paths=["specs/bookshop-sketch.md"])
+            action = Validate(session=working_in(self.unread_project, self.unread, self.unread))
+            self.partly_read_report = action.validate(guidance=["clean-engineering-code"], paths=["specs/bookshop-sketch.md", "src/orders/order.ts"])
+
+        with after.all:
+            self.unread_project.close()
+            shutil.rmtree(self.unread, ignore_errors=True)
+
+        with it("should name the file and say no graph rule ran on it"):
+            expect(self.unread_report).to(contain("**No graph rule ran on:** `specs/bookshop-sketch.md`"))
+
+        with it("should not say the graph rules passed"):
+            expect(self.unread_report).not_to(contain("All scanned graph rules passed"))
+
+        with context("that is named beside a file the graph reads"):
+            with it("should still name the file no graph rule ran on"):
+                expect(self.partly_read_report).to(contain("**No graph rule ran on:** `specs/bookshop-sketch.md`"))
+
+            with it("should report the violations of the file it read"):
+                expect(self.partly_read_report).to(contain("[src/orders/order.ts]("))
 
     with context("with an edited story map markdown file"):
         with before.all:
@@ -313,6 +390,54 @@ with description("a validate action on practice guidance") as self:
             with it("should name its violations on that line"):
                 expect(self.validate_lines[-1]).to(contain(" graph-rule "))
 
+        # A candidate is a place for the judge to read, so it does not mark the fidelity's validate as failed.
+        with context("that has been validated with only a candidate of a rule that requires a judge"):
+            with before.all:
+                self.listed = _StoryMapFolder(story_map=_MAP_WITH_A_CANDIDATE)
+                self.listed_report = self.listed.validate()
+                self.listed_lines = self.listed.validate_lines()
+
+            with after.all:
+                self.listed.close()
+
+            with it("should list the candidate in its report"):
+                expect(self.listed_report).to(contain("**CANDIDATE** **[graph rule]**"))
+
+            with it("should name no violation on its validate line"):
+                expect(self.listed_lines[-1]).not_to(contain(" graph-rule "))
+
+        # Windows can mark a folder read-only, and the whole graph an earlier report was checked against is dropped
+        # when the next report is saved; reported 2026-11-18: validate failed with "PermissionError: [WinError 5]
+        # Access is denied" on an earlier checked graph.
+        with context("whose earlier checked graph is marked read-only"):
+            with before.all:
+                self.marked = _StoryMapFolder()
+                self.marked.validate()
+                checked_graphs = next(self.marked.session.rglob("checked-graphs"))
+                earlier = checked_graphs / "stories-story-map-20000101T000000"
+                earlier.mkdir()
+                (earlier / "graph.json").write_text("{}", encoding="utf-8")
+                for path in (earlier / "graph.json", earlier):
+                    os.chmod(path, stat.S_IREAD)
+                self.earlier = earlier
+                try:
+                    self.marked.validate()
+                    self.refused = ""
+                except PermissionError as refused:
+                    self.refused = str(refused)
+
+            with after.all:
+                for path in (self.earlier, self.earlier / "graph.json"):
+                    if path.exists():
+                        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+                self.marked.close()
+
+            with it("should save the report"):
+                expect(self.refused).to(equal(""))
+
+            with it("should drop that earlier graph"):
+                expect(self.earlier.exists()).to(equal(False))
+
         # The line names the fidelity worked at, which the log reads from that fidelity's own session output.
         with context("that has been validated at a fidelity after the first"):
             with before.all:
@@ -348,6 +473,20 @@ with description("a validate action on practice guidance") as self:
 
         # The session board validates with no paths, and a report saved without its graph lists no violations to fix.
         with context("that the story map fidelity declares as its output"):
+            # graph: true names the session's graph, "created for the session and loaded when it is missing": with
+            # nothing saved yet, the call builds it from what the fidelity has written instead of checking nothing.
+            with context("that is validated with the session's graph before one is saved"):
+                with before.all:
+                    self.unsaved = _StoryMapFolder(declared=True)
+                    self.unsaved_report = self.unsaved.action.validate(guidance=["stories-story-map"], graph=True)
+
+                with after.all:
+                    self.unsaved.close()
+
+                with it("should check the graph built from the files the fidelity has written"):
+                    expect(self.unsaved_report).not_to(contain("No saved graph found"))
+                    expect(self.unsaved_report).to(contain("Boarding Stuff"))
+
             with context("that is validated with no paths named"):
                 with before.all:
                     self.declared = _StoryMapFolder(declared=True)
@@ -376,6 +515,22 @@ with description("a validate action on practice guidance") as self:
                     with it("should judge only the markdown the fidelity writes by default"):
                         expect(self.both_report).to(contain("Judge only the checked format's files (markdown: "))
 
+                # A call that names only files of the format the fidelity does not check, with the session's graph,
+                # still checks the session's graph; reported 2026-11-18: a domain model validated on its markdown, with
+                # drawio checked, answered "No saved graph found" and ran no graph rule.
+                with context("that is validated on only its drawio with the session's graph"):
+                    with before.all:
+                        self.drawio_only = _StoryMapFolder(declared=True, drawio=True)
+                        self.drawio_only_report = self.drawio_only.action.validate(
+                            guidance=["stories-story-map"], paths=["board/.context/story-map.drawio"], graph=True)
+
+                    with after.all:
+                        self.drawio_only.close()
+
+                    with it("should check the graph built from the files the fidelity has written"):
+                        expect(self.drawio_only_report).not_to(contain("No saved graph found"))
+                        expect(self.drawio_only_report).to(contain("Boarding Stuff"))
+
                 with context("that is validated on a markdown file the call names"):
                     with before.all:
                         self.elsewhere = _StoryMapFolder(declared=True, drawio=True)
@@ -399,6 +554,12 @@ with description("a validate action on practice guidance") as self:
                     with it("should judge only the format the guidance names"):
                         expect(self.named_format_report).to(contain("Judge only the checked format's files (drawio: "))
 
+                    # The graph reads the story map from its markdown only, so a finding there is no second copy of one
+                    # in the drawio; reported 2026-11-18: a domain model checked in drawio dropped all 93 of its graph's
+                    # findings, which sat in domain-model.md.
+                    with it("should keep the findings the graph found in the format it reads"):
+                        expect(self.named_format_report).to(contain("Boarding Stuff"))
+
                 with context("that the latest generate wrote"):
                     with before.all:
                         from harness.guidance_actions import GuidanceAction
@@ -421,20 +582,20 @@ with description("a validate action on practice guidance") as self:
                     with before.all:
                         self.racing = _StoryMapFolder(declared=True, drawio=True)
                         validate = self.racing.action
-                        resolve = CheckedGraph.check_beside
+                        resolve = ReportFiles.graph_file
                         markdown_call_waiting = threading.Event()
                         drawio_call_done = threading.Event()
 
-                        def resolve_after_the_drawio_call(checked_graph, reports):
+                        def resolve_after_the_drawio_call(reports):
                             if threading.current_thread() is markdown_call:
                                 markdown_call_waiting.set()
                                 drawio_call_done.wait(60)
-                            return resolve(checked_graph, reports)
+                            return resolve(reports)
 
                         def check_the_markdown():
                             self.racing_report = validate.validate(guidance=["stories-story-map"], paths=["board/.context/story-map.md"])
 
-                        CheckedGraph.check_beside = resolve_after_the_drawio_call
+                        ReportFiles.graph_file = resolve_after_the_drawio_call
                         try:
                             markdown_call = threading.Thread(target=check_the_markdown)
                             markdown_call.start()
@@ -443,7 +604,7 @@ with description("a validate action on practice guidance") as self:
                             drawio_call_done.set()
                             markdown_call.join()
                         finally:
-                            CheckedGraph.check_beside = resolve
+                            ReportFiles.graph_file = resolve
 
                     with after.all:
                         self.racing.close()
@@ -514,6 +675,55 @@ with description("a validate action on practice guidance") as self:
                     pass
                 expect((self.missing.session / "validation-reports").exists()).to(equal(False))
 
+        # An empty name would be read as the project's root, so the call would check the whole project unasked.
+        with context("that is named by an empty path"):
+            with before.all:
+                self.empty = _StoryMapFolder()
+
+            with after.all:
+                self.empty.close()
+
+            with it("should refuse it, saying the path is empty"):
+                expect(lambda: self.empty.validate(paths=[""])).to(raise_error(EmptyPathNamedError, contain("an empty path names no file or folder")))
+
+            with it("should refuse a path of only spaces the same way"):
+                expect(lambda: self.empty.validate(paths=["board/.context/story-map.md", "  "])).to(raise_error(EmptyPathNamedError, contain("an empty path names no file or folder")))
+
+            with it("should save no report"):
+                try:
+                    self.empty.validate(paths=[""])
+                except EmptyPathNamedError:
+                    pass
+                expect((self.empty.session / "validation-reports").exists()).to(equal(False))
+
+    # Exploratory testing, widget-10: the code fidelity declares its output as a folder named by a part, {module}/, which
+    # names no one folder, so a validate naming no paths found nothing written and answered "No graph checked".
+    with context("with code written under the practice's root and no paths named"):
+        with before.all:
+            self.written_project = ThrowawayProject()
+            self.written = Path(tempfile.mkdtemp(prefix="cdd-validate-"))
+            _write(self.written, "src/orders/order.ts", _OVER_LIMIT.format(name="Order"))
+            session = working_in(self.written_project, self.written, self.written)
+            self.session_graph_report = Validate(session=session).validate(guidance=["clean-engineering-code"], graph=True)
+            self.no_argument_report = Validate(session=session).validate(guidance=["clean-engineering-code"])
+            self.one_rule_report = Validate(session=session).validate(guidance=["clean-engineering-code"], rule="limit-comments")
+
+        with after.all:
+            self.written_project.close()
+            shutil.rmtree(self.written, ignore_errors=True)
+
+        with it("should check the session's graph, built from what the fidelity has written, when graph is true"):
+            expect(self.session_graph_report).to(contain("limit-operation-parameters"))
+
+        with it("should check the folders holding the fidelity's written output when no graph is named either"):
+            expect(self.no_argument_report).to(contain("limit-operation-parameters"))
+
+        with it("should hand the judge the one rule the call names"):
+            expect(self.one_rule_report).to(contain("Evaluate the current context against this rule (limit-comments)"))
+
+        with it("should leave the other rules out when the call names one"):
+            expect(self.one_rule_report).not_to(contain("Evaluate the current context against this rule (hide-inner-details)"))
+
     # The sample's graph takes seconds to build, so one working copy is validated in before.all, once for each call the
     # examples read, and each example reads the report, and the report files, its own call left.
     with context("with edited files of a working copy that every graph practice reads"):
@@ -548,9 +758,10 @@ with description("a validate action on practice guidance") as self:
             expect(self.entity_root_report).to(contain("private-method-naming"))
             expect(self.entity_root_report).to(contain(f"[{ENTITY_ROOT_FILE}]("))
 
-        with it("should report the verb-noun-format violation on the edited story"):
-            expect(self.story_report).to(contain("verb-noun-format"))
-            expect(self.story_report).to(contain(f"[{STORY_FILE}]("))
+        # Handle Request opens with a generic verb, which the judged rule lists for a reading.
+        with it("should list the story-name-captures-system-mechanic candidate on the edited story"):
+            expect(self.story_report).to(contain("story-name-captures-system-mechanic"))
+            expect(self.story_report).to(contain(f"**CANDIDATE** **[graph rule]** - [{STORY_FILE}]("))
 
         with it("should report the observable-behavior violation on the edited spec"):
             expect(self.spec_report).to(contain("observable-behavior"))
@@ -631,13 +842,13 @@ with description("a validate action on practice guidance") as self:
         # A report's name is dated to the second, so a second call in that second would write over the first's report.
         with context("that is validated twice in the same second"):
             with before.all:
-                clock = session_output_module.datetime
-                session_output_module.datetime = _ClockAtOneSecond
+                clock = validation_report_module.datetime
+                validation_report_module.datetime = _ClockAtOneSecond
                 try:
                     _, first = self.sample_validated(["ddd-tactics"], [ENTITY_ROOT_FILE])
                     _, second = self.sample_validated(["ddd-tactics"], [ENTITY_ROOT_FILE])
                 finally:
-                    session_output_module.datetime = clock
+                    validation_report_module.datetime = clock
                 self.same_second_reports = sorted(path for path in first + second if path.suffix == ".md")
 
             with it("should save a report for each call"):

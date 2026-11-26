@@ -13,7 +13,7 @@ if str(_REPO) not in sys.path:
 
 from harness.graph.graph import Graph  # noqa: E402
 from harness.graph.graph import Source  # noqa: E402
-from cdd_guidance.practices.stories.model.story_model import Epic, Scenario, Step, StepType, Story, StoryModel  # noqa: E402
+from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap  # noqa: E402
 
 
 with description("a story map recorded on a graph"):
@@ -29,13 +29,13 @@ with description("a story map recorded on a graph"):
         ]
         scenario.steps[1].concepts = ["Cart"]
         story.scenarios = [scenario]
-        model = StoryModel()
+        model = StoryMap()
         epic = Epic("Place Orders", 1)
         epic.stories.append(story)
         model.epics.append(epic)
         graph = Graph()
         graph.reads.open(Path(str(self.root)))
-        practice = graph.practice("stories")
+        practice = graph.practices.named("stories")
         model.record(practice)
         self.practice = practice
 
@@ -61,7 +61,7 @@ with description("a story map recorded on a graph"):
 with description("a merged story map whose two maps each hold a story a story test specifies"):
     with before.each:
         self.tmp = tempfile.TemporaryDirectory()
-        model = StoryModel()
+        model = StoryMap()
         for order, file in enumerate(["story-map.md", "story-map.drawio"], start=1):
             story = Story("Submit Order")
             story.source = Source(file, 1, 1)
@@ -73,7 +73,7 @@ with description("a merged story map whose two maps each hold a story a story te
         model.test_scenarios.take([read], "tests/submit_order_story.test.ts")
         graph = Graph()
         graph.reads.open(Path(self.tmp.name))
-        self.practice = graph.practice("stories")
+        self.practice = graph.practices.named("stories")
         model.record(self.practice)
 
     with after.each:
@@ -91,12 +91,12 @@ def _imports_of(root: Path, file: str, text: str) -> dict:
     story.source = Source(file, 1, 1)
     epic = Epic("Onboard", 1)
     epic.stories.append(story)
-    model = StoryModel()
+    model = StoryMap()
     model.epics.append(epic)
     model.sources.add(file, text)
     graph = Graph()
     graph.reads.open(Path(str(root)))
-    practice = graph.practice("stories")
+    practice = graph.practices.named("stories")
     model.record(practice)
     return practice.reading.in_graph.nodes("Story")[0].get_fact("imported_modules")
 
@@ -123,15 +123,3 @@ with description("a story read from a story test that imports its examples"):
                 {"valid_customer": "./examples/customers_examples", "lapsed_customer": "./examples/customers_examples"}
             ))
 
-    with context("that is Java"):
-        with it("should map a static import to its class file and a class import to itself"):
-            text = (
-                "import static shop.onboard.examples.CustomersExamples.validCustomer;\n"
-                "import shop.onboard.examples.LapsedExamples;\n"
-            )
-            expect(_imports_of(self.root, "tests/OnboardStoryTest.java", text)).to(equal(
-                {
-                    "validCustomer": "shop/onboard/examples/CustomersExamples",
-                    "LapsedExamples": "shop/onboard/examples/LapsedExamples",
-                }
-            ))

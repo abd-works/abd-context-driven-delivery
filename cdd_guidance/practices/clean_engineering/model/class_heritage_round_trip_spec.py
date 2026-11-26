@@ -10,7 +10,6 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     UnreadableSource,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.drawio_class_model import DrawIOCleanEngineeringModel
-from cdd_guidance.practices.clean_engineering.model.java.java_class_model import JavaCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.javascript.javascript_class_model import JavaScriptCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.json.json_class_model import JsonCleanEngineeringModel
 from cdd_guidance.practices.clean_engineering.model.markdown.markdown_class_model import MarkdownCleanEngineeringModel
@@ -95,16 +94,6 @@ with description("a class that extends two bases and carries stereotypes"):
     with context("written as TypeScript and read back"):
         with before.each:
             self.cart = _read_back(TypeScriptCleanEngineeringModel())
-
-        with it("should keep the base it extends and the one it implements"):
-            expect(self.cart.bases).to(equal(["Basket", "Auditable"]))
-
-        with it("should keep its stereotypes"):
-            expect(self.cart.stereotypes).to(equal(["Aggregate Root", "Entity"]))
-
-    with context("written as Java and read back"):
-        with before.each:
-            self.cart = _read_back(JavaCleanEngineeringModel())
 
         with it("should keep the base it extends and the one it implements"):
             expect(self.cart.bases).to(equal(["Basket", "Auditable"]))

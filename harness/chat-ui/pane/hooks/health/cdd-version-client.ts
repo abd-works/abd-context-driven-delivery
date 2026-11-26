@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { CddVersionData } from '@cdd/harness/diagnostics/cdd-version'
+import type { CddVersionData } from '@cdd/harness/release/cdd-version'
 
 import type { CddVersionJson } from '../../types'
 import { BRAND } from '../shared/brand'
@@ -16,9 +16,10 @@ const INSTALL_LATEST_COMMAND = '/harness:installation:install-latest'
 const FIRST_CHECK_WAIT_MS = 5000
 // Twelve tries five seconds apart: a minute for cdd to connect after the chat opens or the plugins reload.
 const CHECK_TRIES = 12
-// The colour of each standing CddVersion answers: green current, yellow a minor update behind, red a major one.
+// The colour of each standing CddVersion answers: green current, yellow a patch or minor update behind, red a major one.
 const STANDING_COLOURS: Record<string, string> = {
   current: BRAND.success,
+  'behind patch': BRAND.warning,
   'behind minor': BRAND.warning,
   'behind major': BRAND.error,
   unknown: BRAND.muted,
@@ -61,14 +62,6 @@ export class CddVersionClient {
 
   get isAsking(): boolean {
     return this.json.isAsking
-  }
-
-  get update(): CddVersionJson['update'] {
-    return this.json.update
-  }
-
-  get error(): string | null {
-    return this.json.error
   }
 }
 

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from harness.graph.violation import Finding
+
 import re
 from typing import TYPE_CHECKING
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_test_code
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -24,17 +26,19 @@ _INDEPENDENT_SUBSYSTEMS = frozenset({"Agent Toolset"})
 
 class DomainNounsOnly(ProductionCodeRule):
     slug = "domain-nouns-only"
+    # Requires a judge: whether a module's name is a domain noun is read from the domain; the check matches verbs and suffixes.
+    requires_judge = True
     node_types = ("Module",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         name = (node.name or "").strip()
         if not name:
             return []
         if _VERB_MODULE.search(name.replace(".", "/")):
-            return [f"Module {name!r} reads like an action verb path, not a domain noun."]
+            return [Finding(node, f"Module {name!r} reads like an action verb path, not a domain noun.")]
         leaf = name.split(".")[-1]
         if _BAD_SUFFIX.search(leaf):
-            return [f"Module {name!r} uses technical suffix {leaf!r}; use a domain noun."]
+            return [Finding(node, f"Module {name!r} uses technical suffix {leaf!r}; use a domain noun.")]
         return []
 
 
@@ -43,46 +47,43 @@ class NoModulePerClass(ProductionCodeRule):
     toolset, which is installed and published as a unit of its own, with its own guidance beside it."""
 
     slug = "no-module-per-class"
+    # Requires a judge: whether a class is an independent subsystem of its own is read from what it does; the check counts the classes of a module.
+    requires_judge = True
     node_types = ("Module",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         if node.get_fact("is_a_in_context"):
-            return [
-                f"Module {node.name!r} module-context uses '*is a type of*'; "
-                "generalisation belongs in model, not modules fidelity."
-            ]
+            return [Finding(node, f"Module {node.name!r} module-context uses '*is a type of*'; "
+                "generalisation belongs in model, not modules fidelity.")]
         if node.get_fact("child_parent_in_context"):
-            return [
-                f"Module {node.name!r} module-context uses 'Child : Parent'; "
-                "use model fidelity for generalisation."
-            ]
+            return [Finding(node, f"Module {node.name!r} module-context uses 'Child : Parent'; "
+                "use model fidelity for generalisation.")]
         if self._holds_modules(node, context):
             return []
         public = self._public_classes_in(node, context)
         if len(public) == 1 and node.get_fact("public_source_files", 0) <= 1 and not self._independent(public[0]):
-            return [
-                f"Module {node.name!r} exposes a single class in one file; "
-                "group cohesive classes or merge into an existing module."
-            ]
+            return [Finding(node, f"Module {node.name!r} exposes a single class in one file; "
+                "group cohesive classes or merge into an existing module.")]
         return []
 
     def _holds_modules(self, folder_node: "Node", context: "RuleCheckContext") -> bool:
         """A folder above folders of code of its own, modules with a card or packages without one, may hold only the base
         they share, or the class that names the whole: Bdd in `bdd/` above its `model/` and `rules/` packages. It groups
         those folders, so it is not a module of one class."""
-        return any(child.type in ("Module", "Package") for child in context.children(folder_node, "owns"))
+        return any(child.type in FOLDER_TYPES for child in context.targets(folder_node, "owns"))
 
     def _public_classes_in(self, folder_node: "Node", context: "RuleCheckContext") -> list["Node"]:
         """The classes the folder owns that its production files declare under public names; a spec's classes are not
         its seam."""
+        test_code = context.practice.reading.test_code
         return [
             class_node
             for class_node in context.targets(folder_node, "owns")
-            if class_node.type == "OoadClass" and self._in_public_file(class_node.source.file or "")
+            if class_node.type == "OoadClass" and self._in_public_file(class_node.source.file or "") and not test_code.is_test_code(class_node.source.file)
         ]
 
     def _in_public_file(self, file: str) -> bool:
-        return not file.rsplit("/", 1)[-1].startswith("_") and not is_test_code(file)
+        return not file.rsplit("/", 1)[-1].startswith("_")
 
     def _independent(self, class_node: "Node") -> bool:
         """True for a class its stereotype marks as a subsystem of its own, such as an `@agent_toolset`."""

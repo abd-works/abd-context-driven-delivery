@@ -1,6 +1,6 @@
 """See Work On Session Board: the shared scenarios the Python tiers replay.
 
-Scenarios: story_tests/move-work-forward-on-session-board/see-work-on-session-board/see_work_on_session_board_story.test.md; Restrict Actions To Active Session is in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md.
+Scenarios: story_tests/move-work-forward-on-session-board/see-work-on-session-board/show-tickets-on-board/show_tickets_on_board_story.test.md and story_tests/move-work-forward-on-session-board/see-work-on-session-board/arrange-board-and-ticket-details/arrange_board_and_ticket_details_story.test.md; Restrict Actions To Active Session is in story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md.
 Map: .context/story-map.md#e-see-work-on-session-board. Model: .context/kanban-model.md.
 
 Steps reach the board only through the namespace a tier hands them (`world.Board`, `world.Ticket`), so the domain spec
@@ -8,12 +8,15 @@ and the cdd tools spec replay the same steps. Every Then asserts what the board 
 fields its classes mark, which the board app draws from.
 
 Covered by the board app's TypeScript client specs in space/kanban/app, not here, because they have no Python
-operation: Arrange Board And Details (all three); Arrange Side Panel (all four); Display Board "Say the cdd server is
-not connected", "Install the board again", "Say why the board's install failed", "Keep the newer board when an older read answers late", "Announce a
-ticket that moved", "Announce a fidelity done"; Display Ticket Card "Draw the card's title, age, and fidelity
-segments", "Name the active ticket on the chat's status line"; Display Ticket Details "Show the active ticket with no
-card pressed", "Show main when no other ticket is opened", "Say another session must be activated to act on
-a locked ticket", "Expand one ticket's card at a time", "Open a card on the fidelity of a pressed segment"; Open Board
+operation: Arrange Board And Details (all three); Arrange Side Panel (all four); Display Board "Keep the newer board
+when an older read answers late", "Announce a ticket that moved", "Announce a fidelity done"; Display Board Server
+Health "Say the cdd server is not connected", "Show a failing tool in a toast" and Update Board And CDD "Install the
+board again", "Say why the board's install failed", whose scenarios are in
+story_tests/move-work-forward-on-session-board/check-cdd-server-health-on-board/check_cdd_server_health_on_board_story.test.md;
+Display Ticket Card "Draw the card's title, age, and fidelity segments", "Name the active ticket on the chat's status
+line"; Display Ticket Details "Show the active ticket with no card pressed", "Show main when no other ticket is
+opened", "Say another session must be activated to act on a locked ticket"; Expand Ticket From Empty Area "Expand one
+ticket's card at a time", "Open a card on the fidelity of a pressed segment"; Open Board
 "Find the board from a chat"; Restrict Actions To Active Session (all three: Active session only is the board app's
 own setting); Set Stage WIP Limit "Change nothing for a limit that is not a whole number". The Thens of the scenarios
 below that only the page shows (the band, the outline, the polling) are left to those specs too.
@@ -30,8 +33,8 @@ from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.ux import Ux
 from harness.catalog_generator.catalog_practice import CatalogPractice
 from harness.installation.json_file import JsonFileUnreadable
-from space.session.sessions import BoardPractices
-from space.repo.repo import Repo
+from space.kanban.board_practices import BoardPractices
+from space.session.sessions import Sessions
 from space.kanban.session_board_examples import (
     BACK_TO_BACKLOG,
     BILLING_REPORT,
@@ -63,7 +66,7 @@ from space.kanban.story_test import SharedStories, active_in, column_in, expect_
 
 shared_stories = SharedStories("See Work On Session Board")
 
-STAGES = ("Discovery", "Specification", "Implementation")
+STAGES = ("Discovery", "Specification", "Implementation", "Hardening")
 
 
 @shared_stories.scenario("Open Board", "Open the board on a project")
@@ -91,7 +94,7 @@ def _(s):
 def _(s):
     @s.given("a board with the Stories, DDD, and UX practices chosen")
     def _(world):
-        world.board = world.Board(Repo(world.project.root), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
+        world.board = world.Board(Sessions.of_project(world.project.root), BoardPractices(CatalogPractice.of_practices([Stories(), Ddd(), Ux()])))
 
     @s.when("the session board reads the board")
     def _(world):
@@ -103,7 +106,7 @@ def _(s):
 
     @s.and_("each stage shows an In progress list and a Done list")
     def _(world):
-        expect([("in_progress" in column_in(world.read, stage), "done" in column_in(world.read, stage)) for stage in STAGES]).to(equal([(True, True)] * 3))
+        expect([("in_progress" in column_in(world.read, stage), "done" in column_in(world.read, stage)) for stage in STAGES]).to(equal([(True, True)] * len(STAGES)))
 
     @s.and_("the Discovery stage requires story_map, bounded_context, and ia, each through Generate and Validate")
     def _(world):
@@ -111,21 +114,49 @@ def _(s):
         expect(required).to(equal((["stories-story-map", "ddd-bounded-context", "ux-ia"], ["generate", "validate"])))
 
 
-@shared_stories.scenario("Display Board", "Show a failing tool in a toast")
+@shared_stories.scenario("Display Board", "Show the other tickets when one ticket's session file does not read")
 def _(s):
     @s.given("the session folder .sessions/broken holds a session.json that is not JSON")
     def _(world):
         world.project.seed_session(BROKEN)
         world.project.seed_session_json_text(BROKEN, BROKEN_SESSION_JSON)
 
+    @s.and_("the ticket pet-visits is on the board")
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
     @s.when("the session board reads the board")
     def _(world):
-        world.refusal = refusal_of(lambda: world.data_of(world.Board.load().show()))
+        # Board.show()
+        #   -> BoardReads.sessions -> Sessions.read_apart()
+        #   <- the board with pet-visits, and .sessions/broken/session.json among its unreadable files
+        world.read = world.data_of(world.Board.load().show())
 
-    @s.then("a toast says cdd board.show failed: JsonFileUnreadable: .sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))")
+    @s.then("pet-visits shows in Discovery")
+    def _(world):
+        expect(PET_VISITS.name in names_in(column_in(world.read, "Discovery"))).to(be_true)
+
+    @s.and_("no column shows broken")
+    def _(world):
+        expect(ticket_in(world.read, BROKEN.name)).to(be_none)
+
+    @s.and_("the board names .sessions/broken/session.json as a file it could not read, with what is wrong in it")
+    def _(world):
+        named = [(unread["file"], "is not a readable JSON object (Expecting property name" in unread["error"]) for unread in world.read["unreadable"]]
+        expect(named).to(equal([(".sessions/broken/session.json", True)]))
+
+    @s.when("the Person tags broken's session with billing")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.Ticket.load(BROKEN.name).tag(word="billing"))
+
+    @s.then("the board says .sessions/broken/session.json is not a readable JSON object")
     def _(world):
         broken = world.project.sessions / BROKEN.name / "session.json"
         expect_refused(world.refusal, JsonFileUnreadable, f"{broken} is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))")
+
+    @s.and_("that file is as it was")
+    def _(world):
+        expect((world.project.sessions / BROKEN.name / "session.json").read_text(encoding="utf-8")).to(equal(BROKEN_SESSION_JSON))
 
 
 @shared_stories.scenario("Display Backlog Items As Tickets", "Show each idea file in the Backlog")
@@ -214,7 +245,7 @@ def _(s):
         expect(ticket_in(world.read, OLD_SPIKE.name)).to(be_none)
 
 
-@shared_stories.scenario("Display Ticket Card", "Place a ticket in the stage of its latest move")
+@shared_stories.scenario("Place Ticket In Column", "Place a ticket in the stage of its latest move")
 def _(s):
     @s.given("the session log of the ticket second-spec ends with move Specification")
     def _(world):
@@ -229,7 +260,7 @@ def _(s):
         expect_placed(ticket_in(world.read, SECOND_SPEC.name), "Specification", is_done=False)
 
 
-@shared_stories.scenario("Display Ticket Card", "Place a ticket with no move in the stage of its latest work")
+@shared_stories.scenario("Place Ticket In Column", "Place a ticket with no move in the stage of its latest work")
 def _(s):
     @s.given("the session log of the ticket pet-visits has one line, generate /work/ux ux mockup html ux")
     def _(world):
@@ -249,7 +280,7 @@ def _(s):
         expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Specification"))
 
 
-@shared_stories.scenario("Display Ticket Card", "Follow work into a later stage")
+@shared_stories.scenario("Place Ticket In Column", "Follow work into a later stage")
 def _(s):
     @s.given("a person moved pet-visits into Discovery")
     def _(world):
@@ -268,7 +299,7 @@ def _(s):
         expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Specification"))
 
 
-@shared_stories.scenario("Display Ticket Card", "Keep a person's move until the next work")
+@shared_stories.scenario("Place Ticket In Column", "Keep a person's move until the next work")
 def _(s):
     @s.given("pet-visits' ux mockup was generated")
     def _(world):
@@ -287,7 +318,7 @@ def _(s):
         expect(ticket_in(world.read, PET_VISITS.name)["column"]["name"]).to(equal("Discovery"))
 
 
-@shared_stories.scenario("Display Ticket Card", "Follow work back into an earlier stage")
+@shared_stories.scenario("Place Ticket In Column", "Follow work back into an earlier stage")
 def _(s):
     @s.given("a person moved pet-visits into Implementation")
     def _(world):
@@ -393,7 +424,7 @@ def _(s):
 
     @s.then("Discovery, Specification, and Implementation each show the limit 3")
     def _(world):
-        expect([column_in(world.read, stage)["wip_limit"] for stage in STAGES]).to(equal([DISCOVERY_LIMIT] * 3))
+        expect([column_in(world.read, stage)["wip_limit"] for stage in STAGES]).to(equal([DISCOVERY_LIMIT] * len(STAGES)))
 
 
 @shared_stories.scenario("Set Stage WIP Limit", "Show a stage over its limit")

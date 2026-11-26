@@ -2,95 +2,74 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Optional, Union
+import re
+from pathlib import Path
+from typing import Optional, Sequence, Union
 
-from harness.graph.graph import Graph, Node
+from harness.graph.graph import Node
 
-KEY_SEPARATOR = " › "
+from cdd_guidance.practices.stories.model.story_tree import LINKED_TYPES, StoryTree, WrittenStoryNodes
 
-# The Stories node types a link of each kind can hold; a background is a scenario a story runs first, and the Stories
-# graph types each step by its phase.
-_NODE_TYPES = {
-    "Story": ("Story",),
-    "Scenario": ("Scenario", "Background"),
-    "Step": ("Step", "Given", "When", "Then"),
-}
+# An association written as a markdown link: its key as the link's text, and the file and heading it is written at.
+_WRITTEN_LINK = re.compile(r"^\[(?P<key>[^\]]+)\]\((?P<target>[^)\s]+)\)$")
 
 
 class StoryLink:
-    """A story, scenario, or step a screen shows.
+    """A story, scenario, or step a screen or a control serves.
 
-    Once that Stories node is on the screen's graph the link holds the node itself, so a story renamed after it is
-    linked keeps its screens and the formats write its new name. Until then the link holds the key the formats
-    store: a story by its name, a scenario as ``Story › Scenario``, a step as ``Story › Scenario › Step``.
+    Once that Stories node is on the graph of the screen or control the link holds the node itself, so a story renamed
+    after it is linked keeps its screens and the formats write its new name. Until then the link holds what the
+    formats store: the key (a story by its name, a scenario as ``Story › Scenario``, a step as
+    ``Story › Scenario › Step``) and, when the association was written as a markdown link, its target: the file the
+    story is written in, with the heading of the story or scenario after ``#`` when the file has one. A link with a
+    target is followed to that file, never matched by its key alone.
     """
 
     def __init__(self, kind: str, key: str = "", node: Optional[Node] = None) -> None:
         self.kind = kind
         self._key = key
         self.node = node
+        # The file and heading the association was written with as a markdown link; none for one written by its key.
+        self.target = ""
 
     @classmethod
     def from_shown(cls, kind: str, shown: Union[Node, str]) -> "StoryLink":
-        """A link to the Stories node a screen shows, or to the key a format read for it."""
-        if isinstance(shown, str):
+        """A link to the Stories node a screen or control serves, or to what a format read for it: its key, or a
+        markdown link whose text is the key."""
+        if not isinstance(shown, str):
+            return cls(kind, node=shown)
+        written = _WRITTEN_LINK.match(shown.strip())
+        if written is None:
             return cls(kind, key=shown)
-        return cls(kind, node=shown)
+        link = cls(kind, key=written.group("key").strip())
+        link.target = written.group("target")
+        return link
 
     @property
     def key(self) -> str:
-        return key_of(self.node) if self.node is not None else self._key
+        return StoryTree.key_of(self.node) if self.node is not None else self._key
 
-    def resolved_on(self, graph: Graph) -> Optional[Node]:
-        """The node this link names on graph; the first node found is held from then on."""
-        if self.node is None:
-            self.node = next((node for node in self._candidates(graph) if key_of(node) == self._key), None)
+    @property
+    def written(self) -> str:
+        """The link as the formats write it: a markdown link to its target when it has one, else its key."""
+        return f"[{self.key}]({self.target})" if self.target else self.key
+
+    def resolved_in(self, story_tree: Optional[StoryTree], written_in: Sequence[Path] = ()) -> Optional[Node]:
+        """The node this link names in story_tree; the first node found is held from then on. A link with a target names
+        the node read from that file, the target's path taken from each folder of written_in in turn, then from the
+        folders the graph reads; a link with none names the node with its key. A graph that reads no Stories (no
+        story_tree) names none."""
+        if self.node is None and story_tree is not None:
+            self.node = self.found_in(story_tree.written_nodes(), story_tree, written_in)
         return self.node
+
+    def found_in(self, written: WrittenStoryNodes, story_tree: StoryTree, written_in: Sequence[Path] = ()) -> Optional[Node]:
+        """The node this link names, its target followed through written, the Stories nodes by the file each was read
+        from, which a run of links shares; its key looked up in story_tree when it has no target."""
+        if self.target:
+            return written.node_written_at(self.kind, self.target, self.key, written_in)
+        return next(iter(story_tree.nodes_keyed(self.kind, self._key)), None)
 
     def names(self, node: Node) -> bool:
         """True when this link holds node, or names a node with node's key, such as a copy drawn on another graph."""
-        return node is self.node or (node.type in _NODE_TYPES[self.kind] and key_of(node) == self.key)
-
-    def _candidates(self, graph: Graph) -> Iterator[Node]:
-        """The Stories nodes of this link's kind on graph; none while graph reads no Stories."""
-        from cdd_guidance.practices.stories.stories import Stories
-
-        stories = graph.practices.loaded(Stories)
-        if stories is None:
-            return
-        for node_type in _NODE_TYPES[self.kind]:
-            yield from stories.reading.in_graph.nodes(node_type)
-
-
-def key_of(node: Node) -> str:
-    """The key a screen lists a Stories node by: the story's name, then its scenario's, then the step's text. It reads
-    the node's type, its saved facts, and the graph's edges, so a Stories node read back from a saved graph has the key
-    the story object it was read from has."""
-    kind = node.type
-    if kind in _NODE_TYPES["Step"]:
-        scenario = _ancestor(node, _NODE_TYPES["Scenario"])
-        parts = [_story_name(scenario), scenario.name if scenario is not None else "", node.get_fact("text") or node.name]
-    elif kind == "Story":
-        return node.name
-    else:
-        parts = [_story_name(node), node.name]
-    return KEY_SEPARATOR.join(part for part in parts if part)
-
-
-def _story_name(node: Optional[Node]) -> str:
-    story = _ancestor(node, ("Story",)) if node is not None else None
-    return story.name if story is not None else ""
-
-
-def _ancestor(node: Node, kinds: tuple) -> Optional[Node]:
-    current = _parent(node)
-    while current is not None and current.type not in kinds:
-        current = _parent(current)
-    return current
-
-
-def _parent(node: Node) -> Optional[Node]:
-    """The node above node: the parent its tree gives it, else the one a direct edge of its graph hangs it under."""
-    if node.parent is not None:
-        return node.parent
-    return node.graph.edges.direct_parent(node) if node.practice is not None else None
+        return node is self.node or (node.type in LINKED_TYPES[self.kind] and StoryTree.key_of(node) == self.key)

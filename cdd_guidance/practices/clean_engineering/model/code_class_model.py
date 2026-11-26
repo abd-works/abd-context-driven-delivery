@@ -4,6 +4,7 @@ operation are subclasses of the domain parts that spell their own lines."""
 from __future__ import annotations
 
 import re
+from functools import cached_property
 from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
@@ -14,11 +15,17 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.c_family_parse import CFamilyParse
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocComment
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
+from cdd_guidance.practices.source_code import BodyTranslation, CodeBody, CodeLanguage, TranslatedBody
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.source_code import SourceText
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES
+from cdd_guidance.practices.clean_engineering.model.source_facts import (
+    CONSTRUCTOR_NAMES,
+    CodeClassSourceFacts,
+    OperationShape,
+)
+from cdd_guidance.practices.source_code import MeasuredBody
+from harness.guidance.practice_formats import Written
 
 
 class CodeProperty(Property):
@@ -37,14 +44,39 @@ class CodeProperty(Property):
         raise NotImplementedError(f"{type(self).__name__} must spell its lines")
 
 
+# The dash a markdown model writes between a type and the note after it: `email: string — identity`.
+_NOTE_DASH = " — "
+
+
 class CodeOperation(Operation):
     """An operation as one language writes it. A brace-language parser gives it the statements inside its braces, and
     it measures them itself once its class holds it, so it reads its own class, body, and parameters."""
 
     language: CodeLanguage
+    # The measures a tool supplies of a file a read names, each kept only once the tool has supplied it: the paths
+    # through it and its readability score. Its lines and its parameters are facts every read already keeps.
+    paths_through: int
+    readability_score: int
+    graph_facts = (
+        *Operation.graph_facts,
+        "max_control_flow_depth",
+        "has_bare_catch",
+        "swallows_exceptions",
+        "unreadable_read_as_empty",
+        "unnamed_literal_numbers",
+        "paths_through",
+        "readability_score",
+    )
 
     def __init__(self, name: str, sequential_order: int = 0, return_type: str = "") -> None:
         super().__init__(name, sequential_order, return_type)
+        # The measures the rules read from its written body, each at its clean value until the body is measured.
+        self.max_control_flow_depth: int = 0
+        self.has_bare_catch: bool = False
+        self.swallows_exceptions: bool = False
+        # The failure to parse or decode a catch of its body answers with an empty value, by name; empty when none does.
+        self.unreadable_read_as_empty: str = ""
+        self.unnamed_literal_numbers: list[str] = []
         # The statements inside its braces as written, which the brace-language measures read.
         self._brace_text = SourceText("")
 
@@ -59,14 +91,30 @@ class CodeOperation(Operation):
     def load_brace_body_facts(self) -> None:
         """Fill the facts the rules measure on its brace-language body."""
         measured = self._brace_text
-        self.max_control_flow_depth = measured.control_flow_depth()
-        self.has_bare_catch = measured.failures.has_bare_catch()
-        self.swallows_exceptions = measured.failures.swallows_exceptions()
-        self.unnamed_literal_numbers = measured.unnamed_numbers()
+        self.measure_body(measured)
         self.peer_private_access = measured.collaborators.reaches_peer_private(self._own_objects(), self._own_members())
         if self.is_constructor_of(self.parent):
             parameters = frozenset(parameter.name for parameter in self.parameters if parameter.name)
             self.constructed_types = measured.collaborators.built(parameters, self.line or 1)
+
+    def measure_body(self, body: MeasuredBody) -> None:
+        """Keep what the rules measure in its body, which its parser read as a span of text or as a syntax tree."""
+        self.max_control_flow_depth = body.control_flow_depth()
+        self.has_bare_catch = body.catches_everything()
+        self.swallows_exceptions = body.swallows()
+        self.unreadable_read_as_empty = body.unreadable_read_as_empty()
+        self.unnamed_literal_numbers = body.unnamed_numbers()
+
+    def _copy_measures_from(self, source: "Operation") -> None:
+        """Copy the measures the parser took of source's body as well, when source was read from code too."""
+        super()._copy_measures_from(source)
+        if not isinstance(source, CodeOperation):
+            return
+        self.max_control_flow_depth = source.max_control_flow_depth
+        self.has_bare_catch = source.has_bare_catch
+        self.swallows_exceptions = source.swallows_exceptions
+        self.unreadable_read_as_empty = source.unreadable_read_as_empty
+        self.unnamed_literal_numbers = list(source.unnamed_literal_numbers)
 
     def _own_objects(self) -> frozenset[str]:
         """The names its body holds an object of its own class by, since privacy is per class: the class itself, each
@@ -87,7 +135,8 @@ class CodeOperation(Operation):
 
     def doc_text(self) -> str:
         """The operation's own description. A description joined from its comments is not documentation."""
-        return "" if self.invariants else self.description
+        joined = "\n".join(invariant.text for invariant in self.invariants)
+        return "" if self.description == joined else self.description
 
     def signature(self, contract: bool) -> List[str]:
         """The lines that open the operation: its doc comment, decorators, and head."""
@@ -102,11 +151,45 @@ class CodeOperation(Operation):
 
 
 class CodeClass(OoadClass):
-    """A class as one language writes it: its doc comment, its declaration, its constructor, and its close."""
+    """A class as one language writes it: its doc comment, its declaration, its constructor, and its close. Only a
+    class read from code is one, so only it declares the measures of its code, which its source facts fill when they
+    load; a class read from a markdown model document has none of them."""
 
     language: CodeLanguage
     property_type: type = CodeProperty
     operation_type: type = CodeOperation
+    # The measures the reader keeps of a file a read names, each kept only once a tool has supplied it: its total complexity, the
+    # classes it depends on, and the groups of its methods that share no data with one another.
+    total_complexity: int
+    classes_depended_on: int
+    unshared_method_groups: int
+    graph_facts = (
+        *OoadClass.graph_facts,
+        "method_count",
+        "operation_shapes",
+        "property_names",
+        "constructs",
+        "prose_comment",
+        "prototype_swap",
+        "total_complexity",
+        "classes_depended_on",
+        "unshared_method_groups",
+    )
+
+    def __init__(self, name: str, sequential_order: int, intent: str = "") -> None:
+        super().__init__(name, sequential_order, intent)
+        self.method_count = 0
+        self.operation_shapes: List[OperationShape] = []
+        self.property_names: List[str] = []
+        # The classes its constructor builds that its caller cannot hand it.
+        self.constructs: List[str] = []
+        # Whether a `#` comment in the lines it spans narrates what the code already says.
+        self.prose_comment = False
+        # The code that swaps an object's class, and its line; empty when the class swaps none.
+        self.prototype_swap: dict[str, str | int] = {}
+
+    def _source_facts(self) -> CodeClassSourceFacts:
+        return CodeClassSourceFacts(self)
 
     @property
     def is_contract(self) -> bool:
@@ -146,7 +229,7 @@ class CodeClass(OoadClass):
         """`class Name extends Base implements Contract, Other {`: the first base that is not an I{Class} contract is
         extended, and every other base is implemented."""
         extended, implemented = self._heritage(bases)
-        extends = f" extends {extended}" if extended else ""
+        extends = f" extends {self.language.type_name(extended)}" if extended else ""
         implements = f" implements {', '.join(implemented)}" if implemented else ""
         return [f"{self._class_modifiers(implemented)}class {self.name}{extends}{implements} {{"]
 
@@ -156,7 +239,7 @@ class CodeClass(OoadClass):
         return extended, [base for base in bases if base != extended]
 
     def _class_modifiers(self, implemented: List[str]) -> str:
-        """The words before `class`, such as Java's `public`."""
+        """The words before `class`, such as TypeScript's `abstract`."""
         return ""
 
     def closing(self, has_members: bool) -> List[str]:
@@ -188,7 +271,7 @@ class CodeModule(Module):
 
 
 class CodeCleanEngineeringModel(CleanEngineeringModel):
-    """A class model written as code. Python, TypeScript, JavaScript, and Java parts spell their own lines."""
+    """A class model written as code. Python, TypeScript, and JavaScript parts spell their own lines."""
 
     language: CodeLanguage
     module_type: type = CodeModule
@@ -211,18 +294,68 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         """The module the last text this model parsed forms, with that text kept, whether or not it holds a class."""
         return self._file_module
 
-    def render(self, canonical: CleanEngineeringModel, previous: Optional[str] = None) -> str:
-        """Become the canonical model once, then write this model as code, keeping the bodies the previous file had."""
-        kept = type(self)(name="", sequential_order=1)
-        if previous:
-            kept.parse(previous)
+    def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
+        """Write canonical as code, keeping the bodies the previous file had. A practice keeps one channel per format
+        and renders every model through it, so another model is written from a model of its own, never translated into
+        this one, whose classes would keep the names of the model rendered before."""
         if canonical is not self:
-            self.translate_from(canonical)
+            own = type(self)(name="", sequential_order=1)
+            own.translate_from(canonical)
+            own.keep_notes_out_of_code()
+            own.declare_assigned_fields()
+            return own.render(own, written)
+        kept = type(self)(name="", sequential_order=1)
+        if written.previous:
+            kept.parse(written.previous)
         known_names = [oclass.name for oclass in self.every_class()]
         lines = self.file_header(self._preamble(kept))
         for module in self.modules:
             lines.extend(self._render_module(module, known_names, kept))
         return "\n".join(lines).strip("\n") + "\n"
+
+    def keep_notes_out_of_code(self) -> None:
+        """Move what a markdown model writes beside a name or type into comments, so the code parses: the words a class
+        heading writes after the class's name go into its description, and a note written after a type with a dash
+        (`email: string — identity`) becomes the member's note."""
+        for oclass in self.every_class():
+            self._keep_class_name_alone(oclass)
+            for prop in oclass.properties:
+                prop.type_hint = self._type_alone(prop, prop.type_hint)
+            for operation in oclass.operations:
+                operation.return_type = self._type_alone(operation, operation.return_type)
+                for parameter in operation.parameters:
+                    parameter.type_hint = self._without_note(parameter.type_hint)[0]
+
+    def declare_assigned_fields(self) -> None:
+        """Make each field a class's constructor assigns, and the class does not declare, a property of it, as Python
+        holds its fields: a language that declares its fields, such as TypeScript, then declares each one."""
+        for oclass in self.every_class():
+            fields = oclass.source_facts.assigned_fields()
+            oclass.properties.extend(oclass.property_type(field.name, field.sequential_order, field.type_hint) for field in fields)
+
+    def _keep_class_name_alone(self, oclass: OoadClass) -> None:
+        """Name oclass by the identifier its heading starts with, keeping the rest in its description, and its
+        constructor, named after the class, by that name too."""
+        named = re.match(r"\w+", oclass.name or "")
+        if named is None or named.group(0) == oclass.name:
+            return
+        written, oclass.name = oclass.name, named.group(0)
+        oclass.intent = " ".join(part for part in (oclass.intent, written[named.end():].strip()) if part)
+        for operation in oclass.operations:
+            if operation.name == written:
+                operation.name = oclass.name
+
+    def _type_alone(self, member: Operation | Property, written: str) -> str:
+        """written without the note after its dash, which member keeps as a note."""
+        type_hint, note = self._without_note(written)
+        if note:
+            member.add_invariant(note)
+        return type_hint
+
+    def _without_note(self, written: str) -> tuple:
+        """(the type written before a note's dash, the note after it); the note is empty when there is none."""
+        type_hint, _dash, note = (written or "").partition(_NOTE_DASH)
+        return type_hint.strip(), note.strip()
 
     def operation_body(self, class_name: str, operation_name: str) -> CodeBody:
         """The body this model read for one operation; "constructor" finds the constructor in any language."""
@@ -273,7 +406,29 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         indent = self.language.indent * 2
         if body.language is self.language:
             return body.lines_in(self.language, indent, self.language.unfinished)
+        translated = self._translated(operation, body)
+        if translated is not None:
+            unfinished = [f"{indent}{self.language.unfinished}"] if translated.untranslated else []
+            return [f"{indent}{line}" if line else line for line in translated.lines] + unfinished
         return self._scaffold(operation, body, indent) + body.lines_in(self.language, indent, self.language.unfinished)
+
+    def _translated(self, operation: Optional[Operation], body: CodeBody) -> Optional[TranslatedBody]:
+        """body, written in another language, translated statement by statement into this one; none when the two
+        languages have no translation between them, or the body holds nothing."""
+        if body.language is None or body.is_empty:
+            return None
+        parameters = [parameter.name for parameter in operation.parameters] if operation is not None else []
+        return BodyTranslation(body.language, self.language, self._parameters_by_operation).translate(body.text, parameters)
+
+    @cached_property
+    def _parameters_by_operation(self) -> dict:
+        """The parameters of each operation the model declares, by its name: what a call with keyword arguments is
+        ordered by."""
+        return {
+            operation.name: [parameter.name for parameter in operation.parameters]
+            for oclass in self.every_class()
+            for operation in oclass.operations
+        }
 
     def file_header(self, preamble: CodeBody) -> List[str]:
         return preamble.lines_in(self.language, "", "")
@@ -294,11 +449,19 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         return lines
 
     def _preamble(self, kept: "CodeCleanEngineeringModel") -> CodeBody:
-        for model in (self, kept):
-            for module in model.modules:
-                if module.preamble.language is self.language:
-                    return module.preamble
-        return CodeBody()
+        """The lines above the first class as this language wrote them, from this model or the previous file; else the
+        imports another language's preamble states, written as this language imports them."""
+        preambles = [module.preamble for model in (self, kept) for module in model.modules]
+        own = next((preamble for preamble in preambles if preamble.language is self.language), None)
+        if own is not None:
+            return own
+        imports = [
+            self.language.import_line(module, names)
+            for preamble in preambles
+            if preamble.language is not None
+            for module, names in preamble.language.imports_in(preamble.text)
+        ]
+        return CodeBody("\n".join(imports), self.language)
 
     def _constructor_body(
         self, oclass: CodeClass, constructor: Optional[Operation], kept: "CodeCleanEngineeringModel"
@@ -309,12 +472,18 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
         indent = self.language.indent * 2
         if body.language is self.language:
             return body.lines_in(self.language, indent, "")
+        translated = self._translated(constructor, body)
+        if translated is not None and not translated.untranslated:
+            return [f"{indent}{line}" if line else line for line in translated.lines]
         scaffold = self._scaffold(constructor, body, indent) if constructor is not None else []
+        passed = body.language.base_constructor_arguments(body.text) if body.language is not None else None
+        base_call = [f"{indent}{self.language.base_constructor_call(passed)}"] if passed is not None else []
         assignments = [
             f"{indent}{self.language.assignment(name)}"
             for name, _hint in oclass.constructor_parameters(constructor)
+            if name not in (passed or [])
         ]
-        return scaffold + body.lines_in(self.language, indent, "") + assignments
+        return scaffold + body.lines_in(self.language, indent, "") + base_call + assignments
 
     def _scaffold(self, operation: Operation, body: CodeBody, indent: str) -> List[str]:
         """What the model says about a body nobody has written yet: its invariants, then its interactions.
@@ -327,5 +496,5 @@ class CodeCleanEngineeringModel(CleanEngineeringModel):
 
 
 class BraceCleanEngineeringModel(CFamilyParse, CodeCleanEngineeringModel):
-    """A class model written in a brace language: TypeScript, JavaScript, or Java. Each reads its own text through
+    """A class model written in a brace language: TypeScript or JavaScript. Each reads its own text through
     the brace-language reading it shares."""

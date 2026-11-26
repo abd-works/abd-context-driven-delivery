@@ -1,0 +1,25 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T04:02:26.911203+00:00",
+  "prompts": [
+    {
+      "id": "61c723f4fb1c",
+      "text": "[interruption] remove te dit bot nsamr button for now ts dirsdtacting",
+      "is_done": true,
+      "steps": [
+        {
+          "text": "Remove the robot rename button",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] is this also saved prop toatrchive?",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] if a interupt doen nt gpo to an agent queue , show it  bel,owthagetn take whole withr limke regulkar noina gent item mode",
+          "state": "done"
+        }
+      ]
+    }
+  ]
+}

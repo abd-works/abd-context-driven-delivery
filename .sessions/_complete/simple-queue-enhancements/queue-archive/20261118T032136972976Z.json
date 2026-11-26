@@ -1,0 +1,726 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:21:36.972976+00:00",
+  "prompts": [
+    {
+      "id": "7368b4916010",
+      "text": "[interruption] create a queioe that will resutls oin lsots of task fopr losdts of agents like 4",
+      "is_done": true,
+      "steps": [
+        {
+          "text": "[interruption] rememrbert dotnm asssign toagent sagent bujttoin does it",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] ?",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] nvm they were co,lpased we should always expoanbd on populaew",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] ??",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] we lost all the mov e up move doen etc nuttons ewr hve in single view",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] * also dioesnt workl",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] +",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] Story scenarios  do we have ?",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] n F the design canvas",
+          "state": "pending"
+        }
+      ],
+      "robot": "Sparky"
+    },
+    {
+      "id": "d634954fb50f",
+      "text": "Run3 hooks survey (read only, change no tracked file): first give this card its steps with prompt-queue.set_steps, one per file, then for each .ts and .tsx file under tools/prompt_queue/hooks write its name and line count to .sessions/simple-queue-enhancements/demo/run3/hooks/survey.md, ticking each step done with prompt-queue.step_done as you go. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Bolt",
+      "steps": [
+        {
+          "text": "queue/icon-button-view.tsx",
+          "state": "done"
+        },
+        {
+          "text": "queue/plan-steps.ts",
+          "state": "done"
+        },
+        {
+          "text": "queue/prompt-queue.ts",
+          "state": "done"
+        },
+        {
+          "text": "queue/queue-order.ts",
+          "state": "done"
+        },
+        {
+          "text": "queue/queue-view.tsx",
+          "state": "done"
+        },
+        {
+          "text": "register.test.tsx",
+          "state": "done"
+        },
+        {
+          "text": "register.tsx",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "e49ce0796f3b",
+      "text": "Run3 hooks survey, part 2: after demo/run3/hooks/survey.md lists every file, give this card one step per file and, for each, add under its name the names of the functions it exports, ticking each step done as you go. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Bolt",
+      "steps": [
+        {
+          "text": "queue/icon-button-view.tsx",
+          "state": "done"
+        },
+        {
+          "text": "queue/plan-steps.ts",
+          "state": "done"
+        },
+        {
+          "text": "queue/prompt-queue.ts",
+          "state": "done"
+        },
+        {
+          "text": "queue/queue-order.ts",
+          "state": "done"
+        },
+        {
+          "text": "queue/queue-view.tsx",
+          "state": "done"
+        },
+        {
+          "text": "register.test.tsx",
+          "state": "done"
+        },
+        {
+          "text": "register.tsx",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "4cc1a05fc466",
+      "text": "Run3 hooks survey, part 3: after demo/run3/hooks/survey.md lists each file's exports, give this card three steps (biggest file, most exports, total lines) and write each answer as a line at the top of the survey, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Bolt",
+      "steps": [
+        {
+          "text": "Biggest file",
+          "state": "done"
+        },
+        {
+          "text": "Most exports",
+          "state": "done"
+        },
+        {
+          "text": "Total lines",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "4ad0e2f9fb90",
+      "text": "Run3 stories survey (read only): give this card one step per sub-epic folder under story_tests/queue-prompts-for-later, then for each write its name and the scenario titles its files hold to .sessions/simple-queue-enhancements/demo/run3/stories/scenarios.md, ticking each step done as you go. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Gizmo",
+      "steps": [
+        {
+          "text": "build-prompt-queue",
+          "state": "done"
+        },
+        {
+          "text": "nest-prompt-steps-in-queue",
+          "state": "done"
+        },
+        {
+          "text": "share-queue-among-robots",
+          "state": "done"
+        },
+        {
+          "text": "work-through-prompt-queue",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "3f6386956fd6",
+      "text": "Run3 stories survey, part 2: after demo/run3/stories/scenarios.md lists the scenarios, give this card one step per sub-epic and add under each a one-line plain-English summary of what its scenarios check, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Gizmo",
+      "steps": [
+        {
+          "text": "Summarise build-prompt-queue",
+          "state": "done"
+        },
+        {
+          "text": "Summarise nest-prompt-steps-in-queue",
+          "state": "done"
+        },
+        {
+          "text": "Summarise share-queue-among-robots",
+          "state": "done"
+        },
+        {
+          "text": "Summarise work-through-prompt-queue",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "9e34d978b70b",
+      "text": "Run3 stories survey, part 3: after the summaries are in demo/run3/stories/scenarios.md, give this card two steps (count scenarios per sub-epic, name the sub-epic with the most) and write both answers at the top, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Gizmo",
+      "steps": [
+        {
+          "text": "Count scenarios per sub-epic",
+          "state": "done"
+        },
+        {
+          "text": "Name the sub-epic with the most",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "992e64bc973a",
+      "text": "Run3 history survey (read only, git log): give this card one step per day of the last 3 days with commits on the simple-queue-enhancements branch, then for each write the date and that day's commit subjects to .sessions/simple-queue-enhancements/demo/run3/history/days.md, ticking each step done as you go. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Rivet",
+      "steps": [
+        {
+          "text": "2026-11-17 commit subjects",
+          "state": "done"
+        },
+        {
+          "text": "2026-11-16 commit subjects",
+          "state": "done"
+        },
+        {
+          "text": "2026-11-15 commit subjects",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "0a845a6ae52c",
+      "text": "Run3 history survey, part 2: after demo/run3/history/days.md lists each day's commits, give this card one step per day and add under each day a one-line plain-English summary of what changed, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Rivet",
+      "steps": [
+        {
+          "text": "Summarise 2026-11-17",
+          "state": "done"
+        },
+        {
+          "text": "Summarise 2026-11-16",
+          "state": "done"
+        },
+        {
+          "text": "Summarise 2026-11-15",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "f55b58162ce1",
+      "text": "Run3 history survey, part 3: after the daily summaries are in demo/run3/history/days.md, give this card two steps (busiest day, total commits) and write both answers at the top, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Rivet",
+      "steps": [
+        {
+          "text": "Busiest day",
+          "state": "done"
+        },
+        {
+          "text": "Total commits",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "f2225a7c5e18",
+      "text": "Run3 timed progress: give this card six steps, one per line, then write six lines to .sessions/simple-queue-enhancements/demo/run3/progress/log.md, one about every 15 seconds, each saying which line it is and the time, ticking each step done as its line is written so the run can be watched. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Pixel",
+      "steps": [
+        {
+          "text": "Write line 1",
+          "state": "done"
+        },
+        {
+          "text": "Write line 2",
+          "state": "done"
+        },
+        {
+          "text": "Write line 3",
+          "state": "done"
+        },
+        {
+          "text": "Write line 4",
+          "state": "done"
+        },
+        {
+          "text": "Write line 5",
+          "state": "done"
+        },
+        {
+          "text": "Write line 6",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "67054417761b",
+      "text": "Run3 timed progress, part 2: after demo/run3/progress/log.md has its six timed lines, give this card two steps (seconds between first and last, average gap) and write both as the last lines, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Pixel",
+      "steps": [
+        {
+          "text": "Seconds between first and last",
+          "state": "done"
+        },
+        {
+          "text": "Average gap",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "ef2f66aa7038",
+      "text": "Run3 wrap-up for the progress strand: after demo/run3/progress/log.md has its gaps, give this card one step and write one line at the top of the log saying the strand finished and when. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Pixel",
+      "steps": [
+        {
+          "text": "Write the finished line at the top of the log",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "580f650e4cd4",
+      "text": "[interruption] put the4 test queue back",
+      "steps": [
+        {
+          "text": "[interruption] pause for now",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "deb446a779ad",
+      "text": "Run4 harness survey (read only): give this card one step per top-level folder under harness/, then for each write its name and its count of .py files to .sessions/simple-queue-enhancements/demo/run4/harness/folders.md, ticking each step done with prompt-queue.step_done as you go. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "agent_tools",
+          "state": "done"
+        },
+        {
+          "text": "annotations",
+          "state": "done"
+        },
+        {
+          "text": "catalog_generator",
+          "state": "done"
+        },
+        {
+          "text": "chat",
+          "state": "done"
+        },
+        {
+          "text": "chat-ui",
+          "state": "done"
+        },
+        {
+          "text": "design_canvas",
+          "state": "done"
+        },
+        {
+          "text": "diagnostics",
+          "state": "done"
+        },
+        {
+          "text": "e2e_review",
+          "state": "done"
+        },
+        {
+          "text": "files_app",
+          "state": "done"
+        },
+        {
+          "text": "git",
+          "state": "done"
+        },
+        {
+          "text": "graph",
+          "state": "done"
+        },
+        {
+          "text": "guidance",
+          "state": "done"
+        },
+        {
+          "text": "guidance_actions",
+          "state": "done"
+        },
+        {
+          "text": "hooks",
+          "state": "done"
+        },
+        {
+          "text": "installation",
+          "state": "done"
+        },
+        {
+          "text": "markdown",
+          "state": "done"
+        },
+        {
+          "text": "mcp",
+          "state": "done"
+        },
+        {
+          "text": "process",
+          "state": "done"
+        },
+        {
+          "text": "whiteboard",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "85eae9e28b58",
+      "text": "Run4 practices survey (read only): give this card one step per practice folder under cdd_guidance/practices, then for each write its name and the headings of its {practice}.md to .sessions/simple-queue-enhancements/demo/run4/practices/headings.md, ticking each step done as you go. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "agent_bdd",
+          "state": "done"
+        },
+        {
+          "text": "bdd",
+          "state": "done"
+        },
+        {
+          "text": "clean_engineering",
+          "state": "done"
+        },
+        {
+          "text": "ddd",
+          "state": "done"
+        },
+        {
+          "text": "stories",
+          "state": "done"
+        },
+        {
+          "text": "tdd",
+          "state": "done"
+        },
+        {
+          "text": "ux",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "19e22ef9b912",
+      "text": "Run4 practices survey, part 2: after demo/run4/practices/headings.md lists every practice, give this card one step per practice and add under each the count of rules its markdown names, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "agent_bdd",
+          "state": "done"
+        },
+        {
+          "text": "bdd",
+          "state": "done"
+        },
+        {
+          "text": "clean_engineering",
+          "state": "done"
+        },
+        {
+          "text": "ddd",
+          "state": "done"
+        },
+        {
+          "text": "stories",
+          "state": "done"
+        },
+        {
+          "text": "tdd",
+          "state": "done"
+        },
+        {
+          "text": "ux",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "a81451f28c9c",
+      "text": "Run4 practices survey, part 3: after the rule counts are in demo/run4/practices/headings.md, give this card one step per practice and add under each the file names in its _examples folder, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "agent_bdd",
+          "state": "done"
+        },
+        {
+          "text": "bdd",
+          "state": "done"
+        },
+        {
+          "text": "clean_engineering",
+          "state": "done"
+        },
+        {
+          "text": "ddd",
+          "state": "done"
+        },
+        {
+          "text": "stories",
+          "state": "done"
+        },
+        {
+          "text": "tdd",
+          "state": "done"
+        },
+        {
+          "text": "ux",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "161527ec42a6",
+      "text": "Run4 practices survey, part 4: after the examples are listed in demo/run4/practices/headings.md, give this card two steps (practice with the most rules, total rules) and write both answers at the top, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "Practice with the most rules",
+          "state": "done"
+        },
+        {
+          "text": "Total rules",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "db69ef576414",
+      "text": "Run4 prompt queue survey (read only): give this card one step per .py file under tools/prompt_queue (not hooks or node_modules), then for each write its name and line count to .sessions/simple-queue-enhancements/demo/run4/queue/files.md, ticking each step done as you go. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "examples/prompt_queue_examples.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_heavy_spec.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_plugin_e2e_spec.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_spec.py",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "e5248abc67a6",
+      "text": "Run4 prompt queue survey, part 2: after demo/run4/queue/files.md lists every file, give this card one step per file and add under each the names of the classes it defines, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "examples/prompt_queue_examples.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_heavy_spec.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_plugin_e2e_spec.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_spec.py",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "4698c64a0277",
+      "text": "Run4 prompt queue survey, part 3: after the classes are in demo/run4/queue/files.md, give this card one step per file and add under each the names of the spec files that test it, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "examples/prompt_queue_examples.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_heavy_spec.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_plugin_e2e_spec.py",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_spec.py",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "3474a1f1f571",
+      "text": "Run4 prompt queue survey, part 4: after the specs are in demo/run4/queue/files.md, give this card two steps (files with no spec, biggest file) and write both answers at the top, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "Files with no spec",
+          "state": "done"
+        },
+        {
+          "text": "Biggest file",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "d2830de4b453",
+      "text": "Run4 timed progress: give this card eight steps, one per line, then write eight lines to .sessions/simple-queue-enhancements/demo/run4/progress/log.md, one about every 10 seconds, each saying which line it is and the time, ticking each step done as its line is written. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "Write line 1",
+          "state": "done"
+        },
+        {
+          "text": "Write line 2",
+          "state": "done"
+        },
+        {
+          "text": "Write line 3",
+          "state": "done"
+        },
+        {
+          "text": "Write line 4",
+          "state": "done"
+        },
+        {
+          "text": "Write line 5",
+          "state": "done"
+        },
+        {
+          "text": "Write line 6",
+          "state": "done"
+        },
+        {
+          "text": "Write line 7",
+          "state": "done"
+        },
+        {
+          "text": "Write line 8",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "86b2b2b34306",
+      "text": "Run4 timed progress, part 2: after demo/run4/progress/log.md has its eight lines, give this card two steps (seconds between first and last, average gap) and write both as the last lines, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "Seconds between first and last",
+          "state": "done"
+        },
+        {
+          "text": "Average gap",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "ab90b709a365",
+      "text": "Run4 timed progress, part 3: give this card four steps, then append four more lines to demo/run4/progress/log.md, one about every 10 seconds, each with the time, ticking each step done as its line is written. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "Write line 9",
+          "state": "done"
+        },
+        {
+          "text": "Write line 10",
+          "state": "done"
+        },
+        {
+          "text": "Write line 11",
+          "state": "done"
+        },
+        {
+          "text": "Write line 12",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    },
+    {
+      "id": "6727e5da16a2",
+      "text": "Name each robot's sub-agent after its robot, so the lead can message a robot by name",
+      "is_done": true
+    }
+  ]
+}

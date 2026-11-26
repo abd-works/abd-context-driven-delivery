@@ -6,6 +6,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import Clea
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
 from cdd_guidance.practices.clean_engineering.model.sketch.sketch_class_model import SketchCleanEngineeringModel
+from harness.guidance.practice_formats import Written
 
 
 def _shop() -> CleanEngineeringModel:
@@ -106,7 +107,7 @@ with description("a class model written as a sketch"):
                 "## clean engineering:\n\n### old/\n\n##### Stale\n\n```\ngone\n```\n\n"
                 "## behavior driven development:\n\nan order\n"
             )
-            self.written = SketchCleanEngineeringModel().render(_shop(), previous)
+            self.written = SketchCleanEngineeringModel().render(_shop(), Written(previous))
 
         with it("should keep the other practices' sections"):
             expect(self.written).to(contain("## stories:\n\nbuy things"))

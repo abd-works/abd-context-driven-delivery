@@ -1,7 +1,7 @@
 import { useBoard } from '../shared/board-context'
 import type { ReportPanel } from '../shared/board-store'
-import { fixTitleOn } from './report-client'
-import { RuleView } from './report-rule-view'
+import { CANDIDATE_TITLE, fixTitleOn } from './report-client'
+import { AcceptedViolationsView, RuleView } from './report-rule-view'
 
 export function ReportPanelHeadView({ panel }: { panel: ReportPanel }) {
   const { page } = useBoard()
@@ -24,10 +24,22 @@ export function ReportStatsView({ panel }: { panel: ReportPanel }) {
         <span className="report-number is-error">{panel.report.violationCount}</span>
         <span className="panel-subtitle">violations</span>
       </div>
+      {panel.report.candidateCount ? (
+        <div className="report-stat" title={CANDIDATE_TITLE}>
+          <span className="report-number is-candidate">{panel.report.candidateCount}</span>
+          <span className="panel-subtitle">candidates</span>
+        </div>
+      ) : null}
       <div className="report-stat">
         <span className="report-number">{panel.report.rules.length}</span>
         <span className="panel-subtitle">rules hit</span>
       </div>
+      {panel.report.acceptedCount ? (
+        <div className="report-stat">
+          <span className="report-number">{panel.report.acceptedCount}</span>
+          <span className="panel-subtitle">accepted</span>
+        </div>
+      ) : null}
     </>
   )
 }
@@ -38,7 +50,7 @@ function OutOfDateView({ panel, isOff }: { panel: ReportPanel; isOff: boolean })
     <>
       <p className="panel-warning">This report's saved graph is out of date, so its graph's rules are not shown. Validate again to read them.</p>
       {progress ? (
-        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to validate' : 'Ask the chat to validate this fidelity again'} onClick={() => void panel.ticket.prompts.validateAgain(progress)}>
+        <button className="ghost-button" disabled={isOff} title={isOff ? 'Connect a chat to validate' : 'Ask the chat to validate this fidelity again'} onClick={() => void panel.ticket.chatPrompts.validateAgain(progress)}>
           Validate again
         </button>
       ) : null}
@@ -76,6 +88,7 @@ export function ReportPanelBodyView({ panel }: { panel: ReportPanel }) {
       {panel.report.rules.map(rule => (
         <RuleView key={`${rule.fidelity.slug}/${rule.rule.slug}`} panel={panel} rule={rule} isOff={isOff} />
       ))}
+      <AcceptedViolationsView panel={panel} />
     </div>
   )
 }

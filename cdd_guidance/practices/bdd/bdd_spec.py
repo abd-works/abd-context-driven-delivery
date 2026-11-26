@@ -18,6 +18,7 @@ from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
+from harness.guidance.practice_formats import Rendered
 
 
 def _expanded(bdd, action_name):
@@ -91,12 +92,34 @@ with description("a Bdd toolset"):
                 "a cart\n  that has been created\n    it should hold no items\n",
                 source="markdown",
             )
-            expect(result).to(be_a(dict))
-            expect(str(result.get("content"))).to(contain("description"))
+            expect(result).to(be_a(Rendered))
+            expect(str(result.content)).to(contain("description"))
 
     with context("that reads a spec file into the graph"):
         with it("should read a Python spec with its Python format"):
             expect(type(Bdd().formats.for_file(Path("cart_spec.py"))).__name__).to(equal("PythonBddModel"))
 
-        with it("should read a JavaScript spec with its TypeScript format"):
-            expect(type(Bdd().formats.for_file(Path("cart.spec.js"))).__name__).to(equal("TypeScriptBddModel"))
+        with it("should read a TypeScript spec with its TypeScript format"):
+            expect(type(Bdd().formats.for_file(Path("cart.spec.ts"))).__name__).to(equal("TypeScriptBddModel"))
+
+        with it("should read a JavaScript spec with its JavaScript format"):
+            expect(type(Bdd().formats.for_file(Path("cart.spec.js"))).__name__).to(equal("JavaScriptBddModel"))
+
+    with context("whose fidelities offer formats to write specs in"):
+        with it("should have a format adapter for every format a fidelity offers"):
+            practice = Bdd()
+            offered = {label for fidelity in practice.fidelities for label in fidelity.outputs}
+            expect(sorted(offered - set(Bdd.format_adapters))).to(equal([]))
+
+        with it("should offer JavaScript in every fidelity that offers TypeScript"):
+            without = [fidelity.name for fidelity in Bdd().fidelities if "typescript" in fidelity.outputs and "javascript" not in fidelity.outputs]
+            expect(without).to(equal([]))
+
+        with it("should offer no language but Python, TypeScript and JavaScript to write specs in"):
+            offered = {label for fidelity in Bdd().fidelities for label in fidelity.outputs}
+            expect(sorted(offered - {"markdown"})).to(equal(["javascript", "python", "typescript"]))
+
+    with context("whose realization guidance is read"):
+        with it("should send the render to the graph file the save answers with, not a fixed path"):
+            prose = _expanded(Bdd(fidelity="realization"), "guidance")
+            expect(".context/graph.json" in prose).to(equal(False))

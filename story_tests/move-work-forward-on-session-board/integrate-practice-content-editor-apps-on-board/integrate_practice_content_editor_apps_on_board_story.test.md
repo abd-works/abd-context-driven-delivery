@@ -17,7 +17,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../harne
 - ++practice row++ — one fidelity's row in a ticket's practice grid ([FidelityProgress](../../../harness/.context/editor-apps/.context/editor-apps-model.md#fidelityprogress-extended)).
 - ++editor widget++ — the small control on the Stories story-map row that opens the Story UI editor ([BoardFidelity.editor](../../../harness/.context/editor-apps/.context/editor-apps-model.md#boardfidelity-extended)).
 - ++graph widget++ — the control on a ticket, beside its folder and file icons, that opens the Graph app on the ticket ([Graph.load_practice_roots](../../../harness/.context/editor-apps/.context/editor-apps-model.md#graph-extended)).
-- ++story map++ — the session's epics, sub-epics and stories, shown by the Story UI editor ([StoryModel](../../../harness/.context/editor-apps/.context/editor-apps-model.md#storymodel-extended)).
+- ++story map++ — the session's epics, sub-epics and stories, shown by the Story UI editor ([StoryMap](../../../harness/.context/editor-apps/.context/editor-apps-model.md#storymap-extended)).
 - ++knowledge graph++ — the practice trees the Graph app loads from a session's practice roots.
 - ++practice root++ — the folder a session names for one of its enabled practices ([PracticeGuidance.session_root](../../../harness/.context/editor-apps/.context/editor-apps-model.md#practiceguidance-extended)).
 - ++generated adapter++ — the `{Object}Adapter` and `{Object}ClientGenerated` the cdd_web_domain_access pattern generates for a Python domain object.
@@ -68,7 +68,7 @@ Each term links to its class in the model, [editor-apps-model.md](../../../harne
 |--------|------|
 | `.context/story-map.md:575-577` | Requested (2026-11-06): the board opens the Story UI editor on the part of the story map the ticket covers; Requested (2026-11-12): a small editor widget on the ticket's Stories story-map row opens it |
 | `space/kanban/app/src/kanban/ticket/practice-grid-view.tsx` | Observed: the ticket's practice grid, one row per fidelity |
-| `cdd_guidance/practices/stories/model/story_model.py:1110` | Observed: *Descendants.stories_named* (`StoryModel.descendants`), which the ticket's scope reads |
+| `cdd_guidance/practices/stories/model/story_map.py:1110` | Observed: *Descendants.stories_named* (`StoryMap.descendants`), which the ticket's scope reads |
 
 #### Scenario: The story-map row's editor widget opens the Story UI editor on the ticket's stories
 

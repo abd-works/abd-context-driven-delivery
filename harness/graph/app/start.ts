@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
 
 import ports from './ports.json';
-import { servePort } from './serve-port';
+import { serveLaneHome, servePort } from './serve-port';
 
 // `npm start`, and what the chat that opens the Graph app runs: the explorer's two servers in this one process. Vite
 // serves the page on the app's ports and passes /api to the web server, so the app answers only while both run. Both
@@ -12,6 +12,7 @@ import { servePort } from './serve-port';
 //
 // A dev-lane chat starts it with `--port N`, the page's port on that lane; the web server moves by as much, so neither
 // meets the stable lane's Graph. The web server reads its port when it is imported, so it is imported after.
+serveLaneHome(process.argv);
 const page = servePort(process.argv, ports.app[0]);
 const web = ports.web[0] + page - ports.app[0];
 if (page !== ports.app[0]) {

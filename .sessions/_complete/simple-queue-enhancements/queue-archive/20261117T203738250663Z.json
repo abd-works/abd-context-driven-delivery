@@ -1,0 +1,10 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T20:37:38.250663+00:00",
+  "prompts": [
+    {
+      "id": "5877c9230b9f",
+      "text": "[decision required] Check live: may the agent stop the dev lane's cdd server for a moment so the person sees a queue failure on CDD's shared failure line with Fix and \u2715? Other dev-lane chats lose the server meanwhile. Recommendation: yes, at a quiet moment; then record what was seen on the story map."
+    }
+  ]
+}

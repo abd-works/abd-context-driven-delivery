@@ -103,3 +103,16 @@ with description("the pinned runtime a chat's connect script imports") as self:
         with it("should fail, naming the missing record"):
             connect.RUNTIME_SWAP_SECONDS = 0.02
             expect(connect.import_runtime).to(raise_error(FileNotFoundError))
+
+
+with description("the server a connect script reaches"):
+    # Seen live 2026-11-17: the Files app of a dev-lane session, started with the dev lane's home, ran its calls through
+    # ~/.cdd/dev/connect.py, which answered the stable lane's port; a session kept in the main checkout is the stable
+    # lane's project there, so main's code answered every call of the feature being served.
+    with context("in the stable lane's home"):
+        with it("should be the stable lane's server"):
+            expect(connect.lane_address(Path.home() / ".cdd").port).to(equal(McpAddress().port))
+
+    with context("in the dev lane's home"):
+        with it("should be the dev lane's server, on the port after the stable lane's"):
+            expect(connect.lane_address(Path.home() / ".cdd" / "dev").port).to(equal(McpAddress().port + 1))

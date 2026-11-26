@@ -6,39 +6,22 @@ import type { TicketClient } from './ticket-client'
 
 export const locationOf = (violation: ViolationData): string => (violation.line ? `${violation.location}:${violation.line}` : violation.location)
 
-// The failing line is marked, so the agent edits the content validate judged, not a line near it.
-const sourceOf = (violation: ViolationData): string[] =>
-  violation.source.map(entry => `${entry.number === violation.line ? '>' : ' '} ${entry.number} | ${entry.text}`)
+// Whether a rule that requires a judge listed violation for a reading: a candidate, which nothing has decided is wrong.
+export const isCandidate = (violation: ViolationData): boolean => violation.severity === 'candidate'
 
-const errorOf = (violation: ViolationData): string[] => [`${locationOf(violation)}: ${violation.message}`, ...sourceOf(violation)]
-
-// A fix in one format alone leaves the fidelity's other formats still breaking the rule, so every fix asks for all of them.
-const EVERY_FORMAT = 'Fix every format of the fidelity: its documents, its diagrams, and its code.'
-
-// The agent fixes from the report's own words, so it needs no second validate to find out what failed.
-function fixPrompt(rule: ReportRuleData, violations: ViolationData[]): string {
-  const slug = rule.fidelity.slug
-  const errors = violations.flatMap((violation, index) => ['', `${index + 1}. ${errorOf(violation).join('\n')}`])
-  return [
-    `Fix ${violations.length === 1 ? 'this violation' : `these ${violations.length} violations`} of the ${slug} rule.`,
-    '',
-    `${rule.rule.slug}: ${rule.rule.body}`,
-    ...errors,
-    '',
-    `Change each file so the content marked > follows the rule, and change nothing the errors do not name. ${EVERY_FORMAT} Then validate ${slug} with rule ${rule.rule.slug} on the files you changed.`,
-  ].join('\n')
-}
-
-const fixViolationPrompt = (rule: ReportRuleData, violation: ViolationData): string => fixPrompt(rule, [violation])
-
-const fixRulePrompt = (report: ReportClient, rule: ReportRuleData): string =>
-  `Fix all violations of ${rule.rule.slug} found in this report: ${report.path}. ${EVERY_FORMAT}`
-
-// The report already holds every violation, so the chat reads it there rather than from a copy in the message.
-const fixReportPrompt = (report: ReportClient): string => `Fix all violations found in this report: ${report.path}. ${EVERY_FORMAT}`
+// What a violation's Fix and False send, which Python writes beside each violation of a rule, in the same order.
+const promptsOf = (rule: ReportRuleData, violation: ViolationData) => rule.violation_prompts[rule.violations.indexOf(violation)]
 
 // A Fix button's title says where the fix goes, as the repository's board sends fixes.
 export const fixTitleOn = (board: BoardClient): string => (board.sendsFixesDirectly ? 'Send this fix to the chat' : "Put this fix in the chat's prompt to edit and send")
+
+// A False button's title says what it asks and where that goes.
+export const falseTitleOn = (board: BoardClient): string =>
+  board.sendsFixesDirectly ? 'Say this violation is false: the chat investigates the rule' : "Say this violation is false: put the request to investigate the rule in the chat's prompt"
+
+export const CANDIDATE_TITLE = 'A rule that requires a judge listed this for a reading. It is not an error until a judge or a person reads it and says so'
+export const ACCEPT_TITLE = 'Accept this violation as it is: no later validation reports it while it stays the same'
+export const TAKE_BACK_TITLE = 'Take this acceptance back: the violation is reported again'
 
 // A report as the side panel reads it, for the ticket whose report it is. ReportData has no generated class, because
 // Python returns it as a plain result.
@@ -49,23 +32,46 @@ export class ReportClient {
     private readonly page: BoardPage,
   ) {}
 
-  // A report's fixes are for its ticket, so they name its session and go to its chat: into its prompt for the person to
-  // edit before sending, unless the repository's board sends fixes directly.
+  // A report's fixes are for its ticket, so they go to its chat in the words Python wrote, which name its session: into
+  // its prompt for the person to edit before sending, unless the repository's board sends fixes directly.
   fixViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
-    return this.deliver(fixViolationPrompt(rule, violation))
+    return this.deliver(promptsOf(rule, violation)?.fix ?? '')
+  }
+
+  // The person says the finding is wrong: the chat investigates the rule, in the same place a fix would go.
+  reportFalseViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
+    return this.deliver(promptsOf(rule, violation)?.false ?? '')
+  }
+
+  // The person accepts the finding as it is. Python keeps the acceptance, by the rule and the id of the node the
+  // violation is on, and decides what it covers; the page names the violation as the report showed it and reads the
+  // open report again.
+  async acceptViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
+    const kept = await this.progressOf(rule)?.acceptViolation(rule.rule.slug, violation.message, violation.location, violation.line ?? 0, violation.node_id)
+    if (kept) await this.page.panels.reload()
+  }
+
+  // The person takes an acceptance back, so the violation is reported again.
+  async reopenViolation(rule: ReportRuleData, violation: ViolationData): Promise<void> {
+    const reopened = await this.progressOf(rule)?.reopenViolation(rule.rule.slug, violation.message, violation.location, violation.line ?? 0, violation.node_id)
+    if (reopened) await this.page.panels.reload()
+  }
+
+  // A rule names its fidelity, since a ticket's report lists the rules of several; the fidelity's progress keeps its report.
+  private progressOf(rule: ReportRuleData) {
+    return this.ticket.work.progressNamed(rule.fidelity.slug)
   }
 
   fixRule(rule: ReportRuleData): Promise<void> {
-    return this.deliver(fixRulePrompt(this, rule))
+    return this.deliver(rule.fix_prompt)
   }
 
   fixReport(): Promise<void> {
-    return this.deliver(fixReportPrompt(this))
+    return this.deliver(this.report.fix_prompt)
   }
 
   private deliver(prompt: string): Promise<void> {
-    const text = this.ticket.prompts.inSession(prompt)
-    return this.page.board.sendsFixesDirectly ? this.ticket.chat.command(text) : this.ticket.chat.fill(text)
+    return this.page.board.sendsFixesDirectly ? this.ticket.chat.command(prompt) : this.ticket.chat.fill(prompt)
   }
 
   get path(): string {
@@ -88,8 +94,22 @@ export class ReportClient {
     return this.report.is_out_of_date
   }
 
-  // Graph hits and judged findings together, as Python counts them.
+  // Graph hits and judged findings together, as Python counts them, without the ones a person accepted.
   get violationCount(): number {
     return this.report.violation_count
+  }
+
+  // The candidates the rules that require a judge listed for a reading, as Python counts them apart from violations.
+  get candidateCount(): number {
+    return this.report.candidate_count
+  }
+
+  // The violations a person accepted, under the rule each breaks, which Python leaves out of the rules and the count.
+  get accepted(): ReportRuleData[] {
+    return this.report.accepted
+  }
+
+  get acceptedCount(): number {
+    return this.report.accepted_count
   }
 }

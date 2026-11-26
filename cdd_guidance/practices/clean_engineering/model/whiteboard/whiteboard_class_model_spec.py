@@ -1,6 +1,7 @@
 """Mamba spec: a Clean Engineering model drawn on a Claude Whiteboard as its drawio is drawn, and read back as the same
 model."""
 
+from pathlib import Path
 from expects import be_above, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
@@ -166,3 +167,31 @@ with description("a modules view drawn on a Claude whiteboard") as self:
     with context("that is read from text that is no saved board"):
         with it("should refuse the text as an unreadable source"):
             expect(lambda: WhiteboardCleanEngineeringModel().parse("not a board")).to(raise_error(UnreadableSource))
+
+
+def _saved_as(name: str, text: str) -> Whiteboard:
+    """text saved by a render as the whiteboard file called name, read back."""
+    import tempfile
+    from cdd_guidance.actions.render.rendered_file import RenderedFile
+    from harness.guidance.practice_formats import Rendered
+    from harness.markdown.format import Format
+
+    file = Path(tempfile.mkdtemp(prefix="board-title-")) / name
+    RenderedFile(file, Format("whiteboard")).save(Rendered(Format("whiteboard"), text))
+    return Whiteboard.from_text(file.read_text(encoding="utf-8"))
+
+
+with description("a Clean Engineering board saved as its file") as self:
+    with it("should title a module's class model with its file's name, {module}-model"):
+        expect(_saved_as("ordering-model.whiteboard", WhiteboardCleanEngineeringModel().render(orders_class_model())).title).to(equal("ordering-model"))
+
+    with it("should title the modules view with its file's name, modules"):
+        modules = CleanEngineeringModel("Shop")
+        modules.modules = [_module_card("orders", 1, "Takes orders.", ["Order"], []), _module_card("billing", 2, "Bills orders.", ["Invoice"], ["orders"])]
+        expect(_saved_as("modules.whiteboard", WhiteboardCleanEngineeringModel().render(modules)).title).to(equal("modules"))
+
+    with it("should still draw the system's name over the modules view"):
+        modules = CleanEngineeringModel("Shop")
+        modules.modules = [_module_card("orders", 1, "Takes orders.", ["Order"], [])]
+        board = _saved_as("modules.whiteboard", WhiteboardCleanEngineeringModel().render(modules))
+        expect([label.text for label in board.labels if label.id == "title"]).to(equal(["Shop - Modules Context"]))

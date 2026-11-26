@@ -5,7 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from expects import be, be_true, equal, expect, raise_error
+from expects import be, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -17,11 +17,21 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 import cdd_guidance.practices  # noqa: F401
+import cdd_guidance.patterns  # noqa: F401  (registers lern_domain_driven, which a session can overlay)
+from cdd_guidance.practices.ux.model.claude_design.project_story_canvas import FixturesNotBuilt
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
-from cdd_guidance.practices.ux.ux import NoJavascriptPractice, Ux, UxOutsideSession
-from cdd_guidance.practices.ux.model.nodes import Screen
+from cdd_guidance.practices.ux.ux import Ux, UxOutsideSession, ViewNotRendered
+from cdd_guidance.practices.ux.model.nodes import Control, Region, Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from space.session.sessions import Sessions
+from harness.drawio import DrawioFile
+from harness.guidance.practice_formats import Rendered
+from harness.markdown.format import Format, SourceDocument
+
+# A story map small enough to render in an example: one epic holding one story.
+_STORY_MAP = "# Story Map\n\n## Epic: Sign Up\n\n- Story: Enter Email\n"
+# A story map the story canvas reads from the Stories practice's root: one epic holding one story.
+_CANVAS_STORY_MAP = "# (E) Place Order\n## (S) Customer --> Order Plan\n"
 
 
 class UxJsonSample:
@@ -56,8 +66,43 @@ with description("Ux fidelity and format defaults"):
             expect(self.ux.fidelities.current.name).to(equal("mockup"))
 
     with context("Ux constructed with fidelity front_end_code"):
-        with it("should default format to html"):
-            expect(Ux(fidelity="front_end_code").format).to(equal("html"))
+        with before.each:
+            self.ux = Ux(fidelity="front_end_code")
+
+        with it("should default to typescript, a format the fidelity writes"):
+            expect(self.ux.format).to(equal("typescript"))
+
+    with context("at each of its fidelities"):
+        with it("should default to a format that fidelity writes"):
+            strays = [fidelity.name for fidelity in Ux().fidelities if fidelity.default_format.name not in fidelity.outputs]
+            expect(strays).to(equal([]))
+
+    # A file list and the graph tree show the files a fidelity declares, so a file no fidelity declares is shown nowhere.
+    with context("with the files a UX project holds beside its mockup"):
+        with it("should hold the mockup's drawing in the epic's .context as the mockup's file"):
+            expect(Ux().fidelities["mockup"].declared.includes("bookshop/.context/buy-a-book.drawio", "drawio")).to(equal(True))
+
+        with it("should hold the mockup's board beside its drawing as the mockup's file"):
+            expect(Ux().fidelities["mockup"].declared.includes("bookshop/.context/buy-a-book.whiteboard", "whiteboard")).to(equal(True))
+
+        with it("should hold the information architecture's board beside its drawing"):
+            expect(Ux().fidelities["ia"].outputs["whiteboard"]).to(equal("{epic}/.context/information-architecture.whiteboard"))
+
+        with it("should hold the UX map's ux-map.json in an epic's folder as the information architecture's file"):
+            expect(Ux().fidelities["ia"].declared.includes("bookshop/ux-map.json", "json")).to(equal(True))
+
+        with it("should hold the UX map's ux/ux.json as the information architecture's file"):
+            expect(Ux().fidelities["ia"].declared.includes("ux/ux.json", "json")).to(equal(True))
+
+        with it("should offer the drawing and the board as formats a person picks for the mockup"):
+            outputs = Ux().fidelities["mockup"].outputs
+            expect(("drawio" in outputs, "whiteboard" in outputs)).to(equal((True, True)))
+
+        with it("should hold a view written in TypeScript as the front end code's file"):
+            expect(Ux().fidelities["front_end_code"].declared.includes("bookshop/src/CartView.tsx", "typescript")).to(equal(True))
+
+        with it("should hold a view written in JavaScript as the front end code's file"):
+            expect(Ux().fidelities["front_end_code"].declared.includes("bookshop/src/CartView.jsx", "javascript")).to(equal(True))
 
     with context("Ux constructed with an unsupported fidelity"):
         with it("should raise ValueError"):
@@ -79,19 +124,75 @@ with description("Ux transform tool"):
             )
 
         with it("should return a dict"):
-            expect(isinstance(self.result, dict)).to(be_true)
+            expect(isinstance(self.result, Rendered)).to(be_true)
 
         with it("should set format to markdown"):
-            expect(self.result["format"]).to(equal("markdown"))
+            expect(self.result.format).to(equal("markdown"))
 
         with it("should render markdown content that names the scope"):
-            expect("Place New Order" in self.result["content"]).to(be_true)
+            expect("Place New Order" in self.result.content).to(be_true)
 
     with context("transform with an unsupported source format"):
         with it("should raise ValueError"):
             expect(
                 lambda: Ux().render("json", "{}", source="yaml")
             ).to(raise_error(ValueError))
+
+
+with description("a mockup rendered to its board and back"):
+    with before.each:
+        self.link = "[Browse Product Catalog › Products are listed](story_tests/order/browse_story.test.md#scenario-products-are-listed)"
+        ux_map = UxMap.create(name="demo")
+        screen = Screen("Catalog", 0)
+        region = Region("product list", 0)
+        control = Control("Products", 0)
+        control.show_scenario(self.link)
+        region.append_control(control)
+        screen.append_region(region)
+        ux_map.append_screen(screen)
+        self.ux = Ux(fidelity="mockup")
+        board = self.ux.render("whiteboard", JsonUxMap.create().render(ux_map), source="json").content
+        self.back = JsonUxMap.create().parse(self.ux.render("json", board, source="whiteboard").content)
+
+    with it("should keep the scenario a control serves, with the place it is written at"):
+        expect(self.back.screens[0].regions[0].controls[0].scenario_keys).to(equal([self.link]))
+
+
+with description("a front-end view rendered to another format"):
+    with before.each:
+        self.ux = Ux(fidelity="front_end_code")
+        self.typed = "export function CheckoutView({ total }: { total: number }): JSX.Element {\n  return <main>Total: {total}</main>;\n}\n"
+        self.untyped = "export function CheckoutView({ total }) {\n  return <main>Total: {total}</main>;\n}\n"
+
+    with context("from typescript to javascript"):
+        with it("should be the same view with its type annotations dropped"):
+            expect(self.ux.render("javascript", self.typed, source="typescript")).to(equal(Rendered("javascript", self.untyped)))
+
+    with context("from javascript to typescript"):
+        with it("should be the view as it is written, with no type annotation made up for it"):
+            expect(self.ux.render("typescript", self.untyped, source="javascript")).to(equal(Rendered("typescript", self.untyped)))
+
+    with context("from typescript with no source format named, at the fidelity that works in typescript"):
+        with it("should read it as typescript"):
+            expect(self.ux.render("javascript", self.typed).content).to(equal(self.untyped))
+
+    with context("that starts with a brace, as a JSON document does"):
+        with it("should still be read as a view"):
+            view = "{\n  const total = 1;\n}\nexport function CartView() {\n  return <p>Cart</p>;\n}\n"
+            expect(self.ux.render("javascript", view, source="typescript").content).to(equal(view))
+
+    with context("to a format of the UX map"):
+        with it("should refuse it, since no UX map is read from a view, naming both formats"):
+            expect(lambda: self.ux.render("drawio", self.typed)).to(
+                raise_error(ViewNotRendered, "A front-end view is rendered between typescript and javascript only: no render makes drawio from typescript.")
+            )
+
+    with context("from a mockup page to typescript"):
+        with it("should refuse it, since no view is written from a UX map"):
+            def render():
+                self.ux.render("typescript", "<html></html>", source="html")
+
+            expect(render).to(raise_error(ViewNotRendered, "A front-end view is rendered between typescript and javascript only: no render makes typescript from html."))
 
 
 with description("Ux ensure_javascript tool"):
@@ -106,20 +207,51 @@ with description("Ux ensure_javascript tool"):
             self.project = Path(tempfile.mkdtemp(prefix="cdd-ux-"))
             (self.project / ".git").mkdir()
             sessions = Sessions(self.project)
-            self.session = sessions.opened.open(sessions.create("alpha", self.project))
+            self.session = sessions.opened.open(sessions.create("alpha", self.project), "")
             self.ux = self.session.practices["ux"].guidance
 
         with after.each:
             shutil.rmtree(self.project, ignore_errors=True)
 
         with it("should get the JavaScript from that session's own Stories practice"):
-            expect(self.ux.javascript_practice("stories")).to(be(self.session.practices["stories"].guidance))
+            stories = self.session.practices["stories"].guidance
+            expect(self.ux.ensure_javascript("stories", "markdown", _STORY_MAP)).to(equal(stories.render("javascript", _STORY_MAP, source="markdown")))
 
-        with context("asked for a practice that writes no mockup JavaScript"):
-            with it("should refuse it as a practice with no JavaScript"):
-                expect(
-                    lambda: self.ux.ensure_javascript("ddd", "markdown", "")
-                ).to(raise_error(NoJavascriptPractice))
+        with context("finding its root while nobody chose one"):
+            with it("should write under ux in the session's root while no folder holds a UX map or a design canvas"):
+                expect(self.session.practices["ux"].folder).to(equal(self.session.work_root / "ux"))
+
+            with it("should write under the folder holding the project's UX map"):
+                (self.project / "apps" / "web" / "screens").mkdir(parents=True)
+                (self.project / "apps" / "web" / "screens" / "ux.json").write_text("{}", encoding="utf-8")
+                expect(self.session.practices["ux"].folder).to(equal(self.session.work_root / "apps" / "web" / "screens"))
+
+            with it("should write under the folder holding the project's design canvas"):
+                (self.project / "design" / "design-canvas").mkdir(parents=True)
+                expect(self.session.practices["ux"].folder).to(equal(self.session.work_root / "design"))
+
+            with it("should write under the root the session chose, wherever the UX map is"):
+                (self.project / "design" / "design-canvas").mkdir(parents=True)
+                (self.project / "screens").mkdir()
+                self.session.practices["ux"].choose_root("screens")
+                expect(self.session.practices["ux"].folder).to(equal(self.session.work_root / "screens"))
+
+        with context("rendering the story canvas"):
+            with before.each:
+                stories = self.session.practices["stories"].folder
+                (stories / ".context").mkdir(parents=True, exist_ok=True)
+                (stories / ".context" / "story-map.md").write_text(_CANVAS_STORY_MAP, encoding="utf-8")
+                ux_root = self.session.practices["ux"].folder
+                ux_root.mkdir(parents=True, exist_ok=True)
+                (ux_root / "ux.json").write_text('{"name": "Shop", "screens": []}', encoding="utf-8")
+
+            with it("should stop, rendering nothing, when the session overlays no pattern that builds canvas fixtures"):
+                expect(lambda: self.ux.render_story_canvas()).to(raise_error(FixturesNotBuilt, contain("No pattern the session overlays")))
+                expect((self.session.practices["ux"].folder / "design-canvas" / "version-1" / "project" / "canvas.json").exists()).to(equal(False))
+
+            with it("should stop with the pattern's runtime check when the project's step library lacks the story runtime"):
+                self.session.choose_overlays(["lern_domain_driven"])
+                expect(lambda: self.ux.render_story_canvas()).to(raise_error(FixturesNotBuilt, contain("story-test.ts")))
 
 
 with description("Ux contexts instruction"):
@@ -130,3 +262,56 @@ with description("Ux contexts instruction"):
 
         with it("should return non-empty prose"):
             expect(len(self.contexts) > 0).to(be_true)
+
+
+_UX_CONTEXT = (
+    "# UX context\n\n"
+    "Scope: Browse Books, Fill Cart\n\n"
+    "## Invariants\n- A Cart Line shows one Book and its quantity.\n\n"
+    "## Notes\n- A Customer reaches the Cart from every screen through the Main Nav.\n"
+)
+_IA_DRAWING = (
+    '<mxfile host="drawio-ux"><diagram id="site-map" name="Site Map"><mxGraphModel><root>'
+    '<mxCell id="0"/><mxCell id="1" parent="0"/>'
+    '<mxCell id="2" value="Book List" style="rounded=1;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="200" height="48" as="geometry"/></mxCell>'
+    '<mxCell id="3" value="Cart" style="rounded=1;" vertex="1" parent="1"><mxGeometry x="300" y="40" width="200" height="48" as="geometry"/></mxCell>'
+    '<mxCell id="4" value="View cart" style="html=1;" edge="1" source="2" target="3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>'
+    "</root></mxGraphModel></diagram></mxfile>"
+)
+
+
+def _cells_of(drawing: str) -> list:
+    """Each cell a drawing draws, by its id, words and style."""
+    return [(cell.id, cell.label, cell.style.text) for cell in DrawioFile.from_text(drawing).whole.cells if cell.is_vertex or cell.is_edge]
+
+
+with description("a UX map rendered over the other file its fidelity keeps"):
+    with before.each:
+        self.ux = Ux(fidelity="ia")
+
+    with context("from its drawing, which holds no scope or notes, over the UX context a person wrote"):
+        with before.each:
+            self.result = self.ux.render("markdown", _IA_DRAWING, source="drawio", previous=_UX_CONTEXT)
+
+        with it("should keep the scope, the invariants, and the notes the UX context holds"):
+            expect(self.result.content).to(equal(_UX_CONTEXT))
+
+    with context("from its UX context, which holds no screens, over the drawing a person made"):
+        with before.each:
+            self.result = self.ux.render("drawio", _UX_CONTEXT, source="markdown", previous=_IA_DRAWING)
+
+        with it("should keep the drawing with its screens and transitions"):
+            expect(_cells_of(self.result.content)).to(equal(_cells_of(_IA_DRAWING)))
+
+        with it("should keep the UX context it was rendered from hidden in the drawing"):
+            expect(DrawioFile.from_text(self.result.content).kept_document).to(equal(SourceDocument(Format("markdown"), _UX_CONTEXT)))
+
+    with context("from a map that holds its own scope, over the UX context a person wrote"):
+        with before.each:
+            self.result = self.ux.render("markdown", UxJsonSample().render(), source="json", previous=_UX_CONTEXT)
+
+        with it("should write the map's scope"):
+            expect("Scope: Place New Order" in self.result.content).to(be_true)
+
+        with it("should keep the invariants the map does not hold"):
+            expect("- A Cart Line shows one Book and its quantity." in self.result.content).to(be_true)

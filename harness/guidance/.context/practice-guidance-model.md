@@ -8,7 +8,7 @@ Markdown channel for `harness/guidance`. The module's purpose, seam, and depende
 
 ## Language companion
 
-A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage` (held as its *ApproachStage*), `default_format`, `outputs`, `judged_on`, and optional `clean_engineering` companion come from the YAML fields in its block, which the fidelity applies itself when its block makes it (`FidelityGuidance.from_block`). The practice holds its document (`document`, read once), and each fidelity reads its block, its instructions, rules, templates, template file, and declared files from itself, so an action holding a fidelity reads only that fidelity's text whatever fidelity is current. Each guidance hands its *Markdown* a *MarkdownScope*: its folder, slug, fidelity, and format. The practice's current fidelity, `fidelities.current`, is fixed at construction: a session's practices are shared by every call in it, so an action holds the fidelity it works at and never moves the practice's. Each fidelity keeps the format it last used, so the practice's `format` is its current fidelity's. Callers convert artifacts through *Render*, which asks the fidelity the action works at (*FidelityGuidance.render* or *render_files*); that fidelity hands its practice a *RenderRequest* that carries it. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; every practice CDD ships passes formats today; a practice with none renders through the Clean Engineering companion of the fidelity the request works at (`RenderRequest.companion`, which is `FidelityGuidance.clean_engineering`).
+A *PracticeGuidance* reads its *FidelityGuidance* children from the Fidelities section of `{practice}/{practice}.md`; each fidelity's `stage` (held as its *ApproachStage*), `default_format`, `outputs`, `judged_on`, and optional `clean_engineering` companion come from the YAML fields in its block, which the fidelity applies itself when its block makes it (`FidelityGuidance.from_block`). The practice holds its document (`document`, read once), and each fidelity reads its block, its instructions, rules, templates, template file, and declared files from itself, so an action holding a fidelity reads only that fidelity's text whatever fidelity is current. Each guidance hands its *Markdown* a *MarkdownScope*: its folder, slug, and format, the name its template is looked for by first, the headings its sections are read under (a fidelity's are `("Fidelities", name)`), and the filter of its folders' files its practice gives at that fidelity (`scope_at`, `reads_file_at`). The practice's current fidelity, `fidelities.current`, is fixed at construction: a session's practices are shared by every call in it, so an action holds the fidelity it works at and never moves the practice's. Each fidelity keeps the format it last used, so the practice's `format` is its current fidelity's. Callers convert artifacts through *Render*, which asks the fidelity the action works at (*FidelityGuidance.render* or *render_files*); that fidelity hands its practice a *RenderRequest* that carries it. A practice that owns an artifact keeps one adapter per format under `{practice}/model/{format}/` and passes them as `formats`; the markdown documents in that folder, such as UX's `claude_design.md` and `story_canvas.md`, are the rules and steps for writing in the format, and a fidelity working in it gives them in full in its instructions (`PracticeGuidance.format_guidance`), after its rules and before its template; every practice CDD ships passes formats today; a practice with none renders through the Clean Engineering companion of the fidelity the request works at (`RenderRequest.companion`, which is `FidelityGuidance.clean_engineering`).
 
 ---
 
@@ -26,7 +26,7 @@ session: Session | None
 	// the session work_in gives a practice; none until a session works on it
 name: str | None
 slug: str
-registration_name: str
+reference: ToolsetReference
 install_folder: Path
 module_dir: Path
 overview: str
@@ -37,7 +37,28 @@ sketch_template: str
 rules: RulesCollection
 	// the "shared rules" section
 instructions: str
-	// overview, guidance, rules, and templates joined; published as a skill and an MCP prompt
+	// overview, guidance, rules, and templates joined; published as a skill and an MCP prompt, as a GuidanceInstructions
+markdown_scope: MarkdownScope
+	// the folder beside its class, its slug, and its format
+----
+instructions_type(name: str): type[AgentInstructions]
+	// GuidanceInstructions for its own instructions member
+installed_as(tool: AgentTool): InstalledName
+	// its install folder; its own instructions named after it alone
+listed_parts(): list[AgentToolSet]
+	// its child toolsets, such as a practice's fidelities
+
+## GuidanceInstructions : AgentInstructions
+
+A guidance's own instructions tool: a call answers the guidance's whole instructions, described by its overview when its docstring says nothing; the MCP tool list gives its opening paragraph and a note that a call returns the rest; the file installed for it carries the guidance's schema guide.
+
+------
+listed_description: str
+description: str
+served_body: str
+----
+answer(call: ToolCall): str
+	-> toolset.for_call(call).instructions
 
 ## GuidanceCollection : MarkdownCollection, Guidance
 
@@ -107,12 +128,18 @@ answers_to(slug: str): PracticeGuidance | FidelityGuidance | None
 	// itself for its slug, the fidelity whose slug it is, else none
 work_in(session_output: PracticeSessionOutput): None
 	// the practice works in that output's session; each fidelity is given its FidelitySessionOutput through FidelityGuidance.work_in
+session_roots: list[Path]
+	// the folders its session names for it: its own folder, then each folder added to one of its fidelities; none outside a session
 generate_output(): str
 	// instruction-only by default; a practice that owns generation overrides it
-render(format: str, content: RenderContent, source: str | None, previous: str): dict
+render(format: str, content: RenderContent, source: str | None, previous: str): Rendered
 	// at the fidelity the practice was made at, which renders it; a practice with no fidelity renders through its formats
 	-> fidelities.current.render
 	-> formats.render
+scope_at(fidelity: FidelityGuidance | None): MarkdownScope
+	// its markdown read at fidelity: templates named for that fidelity first, and the files reads_file_at gives
+reads_file_at(fidelity: str | None): FileFilter | None
+	// which files of its folders it reads at fidelity; every file, and Stories' story map examples alone at the story map
 
 ## WorkingSet
 
@@ -145,16 +172,18 @@ hold(practices: Mapping[str, PracticeGuidance], supplements: Sequence[PracticeSu
 
 ## PracticeSupplement : PracticeGuidance
 
-Guidance that adds to other practices at the fidelities it names, such as TDD on Clean Engineering code, Stories acceptance_tests, BDD development, and DDD tactics. It is a practice of its own (its folder sits with the practices), but it has no stage and no fidelities on the board: it never moves work forward, it only adds guidance and rules to the fidelities it supplements. Its markdown's front matter names them:
+Guidance that adds to other practices at the fidelities it names, such as TDD on Clean Engineering code, Stories acceptance_tests and hardening, BDD development and hardening, and DDD tactics. It is a practice of its own (its folder sits with the practices), but it has no stage and no fidelities on the board: it never moves work forward, it only adds guidance and rules to the fidelities it supplements. Its markdown's front matter names them:
 
 ```yaml
 always_apply: true
 supplements:
   clean_engineering: code
-  stories: acceptance_tests
-  bdd: development
+  stories: [acceptance_tests, hardening]
+  bdd: [development, hardening]
   ddd: tactics
 ```
+
+A practice with one supplemented fidelity names it; one with several names them as a list, since YAML holds each practice key once.
 
 Its markdown keeps the usual Overview and Guidance, then sections headed with the slugs of the fidelities they apply to (`## bdd-development`, or `## stories-acceptance-tests, bdd-development` for rules both share), each with its guidance and a `### Rules` list. It has no rules for every fidelity it supplements: each rule names the fidelities it is for. Its graph rules live in its own folder the way a pattern's do: `rules/` for one rule checked on several named practices (*SharedPracticeGraphRule*), and `practices/<practice>/rules` and `model/{schema,rules}.yaml` for those of one practice.
 
@@ -199,59 +228,87 @@ adapter_settings: dict[str, Any]
 ----
 check(): None
 	// ValueError for a format the practice works in but does not write
-adapter_class(format: str): Any
+adapter_class(format: str): type[FormatAdapter]
 	// imported once
-adapter(format: str): Any
+adapter(format: str): FormatAdapter
 	// made once and kept
 reading(file: Path): Format | None
 reading_with(file: Path, others: Iterable[PracticeGuidance]): Format | None
-for_file(file: Path): Any
+for_file(file: Path): FormatAdapter
 	// a new model of the format that reads the file
 read(paths, request: RenderRequest): Any
 	// what a render converts from files: their text, read through the session's project
-render(request: RenderRequest): dict
+render(request: RenderRequest): Rendered
 	Interaction:
 		# no adapters: hand the request to the companion's practice
 		-> request.companion.practice_guidance.formats.render
 		# otherwise: read content into the object model, then render the target format
 		-> parse
 		-> model_for
-		-> adapter(request.format).render
-parse(format: Format, content: Any): Any
-model_for(target: Any, model: Any): Any
+		-> adapter(request.format).render(model, request.written)
+parse(format: Format, content: Any): ObjectModel
+model_for(target: FormatAdapter, model: ObjectModel): ObjectModel
+
+## FormatAdapter
+
+The one contract every format of every practice meets; each practice's domain root extends it (*StoryMap*,
+*CleanEngineeringModel*, *BoundedContextMap*, *BddModel*, *UxMap*, UX's *ViewFormat*).
+
+----
+parse(text: TextOrData, file: str = ''): Self
+render(model: ObjectModel, written: Written = Written()): str | dict[str, str]
+read_file(path: Path, project: Path, on_file: OnFile = None): Self
+	// by default: the file's text parsed, then placed_in(file, text)
+placed_in(file: str, text: str): Self
+	// by default: itself; a story map keeps the text as a source and names the file on every node
+reshape(rendered: str, existing: str): Reshaped | None
+	// by default: none, which leaves the writing to the Render action
+
+## Written (frozen)
+
+What an adapter is handed of the file a render writes: previous (its text now, or each file's text by path for a
+format written as several files) and folder (where the files it links to are), or None.
+
+## RenderRequest (frozen)
+
+format, content, source, previous, folder, fidelity
+----
+written: Written
+from_files(fidelity, format, paths, source, previous): RenderRequest
+	// what it converts read from the files at paths, in the folder the first one is or sits in
+render(): Rendered
+	-> fidelity.practice_guidance.formats.render(self)
+
+## Rendered
+
+The content of a render in the format it is written in: format, content; written as those two fields.
+
+## Reshaped (frozen)
+
+text, kept, added, changed, set_apart: int
+----
+left_to_move: list[str]
+	// each member kept, then how many lines were set apart
+
+## ExistingText
+
+ExistingText(text)
+----
+lines_not_in(text: str): list[str]
+	// the lines a text would lose; every reshaper's lost-line check
+set_apart_below(rendered: str, comment: str): Reshaped
+	// the lines only this text holds, as comments under one marking line; carried over unchanged when set apart before
+
+## OutlinedMember
+
+OutlinedMember(name, lead, start, end, indent = '')
+----
+lead_of(lines, start, indent, marks, floor = 0): int
+	// a module function of practice_formats.py, not an operation: the first comment or decorator line written directly above start
 
 ## PracticeReading
 
-How one practice takes part in the knowledge graph. Each practice names its kind (`reading_type`): Clean Engineering's
-*GraphReading*, BDD's *BddGraphReading*, DDD's *DddReading*, Stories' *StoriesReading*, UX's *UxReading*.
-
-PracticeReading(practice: PracticeGuidance)
-------
-reads_after: tuple[str, ...]
-node_types: tuple[str, ...]
-class_types: tuple[str, ...]
-member_types: tuple[str, ...]
-class_node_type: str
-source_ordered_types: frozenset[str]
-anchor_types: dict[str, str]
-rule_types: dict[str, tuple[str, ...]]
-graph: HoldingGraph | None
-	// the graph that holds the practice, named by a protocol harness/graph's Graph answers, since the graph sits above guidance
-in_graph: HeldNodes | None
-	// the practice's nodes and edges in the graph that holds it, named by a protocol harness/graph's PracticeNodes answers
-graph_checks: dict[str, PracticeGraphRule]
-	// read once
-package: str
-----
-held_in(graph: HoldingGraph, nodes: HeldNodes): None
-read(): None
-	// offers its node types, then reads the working copy
-	-> read_working_copy
-read_working_copy(): None
-	// reads its nodes, then links them to the nodes of the practices it reads after
-own_graph_checks(): dict[str, PracticeGraphRule]
-checks(): dict[str, PracticeGraphRule]
-	// with the rules the graph's overlays add
+How one practice takes part in the knowledge graph. It lives in harness/graph (`harness/graph/practice_reading.py`, described in `harness/graph/.context/graph-populate-model.md`), which sits above this module: *PracticeGuidance* names its kind as `reading_type: type | None`, harness/graph sets the default when it is imported, and the practice makes its reading the first time it is asked (`practice.reading`).
 
 ## FidelityGuidance : Guidance
 
@@ -300,6 +357,14 @@ templates: str
 	// its template in the format it works in, else its default format
 examples: str
 	// its practice's examples at this fidelity and format
+	-> practice_guidance.scope_at(self)
+markdown_scope: MarkdownScope
+	// its practice's scope at this fidelity, read within ("Fidelities", name)
+----
+published_name(tool: AgentTool): str
+	// its own instructions under its slug alone when a practice holds it
+installed_as(tool: AgentTool): InstalledName
+	// its practice's install folder, named after its kebab slug
 checked_rule_collections: list[RulesCollection]
 	// the practice's shared rules, then its own, then each supplement's rules for this fidelity
 	-> PracticeSupplement.rules_for
@@ -310,33 +375,74 @@ declared: DeclaredOutputs
 ----
 generate_output(): str
 	// the practice's generate_output recipe, expanded
-render(format: str, content: RenderContent, source: str | None): dict
+render(format: str, content: RenderContent, source: str | None): Rendered
 	// at this fidelity: content is in source, else in this fidelity's format
-	-> practice_guidance.formats.render RenderRequest(fidelity=self)
-render_files(format: str, paths: list[str] | str, source: str | None): dict
+	-> RenderRequest(fidelity=self).render
+render_files(format: str, paths: list[str] | str, source: str | None, previous: str): Rendered
 	// a renderer that links to other files finds them in the folder of the first path
-	-> practice_guidance.formats.read
-	-> practice_guidance.formats.render RenderRequest(fidelity=self)
+	-> RenderRequest.from_files(self, ...).render
 work_in(session_output: FidelitySessionOutput): None
-	// its reports and where a new one goes are its session output's: session_output.validation_reports.listed(), validation_reports.new_path()
+	// its reports and where a new one goes are its session output's: session_output.validation_reports.listed(), validation_reports.new(), each a ValidationReport
 
 ## DeclaredOutputs
 
-The files one fidelity declares, made from its outputs. The fidelity holds it (`fidelity.declared`).
+The files one fidelity declares, made from its outputs: declarations only. The fidelity holds it (`fidelity.declared`). What the fidelity has written in a session (`output_paths`, `files`, `saved_beside`, `files_to_review`, `every_file`) is asked of `fidelity.session_output.written`, a *WrittenOutput*; a fidelity whose practice works in no session holds *NoSessionOutput*, which answers empty.
 
-DeclaredOutputs(fidelity: FidelityGuidance, outputs: dict[str, str | list[str]])
+DeclaredOutputs(outputs: dict[str, str | list[str]])
 ------
 outputs: dict[str, str | list[str]]
 ----
 includes(path: str, format: str = ""): bool
 	// a file one of its outputs names, in format when one is named; DeclaredFile matches the end of the path
-output_paths(): dict[str, list[str]]
-	-> fidelity.session_output.written.output_paths
-files(): dict[str, list]
-	-> fidelity.session_output.written.files
-has_output(): bool
-files_to_review(): dict[str, list]
-	// its fidelity's own files, or those of the fidelities it reviews files of, each file once
+paths_in(format: str): list[str]
+	// the one reading of a declaration of one path or of several
+declared_files(format: str): list[DeclaredFile]
+file_name_beside(source: str, format: str): str
+file_beside(source: str, format: str): str
+placement: RenderPlacement
+	// made once; where a render is saved, from the patterns alone
+
+## DeclaredFile
+
+DeclaredFile(declared: str)
+----
+pattern, glob, names_one_path, is_named, parts_of(path), named_with(parts), start_of(path)
+fixed_folder: str
+	// the folders it names outright before its first named or wildcard part
+own_name_of(source: Path): str | None
+	// `Cart` for `CartView.tsx` against `**/*View.tsx`; `bookshop` off `{scope}`
+file_name_with(name: str): str
+filled_with(names: list[str]): str
+	// its named parts filled in order; empty when the count differs
+
+## RenderPlacement
+
+Where a render is saved, as one fidelity's declared paths answer it from the patterns alone; where the fidelity has
+written a file in the session stays the session's (`WrittenOutput.saved_beside`). Cutting rendered code into sections
+at its banners stays in the Render action.
+
+RenderPlacement(declared: DeclaredOutputs)
+----
+owns(first, source): bool
+name_beside(first, source, format): str
+writes_by_section(first, format): bool
+	// a file of its own rendered into a format declared only at paths with a named part, such as one card file for each module: saved one file for each section
+beside_itself(first, source, format): Path
+own_name_of(source): str | None
+declares(path, format): bool
+paths_in(format): list[str]
+section_place(names, format): RenderPlace | None
+counterpart_of(source, format): RenderPlace | None
+named_for(source, name, format): RenderPlace | None
+beside_source(source, format): RenderPlace | None
+scoped_paths(format): list[str]
+place_for_scope(scope, format): RenderPlace | None
+
+## RenderPlace (frozen)
+
+path: str, from_root: bool
+----
+under(root: Path): Path
 
 ## Rule
 
@@ -347,13 +453,10 @@ Rule(slug: str, body: str, fidelity: str | None)
 slug: str
 body: str
 fidelity: str | None
-practice: str
-pattern: str
-shared: bool
 ----
 validate(): str
 	// the instructions to check the current context against this rule
-from_bullet(text: str, fidelity: str | None): Rule
+_from_bullet(text: str, fidelity: str | None): Rule
 
 ## RulesCollection : MarkdownCollection
 
@@ -442,16 +545,28 @@ toolsets: tuple[type, ...]
 actions: tuple[Action, ...]
 	// made once from the registered toolsets, each holding this catalogue
 names: tuple[str, ...]
-runner: ActionRunner
+_registered_runner: ActionRunner
 	// ActionsNotRegistered while no runner is registered
-fidelity_actions: tuple[Action, ...]
+_fidelity_actions: tuple[Action, ...]
 	// the actions the runner runs on a fidelity
+on_fidelities: tuple[Action, ...]
+	// every action placed on a fidelity's stage (Action.place), in rank order: partition, generate, validate, iterate, sketch, render, document; the same in every stage, made once
+steps: tuple[Action, ...]
+	// those placed with STEP: generate, validate
+writing_step: Action
+	// the step that does not check: generate
+checking_step: Action
+	// the step that checks: validate
+producing: tuple[Action, ...]
+	// every one but those that check (CHECKS): every action but validate
+taking_formats: tuple[Action, ...]
+	// those placed with TAKES_FORMATS: generate, iterate, sketch, render, document
+needing_output: tuple[Action, ...]
+	// those that check or convert (CHECKS, CONVERTS), which wait until a fidelity has output: validate, render
 ----
 register(*toolset_classes: type)
 	// called by cdd_guidance/actions when it is imported
 run_actions_with(runner: ActionRunner): None
-has(name: str): bool
-action(name: str): Action | None
 
 ## Action
 
@@ -465,10 +580,12 @@ toolset_class: type
 operation: Callable
 folder: Path
 	// the toolset's folder under cdd_guidance/actions
+place: OnStage | None
+	// where it sits among the actions run on a fidelity in its stage, read from its operation's @on_stage; none for repair
 ----
-run_on(fidelity: WorkedFidelity, **arguments): Any
+_run_on(fidelity: WorkedFidelity, **arguments): Any
 	// through the runner the catalogue that made it holds
-	-> ActionCatalogue.runner
+	-> ActionCatalogue._registered_runner
 
 ## ApproachStages
 
@@ -482,28 +599,18 @@ of(name: str): ApproachStage | None
 
 ## ApproachStage
 
-One stage: its name, its title, its scope, and the actions a person runs on a fidelity in it. The session board's and the catalog's stage columns are each built on one.
+One stage: its name, its title, and its scope. The session board's and the catalog's stage columns are each built on one. The actions a person runs on a fidelity are the same in every stage, so the action catalogue answers them (`on_fidelities`, `steps`, `producing`, `taking_formats`).
 
-One stage reads its actions from the action catalogue: each action's operation carries an `@on_stage` annotation (*OnStage*) saying where it sits, which the stage reads back with `OnStage.recorded_on`, so no list of action names is kept here.
-
-ApproachStage(name: str, scope: StageScope, catalogue: ActionCatalogue)
+ApproachStage(name: str, scope: StageScope)
 ------
 name: str
 title: str
 scope: StageScope
-steps: list[str]
-	// the actions annotated on_stage(rank, STEP), in rank order: generate, validate
-actions: list[str]
-	// every action annotated on_stage, in rank order: partition, generate, validate, iterate, sketch, render, document
-producing_actions: list[str]
-	// every one but those that check a fidelity's files (on_stage(rank, CHECKS)): every action but validate
-actions_with_formats: list[str]
-	// those annotated on_stage(rank, TAKES_FORMATS): generate, render
 ----
 
 ## OnStage : Annotation
 
-The annotation on an action's operation that says where it sits among the actions a person runs on a fidelity in its stage, typed `@on_stage(rank, *traits)` with the traits `STEP`, `TAKES_FORMATS`, and `CHECKS`, as `@on_stage(1, STEP, TAKES_FORMATS)` on generate.
+The annotation on an action's operation that says where it sits among the actions a person runs on a fidelity in its stage, typed `@on_stage(rank, *traits)` with the traits `STEP`, `TAKES_FORMATS`, `CHECKS`, and `CONVERTS`, as `@on_stage(1, STEP, TAKES_FORMATS)` on generate and `@on_stage(5, TAKES_FORMATS, CONVERTS)` on render. It lives in `action_catalogue.py`, beside the *Action* that reads it.
 
 OnStage(rank: int, *traits: str)
 ------
@@ -511,22 +618,21 @@ rank: int
 step: bool
 takes_formats: bool
 checks: bool
+needs_output: bool
+	// it checks or converts a fidelity's output
 ----
 
 ## StageScope
 
 How much of the solution a stage's work covers, from the whole solution (Discovery) to one story (Implementation).
 
-StageScope(shape: str, name: str, reach: str)
+StageScope(shape: str, name: str, reach: str, covers: str = "")
 ------
 shape: str
 name: str
 reach: str
 covers: str
-	// empty unless the scope was made covering what its work decides
-----
-covering(covers: str): StageScope
-	// this scope with what its work decides, such as `outcomes · scope · boundaries`
+	// what its work decides, such as `outcomes · scope · boundaries`; empty unless the scope was made with it
 
 
 ## Schema
@@ -539,7 +645,7 @@ Schema.load(path: Path): Schema
 ------
 types: dict[str, SchemaType]
 ----
-fidelities(): dict[str, str]
+_fidelities(): dict[str, str]
 rules(): dict[str, tuple[str, ...]]
 
 ## SchemaType
@@ -548,11 +654,30 @@ SchemaType(key: str)
 ------
 key: str
 fields: list[tuple[str, str]]
+optional: set[str]
+relationships: list[SchemaRelationship]
+	// every field with a value that does not describe the type itself (is, fidelity, path, name), read once
+required_relationships: dict[str, tuple[str, ...]]
+	// derives from relationships: those is_required says
 rules: list[str]
 fidelity: str
 supertype: str
 ----
 field(name: str): str
+add_field(name: str, value: str, optional: bool): None
+
+## SchemaRelationship
+
+One field of a schema type that relates a node of the type to others; the graph's edges, its required relationships, and a pattern's added edge kinds all read a type's fields through these.
+
+SchemaRelationship(name: str, written: str, optional: bool)
+------
+targets: tuple[str, ...]
+	// each word of the value that names a type, value types left out; none for a quoted value
+references: tuple[str, ...]
+	// the schema types the value names, when it names only types
+is_required: bool
+	// not optional, naming only types, and not the belongsTo back-edge
 
 ## load_document
 

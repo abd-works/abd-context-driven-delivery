@@ -1,2 +1,10 @@
 mistake: wrote a Cursor SKILL.md into practices/stories
 correction: skills are install output under the harness skills tree (.cursor/skills). Never write SKILL.md into a practice package.
+
+## 2026-11-22: edge conditions tracked in a separate table
+
+**Mistake.** The new scenarios rule `edge-conditions-walked` asked every story to carry an `### Edge conditions` table in its scenarios file, with one line for each of nine conditions: a scenario, "does not apply, because ...", or a question for the person. The template, the worked example and the code templates' header comments were changed to hold that table.
+
+**Correction, from the person.** "That's a terrible rule; a story or sub-epic needs stories that cover edge and error cases; add these as scenarios; don't track independently as a separate table."
+
+**What is right.** Edge and error cases are covered by the work itself: a sub-epic holds the stories, and a story holds the scenarios, that cover its edge and error cases. Nothing is tracked beside them. The list of edge conditions is a prompt for which stories and scenarios to write, never a table to fill in, and a condition that does not apply is simply not written.

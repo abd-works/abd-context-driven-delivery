@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from functools import cached_property
 from pathlib import Path
 _EXPECTED_BLOCK = re.compile(
     r"<!--\s*expected-entries\s*\n(.*?)-->",
@@ -53,10 +54,6 @@ class SegmentEntry:
     @property
     def name(self) -> str:
         return self._name
-
-    @property
-    def body(self) -> str | None:
-        return self._body
 
     @property
     def body_chars(self) -> int:
@@ -137,20 +134,13 @@ class Segment(PartitionFile):
         return segment
 
     @property
-    def expected_names(self) -> list[str]:
-        return list(self._expected_names)
-
-    @property
     def has_expected_names(self) -> bool:
         return bool(self._expected_names)
 
+    @cached_property
     def entries(self) -> list[SegmentEntry]:
-        lines = self._content_lines
-        return [self._entry_for(name, lines) for name in self._expected_names]
-
-    @property
-    def is_complete(self) -> bool:
-        return self._passes(self.entries())
+        """Each expected entry as the segment holds it, read once."""
+        return [self._entry_for(name) for name in self._expected_names]
 
     def completeness_report(self) -> str:
         if not self.has_expected_names:
@@ -160,20 +150,20 @@ class Segment(PartitionFile):
                 "error: no expected_names argument and no "
                 "<!-- expected-entries --> marker in segment\n"
             )
-        entries = self.entries()
-        lines = self._report_header(entries)
-        lines.extend(self._report_table_lines(entries))
-        if not self._passes(entries):
+        lines = self._report_header()
+        lines.extend(self._report_table_lines())
+        if not self._passes():
             lines.extend(self._FAIL_FOOTER)
         return "\n".join(lines) + "\n"
 
-    def _passes(self, entries: list[SegmentEntry]) -> bool:
+    def _passes(self) -> bool:
         """A segment passes when it has entries and every one is complete."""
-        return bool(entries) and all(entry.is_complete for entry in entries)
+        return bool(self.entries) and all(entry.is_complete for entry in self.entries)
 
-    def _report_header(self, entries: list[SegmentEntry]) -> list[str]:
+    def _report_header(self) -> list[str]:
+        entries = self.entries
         complete = sum(1 for entry in entries if entry.is_complete)
-        overall = "PASS" if self._passes(entries) else "FAIL"
+        overall = "PASS" if self._passes() else "FAIL"
         return [
             f"segment: {self._path}",
             f"min_body_chars: {self._completeness.min_body_chars}",
@@ -184,17 +174,17 @@ class Segment(PartitionFile):
             "|-------|--------|------------|",
         ]
 
-    def _entry_for(self, name: str, lines: list[str]) -> SegmentEntry:
+    def _entry_for(self, name: str) -> SegmentEntry:
         header = name.upper().strip()
+        lines = self._content_lines
         idxs = [i for i, line in enumerate(lines) if line.strip() == header]
         if not idxs:
             return SegmentEntry(name, None, self._completeness)
-        body = self._body_after_header(lines, idxs[0], header)
+        body = self._body_after_header(idxs[0], header)
         return SegmentEntry(name, body, self._completeness)
 
-    def _body_after_header(
-        self, lines: list[str], header_index: int, header: str
-    ) -> str:
+    def _body_after_header(self, header_index: int, header: str) -> str:
+        lines = self._content_lines
         start = header_index + 1
         body_end = len(lines)
         for index in range(start, len(lines)):
@@ -216,17 +206,14 @@ class Segment(PartitionFile):
             return False
         return True
 
-    def _report_table_lines(self, entries: list[SegmentEntry]) -> list[str]:
+    def _report_table_lines(self) -> list[str]:
         table_lines = [
             f"| {entry.name} | {entry.status} | {entry.body_chars} |"
-            for entry in entries
+            for entry in self.entries
             if not entry.is_complete
         ]
-        if self._passes(entries):
-            table_lines.append(
-                f"| - | (all expected entries) | OK | "
-                f">={self._completeness.min_body_chars} |"
-            )
+        if self._passes():
+            table_lines.append(f"| (all expected entries) | OK | >={self._completeness.min_body_chars} |")
         return table_lines
 
     def _names_from_marker(self) -> list[str]:
@@ -238,7 +225,7 @@ class Segment(PartitionFile):
             return self._split_names(inline.group(1))
         return []
 
-    @property
+    @cached_property
     def _content_lines(self) -> list[str]:
         """The segment's lines with its HTML comments, such as the expected-entries marker, taken out."""
         return _HTML_COMMENT.sub("", self._text).splitlines()

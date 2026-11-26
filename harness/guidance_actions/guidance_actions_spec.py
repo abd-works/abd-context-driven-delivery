@@ -35,12 +35,12 @@ from mamba import after, before, context, description, it
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 from harness.guidance_actions import GuidanceAction  # noqa: F401 - loaded with the module, not by its first example
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: F401 - likewise
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject  # noqa: F401 - likewise
 
 
 def _project() -> Path:
     """A project of its own for an example, so what its actions log never lands in the session being worked on here."""
-    from space.session.throwaway_project import ThrowawayProject
+    from space.session.spec_support.throwaway_project import ThrowawayProject
 
     folder = ThrowawayProject().root
     (folder / ".git").mkdir()
@@ -57,7 +57,7 @@ def _open_session(project: Path, name: str) -> None:
     from space.session import Sessions
 
     sessions = Sessions(project)
-    sessions.opened.open(sessions.create(name, project))
+    sessions.opened.open(sessions.create(name, project), "")
 
 
 def _call(guidance, project: Path | None = None):
@@ -164,6 +164,117 @@ with description("a guidance action"):
 
             action = GuidanceAction()
             expect(lambda: action._work_on(["cdd"])).to(raise_error(ValueError, contain("clean-engineering-model")))
+
+    # Exploratory testing, widget-01: one word shaped like a slug that names nothing ran as text, so generate answered
+    # with no rules and render answered the word back, each with no error.
+    with context("with one word, sent alone, that is shaped like a slug and names no practice or fidelity"):
+        with it("should refuse a made-up word by name"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("wibble-wobble")).to(raise_error(UnknownGuidance, contain("no practice or fidelity has the slug 'wibble-wobble'")))
+
+        with it("should list the slugs there are"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("wibble-wobble")).to(raise_error(UnknownGuidance, contain("stories-story-map")))
+
+        with it("should refuse a real slug written in capitals, as it is refused in a list"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("STORIES-STORY-MAP")).to(raise_error(UnknownGuidance, contain("'STORIES-STORY-MAP'")))
+
+        with it("should refuse a real slug written with underscores, as it is refused in a list"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("stories_story_map")).to(raise_error(UnknownGuidance, contain("'stories_story_map'")))
+
+        with it("should refuse the unknown word among slugs joined by commas"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("stories-story-map,wibble")).to(raise_error(UnknownGuidance, contain("'wibble'")))
+
+        with it("should still refuse it when a command word follows it"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on("wibble-wobble format=drawio")).to(raise_error(UnknownGuidance, contain("'wibble-wobble'")))
+
+    # Exploratory testing, widget-02: a mapping whose toolset was a practice's slug was refused with "no practice or
+    # fidelity has the slug 'stories'; the slugs are stories, ...", which denies the slug it then lists.
+    with context("with a mapping whose toolset is a slug"):
+        with it("should work on the practice the slug names, at the fidelity the mapping names"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction()
+            action._work_on({"toolset": "stories", "fidelity": "scenarios"})
+            listed = action.listed()
+            expect((type(listed[0]).__name__, action.work.fidelity_of(listed[0]).name)).to(equal(("Stories", "scenarios")))
+
+        with it("should work on the fidelity a fidelity's slug names"):
+            from harness.guidance_actions import GuidanceAction
+
+            action = GuidanceAction()
+            action._work_on({"toolset": "stories-scenarios"})
+            expect(action.work.fidelity_of(action.listed()[0]).name).to(equal("scenarios"))
+
+        with it("should refuse a toolset that is no slug by name"):
+            from harness.guidance_actions import GuidanceAction, UnknownGuidance
+
+            expect(lambda: GuidanceAction()._work_on({"toolset": "wibble"})).to(raise_error(UnknownGuidance, contain("'wibble'")))
+
+    with context("with a mapping that names no toolset"):
+        with it("should refuse it, saying a mapping names its practice in toolset"):
+            from harness.guidance_actions import GuidanceAction, GuidanceMappingNamesNoToolset
+
+            expect(lambda: GuidanceAction()._work_on({"foo": "bar"})).to(raise_error(GuidanceMappingNamesNoToolset, contain("toolset")))
+
+    with context("with a mapping sent as text that is not JSON"):
+        with it("should refuse it, naming the text and where it stops being JSON"):
+            from harness.guidance_actions import GuidanceAction, GuidanceMappingUnreadable
+
+            expect(lambda: GuidanceAction()._work_on('{"toolset": "stories",}')).to(
+                raise_error(GuidanceMappingUnreadable, contain('{"toolset": "stories",} is not JSON'))
+            )
+
+    # Reported 2026-11-18: with ux off, `ux-ia` alone ran as text, so render answered the slug back and validate checked
+    # nothing. Reported 2026-11-25: refusing it instead blocked every render and validate the person asked for once a
+    # practice was switched off on the board; switching a practice off changes only what the board and chat show.
+    with context("in a session that works on stories with ux switched off"):
+        with before.each:
+            from types import SimpleNamespace
+
+            from cdd_guidance.practices.stories.stories import Stories
+            from cdd_guidance.practices.ux.ux import Ux
+            from harness.guidance_actions import GuidanceAction
+
+            self.ux = Ux()
+            every = {"stories": SimpleNamespace(guidance=Stories()), "ux": SimpleNamespace(guidance=self.ux)}
+            self.taken_up = []
+            session = SimpleNamespace(
+                name="sign-up",
+                practices={"stories": every["stories"]},
+                own_practices=every,
+                overlays=[],
+                take_up=lambda key: self.taken_up.append(key) or every[key],
+            )
+            self.action = GuidanceAction(session)
+
+        with it("should work on the slug of a fidelity of the practice switched off, sent alone, at that fidelity"):
+            self.action._work_on("ux-ia")
+            expect(self.action.listed()).to(equal([self.ux]))
+            expect(self.action.work.fidelity_of(self.ux).slug).to(equal("ux-ia"))
+
+        with it("should work on it in a list beside a practice switched on"):
+            self.action._work_on(["stories-story-map", "ux-ia"])
+            expect([practice.key for practice in self.action.listed()]).to(equal(["stories", "ux"]))
+
+        with it("should work on a mapping whose toolset is the slug of the practice switched off, and hold it in the session's graph"):
+            self.action._work_on({"toolset": "ux", "fidelity": "ia"})
+            expect(self.action.listed()).to(equal([self.ux]))
+            expect(self.taken_up).to(equal(["ux"]))
+
+        with it("should read a slug of the practice it works on as guidance, not text"):
+            self.action._work_on("stories-story-map")
+            expect(self.action.work.text).to(equal(None))
 
     with it("should run the passed operation on each Guidance when guidance is a list"):
         from harness.guidance_actions import GuidanceAction
@@ -317,7 +428,7 @@ with description("a guidance action"):
             action = GuidanceAction().for_call(_call(f"stories-story-map format=drawio {self.session_word}", self.project))
             action.run(lambda item: None, action="generate")
             reloaded = Sessions(self.project).held.load(self.project / ".sessions" / "sign-up")
-            expect(reloaded.practices["stories"].saved.get("formats")).to(equal({"story_map": ["markdown", "drawio"]}))
+            expect(reloaded.practices["stories"].fields.fidelity("story_map").formats).to(equal(["markdown", "drawio"]))
 
         with it("should work in the kept format when the next command names none"):
             from harness.guidance_actions import GuidanceAction
@@ -335,7 +446,7 @@ with description("a guidance action"):
             from space.session import Sessions
 
             session = Sessions(self.project).held.load(self.project / ".sessions" / "sign-up")
-            session.practices["stories"].save(formats={"story_map": ["drawio", "markdown"]})
+            session.record.update(lambda fields: setattr(fields.practice("stories").fidelity("story_map"), "formats", ["drawio", "markdown"]), "formats")
             action = GuidanceAction().for_call(_call(f"stories-story-map {self.session_word}", self.project))
             expect([action.work.fidelity_of(item).format for item in action.listed()]).to(equal(["drawio"]))
 
@@ -516,7 +627,7 @@ with description("a guidance action that wrote files"):
 
     with it("should refresh its session's graph with those files"):
         graph = self.session.graph
-        classes = graph.practice("clean_engineering").reading.in_graph.nodes("OoadClass")
+        classes = graph.practices.named("clean_engineering").reading.in_graph.nodes("OoadClass")
         expect([node.name for node in classes]).to(equal(["Order"]))
 
     with it("should work on the graph its session holds"):
@@ -536,11 +647,12 @@ class _RecordingGraph:
 
 
 class _SessionWithGraph:
-    """A session with no practices turned on, whose graph records each refresh."""
+    """A session with no practices, whose graph records each refresh."""
 
     def __init__(self) -> None:
         self.graph = _RecordingGraph()
         self.practices: dict = {}
+        self.own_practices: dict = {}
 
 
 with description("an action started inside another that wrote files"):

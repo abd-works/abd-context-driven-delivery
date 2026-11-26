@@ -5,8 +5,12 @@ export function overlayCatalogLabel(patternId: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-export function overlayPathLabel(path: string): string {
+// The id of the overlay kept at path, its folder's name, which is how the graph's catalogue names it.
+export function overlayId(path: string): string {
   const trimmed = path.replace(/[/\\]+$/, '');
-  const base = trimmed.split(/[/\\]/).pop() || path;
-  return overlayCatalogLabel(base);
+  return trimmed.split(/[/\\]/).pop() || path;
+}
+
+export function overlayPathLabel(path: string): string {
+  return overlayCatalogLabel(overlayId(path));
 }

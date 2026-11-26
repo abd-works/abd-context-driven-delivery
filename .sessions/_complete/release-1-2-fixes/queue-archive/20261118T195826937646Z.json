@@ -1,0 +1,17 @@
+{
+  "chat": "5b5466c3-9f1f-4998-ace2-5da34679e50c",
+  "taken_off": "2026-11-18T19:58:26.937646+00:00",
+  "prompts": [
+    {
+      "id": "bf39f11b7539",
+      "text": "[interruption] i dont see it",
+      "steps": [
+        {
+          "text": "[interruption] add those both back",
+          "state": "pending"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

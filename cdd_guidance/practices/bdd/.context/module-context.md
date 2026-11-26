@@ -3,9 +3,11 @@
 
 The hierarchy is written as a sketch, markdown, Python, or TypeScript, and `render(format, content)` converts between them; a saved knowledge graph can be rendered to draw the realization. Rule specs check a failing example and its repaired example with the rule examples in each practice's `rules/rule_examples.py`.
 
+*SpecReshape* (`model/spec_reshape.py`) writes a rendered describe tree onto a spec file that is already there, for Python, TypeScript and JavaScript: the Render action asks a spec's format for it (`PythonBddModel.reshape(rendered, existing)`, and the same on the TypeScript and JavaScript models) and saves what it answers, a *Reshaped* (harness/guidance). Blocks are matched by the names of the description, contexts and observation they sit under: a block both hold stays as the file has it, with its body, setup and comments; a block the tree gained is added at the end of the block it sits in, an observation with its `BDD: SIGNATURE` marker; a block the tree lost stays where it is under a line saying it is no longer in the model. Only lines are added, so `before.each`, helpers and imports stay where they were.
+
 - **Purpose:** Turn domain vocabulary into passing tests, locking what is observed before how it is built.
 - **Seam (terms):** Bdd, `bdd.instructions`, `bdd-behavior`, `bdd-realization`, `bdd-development`, `render`
-- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/annotations` (*Name*), `cdd_guidance/practices/sketch_document` (*SketchOutline*, *DiscoveryDocument*), `cdd_guidance/practices/clean_engineering` (class model, for the code a test drives).
+- **Dependencies (one-way):** `harness/guidance` (*PracticeGuidance*), `harness/graph`, `harness/agent_tools`, `harness/annotations` (*Name*), `cdd_guidance/practices/sketch_document` (*SketchOutline*, *DiscoveryDocument*), `cdd_guidance/practices/clean_engineering` (class model, for the code a test drives), `cdd_guidance/practices/source_code` (*CallGraph*, *CodeBody*, *CodeLanguage*, which read the code of a spec and the calls it makes).
 
 ## Constraint
 

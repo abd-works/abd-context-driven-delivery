@@ -1,0 +1,46 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T23:24:21.934538+00:00",
+  "prompts": [
+    {
+      "id": "0b21ea030467",
+      "text": "[decision required] Make the agents' queues usable: after /reload-plugins, do Bolt, Gizmo, Rivet and Pixel come back with their done cards (2/2 each), and does the first robot stay first after collapsing and expanding? And what did \"assign is also bombing\" mean: what did you press and what did you see? Recommendation: reload, open sub-agent mode, check both; if they hold, mark this card done.",
+      "steps": [
+        {
+          "text": "Find where robot assignments are kept",
+          "state": "done"
+        },
+        {
+          "text": "Keep each card's robot on the queue so a reload keeps it",
+          "state": "done"
+        },
+        {
+          "text": "Run the plugin tests, repin, commit and push",
+          "state": "done"
+        },
+        {
+          "text": "Put the demo cards back in their robots' queues (needs the cdd MCP reconnected for prompt-queue.assign)",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] first bot moves after collapse and expand: header keeps a fixed order",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] /rep[in",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] add the tiems back",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] asiign is aso bombin",
+          "state": "in_progress"
+        }
+      ],
+      "is_done": false,
+      "robot": "Sparky"
+    }
+  ]
+}

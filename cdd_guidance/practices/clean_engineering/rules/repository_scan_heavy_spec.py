@@ -32,7 +32,7 @@ _FEATURE_SPEC = re.compile(r"\.feature\.py$")
 _TEMPLATE = re.compile(r"(^|/)templates/")
 _EXAMPLE = re.compile(r"(^|/)(_examples|catalog-examples|fixtures)/")
 # A file a message names, such as the two files of a file cycle: `'order.py'`.
-_NAMED_FILE = re.compile(r"'([\w.\-/]+\.(?:py|ts|tsx|js|jsx|java))'")
+_NAMED_FILE = re.compile(r"'([\w.\-/]+\.(?:py|ts|tsx|js|jsx))'")
 _PLAIN_JAVASCRIPT = re.compile(r"\.(?:m?js|jsx)$")
 # The folder an extension's message says the class it extends comes from: `from 'ddd/model'`.
 _EXTENDED_HOME = re.compile(r"from '([^']+)' with")

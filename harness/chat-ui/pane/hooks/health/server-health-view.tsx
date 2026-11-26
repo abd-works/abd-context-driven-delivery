@@ -44,19 +44,19 @@ function PartView({ Box, Button, Text }: ElementTable, part: Part, actions: Acti
           {icon}
         </Button>
       )}
-      <Box position="absolute" top={-1} right={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+      <Box position="absolute" bottom={1} right={0} paddingX={1} backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
         <Text color={BRAND.text} wrap="truncate-end">{tooltipOf(part)}</Text>
       </Box>
     </Box>
   )
 }
 
-// The MCP host, each app, and the hook server as a row of icons, for the top right of the session card.
+// The MCP host, each app, and the test runs as a row of icons, for the top right of the session card.
 export function ServerHealthIconsView(elements: ElementTable, band: Band) {
   const { Box } = elements
   return (
     <Box key="health-icons" flexDirection="row" gap={1}>
-      {partsOf(band.health).map(part => PartView(elements, part, band.actions))}
+      {partsOf(band.health, band.opening).map(part => PartView(elements, part, band.actions))}
     </Box>
   )
 }

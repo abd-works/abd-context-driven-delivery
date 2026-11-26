@@ -231,3 +231,44 @@ section: body
 *Given* no [ticket](../../../.context/kanban-model.md#ticket--card) is active  
 *When* the chat composes its system prompt  
 *Then* the system prompt holds no session board section
+
+## Story: Choose Session And Practice Roots
+
+> Requested 2026-11-16 ("we need better instructions on session setup to scan for all relevant folders to set up roots correctly across product, tests, domain etc."): a session's roots cover exactly the pieces its ticket works on, in every practice it has on, and nothing beside them.
+
+#### Scenario: Root a session on one aggregate's pieces in every practice
+
+*Given* the ticket refund-order names the Refund aggregate, which the repository keeps in domain/orders/refund, implements in src/orders/refund, and covers in story_tests/manage-orders/refund-order  
+*And* domain/orders/payment, src/orders/payment and story_tests/manage-orders/place-order sit beside them  
+*When* the agent sets up refund-order's session roots  
+*Then* DDD's model and tactics are rooted at domain/orders/refund  
+  *And* Clean Engineering's code is rooted at src/orders/refund  
+  *And* Stories' scenarios and acceptance tests are rooted at story_tests/manage-orders/refund-order  
+  *And* no root names domain/orders/payment, src/orders/payment or story_tests/manage-orders/place-order
+
+#### Scenario: Add a folder found later beside the roots a fidelity has
+
+*Given* refund-order's acceptance tests are rooted at story_tests/manage-orders/refund-order  
+*When* the agent finds a story test of the Refund aggregate in story_tests/ship-orders/return-parcel  
+*Then* it adds story_tests/ship-orders/return-parcel to the acceptance tests' roots with fidelity-session-output.add_root  
+  *And* the acceptance tests keep story_tests/manage-orders/refund-order
+
+#### Scenario: Propose roots from the ticket and its branch, then confirm them with the person
+
+*Given* refund-order's ticket text names Refund  
+*And* its branch changed domain/orders/refund/refund.py and story_tests/manage-orders/refund-order/refund-order.story.shared.py  
+*When* the agent asks each fidelity for the roots it proposes  
+*Then* DDD's tactics propose domain/orders/refund and Stories' acceptance tests propose story_tests/manage-orders/refund-order  
+  *And* the agent shows the proposed roots for each practice and fidelity to the person  
+  *And* it sets them only once the person confirms them
+
+#### Scenario: Refuse a file or an empty path as a root
+
+> Exploratory testing, widget-12: a file and an empty path were kept as roots, and generate then told the agent to write there.
+
+*Given* refund-order's acceptance tests are rooted at story_tests/manage-orders/refund-order
+*When* the agent chooses the file domain/orders/refund/refund.py as the acceptance tests' root
+*Then* the choice is refused, saying domain/orders/refund/refund.py is a file
+*When* the agent chooses an empty path as Stories' root
+*Then* the choice is refused, saying an empty path names no folder
+  *And* the acceptance tests keep story_tests/manage-orders/refund-order

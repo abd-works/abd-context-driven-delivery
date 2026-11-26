@@ -13,6 +13,8 @@ from harness.agent_tools.agent_tools import ToolsetReference
 from harness.annotations.annotation import annotation_kinds, hosted_only
 from harness.annotations.name import Name
 
+# The decorator that makes a class a toolset whatever its members are annotated with.
+_TOOLSET_DECORATOR = "agent_toolset"
 # The last name of every decorator a source file could carry, ``@mcp`` and ``@Hook("...")`` alike.
 _DECORATOR_NAME = re.compile(r"@\s*(?:\w+\s*\.\s*)*(\w+)")
 
@@ -26,7 +28,7 @@ RUNNING_CHECKOUT: Path = Path(__file__).resolve().parents[2]
 class ToolsetUnloadable(Exception):
     """A toolset the repository's source defines whose module cannot be imported, or does not define it."""
 
-    def __init__(self, reference: str, cause: Exception) -> None:
+    def __init__(self, reference: ToolsetReference, cause: Exception) -> None:
         super().__init__(f"{reference}: {type(cause).__name__}: {cause}")
         self.reference = reference
         self.cause = cause
@@ -139,7 +141,7 @@ class RepositoryToolsets:
             # A toolset's module is the repository's own code; any failure importing it is that toolset's failure.
             except Exception as error:  # noqa: BLE001
                 logger.exception("could not load toolset %s", reference)
-                self.unloadable.append(ToolsetUnloadable(str(reference), error))
+                self.unloadable.append(ToolsetUnloadable(reference, error))
         return found
 
     def references(self) -> list[ToolsetReference]:
@@ -165,10 +167,11 @@ class RepositoryToolsets:
             return None
 
     def _text_of(self, py_file: Path) -> str:
-        """py_file's text; empty for a file that cannot be read."""
+        """py_file's text, a byte that is not UTF-8, such as one in a comment saved in another code page, read as a
+        replacement character so the file's toolsets are still found; empty for a file gone since the scan listed it."""
         try:
-            return py_file.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+            return py_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
             return ""
 
     def _toolset_refs_in_file(self, py_file: Path) -> list[ToolsetReference]:
@@ -177,7 +180,7 @@ class RepositoryToolsets:
         if not module:
             return []
         return [
-            ToolsetReference.in_module(module, node.name)
+            ToolsetReference(module, node.name)
             for node in tree.body
             if isinstance(node, ast.ClassDef)
             and not self._is_hosted_only(node)
@@ -188,7 +191,7 @@ class RepositoryToolsets:
         """Whether text names a decorator that can make a class installable. Most source files name none, and reading
         their text this way is far quicker than parsing it; a file that does name one is parsed to find its classes."""
         installing = annotation_kinds.installing_names
-        return any(name == "agent_toolset" or Name(name).snake in installing for name in set(_DECORATOR_NAME.findall(text)))
+        return any(name == _TOOLSET_DECORATOR or Name(name).snake in installing for name in set(_DECORATOR_NAME.findall(text)))
 
     def _collected_files(self) -> Iterable[Path]:
         skip = {name.lower() for name in self._SKIP_DIRS}
@@ -225,7 +228,7 @@ class RepositoryToolsets:
         return any(Name(self._annotation_id(dec) or "").snake == hosted_only.written_as() for dec in class_def.decorator_list)
 
     def _class_is_installable(self, class_def: ast.ClassDef) -> bool:
-        if any(self._annotation_id(dec) == "agent_toolset" for dec in class_def.decorator_list):
+        if any(self._annotation_id(dec) == _TOOLSET_DECORATOR for dec in class_def.decorator_list):
             return True
         # A decorator is matched by its snake-case name, so a kind's class name (``Mcp``) and its alias (``mcp``) both count.
         installing = annotation_kinds.installing_names

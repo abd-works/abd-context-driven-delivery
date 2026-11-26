@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from mamba import description, it
 from expects import equal, expect
@@ -18,9 +19,20 @@ with description("a format") as self:
         with it("should be the format that extension belongs to"):
             expect(Format.from_extension(".ts").name).to(equal("typescript"))
 
+    with description("whose files carry an ending before their extension"):
+        with it("should name a file that carries the ending"):
+            expect(Format("sketch").names(Path("orders-sketch.md"))).to(equal(True))
+
+        with it("should not name a file without the ending"):
+            expect(Format("sketch").names(Path("orders.md"))).to(equal(False))
+
+    with description("whose files carry no ending"):
+        with it("should name no file by an ending"):
+            expect(Format("markdown").names(Path("orders.md"))).to(equal(False))
+
     with description("that is a code format"):
         with it("should say it is code"):
-            expect(Format("java").is_code).to(equal(True))
+            expect(Format("javascript").is_code).to(equal(True))
 
         with it("should keep its templates in the folder of its short name"):
             expect(Format("javascript").template_folder).to(equal("js"))
@@ -67,6 +79,15 @@ with description("a format") as self:
         with it("should be a group of its own, after the others"):
             expect((Format("sub").group, Format("sub").group_order)).to(equal(("sub", 4)))
 
+    # Requested 2026-11-16: thin_slice and realization are files a fidelity writes, not formats a person picks.
+    with description("that is a fidelity output named for what it holds, such as thin_slice"):
+        with it("should not be offered for a person to pick"):
+            expect([Format("thin_slice").is_offered, Format("realization").is_offered]).to(equal([False, False]))
+
+    with description("that is in a group a person picks by"):
+        with it("should be offered for a person to pick"):
+            expect([Format(name).is_offered for name in ("markdown", "drawio", "whiteboard", "python", "html", "claude_design")]).to(equal([True] * 6))
+
     with description("that was not given"):
         with it("should have no name"):
             expect(Format(None).name).to(equal(""))
@@ -80,3 +101,10 @@ with description("a format") as self:
 
         with it("should stay the same format when made again from itself"):
             expect(Format(Format("ts")).is_code).to(equal(True))
+
+    with description("naming the file it was read from"):
+        with it("should be a sketch file's name without its sketch ending"):
+            expect(Format("sketch").stem_of(Path("work/orders-sketch.md"))).to(equal("orders"))
+
+        with it("should be any other file's own name without its extension"):
+            expect(Format("markdown").stem_of(Path("work/orders-sketch.md"))).to(equal("orders-sketch"))

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from expects import be_true, contain, equal, expect
-from mamba import context, description, it
+from mamba import before, context, description, it
 
 from cdd_guidance.practices.clean_engineering.model.python.python_class_model import PythonCleanEngineeringModel
 from cdd_guidance.practices.ddd.ddd import Ddd
@@ -13,8 +13,8 @@ _MODEL = (Path(__file__).resolve().parent / "_examples" / "expected" / "domain-m
 
 
 def _round_trip(code_format):
-    code = Ddd(fidelity="model").render(code_format, _MODEL, source="markdown")["content"]
-    back = Ddd(fidelity="model").render("markdown", code, source=code_format)["content"]
+    code = Ddd(fidelity="model").render(code_format, _MODEL, source="markdown").content
+    back = Ddd(fidelity="model").render("markdown", code, source=code_format).content
     return code, MarkdownBoundedContextMap().parse(back)
 
 
@@ -153,7 +153,7 @@ with description("Ddd.render at model fidelity"):
     with context("from code whose classes carry decorators that are not DDD's"):
         with it("should keep only the DDD stereotypes on each card"):
             code = "@dataclass\n@value_object\nclass Money:\n    amount: int\n\n@entity\nclass Wallet:\n    money: Money\n"
-            back = Ddd(fidelity="model").render("markdown", code, source="python")["content"]
+            back = Ddd(fidelity="model").render("markdown", code, source="python").content
             cards = MarkdownBoundedContextMap().parse(back).contexts[0].aggregates[0].classes
             expect(sorted((card.name, card.stereotypes) for card in cards)).to(
                 equal([("Money", ["Value Object"]), ("Wallet", ["Entity"])])
@@ -170,8 +170,174 @@ with description("Ddd.render at model fidelity"):
                 "class CartRepository:\n"
                 "    def load(self, cart_id: str) -> Cart: ...\n"
             )
-            back = Ddd(fidelity="model").render("markdown", code, source="python")["content"]
+            back = Ddd(fidelity="model").render("markdown", code, source="python").content
             model = MarkdownBoundedContextMap().parse(back)
             aggregate = model.contexts[0].aggregates[0]
             expect([card.name for card in aggregate.classes]).to(equal(["Cart", "CartRepository", "CartLine"]))
             expect(aggregate.repository is not None).to(be_true)
+
+
+# Seen 2026-11-21 (r3-bolt-07): a model rendered from Python to TypeScript kept Python's type spellings, an operation's
+# note and call became a Python body to translate, and TypeScript rendered back kept `-> boolean` and lost each note.
+_SHOP = """# Domain Model
+
+## Ordering | custom
+
+### Cart
+
+#### Cart <<Aggregate Root>> <<Entity>>
+
+------
++ cartId: string
++ << composition >> lines: CartLine[]
++ checkedOut: boolean
+----
++ addBook(bookId: string, quantity: number): CartLine
+	// the title and price cross at the moment the book is added
+	-> BookRepository.load(bookId)
++ isEmpty(): boolean
+
+#### CartLine <<Value Object>>
+
+------
++ bookId: string
++ quantity: number
+----
+
+#### CartRepository <<Repository>>
+
+------
++ << aggregation >> carts: Collection<Cart>
+----
++ load(cartId: string): Cart
++ search(customerId: string): Order[]
+	// the Customer looks up their own orders
+"""
+
+
+def _rendered_through(*formats):
+    """The shop's model rendered from markdown through each of formats in turn: the text of the last."""
+    text, source = _SHOP, "markdown"
+    for target in formats:
+        text, source = Ddd(fidelity="model").render(target, text, source=source).content, target
+    return text
+
+
+with description("a domain model rendered from one code format to the other") as self:
+    with context("from Python to TypeScript"):
+        with before.all:
+            self.code = _rendered_through("python", "typescript")
+
+        with it("should write a list as a TypeScript array"):
+            expect(self.code).to(contain("search(customerId: string): Order[] {"))
+
+        with it("should write a generic type in TypeScript's brackets"):
+            expect(self.code).to(contain("carts: Collection<Cart>;"))
+
+        with it("should keep the relationship each property is marked with"):
+            expect(self.code).to(contain("  // << composition >>\n  lines: CartLine[];"))
+
+        with it("should write an operation's note as a TypeScript comment"):
+            expect(self.code).to(contain("    // the Customer looks up their own orders\n"))
+
+        with it("should write an operation's call in TypeScript, with its arguments"):
+            expect(self.code).to(contain("    BookRepository.load(bookId);\n"))
+
+        with it("should leave no Python body to translate"):
+            expect(self.code).not_to(contain("python body to translate"))
+
+    with context("from TypeScript back to Python"):
+        with before.all:
+            self.code = _rendered_through("python", "typescript", "python")
+
+        with it("should write a boolean as Python writes one"):
+            expect(self.code).to(contain("def isEmpty(self) -> bool:"))
+
+        with it("should leave no TypeScript body to translate"):
+            expect(self.code).not_to(contain("typescript body to translate"))
+
+    with context("from Python whose operation has a docstring, to TypeScript and back"):
+        with it("should keep the docstring"):
+            code = (
+                '@aggregate_root\n@entity\nclass Cart:\n    """Module: Ordering | custom · Cart"""\n\n'
+                "    def add_book(self, book_id: str) -> bool:\n"
+                '        """the title and price cross at the moment the book is added"""\n'
+                "        raise NotImplementedError\n"
+            )
+            typescript = Ddd(fidelity="model").render("typescript", code, source="python").content
+            back = Ddd(fidelity="model").render("python", typescript, source="typescript").content
+            expect(back).to(contain('"""the title and price cross at the moment the book is added"""'))
+
+    with context("from TypeScript to markdown"):
+        with before.all:
+            self.back = _rendered_through("python", "typescript", "markdown")
+
+        with it("should keep each operation's note"):
+            expect(self.back).to(contain("+ search(customerId: string): Order[]\n\t// the Customer looks up their own orders"))
+
+        with it("should keep each call with its arguments"):
+            expect(self.back).to(contain("\t-> BookRepository.load(bookId)"))
+
+
+# Requested 2026-11-24 (r3-bolt-07): a domain model's bodies, written in code, are translated into the other language
+# statement by statement, through the one translation Clean Engineering's render uses.
+_CART_CODE = '''\
+@aggregate_root
+@entity
+class Cart:
+    """Module: Ordering | custom · Cart"""
+
+    def add(self, book: Book, quantity: int) -> CartLine:
+        if quantity <= 0:
+            raise OutOfStock(book.title)
+        for line in self.lines:
+            if line.book == book:
+                line.quantity += quantity
+                return line
+        line = CartLine(book, quantity)
+        self.lines.append(line)
+        return line
+'''
+
+_ADD_IN_TYPESCRIPT = """\
+  add(book: Book, quantity: number): CartLine {
+    if (quantity <= 0) {
+      throw new OutOfStock(book.title);
+    }
+    for (const line of this.lines) {
+      if (line.book === book) {
+        line.quantity += quantity;
+        return line;
+      }
+    }
+    const line = new CartLine(book, quantity);
+    this.lines.push(line);
+    return line;
+  }
+"""
+
+_ADD_IN_PYTHON = """\
+    def add(self, book: Book, quantity: float) -> CartLine:
+        if quantity <= 0:
+            raise OutOfStock(book.title)
+        for line in self.lines:
+            if line.book == book:
+                line.quantity += quantity
+                return line
+        line = CartLine(book, quantity)
+        self.lines.append(line)
+        return line
+"""
+
+
+with description("a domain model whose operation has a body written in code") as self:
+    with context("rendered from Python to TypeScript"):
+        with it("should translate the guard, the loop and the raise into TypeScript"):
+            typescript = Ddd(fidelity="model").render("typescript", _CART_CODE, source="python").content
+            expect(typescript).to(contain(_ADD_IN_TYPESCRIPT))
+
+    with context("rendered from Python to TypeScript and back"):
+        with it("should come back as the same Python statements"):
+            typescript = Ddd(fidelity="model").render("typescript", _CART_CODE, source="python").content
+            back = Ddd(fidelity="model").render("python", typescript, source="typescript").content
+            expect(back).to(contain(_ADD_IN_PYTHON))

@@ -13,6 +13,7 @@ written plain (``  uses?: [module]``) or listed (``  - root: entityRoot``). The 
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
@@ -23,46 +24,84 @@ _BULLET = re.compile(r"^\s+-\s+(\S+)\s*$")
 _BLOCKS = {"rules", "where"}
 # A reference to another schema type: a key of the same schema (``route``) or ``practice.type`` (``ddd.entityRoot``).
 _REFERENCE = re.compile(r"^[A-Za-z]\w*(?:\.[A-Za-z]\w*)?$")
-# Fields that describe the type itself, and the ``belongsTo`` back-edge of a child list: no relationship to require.
-_DESCRIBING = frozenset({"is", "fidelity", "path", "name", "text", "order", "id", "belongsTo"})
+# Fields that describe the type itself rather than relate it to another type.
+_DESCRIBING = frozenset({"is", "fidelity", "path", "name"})
+# The back-edge every child list records to its owner: a relationship, but none a node is required to have.
+_BACK_EDGE = "belongsTo"
 # Field values that name a value type rather than another schema type.
 VALUE_TYPES = frozenset({"string", "number", "dotPath"})
+# A word of a field's value, which names a type unless it is a value type.
+_WORD = re.compile(r"[A-Za-z]\w*")
+
+
+@dataclass(frozen=True)
+class SchemaRelationship:
+    """One field of a schema type that relates a node of the type to others: its name, its value as written, and
+    whether it is written optional (``name?:``). The graph's edges, its required relationships, and a pattern's added
+    edge kinds all read the fields of a type through these."""
+
+    name: str
+    written: str
+    optional: bool
+
+    @property
+    def targets(self) -> tuple[str, ...]:
+        """Each word of the value that names a type, value types left out; none for a quoted value. ``ddd.entityRoot``
+        names ``ddd`` and ``entityRoot``."""
+        if '"' in self.written:
+            return ()
+        return tuple(word for word in _WORD.findall(self.written.strip()) if word not in VALUE_TYPES)
+
+    @property
+    def references(self) -> tuple[str, ...]:
+        """The schema types the value names, one (``route``), ``practice.type`` (``ddd.entityRoot``), or each of a list
+        (``[a | b]``); none when any part of it is a value type, a quoted value, or no type."""
+        parts = tuple(part.strip() for part in self.written.strip().strip("[]").split("|"))
+        if not self.written.strip() or any(part in VALUE_TYPES or not _REFERENCE.match(part) for part in parts):
+            return ()
+        return parts
+
+    @property
+    def is_required(self) -> bool:
+        """Whether a node of the type must have it: written not optional, naming only other schema types, and not the
+        back-edge of a child list. A field a value such as a string satisfies is no relationship to require."""
+        return not self.optional and self.name != _BACK_EDGE and bool(self.references)
 
 
 class SchemaType:
     """One type a schema declares: its fields in the order written, which of them are optional (written ``name?:``),
-    and its rule slugs."""
+    the relationships among them (every field with a value that does not describe the type itself), and its rule
+    slugs."""
 
     def __init__(self, key: str) -> None:
         self.key = key
         self.fields: list[tuple[str, str]] = []
         self.optional: set[str] = set()
+        self.relationships: list[SchemaRelationship] = []
         self.rules: list[str] = []
 
     def field(self, name: str) -> str:
         """The first value written for ``name``; empty when the type does not name it."""
         return next((value for field, value in self.fields if field == name), "")
 
+    def add_field(self, name: str, value: str, optional: bool) -> None:
+        """Add the field written ``name: value`` (``name?:`` when optional), and the relationship it is when it has a
+        value that does not describe the type itself."""
+        self.fields.append((name, value))
+        if optional:
+            self.optional.add(name)
+        if value and name not in _DESCRIBING:
+            self.relationships.append(SchemaRelationship(name, value, optional))
+
     @property
     def required_relationships(self) -> dict[str, tuple[str, ...]]:
-        """Each field a node of this type must have, with the types it may lead to (``route`` or ``ddd.entityRoot``):
-        the fields not written optional whose value names only other schema types, one (``route``) or a list
-        (``[a | b]``). A field describing the type itself, the ``belongsTo`` back-edge, and a field a value such as a
-        string satisfies are no relationship to require."""
+        """Each relationship a node of this type must have (``SchemaRelationship.is_required``), with the types it may
+        lead to (``route`` or ``ddd.entityRoot``); the first written when one is written twice."""
         found: dict[str, tuple[str, ...]] = {}
-        for name, value in self.fields:
-            references = self._types_named(value)
-            if references and name not in self.optional and name not in _DESCRIBING:
-                found.setdefault(name, references)
+        for relationship in self.relationships:
+            if relationship.is_required:
+                found.setdefault(relationship.name, relationship.references)
         return found
-
-    def _types_named(self, written: str) -> tuple[str, ...]:
-        """The schema types a field's written value names, or none when any part of it is a value type, a quoted value,
-        or no type."""
-        parts = tuple(part.strip() for part in written.strip().strip("[]").split("|"))
-        if not written.strip() or any(part in VALUE_TYPES or not _REFERENCE.match(part) for part in parts):
-            return ()
-        return parts
 
     @property
     def fidelity(self) -> str:
@@ -100,7 +139,7 @@ class Schema:
             return ""
         return f"Guide this action so the output conforms to this schema.\n\n{self.text}"
 
-    def fidelities(self) -> dict[str, str]:
+    def _fidelities(self) -> dict[str, str]:
         """Each type key mapped to the fidelity that creates it, for the types that name one."""
         return {key: kind.fidelity for key, kind in self.types.items() if kind.fidelity}
 
@@ -108,20 +147,9 @@ class Schema:
         """Each type key with the fidelity that creates it and every one after it in order, the fidelities of the
         practice from lowest to highest: a node a low fidelity creates also belongs to the higher ones, which build it
         out rather than replace it. A type whose fidelity is not in order is left out."""
-        created = self.fidelities()
+        created = self._fidelities()
         return {node: order[order.index(fidelity):] for node, fidelity in created.items() if fidelity in order}
 
-    def fidelity_errors(self, declared: list[str]) -> list[str]:
-        """What is wrong between this schema and declared, the fidelities of its practice: a schema with no node
-        fidelity, or a node fidelity that is none of them. Empty when they agree."""
-        created = self.fidelities()
-        if not created:
-            return ["schema defines no node fidelity entries"]
-        known = sorted(declared)
-        return [
-            f"{node} maps to fidelity {fidelity!r}, which is not under ## Fidelities (have {known!r})"
-            for node, fidelity in sorted(created.items()) if fidelity not in known
-        ]
 
     def rules(self) -> dict[str, tuple[str, ...]]:
         """Each type key mapped to the rule slugs its ``rules:`` block lists, for the types that have one."""
@@ -157,9 +185,7 @@ class Schema:
         name, value = field.group(2), field.group(4)
         if name in _BLOCKS and not value:
             return name
-        current.fields.append((name, value))
-        if field.group(3):
-            current.optional.add(name)
+        current.add_field(name, value, bool(field.group(3)))
         return ""
 
     def _read_block_item(self, current: SchemaType, block: str, line: str) -> None:

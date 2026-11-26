@@ -20,7 +20,7 @@ _CLASS = "export class Cart {\n  total() { return 1; }\n}\n"
 
 
 def _names(graph: Graph) -> list[str]:
-    practice = graph.practice("clean_engineering")
+    practice = graph.practices.named("clean_engineering")
     return [node.name for node in practice.reading.in_graph.nodes()]
 
 

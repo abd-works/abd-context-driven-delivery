@@ -1,0 +1,30 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T21:21:22.617218+00:00",
+  "prompts": [
+    {
+      "id": "8f5ea5889f02",
+      "text": "Make the whiteboard spec's split-document examples fast (harness/whiteboard only): three examples in whiteboard_spec.py take 239 to 683 ms run alone, over the 100 ms unit budget, so the unit tier fails that file. Build the large document once before the examples, or move them to a heavy spec. Commit and push.",
+      "steps": [
+        {
+          "text": "Time the split-document examples alone and find what each spends its time on",
+          "state": "done"
+        },
+        {
+          "text": "Build the large document and its writes once, before the examples",
+          "state": "done"
+        },
+        {
+          "text": "Run the whiteboard spec alone and check every example is under 100 ms",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    }
+  ]
+}

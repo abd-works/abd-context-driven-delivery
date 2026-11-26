@@ -1,5 +1,5 @@
 import type { FilterSelection } from './filter-selection';
-import { overlayCatalogLabel, overlayPathLabel } from '../labels/overlay-labels';
+import { overlayCatalogLabel, overlayId, overlayPathLabel } from '../labels/overlay-labels';
 
 type FilterViewProps = {
   open: boolean;
@@ -48,51 +48,74 @@ export function FilterView({
             </button>
           </div>
         </div>
-        {availableOverlays.length > 0 ? (
-          <div className="overlay-catalog" data-testid="overlay-catalog">
-            {availableOverlays
-              .filter((name) => !selection.overlays.some((item) => overlayLabel(item) === name))
-              .map((name) => (
-                <button
-                  key={name}
-                  type="button"
-                  className="overlay-catalog-item"
-                  data-testid={`overlay-add-${name}`}
-                  disabled={overlayApplying}
-                  onClick={() => onAddNamedOverlay?.(name)}
-                >
-                  {overlayCatalogLabel(name)}
-                </button>
-              ))}
-          </div>
-        ) : null}
+        <OverlayCatalog selection={selection} availableOverlays={availableOverlays} overlayApplying={overlayApplying} onAddNamedOverlay={onAddNamedOverlay} />
         {overlayApplying ? <p className="overlay-status" data-testid="overlay-applying">Applying overlay…</p> : null}
-        <ul className="overlay-items" data-testid="overlay-list">
-          {selection.overlays.length === 0 ? (
-            <li className="overlay-empty">
-              No active overlay. Click <strong>Lern domain driven</strong> above (or Add folder…), then wait for the graph
-              to rebuild.
-            </li>
-          ) : (
-            selection.overlays.map((overlay) => (
-              <li key={overlay} className="overlay-item">
-                <span className="overlay-path" title={overlay}>{overlayPathLabel(overlay)}</span>
-                <button
-                  type="button"
-                  className="overlay-remove"
-                  data-testid={`overlay-remove-${overlayId(overlay)}`}
-                  aria-label={`Remove overlay ${overlayPathLabel(overlay)}`}
-                  onClick={() => onRemoveOverlay(overlay)}
-                >
-                  ×
-                </button>
-              </li>
-            ))
-          )}
-        </ul>
+        <OverlayItems selection={selection} onRemoveOverlay={onRemoveOverlay} />
       </div>
       <NodeFilterLists selection={selection} nodeTypes={nodeTypes} relationships={relationships} rules={rules} onChange={onChange} />
     </div>
+  );
+}
+
+// The named overlays the server offers that the filter does not use yet, each a button that adds it.
+function OverlayCatalog({
+  selection,
+  availableOverlays,
+  overlayApplying,
+  onAddNamedOverlay,
+}: {
+  selection: FilterSelection;
+  availableOverlays: string[];
+  overlayApplying: boolean;
+  onAddNamedOverlay?: (name: string) => void;
+}) {
+  if (availableOverlays.length === 0) return null;
+  return (
+    <div className="overlay-catalog" data-testid="overlay-catalog">
+      {availableOverlays
+        .filter((name) => !selection.overlays.some((item) => overlayId(item) === name))
+        .map((name) => (
+          <button
+            key={name}
+            type="button"
+            className="overlay-catalog-item"
+            data-testid={`overlay-add-${name}`}
+            disabled={overlayApplying}
+            onClick={() => onAddNamedOverlay?.(name)}
+          >
+            {overlayCatalogLabel(name)}
+          </button>
+        ))}
+    </div>
+  );
+}
+
+// The overlays the filter uses, each with a button that removes it; a hint on adding one while it uses none.
+function OverlayItems({ selection, onRemoveOverlay }: { selection: FilterSelection; onRemoveOverlay: (overlay: string) => void }) {
+  return (
+    <ul className="overlay-items" data-testid="overlay-list">
+      {selection.overlays.length === 0 ? (
+        <li className="overlay-empty">
+          No active overlay. Click <strong>Lern domain driven</strong> above (or Add folder…), then wait for the graph
+          to rebuild.
+        </li>
+      ) : (
+        selection.overlays.map((overlay) => (
+          <li key={overlay} className="overlay-item">
+            <span className="overlay-path" title={overlay}>{overlayPathLabel(overlay)}</span>
+            <button
+              type="button"
+              className="overlay-remove"
+              data-testid={`overlay-remove-${overlayId(overlay)}`}
+              aria-label={`Remove overlay ${overlayPathLabel(overlay)}`}
+              onClick={() => onRemoveOverlay(overlay)}
+            >
+              ×
+            </button>
+          </li>
+        ))
+      )}
+    </ul>
   );
 }
 
@@ -145,16 +168,6 @@ export function NodeFilterLists({ selection, nodeTypes, relationships, rules, on
       </div>
     </>
   );
-}
-
-function overlayId(path: string): string {
-  const trimmed = path.replace(/[/\\]+$/, '');
-  const parts = trimmed.split(/[/\\]/);
-  return parts[parts.length - 1] || path;
-}
-
-function overlayLabel(path: string): string {
-  return overlayCatalogLabel(overlayId(path));
 }
 
 function FilterSelect({

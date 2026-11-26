@@ -84,7 +84,7 @@
 <li><strong>Confirm framework</strong> — inherit from the behavior file.</li>
 <li><strong>Scan markers</strong> — list all <code>it</code> blocks still containing <code>BDD: SIGNATURE</code>; report count.</li>
 <li><strong>Identify shared setup</strong> — extract to <code>beforeEach</code> / <code>with before.each:</code> or a factory when three or more siblings share arrangement.</li>
-<li>Pick <strong>one</strong> marker. Use the <strong>realization</strong> call graph for Act when present; otherwise derive Act from the observation label and domain model. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of <code>templates/bdd-templates.{ext}</code> (<code>.py</code> / <code>.java</code> / <code>.ts</code>).</li>
+<li>Pick <strong>one</strong> marker. Use the <strong>realization</strong> call graph for Act when present; otherwise derive Act from the observation label and domain model. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of <code>templates/bdd.py</code>, <code>templates/bdd.ts</code>, or <code>templates/bdd.js</code>.</li>
 <li>Run the test — confirm RED for the right reason.</li>
 <li>Write the <strong>minimum</strong> production code until GREEN (PRODUCTION CODE section of the same template).</li>
 <li>Refactor only while green. Move to the next marker.</li>

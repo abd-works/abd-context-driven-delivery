@@ -35,7 +35,7 @@ with description("pattern overlays") as self:
     with it("should rebuild the tree from edges that still point at the practice root"):
         graph = Graph()
         graph.reads.open(Path("."))
-        practice = graph.practice("ddd")
+        practice = graph.practices.named("ddd")
         root = practice.reading.in_graph.root
         child = Node(
             practice,
@@ -57,21 +57,21 @@ with description("pattern overlays") as self:
             data_of(self.graph.load_working_copy(str(sample), roots, database=str(sample), overlays=["lern_domain_driven"], force=True))
 
         with it("should add the lern nodes"):
-            names = {node.type for node in self.graph.practice("ddd").reading.in_graph.nodes()}
+            names = {node.type for node in self.graph.practices.named("ddd").reading.in_graph.nodes()}
             expect("NodeRoot" in names).to(equal(True))
             expect("ClientRoot" in names).to(equal(True))
-            story_types = {node.type for node in self.graph.practice("stories").reading.in_graph.nodes()}
+            story_types = {node.type for node in self.graph.practices.named("stories").reading.in_graph.nodes()}
             expect("StoryShared" in story_types).to(equal(True))
 
         with it("should load the full source file for a lern domain node"):
-            domain_nodes = [node for node in self.graph.practice("ddd").reading.in_graph.nodes() if node.type == "NodeRoot"]
+            domain_nodes = [node for node in self.graph.practices.named("ddd").reading.in_graph.nodes() if node.type == "NodeRoot"]
             expect(len(domain_nodes) > 0).to(equal(True))
             node = domain_nodes[0]
             expect(node.source.end_line > 1).to(equal(True))
             expect(len(node.source.text.splitlines()) > 1).to(equal(True))
 
         with it("should parent lern tier files on their aggregate in the explorer tree"):
-            ddd_tree = data_of(self.graph.practice("ddd").reading.in_graph.root.tree.serialize())
+            ddd_tree = data_of(self.graph.practices.named("ddd").reading.in_graph.root.tree.serialize())
 
             def walk(node):
                 yield node
@@ -90,15 +90,3 @@ with description("pattern overlays recording what content is generated with") as
     with it("should give each pattern's roles from its layer table"):
         overlay = PatternOverlays(["cdd_web_domain_access"]).patterns[0].graph_overlay
         expect(overlay.roles).to(equal(["Domain", "Tool", "Contract", "Annotation", "Language adapter", "Connection"]))
-
-    with it("should name the patterns recorded for content where it was generated"):
-        root = Path(tempfile.mkdtemp())
-        app = root / "app"
-        (app / "src").mkdir(parents=True)
-        overlays = PatternOverlays(["lern_domain_driven", "cdd_web_domain_access"])
-        overlays.record_content([app])
-        expect(PatternOverlays().recorded_for([app / "src" / "board.tsx"], root)).to(equal(["lern_domain_driven", "cdd_web_domain_access"]))
-
-    with it("should name none for content no folder records"):
-        root = Path(tempfile.mkdtemp())
-        expect(PatternOverlays().recorded_for([root / "board.tsx"], root)).to(equal([]))

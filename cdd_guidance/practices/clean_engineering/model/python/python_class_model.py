@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import ast
 import io
+import re
 import tokenize
 from pathlib import Path
 from typing import Iterator, List, Optional
@@ -24,7 +25,7 @@ from cdd_guidance.practices.clean_engineering.model.class_stereotypes import (
     snake_case_decorator,
     stereotype_named,
 )
-from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, CodeBody
+from cdd_guidance.practices.source_code import PYTHON, CodeBody
 from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     CodeClass,
     CodeCleanEngineeringModel,
@@ -34,6 +35,7 @@ from cdd_guidance.practices.clean_engineering.model.code_class_model import (
 )
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.operation_metrics import PythonFunctionBody
+from cdd_guidance.practices.clean_engineering.model.type_refs import name_with_type
 
 _FUTURE_IMPORT = "from __future__ import annotations"
 _ABC_IMPORT = "from abc import ABC, abstractmethod"
@@ -47,9 +49,21 @@ Function = ast.FunctionDef | ast.AsyncFunctionDef
 
 
 def python_type(hint: str) -> str:
-    """A type written the way Python writes generics: `Collection<Root>` from another language is `Collection[Root]`,
-    so the file reads back as Python."""
-    return (hint or "").replace("<", "[").replace(">", "]")
+    """A type, or a `name: Type` parameter, written the way Python writes it: `Collection<Root>` from another language
+    is `Collection[Root]`, `Root[]` is `list[Root]`, and `boolean` is `bool`, so the file reads back as Python. A
+    parameter a caller may leave out, which a model line marks `name?: Type`, is `name: Type | None = None`, since
+    Python has no `?` and does not parse one."""
+    parameter = _PARAMETER.match(hint or "")
+    if parameter is None or not (parameter["left_out"] or parameter["type"] is not None):
+        return PYTHON.type_name(hint) if (hint or "").strip() else (hint or "")
+    name, written = parameter["name"], (parameter["type"] or "").strip()
+    if not parameter["left_out"]:
+        return f"{name}: {PYTHON.type_name(written)}" if written else hint
+    return f"{name}: {PYTHON.type_name(written)} | None = None" if written else f"{name}=None"
+
+
+# A parameter as a model line writes one: its name, a `?` when a caller may leave it out, then a colon and its type.
+_PARAMETER = re.compile(r"^(?P<name>\w+)\s*(?P<left_out>\?)?\s*(?::(?P<type>.*))?$", re.S)
 
 
 class PythonProperty(CodeProperty):
@@ -61,6 +75,18 @@ class PythonProperty(CodeProperty):
         prop = cls(name=node.target.id, sequential_order=order, type_hint=ast.unparse(node.annotation) if node.annotation else "")
         prop.line = node.lineno
         return prop
+
+    def take_comments_above(self, lines: List[str]) -> None:
+        """Keep each `#` comment line right above its declaration as a note, as a brace language keeps its `//` lines:
+        the relationship written on it (`# << composition >>`), its cardinality, where it comes from, or an invariant.
+        lines are its file's."""
+        first = (self.line or 1) - 1
+        start = first
+        while start > 0 and lines[start - 1].strip().startswith("#"):
+            start -= 1
+        for line in lines[start:first]:
+            self.take_note(line.strip().lstrip("#"))
+        self.arrow.derive()
 
     def lines(self, contract: bool) -> List[str]:
         hint = python_type(self.type_hint) or "object"
@@ -79,15 +105,23 @@ class PythonOperation(CodeOperation):
         function = PythonFunctionBody(node, owner)
         operation = cls(node.name, return_type=ast.unparse(node.returns) if node.returns is not None else "")
         operation.take_parameters(function.parameters())
-        operation.description = (ast.get_docstring(node) or "").strip()
         operation.callees = function.callees()
         operation.take_place(node)
         operation.source_facts.take_body_fingerprint("\n".join(ast.unparse(stmt) for stmt in node.body))
-        operation.source_facts.take_body(function.body_text(text), PYTHON)
+        body = function.body_text(text)
+        operation.source_facts.take_body(body, PYTHON)
+        operation.take_comments(body)
+        operation.description = (ast.get_docstring(node) or "").strip() or operation.description
         operation.is_setter = any(isinstance(item, ast.Attribute) and item.attr == "setter" for item in node.decorator_list)
         operation.published_as_tool = any(operation._decorator_name(item) in _TOOL_DECORATORS for item in node.decorator_list)
         operation.measure(function)
         return operation
+
+    def take_comments(self, body: str) -> None:
+        """Keep each `#` comment line of its body as a note, as a brace language keeps its `//` lines."""
+        for line in body.splitlines():
+            if line.strip().startswith("#"):
+                self.add_invariant(line.strip().lstrip("#"))
 
     def _decorator_name(self, decorator: ast.expr) -> str:
         """The name a decorator is written with, with or without arguments: `@mcp`, `@agent_tool(...)`, `@tools.mcp`."""
@@ -110,10 +144,7 @@ class PythonOperation(CodeOperation):
         self.is_static = function.decorated("staticmethod")
         self.is_classmethod = function.decorated("classmethod")
         self.constructed_types = function.collaborators.built() if self.is_constructor else []
-        self.max_control_flow_depth = function.control_flow_depth()
-        self.has_bare_catch, self.swallows_exceptions = function.except_flags()
-        self.unnamed_literal_numbers = function.unnamed_numbers()
-        self.narrative_comment_lines = 0
+        self.measure_body(function)
         self.peer_private_access = function.collaborators.reaches_peer_private()
         self.packed_parameters = function.packed_parameters()
 
@@ -151,7 +182,7 @@ class PythonClass(CodeClass):
     operation_type = PythonOperation
 
     def opening(self, known_names: List[str]) -> List[str]:
-        bases = ", ".join(self.declared_bases(known_names) or (["ABC"] if self.is_contract else []))
+        bases = ", ".join(self.language.type_name(base) for base in self.declared_bases(known_names) or (["ABC"] if self.is_contract else []))
         heading = f"class {self.name}({bases}):" if bases else f"class {self.name}:"
         lines = ["", ""] + [f"@{snake_case_decorator(item)}" for item in self.stereotypes] + [heading]
         doc = self._doc_intent()
@@ -170,7 +201,7 @@ class PythonClass(CodeClass):
         return []
 
     def constructor_lines(self, constructor: Optional[Operation], body: List[str]) -> List[str]:
-        parameters = ", ".join(f"{name}: {python_type(hint)}" if hint else name for name, hint in self.constructor_parameters(constructor))
+        parameters = ", ".join(python_type(name_with_type(name, hint)) for name, hint in self.constructor_parameters(constructor))
         receiver = f"self, {parameters}" if parameters else "self"
         return [f"    def __init__({receiver}) -> None:"] + (body or ["        pass"])
 
@@ -324,7 +355,7 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
     module_type = PythonModule
     suffixes = language.suffixes
 
-    def parse(self, text: str) -> "PythonCleanEngineeringModel":
+    def parse(self, text: str, file: str = "") -> "PythonCleanEngineeringModel":
         """The model the Python text declares. Text that is not valid Python raises UnreadableSource."""
         self._text = text
         try:
@@ -357,6 +388,9 @@ class PythonCleanEngineeringModel(CodeCleanEngineeringModel):
         ]
         fields = [child for child in node.body if isinstance(child, ast.AnnAssign) and isinstance(child.target, ast.Name)]
         oclass.properties = [PythonProperty.from_annotation(child, order) for order, child in enumerate(fields, start=1)]
+        lines = self._text.split("\n")
+        for prop in oclass.properties:
+            prop.take_comments_above(lines)
         return oclass
 
     def _stereotypes_above(self, node: ast.ClassDef) -> list[str]:

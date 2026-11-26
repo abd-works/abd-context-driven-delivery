@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -19,23 +20,22 @@ class ScreenStoryBudget(PracticeGraphRule):
     node_types = ("Screen",)
     soft_max = 4
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        count = context.child_count(node, ("shows",))
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        count = len(context.targets(node, "shows"))
         if count <= self.soft_max:
             return []
-        return [
-            f"Screen {node.name!r} has {count} stories (budget ~{self.soft_max})."
-        ]
+        return [Finding(node, f"Screen {node.name!r} has {count} stories (budget ~{self.soft_max}).")]
 
 
 class ScreenNamesUseDomainTerms(PracticeGraphRule):
     slug = "screen-names-use-domain-terms"
+    requires_judge = True
     node_types = ("Screen",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         name = node.name.strip()
         if not name:
-            return ["Screen name is empty."]
+            return [Finding(node, "Screen name is empty.")]
         if name.lower() in {"screen", "page", "view", "home", "main"}:
-            return [f"Screen {name!r} should use a domain term, not a generic label."]
+            return [Finding(node, f"Screen {name!r} should use a domain term, not a generic label.")]
         return []

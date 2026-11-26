@@ -6,7 +6,8 @@ import ast
 import re
 from pathlib import Path
 
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.patterns.cdd_web_domain_access import fact_names
+from cdd_guidance.patterns.fact_file import FactFile
 
 _TOOL_CALL = re.compile(r"\.call(?:<[^>]*>)?\(")
 _ADAPTER_IMPORT = re.compile(r"""from\s+['"]@cdd/""")
@@ -20,51 +21,59 @@ _OPERATION_ANNOTATION = "mcp"
 _OPEN_RESULT = "dict[str, Any]"
 
 
-class AccessFile:
-    """One file that may reach the CDD domain from outside Python, read once, with the SourceText that gives each match
-    in it the line it starts on: a route, a node tier, a hand-written adapter, or an annotated toolset. Which of those it
-    is, and the facts its rules read, are its operations."""
+class AccessFile(FactFile):
+    """One file that may reach the CDD domain from outside Python, read once: a route, a node tier, a hand-written
+    adapter, or an annotated toolset, each the DDD node type it becomes, with the facts its rules read; a file that does
+    not reach the domain becomes no node."""
 
-    def __init__(self, name: str, text: str) -> None:
-        self.name = name
-        self._source = SourceText(text)
+    def __init__(self, relative: str, text: str) -> None:
+        super().__init__(relative, text)
+        self.name = Path(relative).name
 
-    @classmethod
-    def at(cls, path: Path) -> AccessFile:
-        """The file at path, read now."""
-        return cls(path.name, path.read_text(encoding="utf-8", errors="replace"))
-
-    def tier(self) -> tuple[str, dict] | None:
-        """The DDD node type this file becomes and the facts it carries; none for a file that does not reach the domain."""
+    @property
+    def node_type(self) -> str:
+        """The DDD node type this file becomes; none for a file that does not reach the domain."""
         if self.name.endswith("-routes.ts"):
-            return "AccessRoute", self.route_facts()
-        if self.is_hand_written_adapter():
-            return "AccessHandWrittenAdapter", {}
+            return "AccessRoute"
+        if self._is_hand_written_adapter():
+            return "AccessHandWrittenAdapter"
         if self.name.endswith("-node.ts"):
-            return "AccessNode", self.node_facts()
-        if self.name.endswith(".py") and self.is_annotated():
-            return "AccessAnnotatedToolset", self.annotated_toolset_facts()
-        return None
+            return "AccessNode"
+        if self.name.endswith(".py") and self._is_annotated():
+            return "AccessAnnotatedToolset"
+        return ""
 
-    def route_facts(self) -> dict:
-        return {"tool_calls": self._source.hits(_TOOL_CALL)}
+    @property
+    def facts(self) -> dict:
+        """The facts the node this file becomes carries."""
+        kind = self.node_type
+        if kind == "AccessRoute":
+            return self._route_facts()
+        if kind == "AccessNode":
+            return self._node_facts()
+        if kind == "AccessAnnotatedToolset":
+            return self.annotated_toolset_facts()
+        return {}
 
-    def node_facts(self) -> dict:
+    def _route_facts(self) -> dict:
+        return {fact_names.TOOL_CALLS: self._source.hits(_TOOL_CALL)}
+
+    def _node_facts(self) -> dict:
         reaches_cdd = bool(_ADAPTER_IMPORT.search(self._source.text))
         return {
-            "tool_calls": self._source.hits(_TOOL_CALL),
-            "reaches_cdd": reaches_cdd,
-            "extends_adapter": bool(_EXTENDS_ADAPTER.search(self._source.text)),
-            "store_imports": self._source.hits(_STORE_IMPORT) if reaches_cdd else [],
+            fact_names.TOOL_CALLS: self._source.hits(_TOOL_CALL),
+            fact_names.REACHES_CDD: reaches_cdd,
+            fact_names.EXTENDS_ADAPTER: bool(_EXTENDS_ADAPTER.search(self._source.text)),
+            fact_names.STORE_IMPORTS: self._source.hits(_STORE_IMPORT) if reaches_cdd else [],
         }
 
-    def is_hand_written_adapter(self) -> bool:
+    def _is_hand_written_adapter(self) -> bool:
         """A file named like generated code that reaches cdd; an adapter for anything else is the application's own port."""
         if not _HAND_WRITTEN_ADAPTER.search(self.name):
             return False
         return self.name.startswith("cdd-connection") or bool(_ADAPTER_IMPORT.search(self._source.text) or _TOOL_CALL.search(self._source.text))
 
-    def is_annotated(self) -> bool:
+    def _is_annotated(self) -> bool:
         return bool(_MARK.search(self._source.text))
 
     def annotated_toolset_facts(self) -> dict:
@@ -72,7 +81,7 @@ class AccessFile:
         TypeScript then reads with no type. The decorators are read from the parsed file, so every spelling of the
         annotation and any number of other annotations above it count."""
         operations = [node for node in ast.walk(ast.parse(self._source.text)) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
-        return {"open_results": [[node.lineno, node.name] for node in operations if self._answers_open_dict(node) and self._is_published(node)]}
+        return {fact_names.OPEN_RESULTS: [[node.lineno, node.name] for node in operations if self._answers_open_dict(node) and self._is_published(node)]}
 
     def _answers_open_dict(self, operation: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
         return operation.returns is not None and ast.unparse(operation.returns) == _OPEN_RESULT

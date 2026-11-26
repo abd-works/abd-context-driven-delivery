@@ -7,7 +7,6 @@ which is all a node read back from graph.json holds.
 from __future__ import annotations
 
 from functools import cached_property
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,12 +16,11 @@ if TYPE_CHECKING:
 
 
 class RuleCheckContext:
-    """The practice one load checks, the graph that holds it, and the folder its source was read from."""
+    """The practice one load checks and the graph that holds it."""
 
-    def __init__(self, practice: PracticeGuidance, source_root: Path | None) -> None:
+    def __init__(self, practice: PracticeGuidance) -> None:
         self.practice = practice
         self.graph = practice.reading.graph
-        self.source_root = source_root
 
     @cached_property
     def read_node_types(self) -> frozenset[str]:
@@ -49,14 +47,3 @@ class RuleCheckContext:
     def edges(self, kind: str) -> list[Edge[Node]]:
         """The checked practice's edges of kind."""
         return self.practice.reading.in_graph.edge_index.of(kind)
-
-    def node(self, node_id: str) -> Node | None:
-        """The node called node_id in the graph; none when no practice holds one."""
-        return self.graph.node(node_id)
-
-    def child_count(self, node: Node, edge_kinds: tuple[str, ...]) -> int:
-        return sum(1 for kind in edge_kinds for edge in self.edges(kind) if edge.parent is node)
-
-    def children(self, node: Node, edge_kind: str) -> list[Node]:
-        return [edge.child for edge in self.edges(edge_kind) if edge.parent is node]
-

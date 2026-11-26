@@ -16,8 +16,8 @@ import re
 
 from typing import Iterable, List, Optional
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-from cdd_guidance.practices.clean_engineering.model.class_stereotypes import stereotype_named, without_marks
+from cdd_guidance.practices.clean_engineering.model import OoadClass
+from cdd_guidance.practices.clean_engineering.model import stereotype_named, without_marks
 
 # Each DDD stereotype, lower-cased, and the building block it names. Order matters: the first one a class carries wins.
 KIND_OF_STEREOTYPE = (

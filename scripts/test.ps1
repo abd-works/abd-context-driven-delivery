@@ -14,7 +14,10 @@ param(
     [ValidateSet("unit", "vanilla", "heavy", "e2e", "agent")]
     [string]$Suite = "unit",
     # The unit tier's budget for one example, before.each and after.each included. Over it, the example's file fails.
-    [int]$ExampleBudgetMs = 100
+    [int]$ExampleBudgetMs = 100,
+    # The e2e tier without the agentic BDD specs, whose agents' answers are judged: the browser specs and the
+    # Playwright suite alone, for a check after each fix before a judge round.
+    [switch]$SkipAgents
 )
 if ($Suite -eq "vanilla") { $Suite = "unit" }
 if ($Suite -eq "agent") { $Suite = "e2e" }
@@ -28,9 +31,27 @@ if (-not (Test-Path $venv)) {
     if ($commonGit) { $venv = Join-Path (Split-Path -Parent $commonGit) ".venv" }
 }
 $venvPython = Join-Path $venv "Scripts\python.exe"
-$venvMamba = Join-Path $venv "Scripts\mamba.exe"
 $python = if (Test-Path $venvPython) { $venvPython } else { "python" }
-$mamba = if (Test-Path $venvMamba) { $venvMamba } else { "mamba" }
+# Mamba runs as a module of the venv's Python, not through its mamba.exe launcher: a launcher in a venv is a fresh,
+# unsigned executable, which an application control policy may block while it still lets Python itself run.
+$mamba = $python
+$mambaModule = @("-m", "mamba.cli")
+
+# A heavy or e2e tier run here is recorded as running in the record of test runs the runner and the cadence read
+# (harness/release/test_runs.py, in the cdd home), so neither starts a run of this checkout beside it; while one of
+# theirs, or another test.ps1, runs a tier of this checkout, this waits and says so. Two runs at once start the same
+# servers on the same ports and fail on each other. A run the runner started is recorded already, and says so.
+$runRecordedVariable = "CDD_TEST_RUN_RECORDED"
+if ($Suite -ne "unit" -and -not [Environment]::GetEnvironmentVariable($runRecordedVariable)) {
+    $shellPythonPath = $env:PYTHONPATH
+    $env:PYTHONPATH = "$repo$([IO.Path]::PathSeparator)$shellPythonPath"
+    & $python -m harness.release.test_runs $Suite $repo --script $PID
+    $recorded = $LASTEXITCODE
+    $env:PYTHONPATH = $shellPythonPath
+    if ($recorded -ne 0) { exit $recorded }
+}
+# The specs this run starts are not the recorded run, and a spec that starts test.ps1 must see it record itself.
+Remove-Item "Env:$runRecordedVariable" -ErrorAction SilentlyContinue
 
 $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
     [string[]]@(
@@ -40,7 +61,38 @@ $excludedDirs = [System.Collections.Generic.HashSet[string]]::new(
     [StringComparer]::OrdinalIgnoreCase
 )
 
+# Every temporary folder a spec makes, and the cdd homes and output of each batch, go in one folder for the run, which
+# the run removes when it ends: specs that make temporary folders and never remove them left tens of thousands behind in
+# %TEMP%, several gigabytes a day, until the disk filled. A folder a run could not remove, because a server a heavy spec
+# started still held a file in it, or because the run was killed, is removed by a later run once it is a day old.
+$runFolderPrefix = "cdd-run-"
+$staleRunHours = 24
+
+function Remove-StaleRunFolders {
+    param([string]$Temp)
+    $cutoff = (Get-Date).AddHours(-$staleRunHours)
+    Get-ChildItem -LiteralPath $Temp -Directory -Filter "$runFolderPrefix*" -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -lt $cutoff } |
+        ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+function Set-RunTemp {
+    # The shell that runs the script keeps its environment after it, so the run gives back the temporary folder it found.
+    $script:shellTemp = $env:TEMP
+    $script:shellTmp = $env:TMP
+    $temp = [IO.Path]::GetTempPath()
+    Remove-StaleRunFolders $temp
+    # Eight characters of the guid keep the folder apart from another run's and keep a spec's deepest file, such as a
+    # story test copied into a throwaway project, under Windows' 260 character path limit.
+    $script:runTemp = Join-Path $temp ($runFolderPrefix + [guid]::NewGuid().ToString("N").Substring(0, 8))
+    New-Item -ItemType Directory -Force $script:runTemp | Out-Null
+    # Python's tempfile reads TEMP and TMP, and .NET's GetTempPath reads TMP, so both point every spec at the run's folder.
+    $env:TEMP = $script:runTemp
+    $env:TMP = $script:runTemp
+}
+
 function Set-TestEnvironment {
+    Set-RunTemp
     $roots = @(".", "cdd_guidance/actions", "tools", "cdd_guidance/practices", "cdd_guidance/patterns")
     # Leave the harness folder off the path so `import mcp` stays the SDK,
     # not harness/mcp. The repo root still exposes the harness package.
@@ -57,6 +109,8 @@ function Set-TestEnvironment {
     $env:CDD_HOME = Join-Path ([IO.Path]::GetTempPath()) ("cdd-spec-home-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Force $env:CDD_HOME | Out-Null
     Remove-Item Env:CLAUDE_CODE_SESSION_ID -ErrorAction SilentlyContinue
+    # A chat a spec opens is kept as a link in this file, never opened in the Claude app on this machine.
+    $env:CDD_OPENED_CHATS = Join-Path $env:CDD_HOME "opened-chats.txt"
 }
 
 function Get-RepoFiles {
@@ -170,8 +224,14 @@ function Read-SpecSeconds {
 
 function Save-SpecSeconds {
     param([hashtable]$Seconds)
-    New-Item -ItemType Directory -Force (Split-Path $timesFile) | Out-Null
-    $Seconds | ConvertTo-Json | Set-Content -Path $timesFile -Encoding utf8
+    # The seconds only order the next run, so a file another run holds open is passed over with a warning: an error here
+    # ended the whole run after its first spec file, which then exited 0 having counted nothing.
+    try {
+        New-Item -ItemType Directory -Force (Split-Path $timesFile) | Out-Null
+        $Seconds | ConvertTo-Json | Set-Content -Path $timesFile -Encoding utf8 -ErrorAction Stop
+    } catch [System.IO.IOException] {
+        Write-Host "Spec timings not saved: $($_.Exception.Message)"
+    }
 }
 
 function Get-ExpectedSeconds {
@@ -200,7 +260,10 @@ function Start-SpecBatch {
     $env:CDD_HOME = Join-Path $OutputFolder ("home-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Force $env:CDD_HOME | Out-Null
     $out = Join-Path $OutputFolder ([guid]::NewGuid().ToString("N") + ".out")
-    $process = Start-Process -FilePath $Executable -ArgumentList ($Arguments + $Relatives) -WorkingDirectory $repo `
+    # Start-Process joins its arguments with spaces, so a path that holds one is quoted, or Mamba is handed its halves
+    # as two paths, finds neither, and runs nothing.
+    $paths = @($Relatives | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } })
+    $process = Start-Process -FilePath $Executable -ArgumentList ($Arguments + $paths) -WorkingDirectory $repo `
         -NoNewWindow -PassThru -RedirectStandardOutput $out -RedirectStandardError "$out.err"
     # Windows PowerShell reads a started process's exit code only when its handle was taken while it ran.
     $null = $process.Handle
@@ -213,7 +276,21 @@ function Get-FailedFiles {
     $text = Get-Content $Batch.Out, "$($Batch.Out).err" -Raw -ErrorAction SilentlyContinue
     $failed = @($Batch.Relatives | Where-Object { $text -match [regex]::Escape("Failure/Error: " + $_.Replace('/', '\')) -or $text -match [regex]::Escape("Failure/Error: " + $_) })
     if ($Batch.Process.ExitCode -ne 0 -and $failed.Count -eq 0) { return @($Batch.Key) }
+    # A batch that ran no example proved nothing about its files, so each of them fails: a spec file with no example,
+    # or one Mamba never found, would otherwise be counted as passed.
+    if ($failed.Count -eq 0 -and (Get-ExamplesRan ($text -join "`n")) -eq 0) { return @($Batch.Relatives) }
     return $failed
+}
+
+# How many examples a batch's Mamba process says it ran, on its closing line: "12 examples ran in ..." or
+# "2 examples failed of 12 ran in ...". None when it printed no such line.
+function Get-ExamplesRan {
+    param([string]$Text)
+    $ran = 0
+    foreach ($line in [regex]::Matches($Text, '(\d+) (?:examples? )?ran (?:in|\()')) {
+        $ran += [int]$line.Groups[1].Value
+    }
+    return $ran
 }
 
 # The examples the unit guard logged over the budget, each with its spec file from the repository's top.
@@ -302,7 +379,7 @@ try {
         $env:PYTHONPATH = "$storyModule$([IO.Path]::PathSeparator)$savedPath"
         $storyFailures = Invoke-Reported "Python story tests" $stories $python @("-m", "story_test", "--format", "budget_formatter.BudgetDocumentation")
         $env:PYTHONPATH = $savedPath
-        $specFailures = Invoke-Reported "Mamba specs" $specs $mamba @("--format", "budget_formatter.BudgetDocumentation")
+        $specFailures = Invoke-Reported "Mamba specs" $specs $mamba ($mambaModule + @("--format", "budget_formatter.BudgetDocumentation"))
         foreach ($relative in @($storyFailures) + @($specFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
         }
@@ -317,7 +394,7 @@ try {
             $env:PYTHONPATH = "$storyModule$([IO.Path]::PathSeparator)$savedPath"
             Invoke-Reported "Over the budget in parallel, run again alone" $flaggedStories $python @("-m", "story_test", "--format", "budget_formatter.BudgetProgress") -Parallel 1 | Out-Null
             $env:PYTHONPATH = $savedPath
-            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedSpecs $mamba @("--format", "budget_formatter.BudgetProgress") -Parallel 1 | Out-Null
+            Invoke-Reported "Over the budget in parallel, run again alone" $flaggedSpecs $mamba ($mambaModule + @("--format", "budget_formatter.BudgetProgress")) -Parallel 1 | Out-Null
             $slow = @(Read-SlowExamples $guardLog)
             if ($slow.Count -gt 0) {
                 Write-Host ""
@@ -340,7 +417,7 @@ try {
         # Heavy specs start servers and browsers, so each runs in its own process, one at a time.
         $heavyFailures = @()
         foreach ($heavy in $heavySpecs) {
-            $heavyFailures += Invoke-Reported "Heavy spec" @($heavy) $mamba @("--format", "documentation") -Parallel 1
+            $heavyFailures += Invoke-Reported "Heavy spec" @($heavy) $mamba ($mambaModule + @("--format", "documentation")) -Parallel 1
         }
         foreach ($relative in @($heavyFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
@@ -350,11 +427,11 @@ try {
         # A browser or an agent per example: one file at a time, so they do not fight over the machine.
         $endToEndSpecs = @(Get-RepoFiles { param($name) $name -like "*_spec.py" } | Where-Object {
             $name = [IO.Path]::GetFileName($_)
-            (Test-EndToEnd $name) -or (Test-AgenticBdd $name)
+            (Test-EndToEnd $name) -or ((-not $SkipAgents) -and (Test-AgenticBdd $name))
         })
         $agentFailures = @()
         foreach ($spec in $endToEndSpecs) {
-            $agentFailures += Invoke-Reported "End-to-end spec" @($spec) $mamba @("--format", "documentation") -Parallel 1
+            $agentFailures += Invoke-Reported "End-to-end spec" @($spec) $mamba ($mambaModule + @("--format", "documentation")) -Parallel 1
         }
         foreach ($relative in @($agentFailures)) {
             if ($relative) { $failures.Add($relative) | Out-Null }
@@ -376,8 +453,18 @@ try {
     }
 } finally {
     Pop-Location
+    $env:TEMP = $script:shellTemp
+    $env:TMP = $script:shellTmp
+    Remove-Item -LiteralPath $script:runTemp -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+# A run that stopped before counting its files proved nothing, so it fails.
+if (-not $total) {
+    Write-Host ""
+    Write-Host "0/ files passed"
+    Write-Host "FAILED the run stopped before it counted its spec files"
+    exit 1
+}
 $failed = @($failures | Where-Object { $_ })
 $passed = $total - $failed.Count
 Write-Host ""

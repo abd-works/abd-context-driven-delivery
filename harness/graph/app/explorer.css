@@ -726,6 +726,11 @@ ul.tree ul {
   color: var(--error);
 }
 
+.tree button.tree-candidate,
+.tree button.tree-candidate .kind-mark {
+  color: var(--warning);
+}
+
 .tree-counts {
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -771,7 +776,9 @@ ul.tree ul {
   font-weight: 600;
 }
 
-.tree button.selected.tree-violating {
+.tree button.selected.tree-violating,
+.tree button.selected.tree-candidate,
+.tree button.selected.tree-candidate .kind-mark {
   color: var(--select);
 }
 
@@ -787,6 +794,7 @@ ul.tree ul {
 
 .rule-status.passing { color: var(--success); }
 .rule-status.violating { color: var(--error); }
+.rule-status.candidate { color: var(--warning); }
 .rule-status.prompt { color: var(--text-muted, var(--text)); }
 
 .source-highlight {

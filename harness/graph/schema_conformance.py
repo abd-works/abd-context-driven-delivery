@@ -13,7 +13,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
-from harness.graph.schema_edges import CHILD_LISTS, SchemaKey
+from harness.graph.practice_node_types import NODE_TYPE_TABLES
+from harness.graph.schema_edges import SchemaKey
+from harness.graph.violation import Finding
 from harness.guidance.rule import Rule
 
 if TYPE_CHECKING:
@@ -61,14 +63,14 @@ class RequiredRelationship:
         (``when``) holds a ``Step`` only when the step is of that phase."""
         phase, general = self.owner.phase, self.owner.node_type
         nodes = [node for node_type in self.owner.node_types for node in context.nodes(node_type)]
-        return [node for node in nodes if not phase or node.type != general or getattr(node, "phase", "") == phase]
+        return [node for node in nodes if not phase or node.type != general or node.get_fact("phase", "") == phase]
 
     def gap_on(self, node: Node, context: RuleCheckContext) -> str:
         """What node lacks of this relationship: none when an edge of the field leads from it to a node of a target type,
         or, for a child list, when it holds a node of a target type under any kind its practice records it."""
         if self.field in (node.get_fact(EXEMPT_FACT) or []):
             return ""
-        linked = context.held_by(node) if self.field in CHILD_LISTS else context.targets(node, self.field)
+        linked = context.held_by(node) if NODE_TYPE_TABLES.is_child_list(self.field) else context.targets(node, self.field)
         if any(target.type in self.targets for target in linked):
             return ""
         return (
@@ -99,7 +101,7 @@ class ConformsToSchema(PracticeGraphRule):
         """Every node type: every type a schema names may require a relationship."""
         return True
 
-    def check_practice(self, context: RuleCheckContext) -> list[tuple[str, str]]:
+    def check_practice(self, context: RuleCheckContext) -> list[Finding]:
         """Each node missing a relationship its schema requires at the practice's current fidelity, with what it lacks."""
         if self._reads_only_named_files(context):
             return []
@@ -107,7 +109,7 @@ class ConformsToSchema(PracticeGraphRule):
         stage = schema.current_stage
         due = [requirement for requirement in schema.requirements if requirement.required_at(stage) and requirement.judged_in(context)]
         found = ((node, requirement.gap_on(node, context)) for requirement in due for node in requirement.owners(context))
-        return [(node.node_id, gap) for node, gap in found if gap]
+        return [Finding(node, gap) for node, gap in found if gap]
 
 
     def _reads_only_named_files(self, context: RuleCheckContext) -> bool:

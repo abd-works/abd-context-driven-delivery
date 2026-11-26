@@ -6,7 +6,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_false, be_none, be_true, contain, equal, expect
+from expects import be_false, be_true, contain, equal, expect
 from mamba import before, description, it
 
 from harness.guidance.action_catalogue import ACTION_CATALOGUE
@@ -14,6 +14,10 @@ import cdd_guidance.practices  # noqa: F401 - registers the practices with the p
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
 _ACTIONS_FOLDER = _REPO_ROOT / "cdd_guidance" / "actions"
+
+
+def _action_named(name: str):
+    return next(action for action in ACTION_CATALOGUE.actions if action.name == name)
 
 
 with description("the action catalogue"):
@@ -41,15 +45,41 @@ with description("the action catalogue"):
     with it("should leave out the folder of examples"):
         expect("CarStory" in [toolset.__name__ for toolset in ACTION_CATALOGUE.toolsets]).to(be_false)
 
-    with description("that is asked for one action"):
+    with description("that holds each action"):
         with it("should give the toolset that installs it"):
-            expect(ACTION_CATALOGUE.action("verify_fix").toolset_class.__name__).to(equal("Improvement"))
+            expect(_action_named("verify_fix").toolset_class.__name__).to(equal("Improvement"))
 
         with it("should give the toolset's folder"):
-            expect(ACTION_CATALOGUE.action("grill").folder.name).to(equal("grill_context"))
+            expect(_action_named("grill").folder.name).to(equal("grill_context"))
 
-        with it("should give nothing for a name no toolset publishes"):
-            expect(ACTION_CATALOGUE.action("astrology")).to(be_none)
+        with it("should list no name that no toolset publishes"):
+            expect(("repair" in self.names, "review" in self.names)).to(equal((True, False)))
 
-        with it("should say whether a toolset publishes the name"):
-            expect((ACTION_CATALOGUE.has("repair"), ACTION_CATALOGUE.has("review"))).to(equal((True, False)))
+    # Every stage offers the same actions on a fidelity, so the catalogue answers them once, by each action's @on_stage.
+    with description("that places the actions a person runs on a fidelity in its stage"):
+        with it("should take every fidelity through generate, then validate"):
+            expect([action.name for action in ACTION_CATALOGUE.steps]).to(equal(["generate", "validate"]))
+
+        with it("should name generate the step that writes and validate the step that checks"):
+            expect((ACTION_CATALOGUE.writing_step.name, ACTION_CATALOGUE.checking_step.name)).to(equal(("generate", "validate")))
+
+        with it("should offer the other actions after the steps"):
+            expect([action.name for action in ACTION_CATALOGUE.on_fidelities]).to(
+                equal(["partition", "generate", "validate", "iterate", "sketch", "render", "document"])
+            )
+
+        with it("should name every action that writes a fidelity's files from its guidance as taking the formats a person picks"):
+            expect([action.name for action in ACTION_CATALOGUE.taking_formats]).to(
+                equal(["generate", "iterate", "sketch", "render", "document"])
+            )
+
+        with it("should leave validate out of the actions that write a fidelity's files"):
+            expect([action.name for action in ACTION_CATALOGUE.producing]).to(
+                equal(["partition", "generate", "iterate", "sketch", "render", "document"])
+            )
+
+        with it("should name validate and render as the actions that wait until a fidelity has output"):
+            expect([action.name for action in ACTION_CATALOGUE.needing_output]).to(equal(["validate", "render"]))
+
+        with it("should give an action run on no fidelity's stage no place"):
+            expect(_action_named("repair").place).to(equal(None))

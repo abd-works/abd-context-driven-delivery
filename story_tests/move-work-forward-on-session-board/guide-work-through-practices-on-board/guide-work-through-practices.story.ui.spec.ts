@@ -255,7 +255,7 @@ test.describe('with a chat connected', () => {
 
       // The command also names the ticket's session.json, because a command runs in whichever chat it is sent to.
       test('Then the chat receives the command /actions-sketch stories-story-map ddd-bounded-context ux-ia clean-engineering-modules bdd-behavior', async () => {
-        await expect.poll(() => receivedBy(chat)).toContain('/actions-sketch stories-story-map ddd-bounded-context ux-ia clean-engineering-modules bdd-behavior session=.sessions/billing-report/session.json')
+        await expect.poll(() => receivedBy(chat)).toContain('/actions-sketch stories-story-map ddd-bounded-context ux-ia clean-engineering-modules bdd-behavior session=.sessions/billing-report/session.json format=python')
       })
     })
   })

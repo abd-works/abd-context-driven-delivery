@@ -89,7 +89,7 @@ section: body
 
 *Given* checkout-flow's story_map report is open
 *When* the Person opens the verb-noun-format violation
-*Then* the files panel shows .context/story-map.md with line 6 marked
+*Then* the Files app opens .context/story-map.md at line 6
 
 #### Scenario: Say there is no report
 
@@ -123,6 +123,14 @@ section: body
 *When* the Person fixes that violation
 *Then* the chat's prompt is filled with one message, for the person to edit and send, naming the verb-noun-format rule, the error at .context/story-map.md:6, and the content that failed, with instructions to fix it
 
+#### Scenario: Say a violation is false
+
+*Given* checkout-flow's story_map report lists verb-noun-format at .context/story-map.md line 6
+*And* a chat is connected
+*When* the Person says that violation is false
+*Then* the chat's prompt is filled with one message, for the person to edit and send, saying the violation is false and asking to investigate the rule for errors, naming the verb-noun-format rule, the finding at .context/story-map.md:6, and the content it judged
+*And* the message asks that none of the content the finding names be changed
+
 #### Scenario: Fix every violation of a rule
 
 *Given* checkout-flow's story_map report lists verb-noun-format
@@ -141,6 +149,56 @@ section: body
 *Given* checkout-flow's story_map report is open with verb-noun-format listed
 *When* Claude Code validates the story map again with no violations
 *Then* the open report lists no rules
+
+## Story: Accept Report Violation
+
+#### Scenario: Accept a violation as it is
+
+*Given* checkout-flow's story_map report lists verb-noun-format at .context/story-map.md line 6, on the story node-1, saying Name the story with a verb
+*When* the Person accepts that violation
+*Then* .context/violations-accepted.json keeps verb-noun-format on node-1 with the message Name the story with a verb
+*And* the story_map report lists no rules and says it leaves out 1 accepted violation
+*And* the story_map tile marks Validate ✓ with no violations
+
+#### Scenario: Leave an accepted violation out of the next validation
+
+*Given* the session checkout-flow has an entity root with a private-method-naming violation
+*And* Claude Code validated ddd-tactics on that file
+*And* the Person accepted every private-method-naming violation of the ddd-tactics report
+*When* Claude Code validates ddd-tactics on that file again
+*Then* the validation report names no private-method-naming violation
+*And* it says how many accepted violations it leaves out, kept in .context/violations-accepted.json
+*And* the session log's validate line names no private-method-naming violation
+
+#### Scenario: Show an accepted violation again once its finding changes
+
+*Given* the Person accepted verb-noun-format on node-1 saying Name the story with a verb
+*When* Claude Code validates the story map again and finds verb-noun-format on node-1 saying Name the story with a verb and a noun
+*Then* the story_map report lists verb-noun-format with one violation again
+*And* the story_map tile marks Validate as violations
+
+#### Scenario: Accept a judged finding on a line of a file
+
+*Given* checkout-flow's story_map report's judgment fails do-not-invent-requirements at story-map.md line 7, which reads - Confirm Order
+*When* the Person accepts that finding
+*Then* .context/violations-accepted.json keeps do-not-invent-requirements on .context/story-map.md with the judged content - Confirm Order and no line number
+*And* the story_map report lists no rules
+
+#### Scenario: Take an acceptance back
+
+*Given* the Person accepted verb-noun-format on node-1 saying Name the story with a verb
+*And* the story_map report lists that violation among the accepted ones
+*When* the Person takes that acceptance back
+*Then* the story_map report lists verb-noun-format with one violation again
+*And* .context/violations-accepted.json keeps no acceptance
+
+#### Scenario: Refuse accepted violations that are not readable JSON
+
+*Given* checkout-flow's story map has violations
+*And* .context/violations-accepted.json is not readable JSON
+*When* the Person opens checkout-flow's story_map report
+*Then* the report is refused, naming .context/violations-accepted.json and how to repair it
+*And* the file is left as it was
 
 ## Story: Display Violations Band
 

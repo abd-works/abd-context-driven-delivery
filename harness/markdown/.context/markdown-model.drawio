@@ -1,0 +1,119 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="harness/markdown" id="page-harness-markdown">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2420" pageHeight="1198" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="harness-annotations--hostedonly" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/annotations»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;HostedOnly&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="380" width="200" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-annotations--name" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/annotations»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Name&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ words: list[str]&lt;br/&gt;+ snake: str&lt;br/&gt;+ kebab: str&lt;br/&gt;+ camel: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="740" y="760" width="200" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-markdown--markdown" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Markdown&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ location: AssetLocation&lt;br/&gt;+ document: MarkdownText&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Markdown(instance: Any, label: str, fidelity: str | None, format: str | None)&lt;br/&gt;+ from_label(instance: Any, label: str, fidelity: str | None, format: str | None): Markdown&lt;br/&gt;+ held_by(owner: Any, label: str): Markdown&lt;br/&gt;+ extract(): str&lt;br/&gt;+ expand_docstring(docstring: str | None): str&lt;br/&gt;+ html(): HTML&lt;br/&gt;+ coerce(text: str, return_type: Any): Any&lt;br/&gt;+ built_by(from_markdown: Callable[..., Any], text: str, parent: Any): Any&lt;br/&gt;+ read_into(return_type: Any, build: Callable[..., Any] | None): Any&lt;br/&gt;+ return_type_of(fn: Callable[..., Any], default: Any): Any&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/markdown;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="380" width="520" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-markdown--markdownscope" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MarkdownScope&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ slug: str&lt;br/&gt;+ format: str | None&lt;br/&gt;+ template_name: str | None&lt;br/&gt;+ within: tuple[str, ...]&lt;br/&gt;+ reads_file: FileFilter | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ MarkdownScope(folder: Path, slug: str, format: str | None, template_name: str | None, within: tuple[str, ...], reads_file: FileFilter | None)&lt;br/&gt;+ beside(owner_class: type): MarkdownScope&lt;br/&gt;+ of(owner: Any): MarkdownScope&lt;br/&gt;+ at(format: str | None): MarkdownScope&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/markdown;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="760" width="820" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-markdown--markdowncollection" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MarkdownCollection&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ entries: dict[str, Any] | list[Any]&lt;br/&gt;+ parent: Any&lt;br/&gt;+ markdown: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ MarkdownCollection(entries: dict[str, Any] | list[Any] | None, parent: Any)&lt;br/&gt;+ child(name: str, body: str): Any&lt;br/&gt;+ from_markdown(text: str, parent: Any): MarkdownCollection&lt;br/&gt;+ from_section(markdown: Markdown, return_type: Any, parent: Any): Any&lt;br/&gt;+ attach(instance: Any, name: str | None): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/markdown;" vertex="1" parent="1">
+          <mxGeometry x="950" y="60" width="460" height="174" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-markdown--markdowntext" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MarkdownText&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ text: str&lt;br/&gt;+ yaml_fields: dict[str, Any]&lt;br/&gt;+ without_yaml: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ MarkdownText(text: str)&lt;br/&gt;+ headings(): list[tuple[int, int, int, str]]&lt;br/&gt;+ slice_heading(heading: str): str&lt;br/&gt;+ child_blocks(parent_heading: str): list[tuple[str, str]]&lt;br/&gt;+ section_child_blocks(): list[tuple[str, str]]&lt;br/&gt;+ block_under(*headings: str): str&lt;br/&gt;+ named_subsection(heading: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/markdown;" vertex="1" parent="1">
+          <mxGeometry x="280" y="760" width="340" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-markdown--frontmatter" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FrontMatter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ text: str&lt;br/&gt;+ settings: str&lt;br/&gt;+ fields: dict[str, str]&lt;br/&gt;+ content: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ FrontMatter(text: str)&lt;br/&gt;+ of_file(path: Path): FrontMatter&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/markdown;" vertex="1" parent="1">
+          <mxGeometry x="1570" y="60" width="220" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-markdown--format" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Format&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ short: str&lt;br/&gt;+ extension: str&lt;br/&gt;+ is_code: bool&lt;br/&gt;+ group: str&lt;br/&gt;+ group_order: int&lt;br/&gt;+ file_order: int&lt;br/&gt;+ is_templated: bool&lt;br/&gt;+ template_folder: str&lt;br/&gt;+ template_extension: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Format(name: str | None)&lt;br/&gt;+ from_extension(extension: str): Format&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#ffe6cc;strokeColor=#666666;module=harness/markdown;" vertex="1" parent="1">
+          <mxGeometry x="1760" y="760" width="240" height="238" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-guidance--guidancecollection" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;GuidanceCollection&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ current: Guidance | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="360" y="380" width="420" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-guidance--rulescollection" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/guidance»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;RulesCollection&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ applies_to: AppliesTo&lt;br/&gt;+ prose: str&lt;br/&gt;+ injection: RuleInjection&lt;br/&gt;+ practice_key: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="880" y="380" width="640" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="document «reads sections with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.1923;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6765;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-markdown--markdown" target="harness-markdown--markdowntext" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1800" y="660" />
+              <mxPoint x="510" y="660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="«locates its section from»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5962;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-markdown--markdown" target="harness-markdown--markdownscope" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2010" y="700" />
+              <mxPoint x="1350" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="2" value="document «reads sections with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.1923;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6765;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-markdown--markdown" target="harness-markdown--markdowntext" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1800" y="660" />
+              <mxPoint x="510" y="660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="«reads template folders of»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8077;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-markdown--markdown" target="harness-markdown--format" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2120" y="720" />
+              <mxPoint x="1880" y="720" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.4038;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-markdown--markdown" target="harness-annotations--name" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1910" y="680" />
+              <mxPoint x="840" y="680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6" value="«calls built_by on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7609;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-markdown--markdowncollection" target="harness-markdown--markdown" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1300" y="340" />
+              <mxPoint x="1960" y="340" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3235;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-markdown--markdowncollection" target="harness-markdown--markdowntext" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1180" y="350" />
+              <mxPoint x="810" y="350" />
+              <mxPoint x="810" y="640" />
+              <mxPoint x="390" y="640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8" value="«annotated with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2391;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-markdown--markdowncollection" target="harness-annotations--hostedonly" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1060" y="330" />
+              <mxPoint x="160" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="9" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-guidance--guidancecollection" target="harness-markdown--markdowncollection" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1180" y="264" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="10" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="harness-guidance--rulescollection" target="harness-markdown--markdowncollection" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1180" y="264" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram></mxfile>

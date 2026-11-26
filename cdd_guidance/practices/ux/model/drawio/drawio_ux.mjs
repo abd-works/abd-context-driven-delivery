@@ -150,7 +150,9 @@ function getTemplate(layoutName) {
 
 const SCREEN_W   = 720   // screen box width
 const CALLOUT_GAP = 6    // space between a screen and its stories callout
-const CALLOUT_H  = 52    // stories callout height
+const CALLOUT_H  = 52    // stories callout height, for up to two lines
+const CALLOUT_LINE_H = 18 // height of each line of a longer callout
+const CALLOUT_PAD = 16   // space above and below a longer callout's lines
 const LANE_GAP   = 30    // space between the screens and the first transition lane above them
 const LANE_STEP  = 24    // space between transition lanes
 const SCREEN_HDR = 32    // height of bold name bar at top of screen
@@ -207,6 +209,9 @@ const S = {
     'whiteSpace=wrap;html=1;' +
     'fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;' +
     'fontStyle=1;fontSize=11;verticalAlign=top;align=left;',
+  sharedNote:
+    'text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacing=6;' +
+    'fillColor=#fafafa;strokeColor=#666666;fontSize=10;',
   formRow:
     'whiteSpace=wrap;html=1;' +
     'fillColor=#ffffff;strokeColor=none;strokeWidth=0;' +
@@ -389,6 +394,26 @@ function layout(screens) {
 // The VS Code draw.io extension requires sequential numeric cell IDs.
 // We thread a plain counter object { v: number } through all helpers.
 
+// What the drawing keeps for its reader beside what it shows: a style key such as uxLayout=sidebar, which draw.io
+// carries untouched. A value holds no ';' or '=', which end a style key.
+function keep(key, value) {
+  if (value === undefined || value === null || value === '') return ''
+  return `${key}=${esc(String(value).replace(/[;=]/g, ' '))};`
+}
+
+// One value for each control a row or an action strip shows, in the order it shows them, under key: the type of each,
+// uxControls=number,button, or the name of each named otherwise than it is labelled, uxNames=Add To Cart Button,.
+// A control with no value keeps its place, so the values stay beside their labels.
+function keepEach(key, values) {
+  if (!Array.isArray(values) || values.length === 0 || values.every(value => !value)) return ''
+  return `${key}=${esc(values.map(value => String(value || '').replace(/[;=,]/g, ' ')).join(','))};`
+}
+
+// What a row or an action strip keeps of the controls it shows: their types and their names.
+function keepControls(kinds, names) {
+  return keepEach('uxControls', kinds) + keepEach('uxNames', names)
+}
+
 function mkCell(counter, { value, style, vertex, edge, source, target, parent, x, y, w, h, waypoints }) {
   const id = String(++counter.v)
   const parts = [
@@ -425,7 +450,7 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
   if (r.type === 'chrome') {
     cells.push(mkCell(counter, {
       value: r.name,
-      style: r.dimmed ? S.chromeDimmed : S.chrome,
+      style: (r.dimmed ? S.chromeDimmed : S.chrome) + keep('uxArea', r.uxArea),
       vertex: true, parent: sid,
       x: rx, y: ry, w: rw, h: CHROME_H,
     }).xml)
@@ -436,14 +461,14 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
     const vH  = verbRowH(r.actions, rw - 8)
     const rh  = LIST_HDR_H + vH + ROW_H * ROW_COUNT
     cells.push(mkCell(counter, {
-      value: `<b>${r.name}</b>`, style: S.listRegion,
+      value: `<b>${r.name}</b>`, style: S.listRegion + keep('uxArea', r.uxArea),
       vertex: true, parent: sid,
       x: rx, y: ry, w: rw, h: rh,
     }).xml)
     // Actions strip immediately below region header label (wraps as needed)
     const actions = (r.actions || []).join(' · ')
     cells.push(mkCell(counter, {
-      value: actions, style: S.verbRow,
+      value: actions, style: S.verbRow + keepControls((r.actions || []).map(() => 'button'), r.actionNames),
       vertex: true, parent: sid,
       x: rx + 4, y: ry + LIST_HDR_H, w: rw - 8, h: vH,
     }).xml)
@@ -451,7 +476,7 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
     const fields = (r.fields || []).join(' · ')
     for (let i = 0; i < ROW_COUNT; i++) {
       cells.push(mkCell(counter, {
-        value: fields, style: S.row,
+        value: fields, style: S.row + keepControls(r.fieldKinds, r.fieldNames),
         vertex: true, parent: sid,
         x: rx + 4, y: ry + LIST_HDR_H + vH + i * ROW_H, w: rw - 8, h: ROW_H,
       }).xml)
@@ -463,13 +488,14 @@ function renderRegion(r, cells, counter, sid, rx, ry, rw) {
     const fieldCount = r.fields?.length || 3
     const rh = LIST_HDR_H + FORM_ROW_H * fieldCount
     cells.push(mkCell(counter, {
-      value: `<b>${r.name}</b>`, style: S.formRegion,
+      value: `<b>${r.name}</b>`, style: S.formRegion + keep('uxArea', r.uxArea),
       vertex: true, parent: sid,
       x: rx, y: ry, w: rw, h: rh,
     }).xml)
     for (let i = 0; i < fieldCount; i++) {
       cells.push(mkCell(counter, {
-        value: (r.fields || [])[i] || '', style: S.formRow,
+        value: (r.fields || [])[i] || '', style: S.formRow + keepControls(r.fieldKinds && i < r.fieldKinds.length ? [r.fieldKinds[i]] : null,
+                                          r.fieldNames && i < r.fieldNames.length ? [r.fieldNames[i]] : null),
         vertex: true, parent: sid,
         x: rx + 4, y: ry + LIST_HDR_H + i * FORM_ROW_H, w: rw - 8, h: FORM_ROW_H,
       }).xml)
@@ -497,7 +523,7 @@ function generateXml(state) {
 
     const sid     = screenNumId[screen.name]
     const tmplObj = getTemplate(screen.layout || 'stack')
-    const style   = tmplObj.rounded ? S.screenModal : S.screen
+    const style   = (tmplObj.rounded ? S.screenModal : S.screen) + keep('uxLayout', screen.uxLayout)
 
     // Push screen cell directly with its pre-assigned id (don't call mkCell which auto-increments)
     const geoParts = `x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" as="geometry"`
@@ -539,15 +565,20 @@ function generateXml(state) {
     }
 
     // Callout annotation
+    // What the screen serves, one line for each kind, its domain terms, then one line for each kind of thing each
+    // control serves. A served story, scenario or step arrives as label markup: a link when it has a target.
     const lines = [
-      screen.stories?.length ? `<b>Stories:</b> ${screen.stories.join(' · ')}` : '',
-      screen.terms?.length   ? `<b>Domain terms:</b> ${screen.terms.join(' · ')}` : '',
+      screen.stories?.length   ? `<b>Stories:</b> ${screen.stories.join(' · ')}` : '',
+      screen.scenarios?.length ? `<b>Scenarios:</b> ${screen.scenarios.join(' · ')}` : '',
+      screen.steps?.length     ? `<b>Steps:</b> ${screen.steps.join(' · ')}` : '',
+      screen.terms?.length     ? `<b>Domain terms:</b> ${screen.terms.join(' · ')}` : '',
+      ...(screen.served || []).map(line => `<b>${esc(line.by)} serves ${line.kind}:</b> ${line.items.join(' · ')}`),
     ].filter(Boolean)
     if (lines.length) {
       cells.push(mkCell(counter, {
         value: lines.join('<br>'),
         style: S.callout, vertex: true, parent: '1',
-        x: pos.x, y: pos.y + pos.h + CALLOUT_GAP, w: pos.w, h: CALLOUT_H,
+        x: pos.x, y: pos.y + pos.h + CALLOUT_GAP, w: pos.w, h: Math.max(CALLOUT_H, lines.length * CALLOUT_LINE_H + CALLOUT_PAD),
       }).xml)
     }
   }
@@ -637,6 +668,34 @@ function generateXml(state) {
   ].join('\n')
 }
 
+// ─── Shared notes ──────────────────────────────────────────────────────────────
+// The lines of the note drawn for each content type, then each nav component, the screens share: a heading line
+// naming it, then a line for each thing it holds, as `Heading: value`, several values joined by ' · '. The reader
+// takes each back by its heading, so a person can change a line in draw.io.
+
+const NOTE_W = 240
+const NOTE_LINE_H = 16
+const NOTE_PAD = 12
+const NOTE_GAP = 20
+
+function noteLine(heading, value) {
+  return value ? `<b>${heading}:</b> ${esc(value)}` : ''
+}
+
+function sharedNotes(state) {
+  const contentTypes = (state.contentTypes || []).map(kind => [
+    noteLine('Content type', kind.name),
+    noteLine('Hierarchy', kind.hierarchy),
+    noteLine('Key actions', (kind.keyActions || []).join(' · ')),
+  ])
+  const navComponents = (state.navComponents || []).map(nav => [
+    noteLine('Nav component', nav.name),
+    noteLine('Kind', nav.uxType),
+    noteLine('Destinations', (nav.destinations || []).join(' · ')),
+  ])
+  return [...contentTypes, ...navComponents].map(lines => lines.filter(Boolean))
+}
+
 // ─── Site map page ─────────────────────────────────────────────────────────────
 // Second diagram page: one titled box per screen, labeled connector arrows only.
 // Positioned using the same col/row grid as the detailed page (260px col, 90px row).
@@ -684,6 +743,20 @@ function generateSiteMapPage(state) {
     })
   }
 
+  // A note for each content type and each nav component the screens share, stacked in a column of their own to the
+  // right of every screen, so no note lies over a screen or the lines between screens.
+  const lastCol = Math.max(-1, ...screens.map(s => (s.col !== undefined ? s.col : 0)))
+  let noteY = PAD_Y
+  for (const lines of sharedNotes(state)) {
+    const h = lines.length * NOTE_LINE_H + NOTE_PAD
+    cells.push(
+      `                <mxCell id="${++idCtr}" value="${esc(lines.join('<br>'))}" style="${S.sharedNote}" vertex="1" parent="1">`,
+      `                    <mxGeometry x="${PAD_X + (lastCol + 1) * COL_W}" y="${noteY}" width="${NOTE_W}" height="${h}" as="geometry"/>`,
+      `                </mxCell>`
+    )
+    noteY += h + NOTE_GAP
+  }
+
   // Connector arrows — merge A→B + B→A into one bidirectional arrow
   const siteConnSet  = new Set(conns.map(c => `${c.from}|${c.to}`))
   const siteRendered = new Set()
@@ -703,9 +776,9 @@ function generateSiteMapPage(state) {
     const baseStyle = conn.dashed
       ? 'html=1;strokeColor=#000000;endArrow=block;endFill=1;fontSize=10;dashed=1;'
       : 'html=1;strokeColor=#000000;endArrow=block;endFill=1;fontSize=10;'
-    const style = isBidi
+    const style = (isBidi
       ? baseStyle.replace('endArrow=block', 'startArrow=block;startFill=1;endArrow=block')
-      : baseStyle
+      : baseStyle) + keep('uxNav', conn.navType)
     cells.push(
       `                <mxCell id="${id}" value="${esc(label)}" style="${style}" edge="1" source="${srcId}" target="${tgtId}" parent="1">`,
       `                    <mxGeometry relative="1" as="geometry"/>`,

@@ -16,12 +16,11 @@ from expects import equal, expect
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.validate.checked_graph import CheckedGraph, NamedToCheck
-from cdd_guidance.actions.validate.report_files import ReportFiles
 from harness.agent_tools.tool_call import ToolCall
 from harness.graph.saved_graph import SavedGraph
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
-_FIXTURES = Path(__file__).with_name("fixtures")
+_FIXTURES = Path(__file__).resolve().with_name("fixtures")
 _SAVED_GRAPH = _FIXTURES / "saved-graph" / ".context" / "graph.json"
 _NODE_LIST = _FIXTURES / "sample-graph-violations.json"
 
@@ -30,9 +29,7 @@ def _checked(named):
     """A validate call's checked graph for the graph files named, in a throwaway project, and the project."""
     throwaway = ThrowawayProject()
     session = ToolCall(project=throwaway.root).session
-    graph = CheckedGraph(session, [], NamedToCheck(graph=named))
-    graph.check_beside(ReportFiles(session, []))
-    return graph, throwaway
+    return CheckedGraph(session, [], NamedToCheck(graph=named)), throwaway
 
 
 with description("a validate call's checked graph"):
@@ -99,7 +96,7 @@ with description("a validate call's checked graph"):
             self.saved.parent.mkdir(parents=True, exist_ok=True)
             self.saved.write_bytes(_SAVED_GRAPH.read_bytes())
             self.graph = CheckedGraph(session, [], NamedToCheck(graph=True))
-            self.files = self.graph.check_beside(ReportFiles(session, []))
+            self.files = self.graph.files
 
         with after.each:
             self.throwaway.close()
@@ -111,3 +108,56 @@ with description("a validate call's checked graph"):
             expect([violation.rule for violation in self.graph.violations()]).to(
                 equal(["limit-operation-parameters", "load-with-identity-in-hand"])
             )
+
+    with context("that checks a graph one of whose violations a person accepted"):
+        with before.each:
+            self.graph, self.throwaway = _checked(str(_SAVED_GRAPH))
+            self.accepted = self.graph.found()[0]
+            self.graph.session.accepted_violations.accept(self.accepted)
+
+        with after.each:
+            self.throwaway.close()
+
+        with it("should leave the accepted violation out of the violations it reports"):
+            expect([violation.rule for violation in self.graph.violations()]).to(equal(["load-with-identity-in-hand"]))
+
+        with it("should name the accepted violation as accepted"):
+            expect(self.graph.accepted()).to(equal([self.accepted]))
+
+        with it("should still find it, so the session's history never records it as fixed"):
+            expect([violation.rule for violation in self.graph.found()]).to(equal(["limit-operation-parameters", "load-with-identity-in-hand"]))
+
+        with it("should report it again once the acceptance is taken back"):
+            self.graph.session.accepted_violations.reopen(self.accepted)
+            expect([violation.rule for violation in self.graph.violations()]).to(equal(["limit-operation-parameters", "load-with-identity-in-hand"]))
+
+
+_STORY_MAP = "# (E) Sell Books\n## (E) Take Orders\n### (S) Customer --> Place Order\n"
+_UNPLACED = (
+    "# Sub-epic: Take Orders\n\n"
+    "## Story: Gift Order\n\n#### Scenario: Gift one book\n\n*Given* a Customer\n*When* the Customer gifts a book\n*Then* the gift is sent\n\n"
+    "## Story: Wrap Order\n\n#### Scenario: Wrap one book\n\n*Given* a Customer\n*When* the Customer wraps a book\n*Then* the book is wrapped\n"
+)
+
+
+with description("a validate call's checked graph in a session that names its stories"):
+    with before.each:
+        from harness.graph.rule_fixture import RuleFixture
+        from cdd_guidance.practices.stories.stories import Stories
+
+        fixture = RuleFixture(Stories, {"story-map.md": _STORY_MAP, "story_tests/sell-books/take-orders/take_orders_story.test.md": _UNPLACED})
+        self.throwaway = ThrowawayProject()
+        session = ToolCall(project=self.throwaway.root).session
+        session.keep_text("## Story: Gift Order\n")
+        saved = self.throwaway.root / "stories-graph.json"
+        saved.write_text(SavedGraph.from_graph(fixture.practice.reading.graph).text, encoding="utf-8")
+        self.found = CheckedGraph(session, [], NamedToCheck(graph=str(saved))).found()
+
+    with after.each:
+        self.throwaway.close()
+
+    with it("should keep a violation on a story it names"):
+        expect(any("Gift Order" in violation.described for violation in self.found)).to(equal(True))
+
+    with it("should leave out a violation on a story map node outside those stories, another increment's work"):
+        expect(any("Wrap Order" in violation.described for violation in self.found)).to(equal(False))

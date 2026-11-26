@@ -101,18 +101,18 @@ Start from an agreed sketch and deepen toward green tests and production code. E
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*-sketch.md"
 ```
 
 Whenever you write or reshape describe / that / with / it-should specs, or code that is supported by these specifications. Follow these rules.
 
-- **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals. Assertions on internals break when the code is refactored and still pass when the behavior is wrong.
+- **`observable-behavior`** — Prove what a stakeholder can verify without reading code (return value, state, public effect). Never internals. Assertions on internals break when the code is refactored and still pass when the behavior is wrong. {{decided.observable_behavior}}
 - **`domain-practice-alignment`** — Describe names must match domain language / model exactly, so the business, the spec, and the code all use the same words.
 - **`usage-order-behaviors`** — Order describes, contexts, and examples as a **usage story** or operational sequence (what happens first → next). Do not order by implementation layer, package, or internal type. In usage order a missing step is obvious; ordered by layer, nobody can tell what is not covered.
-- **`describe-is-subject-not-internal`** — A `describe` is a domain subject, state, or observable condition — never a manager, hub, runner, service, or other internal (`SessionLog`, `ToolsetRunner`, …). A spec named after a class has to be rewritten when that class is replaced, even though the behavior did not change.
-- **`describe-is-plain-english`** — Full English phrases (e.g. "an action that is annotated with log", "an action that is not annotated"). Never symbol/mechanism names (`"@log marker"`) as the subject.
-- **`shared-describe-subject`** — Keep **one** outermost `describe` per domain subject. When two top-level describes share the same opening phrase and only diverge in a trailing qualifier (`registered for deploy` vs `with mcp-published operations`, `context guidance registered for` vs `context guidance with`, `a context tool module with fidelity sections` vs `with fidelities and assembly`), that divergence is a **branch** — promote the shared phrase to the single describe and nest each qualifier as a sibling `with` / `that` context. Do not repeat the shared setup string in a second top-level describe; scan the spec file for repeated top-level `describe` prefixes before adding another subject line.
-- **`state-not-when`** — Never name a nested state with `when`. Use `that …` for events/conditions on the subject and `with …` for standing conditions. Ask: what event or condition must already be true for this observation?
+- **`describe-is-subject-not-internal`** — A `describe` is a domain subject, state, or observable condition — never a manager, hub, runner, service, or other internal (`SessionLog`, `ToolsetRunner`, …). A spec named after a class has to be rewritten when that class is replaced, even though the behavior did not change. {{decided.describe_is_subject_not_internal}}
+- **`describe-is-plain-english`** — Full English phrases (e.g. "an action that is annotated with log", "an action that is not annotated"). Never symbol/mechanism names (`"@log marker"`) as the subject. {{decided.describe_is_plain_english}}
+- **`shared-describe-subject`** — Keep **one** outermost `describe` per domain subject. When two top-level describes share the same opening phrase and only diverge in a trailing qualifier (`registered for deploy` vs `with mcp-published operations`, `context guidance registered for` vs `context guidance with`, `a context tool module with fidelity sections` vs `with fidelities and assembly`), that divergence is a **branch** — promote the shared phrase to the single describe and nest each qualifier as a sibling `with` / `that` context. Do not repeat the shared setup string in a second top-level describe; scan the spec file for repeated top-level `describe` prefixes before adding another subject line. {{decided.shared_describe_subject}}
+- **`state-not-when`** — Never name a nested state with `when`. Use `that …` for events/conditions on the subject and `with …` for standing conditions. Ask: what event or condition must already be true for this observation? {{decided.state_not_when}}
 - **`nest-by-enabling-events`** — Each nested `that` / `with` must be a real precondition or event required for the nested `it should` — not a test-file grouping convenience.
 - **`context-setup-expresses-state`** — Any `before.each`, `before.all`, or Arrange nested directly under a `that`/`with` must establish the state named in that label. Read label and setup together: if the label says the subject is annotated, configured, or classified a certain way, the setup must make that true — not merely boot the host, wire paths, or call a factory. Put host boot, browser launch, and construction plumbing in a parent context whose label says the host is started, loaded, or running (`that is hosted on…`, `that the server has started…`). At development fidelity `before.each` is the Arrange step, and the same holds.
 - **`full-surface-coverage`** — Full coverage means the behavior tree is complete — every observable outcome has an `it should` in the right branch. Walk the describe/`that`/`with` tree for missing subjects, states, and outcomes; do not add one `it` per public method just because the member exists.
@@ -128,8 +128,12 @@ stage: discovery
 clean_engineering: model
 outputs:
   python: "**/*_spec.py"
-  typescript: "**/*spec.ts"
-  java: "**/*Spec.java"
+  typescript: "**/*.spec.ts"
+  javascript: "**/*.spec.js"
+example: "_examples/examples.py"
+leaves_out:
+  typescript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
+  javascript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
 ```
 
 #### Overview
@@ -139,11 +143,11 @@ Define BDD signatures — describe/it names for every observation, no test bodie
 #### Guidance
 
 - Sketch nesting (subjects → `with`/`that`/events → `it should`) is agreed
-- **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest/TypeScript or JUnit 5/Java when the project uses those.
+- **Confirm framework** — ask if not stated. Default: Mamba/Python; Jest or Vitest in TypeScript or JavaScript when the project uses those. These are the three languages the practice reads, renders, and checks.
 - Convert every sketch hierarchy line to its framework equivalent (see Framework syntax).
 - Process in batches of ~18 describe blocks when the hierarchy is large.
 
-Fill the **behavior** (SIGNATURE) section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
+Fill the **behavior** (SIGNATURE) section of `templates/bdd.py`, `templates/bdd.ts`, or `templates/bdd.js`.
 
 #### Scaffold
 
@@ -155,15 +159,15 @@ Rough behavior index for a **partition** pass or first cut — the subjects unde
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*-sketch.md"
 ```
 
 Whenever you name or re-nest describe/it signatures, change code that relies on those signatures, or change specifications that need this kind of rename. Follow these rules.
 
 If this change will not stay here, follow `practices/bdd.mdc`.
 
-- **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup. The rule judges a spec still at behavior fidelity: once development has replaced every `BDD: SIGNATURE` marker with a test body that asserts, the spec is a finished test and its bodies belong there.
-- **`framework-syntax`** — Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs. Mark each signature with `BDD: SIGNATURE` until development replaces it; a finished spec carries none.
+- **`no-implementation`** — No assertions, mocks, production imports, helpers, or `beforeEach` / shared setup. The rule judges a spec still at behavior fidelity: once development has replaced every `BDD: SIGNATURE` marker with a test body that asserts, the spec is a finished test and its bodies belong there. {{decided.no_implementation}}
+- **`framework-syntax`** — Refer to [`cdd_guidance/references/language-tools.md`](../../references/language-tools.md) for the target language's syntax. One confirmed framework throughout. Do not mix Jest and Mamba constructs. Mark each signature with `BDD: SIGNATURE` until development replaces it; a finished spec carries none. {{decided.framework_syntax}}
 
 **Pass:**
 ```typescript
@@ -184,8 +188,14 @@ stage: specification
 clean_engineering: model
 outputs:
   python: "**/*_spec.py"
-  typescript: "**/*spec.ts"
+  typescript: "**/*.spec.ts"
+  javascript: "**/*.spec.js"
   markdown: ".context/{scope}-bdd-realization.md"
+example: "_examples/examples.py"
+leaves_out:
+  typescript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
+  javascript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
+  markdown: "everything but the describe tree. Imports, helpers and test bodies stay in the spec file"
 ```
 
 #### Overview
@@ -203,8 +213,8 @@ Ask which public operation on the subject under test each observation exercises,
 - **Default on** after **behavior** signatures exist, unless the user says **no realizations**.
 - **Render it from the graph.** The realization is drawn, not written by hand, so it says exactly what the graph and the model say:
   1. Load the knowledge graph for the spec files, the code they test, and the module's model (`graph.load_files` with `bdd` and `clean_engineering`, files naming the module folder). The load reads each folder's `.context/*-model.md` with the code.
-  2. Save it (`graph.save_json`, written to `.context/graph.json`).
-  3. Render it: `render` on this guidance with `format=markdown`, `source=graph`, and `paths` naming the saved graph. Write the result to `.context/{scope}-bdd-realization.md`.
+  2. Save it (`graph.save_json`). The save answers with the path of the file it wrote, the session's own `graph.json`.
+  3. Render it: `render` on this guidance with `format=markdown`, `source=graph`, and `paths` naming that path, so the render draws the graph just loaded and not an older one saved elsewhere. The render saves it as `.context/{scope}-bdd-realization.md`, its scope named for what the graph was read from: the one spec's own name (`cart` for `cart_spec.py`), else the folder that holds every spec.
   4. Read the result for the gaps below, fix the model or the specs where they are wrong, and render again. Do not edit the rendered file by hand, because the next render replaces it.
 - **The tree comes from the graph.** The graph's `Spec`, `Description`, `Context`, and `Observation` nodes are the behavior tree, in each spec file's order, with every heading and `it should` as the spec writes it; one graph per observation, none added or dropped.
 - **Each observation's entry operations come from its `invokes` edges.** The graph links an observation to the operations and properties it reaches: first what its nearest enclosing setup calls (`before.each`, `beforeEach`, `before`), which is the event the observation follows, then what its own body calls or reads. A tool called by name, `call("ticket.move_next", …)`, is that toolset's operation. Spec files and test helpers are never entries, so the graph already shows the domain call a helper delegates to.
@@ -213,7 +223,7 @@ Ask which public operation on the subject under test each observation exercises,
 - Keep Arrange surface lines (`-> subject = new …`, property sets) separate from the nested call graph under the Act that the observation proves.
 - Store graphs on observations in the BDD model: fenced blocks in `templates/bdd-sketch.md`, round-tripped through `practices/bdd/model` (same call-graph conversion as stories and clean engineering).
 
-Fill the **realization** section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`) — call-graph comments or structured `realization` data beside each `BDD: SIGNATURE` until **development** replaces them with real Arrange / Act / Assert.
+Fill the **realization** section of `templates/bdd.py`, `templates/bdd.ts`, or `templates/bdd.js` — call-graph comments or structured `realization` data beside each `BDD: SIGNATURE` until **development** replaces them with real Arrange / Act / Assert.
 
 #### Scaffold
 
@@ -225,7 +235,7 @@ Rough realization index for a **partition** pass or first cut — under each `it
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md,**/*-bdd-realization.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*-sketch.md,**/*-bdd-realization.md"
 ```
 
 Whenever you add or change call graphs on BDD observations, or change production code those graphs describe. Follow these rules.
@@ -253,8 +263,12 @@ stage: implementation
 clean_engineering: code
 outputs:
   python: "**/*_spec.py"
-  typescript: "**/*spec.ts"
-  java: "**/*Spec.java"
+  typescript: "**/*.spec.ts"
+  javascript: "**/*.spec.js"
+example: "_examples/examples.py"
+leaves_out:
+  typescript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
+  javascript: "nothing of the describe tree or the test bodies; a line comes back as the spec format spells it, with double quotes and a nested description as a context"
 ```
 
 #### Overview
@@ -270,7 +284,7 @@ Implement BDD tests with production code.
 1. **Confirm framework** — inherit from the behavior file.
 2. **Scan markers** — list all `it` blocks still containing `BDD: SIGNATURE`; report count.
 3. **Identify shared setup** — extract to `beforeEach` / `with before.each:` or a factory when three or more siblings share arrangement.
-4. Pick **one** marker. Use the **realization** call graph for Act when present; otherwise derive Act from the observation label and domain model. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd-templates.{ext}` (`.py` / `.java` / `.ts`).
+4. Pick **one** marker. Use the **realization** call graph for Act when present; otherwise derive Act from the observation label and domain model. Fill Arrange-Act-Assert from the DEVELOPMENT TESTS section of `templates/bdd.py`, `templates/bdd.ts`, or `templates/bdd.js`.
 5. Run the test — confirm RED for the right reason.
 6. Write the **minimum** production code until GREEN (PRODUCTION CODE section of the same template).
 7. Refactor only while green. Move to the next marker.
@@ -305,7 +319,7 @@ Rough development index for a **partition** pass or first cut — the spec files
 
 ```yaml
 alwaysApply: false
-globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*Spec.java,**/*-sketch.md"
+globs: "**/*spec.py,**/*_spec.py,**/*spec.ts,**/*.spec.shared.ts,**/*spec.js,**/*.spec.shared.js,**/*-sketch.md"
 ```
 
 Whenever you create, alter, or delete production code supported by BDD specs, or the specs themselves. Follow these rules.
@@ -316,11 +330,19 @@ If this change will not stay here, follow `practices/bdd/bdd-behavior.mdc`.
 - **`red-then-green`** — Fix code by writing the test first, then watching it fail, then making production code changes.
 - **`minimum-green`** / **`code-minimalism`** — Least production code that makes this assertion pass. Refactor only while green.
 - **`one-signature-at-a-time`** — Implement and test one `BDD: SIGNATURE` at a time — get it passing before moving to the next. Do not fill in every test body first and try to make them all pass together.
-- **`one-assertion-per-test`** — One outcome per `it` — two outcomes in one test and a failure does not tell you which behavior broke.
-- **`layer-isolation`** — Mock only at architecture boundaries; never the subject under test. Mocking the subject tests the mock, not your code.
+- **`one-assertion-per-test`** — One outcome per `it` — two outcomes in one test and a failure does not tell you which behavior broke. {{decided.one_assertion_per_test}}
+- **`layer-isolation`** — Mock only at architecture boundaries; never the subject under test. Mocking the subject tests the mock, not your code. {{decided.layer_isolation}}
 - **`context-sharing`** — Shared construction in `beforeEach` / factory at three sibling dupes. Repeated setup in every test hides what actually differs between them.
 - **`oo-api-design`** — Ask-don't-tell: construct fully; own state on the object; operations on the closest domain concept. Tests that assemble state through getters or pass setup bags couple to how you built it, not what it does.
 - **`honors-documented-surface-contracts`** — Public API must match documented surface contracts; if a spec fights the contract, fix the spec.
+
+---
+
+### hardening
+
+```yaml
+stage: hardening
+```
 
 ---
 

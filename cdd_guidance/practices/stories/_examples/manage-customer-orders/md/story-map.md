@@ -29,3 +29,4 @@ example-of: story-map
 - Actor goes before `-->`, not in the story name
 - Each story is one observable behavior — not a task or feature
 - Sub-epics group stories into coherent flows
+- The shape, one epic of three sub-epics, belongs to this order domain: take your map's epics and nesting from your own sources

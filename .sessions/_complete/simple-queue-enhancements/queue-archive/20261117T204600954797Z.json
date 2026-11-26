@@ -1,0 +1,17 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T20:46:00.954797+00:00",
+  "prompts": [
+    {
+      "id": "9543628730a5",
+      "text": "[interruption] no dummy we add a a dd remove reoirser tasks on queue item whgre s that",
+      "steps": [
+        {
+          "text": "[interruption] not wqhat i asmked ow t=do i add remve reorider  etc the TASWKS IN THE QUQUQ",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

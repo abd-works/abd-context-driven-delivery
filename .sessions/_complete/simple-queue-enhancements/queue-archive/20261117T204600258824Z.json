@@ -1,0 +1,17 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T20:46:00.258824+00:00",
+  "prompts": [
+    {
+      "id": "3f1676063cb5",
+      "text": "[interruption] how do  ia dd a atask",
+      "steps": [
+        {
+          "text": "[interruption] not a queue item a task",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

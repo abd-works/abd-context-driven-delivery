@@ -19,8 +19,9 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from cdd_guidance.practices.clean_engineering.model.code_body import PYTHON, CodeBody
-from cdd_guidance.practices.stories.model.story_model import Example, ExampleValue, Scenario, StepType, Story
+from cdd_guidance.practices.source_code import PYTHON, CodeBody
+from cdd_guidance.practices.stories.model.story_file import StoryFile
+from cdd_guidance.practices.stories.model.story_map import Example, ExampleValue, Scenario, StepType, Story
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_recording import StoryRecording
@@ -38,15 +39,21 @@ class FixtureExample(Example):
     """An example a shared story file takes from its examples module: its fixture's fields as its value, and the facts
     the statements that use it give, which it records with in place of the facts a story file's own example reads."""
 
-    def __init__(self, name: str, example_value: ExampleValue = None, facts: dict | None = None) -> None:
+    def __init__(self, name: str, example_value: ExampleValue = None, facts: dict | None = None, declared: tuple | None = None) -> None:
         super().__init__(name, example_value)
         self.fixture_facts = dict(facts or {})
+        self._declared = declared
 
     def recorded_facts(self, recording: "StoryRecording", file: str) -> dict:
         return dict(self.fixture_facts)
 
+    @property
+    def declaration(self) -> tuple | None:
+        """The examples module the fixture is defined in, and its definition's first and last line."""
+        return self._declared
+
     def clone(self) -> "FixtureExample":
-        cloned = type(self)(self.name, dict(self.value) if isinstance(self.value, dict) else self.value, self.fixture_facts)
+        cloned = type(self)(self.name, dict(self.value) if isinstance(self.value, dict) else self.value, self.fixture_facts, self._declared)
         cloned.sequential_order, cloned.scope = self.sequential_order, self.scope
         return cloned
 
@@ -63,10 +70,12 @@ class StepCode:
 
 @dataclass(frozen=True)
 class Fixture:
-    """One fixture of an examples module: the fields it is built with, and the names its definition holds."""
+    """One fixture of an examples module: the fields it is built with, the names its definition holds, and the first and
+    last line of its definition."""
 
     cells: dict
     names: tuple[str, ...]
+    lines: tuple[int, int] = (0, 0)
 
 
 class FixtureModule:
@@ -84,7 +93,7 @@ class FixtureModule:
         for node in self._tree.body:
             if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
                 definition = ast.get_source_segment(self._text, node) or ""
-                found[node.targets[0].id] = Fixture(self._cells(node.value), tuple(dict.fromkeys(_IDENTIFIER.findall(definition))))
+                found[node.targets[0].id] = Fixture(self._cells(node.value), tuple(dict.fromkeys(_IDENTIFIER.findall(definition))), (node.lineno, node.end_lineno or node.lineno))
         return found
 
     @cached_property
@@ -112,28 +121,41 @@ class FixtureModule:
         return ast.get_source_segment(self._text, expression) or ""
 
 
-class SharedStoryFile:
-    """One shared story file's text, parsed once, with the folders its examples module is looked for in."""
+class SharedStoryFile(StoryFile):
+    """One shared story file, read once: its stories, each with its scenarios in the order the file writes them. Its
+    examples module is looked for in the project first, then in the folders Python imports from. Its own code is not
+    kept."""
 
-    def __init__(self, text: str, search: list[Path] | None = None) -> None:
-        self.text = text
-        self._tree = ast.parse(text)
-        self._lines = text.splitlines()
-        self._search = [Path(folder) for folder in (search if search is not None else [Path.cwd(), *map(Path, sys.path)])]
+    @cached_property
+    def _read(self) -> tuple[list, None]:
+        return self._stories(), None
 
-    def stories(self, story_type: type) -> list:
+    @cached_property
+    def _tree(self) -> ast.Module:
+        return ast.parse(self.text)
+
+    @cached_property
+    def _lines(self) -> list[str]:
+        return self.text.splitlines()
+
+    @cached_property
+    def _search(self) -> list[Path]:
+        return [*([Path(self.project)] if self.project is not None else []), Path.cwd(), *map(Path, sys.path)]
+
+    def _stories(self) -> list:
         """The stories of the file, each with its scenarios in the order the file writes them."""
+        story_class = self.model.story_class
         stories: dict[str, Any] = {}
         for function in self._tree.body:
             named = self._decorated_with(function, frozenset({_SCENARIO}))
             if named is None or len(named) < 2:
                 continue
-            story = stories.setdefault(named[0], story_type(named[0], len(stories) + 1))
+            story = stories.setdefault(named[0], story_class(named[0], len(stories) + 1))
             story.scenarios.append(self._scenario(story, named[1], function))
         return list(stories.values())
 
     def _scenario(self, story: Story, name: str, function: ast.FunctionDef) -> Scenario:
-        scenario = story.scenario_type(name=name, sequential_order=len(story.scenarios) + 1)
+        scenario = story.scenario_class(name=name, sequential_order=len(story.scenarios) + 1)
         for step in self._steps_of(function):
             self._add_step(scenario, step)
         scenario_text = self._code_of(function)
@@ -148,7 +170,7 @@ class SharedStoryFile:
         continued = scenario.steps[-1] if code.kind in _CONTINUATIONS and scenario.steps else None
         phase = _PHASES.get(code.kind) or (continued.step_type if continued is not None else StepType.GIVEN)
         order = len(continued.ands if continued is not None else scenario.steps) + 1
-        made = scenario.step_type(code.words, phase, order)
+        made = scenario.step_class(code.words, phase, order)
         made.keyword = _CONTINUATIONS.get(code.kind, code.kind.capitalize())
         made.body = CodeBody(self._code_of(code.function), PYTHON)
         if continued is not None:
@@ -190,9 +212,11 @@ class SharedStoryFile:
         function the module offers is no fixture."""
         found: dict[str, FixtureExample] = {}
         for module, names in self._imports():
-            fixtures = FixtureModule(self._module_text(module)).fixtures
+            path = self._module_path(module)
+            fixtures = FixtureModule(path.read_text(encoding="utf-8") if path is not None else "").fixtures
             for name in (imported for imported in names if imported in fixtures):
-                found[name] = FixtureExample(name, fixtures[name].cells, facts=self._facts_of(name, fixtures[name]))
+                declared = (path, *fixtures[name].lines)
+                found[name] = FixtureExample(name, fixtures[name].cells, facts=self._facts_of(name, fixtures[name]), declared=declared)
         return found
 
     def _imports(self) -> list[tuple[str, list[str]]]:
@@ -202,11 +226,10 @@ class SharedStoryFile:
             if isinstance(node, ast.ImportFrom) and node.module and _EXAMPLES_MODULE.search(node.module)
         ]
 
-    def _module_text(self, module: str) -> str:
-        """The examples module's text, from the first folder searched that holds it; empty when none does."""
+    def _module_path(self, module: str) -> Path | None:
+        """The examples module's file, in the first folder searched that holds it; none when none does."""
         relative = Path(*module.split(".")).with_suffix(".py")
-        found = next((folder / relative for folder in self._search if (folder / relative).is_file()), None)
-        return found.read_text(encoding="utf-8") if found is not None else ""
+        return next((folder / relative for folder in self._search if (folder / relative).is_file()), None)
 
     def _facts_of(self, name: str, fixture: Fixture) -> dict:
         """The names an example shows and the members read off it: the names of its definition and of every statement

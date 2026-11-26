@@ -57,6 +57,10 @@ with description("stories TypeScript story-test examples") as self:
         with it("should flag camelCase story test file names"):
             assert_stories_example_pair("kebab-case-paths")
 
+    with context("then-observes-an-example"):
+        with it("should flag a Then that names no example where a domain model is written, and accept one that names it"):
+            assert_stories_example_pair("then-observes-an-example")
+
     with context("vocabulary-traces-to-domain-source"):
         # The executable name check was retired in 49bec82f; the rule is a prompt the agent judges.
         with it("should apply to stories as a prompt rule with no executable check"):

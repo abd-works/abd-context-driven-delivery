@@ -1,0 +1,34 @@
+{
+  "prompts": [
+    {
+      "id": "95407841f053",
+      "text": "Bots integrated with the Claude pane's background tasks: move its ticket to In Progress on main and do it in this chat (no worktree or branch); also fix interruption steps that hold the board viewer's raw state text (the person, 2026-11-24)",
+      "steps": [
+        {
+          "text": "[interruption] it ewas doen already",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] jsut fucking fix it",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] fuxck off wo9th the queue",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] ???",
+          "state": "pending"
+        }
+      ],
+      "is_done": false,
+      "robot": "Cog"
+    },
+    {
+      "id": "1cc8f5d3caca",
+      "text": "Chats in a dev-lane worktree load the dev lane's mods (queue bar with Flush) without overwriting the stable lane's mod folder; today the dev queue mod was copied into ~/.cdd/claude-plugins by hand, so main chats show a Flush their server can't run until the next stable repin (the person, 2026-11-24)",
+      "is_done": true,
+      "robot": "Sprocket"
+    }
+  ]
+}

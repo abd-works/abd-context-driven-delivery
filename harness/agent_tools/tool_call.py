@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 from contextlib import contextmanager
-from dataclasses import dataclass, replace
 from contextvars import ContextVar
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Iterator, Protocol
+from typing import Any, Callable, Iterator, Protocol
 
 from harness.agent_tools.chat_pointer import ChatPointer
 
@@ -22,18 +22,30 @@ CHAT_FOLDER_ARGUMENT = "chat_folder"
 _NO_CHAT = "unknown"
 
 
+class CallSession(Protocol):
+    """The session a call works in, as agent_tools and mcp use it: they log each tool a call ran in it, and each
+    failure. space/session's *Session* answers it; each framework module that reads more of a session declares what it
+    reads in a protocol of its own that extends this one (*HookSession*, *WorkedSession*)."""
+
+    def log_tool(self, call: ToolCall, tool: str) -> None:
+        """Log that call ran tool, with the paths it named, as a line pointing at the call's chat."""
+
+    def log_failure(self, call: ToolCall, failure: BaseException) -> None:
+        """Log that call failed with failure, its trace kept beside the session's log."""
+
+
 class SessionOpener(Protocol):
     """How a call finds the sessions it works in. The framework keeps no sessions of its own: the module that does
     registers its opener with ``SESSION_OPENING.open_with`` when it is imported, so the framework never imports it."""
 
-    def saved_in(self, project: Path) -> Any:
+    def saved_in(self, project: Path) -> CallSession | None:
         """The session saved as open in project's checkout, read for one caller that serves no call, such as a hook
         event or a diagnostics probe."""
 
-    def open_in(self, call: ToolCall) -> Any:
+    def open_in(self, call: ToolCall) -> CallSession | None:
         """The session saved as open in the call's project."""
 
-    def named_in(self, session_file: str, call: ToolCall) -> Any:
+    def named_in(self, session_file: str, call: ToolCall) -> CallSession | None:
         """The session whose session.json is session_file, a path from the call's project or an absolute one."""
 
 
@@ -43,7 +55,7 @@ class AnsweringMcpHost(Protocol):
     so a call names only what it asks of the host."""
 
     @property
-    def checkout_server(self) -> Any: ...
+    def checkout_toolsets(self) -> Any: ...
 
     def dispatch(self, name: str, arguments: dict[str, object] | None = None, project: Path | None = None) -> object: ...
 
@@ -77,10 +89,10 @@ class ToolRequest:
 
 
 class CallsBeingAnswered:
-    """The call a tool is answering on each thread, so code deep under it, such as a board switching its session, keeps
-    the open session of the call's own chat without each layer passing the chat on. The process keeps one
-    (``CALLS_BEING_ANSWERED``): the MCP host and an in-process answer mark the call they run, and code under them asks
-    for it."""
+    """The call a tool is answering on each thread, kept only so ``report_progress`` deep under a tool reaches the chat
+    that asked without each layer passing a reporter on. Nothing reads a session or a chat from it: a board, a session,
+    and a chat are handed the call that asked. The process keeps one (``CALLS_BEING_ANSWERED``): the MCP host and an
+    in-process answer mark the call they run."""
 
     def __init__(self) -> None:
         self._answering: ContextVar[ToolCall | None] = ContextVar("answering_call", default=None)
@@ -92,7 +104,11 @@ class CallsBeingAnswered:
 
     @contextmanager
     def answering(self, call: ToolCall) -> Iterator[ToolCall]:
-        """Mark call as the one being answered on this thread while its tool runs."""
+        """Mark call as the one being answered on this thread while its tool runs. A call made inside another that no
+        one listens to of its own reports its progress to whoever listens to the other."""
+        outer = self._answering.get()
+        if outer is not None and call.reporter is None:
+            call.reporter = outer.reporter
         token = self._answering.set(call)
         try:
             yield call
@@ -116,18 +132,18 @@ class SessionOpening:
         """Have every call find its sessions through opener."""
         self._opener = opener
 
-    def saved_in(self, project: Path | str) -> Any:
+    def saved_in(self, project: Path | str) -> CallSession | None:
         """The session saved as open in the ``.sessions/session.json`` of the checkout holding project, main when none
         is, for work on a project that serves no call, such as the agent BDD harness or a diagnostics probe; none when
         no sessions are registered. It is read again on each ask, so a switch or a close made through MCP is seen at
         once."""
         return self._opener.saved_in(Path(project).resolve()) if self._opener is not None else None
 
-    def open_in(self, call: ToolCall) -> Any:
+    def open_in(self, call: ToolCall) -> CallSession | None:
         """The session saved as open in the call's project; none when no sessions are registered."""
         return self._opener.open_in(call) if self._opener is not None else None
 
-    def named_in(self, session_file: str, call: ToolCall) -> Any:
+    def named_in(self, session_file: str, call: ToolCall) -> CallSession | None:
         """The session whose session.json is session_file, for call."""
         if self._opener is None:
             raise SessionsNotLoaded(session_file)
@@ -150,11 +166,20 @@ class ToolCall:
         arguments: dict[str, Any] | None = None,
         project: Path | str | None = None,
         request: ToolRequest = ToolRequest(),
+        reporter: Callable[[str], None] | None = None,
     ) -> None:
         self.arguments = dict(arguments or {})
         self.project = Path(project).resolve() if project is not None else None
         self.request = request
-        self._session: Any = None
+        self.reporter = reporter
+        """Whoever listens to the call's progress, such as the MCP host sending it to the chat as notifications; none
+        for a call no one listens to, whose reports go nowhere."""
+        self._session: CallSession | None = None
+
+    def report_progress(self, message: str) -> None:
+        """Tell whoever listens to this call what its tool is doing now; nothing when no one listens."""
+        if self.reporter is not None:
+            self.reporter(message)
 
     @classmethod
     def sent(cls, arguments: dict[str, Any] | None, project: Path | str | None, request: ToolRequest = ToolRequest()) -> ToolCall:
@@ -165,6 +190,19 @@ class ToolCall:
         chat, remaining = ChatPointer.taken_from(arguments)
         chat_folder = str(remaining.pop(CHAT_FOLDER_ARGUMENT, "") or "").strip()
         return cls(remaining, chat_folder or project, request.sent_by(chat))
+
+    @classmethod
+    def from_sent(cls, sent: dict[str, Any], mcp_host: AnsweringMcpHost) -> ToolCall:
+        """The call one lane's server handed this one, which mcp_host answers for the chat that sent it: the tool, its
+        arguments, its project, and its chat, as the sending lane wrote them (``as_sent``)."""
+        chat = ChatPointer.from_request(str(sent.get("chat") or ""))
+        request = ToolRequest(chat, str(sent.get("tool") or ""), mcp_host, answers_a_chat=True)
+        return cls.sent(dict(sent.get("arguments") or {}), str(sent.get("project") or "") or None, request)
+
+    def as_sent(self) -> dict[str, Any]:
+        """This call as one lane's server hands it to the other's, as JSON: the tool, its arguments, its project, and
+        its chat (``from_sent`` reads it back)."""
+        return {"tool": self.request.tool, "arguments": dict(self.arguments), "project": str(self.project or ""), "chat": self.chat_id}
 
     @property
     def chat_id(self) -> str:
@@ -188,7 +226,7 @@ class ToolCall:
         return list(dict.fromkeys(str(value).strip() for value in values if isinstance(value, str) and value.strip()))
 
     @property
-    def session(self) -> Any:
+    def session(self) -> CallSession | None:
         """The session saved as open in the ``.sessions/session.json`` of the checkout holding the project, main when
         none is, read once for this call; none when the call names no project or no sessions are registered. Every call
         in a session works on the one object its sessions hold for it; the lines a call logs point at this call's
@@ -199,7 +237,7 @@ class ToolCall:
             self._session = SESSION_OPENING.open_in(self)
         return self._session
 
-    def session_named(self, session_file: str) -> Any:
+    def session_named(self, session_file: str) -> CallSession | None:
         """The session whose session.json is session_file, a path from the project or an absolute one, for this call.
         A board command names its ticket's session this way, because it runs in whichever chat it is sent to."""
         return SESSION_OPENING.named_in(session_file, self)

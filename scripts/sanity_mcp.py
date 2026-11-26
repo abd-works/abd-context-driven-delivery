@@ -69,7 +69,7 @@ class McpSanity:
         return self.report.emit()
 
     def _ping_enrolled(self, host: McpHost) -> None:
-        server = host.checkout_server
+        server = host.checkout_toolsets
         skipped = {item["tool"] for item in server.skipped.as_data}
         for item in server.skipped.as_data:
             self.report.failed(item["tool"], item["reason"])

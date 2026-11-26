@@ -18,7 +18,7 @@ from harness.installation.data_class import data_field, identity, language_adapt
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.mcp_annotations import mcp
 from harness.agent_tools.chat_pointer import ChatPointer
-from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED
+from harness.agent_tools.tool_call import ToolCall
 
 # The mod checks in every second, so a chat silent for this long has gone.
 CHAT_GONE_SECONDS = 5
@@ -144,27 +144,77 @@ class ChatsFolder:
 CHATS_FOLDER = ChatsFolder()
 
 
-class ChatLinks:
+class ChatOpener:
     """Opens a new chat in the Claude app by handing its link to the system, which passes it to the app registered for
     its scheme. A page in the app's Browser pane cannot, so the board opens a ticket's chat through the cdd server."""
 
-    def open_new(self, folder: str, prompt: str) -> str:
-        """Open a new chat on folder with prompt filled in, and answer the link it opened."""
-        link = self.link_to_new(folder, prompt)
-        self.hand_over(link)
+    def open(self, link: str) -> None:
+        """Hand link to the app registered for its scheme."""
+        if sys.platform == "win32":
+            os.startfile(link)  # noqa: S606 - the link names the desktop app's own scheme
+        else:
+            subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", link], check=True, timeout=OPEN_LINK_SECONDS)
+
+    @staticmethod
+    def from_environment() -> ChatOpener:
+        """What a new chat's link is handed to: the system's, unless the run names a file to keep the links in."""
+        kept = os.environ.get(OPENED_CHATS_VARIABLE)
+        return RecordedChatOpener(Path(kept)) if kept else ChatOpener()
+
+
+class RecordedChatOpener(ChatOpener):
+    """Keeps each link in a file, one a line, instead of opening the Claude app: a test run's chats open through it, so
+    no spec opens a chat on this machine, and the spec reads the links back from that file."""
+
+    def __init__(self, file: Path) -> None:
+        self._file = file
+
+    def open(self, link: str) -> None:
+        self._file.parent.mkdir(parents=True, exist_ok=True)
+        with self._file.open("a", encoding="utf-8") as kept:
+            kept.write(f"{link}\n")
+
+
+class NewChat:
+    """*NewChat* is one new chat to open in the Claude app: on folder, with prompt filled in for the person to send,
+    opened from the chat that asked for it when one did. Its link holds the prompt and what keeps the new chat on its
+    folder and beside the chat that opened it; ``open`` hands the link to the opener."""
+
+    def __init__(self, folder: str, prompt: str, opened_from: Chat | None, opener: ChatOpener) -> None:
+        self.folder = folder
+        self.prompt = prompt
+        self.opened_from = opened_from
+        self._opener = opener
+
+    @property
+    def link(self) -> str:
+        """The link that opens the new chat on its folder with its prompt filled in. The app files a new chat under its
+        repository's name; when a titled chat asked for it, the prompt also has the new chat join that chat's sidebar
+        section."""
+        prompt = " ".join(part for part in (self.prompt, self._stay_in(), self._join_opener_section()) if part)
+        return f"{NEW_CHAT_LINK}?folder={quote(self.folder, safe='')}&q={quote(prompt, safe='')}"
+
+    def open(self) -> str:
+        """Open the new chat in the Claude app, and answer the link it opened."""
+        link = self.link
+        self._opener.open(link)
         return link
 
-    def link_to_new(self, folder: str, prompt: str) -> str:
-        """The link that opens a new chat on folder with prompt filled in. The app files a new chat under its
-        repository's name; when a chat asked for it, the prompt also has the new chat join that chat's sidebar section."""
-        prompt = " ".join(part for part in (prompt, self._join_opener_section()) if part)
-        return f"{NEW_CHAT_LINK}?folder={quote(folder, safe='')}&q={quote(prompt, safe='')}"
+    def _stay_in(self) -> str:
+        """What keeps a new chat on its own repository: the Claude app can open it in another folder than the link
+        names, such as the one last used, and a chat working on there would change that repository's sessions and
+        branches."""
+        folder = self.folder
+        return (
+            f"This chat was opened for the folder {folder}. Before anything else, check the folder this chat works in. "
+            "If it is another folder, stop: do not create, switch or change any session, ticket, branch or file there, "
+            f"and tell the person this chat opened in the wrong folder and should be started again in {folder}."
+        )
 
     def _join_opener_section(self) -> str:
         """What a new chat is told so it lands beside the chat that opened it: the app knows that chat by its title and
         folder, not by the transcript id cdd has, so the new chat finds it by those. Empty when no titled chat asked."""
-        call = CALLS_BEING_ANSWERED.current
-        opener = Chat.load(call.chat_id) if call is not None and call.chat_id else None
+        opener = self.opened_from
         if opener is None or not opener.title:
             return ""
         return (
@@ -173,35 +223,6 @@ class ChatLinks:
             "otherwise leave it where the app put it."
         )
 
-    def hand_over(self, link: str) -> None:
-        if sys.platform == "win32":
-            os.startfile(link)  # noqa: S606 - the link names the desktop app's own scheme
-        else:
-            subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", link], check=True, timeout=OPEN_LINK_SECONDS)
-
-
-class RecordedChatLinks(ChatLinks):
-    """Keeps each link in a file, one a line, instead of opening the Claude app: a test run's chats open through it, so
-    no spec opens a chat on this machine, and the spec reads the links back."""
-
-    def __init__(self, file: Path) -> None:
-        self._file = file
-
-    def hand_over(self, link: str) -> None:
-        self._file.parent.mkdir(parents=True, exist_ok=True)
-        with self._file.open("a", encoding="utf-8") as kept:
-            kept.write(f"{link}\n")
-
-    @property
-    def links(self) -> list[str]:
-        return self._file.read_text(encoding="utf-8").splitlines() if self._file.is_file() else []
-
-
-def links_of_run() -> ChatLinks:
-    """What a new chat's link is handed to: the system's, unless the run names a file to keep the links in."""
-    kept = os.environ.get(OPENED_CHATS_VARIABLE)
-    return RecordedChatLinks(Path(kept)) if kept else ChatLinks()
-
 
 @language_adapter(language="typescript")
 @agent_toolset
@@ -209,18 +230,27 @@ class Chats:
     """The Claude Code chats on this machine: list the ones connected now, and open a new one in the Claude app.
 
     Every chat runs its own cdd server and the board runs another, so the chats are folders every process can read,
-    one a chat; a new chat's link is handed to the opener the chats hold.
+    one a chat; a new chat's link is handed to the opener the chats hold, and a new chat is opened beside the chat that
+    asked, when one did.
     """
 
-    def __init__(self, folder: Path, opener: ChatLinks) -> None:
+    def __init__(self, folder: Path, opener: ChatOpener, asking: str = "") -> None:
         self._folder = folder
-        self.opener = opener
+        self._opener = opener
+        # The id of the chat whose call asks for new chats; empty for a call that names none.
+        self._asking = asking
 
     @classmethod
     @tool_subject
-    def load(cls) -> Chats:
-        """The chats in the folder every process reads, opening new ones through the run's opener."""
-        return cls(CHATS_FOLDER.path, links_of_run())
+    def load(cls, call: ToolCall | None = None) -> Chats:
+        """The chats in the folder every process reads, opening new ones through the run's opener beside the chat call
+        came from."""
+        return cls(CHATS_FOLDER.path, ChatOpener.from_environment(), call.chat_id if call is not None else "")
+
+    def new_chat(self, folder: str, prompt: str) -> NewChat:
+        """A new chat on folder with prompt filled in, opened from the chat that asked, when one did."""
+        opened_from = Chat(self._folder / self._asking) if self._asking else None
+        return NewChat(folder, prompt, opened_from, self._opener)
 
     @mcp
     @agent_tool
@@ -234,7 +264,7 @@ class Chats:
     @agent_tool
     def open(self, folder: str, prompt: str) -> str:
         """Open a new chat in the Claude app on folder, with prompt filled in; the app asks the person to confirm the folder and send. Answers the link it opened."""
-        return self.opener.open_new(folder, prompt)
+        return self.new_chat(folder, prompt).open()
 
 
 @identity("id")
@@ -268,7 +298,7 @@ class Chat:
     @agent_tool
     @noSessionLog
     def send(self, kind: CommandKind, text: str) -> Chat:
-        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, an open_file shows the file text names, a path from the project, in its chat bar's file viewer, a refresh has its chat bar read the board again, as after a page such as the Files app changed the session, and a select has its chat bar select the fidelities text names, slugs separated by commas, none to clear the selection, as a practice pressed in the Files app does, and a failure shows a page's failure on its chat bar as the bar shows its own, text a JSON object with the failure and the context it happened in. A fill waits until the chat's turn has ended."""
+        """Send chat a command: a fill puts text in its prompt for the person to review, a submit sends it, a command runs a slash command, an open_file shows the file text names, a path from the project, in its chat bar's file viewer, a refresh has its chat bar read the board again, as after a page such as the Files app changed the session, and a failure shows a page's failure on its chat bar as the bar shows its own, text a JSON object with the failure and the context it happened in. A fill waits until the chat's turn has ended."""
         self.mailbox.queue(kind, text)
         return self
 

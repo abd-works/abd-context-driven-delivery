@@ -1,11 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { BoardOverviewData, BoardPracticeData } from '@cdd/space/kanban/board'
+import type { BacklogItemOverviewData, BoardOverviewData, BoardPracticeData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
-import type { ChatBarJson } from '../../types'
+import type { ChatBarJson, FormatChoiceJson } from '../../types'
 import { shownAsFailure } from '../error-display/failure-client'
 import { reasonOf } from '../shared/reason'
 import { callTool } from '../shared/cdd-tool'
@@ -44,6 +44,12 @@ export class ChatBarClient {
     return (this.board?.columns ?? []).flatMap(column => column.tickets.filter(ticket => ticket.name !== MAIN_SESSION).map(ticket => ({ name: ticket.name, stage: column.name })))
   }
 
+  // The Backlog's own items a person can start from the main chat's session list, each with its children by title, in
+  // the order board.overview sends them; none from an overview sent before it named them.
+  get backlogItems(): BacklogItemOverviewData[] {
+    return (this.board?.columns ?? []).flatMap(column => column.items ?? [])
+  }
+
   // Every session has a ticket, main among them, so the bar draws the full panel whenever the board has answered.
   get hasSession(): boolean {
     return this.ticket !== null
@@ -72,19 +78,11 @@ export class ChatBarClient {
     return this.ticket?.column.name ?? ''
   }
 
-  // The stages whose fidelities the dots show, in the board's order: those turned on with the stage buttons, here or in
-  // a page the chat opened, none turned on meaning every stage; before either chose, the stage the session is in.
+  // The stages whose fidelities the dots show, in the board's order, as the session's guidance selection covers them:
+  // those selected, here or in a page the chat opened, every stage while none is. Before anyone chose, the session
+  // answers the stage its ticket is in selected.
   get shownStages(): string[] {
-    const stages = (this.board?.columns ?? []).filter(column => column.kind === 'stage').map(column => column.name)
-    const selected = this.selectedStages
-    if (!this.guidance?.is_stage_chosen || selected.length) return stages.filter(stage => selected.includes(stage))
-    return stages
-  }
-
-  // The stages the stage buttons have turned on, by title; before any was chosen, the stage the session is in.
-  private get selectedStages(): string[] {
-    if (!this.guidance?.is_stage_chosen) return [this.stage]
-    return this.guidance.stages.filter((stage: { is_selected: boolean }) => stage.is_selected).map((stage: { title: string }) => stage.title)
+    return this.guidance?.covered_stages ?? []
   }
 
   // The first stage shown, whose actions the action button offers: every stage takes the same steps.
@@ -103,7 +101,7 @@ export class ChatBarClient {
   get stages(): StageClient[] {
     const columns = this.board?.columns ?? []
     const sessionPlace = columns.findIndex(column => column.name === this.stage)
-    return columns.map((column, place) => new StageClient(column, place - sessionPlace, this.selectedStages.includes(column.name)))
+    return columns.map((column, place) => new StageClient(column, place - sessionPlace, this.shownStages.includes(column.name)))
   }
 
   // Every action a person can run on a fidelity of the shown stage, its steps first, as the stage sends them.
@@ -114,37 +112,36 @@ export class ChatBarClient {
     return Object.values(this.ticket?.session.practices ?? {}).find(practice => practice.design_view)?.design_view ?? ''
   }
 
-  get ticketName(): string {
-    return this.ticket?.name ?? ''
-  }
-
   // The whole path of the folder the session works in, which the Graph app opens on; empty with no session.
   get sessionPath(): string {
-    return (this.ticket as (TicketData & { session_path?: string }) | null)?.session_path ?? ''
+    return this.ticket?.session_path ?? ''
   }
 
-  // The actions of the shown stage whose command takes the formats the chips pick, generate and render.
-  get actionsWithFormats(): string[] {
-    const column = this.board?.columns.find(column => column.name === this.shownStage) as { actions_with_formats?: string[] } | undefined
-    return column?.actions_with_formats ?? ['generate', 'render']
+  // The command the session's guidance selection writes for action on the fidelities selected, with the formats its chips
+  // chose for an action that takes them; empty before the selection is read.
+  commandOf(action: string): string {
+    return this.guidance?.commands[action] ?? ''
   }
 
   get actions(): string[] {
     return (this.board?.columns.find(column => column.name === this.shownStage)?.actions ?? [])
   }
 
-  // Whether the session works on a practice, as its guidance selection says, else as the board read it.
+  // Whether the session works on a practice, as its guidance selection says.
   isPracticeOn(key: string): boolean {
-    const practice = this.guidance?.practices.find(each => each.key === key)
-    return practice ? practice.is_selected : (this.ticket?.progress.find(progress => progress.practice.key === key)?.is_enabled ?? true)
+    return this.guidance?.practices.find(each => each.key === key)?.is_selected ?? false
   }
 
-  // The fidelities the session's guidance selection translates its stages and practices to, no practice selected meaning
-  // every practice: what the dots stand for and every action runs on, in the order the stages require them. Before the
-  // selection is read, those of the practices the board shows on.
+  // The fidelities the session's guidance selection covers, in its order: the stages shown, the practices on, no
+  // practice on meaning every practice. Every action runs on them, and the selection writes each action's command on
+  // the same ones.
   get fidelities(): FidelityProgressClient[] {
-    const listed = this.guidance?.fidelities
-    return this.fidelitiesOfShownStages.filter(fidelity => (listed ? listed.includes(fidelity.slug) : fidelity.isSelected))
+    const ticket = this.ticket
+    if (!ticket) return []
+    return (this.guidance?.fidelities ?? []).flatMap(slug => {
+      const progress = ticket.progress.find(each => each.fidelity.slug === slug)
+      return progress ? [new FidelityProgressClient(progress, ticket, this)] : []
+    })
   }
 
   // One dot per practice with fidelities in the stages shown, on or off: a press turns the practice on or off for the
@@ -165,7 +162,7 @@ export class ChatBarClient {
   }
 
   // The format chips: each format group the selected fidelities offer, selected or not, as the session holds them.
-  get formatChoices(): { label: string; formats: string[]; offered: number; made: number; is_chosen: boolean }[] {
+  get formatChoices(): FormatChoiceJson[] {
     return (this.guidance?.formats ?? []).map(format => ({ label: format.label, formats: format.formats, offered: format.offered, made: 0, is_chosen: format.is_selected }))
   }
 
@@ -188,29 +185,25 @@ export class ChatBarClient {
     return this.fidelities.find(fidelity => fidelity.slug === this.ticket?.next?.fidelity.slug) ?? this.fidelities[0] ?? null
   }
 
-  // Every fidelity an action runs on: all the selected stages' fidelities of the practices selected.
-  get actionFidelities(): FidelityProgressClient[] {
-    return this.fidelities
-  }
-
   // The repository the board shows, by its folder's name.
   get repoName(): string {
     return this.board?.project ?? ''
   }
 
-  // Whether the folder is a git repository, where tickets get worktrees and chats of their own. A board read before the
-  // overview said so counts as one, so its tickets stay open.
+  // Whether the folder is a git repository, which CDD works in: tickets get worktrees and chats of their own. A board
+  // read before the overview said so counts as one, so its tickets stay open.
   get isClone(): boolean {
     return this.board?.is_clone ?? true
   }
 
-  // The project's folder on disk, which a chat in a plain folder shows instead of the repo and session buttons.
+  // The project's folder on disk: where the new session's folder picker opens, and what a chat in a plain folder names
+  // when it asks for the repository.
   get folder(): string {
     return this.board?.folder ?? ''
   }
 
-  // A chat in a folder that is no git repository, such as one opened from FOLDER on its own session, has no branch to
-  // switch or close and no other repository to open, so the bar shows its folder alone, read only.
+  // A chat in a folder that is no git repository: CDD works only in one, so the bar asks to create it and shows nothing
+  // else until it is there.
   get isPlainFolder(): boolean {
     return Boolean(this.board) && !this.isClone
   }

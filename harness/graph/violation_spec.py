@@ -21,11 +21,11 @@ with description("a broken rule found on a class"):
 
     with context("that names no lines of its own"):
         with it("should be marked on the class's lines"):
-            violation = NodeViolation.at_node(self.found_by, "Class 'Order' has two jobs.")
+            violation = NodeViolation.at_node(self.found_by, Finding(self.found_by.node, "Class 'Order' has two jobs."))
             expect([violation.line, violation.end_line]).to(equal([129, 149]))
 
     # prefer-class-operations finds a module helper on the class that uses it; the helper is what moves.
     with context("that names the line of a module helper the class alone uses"):
         with it("should be marked on the helper's line"):
-            violation = NodeViolation.at_node(self.found_by, Finding("Module function '_total' (line 115) is only used from 'Order'.", 115))
+            violation = NodeViolation.at_node(self.found_by, Finding(self.found_by.node, "Module function '_total' (line 115) is only used from 'Order'.", (115, 115)))
             expect([violation.line, violation.end_line]).to(equal([115, 115]))

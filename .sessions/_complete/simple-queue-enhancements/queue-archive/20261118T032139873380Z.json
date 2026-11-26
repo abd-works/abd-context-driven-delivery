@@ -1,0 +1,184 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:21:39.873380+00:00",
+  "prompts": [
+    {
+      "id": "6ce97bdc7612",
+      "text": "[interruption] i presssed paly gop",
+      "steps": [
+        {
+          "text": "Close the demo-queue card",
+          "state": "done"
+        },
+        {
+          "text": "Let the robots work their cards",
+          "state": "in_progress"
+        },
+        {
+          "text": "Check their output when they finish",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] rremove all details of a queue expect wehen  expanded its soclutterned yuo cant see anyith",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] bots list noithng else",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] then espand to get deial;s",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] kill current ququ",
+          "state": "pending"
+        }
+      ],
+      "robot": "Cog",
+      "is_done": false
+    },
+    {
+      "id": "c2135cb3560d",
+      "text": "Complete the Queue Prompts For Later scenarios: regroup the epic, add stories for this ticket's behaviour, write Given/When/Then for every story, validate",
+      "steps": [
+        {
+          "text": "Load computer use and get access to Claude",
+          "state": "in_progress"
+        },
+        {
+          "text": "Get the walk plan per sub-epic",
+          "state": "pending"
+        },
+        {
+          "text": "Walk and screenshot each scenario",
+          "state": "pending"
+        },
+        {
+          "text": "Record AI verdicts",
+          "state": "pending"
+        },
+        {
+          "text": "Build the report with screenshots",
+          "state": "pending"
+        },
+        {
+          "text": "Commit and push",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] Why can't we use computer and add to chat",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] found it priceed",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] widget should just pretend: no computer use, so go through the acceptance walk as if it were done and say it was pretended",
+          "state": "pending"
+        }
+      ],
+      "is_done": false,
+      "robot": "Widget"
+    },
+    {
+      "id": "1b8c07b7bf4a",
+      "text": "Run4 harness survey, part 2: after demo/run4/harness/folders.md lists every folder, give this card one step per folder and add under each the one-sentence purpose its .context/module-context.md gives (or 'no module context'), ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap",
+      "steps": [
+        {
+          "text": "agent_tools",
+          "state": "done"
+        },
+        {
+          "text": "annotations",
+          "state": "done"
+        },
+        {
+          "text": "catalog_generator",
+          "state": "done"
+        },
+        {
+          "text": "chat",
+          "state": "done"
+        },
+        {
+          "text": "chat-ui",
+          "state": "done"
+        },
+        {
+          "text": "design_canvas",
+          "state": "done"
+        },
+        {
+          "text": "diagnostics",
+          "state": "done"
+        },
+        {
+          "text": "e2e_review",
+          "state": "done"
+        },
+        {
+          "text": "files_app",
+          "state": "done"
+        },
+        {
+          "text": "git",
+          "state": "done"
+        },
+        {
+          "text": "graph",
+          "state": "done"
+        },
+        {
+          "text": "guidance",
+          "state": "done"
+        },
+        {
+          "text": "guidance_actions",
+          "state": "done"
+        },
+        {
+          "text": "hooks",
+          "state": "pending"
+        },
+        {
+          "text": "installation",
+          "state": "done"
+        },
+        {
+          "text": "markdown",
+          "state": "pending"
+        },
+        {
+          "text": "mcp",
+          "state": "pending"
+        },
+        {
+          "text": "process",
+          "state": "pending"
+        },
+        {
+          "text": "whiteboard",
+          "state": "pending"
+        }
+      ]
+    },
+    {
+      "id": "6ed23594270a",
+      "text": "Run4 harness survey, part 3: after the purposes are in demo/run4/harness/folders.md, give this card one step per folder and add under each the names of the other harness folders it imports from, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap"
+    },
+    {
+      "id": "b5eb39d3fe65",
+      "text": "Run4 harness survey, part 4: after the imports are in demo/run4/harness/folders.md, give this card three steps (most files, most imports, folders importing nothing) and write each answer as a line at the top, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap"
+    },
+    {
+      "id": "ac3aa568b8bd",
+      "text": "Run4 wrap-up: after all four Run4 strands' files exist under .sessions/simple-queue-enhancements/demo/run4, give this card one step per strand (harness, practices, queue, progress) and write one line per strand to demo/run4/summary.md naming its file and its headline answer, ticking each step done. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "robot": "Zap"
+    }
+  ]
+}

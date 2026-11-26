@@ -60,9 +60,9 @@ def _(s):
     def _(world):
         world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).work.progress_of(STORY_MAP).files())
 
-    @s.then("the files panel shows a .context/story-map.md tab, as there")
+    @s.then("the Files app shows a .context/story-map.md tab, as there")
     def _(world):
-        expect(world.files["markdown"]).to(equal([{"path": STORY_MAP_FILE, "exists": True, "is_changed": False, "link": "", "format": "markdown", "fidelities": []}]))
+        expect(world.files["markdown"]).to(equal([{"path": STORY_MAP_FILE, "exists": True, "is_changed": False, "link": "", "published_kind": "", "format": "markdown", "fidelities": [], "is_listed": True, "is_session_work": False, "hidden_by_formats": []}]))
 
     @s.but_("no file of another fidelity shows")
     def _(world):
@@ -138,7 +138,7 @@ def _(s):
 
     @s.then("the file view shows .sessions/checkout-flow")
     def _(world):
-        expect(world.files).to(contain({"path": f".sessions/{CHECKOUT_FLOW.name}/validation-reports/{STORY_MAP_REPORT}.md", "exists": True, "is_changed": False, "link": "", "format": "markdown", "fidelities": []}))
+        expect(world.files).to(contain({"path": f".sessions/{CHECKOUT_FLOW.name}/validation-reports/{STORY_MAP_REPORT}.md", "exists": True, "is_changed": False, "link": "", "published_kind": "", "format": "markdown", "fidelities": [], "is_listed": True, "is_session_work": True, "hidden_by_formats": []}))
 
 
 @shared_stories.scenario("Open Session Files From Details", "Open the workpath folder from the details")
@@ -153,9 +153,9 @@ def _(s):
     def _(world):
         world.files = world.data_of(world.Ticket.load(CHECKOUT_FLOW.name).session.workpath_files())
 
-    @s.then("the files panel lists the entries of harness/.context")
+    @s.then("the Files app lists the entries of harness/.context")
     def _(world):
-        expect(world.files).to(equal([{"path": "harness/.context/module-context.md", "exists": True, "is_changed": False, "link": "", "format": "markdown", "fidelities": []}]))
+        expect(world.files).to(equal([{"path": "harness/.context/module-context.md", "exists": True, "is_changed": False, "link": "", "published_kind": "", "format": "markdown", "fidelities": [], "is_listed": True, "is_session_work": True, "hidden_by_formats": []}]))
 
     @s.but_("the root chooser does not open")
     def _(world):

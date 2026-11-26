@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from harness.diagnostics.app import LANGUAGE_ADAPTER_FOLDER, App, AppPackage, AppPage, AppServer, NodeScript
+from harness.apps.app import LANGUAGE_ADAPTER_FOLDER, App, AppPackage, AppPage, AppServer, NodeScript
 from harness.installation.app_ports import AppPorts
 
 FILES_APP_FOLDER = Path(__file__).resolve().parent / "app"

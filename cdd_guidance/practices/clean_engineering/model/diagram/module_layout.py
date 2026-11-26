@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Tuple
 
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import ContainmentForest, DiagramModule
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from harness.whiteboard import Box
 
 MODULE_COL_GAP = 48
 MODULE_ROW_GAP = 32
@@ -37,7 +37,7 @@ class ModuleLayout:
     def __init__(self, forest: ContainmentForest, cells: Dict[str, DiagramModule]) -> None:
         self.forest = forest
         self.cells = cells
-        self.bounds: Dict[str, Geometry] = {}
+        self.bounds: Dict[str, Box] = {}
         self.parent_of: Dict[str, Optional[str]] = {}
 
     def lay_out(self) -> "ModuleLayout":
@@ -51,11 +51,11 @@ class ModuleLayout:
             y = float(self.start_y)
             for name in names:
                 self._place(name, (x_cursor, y), None)
-                y += self.bounds[name][3] + self.row_gap
+                y += self.bounds[name].h + self.row_gap
             x_cursor += max(self.size(name)[0] for name in names) + self.column_gap
         return self
 
-    def page_box(self, name: str) -> Geometry:
+    def page_box(self, name: str) -> Box:
         """Where the module stands on the page, nested or not."""
         box = self.bounds[name]
         parent = self.parent_of.get(name)
@@ -79,7 +79,7 @@ class ModuleLayout:
 
     def _place(self, name: str, position: Tuple[float, float], parent: Optional[str]) -> None:
         if parent is None:
-            self.bounds[name] = Geometry(position[0], position[1], *self.size(name))
+            self.bounds[name] = Box(position[0], position[1], *self.size(name))
         self.parent_of[name] = parent
         children = self.forest.children_of.get(name, [])
         if not children:
@@ -92,7 +92,7 @@ class ModuleLayout:
             column, line = index % columns, index // columns
             relative_x = self.child_pad_x + sum(widths[:column]) + self.child_gap * column
             relative_y = header_height + self.child_pad_y + sum(heights[:line]) + self.child_gap * line
-            self.bounds[child] = Geometry(relative_x, relative_y, *sizes[index])
+            self.bounds[child] = Box(relative_x, relative_y, *sizes[index])
             self._place(child, (position[0] + relative_x, position[1] + relative_y), name)
 
 

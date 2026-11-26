@@ -23,7 +23,7 @@ section: body
 | ++lern_domain_driven++ | Whenever you create, alter, or delete a LERN domain module under `src/` |
 | ++mern_domain_driven++ | Whenever you create, alter, or delete a domain-module feature package |
 
-## Story: Run Fidelity Action With Overlays
+## Story: Apply Chosen Overlays To Fidelity Action
 
 ### Evidence
 

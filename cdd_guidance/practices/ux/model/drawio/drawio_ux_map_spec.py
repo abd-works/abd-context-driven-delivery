@@ -1,0 +1,352 @@
+"""Draw.io UX channel - what a drawing already written reads back as, and what a region tells the command line to
+draw. No example here starts the command line: drawio_ux_map_heavy_spec.py draws through it."""
+
+import sys
+from pathlib import Path
+
+from expects import equal, expect
+from mamba import before, context, description, it
+
+_REPO = Path(__file__).resolve().parents[5]
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from cdd_guidance.practices.ux.model.drawio.nodes import DrawioRegion, DrawioUxMap
+from cdd_guidance.practices.ux.model.nodes import ContentType, Control, NavComponent, Region, Screen, StoryDemoControl, StoryStep
+from cdd_guidance.practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
+
+_ROW = "fillColor=#ffffff;strokeColor=none;strokeWidth=0;"
+_FRAMED = "fillColor=#ffffff;strokeColor=#000000;strokeWidth=1;"
+_STRIP = "fillColor=#f0f0f0;strokeColor=#000000;strokeWidth=1;"
+
+
+def cell(cell_id: str, value: str, style: str, parent: str = "1", x: int = 0, y: int = 0) -> str:
+    return (
+        f'<mxCell id="{cell_id}" value="{value}" style="{style}" vertex="1" parent="{parent}">'
+        f'<mxGeometry x="{x}" y="{y}" width="100" height="20" as="geometry"/></mxCell>'
+    )
+
+
+def drawing(detailed: str, edge_style: str = "html=1;", shared: str = "") -> str:
+    """A two-page drawing of Book Details and Checkout, with detailed as the cells of the Detailed IA page and shared
+    as the notes the Site Map page draws beside the screens."""
+    return (
+        '<mxfile host="drawio-ux">'
+        '<diagram id="ia-diagram" name="Detailed IA"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
+        f"{detailed}</root></mxGraphModel></diagram>"
+        '<diagram id="site-map" name="Site Map"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
+        f'{cell("5001", "Book Details", "rounded=1;")}{cell("5002", "Checkout", "rounded=1;", x=300)}'
+        f'<mxCell id="5003" value="Check out" style="{edge_style}" edge="1" source="5001" target="5002" parent="1">'
+        '<mxGeometry relative="1" as="geometry"/></mxCell>'
+        f"{shared}</root></mxGraphModel></diagram></mxfile>"
+    )
+
+
+# The Detailed IA page as the command line draws Book Details: a list region whose row is drawn twice, its action
+# strip, and the callout under the screen's box; then Checkout with a form.
+_DRAWN = drawing(
+    cell("2", "Book Details", "strokeWidth=2;uxLayout=split-screen;", x=50, y=200)
+    + cell("3", "Checkout", "strokeWidth=2;", x=890, y=200)
+    + cell("4", "Book Summary", _FRAMED + "fontStyle=2;uxArea=panel;", parent="2")
+    + cell("5", "&lt;b&gt;Add To Cart&lt;/b&gt;", _FRAMED + "uxArea=body;", parent="2")
+    + cell("6", "Add to cart · Back to list", _STRIP + "uxControls=button,button;", parent="2")
+    + cell("7", "Quantity", _ROW + "uxControls=number;", parent="2")
+    + cell("8", "Quantity", _ROW + "uxControls=number;", parent="2")
+    + cell("9", "&lt;b&gt;Stories:&lt;/b&gt; Add Book To Cart · View Book&lt;br&gt;&lt;b&gt;Domain terms:&lt;/b&gt; Book · Cart Line",
+           "text;html=1;strokeColor=none;fillColor=none;", x=50, y=420)
+    + cell("10", "&lt;b&gt;Payment&lt;/b&gt;", _FRAMED, parent="3")
+    + cell("11", "Street", _ROW + "uxControls=text;", parent="3")
+    + cell("12", "Country", _ROW + "uxControls=dropdown;", parent="3")
+    + cell("13", "[Pay]", _ROW + "uxControls=button;", parent="3")
+    + cell("14", "&lt;b&gt;Stories:&lt;/b&gt; Pay For Order", "text;html=1;strokeColor=none;fillColor=none;", x=890, y=420),
+    edge_style="html=1;uxNav=top nav;",
+)
+
+# Book Details whose controls are named otherwise than they are labelled: each cell keeps, beside the label it shows,
+# the name of each control whose name is not its label, and leaves the place of one whose name is its label empty.
+_DRAWN_WITH_NAMES = drawing(
+    cell("2", "Book Details", "strokeWidth=2;", x=50, y=200)
+    + cell("5", "&lt;b&gt;Add To Cart&lt;/b&gt;", _FRAMED + "uxArea=body;", parent="2")
+    + cell("6", "Add to cart · Back to list", _STRIP + "uxControls=button,button;uxNames=Add To Cart Button,;", parent="2")
+    + cell("7", "Quantity", _ROW + "uxControls=number;", parent="2")
+    + cell("9", "&lt;b&gt;Add To Cart › Add To Cart Button serves stories:&lt;/b&gt; Add Book To Cart",
+           "text;html=1;strokeColor=none;fillColor=none;", x=50, y=420),
+)
+
+# The same screen as a drawing made before the command line kept control types, or drawn by hand.
+_DRAWN_WITHOUT_TYPES = drawing(
+    cell("2", "Book Details", "strokeWidth=2;", x=50, y=200)
+    + cell("5", "&lt;b&gt;Add To Cart&lt;/b&gt;", _FRAMED, parent="2")
+    + cell("6", "Add to cart · Back to list", _STRIP, parent="2")
+    + cell("7", "Quantity", _ROW, parent="2"),
+    edge_style="html=1;dashed=1;",
+)
+
+_STORY_FILE = "story_tests/shop/fill-cart/fill_cart_story.test.md"
+_STORY_LINK = f"[Add Book To Cart]({_STORY_FILE}#story-add-book-to-cart)"
+_SCENARIO_LINK = f"[Add Book To Cart › Add one book]({_STORY_FILE}#scenario-add-one-book)"
+_STEP_LINK = f"[Add Book To Cart › Add one book › the Customer adds 2 copies]({_STORY_FILE}#scenario-add-one-book)"
+
+
+def anchor(link: str) -> str:
+    """A markdown link as the drawing's cell value writes it: an HTML anchor, escaped once more for the XML."""
+    text, target = link[1:-1].split("](")
+    return f"&lt;a href=&quot;{target}&quot;&gt;{text}&lt;/a&gt;"
+
+
+# Book Details as the command line draws a mockup whose screen and controls serve stories, scenarios and steps: the
+# callout lists what the screen serves, one line for each kind, then what each control serves.
+_DRAWN_WITH_SERVED = drawing(
+    cell("2", "Book Details", "strokeWidth=2;", x=50, y=200)
+    + cell("5", "&lt;b&gt;Add To Cart&lt;/b&gt;", _FRAMED + "uxArea=body;", parent="2")
+    + cell("6", "Add to cart · Back to list", _STRIP + "uxControls=button,button;", parent="2")
+    + cell("7", "Quantity", _ROW + "uxControls=number;", parent="2")
+    + cell("9", f"&lt;b&gt;Stories:&lt;/b&gt; {anchor(_STORY_LINK)} · View Book"
+           f"&lt;br&gt;&lt;b&gt;Scenarios:&lt;/b&gt; {anchor(_SCENARIO_LINK)}"
+           f"&lt;br&gt;&lt;b&gt;Steps:&lt;/b&gt; {anchor(_STEP_LINK)}"
+           "&lt;br&gt;&lt;b&gt;Domain terms:&lt;/b&gt; Book"
+           f"&lt;br&gt;&lt;b&gt;Add To Cart › Quantity serves steps:&lt;/b&gt; {anchor(_STEP_LINK)}"
+           f"&lt;br&gt;&lt;b&gt;Add To Cart › Add to cart serves stories:&lt;/b&gt; {anchor(_STORY_LINK)}"
+           f"&lt;br&gt;&lt;b&gt;Add To Cart › Add to cart serves scenarios:&lt;/b&gt; {anchor(_SCENARIO_LINK)} · Add Book To Cart › Add a second book",
+           "text;html=1;strokeColor=none;fillColor=none;", x=50, y=420),
+)
+
+
+_NOTE = "text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;strokeColor=#666666;fillColor=#fafafa;"
+
+# The Site Map page with the notes the command line draws beside the screens: a content type and a nav component
+# whose destinations name one screen the map has and one it does not.
+_DRAWN_WITH_SHARED = drawing(
+    cell("2", "Book Details", "strokeWidth=2;", x=50, y=200),
+    shared=cell("5010", "&lt;b&gt;Content type:&lt;/b&gt; Book&lt;br&gt;&lt;b&gt;Hierarchy:&lt;/b&gt; Book List &amp;gt; Book"
+                "&lt;br&gt;&lt;b&gt;Key actions:&lt;/b&gt; Add to cart · Save for later", _NOTE, x=560)
+    + cell("5011", "&lt;b&gt;Nav component:&lt;/b&gt; Main Nav&lt;br&gt;&lt;b&gt;Kind:&lt;/b&gt; top nav"
+                   "&lt;br&gt;&lt;b&gt;Destinations:&lt;/b&gt; Checkout · Wish List", _NOTE, x=560, y=120),
+)
+
+
+def control_named(ux_map: DrawioUxMap, screen: str, name: str):
+    return next(control for region in ux_map.find_screen(screen).regions for control in region.controls if control.name == name)
+
+
+
+def controls_of(ux_map: DrawioUxMap, screen: str, region: str) -> list[tuple[str, str]]:
+    held = next(found for found in ux_map.find_screen(screen).regions if found.name == region)
+    return [(control.name, control.control_type) for control in held.controls]
+
+
+with description("a UX map drawn as a draw.io information architecture"):
+    with context("that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(_DRAWN)
+            self.details = self.parsed.find_screen("Book Details")
+
+        with it("should read back the stories the drawing shows under the screen"):
+            expect(self.details.story_keys).to(equal(["Add Book To Cart", "View Book"]))
+
+        with it("should read back the domain terms the drawing shows under the screen"):
+            expect(self.details.domain_terms).to(equal(["Book", "Cart Line"]))
+
+        with it("should give each screen the stories under its own box"):
+            expect(self.parsed.find_screen("Checkout").story_keys).to(equal(["Pay For Order"]))
+
+        with it("should read back the screen's layout"):
+            expect(self.details.layout).to(equal("split-screen"))
+
+        with it("should read back the area each region fills"):
+            expect([region.area for region in self.details.regions]).to(equal(["panel", "body"]))
+
+        with it("should read back a transition's kind of navigation"):
+            expect(self.parsed.transitions[0].nav_type).to(equal("top nav"))
+
+    with context("of a mockup whose regions hold controls, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(_DRAWN)
+
+        with it("should read back only the regions the mockup has"):
+            expect([region.name for region in self.parsed.find_screen("Book Details").regions]).to(
+                equal(["Book Summary", "Add To Cart"])
+            )
+
+        with it("should read back a region's controls with their types, its buttons last"):
+            expect(controls_of(self.parsed, "Book Details", "Add To Cart")).to(
+                equal([("Quantity", "number"), ("Add to cart", "button"), ("Back to list", "button")])
+            )
+
+        with it("should read back a form's fields and its button"):
+            expect(controls_of(self.parsed, "Checkout", "Payment")).to(
+                equal([("Street", "text"), ("Country", "dropdown"), ("Pay", "button")])
+            )
+
+    with context("of a mockup whose screen and controls serve stories, scenarios and steps, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(_DRAWN_WITH_SERVED)
+            self.details = self.parsed.find_screen("Book Details")
+
+        with it("should read back the stories the screen serves, a linked one with its target"):
+            expect(self.details.story_keys).to(equal([_STORY_LINK, "View Book"]))
+
+        with it("should read back the scenarios the screen serves"):
+            expect(self.details.scenario_keys).to(equal([_SCENARIO_LINK]))
+
+        with it("should read back the steps the screen serves"):
+            expect(self.details.step_keys).to(equal([_STEP_LINK]))
+
+        with it("should read back the domain terms beside them"):
+            expect(self.details.domain_terms).to(equal(["Book"]))
+
+        with it("should read back the step a control serves"):
+            expect(control_named(self.parsed, "Book Details", "Quantity").step_keys).to(equal([_STEP_LINK]))
+
+        with it("should read back the story a control serves"):
+            expect(control_named(self.parsed, "Book Details", "Add to cart").story_keys).to(equal([_STORY_LINK]))
+
+        with it("should read back each scenario a control serves, linked or named"):
+            expect(control_named(self.parsed, "Book Details", "Add to cart").scenario_keys).to(
+                equal([_SCENARIO_LINK, "Add Book To Cart › Add a second book"])
+            )
+
+        with it("should give a control that serves nothing no story"):
+            expect(control_named(self.parsed, "Book Details", "Back to list").story_keys).to(equal([]))
+
+        with it("should read no region from the callout"):
+            expect([region.name for region in self.details.regions]).to(equal(["Add To Cart"]))
+
+    with context("of a mockup whose controls are named otherwise than they are labelled, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(_DRAWN_WITH_NAMES)
+            self.region = self.parsed.find_screen("Book Details").regions[0]
+
+        with it("should read back each control's name, else its label"):
+            expect([control.name for control in self.region.controls]).to(equal(["Quantity", "Add To Cart Button", "Back to list"]))
+
+        with it("should read back the label each control shows"):
+            expect([control.label for control in self.region.controls]).to(equal(["Quantity", "Add to cart", "Back to list"]))
+
+        with it("should give the control its callout names by its name what the line lists"):
+            expect(control_named(self.parsed, "Book Details", "Add To Cart Button").story_keys).to(equal(["Add Book To Cart"]))
+
+    with context("with a content type and a nav component drawn beside its screens, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(_DRAWN_WITH_SHARED)
+
+        with it("should read back only the screens the Site Map draws"):
+            expect([screen.name for screen in self.parsed.screens]).to(equal(["Book Details", "Checkout"]))
+
+        with it("should read back the content type with its hierarchy and key actions"):
+            expect([(kind.name, kind.hierarchy, kind.key_actions) for kind in self.parsed.content_types]).to(
+                equal([("Book", "Book List > Book", ["Add to cart", "Save for later"])])
+            )
+
+        with it("should read back the nav component with its kind"):
+            expect([(nav.name, nav.ux_type) for nav in self.parsed.nav_components]).to(equal([("Main Nav", "top nav")]))
+
+        with it("should join the nav component to the screens it names that the map has"):
+            expect(self.parsed.nav_components[0].destinations).to(equal([self.parsed.find_screen("Checkout")]))
+
+    with context("drawn without the types of its controls, that is read back"):
+        with before.each:
+            self.parsed = DrawioUxMap.create().parse(_DRAWN_WITHOUT_TYPES)
+
+        with it("should read an action strip's labels as buttons and a row's label as a control of no known type"):
+            expect(controls_of(self.parsed, "Book Details", "Add To Cart")).to(
+                equal([("Quantity", ""), ("Add to cart", "button"), ("Back to list", "button")])
+            )
+
+        with it("should read a dashed transition as a tab"):
+            expect(self.parsed.transitions[0].nav_type).to(equal("tab"))
+
+
+def map_holding(region: Region) -> UxMap:
+    """A map whose one screen, Book Details, holds region."""
+    ux_map = UxMap.create()
+    screen = Screen("Book Details", 0)
+    screen.append_region(region)
+    ux_map.append_screen(screen)
+    return ux_map
+
+
+with description("a region of a UX map drawn as draw.io"):
+    with context("that holds a number and two buttons"):
+        with before.each:
+            region = made(Region, "Add To Cart", 0, area="body")
+            for order, (name, kind) in enumerate([("Quantity", "number"), ("Add to cart", "button"), ("Back to list", "button")]):
+                region.append_control(made(Control, name, order, control_type=kind))
+            self.record = DrawioUxMap.create().copy_of(map_holding(region)).screens[0].regions[0].cli_record()
+
+        with it("should be drawn as a list that shows every control, each with its type"):
+            expect((self.record["type"], self.record["fields"], self.record["fieldKinds"], self.record["actions"])).to(
+                equal(("list", ["Quantity"], ["number"], ["Add to cart", "Back to list"]))
+            )
+
+        with it("should keep no name for a control whose name is its label"):
+            expect((self.record["fieldNames"], self.record["actionNames"])).to(equal(([""], ["", ""])))
+
+    # A mockup's controls that run story steps are Story Demo controls; the drawing shows them as it shows any other.
+    with context("that holds a form whose button runs story steps"):
+        with before.each:
+            region = made(Region, "Payment", 0, area="body")
+            region.append_control(made(Control, "Street", 0, control_type="text"))
+            region.append_control(made(StoryDemoControl, "Pay Button", 1, control_type="button", label="Pay", story_steps=[StoryStep("When", "the Customer pays")]))
+            self.record = DrawioUxMap.create().copy_of(map_holding(region)).screens[0].regions[0].cli_record()
+
+        with it("should draw the Story Demo control as a row of the form, with its type"):
+            expect((self.record["type"], self.record["fields"], self.record["fieldKinds"])).to(
+                equal(("form", ["Street", "[Pay]"], ["text", "button"]))
+            )
+
+        with it("should keep the name of the control whose name is not its label"):
+            expect(self.record["fieldNames"]).to(equal(["", "Pay Button"]))
+
+    with context("that holds no control"):
+        with it("should be drawn as chrome in its area"):
+            record = made(DrawioRegion, "Main Nav", 0, area="header").cli_record()
+            expect((record["type"], record["uxArea"])).to(equal(("chrome", "header")))
+
+
+with description("a screen of a UX map drawn as draw.io"):
+    with context("that serves a linked story and a scenario, and holds a control that serves a step"):
+        with before.each:
+            ux_map = UxMap.create()
+            screen = Screen("Book Details", 0)
+            screen.show_story(_STORY_LINK)
+            screen.show_story("View <Book>")
+            screen.show_scenario(_SCENARIO_LINK)
+            region = made(Region, "Add To Cart", 0, area="body")
+            quantity = made(Control, "Quantity", 0, control_type="number")
+            quantity.show_step(_STEP_LINK)
+            region.append_control(quantity)
+            region.append_control(made(Control, "Add to cart", 1, control_type="button"))
+            screen.append_region(region)
+            ux_map.append_screen(screen)
+            self.record = DrawioUxMap.create().copy_of(ux_map).screens[0].cli_record(0)
+
+        with it("should draw a linked story as a link to its target, and a named one as its name"):
+            expect(self.record["stories"]).to(equal([f'<a href="{_STORY_FILE}#story-add-book-to-cart">Add Book To Cart</a>', "View &lt;Book&gt;"]))
+
+        with it("should draw the scenarios the screen serves"):
+            expect(self.record["scenarios"]).to(equal([f'<a href="{_STORY_FILE}#scenario-add-one-book">Add Book To Cart › Add one book</a>']))
+
+        with it("should draw what each control serves under the control's region and name, and nothing for a control that serves nothing"):
+            expect(self.record["served"]).to(equal([{
+                "by": "Add To Cart › Quantity", "kind": "steps",
+                "items": [f'<a href="{_STORY_FILE}#scenario-add-one-book">Add Book To Cart › Add one book › the Customer adds 2 copies</a>'],
+            }]))
+
+
+with description("the content types and nav components of a UX map drawn as draw.io"):
+    with context("that holds a content type and a nav component"):
+        with before.each:
+            ux_map = UxMap.create()
+            cart = Screen("Cart", 0)
+            ux_map.append_screen(cart)
+            ux_map.content_types.append(made(ContentType, "Book", 0, hierarchy="Book List > Book", key_actions=["Add to cart"]))
+            ux_map.nav_components.append(made(NavComponent, "Main Nav", 0, ux_type="top nav", destinations=[cart]))
+            self.state = DrawioUxMap.create().copy_of(ux_map)._cli_state("out.drawio")
+
+        with it("should tell the command line the content type's name, hierarchy and key actions"):
+            expect(self.state["contentTypes"]).to(equal([{"name": "Book", "hierarchy": "Book List > Book", "keyActions": ["Add to cart"]}]))
+
+        with it("should tell the command line the nav component's name, kind and destinations"):
+            expect(self.state["navComponents"]).to(equal([{"name": "Main Nav", "uxType": "top nav", "destinations": ["Cart"]}]))

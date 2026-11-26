@@ -1,25 +1,26 @@
 """Server health as the tool the band calls (cdd MCP), for servers it reaches over real sockets. Heavy: each report
 checks every registered app's ports, and Windows waits out each check of a port nothing listens on.
 
-Each signature here has a test of the same name in `harness/chat-ui/pane/hooks/register.test.ts`."""
+The chat bar draws this report as its server health mark, panel and toasts (`harness/chat-ui/pane/hooks/health/`), which
+have no plugin test yet: the TypeScript tests of the same names were removed in 8c56ab052."""
 import json
 import shutil
 import socket
 import tempfile
 from pathlib import Path
 
-from expects import be_false, equal, expect
+from expects import equal, expect
 from mamba import after, before, context, description, it
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 RepositoryToolsets(Path(__file__).resolve().parents[2]).ensure_import_path()
 
-from harness.diagnostics.app import APPS, App, AppPackage, AppPage, AppServer, NodeScript  # noqa: E402
+from harness.apps.app import APPS, App, AppPackage, AppPage, AppServer, NodeScript  # noqa: E402
 from harness.diagnostics.server_health import ServerHealth  # noqa: E402
-from harness.hooks.hook_daemon import HookDaemon  # noqa: E402
 from harness.installation.data_class import data_of  # noqa: E402
-from harness.mcp.mcp_server import McpServer  # noqa: E402
+from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
 
 
 def closed_port() -> int:
@@ -56,23 +57,12 @@ with description("server health") as self:
             graph = next(app for app in data_of(ServerHealth(self.root).report())["apps"] if app["label"] == "Graph")
             expect((graph["status"], graph["port"])).to(equal(("running", self.port)))
 
-    with context("with no hook server state in the project"):
-        with it("should report the hook server is not running"):
-            expect(data_of(ServerHealth(self.root).report())["is_hook_server_running"]).to(be_false)
-
     with context("called through the MCP server for the project the call names"):
         with before.each:
-            self.server = McpServer(project=self.root)
-            self.server.start(("harness.diagnostics.server_health:ServerHealth",))
+            self.server = ProjectToolsets(project=self.root)
+            self.server.start((ToolsetReference.parsed("harness.diagnostics.server_health:ServerHealth"),))
 
         with it("should answer the band's call with every part"):
             result = self.server.invoke("server-health.report", {})
             answer = json.loads(json.dumps(result, default=data_of))
-            expect(sorted(answer)).to(equal(["apps", "is_hook_server_running", "test_runs"]))
-
-    with context("with a hook server state file whose process has gone"):
-        with it("should report the hook server is not running"):
-            state = HookDaemon(self.root).address_file.path
-            state.parent.mkdir()
-            state.write_text(json.dumps({"port": closed_port()}), encoding="utf-8")
-            expect(data_of(ServerHealth(self.root).report())["is_hook_server_running"]).to(be_false)
+            expect(sorted(answer)).to(equal(["apps", "e2e_review", "test_runs"]))

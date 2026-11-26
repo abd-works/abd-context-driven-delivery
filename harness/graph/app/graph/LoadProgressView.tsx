@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { queryProgress, type QueryProgress } from './query-progress';
+import { LOADING_GRAPH, queryProgress, type QueryProgress } from './query-progress';
 
 const SECONDS_PER_MINUTE = 60;
 const MILLISECONDS_PER_SECOND = 1000;
@@ -58,7 +58,7 @@ function LoadLog({ progress, loadingLog, shown, elapsed }: { progress: QueryProg
 export function LoadProgressView({ loadingLabel, loadingLog }: { loadingLabel?: string; loadingLog: string[] }) {
   const progress = queryProgress(loadingLog);
   const elapsed = useElapsed();
-  const headline = progress.headline === 'Loading the graph…' ? loadingLabel ?? progress.headline : progress.headline;
+  const headline = progress.headline === LOADING_GRAPH ? loadingLabel ?? progress.headline : progress.headline;
   const shown = elapsed > 0 ? `${headline} · ${elapsedLabel(elapsed)}` : headline;
   return (
     <div className="empty-state work-progress is-working" data-testid="extraction-progress">

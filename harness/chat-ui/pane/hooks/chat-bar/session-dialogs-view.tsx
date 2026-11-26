@@ -1,12 +1,11 @@
 import type { EngineInterface } from 'claude-code'
 
 import { BRAND } from '../shared/brand'
-import { TipView } from '../shared/tip-view'
 import type { ChatBarDraw } from './chat-bar-view'
 import { repoListShiftOf, sessionListShiftOf } from './bar-columns'
 import { MAIN_SESSION } from './chat-bar-client'
-import { activateTicket, chooseFolder, chooseSessionFolder, closeSession, createSession, openFolder, openRepo } from './session-client'
-import { cancelClose, chooseNewSessionFolder, toggleLeaving } from './session-dialogs-client'
+import { activateTicket, chooseSessionFolder, closeSession, createSession, openRepo, startBacklogItem } from './session-client'
+import { cancelClose, chooseNewSessionFolder, losesWork, toggleBacklogParent, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -57,8 +56,6 @@ const LIST_BORDER_ROWS = 2
 // The cells of the field that names a new session with its ▸ folder button, and of the repo list's fields, as drawn.
 const NEW_SESSION_ROW_CELLS = 30
 const REPO_FIELD_CELLS = 26
-// The folder row: ▸ Choose a folder… with the folder path's field beside it, as drawn.
-const FOLDER_ROW_CELLS = 40
 
 // Each open ticket's label, its stage icon and name, padded to the longest so the buttons share one width.
 function sessionLabels(tickets: { name: string; stage: string }[]): { name: string; label: string }[] {
@@ -80,7 +77,8 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
         <Text color={BRAND.muted}>⌂</Text>
         <Text color={BRAND.accent}>{MAIN_SESSION}</Text>
       </Box>
-      {chatBar.isClone ? TicketChoicesView($, { Box, Button, Input, Text }, { chatBar, view }) : <Text key="session-no-git" color={BRAND.muted}>No git here, so no ticket chats</Text>}
+      {TicketChoicesView($, { Box, Button, Input, Text }, { chatBar, view })}
+      {BacklogChoicesView($, { Box, Button, Text }, { chatBar, view })}
     </Box>
   )
 }
@@ -89,8 +87,8 @@ export function SessionListView($: EngineInterface, { Box, Button, Input, Text }
 // folder chosen for it; none while it is closed.
 export function sessionListRowsOf({ chatBar, view }: ChatBarDraw): number {
   if (!view.isSessionListOpen || !chatBar.isMain) return 0
-  const tickets = chatBar.isClone ? chatBar.openTickets.length + 1 + (view.newSessionFolder ? 1 : 0) : 1
-  return 1 + tickets + LIST_BORDER_ROWS
+  const tickets = chatBar.openTickets.length + 1 + (view.newSessionFolder ? 1 : 0)
+  return 1 + tickets + backlogRowsOf(chatBar, view) + LIST_BORDER_ROWS
 }
 
 // Each ticket is a whole button, its stage icon in its label: a see-through Button laid over the name took no press in
@@ -106,6 +104,39 @@ function TicketChoicesView($: EngineInterface, elements: Pick<ElementTable, 'Box
       <Button key="new-session-folder" plain label="▸ folder" onPress={() => chooseSessionFolder($, chatBar)} />
     </Box>,
     NewSessionFolderView($, elements, chatBar.folder, view.newSessionFolder),
+  ]
+}
+
+// The Backlog's items shown in the session list: each item, and the child items of each parent opened.
+function shownBacklogItems(chatBar: ChatBarDraw['chatBar'], view: ChatBarDraw['view']): { title: string; isChild: boolean; children: number }[] {
+  const opened = view.openBacklogParents ?? []
+  return chatBar.backlogItems.flatMap(item => [
+    { title: item.title, isChild: false, children: item.children.length },
+    ...(opened.includes(item.title) ? item.children.map(child => ({ title: child.title, isChild: true, children: 0 })) : []),
+  ])
+}
+
+// The BACKLOG heading and a row for each item shown; none while the Backlog is empty.
+function backlogRowsOf(chatBar: ChatBarDraw['chatBar'], view: ChatBarDraw['view']): number {
+  const shown = shownBacklogItems(chatBar, view)
+  return shown.length ? 1 + shown.length : 0
+}
+
+// Under the new session's field, the Backlog's items, each a whole button that starts it as the board moves an item out
+// of the Backlog. A parent closes to + N, its count of child items, and a press on that opens it to - N with its child
+// items indented under it; a child starts on its own, its parent staying in the Backlog.
+function BacklogChoicesView($: EngineInterface, { Box, Button, Text }: Pick<ElementTable, 'Box' | 'Button' | 'Text'>, { chatBar, view }: Pick<ChatBarDraw, 'chatBar' | 'view'>) {
+  const shown = shownBacklogItems(chatBar, view)
+  if (!shown.length) return null
+  const opened = view.openBacklogParents ?? []
+  return [
+    <Text key="session-backlog-heading" color={BRAND.muted}>BACKLOG</Text>,
+    ...shown.map(({ title, isChild, children }) => (
+      <Box key={`session-backlog-row-${title}`} flexDirection="row" gap={1}>
+        {children ? <Button key={`session-backlog-open-${title}`} plain label={`${opened.includes(title) ? '-' : '+'} ${children}`} onPress={() => toggleBacklogParent($, title)} /> : null}
+        <Button key={`session-backlog-start-${title}`} plain label={`${isChild ? '  ' : ''}${stageIconOf('Backlog')} ${title}`} onPress={() => startBacklogItem($, title)} />
+      </Box>
+    )),
   ]
 }
 
@@ -133,36 +164,18 @@ function folderFromTop(repository: string, folder: string): string {
 
 // In the main chat, the repositories beside this one, opened from the repository's own button before "main +",
 // alone, so the bar stays in view, its left edge under the start of that button. Opening one starts a top-level chat on it; a new
-// name creates the repository, private. Folder Only (No Repo), above them, opens any folder as it is in a top-level
-// chat, chosen with the system's folder picker or typed, and creates nothing there; its tip says when to choose it.
-const FOLDER_ONLY_TIP = "Choose a path if you don't want to work with a repository and want to just work within your local file system"
+// name creates the repository, private.
 
 // Each repository's label: whether it has CDD, its name, and its branch.
 const repoLabelOf = (repo: { name: string; has_cdd: boolean; branch: string }): string =>
   `${repo.has_cdd ? '◆' : '◇'} ${repo.name}${repo.branch ? ` · ${repo.branch}` : ''}`
 
-// Folder Only (No Repo): the system's folder picker, or a typed path, opens a folder as it is.
-function FolderOnlyView($: EngineInterface, elements: ElementTable) {
-  const { Box, Button, Input, Text } = elements
-  return [
-    <Box key="folder-heading-box">
-      <Text key="folder-heading" color={BRAND.muted}>Folder Only (No Repo)</Text>
-      {TipView(elements, FOLDER_ONLY_TIP, '', BRAND.muted)}
-    </Box>,
-    <Box key="repo-folder-row" flexDirection="row" gap={1}>
-      <Button key="repo-folder-choose" plain label="▸ Choose a folder…" onPress={() => chooseFolder($)} />
-      <Input key="repo-folder-path" placeholder="Folder path" value="" onSubmit={value => (value.trim() ? openFolder($, value.trim()) : undefined)} />
-    </Box>,
-  ]
-}
-
 export function RepoListView($: EngineInterface, elements: ElementTable, { chatBar, view, version }: ChatBarDraw) {
   const { Box, Button, Input, Text } = elements
   if (!view.isRepoListOpen || !chatBar.isMain) return null
-  const widest = Math.max(REPO_FIELD_CELLS, FOLDER_ROW_CELLS, ...(view.repos ?? []).map(repo => repoLabelOf(repo).length))
+  const widest = Math.max(REPO_FIELD_CELLS, ...(view.repos ?? []).map(repo => repoLabelOf(repo).length))
   return (
     <Box key="repo-list" flexDirection="column" position="absolute" bottom={1} left={repoListShiftOf(chatBar, version.label, widest)} paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      {FolderOnlyView($, elements)}
       <Text key="repos-heading" color={BRAND.muted}>REPOS</Text>
       {/* A chat bar whose view was saved before repos existed has none. Each repository is a whole button: a
           see-through one laid over its name took no press. */}
@@ -186,6 +199,20 @@ export function repoListRowsOf({ chatBar, view }: ChatBarDraw): number {
   return 3 + (view.repos ?? []).length + 1 + LIST_BORDER_ROWS
 }
 
+// The Ticket's warning and the files it means, shown while the choices made would delete the worktree or the branch
+// without a commit, so the person sees what goes before pressing Close session.
+function LosingWorkView({ Box, Text }: ElementTable, view: ChatBarDraw['view']) {
+  if (!losesWork(view)) return null
+  return (
+    <Box key="close-warning" flexDirection="column">
+      <Text color={BRAND.error}>{view.leaveWarning}</Text>
+      {view.leaveUnsavedWork.map(file => (
+        <Text key={`unsaved-${file}`} color={BRAND.text}>{`  • ${file}`}</Text>
+      ))}
+    </Box>
+  )
+}
+
 // Closing offers what ticket.close_choices answers: a handoff always, and a commit and a push of the branch the
 // session's work is on while it is checked out, named beside each.
 export function CloseView($: EngineInterface, elements: ElementTable, { chatBar, view }: ChatBarDraw) {
@@ -198,6 +225,7 @@ export function CloseView($: EngineInterface, elements: ElementTable, { chatBar,
       <Text weight="semibold" color={BRAND.text}>{`Close session ${chatBar.title}`}</Text>
       {ChoicesView(elements, leaveHeadingOf(chatBar.sessionName, view.leaveBranch), choices)}
       {branch ? null : <Text color={BRAND.muted}>Nothing checked out is this session's, so nothing is committed.</Text>}
+      {LosingWorkView(elements, view)}
       <Box flexDirection="row" gap={1}>
         <Button key="close-cancel" label="Cancel" onPress={() => cancelClose($)} />
         <Button key="close-confirm" label="Close session" variant="primary" onPress={() => closeSession($, chatBar)} />

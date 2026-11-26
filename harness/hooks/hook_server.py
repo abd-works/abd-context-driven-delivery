@@ -4,6 +4,7 @@ The checkout's hook daemon (``hook_daemon.py``) keeps one *HookServer* loaded be
 the IDE's hook command receives."""
 from __future__ import annotations
 
+import functools
 import json
 import logging
 from collections.abc import Iterator, Mapping
@@ -11,10 +12,10 @@ from dataclasses import dataclass, fields as dataclass_fields, replace
 from pathlib import Path
 from typing import Any, Callable, Protocol
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, InstallDestination, ToolsetConfiguration, ToolsetReference
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, ToolsetReference
+from harness.agent_tools.tool_call import CallSession, ToolCall
 from harness.annotations.annotation import hosted_only
-from harness.hooks.hooks import HookHandlersFile, Hooks, InstalledHookHandlers, events_served
+from harness.hooks.hooks import Hook, HookHandlersFile, Hooks, InstalledHookHandlers, events_served
 from harness.installation.destination import SkippedTools
 from harness.installation.context_config import ContextConfig
 from harness.installation.repository_toolsets import RepositoryToolsets
@@ -23,6 +24,16 @@ logger = logging.getLogger(__name__)
 
 # What loading a toolset by its ``module:Class`` reference raises when the reference is wrong or the class cannot be
 # made: a malformed reference, a missing module or class, a class that is no toolset, or a constructor it cannot call.
+
+
+class ToolInputUnreadable(ValueError):
+    """An event whose tool arguments the IDE sent as text that is not JSON. Read as no arguments, a handler would act as
+    if the tool named no file or guidance, so the event's handlers would do nothing and say nothing."""
+
+    def __init__(self, tool: str, text: str) -> None:
+        super().__init__(f"the arguments the IDE sent for tool {tool or '(none)'} are not JSON: {text[:200]!r}")
+        self.tool = tool
+        self.text = text
 
 
 class HookPayload(Mapping[str, Any]):
@@ -75,13 +86,14 @@ class HookPayload(Mapping[str, Any]):
 
     @property
     def tool_input(self) -> dict[str, Any]:
-        """The arguments the tool was called with; none when the IDE sent none or sent text that is no JSON object."""
+        """The arguments the tool was called with; none when the IDE sent none or sent JSON that is no object. Text
+        that is not JSON raises *ToolInputUnreadable*."""
         raw = self._fields.get("tool_input") or {}
         if isinstance(raw, str):
             try:
                 raw = json.loads(raw)
-            except json.JSONDecodeError:
-                return {}
+            except json.JSONDecodeError as unreadable:
+                raise ToolInputUnreadable(self.tool_name, raw) from unreadable
         return raw if isinstance(raw, dict) else {}
 
     @property
@@ -104,15 +116,12 @@ class HookPayload(Mapping[str, Any]):
         folder = str(self._fields.get("cwd") or "").strip()
         return Path(folder) if folder else None
 
-    @property
+    @functools.cached_property
     def call(self) -> ToolCall:
         """The tool call this event reports: the tool's input, in the project the event happened in, else in the
         checkout that received it, made once, so every handler of the event reads the same call and the session it
         opens."""
-        made = self.__dict__.get("_call")
-        if made is None:
-            made = self.__dict__["_call"] = ToolCall(self.tool_input, self.project or self._checkout)
-        return made
+        return ToolCall(self.tool_input, self.project or self._checkout)
 
     @property
     def chat_id(self) -> str:
@@ -125,12 +134,12 @@ class HookPayload(Mapping[str, Any]):
         return self.conversation_id.strip()
 
     @property
-    def session(self) -> Any:
+    def session(self) -> HookSession | None:
         """The session the event works in: the one saved as open in the event's project, else in the checkout that
         received it, main when none is; none when the event names neither or no sessions are registered. It is read
         once for the event, the way a tool call reads its session, so every hook of one event works in the same session,
         and the next event follows a switch or a close made through MCP."""
-        return self.call.session
+        return self.call.session  # type: ignore[return-value] - the registered sessions answer HookSession
 
     # The IDE event and the tools that report a file the agent just edited: Cursor's file-edit event and its edit
     # tools, and Claude Code's edit tools.
@@ -184,6 +193,16 @@ class ChatRuleInjections(Protocol):
     def is_rules_dump(self, body: str) -> bool: ...
 
 
+class HookSession(CallSession, Protocol):
+    """The session a hook event works in, as the hook server uses it: the rules it keeps for each of its chats, and the
+    dispatch log each handler's result is written to."""
+
+    chat_injections: ChatRuleInjections
+
+    def log_hook_dispatch(self, text: str) -> None:
+        """Stamp text in the session's hook dispatch log."""
+
+
 @dataclass(frozen=True)
 class HookMessages:
     """What a hook says back, each part none when it says nothing there: a line for the person, a note for the agent,
@@ -202,22 +221,15 @@ class HookMessages:
 
 
 class HookResult:
-    """Fields Cursor reads back from the hook process, and the toast the person sees beside the chat. The toast is not
-    sent to Cursor: the hook server hands it to the notifier that shows toasts."""
+    """Fields Cursor reads back from the hook process: the permission, whether the agent goes on, and the messages the
+    hooks say back (``messages``), which hold the toast the person sees beside the chat. The toast is not sent to
+    Cursor: the hook server hands it to the notifier that shows toasts."""
 
     def __init__(self, permission: str = "allow", continue_flag: bool | None = None, messages: HookMessages = HookMessages()) -> None:
         self.permission = permission
         self.continue_flag = continue_flag
-        self.user_message = messages.user_message
-        self.agent_message = messages.agent_message
-        self.followup_message = messages.followup_message
-        self.additional_context = messages.additional_context
-        self.toast = messages.toast
+        self.messages = messages
         self.followup_only = False
-
-    @property
-    def messages(self) -> HookMessages:
-        return HookMessages(self.user_message, self.agent_message, self.followup_message, self.additional_context, self.toast)
 
     @classmethod
     def from_handler(cls, raw: Mapping[str, Any] | None) -> HookResult:
@@ -225,15 +237,19 @@ class HookResult:
             return cls()
         continue_flag = False if raw.get("continue") is False else None
         result = cls(str(raw.get("permission") or "allow"), continue_flag, HookMessages.from_handler(raw))
-        if "permission" not in raw and result.followup_message:
+        if "permission" not in raw and result.messages.followup_message:
             result.followup_only = True
         return result
+
+    def keep_context(self, context: str | None) -> None:
+        """Keep context, or none, as the context the result adds to the agent's model, in place of what it held."""
+        self.messages = replace(self.messages, additional_context=context)
 
     def with_description(self, description: str) -> HookResult:
         text = description.strip()
         if not text:
             return self
-        existing = (self.agent_message or "").strip()
+        existing = (self.messages.agent_message or "").strip()
         if existing == text:
             return self
         if existing:
@@ -243,12 +259,13 @@ class HookResult:
     def merge(self, other: HookResult) -> HookResult:
         permission = "deny" if "deny" in (self.permission, other.permission) else "allow"
         continue_flag = False if False in (self.continue_flag, other.continue_flag) else None
+        mine, theirs = self.messages, other.messages
         merged = HookMessages(
-            self._join_lines(self.user_message, other.user_message),
-            self._join_lines(self.agent_message, other.agent_message),
-            other.followup_message or self.followup_message,
+            self._join_lines(mine.user_message, theirs.user_message),
+            self._join_lines(mine.agent_message, theirs.agent_message),
+            theirs.followup_message or mine.followup_message,
             self._join_unique_context(other),
-            self._join_lines(self.toast, other.toast),
+            self._join_lines(mine.toast, theirs.toast),
         )
         return HookResult(permission, continue_flag, merged)
 
@@ -258,27 +275,22 @@ class HookResult:
 
     def _join_unique_context(self, other: HookResult) -> str | None:
         parts: list[str] = []
-        for item in (self.additional_context, other.additional_context):
+        for item in (self.messages.additional_context, other.messages.additional_context):
             if item and item not in parts:
                 parts.append(item)
         return "\n\n".join(parts) or None
 
     def as_dict(self) -> dict[str, Any]:
+        """What Cursor reads back: only the follow-up prompt for a reply that sends one alone, else the permission,
+        whether the agent goes on, and each message the hooks said; never the toast."""
+        messages = self.messages
         if self.followup_only:
-            if self.followup_message:
-                return {"followup_message": self.followup_message}
-            return {}
+            return {"followup_message": messages.followup_message} if messages.followup_message else {}
         payload: dict[str, Any] = {"permission": self.permission}
         if self.continue_flag is False:
             payload["continue"] = False
-        if self.user_message:
-            payload["user_message"] = self.user_message
-        if self.agent_message:
-            payload["agent_message"] = self.agent_message
-        if self.followup_message:
-            payload["followup_message"] = self.followup_message
-        if self.additional_context:
-            payload["additional_context"] = self.additional_context
+        sent = (field.name for field in dataclass_fields(HookMessages) if field.name != "toast")
+        payload.update({name: getattr(messages, name) for name in sent if getattr(messages, name)})
         return payload
 
 
@@ -360,50 +372,39 @@ class HookHandler:
         raw = self.tool.callable(payload)
         fields = raw if isinstance(raw, Mapping) else None
         result = HookResult.from_handler(fields)
-        if result.additional_context or not fields:
+        if result.messages.additional_context or not fields:
             return result
         return result.with_description(self.tool.docstring)
 
 
 class HandlerCatalog:
     """The toolsets whose hook operations may run, and the handlers of each event they serve, made once when the
-    toolsets load. Each toolset is named by its class, its instance, or, as ``hook-handlers.json`` lists it, its
-    ``module:Class`` reference; one that cannot be loaded is kept in ``failures`` and the rest still serve. A toolset
-    whose hooks ``@Hooks(deploy=False)`` keeps out of install is left out here too, so the hooks an install leaves out
-    never run, however the catalog was named."""
+    toolsets load. Each toolset is named by its reference, as ``hook-handlers.json`` lists it, or handed in made, as a
+    spec's fake is; one that cannot be loaded is kept in ``failures`` and the rest still serve. A toolset whose hooks
+    ``@Hooks(deploy=False)`` keeps out of install is left out here too, so the hooks an install leaves out never run,
+    however the catalog was named."""
 
-    def __init__(self, toolsets: list[Any], repo_root: Path | None = None) -> None:
+    def __init__(self, toolsets: list[ToolsetReference | AgentToolSet], repo_root: Path | None = None) -> None:
         self.repo_root = repo_root
         self.failures: list[tuple[str, BaseException]] = []
-        self.toolsets: list[Any] = []
+        self.toolsets: list[AgentToolSet] = []
         self._load_items(toolsets)
         self._handlers = self._handlers_by_event()
 
-    def _load_items(self, items: list[ToolsetConfiguration]) -> None:
-        for configured in items:
+    def _load_items(self, items: list[ToolsetReference | AgentToolSet]) -> None:
+        for item in items:
             try:
-                loaded = AgentToolSet.from_items([configured])
+                toolset = item.made()
             except AgentToolSet.LOAD_FAILURES as error:
-                self.failures.append((self.ref_label(configured), error))
+                self.failures.append((str(item), error))
                 continue
-            self.toolsets.extend(
-                instance for instance in loaded if not hosted_only.annotates(instance) and Hooks.from_toolset_class(type(instance)).deploy
-            )
-
-    def ref_label(self, configured: ToolsetConfiguration) -> str:
-        if isinstance(configured, str):
-            return configured
-        if isinstance(configured, dict):
-            return str(configured.get("toolset") or configured)
-        registration = getattr(configured, "registration_name", None)
-        if isinstance(registration, str) and registration:
-            return registration
-        return str(ToolsetReference.of(configured if isinstance(configured, type) else type(configured)))
+            if not hosted_only.annotates(toolset) and Hooks.from_toolset_class(type(toolset)).deploy:
+                self.toolsets.append(toolset)
 
     @property
     def event_names(self) -> list[str]:
         """Every event some loaded hook operation serves, each once."""
-        return list(dict.fromkeys(tool.hook_event for tool in self._hook_tools() if tool.hook_event))
+        return list(dict.fromkeys(Hook.name_given(tool.callable) for tool in self._hook_tools() if Hook.name_given(tool.callable)))
 
     def for_event(self, event_name: str) -> list[HookHandler]:
         """The handlers of the hook operations that serve event_name, one for each operation."""
@@ -412,7 +413,7 @@ class HandlerCatalog:
     def _handlers_by_event(self) -> dict[str, list[HookHandler]]:
         by_event: dict[str, dict[tuple[str, str], HookHandler]] = {}
         for tool in self._hook_tools():
-            for event in events_served(tool.hook_event):
+            for event in events_served(Hook.name_given(tool.callable)):
                 handlers = by_event.setdefault(event, {})
                 key = (type(tool.toolset).__name__, tool.name)
                 if key not in handlers:
@@ -420,7 +421,7 @@ class HandlerCatalog:
         return {event: list(handlers.values()) for event, handlers in by_event.items()}
 
     def _hook_tools(self) -> list[AgentTool]:
-        return [tool for toolset in self.toolsets for tool in toolset.tools_for(InstallDestination.HOOK)]
+        return [tool for toolset in self.toolsets for tool in toolset.tools_published_to(Hook)]
 
 
 
@@ -432,14 +433,11 @@ class HookToasts:
     def __init__(self) -> None:
         self._show: Callable[[str, list[Path]], Any] | None = None
 
-    def show_with(self, show: Callable[[str, list[Path]], Any] | None) -> None:
-        """Have show(toast, workspace_roots) show each toast a dispatched event's hooks give; none shows no toast."""
-        self._show = show
-
-    @property
-    def shown_by(self) -> Callable[[str, list[Path]], Any] | None:
-        """The notifier that shows toasts now; none when no notifier registered."""
-        return self._show
+    def show_with(self, show: Callable[[str, list[Path]], Any] | None) -> Callable[[str, list[Path]], Any] | None:
+        """Have show(toast, workspace_roots) show each toast a dispatched event's hooks give; none shows no toast.
+        Answers the notifier it replaces, so a caller that registers its own for a while can put that one back."""
+        replaced, self._show = self._show, show
+        return replaced
 
     def show(self, toast: str, workspace_roots: list[Path]) -> None:
         """Show toast in the chat's workspace folders, when there is a toast and a notifier to show it."""
@@ -467,9 +465,9 @@ class HookServer:
         so the registrations those modules make, such as how a call opens its session, hold in the hook process."""
         classes = toolsets.classes()
         installed = InstalledHookHandlers(toolsets.root).refs
-        server = cls(toolsets.root, HandlerCatalog(list(installed) or classes, toolsets.root))
+        server = cls(toolsets.root, HandlerCatalog(list(installed) or [ToolsetReference.of(toolset_class) for toolset_class in classes], toolsets.root))
         for unloadable in toolsets.unloadable:
-            server.skipped.skip(unloadable.reference, unloadable.cause)
+            server.skipped.skip(str(unloadable.reference), unloadable.cause)
         return server
 
     @classmethod
@@ -493,13 +491,13 @@ class HookServer:
         if session is not None:
             result = self._with_chat_injections(session.chat_injections, payload, result)
         if payload.hook_event_name in ("stop", "subagentStop"):
-            result.followup_only = result.followup_message is not None
+            result.followup_only = result.messages.followup_message is not None
         return result
 
     def _with_chat_injections(self, injections: ChatRuleInjections, payload: HookPayload, result: HookResult) -> HookResult:
         """result with the rules kept for the event's chat, through the chat injections its session keeps."""
-        if injections.is_rules_dump(result.additional_context or ""):
-            result.additional_context = None
+        if injections.is_rules_dump(result.messages.additional_context or ""):
+            result.keep_context(None)
         injections.keep(result, payload)
         if payload.hook_event_name == "beforeSubmitPrompt":
             return injections.replay(payload, result)
@@ -521,7 +519,7 @@ class HookServer:
         for result in self._invoke_enabled(event, payload):
             merged = merged.merge(result)
         self._append_debug(payload, f"MERGED {json.dumps(merged.as_dict())}")
-        HOOK_TOASTS.show(merged.toast, payload.workspace_roots)
+        HOOK_TOASTS.show(merged.messages.toast, payload.workspace_roots)
         return merged
 
     def diagnose(self) -> dict[str, Any]:
@@ -563,5 +561,5 @@ class HookServer:
         """Append message to the dispatch log of the session payload's event works in."""
         session = payload.session
         if session is not None:
-            session.folder.hook_log("dispatch.debug").stamped(message)
+            session.log_hook_dispatch(message)
 

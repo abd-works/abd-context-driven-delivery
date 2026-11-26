@@ -2,7 +2,7 @@
 session's pattern overlays.
 
 Scenarios: story_tests/move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/
-generate_fidelity_outputs_in_chat_bar_story.test.md (Run Fidelity Action With Overlays).
+generate_fidelity_outputs_in_chat_bar_story.test.md (Apply Chosen Overlays To Fidelity Action).
 Map: .context/story-map.md#e-generate-fidelity-outputs-in-chat-bar.
 
 Steps reach the session and Generate only through the namespace a tier hands them, so the domain spec and the cdd tools
@@ -45,7 +45,7 @@ def overlays_kept_by(world) -> list[str]:
     return json.loads((world.project.sessions / CHECKOUT_FLOW.name / "session.json").read_text(encoding="utf-8")).get("overlays", [])
 
 
-@shared_stories.scenario("Run Fidelity Action With Overlays", "Choose the overlays a command names")
+@shared_stories.scenario("Apply Chosen Overlays To Fidelity Action", "Choose the overlays a command names")
 def _(s):
     @s.given("checkout-flow's session overlays none")
     def _(world):
@@ -61,7 +61,7 @@ def _(s):
         expect(overlays_kept_by(world)).to(equal([LERN]))
 
 
-@shared_stories.scenario("Run Fidelity Action With Overlays", "Follow each overlay's shared rules when generating")
+@shared_stories.scenario("Apply Chosen Overlays To Fidelity Action", "Follow each overlay's shared rules when generating")
 def _(s):
     @s.given("checkout-flow's session overlays lern_domain_driven and mern_domain_driven")
     def _(world):
@@ -82,7 +82,7 @@ def _(s):
         expect([opening in world.instructions for opening in OVERLAYS.values()]).to(equal([True, True]))
 
 
-@shared_stories.scenario("Run Fidelity Action With Overlays", "Generate with no overlay chosen")
+@shared_stories.scenario("Apply Chosen Overlays To Fidelity Action", "Generate with no overlay chosen")
 def _(s):
     @s.given("checkout-flow's session overlays none")
     def _(world):
@@ -98,7 +98,7 @@ def _(s):
         expect(world.instructions).not_to(contain("Pattern overlay:"))
 
 
-@shared_stories.scenario("Run Fidelity Action With Overlays", "Judge each overlay's shared rules when validating")
+@shared_stories.scenario("Apply Chosen Overlays To Fidelity Action", "Judge each overlay's shared rules when validating")
 def _(s):
     @s.given("checkout-flow's session overlays lern_domain_driven and mern_domain_driven")
     def _(world):
@@ -119,7 +119,7 @@ def _(s):
         expect([opening in world.report for opening in OVERLAYS.values()]).to(equal([True, True]))
 
 
-@shared_stories.scenario("Run Fidelity Action With Overlays", "Validate with no overlay chosen")
+@shared_stories.scenario("Apply Chosen Overlays To Fidelity Action", "Validate with no overlay chosen")
 def _(s):
     @s.given("checkout-flow's session overlays none")
     def _(world):

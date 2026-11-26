@@ -1,0 +1,10 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-18T03:16:25.303476+00:00",
+  "prompts": [
+    {
+      "id": "a9c1bf300015",
+      "text": "Run4 timed progress: give this card eight steps, one per line, then write eight lines to .sessions/simple-queue-enhancements/demo/run4/progress/log.md, one about every 10 seconds, each saying which line it is and the time, ticking each step done as its line is written so the run can be watched. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done."
+    }
+  ]
+}

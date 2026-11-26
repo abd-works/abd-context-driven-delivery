@@ -4,6 +4,8 @@
   In code, a context is the folder that contains .context/bounded-context.md.
   The code-format build writes that file when it creates the context folder,
   and creates each aggregate as a folder under that context.
+  That file names each aggregate as a link to its heading in the domain model:
+  see "The context's own file" under Model fidelity, at the end.
 -->
 
 # Bounded Context Map — {{project_name}}
@@ -96,3 +98,19 @@ At **model**, keep this map as the strategic source of truth for context · aggr
 - Nothing else — factories, specifications, domain services, and event classes wait for **tactics**.
 
 Keep integrations and `emits events` / `consumes events` on this map aligned with the model's arrows.
+
+**The context's own file.** Each context's folder holds `.context/bounded-context.md`. Under `Aggregates:` it names each aggregate as a markdown link to that aggregate's `###` heading in the domain model, with the path written from the context's file. The Files app opens the aggregate in place from that link, as a story opens its scenarios, and the graph reads which aggregates the context holds from the headings the links open. A `Local → Remote` line under the links is a context mapping; each side names an aggregate by the words its link shows.
+
+```
+# {{ContextName}}
+
+{{What this context is, in one or two sentences.}}
+
+Aggregates:
+- [{{Aggregate}}](../../.context/domain-model.md#{{aggregate-heading-anchor}})
+- [{{Aggregate}}](../../.context/domain-model.md#{{aggregate-heading-anchor}})
+
+{{Aggregate}} → {{OtherContext}} · {{Aggregate}}
+```
+
+The anchor is the heading as a link names it: lower case, punctuation dropped, each space a hyphen (`### Customer Profile` is `#customer-profile`).

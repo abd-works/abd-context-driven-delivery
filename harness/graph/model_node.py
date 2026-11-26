@@ -6,6 +6,7 @@ Pass a graph the same way you pass another model.
 
 from __future__ import annotations
 
+import inspect
 from abc import ABCMeta
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Iterator, Optional
@@ -29,7 +30,7 @@ class _RecordedList(list):
         super().__init__()
         self.owner = owner
         self.kind = kind
-        owner.keeps_list(self)
+        owner._keeps_list(self)
 
     def append(self, held: ModelNode) -> None:
         list.append(self, held)
@@ -119,7 +120,7 @@ class ModelReferences(_RecordedList):
         if target.graph is owner.graph:
             owner.graph.edges.record(EdgeType.from_kind(self.kind, "relationship"), owner, target)
 
-    def record_all(self) -> None:
+    def _record_all(self) -> None:
         """Record the edge to every object held, as on a graph the owner has just moved to."""
         for target in self:
             self._record(target)
@@ -149,8 +150,16 @@ class _SyncedOnceBuilt(ABCMeta):
 
     def __call__(cls, *args: object, **kwargs: object) -> ModelNode:
         model = super().__call__(*args, **kwargs)
-        model.finish_building()
+        model._finish_building()
         return model
+
+    @property
+    def __signature__(cls) -> inspect.Signature:
+        """The parameters the class's own constructor takes, which a caller that inspects the class reads: making a
+        model goes through this metaclass, whose call takes anything, so without this a caller that hands a model the
+        settings its constructor names, as a practice's formats do, would see none of them."""
+        declared = inspect.signature(cls.__init__)
+        return declared.replace(parameters=list(declared.parameters.values())[1:])
 
 
 class ModelNode(Node, metaclass=_SyncedOnceBuilt):
@@ -195,7 +204,7 @@ class ModelNode(Node, metaclass=_SyncedOnceBuilt):
             self.join(graph.practices.of(self.practice_kind))
 
 
-    def finish_building(self) -> None:
+    def _finish_building(self) -> None:
         """Mark this object built, so an assignment to a field that names a schema edge rebuilds the schema edges, and
         record the ones its constructor gave it."""
         self._ready = True
@@ -222,7 +231,7 @@ class ModelNode(Node, metaclass=_SyncedOnceBuilt):
     def semantic_type(self) -> str:
         return self._semantic_type_name
 
-    def keeps_list(self, listed: ModelChildren | ModelReferences) -> None:
+    def _keeps_list(self, listed: ModelChildren | ModelReferences) -> None:
         """Keep listed, one of this object's lists of the parts it is made of or of the objects it refers to, so the
         object records the edge to each when it joins a graph."""
         (self._child_lists if isinstance(listed, ModelChildren) else self._reference_lists).append(listed)
@@ -260,7 +269,7 @@ class ModelNode(Node, metaclass=_SyncedOnceBuilt):
                 node._move_to(practice)
         graph = practice.reading.graph
         for edge in carried:
-            graph.edges.record(edge.type, edge.parent, edge.child)
+            graph.edges.record(edge.type, edge.parent, edge.child, edge.facts)
         for node in subtree:
             node._record_held_edges()
 
@@ -271,7 +280,7 @@ class ModelNode(Node, metaclass=_SyncedOnceBuilt):
                 if isinstance(child, ModelNode) and child is not self:
                     self._record_child_edge(child, children.kind)
         for references in self._reference_lists:
-            references.record_all()
+            references._record_all()
 
     def _move_to(self, practice: PracticeGuidance) -> None:
         if self.practice is practice:

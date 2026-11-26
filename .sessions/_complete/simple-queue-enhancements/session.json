@@ -1,0 +1,99 @@
+{
+  "name": "simple-queue-enhancements",
+  "title": "simple-queue-enhancements",
+  "scope": "feature",
+  "branch": "simple-queue-enhancements",
+  "worktree": "C:\\dev\\abd-cdd-simple-queue-enhancement",
+  "guidance": {
+    "stages": [
+      "discovery",
+      "specification",
+      "implementation"
+    ],
+    "version": 6
+  },
+  "practices": {
+    "bdd": {
+      "formats": {
+        "behavior": [
+          "python"
+        ],
+        "realization": [
+          "markdown",
+          "python"
+        ],
+        "development": [
+          "python"
+        ]
+      }
+    },
+    "stories": {
+      "formats": {
+        "scenarios": [
+          "python",
+          "markdown"
+        ],
+        "acceptance_tests": [
+          "python"
+        ],
+        "story_map": [
+          "markdown",
+          "drawio",
+          "whiteboard"
+        ]
+      }
+    },
+    "ddd": {
+      "formats": {
+        "model": [
+          "markdown",
+          "drawio",
+          "whiteboard",
+          "python"
+        ],
+        "tactics": [
+          "python"
+        ],
+        "bounded_context": [
+          "markdown",
+          "drawio",
+          "whiteboard"
+        ]
+      }
+    },
+    "ux": {
+      "formats": {
+        "mockup": [
+          "claude_design",
+          "html"
+        ],
+        "front_end_code": [
+          "html",
+          "typescript"
+        ],
+        "ia": [
+          "drawio",
+          "markdown"
+        ]
+      }
+    },
+    "clean_engineering": {
+      "formats": {
+        "model": [
+          "python",
+          "drawio",
+          "whiteboard",
+          "markdown"
+        ],
+        "code": [
+          "python"
+        ],
+        "modules": [
+          "markdown",
+          "drawio",
+          "whiteboard"
+        ]
+      }
+    }
+  }
+}

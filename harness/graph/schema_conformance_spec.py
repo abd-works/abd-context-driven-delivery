@@ -1,20 +1,21 @@
 """Content conforms to its schema: every node has each relationship its schema type requires, up to the fidelity its
 practice works at, by its practice's schema and the schemas of the patterns its graph applies."""
 
-from expects import be_empty, contain, equal, expect
+from expects import have_len, be_empty, contain, equal, expect
 from mamba import before, description, it
 
 from harness.graph.graph import Graph
 from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import RuleFixture
-from harness.graph.schema_conformance import ConformsToSchema
+from harness.graph.schema_conformance import ConformsToSchema, RequiredRelationship
+from harness.graph.schema_edges import SchemaKey
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns with the graph's overlays
 from cdd_guidance.practices.stories.stories import Stories
 
 
 def _working_at(graph: Graph, key: str, fidelity: str):
     """The graph's practice called key, working at fidelity, as a session sets it."""
-    practice = graph.practice(key)
+    practice = graph.practices.named(key)
     practice.fidelities.current = practice.fidelities.entries[fidelity]
     return practice
 
@@ -53,7 +54,7 @@ def stories_fixture(files: dict[str, str]) -> RuleFixture:
 
 def _gaps(practice) -> list[str]:
     """Each gap the rule finds in practice, as it records them."""
-    return [message for _, message in ConformsToSchema().check_practice(RuleCheckContext(practice, None))]
+    return [finding.message for finding in ConformsToSchema().check_practice(RuleCheckContext(practice))]
 
 
 with description("conforms to schema"):
@@ -112,22 +113,48 @@ with description("conforms to schema"):
                     "Scenario 'Pay later' has no steps relationship to Step | Given | When | Then | Background, which the stories practice schema requires."
                 ))
 
-    with description("a when step invoking nothing"):
+    with description("an example demonstrating no class"):
         with before.each:
             self.graph = Graph()
             self.practice = _working_at(self.graph, "stories", "acceptance_tests")
-            _node(self.practice, "When", "the Shopper pays")
+            _node(self.practice, "Example", "a card payment")
 
         with description("on a graph that reads no Clean Engineering"):
-            with it("should not judge the invokes it has no operation to lead to"):
-                expect([gap for gap in _gaps(self.practice) if "invokes" in gap]).to(be_empty)
+            with it("should not judge the demonstrates it has no class to lead to"):
+                expect([gap for gap in _gaps(self.practice) if "demonstrates" in gap]).to(be_empty)
 
         with description("on a graph that reads Clean Engineering beside it"):
-            with it("should fail for the invokes it lacks"):
-                self.graph.practice("clean_engineering")
-                expect(_gaps(self.practice)).to(contain(
-                    "When 'the Shopper pays' has no invokes relationship to Operation | Property, which the stories practice schema requires."
-                ))
+            with it("should fail for the demonstrates it lacks"):
+                self.graph.practices.named("clean_engineering")
+                expect([gap for gap in _gaps(self.practice) if "demonstrates" in gap]).to(have_len(1))
+
+    with description("a when step invoking nothing, on a graph that reads Clean Engineering beside it"):
+        with it("should not require invokes, which only a step backed by code can name (code-steps-invoke-code)"):
+            graph = Graph()
+            practice = _working_at(graph, "stories", "acceptance_tests")
+            _node(practice, "When", "the Shopper pays")
+            graph.practices.named("clean_engineering")
+            expect([gap for gap in _gaps(practice) if "invokes" in gap]).to(be_empty)
+
+    with description("a relationship a schema requires of the steps of one phase"):
+        with before.each:
+            self.graph = Graph()
+            self.practice = _working_at(self.graph, "stories", "acceptance_tests")
+            self.required = RequiredRelationship(SchemaKey("when"), "invokes", ("Operation",), "stories practice", None, None)
+            self.context = RuleCheckContext(self.practice)
+
+        with description("with a step that keeps its phase as a saved fact, as a graph restored from its file holds it"):
+            with before.each:
+                self.pays = _node(self.practice, "Step", "the Shopper pays")
+                self.pays.set_fact("phase", "when")
+                self.holds = _node(self.practice, "Step", "the cart holds a book")
+                self.holds.set_fact("phase", "given")
+
+            with it("should hold the step of that phase to it"):
+                expect(self.required.owners(self.context)).to(contain(self.pays))
+
+            with it("should leave out the step of another phase"):
+                expect(self.holds in self.required.owners(self.context)).to(equal(False))
 
     with description("a story with no scenarios"):
         with before.each:

@@ -13,7 +13,7 @@ from urllib.request import urlopen
 from expects import contain, equal, expect
 from mamba import after, before, description, it
 
-from harness.diagnostics.app import Npm
+from harness.apps.app import Npm
 from space.kanban.board_app import APP_FOLDER, BOARD_SERVER, STORY_UI_FOLDER
 from space.kanban.editor_apps_examples import free_port
 

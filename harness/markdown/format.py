@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from pathlib import Path
+
 
 class Format(str):
     """*Format* is a channel an artifact is written in, such as `markdown`, `python`, or `drawio`. A format goes by its
@@ -18,7 +21,7 @@ class Format(str):
 
     _SHORT_NAMES = {"markdown": "md", "python": "py", "typescript": "ts", "javascript": "js"}
     _NAMES_BY_SHORT_NAME = {short: name for name, short in _SHORT_NAMES.items()}
-    CODE = frozenset({"python", "typescript", "java", "javascript"})
+    CODE = frozenset({"python", "typescript", "javascript"})
     TEMPLATED = frozenset({"markdown", *CODE})
     # The groups a person picks formats by, in the order an action bar offers them: a diagram (a draw.io file or a
     # Claude Whiteboard board), the markdown, the code,
@@ -26,12 +29,17 @@ class Format(str):
     GROUPS: dict[str, tuple[str, ...]] = {
         "diagram": ("drawio", "whiteboard"),
         "markdown": ("markdown",),
-        "code": ("python", "typescript", "javascript", "java", "html"),
+        "code": ("python", "typescript", "javascript", "html"),
         "canvas": ("claude_design",),
     }
+    # The groups a fidelity writes in every format of at once: a diagram is both a draw.io file and a Claude Whiteboard
+    # board, so a person picks the diagram, never one of them. In any other group a person picks one of its formats.
+    WRITTEN_TOGETHER = frozenset({"diagram"})
     # The order a fidelity's files are shown in, by group: prose first, then the code, then the diagrams drawn from them,
     # then the canvas played from them.
     FILE_ORDER: tuple[str, ...] = ("markdown", "code", "diagram", "canvas")
+    # What the name of a file in a format ends with before its extension: a sketch is saved as orders-sketch.md.
+    _FILE_NAME_ENDINGS = {"sketch": "-sketch"}
 
     def __new__(cls, name: str | None = "") -> Format:
         folded = (name or "").strip().casefold()
@@ -67,6 +75,18 @@ class Format(str):
         return next((group for group, members in self.GROUPS.items() if self.name in members), self.name)
 
     @property
+    def is_offered(self) -> bool:
+        """Whether a person picks this format, by a group of ``GROUPS``. A fidelity output named for what it holds rather
+        than how it is written, such as the story map's ``thin_slice`` or the scenarios' ``realization``, names files its
+        fidelity writes, never a format a chip or a toggle offers."""
+        return any(self.name in members for members in self.GROUPS.values())
+
+    @property
+    def is_written_with_its_group(self) -> bool:
+        """Whether choosing this format's group chooses every format of it a fidelity writes, as a diagram does."""
+        return self.group in self.WRITTEN_TOGETHER
+
+    @property
     def group_order(self) -> int:
         """Where this format's group comes among the groups an action bar offers; a group of its own comes after them."""
         groups = list(self.GROUPS)
@@ -79,20 +99,50 @@ class Format(str):
         return self.FILE_ORDER.index(self.group) if self.group in self.FILE_ORDER else len(self.FILE_ORDER)
 
     @property
-    def is_templated(self) -> bool:
+    def _is_templated(self) -> bool:
         """Whether this format keeps its templates in its own folder with its own extension."""
         return self.name in self.TEMPLATED
 
     @property
     def template_folder(self) -> str:
         """The folder under `templates/` that holds this format's templates; empty for a format that has none."""
-        return self.short if self.is_templated else ""
+        return self.short if self._is_templated else ""
 
     @property
     def template_extension(self) -> str:
         """The extension this format's templates end with; empty for a format whose template is found by name."""
-        return self.extension if self.is_templated else ""
+        return self.extension if self._is_templated else ""
+
+    def names(self, file: Path) -> bool:
+        """Whether the file's name carries the ending this format's files carry: ``orders-sketch.md`` is named as a
+        sketch. A format whose files carry no ending names no file so."""
+        ending = self._FILE_NAME_ENDINGS.get(self.name, "")
+        return bool(ending) and file.stem.endswith(ending)
+
+    def stem_of(self, file: Path) -> str:
+        """The name of a file in this format without its extension and without the ending this format's files carry,
+        so a file rendered from it can take the same name: ``orders-sketch.md`` is ``orders`` as a sketch."""
+        ending = self._FILE_NAME_ENDINGS.get(self.name, "")
+        return file.stem[: -len(ending)] if self.names(file) else file.stem
 
 
 # The folder names a practice's templates are kept under, one for each templated format: `md`, `py`, ...
 TEMPLATE_FOLDER_NAMES = frozenset(Format(name).short for name in Format.TEMPLATED)
+
+
+class ContentNotHeld(ValueError):
+    """A format refuses content it cannot hold, such as a test body asked for in a format that holds a describe tree
+    only, rather than write it and lose part of it on the way back. A practice raises its own kind, naming what would be
+    lost."""
+
+
+@dataclass(frozen=True)
+class SourceDocument:
+    """The document a drawing was drawn from, in the format it was written in, kept hidden in the drawing: a draw.io
+    file keeps it on its page's root cell and a Claude Whiteboard board in its meta, where neither draws it. A drawing
+    shows only part of what a document says, such as a story map's cards without the prose under them, so a render of
+    the drawing back into that format writes over this document as the file it replaces, and the words the drawing
+    cannot show come back."""
+
+    format: Format
+    text: str

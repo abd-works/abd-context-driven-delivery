@@ -61,11 +61,6 @@ class Granola:
         """Granola working in project, the project the running call names, so a relative folder is that project's."""
         return cls(project)
 
-    @property
-    def root(self) -> Path:
-        """The project folder that relative folders resolve against."""
-        return self._root
-
     def _slug(self, title: str) -> str:
         """The part of a note's file name that comes from its title."""
         slug = Name(title).title_slug

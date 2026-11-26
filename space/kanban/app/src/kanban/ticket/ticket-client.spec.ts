@@ -152,6 +152,42 @@ describe('Move Ticket', () => {
     await ticketOn(page, OTHER).drops.dropOn('Complete')
     expect(page.board.tickets.find(ticket => ticket.name === OTHER)?.column.name).toBe('Complete')
   })
+
+  it('should let a card be dropped above a card in any stage and in Complete', async () => {
+    const { page } = await board.page()
+    const dragged = ticketOn(page, OTHER).drops
+    const closed = page.board.tickets.find(ticket => ticket.isClosed)!
+    expect([dragged.canDropAbove(ticketOn(page, 'almost-shipped')), dragged.canDropAbove(closed), dragged.canDropAbove(ticketOn(page, OTHER))]).toEqual([true, true, false])
+  })
+
+  describe('that a person has dropped above a closed ticket, and was never opened', () => {
+    async function dropped() {
+      const { page } = await board.page()
+      const closed = page.board.tickets.find(ticket => ticket.isClosed)!
+      await ticketOn(page, OTHER).drops.dropAbove(closed)
+      const names = page.board.columnNamed('Complete')!.tickets.map(ticket => ticket.name)
+      return { names, closed: closed.name }
+    }
+
+    it('should close at once and show just above that ticket in Complete', async () => {
+      const { names, closed } = await dropped()
+      expect(names.indexOf(OTHER)).toBe(names.indexOf(closed) - 1)
+    })
+  })
+
+  describe('that a person has moved above a ticket in another stage', () => {
+    async function moved() {
+      const { page } = await board.page()
+      await ticketOn(page, OTHER).moveBefore('almost-shipped')
+      const column = page.board.columnNamed('Hardening')
+      return [...(column?.inProgress ?? []), ...(column?.done ?? [])].map(ticket => ticket.name)
+    }
+
+    it("should show just above that ticket in its stage's list", async () => {
+      const names = await moved()
+      expect(names.indexOf(OTHER)).toBe(names.indexOf('almost-shipped') - 1)
+    })
+  })
 })
 
 describe('Send Next Fidelity Action', () => {
@@ -176,7 +212,7 @@ describe('Send Next Fidelity Action', () => {
 
     it('should send the generate command in the default format', async () => {
       const { chat } = await ran()
-      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map session=.sessions/billing-report/session.json' }])
+      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map session=.sessions/billing-report/session.json format=markdown' }])
     })
   })
 
@@ -194,7 +230,7 @@ describe('Send Next Fidelity Action', () => {
 
     it("should generate it in its own stage's default format", async () => {
       const { chat } = await ran()
-      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map session=.sessions/billing-report/session.json' }])
+      expect(await chat.checkIn()).toEqual([{ kind: 'command', text: '/actions-generate stories-story-map session=.sessions/billing-report/session.json format=markdown' }])
     })
 
     it('should mark its tile as the next one', async () => {
@@ -254,8 +290,18 @@ describe('Write Ticket Handoff', () => {
   it('should fill the prompt with the handoff command', async () => {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
-    await ticketOn(page, ACTIVE).prompts.fillHandoff()
+    await ticketOn(page, ACTIVE).chatPrompts.fillHandoff()
     expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: 'Write a handoff for ticket checkout-flow with /space-session-handoff-session session=.sessions/checkout-flow/session.json' }])
+  })
+})
+
+// Requested 2026-11-17: the roots dialog offers to have the chat set up the session's roots, as activation asks it to.
+describe('Set Up Session Roots With The Chat', () => {
+  it("should fill the prompt asking the ticket's chat to set up its session's roots", async () => {
+    const { page } = await board.page()
+    const chat = await board.connectChat(page)
+    await ticketOn(page, ACTIVE).chatPrompts.fillSetUpRoots()
+    expect(await chat.checkIn()).toEqual([{ kind: 'fill', text: "Set up the roots of ticket checkout-flow's session with session.set_up_roots session=.sessions/checkout-flow/session.json" }])
   })
 })
 
@@ -263,7 +309,7 @@ describe('Close Active Session', () => {
   async function closed() {
     const { page } = await board.page()
     const chat = await board.connectChat(page)
-    await ticketOn(page, ACTIVE).prompts.closeSession()
+    await ticketOn(page, ACTIVE).chatPrompts.closeSession()
     return { page, chat }
   }
 
@@ -325,7 +371,7 @@ describe('Open Ticket Chat', () => {
     it("should send the ticket's commands to the picked chat", async () => {
       const page = await pickedThenClicked()
       const other = board.chat('other-chat', '', '')
-      await ticketOn(page, ACTIVE).prompts.closeSession()
+      await ticketOn(page, ACTIVE).chatPrompts.closeSession()
       expect(await other.checkIn()).toEqual([{ kind: 'command', text: '/space:session:close-session session=.sessions/checkout-flow/session.json' }])
     })
   })
@@ -341,7 +387,7 @@ describe('Open Ticket Chat', () => {
       await page.chat.refresh()
       await page.reader.refresh()
       page.chat.choose('other-chat')
-      await ticketOn(page, ACTIVE).prompts.closeSession()
+      await ticketOn(page, ACTIVE).chatPrompts.closeSession()
       return ticketChat
     }
 
@@ -398,7 +444,7 @@ describe('Open Ticket Chat', () => {
       const { page, asked } = await board.page()
       await board.chat('chat-1').checkIn()
       await page.chat.refresh()
-      await ticketOn(page, ACTIVE).prompts.fillHandoff()
+      await ticketOn(page, ACTIVE).chatPrompts.fillHandoff()
       expect([asked.filter(request => request.path.endsWith('/send')), page.store.state.toasts.at(-1)?.text]).toEqual([[], 'No chat works on checkout-flow yet: open its chat from its card, or pick one in the chat list.'])
     })
   })

@@ -19,12 +19,30 @@ import { readExplorerTree, ScreenTree, ScreenTreeExpansion } from "./screen-tree
 const INCLUDE_WAIT_MILLISECONDS = 3000;
 /** The mode each story function is collected in for the browser demo. */
 const COLLECT_MODE = "fake";
-/** Exposed domain values Interactive carries from one story to the next. */
-const SESSION_KEYS = ["cart", "product", "catalog", "paymentMethod"];
 
-function readBound(snapshot, path) {
-  if (!path || snapshot == null) return undefined;
-  return path.split(".").reduce((acc, key) => acc?.[key], snapshot);
+/** What a scenario exposed, read by the dotted path a page's field or list names, such as `cart.lines`. */
+class Snapshot {
+  constructor(exposed) {
+    this.exposed = exposed ?? {};
+  }
+
+  static of(scenario) {
+    return new Snapshot(scenario?.expose?.());
+  }
+
+  at(path) {
+    if (!path) return undefined;
+    return path.split(".").reduce((held, key) => held?.[key], this.exposed);
+  }
+}
+
+/** The exposed values Interactive carries from one story to the next: the first name of every path the page's fields
+ *  and lists are bound to, so the page itself says what carries and the runner names no product's objects. */
+function sessionKeysOn(root) {
+  const paths = [...root.querySelectorAll("[data-bound-field], [data-bound-list]")]
+    .map((element) => element.getAttribute("data-bound-field") || element.getAttribute("data-bound-list") || "")
+    .filter((path) => path && path !== "true");
+  return [...new Set(paths.map((path) => path.split(".")[0]))];
 }
 
 /** List hosts are painted and wired from the scenario on every repaint, so they are not static controls or fields. */
@@ -161,7 +179,7 @@ class BoundListHost {
   items(snapshot) {
     const path = this.element.getAttribute("data-bound-field") || this.element.getAttribute("data-bound-list") || "";
     if (!path || path === "true") return [];
-    const direct = readBound(snapshot, path);
+    const direct = snapshot.at(path);
     return Array.isArray(direct) ? direct : [];
   }
 
@@ -269,87 +287,85 @@ class StoryCatalog {
   }
 }
 
-function paintCharacterTree(character, root) {
-  const tree = root.querySelector("[data-character-tree]");
-  if (!tree || !character) return;
-  tree.querySelectorAll(".tree-node:not([data-role='folder'])").forEach((node) => node.remove());
-  const node = document.createElement("div");
-  node.className = "tree-node selected";
-  node.textContent = `· ${character.name || "Hero"}`;
-  tree.appendChild(node);
-}
-
-function paintAbilities(character, root) {
-  const list = root.querySelector("[data-ability-list]");
-  if (!list || !character?.abilities) return;
-  list.innerHTML = "";
-  for (const [name, ability] of Object.entries(character.abilities)) {
-    if (name === "pointContribution") continue;
-    const row = document.createElement("div");
-    row.className = "control";
-    row.dataset.type = "list";
-    row.dataset.name = name;
-    row.textContent = `${name} · ${ability.rank ?? 0}`;
-    list.appendChild(row);
-  }
-}
-
 function boundFieldText(element, snapshot) {
   const path = element.getAttribute("data-bound-field");
-  const boundValue = readBound(snapshot, path);
+  const boundValue = snapshot.at(path);
   const label = element.getAttribute("data-bound-label") || path;
   if (boundValue === undefined || boundValue === null) return `${label}: —`;
   if (typeof boundValue === "object") return `${label}: ${JSON.stringify(boundValue)}`;
   return `${label}: ${boundValue}`;
 }
 
-function paintBoundFields(snapshot, root) {
-  root.querySelectorAll("[data-bound-field]").forEach((element) => {
-    if (element.tagName === "BUTTON" || isBoundListHost(element)) return;
-    element.textContent = boundFieldText(element, snapshot);
-  });
-}
+/** The product's screens on the page: which show for a story, which one is current, and the selection a click leaves in
+ *  a region. */
+class ProductScreens {
+  constructor(root) {
+    this.root = root;
+  }
 
-function showScreensForStory(storyTitle, root) {
-  const screens = [...root.querySelectorAll(".screen[data-for-story]")];
-  if (!screens.length) return;
-  let shownFirst = false;
-  for (const screen of screens) {
-    const allowed = screen
-      .getAttribute("data-for-story")
-      .split(",")
-      .map((s) => s.trim());
-    screen.classList.remove("current");
-    if (!allowed.includes(storyTitle)) {
-      screen.hidden = true;
-      continue;
+  get all() {
+    return [...this.root.querySelectorAll(".screen")];
+  }
+
+  /** The screens a story names (`data-for-story`), the first of them shown; a page whose screens name no story is left as it is. */
+  showScreensForStory(storyTitle) {
+    const screens = [...this.root.querySelectorAll(".screen[data-for-story]")];
+    if (!screens.length) return;
+    let shownFirst = false;
+    for (const screen of screens) {
+      const allowed = screen
+        .getAttribute("data-for-story")
+        .split(",")
+        .map((s) => s.trim());
+      screen.classList.remove("current");
+      if (!allowed.includes(storyTitle)) {
+        screen.hidden = true;
+        continue;
+      }
+      screen.hidden = shownFirst;
+      if (!shownFirst) screen.classList.add("current");
+      shownFirst = true;
     }
-    screen.hidden = shownFirst;
-    if (!shownFirst) screen.classList.add("current");
-    shownFirst = true;
   }
-}
 
-function showScreen(root, dest) {
-  if (!dest) return;
-  for (const screen of root.querySelectorAll(".screen")) {
-    const title = screen.querySelector("h2")?.textContent?.trim();
-    const slug = screen.getAttribute("data-slug");
-    const match = title === dest || slug === dest;
-    screen.hidden = !match;
-    screen.classList.toggle("current", match);
+  /** The screen dest names, by its title or its slug, alone on the page. */
+  showScreen(dest) {
+    if (!dest) return;
+    for (const screen of this.all) {
+      const match = this._nameOf(screen) === dest || screen.querySelector("h2")?.textContent?.trim() === dest;
+      screen.hidden = !match;
+      screen.classList.toggle("current", match);
+    }
   }
-}
 
-/** A click on one `clickable` selects it and clears the selection from the `siblings` in its region. */
-function selectWithinRegion(root, clickable, siblings) {
-  root.querySelectorAll(clickable).forEach((element) => {
-    element.addEventListener("click", () => {
-      const region = element.closest("[data-region]");
-      region?.querySelectorAll(siblings).forEach((sibling) => sibling.classList.remove("selected"));
-      element.classList.add("selected");
+  /** The name of the screen shown now: the current one, else the first not hidden. */
+  get currentName() {
+    const screens = this.all;
+    const current = screens.find((screen) => screen.classList.contains("current"))
+      || screens.find((screen) => !screen.hidden);
+    return current ? this._nameOf(current) : "";
+  }
+
+  /** The name of the screen holding element, if it is one of the product's. */
+  nameHolding(element) {
+    const screen = element.closest(".screen");
+    return screen ? this._nameOf(screen) : "";
+  }
+
+  /** A click on one `clickable` selects it and clears the selection from the `siblings` in its region. */
+  selectWithinRegion(clickable, siblings) {
+    this.root.querySelectorAll(clickable).forEach((element) => {
+      element.addEventListener("click", () => {
+        const region = element.closest("[data-region]");
+        region?.querySelectorAll(siblings).forEach((sibling) => sibling.classList.remove("selected"));
+        element.classList.add("selected");
+      });
     });
-  });
+  }
+
+  _nameOf(screen) {
+    return screen.getAttribute("data-slug") || screen.querySelector("h2")?.textContent?.trim() || "";
+  }
 }
 
 /** The explorer beside the product: the screen tree, or the story map when the page has no screens, and its message. */
@@ -379,14 +395,14 @@ class ExplorerPanel {
   }
 
   paint() {
-    const screens = [...this.mockup.root.querySelectorAll(".screen")];
-    if (this.chrome.tree && !screens.length && this.mockup.page.story) this._paintStoryMap();
-    else if (this.chrome.tree && screens.length) this._paintScreenTree(screens);
+    const hasScreens = this.mockup.screens.all.length > 0;
+    if (this.chrome.tree && !hasScreens && this.mockup.page.story) this._paintStoryMap();
+    else if (this.chrome.tree && hasScreens) this._paintScreenTree();
     this._paintMessage();
   }
 
-  _paintScreenTree(screens) {
-    const currentName = this._currentScreenName(screens);
+  _paintScreenTree() {
+    const currentName = this.mockup.screens.currentName;
     this.expansion.followScreen(currentName, this.explorerTree.screenKeys[currentName]);
     const scenario = this.mockup.page.runner.scenario;
     const model = {
@@ -401,12 +417,6 @@ class ExplorerPanel {
     new ScreenTree(model, this._treeHandlers()).drawInto(this.chrome.tree);
   }
 
-  _currentScreenName(screens) {
-    const current = screens.find((screen) => screen.classList.contains("current"))
-      || screens.find((screen) => !screen.hidden);
-    return current?.getAttribute("data-slug") || current?.querySelector("h2")?.textContent?.trim() || "";
-  }
-
   _treeHandlers() {
     return {
       onToggle: (key) => {
@@ -414,7 +424,7 @@ class ExplorerPanel {
         this.mockup.repaint();
       },
       onScreen: (name) => {
-        showScreen(this.mockup.root, name);
+        this.mockup.screens.showScreen(name);
         this.expansion.forgetOpenScreen().requestScroll();
         this.mockup.repaint();
       },
@@ -482,14 +492,18 @@ class ProductPanel {
 
   paint() {
     const scenario = this.mockup.page.runner.scenario;
-    const snapshot = scenario?.expose?.() ?? {};
-    const character = readBound(snapshot, "character");
-    paintCharacterTree(character, this.mockup.root);
-    paintAbilities(character, this.mockup.root);
+    const snapshot = Snapshot.of(scenario);
     this._paintBoundLists(snapshot);
-    paintBoundFields(snapshot, this.mockup.root);
+    this._paintBoundFields(snapshot);
     if (scenario?.currentStep) this.mockup.frame.emphasis.emphasize(scenario.currentStep);
     this.mockup.frame.emphasis.paint();
+  }
+
+  _paintBoundFields(snapshot) {
+    this.mockup.root.querySelectorAll("[data-bound-field]").forEach((element) => {
+      if (element.tagName === "BUTTON" || isBoundListHost(element)) return;
+      element.textContent = boundFieldText(element, snapshot);
+    });
   }
 
   _paintBoundLists(snapshot) {
@@ -506,8 +520,9 @@ class ProductPanel {
       host.showEmpty();
       return;
     }
+    // The item picked is the input the list sets, else the item the scenario exposes under that input's name.
     const selectedName = this.mockup.page.runner.scenario?.input?.(host.inputKey, undefined)
-      ?? readBound(snapshot, "product")?.name;
+      ?? snapshot.at(host.inputKey)?.name;
     for (const lineItem of items) this._paintBoundListLine(new BoundListLine(host, lineItem), selectedName);
   }
 
@@ -516,14 +531,117 @@ class ProductPanel {
     if (line.runsWhen) {
       const control = line.control();
       this.mockup.frame.appendControl(control);
-      this.mockup.wireInteractive(control);
+      this.mockup.wiring.wireInteractive(control);
     } else {
-      this.mockup.wireLineSelect(line.row, line.pickedName, line.host.inputKey);
+      this.mockup.wiring.wireLineSelect(line.row, line.pickedName, line.host.inputKey);
     }
   }
 }
 
-/** A UX-generated mockup page playing its stories: the product frame on the left, the explorer on the right. */
+/** How the page's controls and links reach the stories: a control's click runs its When in Interactive, a list line
+ *  picks its input, and the product's own navigation moves between screens. */
+class ControlWiring {
+  /** @param {GeneratedMockup} mockup */
+  constructor(mockup) {
+    this.mockup = mockup;
+    this.wiredControls = new WeakSet();
+  }
+
+  /** The product's navigation: a click on a screen makes it current, a link goes to its screen, a click selects. */
+  wireProductNav() {
+    this._wireScreenClicks();
+    this._wireGotoLinks();
+    this.mockup.screens.selectWithinRegion(".tree-node:not([data-role='folder'])", ".tree-node");
+    this.mockup.screens.selectWithinRegion("[data-type='list']", "[data-type='list']");
+  }
+
+  wireInteractive(control) {
+    if (!control || this.wiredControls.has(control)) return;
+    this.wiredControls.add(control);
+    control.appendInteraction({ trigger: "click", effect: (triggered) => this._runControl(triggered) });
+    control.listenForClicks(() => {
+      if (this.mockup.page?.mode === "Interactive") control.trigger("click");
+    });
+  }
+
+  /** A list line click selects which item a later When (such as Remove) will use; it runs no When itself. */
+  wireLineSelect(row, pickedName, inputKey) {
+    row.addEventListener("click", () => {
+      const page = this.mockup.page;
+      if (page?.mode !== "Interactive") return;
+      const scenario = page.runner.scenario;
+      if (!scenario?.setInputs) return;
+      scenario.setInputs({ [inputKey]: pickedName });
+      this.mockup.repaint();
+    });
+  }
+
+  _runControl(control) {
+    const mockup = this.mockup;
+    if (mockup.page?.mode !== "Interactive") return;
+    // A control may belong to another story on the map, such as one the active story's screen also shows, so the
+    // page switches to that story first for its When to match.
+    this._activateStoryForControl(control);
+    if (mockup.page.onControlTrigger(control, mockup.root)) {
+      mockup.captureSession();
+      mockup.screens.showScreen(control.destination);
+    }
+    mockup.repaint();
+  }
+
+  _activateStoryForControl(control) {
+    const mockup = this.mockup;
+    const whenLabel = (control.storySteps || []).find((s) => s.kind === "when")?.label;
+    if (!whenLabel) return;
+    const storyIndex = mockup.catalog.storyIndexForWhen(whenLabel);
+    const carry = this._carryInputsFrom(control);
+    if (storyIndex == null || storyIndex === mockup.index) {
+      if (Object.keys(carry).length) mockup.page?.runner?.scenario?.setInputs?.(carry);
+      return;
+    }
+    mockup.activateStory(storyIndex, carry);
+  }
+
+  /** The inputs a control carries into its story: the name of each carried object the scenario exposes, under that
+   *  object's name, then the item the control itself picks. */
+  _carryInputsFrom(control) {
+    const carry = {};
+    const snapshot = Snapshot.of(this.mockup.page?.runner?.scenario);
+    for (const key of this.mockup.sessionKeys) {
+      const name = snapshot.at(key)?.name;
+      if (name != null) carry[key] = name;
+    }
+    if (control?.inputKey && control.name) carry[control.inputKey] = control.name;
+    return carry;
+  }
+
+  _wireScreenClicks() {
+    const mockup = this.mockup;
+    const product = mockup.root.querySelector("#mockup");
+    product?.addEventListener("click", (event) => {
+      if (event.target.closest("[data-goto]")) return;
+      const screen = event.target.closest(".screen");
+      if (!screen || !product.contains(screen)) return;
+      mockup.screens.showScreen(mockup.screens.nameHolding(screen));
+      if (!mockup.page) return;
+      mockup.explorer.requestScroll();
+      mockup.repaint();
+    });
+  }
+
+  _wireGotoLinks() {
+    this.mockup.root.querySelectorAll("[data-goto]").forEach((element) => {
+      // Story-bound controls: Interactive owns goto after When (avoid empty-screen nav).
+      if (element.hasAttribute("data-story-steps")) return;
+      element.addEventListener("click", () => {
+        this.mockup.screens.showScreen(element.getAttribute("data-goto"));
+      });
+    });
+  }
+}
+
+/** A UX-generated mockup page playing its stories: the product frame on the left, the explorer on the right. It owns
+ *  what it paints: its screens, the explorer, the product panel, and the values Interactive carries between stories. */
 class GeneratedMockup {
   /**
    * @param {ParentNode} root
@@ -541,14 +659,16 @@ class GeneratedMockup {
     this.mode = "Play";
     /** @type {Record<string, unknown>} */
     this.session = {};
-    this.wiredControls = new WeakSet();
+    this.sessionKeys = sessionKeysOn(root);
+    this.screens = new ProductScreens(root);
+    this.wiring = new ControlWiring(this);
     this.explorer = new ExplorerPanel(this, chrome, expansion);
     this.product = new ProductPanel(this);
   }
 
   start() {
-    this._wireProductNav();
-    for (const control of this.frame.controls) this.wireInteractive(control);
+    this.wiring.wireProductNav();
+    for (const control of this.frame.controls) this.wiring.wireInteractive(control);
     this.chrome.storyMapToggle?.addEventListener("click", () => {
       this.page?.explorerFrame.storyMap.toggle();
       this.repaint();
@@ -567,8 +687,8 @@ class GeneratedMockup {
     this.page.selectScenario(0);
     this._applyCarried(carryInputs);
     this._ensureInteractiveGivens();
-    this._captureSession();
-    showScreensForStory(entry.title, this.root);
+    this.captureSession();
+    this.screens.showScreensForStory(entry.title);
     this.repaint();
     return this.page;
   }
@@ -595,11 +715,13 @@ class GeneratedMockup {
     }
   }
 
-  _captureSession() {
+  /** Keep what the scenario exposes under each carried name, so the next story Interactive opens is seeded with it. */
+  captureSession() {
     if (this.mode !== "Interactive" || !this.page) return;
-    const snapshot = this.page.runner.scenario?.expose?.() ?? {};
-    for (const key of SESSION_KEYS) {
-      if (snapshot[key] != null) this.session[key] = snapshot[key];
+    const snapshot = Snapshot.of(this.page.runner.scenario);
+    for (const key of this.sessionKeys) {
+      const value = snapshot.at(key);
+      if (value != null) this.session[key] = value;
     }
   }
 
@@ -636,88 +758,6 @@ class GeneratedMockup {
     if (storyIndex >= 0 && storyIndex !== this.index) this.activateStory(storyIndex);
     if (this.page && scenarioIndex >= 0) this.page.selectScenario(scenarioIndex);
     this.repaint();
-  }
-
-  wireInteractive(control) {
-    if (!control || this.wiredControls.has(control)) return;
-    this.wiredControls.add(control);
-    control.appendInteraction({ trigger: "click", effect: (triggered) => this._runControl(triggered) });
-    control.listenForClicks(() => {
-      if (this.page?.mode === "Interactive") control.trigger("click");
-    });
-  }
-
-  _runControl(control) {
-    if (this.page?.mode !== "Interactive") return;
-    // Control may belong to another story on the map (e.g. Add to Cart while
-    // Select Product is active) — switch first so When can match.
-    this._activateStoryForControl(control);
-    if (this.page.onControlTrigger(control, this.root)) {
-      this._captureSession();
-      showScreen(this.root, control.destination);
-    }
-    this.repaint();
-  }
-
-  _activateStoryForControl(control) {
-    const whenLabel = (control.story_steps || []).find((s) => s.kind === "when")?.label;
-    if (!whenLabel) return;
-    const storyIndex = this.catalog.storyIndexForWhen(whenLabel);
-    const carry = this._carryInputsFrom(control);
-    if (storyIndex == null || storyIndex === this.index) {
-      if (Object.keys(carry).length) this.page?.runner?.scenario?.setInputs?.(carry);
-      return;
-    }
-    this.activateStory(storyIndex, carry);
-  }
-
-  _carryInputsFrom(control) {
-    const carry = {};
-    const exposed = this.page?.runner?.scenario?.expose?.();
-    if (exposed?.product?.name) carry.product = exposed.product.name;
-    if (control?.inputKey && control.name) carry[control.inputKey] = control.name;
-    return carry;
-  }
-
-  /** A cart line click selects which product Remove (etc.) will use — no When yet. */
-  wireLineSelect(row, pickedName, inputKey) {
-    row.addEventListener("click", () => {
-      if (this.page?.mode !== "Interactive") return;
-      const scenario = this.page.runner.scenario;
-      if (!scenario?.setInputs) return;
-      scenario.setInputs({ [inputKey]: pickedName });
-      this.repaint();
-    });
-  }
-
-  _wireProductNav() {
-    this._wireScreenClicks();
-    this._wireGotoLinks();
-    selectWithinRegion(this.root, ".tree-node:not([data-role='folder'])", ".tree-node");
-    selectWithinRegion(this.root, "[data-type='list']", "[data-type='list']");
-  }
-
-  _wireScreenClicks() {
-    const mockup = this.root.querySelector("#mockup");
-    mockup?.addEventListener("click", (event) => {
-      if (event.target.closest("[data-goto]")) return;
-      const screen = event.target.closest(".screen");
-      if (!screen || !mockup.contains(screen)) return;
-      showScreen(this.root, screen.getAttribute("data-slug") || screen.querySelector("h2")?.textContent?.trim());
-      if (!this.page) return;
-      this.explorer.requestScroll();
-      this.repaint();
-    });
-  }
-
-  _wireGotoLinks() {
-    this.root.querySelectorAll("[data-goto]").forEach((element) => {
-      // Story-bound controls: Interactive owns goto after When (avoid empty-screen nav).
-      if (element.hasAttribute("data-story-steps")) return;
-      element.addEventListener("click", () => {
-        showScreen(this.root, element.getAttribute("data-goto"));
-      });
-    });
   }
 
   repaint() {

@@ -15,7 +15,7 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.tool_call import ToolCall, ToolRequest
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 from cdd_guidance.actions.validate.validate import Validate
 from cdd_guidance.actions.validate.validate_examples import ENTITY_ROOT_FILE, SPEC_FILE, SampleWorkingCopy
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue

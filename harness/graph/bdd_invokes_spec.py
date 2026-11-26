@@ -27,6 +27,7 @@ export class Cart {
 
 _CART_SPEC = """\
 import { beforeEach, describe, expect, it } from 'vitest'
+import { Cart } from './cart'
 
 describe('a cart', () => {
   describe('with an item added', () => {
@@ -58,7 +59,7 @@ with description("a basket"):
 
 
 def _invoked(graph: Graph, observation: str) -> list[str]:
-    node = next(node for node in graph.practice("bdd").reading.in_graph.nodes() if node.type == "Observation" and node.name == observation)
+    node = next(node for node in graph.practices.named("bdd").reading.in_graph.nodes() if node.type == "Observation" and node.name == observation)
     group = next((child for child in node.children if child.name == "invokes"), None)
     return [child.node_id.rsplit(":", 2)[-2] + ":" + child.node_id.rsplit(":", 1)[-1] for child in (group.children if group else [])]
 

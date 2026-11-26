@@ -1,17 +1,15 @@
 import Editor, { type Monaco, type OnMount } from '@monaco-editor/react';
 import type { editor as monaco } from 'monaco-editor';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CallCatalog, type FoldMember } from './call-expansion';
-import { useCallouts, type CalloutsWithin, type SourceCallout } from './source-callouts';
+import { CallCatalog } from './call-expansion';
+import { LINE_HEIGHT, useCallouts, type CalloutsWithin, type GoToFile, type SourceCallout } from './source-callouts';
 import { foldMarkdownHeadings, useOpenAround, type SourceLines } from './source-folding';
 import type { NodeSourceData } from '@cdd/harness/graph/graph';
-import { buildViolationCorrectPrompt } from './violation-prompt';
-import type { ViolationFocus } from '../graph/graph-selection';
-import { reasonOf } from '../graph/graph-failures';
-import { failures } from '../graph/graph-page';
+import { FixButton } from './FixButton';
+import type { ViolationFixes } from './violation-prompt';
+import type { ViolationFocus, ViolationPlace } from '../graph/graph-selection';
 import './source.css';
 
-const LINE_HEIGHT = 20;
 // The room the editor keeps above and below its lines.
 const SOURCE_PADDING = 16;
 
@@ -31,13 +29,16 @@ export type SourceEditorInstance = Parameters<OnMount>[0];
 // whether long lines wrap, or scroll sideways (shift+wheel or a sideways swipe, since the page, not the editor, scrolls
 // up and down); and the editor and its Monaco once made, so the page can add its own gutter marks (each with the class
 // SOURCE_MARK) and menu actions, such as the Files app's comments, and bind its shortcuts. The file folds as Monaco folds
-// its language, by its classes, functions and blocks, and markdown by its headings.
-export type SourceHostProps = {
+// its language, by its classes, functions and blocks, and markdown by its headings. The callouts on the lines expandLines
+// names open as the page asks, such as a node selected in the graph through a connector.
+type SourceHostProps = {
   openAround?: SourceLines[];
   language?: string;
   keepGlyphMargin?: boolean;
   wordWrap?: boolean;
   callouts?: SourceCallout[];
+  expandLines?: number[];
+  onGoToFile?: GoToFile;
   opensCalls?: boolean;
   onEditor?: (editor: SourceEditorInstance, monacoApi: Monaco) => void;
 };
@@ -46,6 +47,7 @@ export const SOURCE_MARK = 'source-mark';
 
 const NO_LINES: SourceLines[] = [];
 const NO_CALLOUTS: SourceCallout[] = [];
+const NO_LINE_NUMBERS: number[] = [];
 const NO_MEMBERS: NodeSourceData[] = [];
 // A text in no language Monaco reads as code holds no calls.
 const PROSE_LANGUAGES = new Set(['markdown', 'plaintext']);
@@ -58,13 +60,15 @@ type SourceViewProps = SourceHostProps & {
   rules: SourceRule[];
   activeRule: string;
   onSelectRule?: (name: string) => void;
+  // What Fix this one and Fix rule on the broken rule's banner do; with none, the banner offers no fix.
+  fixes?: ViolationFixes;
 };
 
-export function SourceView({ source, note = '', violation, rules = [], activeRule = '', onSelectRule = () => undefined, ...host }: SourceViewProps) {
+export function SourceView({ source, note = '', violation, rules = [], activeRule = '', onSelectRule = () => undefined, fixes, ...host }: SourceViewProps) {
   return (
     <div className="panel" data-testid="source-file">
       {source ? (
-        <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} {...host} />
+        <SourceEditor source={source} violation={violation} rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} fixes={fixes} {...host} />
       ) : (
         <p className="empty-state">{note || 'Select a node'}</p>
       )}
@@ -78,9 +82,10 @@ type SourceEditorProps = SourceHostProps & {
   rules: SourceRule[];
   activeRule: string;
   onSelectRule?: (name: string) => void;
+  fixes?: ViolationFixes;
 };
 
-function SourceEditor({ source, violation, rules, activeRule, onSelectRule, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, opensCalls = true, onEditor }: SourceEditorProps) {
+function SourceEditor({ source, violation, rules, activeRule, onSelectRule, fixes, openAround = NO_LINES, language = '', keepGlyphMargin = false, wordWrap = false, callouts = NO_CALLOUTS, expandLines = NO_LINE_NUMBERS, onGoToFile, opensCalls = true, onEditor }: SourceEditorProps) {
   const file = source.file ?? '';
   const text = source.text ?? '';
   const origin = source.start_line || 1;
@@ -89,7 +94,7 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, open
   const [contentHeight, setContentHeight] = useState(0);
   const { shown, within } = useSourceCallouts(source, shownLanguage, callouts, opensCalls);
   const editorLineOf = useCallback((fileLine: number) => fileLine - origin + 1, [origin]);
-  useCallouts(editor, shown, within, editorLineOf);
+  useCallouts(editor, shown, within, editorLineOf, expandLines, onGoToFile);
   useOpenAround(editor, openAround, text);
   useLineMarks(editor, origin, text, violation, openAround);
   const onMount: OnMount = (made, monacoApi) => {
@@ -102,7 +107,7 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, open
   return (
     <section className="knowledge-graph-panel source-snippet" data-open="true" data-file={file}>
       <SourceRulesView rules={rules} activeRule={activeRule} onSelectRule={onSelectRule} />
-      {violation ? <ViolationBannerView violation={violation} source={source} /> : null}
+      {violation ? <ViolationBannerView key={violationKeyOf(violation)} violation={violation} source={source} fixes={fixes} /> : null}
       <p className="source-path">{file || source.name}</p>
       <div className="panel-source" data-testid="source-excerpt">
         <Editor
@@ -136,24 +141,24 @@ function SourceEditor({ source, violation, rules, activeRule, onSelectRule, open
 // The callouts the source shows: the page's own, then, while the code may open calls, each call and class its code
 // reaches among the graph's members; and the callouts inside an open one, the calls its own code reaches.
 function useSourceCallouts(source: NodeSourceData, language: string, callouts: SourceCallout[], opensCalls: boolean): { shown: SourceCallout[]; within: CalloutsWithin } {
-  const members = (source.members ?? NO_MEMBERS) as FoldMember[];
+  const members = source.members ?? NO_MEMBERS;
   const owner = members.find((member) => member.node_id === source.node_id)?.owner ?? '';
   const catalog = useMemo(() => new CallCatalog(members, owner), [members, owner]);
   const isCode = !PROSE_LANGUAGES.has(language);
   const shown = useMemo(() => {
-    const own = opensCalls && isCode ? catalog.calloutsIn(source.text ?? '', source.start_line || 1, language, [source.node_id]) : [];
+    const own = opensCalls && isCode ? catalog.calloutsIn({ file: source.file, startLine: source.start_line || 1, text: source.text ?? '', language }, [source.node_id]) : [];
     return [...callouts, ...own];
   }, [catalog, callouts, opensCalls, isCode, source, language]);
-  const within = useCallback<CalloutsWithin>((callout, stack) => (callout.kind === 'section' ? [] : catalog.calloutsIn(callout.text, callout.startLine, languageFor(callout.path), stack)), [catalog]);
+  const within = useMemo(() => calloutsWithin(catalog), [catalog]);
   return { shown, within };
 }
 
-// The lines of the broken rule chosen and of the nodes the page asked to show, marked whole.
+// The lines of every place the broken rule chosen names and of the nodes the page asked to show, marked whole.
 function useLineMarks(editor: SourceEditorInstance | null, origin: number, text: string, violation: ViolationFocus | null, openAround: SourceLines[]): void {
   useEffect(() => {
     if (!editor) return;
     const lastLine = origin + text.split('\n').length - 1;
-    const violationLines = violation ? [{ start: violation.startLine ?? origin, end: violation.endLine ?? violation.startLine ?? lastLine }] : [];
+    const violationLines = (violation?.places ?? []).map((place) => ({ start: place.startLine ?? origin, end: place.endLine ?? place.startLine ?? lastLine }));
     const selected = openAround.filter((lines) => lines.start > origin || lines.end < lastLine);
     const marks = editor.createDecorationsCollection([...linesMarked(violationLines, origin, 'violation-highlight'), ...linesMarked(selected, origin, 'selected-lines')]);
     return () => marks.clear();
@@ -185,35 +190,45 @@ function SourceRulesView({ rules, activeRule, onSelectRule }: { rules: SourceRul
   );
 }
 
-function ViolationBannerView({ violation, source }: { violation: ViolationFocus; source: NodeSourceData }) {
-  async function copyCorrectPrompt() {
-    const prompt = buildViolationCorrectPrompt({
-      rule: violation.rule,
-      message: violation.message,
-      nodeName: source.name,
-      nodeType: source.type,
-      file: source.file ?? '',
-      startLine: violation.startLine ?? source.start_line,
-      endLine: violation.endLine ?? source.end_line,
-      excerpt: source.text ?? '',
-    });
-    try {
-      await navigator.clipboard.writeText(prompt);
-    } catch (cause) {
-      failures.fail(`The prompt was not copied: ${reasonOf(cause)}`, `Copy the correction prompt for ${violation.rule} in the Graph app`);
-    }
-  }
+// A banner shows one broken rule at its places; another rule, or the same rule at other places, starts a fresh banner.
+const violationKeyOf = (violation: ViolationFocus): string => `${violation.rule}:${violation.places.map((place) => `${place.startLine ?? ''}-${place.endLine ?? ''}`).join(',')}`;
+
+// The broken rule chosen, with Fix rule where the page fixes a whole rule at once, then each place it is broken: what it
+// says is wrong there, its lines, and Fix this one, which hands the page that place to fix.
+function ViolationBannerView({ violation, source, fixes }: { violation: ViolationFocus; source: NodeSourceData; fixes?: ViolationFixes }) {
+  const fixRule = fixes?.rule;
   return (
-    <div className="violation-banner" data-testid="violation-banner">
-      <div className="violation-banner-copy">
-        <p className="violation-rule">{violation.rule}</p>
-        <p className="violation-message">{violation.message}</p>
+    <div className={violation.isCandidate ? 'violation-banner is-candidate' : 'violation-banner'} data-testid="violation-banner">
+      <div className="violation-banner-head">
+        <p className="violation-rule">{violation.isCandidate ? `${violation.rule} · candidate for a judge to read, not an error` : violation.rule}</p>
+        {fixRule ? <FixButton label="Fix rule" title="Send the fix of every place this rule is broken to the chat that opened the page" testId="violation-fix-rule" fix={() => fixRule(violation.rule)} /> : null}
       </div>
-      <button type="button" className="copy-prompt" data-testid="violation-correct" onClick={() => void copyCorrectPrompt()}>
-        Correct
-      </button>
+      {violation.places.map((place) => (
+        <ViolationPlaceView key={`${place.startLine ?? ''}-${place.endLine ?? ''}`} rule={violation.rule} place={place} source={source} fixes={fixes} />
+      ))}
     </div>
   );
+}
+
+function ViolationPlaceView({ rule, place, source, fixes }: { rule: string; place: ViolationPlace; source: NodeSourceData; fixes?: ViolationFixes }) {
+  const startLine = place.startLine ?? source.start_line;
+  const endLine = place.endLine ?? source.end_line;
+  const fixOne = fixes?.one;
+  return (
+    <div className="violation-place" data-testid="violation-place">
+      <p className="violation-message">
+        {place.startLine ? <span className="violation-lines">{startLine === endLine ? `Line ${startLine}` : `Lines ${startLine}-${endLine}`} </span> : null}
+        {place.message}
+      </p>
+      {fixOne ? <FixButton label="Fix this one" title="Send the fix of this place to the chat that opened the page" testId="violation-fix-one" fix={() => fixOne({ rule, place, nodeId: source.node_id, startLine, endLine })} /> : null}
+    </div>
+  );
+}
+
+// The callouts inside an open callout, among catalog's members: the calls and classes its code reaches; none for a
+// section a link opens, whose own file holds its callouts, or for a missing one.
+export function calloutsWithin(catalog: CallCatalog): CalloutsWithin {
+  return (callout, stack) => (callout.kind === 'section' || callout.kind === 'missing' ? [] : catalog.calloutsIn({ file: callout.path, startLine: callout.startLine, text: callout.text, language: languageFor(callout.path) }, stack));
 }
 
 function languageFor(file: string): string {

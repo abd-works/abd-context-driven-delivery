@@ -2,13 +2,13 @@
 
 *CleanEngineeringModel* is one class model that every format reads and writes: modules holding classes, each with properties, operations and their parameters, and the relationships its properties name. A nested module is a module whose parent is a module. Every node is a graph node (*ModelNode*), so the same objects the formats build are the nodes the graph holds.
 
-A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format reads text with `parse(text)`, which fills the format model itself and returns it, and writes with `render(canonical, previous)`: the format model becomes the canonical model once through `translate_from`, as its own subclasses of the modules and classes, then writes itself. A caller reading a file reads its text and hands it to `parse`; there is no second way in. A member written as a model line, `save(cart: Cart): Receipt` or `identity: Identity`, is read by `Operation.from_signature` and `Property.from_signature`, which every format that writes such lines uses.
+A format is one subclass of *CleanEngineeringModel*: markdown, JSON, sketch, Python, TypeScript, JavaScript, Java, and draw.io. Each format meets harness/guidance's format contract (*FormatAdapter*, which *CleanEngineeringModel* extends): it reads text with `parse(text, file)`, which fills the format model itself and returns it, opens a file with `read_file(path, project)`, and writes with `render(canonical, written)`, *Written* holding the file as it is now: the format model becomes the canonical model once through `translate_from`, as its own subclasses of the modules and classes, then writes itself. A caller reading a file reads its text and hands it to `parse`; there is no second way in. A member written as a model line, `save(cart: Cart): Receipt` or `identity: Identity`, is read by `Operation.from_signature` and `Property.from_signature`, which every format that writes such lines uses.
 
 One format's model becomes another's through `translate_from(source)`: each node copies what it says itself (`update_self`), then matches the source's children to its own by name, else by order, and builds each new child in its own format through `load_module`, `load_class`, `load_property`, `load_operation`, or `load_parameter`.
 
 Callers use the base nodes. The practice picks a format by name from `CleanEngineering(...).formats`. A class's bases and stereotypes are part of what it says itself, so every format writes and reads them and `update_self`, `clone`, and `as_record` copy them. Text a format cannot read raises *UnreadableSource*; the graph read records each such file on its folder, where the `source-parses` rule reports it.
 
-*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) holds its reading part, a *GraphReading* (`practices/clean_engineering/model/graph_reading.py`), which says what the graph reads from the practice. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its practice's formats by the file's extension (`formats.for_file`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`module.source_facts.load_folder`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class's and operation's source facts (`source_facts.take_lines`), so `ClassSourceFacts.load` and `OperationSourceFacts.load` read no file again. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the classes each of its production files imports, re-exports, or reaches as `module.Class`, each with the module it names it from, by the file's path (`imported_classes_by_file`), so a refresh that reads a file again replaces only that file's references. A getter is the operation its class shows as a property, so its node is that property (`Operation.is_property` makes its kind `Property`), typed by the type it returns (`value_type`); an operation's parameters are the *Parameter* nodes its `hasParameter` edges lead to (`parameters_of`, in `class_graph.py`), which every rule and BDD read. The practice's operations and properties are indexed once by name after each read, with its classes, in the reading's *CodeIndex* (`reading.code_index.members_named`, `classes_named`), so the type linking, every rule, and every practice that links to the code ask one index. Once every class is linked, *ComparedFacts* (`model/compared_facts.py`, with `folder_facts.py`, `class_facts.py`, and `operation_facts.py`) records on each node the facts that compare it with the rest of the graph, so every rule reads facts and compares them with its limit and none works anything out across nodes when it checks: it reads every node the practice holds, those read now and those a refresh kept, through their saved facts and the graph's edges, so a refresh records them again over the whole practice and a graph read back from `graph.json` holds them as saved. Its parts are *ClassGraph* (the production classes by name, their operations, fields, bases, and kinds), *ImportCycles*, and *NearCopies*. On each folder it records the imports that close a cycle (`import_cycles`, `file_import_cycles`) and the folder its classes only forward to (`forwards_to_module`); on each module the sibling modules it imports (`sibling_modules_imported`) and the classes of its whole subtree — its files, its packages, and its nested modules, each nested module measured again on its own — with the class definitions that leave it, each import resolved to the definition it names (`subtree_class_count`, `public_classes` by `file:Name` with the routes that reach each: `named` with the folders, `registered` with the registry, `published`; `public_class_count`, `private_class_count`), and their operations (`operations_total`, `operations_public`, `operations_private`, `seam_operations`); on each production class the data bags it takes (`data_bags_taken`), what it copies of another class (`copied_fields`, `copied_references`), the class it only forwards to (`forwards_to`), the domain it extends from another package (`extends_domain`), and the collaborator its constructor builds (`constructs_collaborator`); and on each operation the body it copies (`duplicate_of`, `near_copy_of`) and whether the failure it raises without a message writes its own (`exception_gives_own_message`). Each read is a *CodeRead* (`code_read.py`) made for that read, with the folders it takes (*CodeFolders*), the class names outside an edited-file scope (*OutsideScope*), and the class nodes it adds and links (*ClassNodes*), so nothing one read finds stays on the practice. It then reads every `.context/*-model.md` in scope with the format the practice names for its model documents (`model_document_format`, its markdown format) and keeps the class model each one describes in the reading part's *ModelDocuments*, which answers `reading.model_documents.described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
+*CleanEngineering* (`practices/clean_engineering/clean_engineering.py`) holds its reading part, a *GraphReading* (`practices/clean_engineering/reading/graph_reading.py`), which says what the graph reads from the practice. When `Graph.load_working_copy`, `Graph.load_files`, or `Graph.refresh` reads files, `Graph._read_working_copy` in `harness/graph/working_copy.py` asks each practice the graph holds to read, in dependency order. *CleanEngineering* reads each source file with the class model of its language, which it finds among its practice's formats by the file's extension (`formats.for_file`, which every practice has), and adds each folder as a *Module* that holds its *ModuleContext* (`module.source_facts.load_folder`), and each class, property, operation, and parameter the parser built, as nodes. The parser keeps the file's text on its module and the lines each class and operation spans on that class's and operation's source facts (`source_facts.take_lines`), so `ClassSourceFacts.load` and `OperationSourceFacts.load` read no file again; each assigns the facts to the fields its class or operation declares. Only a class read from code, a *CodeClass*, declares the measures of its code and makes a *CodeClassSourceFacts* that fills them; a class a model document describes has none of them, so no rule that measures code measures it. Each folder owns the folders under it and depends (`dependsOn` edges) on the folders its files import from; it keeps the classes each of its production files imports, re-exports, or reaches as `module.Class`, each with the module it names it from, by the file's path (`imported_classes_by_file`), so a refresh that reads a file again replaces only that file's references. A getter is the operation its class shows as a property, so its node is that property (`Operation.is_property` makes its kind `Property`), typed by the type it returns (`value_type`); an operation's parameters are the *Parameter* nodes its `hasParameter` edges lead to (`parameters_of`, in `class_graph.py`), which every rule and BDD read. The practice's operations and properties are indexed once by name after each read, with its classes, in the reading's *CodeIndex* (`reading.code_index.members_named`, `classes_named`), so the type linking, every rule, and every practice that links to the code ask one index. Once every class is linked, *ComparedFacts* (`model/compared_facts.py`, with `folder_facts.py`, `class_facts.py`, and `operation_facts.py`) records on each node the facts that compare it with the rest of the graph, so every rule reads facts and compares them with its limit and none works anything out across nodes when it checks: it reads every node the practice holds, those read now and those a refresh kept, through their saved facts and the graph's edges, so a refresh records them again over the whole practice and a graph read back from `graph.json` holds them as saved. Its parts are *ProductionClasses* (the production classes read from code by name, leaving out each class a model document describes, each a *ProductionClass* that answers its own operations, fields, bases, and kind) and the recorders that compare them (*ComparedFact*: *ServicesTakingDataBags*, *CopiedModels*, *PassThroughClasses*, *DomainExtensions*, *BuiltCollaborators*; *FolderImportCycles* on folders), *ImportCycles*, and *NearCopies*. On each folder it records the imports that close a cycle (`import_cycles`, `file_import_cycles`) and the folder its classes only forward to (`forwards_to_module`); on each module the sibling modules it imports (`sibling_modules_imported`) and the classes of its whole subtree — its files, its packages, and its nested modules, each nested module measured again on its own — with the class definitions that leave it, each import resolved to the definition it names (`subtree_class_count`, `public_classes` by `file:Name` with the routes that reach each: `named` with the folders, `registered` with the registry, `published`; `public_class_count`, `private_class_count`), and their operations (`operations_total`, `operations_public`, `operations_private`, `seam_operations`); on each production class the data bags it takes (`data_bags_taken`), what it copies of another class (`copied_fields`, `copied_references`), the class it only forwards to (`forwards_to`), the domain it extends from another package (`extends_domain`), and the collaborator its constructor builds (`constructs_collaborator`); and on each operation the body it copies (`duplicate_of`, `near_copy_of`) and whether the failure it raises without a message writes its own (`exception_gives_own_message`). Each read is a *CodeRead* (`code_read.py`) made for that read, with the folders it takes (*CodeFolders*), the class names outside an edited-file scope (*OutsideScope*), and the class nodes it adds and links (*ClassNodes*), so nothing one read finds stays on the practice. A class a model document describes is one node with the class the code of the module the document describes declares under its name (*DescribedClasses*, `ClassNodes.join`): the code's node keeps the document's card as its place in markdown (`Node.written_at`), takes the document's facts the code does not record, and holds each member only the document declares, at the model fidelity; a class no code declares is added at its card, and one two files of its module declare stays a node of its own, since a document names no file. It then reads every `.context/*-model.md` in scope with the format the practice names for its model documents (`model_document_format`, its markdown format) and keeps the class model each one describes in the reading part's *ModelDocuments*, which answers `reading.model_documents.described_member(owner, name)`: the operation or property a model document describes, so a realization follows the model's interactions without a second copy of any member in the graph. A graph read back from `graph.json` reads the documents under its source root the first time it is asked. DDD reads after Clean Engineering and sees its classes as building blocks.
 
 ```
 model = CleanEngineering().formats["markdown"]().parse(text)
@@ -166,7 +166,10 @@ What the file and the folder a module was read from say (`base_class_model.py`),
 + module_helpers: list[list]
 	// the module's private functions only this class calls
 + << composition >> source_facts: ClassSourceFacts
-	// made once: the lines it spans and the facts they give
+	// made once: the lines it spans and the facts they give; a class read from code makes a CodeClassSourceFacts
++ bold_interaction_lines: list[int]
++ bold_invariant_lines: list[int]
+	// the bold Interaction and Invariant bullets its markdown card writes, by line in the card; filled when its source facts load
 + << composition >> arrows: ClassArrows
 	// made once: where each relationship drawn from it lands
 ----
@@ -301,7 +304,19 @@ A rule that must stay true for one property or one operation. The text is the //
 ------
 + text: str
 
-## SourceText
+## MeasuredBody (Protocol)
+
+An operation's body as the rules measure it, whichever way its parser read it (`practices/source_code/source_text.py`): as a span of text in any language (*SourceText*) or as a Python function's syntax tree (*PythonFunctionBody*). An operation keeps the same measures from either (`CodeOperation.measure_body`).
+
+----
++ control_flow_depth(): int
++ unnamed_numbers(): list[str]
++ catches_everything(): bool
+	// a catch that names no failure
++ swallows(): bool
+	// a catch that drops what it caught: an empty one, or one that hands back a fallback value
+
+## SourceText : MeasuredBody
 
 A span of source in any language, an operation body or a class, and what the rules measure in its code. A markdown card's bullets are *CardBullets*' job.
 
@@ -310,30 +325,31 @@ A span of source in any language, an operation body or a class, and what the rul
 ----
 + control_flow_depth(): int
 + unnamed_numbers(): list[str]
++ catches_everything(): bool
+	// `catch ()` or a bare `except:`; TypeScript's optional catch binding, `catch {`, is written on purpose and is not one
++ swallows(): bool
 + mixes_io_and_domain(): bool
 + calls_io_and_domain(): bool
 + mutates_without_record(): bool
 + has_prose_comment(hash_only: bool = False): bool
 	// a `#` line, or a `//` comment outside every string literal, that narrates
-+ prototype_swap(start_line: int): dict
++ prototype_swap(start_line: int): dict[str, str | int]
 + line_of(index: int): int
 	// the line, counted from 1, holding the character at index
 + hits(pattern: Pattern): list[list]
 	// [line, matched code] for each match
 + << composition >> brackets: BracketStructure
 + << composition >> failures: SpanFailures
-	// made once: what the span raises and catches
+	// made once: what the span raises
 + << composition >> collaborators: SpanCollaborators
 	// made once: the objects the span builds and reads
 
 ## SpanFailures
 
-The failures a span of source raises and catches (`operation_metrics.py`), which its *SourceText* makes once and keeps (`span.failures`).
+The failures a span of source raises (`practices/source_code/source_text.py`), which its *SourceText* makes once and keeps (`span.failures`). What it catches the span answers itself, as every *MeasuredBody* does.
 
-+ SpanFailures(span: SourceText, brackets: BracketStructure)
++ SpanFailures(span: SourceText)
 ----
-+ has_bare_catch(): bool
-+ swallows_exceptions(): bool
 + raises_on_empty(): bool
 	// a builtin failure raised on an empty value; a failure the program declares is a named refusal and is left out
 + exception_without_message(): str
@@ -365,7 +381,7 @@ The objects a brace-language span builds and reads (`operation_metrics.py`), whi
 + top_level_index(mark: str): int
 + braced(open_at: int): str | None
 
-## PythonFunctionBody
+## PythonFunctionBody : MeasuredBody
 
 A Python function read from its syntax tree, and what the rules measure in it.
 
@@ -381,8 +397,12 @@ A Python function read from its syntax tree, and what the rules measure in it.
 + parameters(): list[str]
 + callees(): list[str]
 + body(source: str): CodeBody
-+ except_flags(): tuple[bool, bool]
-	-> CatchClause
++ catches_everything(): bool
+	// any `except` clause catches everything
+	-> CatchClause.catches_everything
++ swallows(): bool
+	// any `except` clause drops the failure it caught
+	-> CatchClause.swallows
 + unnamed_numbers(): list[str]
 + packed_parameters(): dict[str, int]
 
@@ -452,8 +472,23 @@ The module card, `.context/module-context.md`, of one code folder.
 + writes_child_parent_headings(): bool
 + model_blocks(): list[str]
 	// model-fidelity detail written into the card: a ------ member list, a Sources / context list, a Live instance list
++ bullets(): ModuleMeta
+	// the card's Purpose, Seam, and Dependencies bullets
 + folder_facts(): dict[str, object]
-	// every fact above by the name a Module keeps it under, with whether the folder holds .context/bounded-context.md
+	// every fact above by the name a Module keeps it under, with whether the folder holds .context/bounded-context.md, and the seam terms and dependencies the card names (card_seam_terms, card_dependencies)
+
+## ModuleMeta (module_context_files.py)
+
+<<Value Object>> The Purpose, Seam, and Dependencies bullets of a modules-fidelity block, and the prose left beside them.
+
++ ModuleMeta(text: str)
+------
++ purpose: str
++ seam_terms: list[str]
++ dependencies: list[str]
++ leftover: str
+----
++ terms(raw: str): list[str]
 
 ## PublicSources
 
@@ -467,7 +502,7 @@ The module card, `.context/module-context.md`, of one code folder.
 
 ## ScriptImports
 
-<<Value Object>> The imports of one source file's text (`script_imports.py`).
+<<Value Object>> The imports of one source file's text (`practices/source_code/script_imports.py`).
 
 + ScriptImports(source_text: str)
 ----
@@ -480,7 +515,7 @@ The module card, `.context/module-context.md`, of one code folder.
 
 ## ClassReference
 
-<<Value Object>> A class name a file names and the module it names it from (`script_imports.py`), saved as `[source, name]`.
+<<Value Object>> A class name a file names and the module it names it from (`practices/source_code/script_imports.py`), saved as `[source, name]`.
 
 + source: str
 + name: str
@@ -499,7 +534,7 @@ Resolves each class reference to the one class definition it names, following re
 
 Records on each module what of its subtree leaves it: public class definitions by route, and its operations (`module_exposure.py`).
 
-+ ModuleExposure(in_graph: PracticeNodes, classes: ClassGraph, routes: PublicRoutes)
++ ModuleExposure(in_graph: PracticeNodes, classes: ProductionClasses, routes: PublicRoutes)
 ----
 + record(): None
 	-> ClassNamers.by_class
@@ -516,7 +551,7 @@ The routes besides naming that make a class public: registered with a framework 
 
 ## ClassSourceFacts
 
-What a class's source says (`source_facts.py`), which the class makes once and keeps (`oclass.source_facts`): the lines it spans, and the facts they give the rules, which the class keeps as its graph facts.
+What a class's source says (`source_facts.py`), which the class makes once and keeps (`oclass.source_facts`): the lines it spans, and the facts they give the rules, which it assigns to the class's declared fields, saved with the graph.
 
 + ClassSourceFacts(oclass: OoadClass)
 ------
@@ -527,10 +562,36 @@ What a class's source says (`source_facts.py`), which the class makes once and k
 	// keeps the lines from its line to its end line, and each operation's
 	-> OperationSourceFacts.take_lines
 + load(): None
-	// keeps operation shapes, property names, what the constructor builds, prose comments, a prototype swap, and its card bullets as the class's graph facts
-	-> CardBullets.lines
+	// assigns the bold bullets its markdown card writes to the class's bold_interaction_lines and bold_invariant_lines
+	-> CardBullets
 + held_fields(): dict[str, str]
 	// its declared properties, then the fields its constructor assigns
++ constructor_fields(): list[Property]
+	// a property for each public field the constructor assigns that the class does not declare, at the line that assigns it, read from the lines of its file
++ assigned_fields(): list[Property]
+	// the same fields read from the constructor's body, for a class carried into another language, which has no lines of a file of its own
+
+## CodeClassSourceFacts : ClassSourceFacts
+
+What the source of a class read from code says (`source_facts.py`): only a *CodeClass* makes one, so only a class read from code is measured. A class read from a markdown model document has none of these measures, not even empty ones.
+
++ CodeClassSourceFacts(oclass: CodeClass)
+----
++ load(): None
+	// what every class's lines give, then the measures of its code in the CodeClass's declared fields: method_count, operation_shapes, property_names, constructs, prose_comment, prototype_swap
+	-> ClassSourceFacts.load
+	-> SourceText.has_prose_comment
+	-> SourceText.prototype_swap
+
+## OperationShape
+
+<<Value Object>> What a class read from code saves of each of its operations (`source_facts.py`, a TypedDict): a getter is a property node in the graph, so the class's own shapes are where a rule finds its getters among its operations.
+
+------
++ name: str
++ is_property: bool
++ is_private: bool
++ callees: list[str]
 
 ## OperationSourceFacts
 
@@ -542,15 +603,16 @@ What an operation's source says (`source_facts.py`), which the operation makes o
 	// the lines it spans in its file, kept by take_lines
 ----
 + take_body(text: str, language: CodeLanguage): None
-	// the statements its parser read, as the operation's body
+	// the statements its parser read, as the operation's body; a body that is only what a render wrote from the model (notes, calls, the line that fails until it is written) is no body, and the operation keeps those calls, with their arguments, as its callees
+	-> CodeLanguage.scaffold_calls
 + take_body_fingerprint(body: str): None
 	-> BodyFingerprint.of_body
 + take_lines(lines: list[str]): None
 + load(): None
-	// keeps its span's fingerprint when its parser took none, I/O mixed with domain work, empty-case and message-less exceptions, unrecorded state changes, prose comments, its card bullets as the operation's graph facts
+	// assigns to the operation's declared fields its span's fingerprint when its parser took none, I/O mixed with domain work, empty-case and message-less exceptions, unrecorded state changes, prose comments, and its card bullets
 	-> SpanFailures
 	-> BodyFingerprint.of_span
-	-> CardBullets.lines
+	-> CardBullets
 
 ## BodyFingerprint
 
@@ -567,8 +629,10 @@ What an operation's source says (`source_facts.py`), which the operation makes o
 <<Value Object>> The bold Interaction and Invariant bullets of a span that is a markdown card (`operation_metrics.py`).
 
 + CardBullets(text: str)
-----
-+ lines(): dict[str, list[int]]
+------
++ interaction_lines: list[int]
++ invariant_lines: list[int]
+	// by line, counted from 1; none of either for a span that is not markdown, and an Invariant bullet in a language section is left out
 
 ## DocComment
 
@@ -623,13 +687,35 @@ The `markdown` format: a `#` heading per module and a `##` card per class, or a 
 	// class operation: the class a card shows, named and marked by its heading
 	-> read_body
 + read_body(body: str): None
-	// the class reads its own card body: intent, constructor, properties, operations, and the dependencies it names
+	// -> ClassCard(body).read_into(self): intent, constructor, properties, operations, and the dependencies it names
 + render(known_names: list[str] | None = None): str
+	// its members written by ClassCard.lines_of
 + heading(known_names: list[str]): ClassHeading
 	-> OoadClass.declared_bases
 + render_card(level: int): str
 + keep_card(card: str, heading: ClassHeading): None
 	// remembers the card this class was read from
+
+## ClassCard (markdown/class_card.py)
+
+The one class-card notation Clean Engineering and DDD both read and write: the intent and constructor above `------`, the properties between `------` and `----`, the operations below, each with the `->` calls and `//` notes under it, a private operation `- name()` read as `_name`, and the dependencies a card names. A card that writes no constructor line, as DDD's building blocks, starts at `------`.
+
++ ClassCard(body_lines: list[str], writes_constructor: bool = True)
+----
++ read_into(oclass: OoadClass): None
++ lines_of(oclass: OoadClass, properties: list[Property] | None = None): list[str]
++ property_lines(properties): list[str]
++ operation_lines(oclass): list[str]
++ property_in(line): Property | None
++ operation_in(line): Operation | None
+
+## SketchFence (markdown/class_card.py)
+
+A sketch's fence under a class heading, read onto the class: member lines in the class-card notation, `-> call` lines, owned members, sketch operations and properties, and `refs:` entries; it answers a *FenceRead* of the `invariant:` lines and the `repo:` repositories, which DDD's building blocks take.
+
++ SketchFence(lines: list[str])
+----
++ read_into(oclass: OoadClass): FenceRead
 
 ## CardDocument
 
@@ -639,19 +725,6 @@ A model document of bold class cards under modules and resource groups, each one
 ----
 + read(text: str, headings: list[tuple]): None
 + render(): str
-
-## ModuleMeta
-
-<<Value Object>> The Purpose, Seam, and Dependencies bullets of a modules-fidelity block, and the prose left beside them.
-
-+ ModuleMeta(text: str)
-------
-+ purpose: str
-+ seam_terms: list[str]
-+ dependencies: list[str]
-+ leftover: str
-----
-+ terms(raw: str): list[str]
 
 ## ClassHeading
 
@@ -741,6 +814,13 @@ How a language writes the receiver, a constructor call, and the end of a stateme
 + camel_case: bool
 + base_constructor: str
 + base_receiver: str
++ list_of: str
++ generic_brackets: tuple[str, str]
++ import_statement: str
++ import_pattern: str
+	// how it writes and reads an import of names from a module
++ dotted_modules: bool
+	// whether it names a module with dots (Python) rather than as a path
 
 ## CodeLanguage
 
@@ -767,6 +847,15 @@ How one programming language spells what every code format writes the same way. 
 	// the constructor line that stores a parameter on the new object
 + interaction(callee: str): str
 	// one -> collaborator.operation note as a call in this language. Empty for a prose note
++ scaffold_calls(text: str): list[str] | None
+	// the calls a body holds when it is only what interaction and the notes wrote above the unfinished statement; None for any other body
++ base_constructor_arguments(text: str): list[str] | None
+	// what a body in this language passes to its base class's constructor; None when it calls none
++ base_constructor_call(arguments: list[str]): str
++ imports_in(text: str): list[tuple[str, list[str]]]
+	// each import of names the text states, its module as a path
++ import_line(module: str, names: list[str]): str
+	// one import as this language writes it; a render into another language writes the imports the source's preamble states
 
 ## CodeBody
 
@@ -866,7 +955,7 @@ A class model written as code. The walk and the body rule live here; each langua
 	// the module the last parsed text forms, kept with that text even when it holds no class
 + render(canonical: CleanEngineeringModel, previous: str | None = None): str
 	Invariant: an operation body read in this language is written back exactly as read
-	// becomes the canonical model once, as the language's parts, then writes itself
+	// becomes the canonical model once, as the language's parts, then writes itself; a model from another language also declares each field its constructors assign (declare_assigned_fields), takes the imports its preamble states in this language's spelling, extends its bases by this language's names for them (type_name), and a constructor calls its base class's constructor with what the source passed, assigning only the rest
 	-> translate_from
 	-> render_class
 + operation_body(class_name: str, operation_name: str): CodeBody
@@ -877,7 +966,9 @@ A class model written as code. The walk and the body rule live here; each langua
 	-> CodeProperty.lines
 	-> CodeOperation.signature
 + render_body(operation: Operation, previous: CodeBody): list[str]
+	// a body read in another language is translated statement by statement; a statement outside the subset stays in its own language under a note naming it, and the body then ends with the unfinished statement
 	-> CodeBody.in_language_of
+	-> BodyTranslation.translate
 	-> CodeBody.lines_in
 + file_header(preamble: CodeBody): list[str]
 
@@ -888,10 +979,23 @@ A class model written as code. The walk and the body rule live here; each langua
 
 ## CodeClass : OoadClass
 
-A class as one language writes it.
+A class as one language writes it. Only a class read from code is one, so only it declares the measures of its code; its source facts fill them when they load.
 
 ------
 + language: CodeLanguage
++ method_count: int
++ operation_shapes: list[OperationShape]
++ property_names: list[str]
++ constructs: list[str]
+	// the classes its constructor builds that its caller cannot hand it
++ prose_comment: bool
++ prototype_swap: dict[str, str | int]
+	// the code that swaps an object's class and its line; empty when it swaps none
++ total_complexity: int
++ classes_depended_on: int
++ unshared_method_groups: int
+	// the three measures the reader keeps of a file a read names, each kept only once a tool has supplied it
++ << composition >> source_facts: CodeClassSourceFacts
 + property_type: type[CodeProperty]
 + operation_type: type[CodeOperation]
 + is_contract: bool
@@ -916,11 +1020,19 @@ A class as one language writes it.
 
 ## CodeOperation : Operation
 
+------
++ paths_through: int
++ readability_score: int
+	// the two measures a tool supplies of a file a read names, each kept only once the tool has supplied it; its lines and parameters are facts every read keeps
+----
 + take_brace_body(text: str, callees: list[str]): None
 	// a brace-language parser gives it the statements inside its braces, which it keeps as its body
 + load_brace_body_facts(): None
-	// what the rules measure on its brace-language body, once its class holds it: control-flow depth, catches, unnamed numbers, reads of another object's private members (an object of its own class, by the class's name, a parameter typed as it, or a `new` of it, and a member its class declares, are its own)
-	-> SourceText
+	// what the rules measure on its brace-language body, once its class holds it: the measures of its body, then reads of another object's private members (an object of its own class, by the class's name, a parameter typed as it, or a `new` of it, and a member its class declares, are its own)
+	-> measure_body
+	-> SpanCollaborators.reaches_peer_private
++ measure_body(body: MeasuredBody): None
+	// control-flow depth, a catch that catches everything, a catch that swallows, and unnamed numbers, from the body its parser read as text or as a syntax tree
 + doc_text(): str
 	// the description when it is the operation's own text, not one joined from its comments
 + signature(contract: bool): list[str]
@@ -954,7 +1066,7 @@ The `python` format.
 
 ------
 + language: CodeLanguage
-	// PYTHON (the code_body constant)
+	// PYTHON (the source_code constant)
 ----
 + parse(text: str): PythonCleanEngineeringModel
 	// read from the syntax tree; text that does not parse raises UnreadableSource
@@ -986,7 +1098,7 @@ The `typescript` format.
 
 ------
 + language: CodeLanguage
-	// TYPESCRIPT (the code_body constant)
+	// TYPESCRIPT (the source_code constant)
 ----
 	// its parts, TypeScriptClass, TypeScriptProperty, TypeScriptOperation, spell TypeScript (the installer's adapter writer calls its method writer *AdapterMethod*, so the name is this model's alone).
 	// The stereotypes are decorators with no arguments: @AggregateRoot()
@@ -997,7 +1109,7 @@ The `javascript` format.
 
 ------
 + language: CodeLanguage
-	// JAVASCRIPT (the code_body constant)
+	// JAVASCRIPT (the source_code constant)
 ----
 	// its parts, JavaScriptClass, JavaScriptProperty, JavaScriptOperation, spell JavaScript. An example extension class
 	// becomes a comment pointing at its base type. JavaScript has no interfaces, so an interface is a class that says it
@@ -1009,7 +1121,7 @@ The `java` format.
 
 ------
 + language: CodeLanguage
-	// JAVA (the code_body constant)
+	// JAVA (the source_code constant)
 ----
 	// its parts, JavaClass, JavaProperty, JavaOperation, spell Java
 
@@ -1018,7 +1130,7 @@ The `java` format.
 One placed cell. Draw.io writes it as HTML; the box, its placement, and its arrows are shared.
 
 ------
-+ geometry: Geometry
++ geometry: Box
 + cell_id: str
 + parent_id: str
 + group: str
@@ -1076,19 +1188,20 @@ Path nesting and dependency depth for ordering modules on a page.
 
 The diagram format draw.io extends. A modules view (`is_modules_view`: modules with no class members to show) stops at modules; a class view continues through properties and operations.
 
-## Geometry
+## Box (harness/whiteboard)
 
-+ Geometry(x: float, y: float, width: float, height: float)
+The one rectangle a laid-out card, a draw.io cell, and a whiteboard element are placed in; the layout uses the
+framework's own.
+
++ Box(x: float, y: float, w: float, h: float)
 ------
-+ x: float
-+ y: float
-+ width: float
-+ height: float
 + center: tuple[float, float]
 ----
-+ overlaps(other: Geometry): bool
-+ shifted(dx: float, dy: float): Geometry
-+ moved_to(x: float, y: float): Geometry
++ holds(other: Box): bool
++ overlaps(other: Box): bool
++ shifted(rightward: float, downward: float): Box
++ moved_to(left: float, top: float): Box
++ clear_gap_to(other: Box): float
 
 ## DiagramArrow
 
@@ -1126,7 +1239,7 @@ Finds the grid position for every card that leaves the fewest crossings and the 
 
 Routes every arrow between the placed cards.
 
-+ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Geometry] = (), kept_paths: list[list] = ())
++ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Box] = (), kept_paths: list[list] = ())
 	Invariant: an arrow never passes through a card or runs along another arrow, and each has its own end points
 	Invariant: the inheritance arrows of two or more subclasses that reach one base from the same side join into one trunk — a drop from each subclass to a shared bar, and one line from the bar to one point on the base; a single subclass keeps a direct arrow
 ------
@@ -1135,3 +1248,86 @@ Routes every arrow between the placed cards.
 	// lays each inheritance trunk first, breaking it into separate arrows when its lines would cross a card or run along another arrow
 	// then routes the other arrows shortest first, and lifts each that crosses another and searches again with the rest in place
 	-> DiagramArrow.corners
+
+## CodeMeasure
+
+<<Value Object>> One measure of code (`measures/code_measures.py`): the name its fact is kept under and a project's config chooses a tool for, what a table calls it in plain English with the tool's own name for it in brackets, how a sentence says a value of it, and whether it is a measure of a function, a class or a module.
+
+------
++ name: str
++ label: str
++ phrase: str
++ of: str
++ existing: str
+	// the fact the reader already keeps that gives the measure, such as `line_count`; empty for a measure kept under its own name
++ counted: bool
++ not_taken_fact: str
+	// the fact a node keeps in place of the measure when no tool could take it, holding why
+----
++ value_on(node: Node): float | int | None
+	// the measure as node holds it; none when no fact on node gives it
++ said_of(value: float | int): str
+	// `14 paths through it (cyclomatic complexity)`
+
+## ChosenTools
+
+The tool a project chose for each measure in each language, and the limit of each measure (`measures/code_measures.py`): the shipped table, which fills in Python and TypeScript, with the project's own `code_measures` laid over it.
+
++ ChosenTools(chosen: Mapping | None, config: Path | None)
+	Invariant: a project whose config has no `code_measures` section chose no tools, and none of its code is measured
+------
++ measures_code: bool
++ config: Path
+----
++ of_project(folder: Path): ChosenTools
+	// the choices of the `.context/config.json` of folder, a project's top folder
+	-> ContextConfig.load
++ tool_name(measure: CodeMeasure, language: str): str | None
+	// none for a measure the project wrote `not measured` for; raises NoToolChosen when nobody chose
++ limit(measure: CodeMeasure): float | None
+	// none for a measure kept for information only, and for every measure of a project with no `code_measures` section
+
+## MeasuringTool
+
+One tool behind one question (`measures/measuring_tools.py`): this measure, of this node. *LizardTool* takes a function's paths and readability score, a class's total complexity, and the lines of code of a module's longest file; *RadonTool* takes the maintainability index of a module's least maintainable Python file; *ReaderTool* counts from the graph's nodes and edges what no fact keeps yet (the classes a class depends on, the methods one call into it can set off, the modules that import a module, the average total complexity of a module's classes, and a module's copied blocks through *CopiedBlocks*), and the groups of a Python class's methods that share no data (*MethodGroups*). No tool repeats a fact the reader already keeps.
+
+------
++ name: str
+----
++ value(measure: CodeMeasure, measured: MeasuredNode): float | int | None
+	// raises ToolDoesNotTakeMeasure for a measure it was wrongly chosen for, and MeasuringToolNotInstalled when the outside tool is missing
+
+## MeasuredNode
+
+<<Value Object>> One node a measure is taken of (`measures/measuring_tools.py`): the node, the reading that holds it, and the checked files it was read from.
+
+------
++ node: Node
++ reading: GraphReading
++ files: tuple[Path, ...]
++ file: Path
++ lines: tuple[int, int]
+
+## CheckedCodeMeasures
+
+The code measures the reader keeps of the files a read names, such as the files a validate checks (`measures/checked_measures.py`).
+
++ CheckedCodeMeasures(reading: GraphReading, files: list[Path], chosen: ChosenTools, tools: dict[str, type[MeasuringTool]])
+	Invariant: test code is not measured
+----
++ take(): None
+	// keeps each measure of each function, class and module read from the named files on its node; a measure no tool could take is kept as the reason, on the first node of the file it was asked of
+	-> ChosenTools.tool_name
+	-> MeasuringTool.value
+
+## CodeMeasureLimit : ProductionCodeRule
+
+One measure held to its limit on the nodes that carry it (`rules/code_measure_limits.py`): `limit-paths-through-a-function`, `keep-functions-readable`, `limit-function-lines`, `limit-class-complexity`, `limit-class-methods`, `keep-class-methods-sharing-data`, `limit-class-coupling`, `limit-class-response`; and on a module (*ModuleMeasureLimit*), `limit-module-file-lines`, `keep-module-files-maintainable`, `limit-average-class-complexity`, `limit-modules-importing`, `limit-copied-code-blocks`.
+
+------
++ measure: CodeMeasure
++ advice: str
+----
++ check_production(node: Node, context: RuleCheckContext): list[Finding]
+	// nothing for a node no read measured; the reason, for a node that keeps why its measure could not be taken; else the node when its measure is over the project's limit
+	-> ChosenTools.limit

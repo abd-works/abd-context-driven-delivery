@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import is_interface_name
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import DocComment, pascal_case_decorator
-from cdd_guidance.practices.clean_engineering.model.code_body import TYPESCRIPT
+from cdd_guidance.practices.source_code import TYPESCRIPT
 from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     BraceCleanEngineeringModel,
     CodeClass,
@@ -17,7 +17,7 @@ from cdd_guidance.practices.clean_engineering.model.code_class_model import (
     CodeOperation,
     CodeProperty,
 )
-from cdd_guidance.practices.clean_engineering.model.operation import Operation
+from cdd_guidance.practices.clean_engineering.model.operation import Operation, Parameter
 
 
 class TypeScriptProperty(CodeProperty):
@@ -34,13 +34,19 @@ class TypeScriptOperation(CodeOperation):
     def signature(self, contract: bool) -> List[str]:
         doc = self.doc_text()
         lines = [f"  /** {doc} */"] if doc else []
-        parameters = ", ".join(parameter.save() for parameter in self.parameters)
+        parameters = ", ".join(self._parameter(parameter) for parameter in self.parameters)
         returned = self.language.type_name(self.return_type) if self.return_type else "void"
         name = self.language.identifier(self.name)
         if contract:
             return lines + [f"  {name}({parameters}): {returned};"]
         access = "private " if self.name.startswith("_") else ""
         return lines + [f"  {access}{name}({parameters}): {returned} {{"]
+
+
+    def _parameter(self, parameter: Parameter) -> str:
+        """A parameter as TypeScript writes it: its name in camel case, then its type in TypeScript's spelling."""
+        name = self.language.identifier(parameter.name)
+        return f"{name}: {self.language.type_name(parameter.type_hint)}" if parameter.type_hint else name
 
 
 class TypeScriptClass(CodeClass):

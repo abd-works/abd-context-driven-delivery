@@ -3,12 +3,12 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
+from harness.drawio import CellStyle, DrawioCell
 from harness.graph.violation import Violation
 
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
-    DrawioPage,
-    cell_box,
+    ClassDiagramPage,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
@@ -19,34 +19,38 @@ SHORT_ROUTE_MAX_BOX_GAP = 320
 class PreferShortRoutesScanner(DrawioScanner):
     RULE = "prefer-short-routes"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
-        """Edges that dog-leg across a short gap, and related boxes placed too far apart."""
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
+        """Edges that dog-leg across a short gap, and related boxes of one module placed too far apart."""
         boxes = self._vertex_boxes(page)
+        modules = {cell.get("id", ""): CellStyle(cell.get("style", "")).value("module") for cell in page.vertices}
         violations = []
         for edge in page.cells:
             source, target = edge.get("source", ""), edge.get("target", "")
             if edge.get("edge") != "1" or source not in boxes or target not in boxes:
                 continue
             name = f"{page.class_names.get(source, source)} → {page.class_names.get(target, target)}"
-            violations.extend(self.violation(page, f"{name}: {message}") for message in self._long_route_messages(edge, boxes))
+            one_module = modules.get(source, "") == modules.get(target, "")
+            violations.extend(self.violation(page, f"{name}: {message}") for message in self._long_route_messages(edge, boxes, one_module))
         return violations
 
-    def _long_route_messages(self, edge: ET.Element, boxes: dict[str, Geometry]) -> list[str]:
-        """What is too long about one edge: many waypoints across a short gap, or its two boxes placed far apart."""
+    def _long_route_messages(self, edge: ET.Element, boxes: dict[str, Box], one_module: bool) -> list[str]:
+        """What is too long about one edge: many waypoints across a short gap, or its two boxes placed far apart. Two
+        boxes of different modules stand as far apart as their modules' places set, so only boxes of one module are
+        held to the gap."""
         waypoints = len(edge.findall("mxGeometry/Array/*"))
         gap = boxes[edge.get("source", "")].clear_gap_to(boxes[edge.get("target", "")])
         messages = []
         if waypoints > SHORT_ROUTE_MAX_WAYPOINTS and gap <= SHORT_ROUTE_MAX_BOX_GAP:
             messages.append(f"{waypoints} waypoints across a {gap:.0f}px gap (max {SHORT_ROUTE_MAX_WAYPOINTS}) — prefer a short orthogonal route")
-        if gap > SHORT_ROUTE_MAX_BOX_GAP:
+        if one_module and gap > SHORT_ROUTE_MAX_BOX_GAP:
             messages.append(f"endpoint gap {gap:.0f}px (max {SHORT_ROUTE_MAX_BOX_GAP}) — place related classes closer")
         return messages
 
-    def _vertex_boxes(self, page: DrawioPage) -> dict[str, Geometry]:
+    def _vertex_boxes(self, page: ClassDiagramPage) -> dict[str, Box]:
         """Every vertex with a geometry, class or not, since an edge may end on any of them."""
-        boxes: dict[str, Geometry] = {}
+        boxes: dict[str, Box] = {}
         for cell in page.cells:
-            box = cell_box(cell) if cell.get("vertex") == "1" else None
+            box = DrawioCell(cell).box if cell.get("vertex") == "1" else None
             if box and cell.get("id"):
                 boxes[cell.get("id")] = box
         return boxes

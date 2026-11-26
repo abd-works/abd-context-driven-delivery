@@ -25,11 +25,13 @@ from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import 
     DiagramCleanEngineeringModel,
     module_tab_label,
 )
-from cdd_guidance.practices.clean_engineering.model.diagram.geometry import Geometry
+from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.field_types import RELATIONSHIP_STRENGTH, Relationship
 from cdd_guidance.practices.clean_engineering.model.property import Property
 
 CLASSES_ON_ONE_PAGE = 40
+# The interaction a dependency names, written on its arrow as `«runs»` on `Repo ---<<runs>>--> Git`.
+DEPENDENCY_LABEL = re.compile("«([^»]+)»")
 
 Relationships = List[Tuple[str, str, str]]
 
@@ -72,7 +74,8 @@ class ClassView:
         module = self.module_of.get(id(source))
         if module is not None:
             for oclass in module.classes:
-                if oclass.name == target_name or plain_class_name(oclass.name) == target_name:
+                names = {oclass.name, plain_class_name(oclass.name), *(item.name for item in oclass.folded)}
+                if target_name in names:
                     return self.cell_ids[id(oclass)]
         ids = self._cell_ids_by_name.get(target_name) or []
         return ids[0] if ids else None
@@ -95,6 +98,9 @@ class ClassView:
                 plain = plain_class_name(oclass.name)
                 if plain and plain != oclass.name:
                     self._cell_ids_by_name.setdefault(plain, []).append(cell_id)
+                # A class folded into this one has no card of its own, so an arrow to it lands on this card.
+                for folded in oclass.folded:
+                    self._cell_ids_by_name.setdefault(folded.name, []).append(cell_id)
 
     def _module_fill_colors(self) -> Dict[str, str]:
         """One colour per module, so a reader sees where a class lives. One module needs no colour."""
@@ -108,6 +114,8 @@ class ClassView:
     def _collect_relationships(self) -> None:
         """The arrows between the classes' cells, with the words each carries."""
         self.arrow_labels: Dict[Tuple[str, str], str] = {}
+        # The properties each pair's arrow stands for that carry no written relationship: their type alone draws it.
+        self.unmarked_properties: Dict[Tuple[str, str], List[str]] = {}
         # The interactions each pair's dependencies name, in model order: `stops`, `reads sections with`.
         self.dependency_labels: Dict[Tuple[str, str], List[str]] = {}
         self.relationships: Relationships = []
@@ -128,11 +136,15 @@ class ClassView:
         relationship = getattr(prop, 'relationship', None)
         target = self.resolve_target(oclass, relationship.target) if relationship is not None else None
         if not target:
+            if prop.stereotype:
+                oclass.marked_on_card.add(prop.name)
             return
         source = self.cell_ids[id(oclass)]
         self.relationships.append((source, target, relationship.kind or 'association'))
         named = self.arrow_labels.get((source, target))
         self.arrow_labels[(source, target)] = f'{named}, {prop.name}' if named else prop.name
+        if not prop.stereotype:
+            self.unmarked_properties.setdefault((source, target), []).append(prop.name)
 
     def _collect_dependency(self, oclass: OoadClass, dependency: Relationship) -> None:
         source = self.cell_ids[id(oclass)]
@@ -172,9 +184,9 @@ class ClassView:
 class ClassViewPage:
     """One page of a class diagram: which classes it shows, which of them it owns, and which it imports."""
 
-    def __init__(self, writer: ClassView, module: Optional[Module] = None) -> None:
-        """The page of module's classes, with the classes of other modules it uses shown dashed; with no module, the
-        single page that shows every class."""
+    def __init__(self, writer: ClassView, module: Optional[Module] = None, shows_imports: bool = True) -> None:
+        """The page of module's classes, with the classes of other modules it uses shown dashed unless the view draws
+        those links itself (shows_imports false); with no module, the single page that shows every class."""
         self._writer = writer
         # None on a single page, where every class is local.
         self._local_ids: Optional[set[str]] = None
@@ -182,7 +194,8 @@ class ClassViewPage:
         if module is None:
             self._page_ids = set(writer.classes_by_cell)
             return
-        self._local_ids, self._import_ids = writer.module_page_ids(module)
+        self._local_ids, imports = writer.module_page_ids(module)
+        self._import_ids = imports if shows_imports else []
         self._page_ids = self._local_ids | set(self._import_ids)
 
     def is_imported(self, cell_id: str) -> bool:
@@ -193,7 +206,7 @@ class ClassViewPage:
         """The page's cards, each placed, keeping those already placed at positions, and the arrows between them, not
         yet routed."""
         arrows = self._arrows()
-        cards = self._cards(arrows)
+        cards = self.cards(arrows)
         self._place_cards_keeping(cards, arrows, positions)
         return cards, arrows
 
@@ -256,7 +269,7 @@ class ClassViewPage:
             for source, target, kind in self._writer.relationships
         )
 
-    def _cards(self, arrows: List[DiagramArrow]) -> Dict[str, DiagramClass]:
+    def cards(self, arrows: List[DiagramArrow]) -> Dict[str, DiagramClass]:
         """One card per class on the page, in the model's order so the diagram reads back in that order, wide enough
         to give every arrow on it its own port."""
         cards: Dict[str, DiagramClass] = {}
@@ -266,7 +279,7 @@ class ClassViewPage:
             width = max(node.width(), SMALLEST_PORT_SPACING * (arrow_count + 1))
             node.cell_id = cell_id
             node.group = self._writer.module_labels.get(cell_id, '')
-            node.geometry = Geometry(0, 0, width, node.height())
+            node.geometry = Box(0, 0, width, node.height())
             cards[cell_id] = node
         return cards
 
@@ -292,7 +305,7 @@ class ClassViewPage:
         kept = [card for card in cards.values() if card.cell_id not in new_ids]
         if not kept:
             return
-        bottom = max(card.geometry.y + card.geometry.height for card in kept)
+        bottom = max(card.geometry.y + card.geometry.h for card in kept)
         for card in new_cards:
             card.geometry = card.geometry.shifted(0, bottom)
 

@@ -3,6 +3,8 @@ import type { FileViolationData, SessionFileData } from '@cdd/space/session/sess
 import type { SourceRule } from '@source-view/SourceView'
 import type { SourceCallout } from '@source-view/source-callouts'
 import type { ViolationFocus } from '@graph-app/graph/graph-selection'
+import { withoutCallMarkers } from '@source-view/call-expansion'
+import { saidBy } from './reason'
 
 // The node type the source view is handed for a whole file, which it opens with every fold open.
 const FILE_NODE = 'File'
@@ -18,10 +20,11 @@ export function fileAnswered(answer: unknown): SessionFileData | null {
   if (answer === null || answer === undefined) return null
   const file = answer as Record<string, unknown>
   if (typeof answer !== 'object' || typeof file.path !== 'string' || typeof file.text !== 'string') throw new Error(`session.file answered no file: ${saidBy(answer)}`)
-  const steps = listOf<Record<string, unknown>>(file.steps).map(step => ({ ...step, invokes: listOf(step.invokes), observes: listOf(step.observes) }))
+  const steps = listOf<Record<string, unknown>>(file.steps).map(step => ({ ...step, callouts: listOf(step.callouts) }))
   return {
     ...(file as SessionFileData),
     language: typeof file.language === 'string' ? file.language : '',
+    rendered_form: typeof file.rendered_form === 'string' ? file.rendered_form : '',
     comments: listOf(file.comments),
     changes: listOf(file.changes),
     folds: listOf(file.folds),
@@ -33,12 +36,6 @@ export function fileAnswered(answer: unknown): SessionFileData | null {
 
 const listOf = <Item>(list: unknown): Item[] => (Array.isArray(list) ? (list as Item[]) : [])
 
-const saidBy = (answer: unknown): string => {
-  if (typeof answer === 'string') return answer
-  const error = (answer as { error?: unknown } | null)?.error
-  return error !== undefined ? String(error) : JSON.stringify(answer)
-}
-
 // How the graph explorer's source view reads a session's file: the whole file as one source, from its first line, so
 // each line the editor shows is that line of the file, with the members of the session's graph, from which a call opens
 // in place, in this file or another; none until the graph view read them.
@@ -47,16 +44,28 @@ export function sourceOf(file: SessionFileData, members: NodeSourceData[] = []):
   return { node_id: file.path, name: fileNameOf(file.path), type: FILE_NODE, owner: '', file: file.path, text: file.text, start_line: 1, end_line: lines, members }
 }
 
-// What the file opens in place itself: each link to a heading in another file, that heading's section under its line;
-// and in a story test, what each step invokes and observes, under the step's first line.
+// A callout as session.file answers it since links to whole files and missing targets carry one; a cdd server lane
+// older than the page answers neither link nor missing.
+type LinkCallout = SessionFileData['callouts'][number] & { link?: string; missing?: string }
+
+// What a link opens in place: the section or file it names, or, when that is not there, what is missing.
+function linkCallout(callout: LinkCallout): SourceCallout {
+  const { path, start_line: startLine, end_line: endLine, content } = callout.section
+  const linked = { line: callout.line, title: callout.title, link: callout.link ?? '', path, startLine, endLine }
+  return callout.missing ? { ...linked, id: `${path}:missing:${callout.link}`, kind: 'missing', text: callout.missing } : { ...linked, id: `${path}:${startLine}`, kind: 'section', text: content }
+}
+
+// What the file opens in place itself: each link to another file, the section or file it names under its line; and in a
+// story test, what each step invokes and observes, on the line and under the title the session answered for it, so the
+// code it reaches opens where the step reaches it.
 export function calloutsOf(file: SessionFileData): SourceCallout[] {
-  const sections = file.callouts.map((callout): SourceCallout => ({ id: `${callout.section.path}:${callout.section.start_line}`, kind: 'section', line: callout.line, title: callout.title, path: callout.section.path, startLine: callout.section.start_line, endLine: callout.section.end_line, text: callout.section.content }))
-  const steps = file.steps.flatMap(step => [...step.invokes.map(target => stepCallout(step.line, target, 'call')), ...step.observes.map(target => stepCallout(step.line, target, 'example'))])
+  const sections = file.callouts.map(linkCallout)
+  const steps = file.steps.flatMap(step => step.callouts.map(stepCallout))
   return [...sections, ...steps]
 }
 
-function stepCallout(line: number, target: NodeSourceData, kind: SourceCallout['kind']): SourceCallout {
-  return { id: target.node_id, kind, line, title: target.owner ? `${target.owner}.${target.name}` : target.name, path: target.file, startLine: target.start_line, endLine: target.end_line, text: target.text }
+function stepCallout({ kind, line, title, target }: SessionFileData['steps'][number]['callouts'][number]): SourceCallout {
+  return { id: target.node_id, kind, line, title, path: target.file, startLine: target.start_line, endLine: target.end_line, text: withoutCallMarkers(target.text) }
 }
 
 // Whether the file is a story test whose steps reach code: its callouts are its steps' own, so a class it names, in a
@@ -71,11 +80,12 @@ export function rulesOf(file: SessionFileData): SourceRule[] {
   return names.map(name => ({ name, status: VIOLATING, messages: file.violations.filter(found => found.violation.rule === name).map(found => found.violation.message) }))
 }
 
-// The first place the chosen rule is broken, which the source view marks and offers a Correct prompt for.
+// Every place the chosen rule is broken in the file, which the source view marks and offers Fix this one for, each with
+// the comment Python wrote for it.
 export function violationFocusOf(file: SessionFileData, rule: string): ViolationFocus | null {
-  const found: FileViolationData | undefined = file.violations.find(each => each.violation.rule === rule)
-  if (!found) return null
-  return { rule: found.violation.rule, message: found.violation.message, startLine: found.range.start_line, endLine: found.range.end_line }
+  const found: FileViolationData[] = file.violations.filter(each => each.violation.rule === rule)
+  if (!found.length) return null
+  return { rule, places: found.map(each => ({ message: each.violation.message, startLine: each.range.start_line, endLine: each.range.end_line, correctionComment: each.correction_comment })) }
 }
 
 // The language Monaco colours the file as, from the session's answer.

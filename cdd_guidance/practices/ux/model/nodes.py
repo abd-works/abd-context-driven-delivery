@@ -13,6 +13,9 @@ from harness.annotations.name import Name
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph, Node
 
+from cdd_guidance.practices.stories.model.story_tree import StoryTree
+
+from .served import NavType, Served
 from .story_link import StoryLink
 from .ux_node import UxNode
 
@@ -31,12 +34,13 @@ class StoryStep:
             return step
         return cls(str(step.get("kind", "") or ""), str(step.get("label", "") or ""))
 
+    @classmethod
+    def from_values(cls, steps: Iterable["StoryStep | Mapping[str, Any]"] | None) -> List["StoryStep"]:
+        """Each step a file lists, in its order; none for a file that lists none."""
+        return [cls.from_value(step) for step in steps or ()]
+
     def as_dict(self) -> dict:
         return {"kind": self.kind, "label": self.label}
-
-
-def story_steps_from(values: Iterable["StoryStep | Mapping[str, Any]"] | None) -> List[StoryStep]:
-    return [StoryStep.from_value(value) for value in values or ()]
 
 
 class Interaction(UxNode):
@@ -44,6 +48,7 @@ class Interaction(UxNode):
     the interaction once it is made."""
 
     _semantic_type_name = "Interaction"
+    graph_facts = ("trigger", "effect")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -60,12 +65,118 @@ class Interaction(UxNode):
     def trigger(self, trigger: str) -> None:
         self._trigger = trigger
 
+    @property
+    def destination_name(self) -> str:
+        """The name of the screen it goes to; blank while it goes to none."""
+        return self.destination.name if self.destination is not None else ""
 
-class Control(UxNode):
-    """A control on a region: its type, the label it shows, and the field it shows the value of. Each is set on the
-    control once it is made."""
+
+class ServesStories(UxNode):
+    """A node of the map that serves stories: a screen, or a control on it.
+
+    It serves stories, scenarios, and steps through one StoryLink each: the Stories node once it is on the node's
+    graph, else what the formats store, the key and the link target the association was written with. ``shows``,
+    ``shows_scenarios``, and ``shows_steps`` are the nodes the graph records as its edges of those names, and each of
+    those nodes records ``shownOn`` this node.
+    """
+
+    def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
+        super().__init__(name, sequential_order, graph)
+        self._story_links: List[StoryLink] = []
+        # What it serves, in the notation every text format lists it in.
+        self.served = Served(self)
+
+    def show_story(self, story: Node | str) -> None:
+        """A story this node serves: the Story, or its name."""
+        self.show("Story", story)
+
+    def show_scenario(self, scenario: Node | str) -> None:
+        """A scenario this node serves: the Scenario, or its key ``Story › Scenario``."""
+        self.show("Scenario", scenario)
+
+    def show_step(self, step: Node | str) -> None:
+        """A step this node serves: the Step, or its key ``Story › Scenario › Step``."""
+        self.show("Step", step)
+
+    @property
+    def shows(self) -> List[Node]:
+        """The stories on this node's graph that it serves."""
+        return self._shown_nodes("Story")
+
+    @property
+    def shows_scenarios(self) -> List[Node]:
+        return self._shown_nodes("Scenario")
+
+    @property
+    def shows_steps(self) -> List[Node]:
+        return self._shown_nodes("Step")
+
+    @property
+    def story_keys(self) -> List[str]:
+        """The stories this node serves, as the formats write them: each a markdown link to the file and heading the story
+        is written at when the link names one, ``[Browse Books](story-map.md#story-browse-books)``, else its name."""
+        return self._keys("Story")
+
+    @property
+    def scenario_keys(self) -> List[str]:
+        return self._keys("Scenario")
+
+    @property
+    def step_keys(self) -> List[str]:
+        return self._keys("Step")
+
+    def lists(self, node: Node) -> bool:
+        """True when this node serves that story, scenario, or step, or one with its key drawn on another graph."""
+        return any(link.names(node) for link in self._story_links)
+
+    def show_what(self, other: "ServesStories") -> None:
+        """Serve the stories, scenarios, and steps other serves: each Stories node other finds on its own graph, else
+        the key and the link target other holds for it."""
+        for link in other._story_links:
+            resolved = link.resolved_in(StoryTree.of_graph(other.graph)) if other.practice is not None else None
+            self.show(link.kind, resolved or link.written)
+
+    def show(self, kind: str, shown: Node | str) -> None:
+        link = StoryLink.from_shown(kind, shown)
+        if not link.key or any(held.key == link.key and held.target == link.target for held in self.links_of(kind)):
+            return
+        self._story_links.append(link)
+        self._sync_schema_edges()
+
+    @property
+    def story_links(self) -> List[StoryLink]:
+        """The stories this node serves, in the order it serves them: each link holds its Story once the node's
+        graph has it, else only the name the formats write."""
+        return self._links("Story")
+
+    def _shown_nodes(self, kind: str) -> List[Node]:
+        """The Stories nodes this node's links of kind name on its graph."""
+        return [link.node for link in self._links(kind) if link.node is not None]
+
+    def _links(self, kind: str) -> List[StoryLink]:
+        """This node's links of kind, each holding the node it names on the node's graph. While no practice holds
+        the node, each holds the node it already held, as a copy keeps the nodes its source found."""
+        links = self.links_of(kind)
+        if self.practice is not None:
+            story_tree = StoryTree.of_graph(self.graph)
+            for link in links:
+                link.resolved_in(story_tree)
+        return links
+
+    def links_of(self, kind: str) -> List[StoryLink]:
+        """The stories, scenarios, or steps (kind) this node serves, in the order it serves them, as it holds them."""
+        return [link for link in self._story_links if link.kind == kind]
+
+    def _keys(self, kind: str) -> List[str]:
+        return [link.written for link in self.links_of(kind)]
+
+
+class Control(ServesStories):
+    """A control on a region: its type, the label it shows, the field it shows the value of, and the stories,
+    scenarios, and steps it serves. Each is set on the control once it is made."""
 
     _semantic_type_name = "Control"
+    graph_facts = ("control_type", "label", "bound_field", "states", "story_keys", "scenario_keys", "step_keys")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -99,6 +210,7 @@ class StoryDemoControl(Control):
     """
 
     _semantic_type_name = "StoryDemoControl"
+    graph_facts = (*Control.graph_facts, "story_step_labels", "set_input", "item_value", "item_label")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -107,6 +219,11 @@ class StoryDemoControl(Control):
         self.item_story_steps: List[StoryStep] = []
         self.item_value = ""
         self.item_label = ""
+
+    @property
+    def story_step_labels(self) -> List[str]:
+        """The text of each story step this control runs, as Stories wrote it."""
+        return [step.label for step in self.story_steps]
 
     def take_story_fields(self, source: "StoryDemoControl") -> None:
         """Run the steps source runs, fill the input it fills, and show its items the way it does."""
@@ -119,6 +236,7 @@ class StoryDemoControl(Control):
 
 class Region(UxNode):
     _semantic_type_name = "Region"
+    graph_facts = ("area",)
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -130,15 +248,11 @@ class Region(UxNode):
         self._renumber(self.controls)
 
 
-class Screen(UxNode):
-    """One screen of the map.
-
-    It shows stories, scenarios, and steps through one StoryLink each: the Stories node once it is on the screen's
-    graph, else the key the formats store. ``shows``, ``shows_scenarios``, and ``shows_steps`` are the nodes the graph
-    records as the screen's edges of those names, and each of those nodes records ``shownOn`` this screen.
-    """
+class Screen(ServesStories):
+    """One screen of the map, with the stories, scenarios, and steps it serves."""
 
     _semantic_type_name = "Screen"
+    graph_facts = ("slug", "layout", "description", "story_keys", "scenario_keys", "step_keys", "domain_terms")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         """A screen called name; its slug, layout, description, and the screen it is the chrome of are set on it once
@@ -149,7 +263,6 @@ class Screen(UxNode):
         self.description = ""
         self.chrome_of: Optional["Screen"] = None
         self.inactive_tabs: List[str] = []
-        self._story_links: List[StoryLink] = []
         self.domain_terms: List[str] = []
         self.domain_concepts: List[str] = []
         self.image = ""
@@ -165,6 +278,11 @@ class Screen(UxNode):
     def slug(self, slug: str) -> None:
         self._slug = slug
 
+    @property
+    def chrome_of_name(self) -> str:
+        """The name of the screen it is the chrome of; blank while it is the chrome of none."""
+        return self.chrome_of.name if self.chrome_of is not None else ""
+
     def append_region(self, region: Region) -> None:
         self.regions.append(region)
         self._renumber(self.regions)
@@ -179,87 +297,9 @@ class Screen(UxNode):
         """
         self.layout = (layout_id or "").strip()
 
-    def show_story(self, story: Node | str) -> None:
-        """A story this screen shows: the Story, or its name."""
-        self._show("Story", story)
-
-    def show_scenario(self, scenario: Node | str) -> None:
-        """A scenario this screen shows: the Scenario, or its key ``Story › Scenario``."""
-        self._show("Scenario", scenario)
-
-    def show_step(self, step: Node | str) -> None:
-        """A step this screen shows: the Step, or its key ``Story › Scenario › Step``."""
-        self._show("Step", step)
-
-    @property
-    def shows(self) -> List[Node]:
-        """The stories on this screen's graph that it shows."""
-        return self._shown_nodes("Story")
-
-    @property
-    def shows_scenarios(self) -> List[Node]:
-        return self._shown_nodes("Scenario")
-
-    @property
-    def shows_steps(self) -> List[Node]:
-        return self._shown_nodes("Step")
-
-    @property
-    def story_keys(self) -> List[str]:
-        """The stories this screen shows, as the formats write them."""
-        return self._keys("Story")
-
-    @property
-    def scenario_keys(self) -> List[str]:
-        return self._keys("Scenario")
-
-    @property
-    def step_keys(self) -> List[str]:
-        return self._keys("Step")
-
-    def lists(self, node: Node) -> bool:
-        """True when this screen shows that story, scenario, or step, or one with its key drawn on another graph."""
-        return any(link.names(node) for link in self._story_links)
-
-    def show_what(self, other: "Screen") -> None:
-        """Show the stories, scenarios, and steps other shows: each Stories node other finds on its own graph, else
-        the key other holds for it."""
-        for link in other._story_links:
-            resolved = link.resolved_on(other.graph) if other.practice is not None else None
-            self._show(link.kind, resolved or link.key)
-
     def attach_domain_term(self, term: str) -> None:
         if term and term not in self.domain_terms:
             self.domain_terms.append(term)
-
-    def _show(self, kind: str, shown: Node | str) -> None:
-        link = StoryLink.from_shown(kind, shown)
-        if not link.key or link.key in self._keys(kind):
-            return
-        self._story_links.append(link)
-        self._sync_schema_edges()
-
-    @property
-    def story_links(self) -> List[StoryLink]:
-        """The stories this screen shows, in the order it shows them: each link holds its Story once the screen's
-        graph has it, else only the name the formats write."""
-        return self._links("Story")
-
-    def _shown_nodes(self, kind: str) -> List[Node]:
-        """The Stories nodes this screen's links of kind name on its graph."""
-        return [link.node for link in self._links(kind) if link.node is not None]
-
-    def _links(self, kind: str) -> List[StoryLink]:
-        """This screen's links of kind, each holding the node it names on the screen's graph. While no practice holds
-        the screen, each holds the node it already held, as a copy of a screen keeps the nodes its source found."""
-        links = [link for link in self._story_links if link.kind == kind]
-        if self.practice is not None:
-            for link in links:
-                link.resolved_on(self.graph)
-        return links
-
-    def _keys(self, kind: str) -> List[str]:
-        return [link.key for link in self._story_links if link.kind == kind]
 
 
 class UxComponent(UxNode):
@@ -270,6 +310,7 @@ class UxComponent(UxNode):
 
 class Transition(UxComponent):
     _semantic_type_name = "Transition"
+    graph_facts = ("trigger", "nav_type")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         """A transition called name; the screens it joins, its trigger, and its kind of navigation are set on it once
@@ -278,13 +319,32 @@ class Transition(UxComponent):
         self.from_screen: Optional[Screen] = None
         self.to_screen: Optional[Screen] = None
         self._trigger = ""
-        self.nav_type = "action"
+        self._nav_type = NavType.ACTION
 
     def joining(self, from_screen: Optional[Screen], to_screen: Optional[Screen]) -> "Transition":
         """This transition going from from_screen to to_screen; answers itself."""
         self.from_screen = from_screen
         self.to_screen = to_screen
         return self
+
+    @property
+    def from_name(self) -> str:
+        """The name of the screen it leaves; blank while it leaves none."""
+        return self.from_screen.name if self.from_screen is not None else ""
+
+    @property
+    def to_name(self) -> str:
+        """The name of the screen it goes to; blank while it goes to none."""
+        return self.to_screen.name if self.to_screen is not None else ""
+
+    @property
+    def nav_type(self) -> NavType:
+        """The kind of navigation it is, saved as the string it is written as."""
+        return self._nav_type
+
+    @nav_type.setter
+    def nav_type(self, nav_type: str) -> None:
+        self._nav_type = NavType(nav_type)
 
     @property
     def trigger(self) -> str:
@@ -298,6 +358,7 @@ class Transition(UxComponent):
 
 class ContentType(UxComponent):
     _semantic_type_name = "ContentType"
+    graph_facts = ("hierarchy", "key_actions")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -307,6 +368,7 @@ class ContentType(UxComponent):
 
 class NavComponent(UxComponent):
     _semantic_type_name = "NavComponent"
+    graph_facts = ("ux_type",)
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)
@@ -318,6 +380,7 @@ class UxContext(UxNode):
     """Optional notes - invariants / thinking not on screens."""
 
     _semantic_type_name = "UxContext"
+    graph_facts = ("notes", "invariants")
 
     def __init__(self, name: str = "context", sequential_order: int = 0, graph: Optional[Graph] = None) -> None:
         super().__init__(name, sequential_order, graph)

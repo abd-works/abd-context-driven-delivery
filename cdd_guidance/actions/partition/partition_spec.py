@@ -22,8 +22,8 @@ from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.actions.partition.segment import Segment, SegmentCompletenessConfig, SegmentEntry
 
 from harness.markdown import Markdown
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
-from harness.agent_tools.agent_tools import AgentToolSet
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 
 _CAR_CHRONICLE_TOOLSET = (
@@ -66,7 +66,7 @@ with description("a practice guidance beside the partition action"):
         OPEN_PROJECTS.close_all()
 
     with it("should not expose partition on practice Guidance"):
-        cls = type(AgentToolSet.instantiate(_CAR_CHRONICLE_TOOLSET))
+        cls = type(ToolsetReference.parsed(_CAR_CHRONICLE_TOOLSET).made())
         practice = cls()
         expect("partition" in practice.tools).to(equal(False))
 
@@ -291,9 +291,6 @@ with description("a SegmentEntry"):
         with it("should expose the name"):
             expect(self.entry.name).to(equal("Hero"))
 
-        with it("should expose the body as None"):
-            expect(self.entry.body).to(be_none)
-
     with context("that has a body long enough to pass"):
         with before.each:
             self.entry = SegmentEntry("Hero", "A" * 120, SegmentCompletenessConfig())
@@ -353,9 +350,6 @@ with description("a Segment"):
                 Path("/fake/test.md"), _SEGMENT_NO_MARKER, SegmentCompletenessConfig()
             )
 
-        with it("should have no expected names"):
-            expect(self.segment.expected_names).to(equal([]))
-
         with it("should report has_expected_names as False"):
             expect(self.segment.has_expected_names).to(be_false)
 
@@ -365,8 +359,8 @@ with description("a Segment"):
                 Path("/fake/test.md"), _SEGMENT_ALL_OK, SegmentCompletenessConfig()
             )
 
-        with it("should parse expected names from the block marker"):
-            expect(self.segment.expected_names).to(equal(["HERO", "VILLAIN"]))
+        with it("should check the two entries the block marker names"):
+            expect("(2/2 OK" in self.segment.completeness_report()).to(be_true)
 
         with it("should report has_expected_names as True"):
             expect(self.segment.has_expected_names).to(be_true)
@@ -386,8 +380,8 @@ with description("a Segment"):
                 expected_names="HERO",
             )
 
-        with it("should use only the argument names"):
-            expect(self.segment.expected_names).to(equal(["HERO"]))
+        with it("should check only the entry the argument names"):
+            expect("(1/1 OK" in self.segment.completeness_report()).to(be_true)
 
     with context("that has all expected entries complete"):
         with before.each:
@@ -395,20 +389,18 @@ with description("a Segment"):
                 Path("/fake/test.md"), _SEGMENT_ALL_OK, SegmentCompletenessConfig()
             )
 
-        with it("should report is_complete as True"):
-            expect(self.segment.is_complete).to(be_true)
-
         with it("should include PASS in the completeness report"):
             expect("PASS" in self.segment.completeness_report()).to(be_true)
+
+        with it("should give the line that says so as many cells as the report table's header"):
+            table = [line for line in self.segment.completeness_report().splitlines() if line.startswith("|")]
+            expect(table[-1].count("|")).to(equal(table[0].count("|")))
 
     with context("that has an expected entry with a missing header"):
         with before.each:
             self.segment = Segment.from_text(
                 Path("/fake/test.md"), _SEGMENT_MISSING_ENTRY, SegmentCompletenessConfig()
             )
-
-        with it("should report is_complete as False"):
-            expect(self.segment.is_complete).to(be_false)
 
         with it("should include FAIL in the completeness report"):
             expect("FAIL" in self.segment.completeness_report()).to(be_true)
@@ -418,9 +410,6 @@ with description("a Segment"):
             self.segment = Segment.from_text(
                 Path("/fake/test.md"), _SEGMENT_WITH_STUB, SegmentCompletenessConfig()
             )
-
-        with it("should report is_complete as False"):
-            expect(self.segment.is_complete).to(be_false)
 
         with it("should include STUB in the completeness report"):
             expect("STUB" in self.segment.completeness_report()).to(be_true)

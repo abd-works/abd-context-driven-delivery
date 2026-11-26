@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from harness.agent_tools import agent_instructions, agent_tool, agent_toolset, tools
-from harness.agent_tools.agent_tools import tool_subject
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, tool_subject
 from harness.catalog_generator.approach_copy import APPROACH_MARKDOWN, ApproachCopy
 from harness.catalog_generator.approach_page import ApproachGrids, ApproachPage
 from harness.catalog_generator.brand import Brand
@@ -73,7 +73,7 @@ class Utility:
         utility that cannot be imported raises rather than leaving a silent gap."""
         toolsets = RepositoryToolsets(_REPO_ROOT)
         classes = toolsets.classes()
-        unloadable = [failure for failure in toolsets.unloadable if failure.reference.startswith(_UTILITY_PACKAGES)]
+        unloadable = [failure for failure in toolsets.unloadable if failure.reference.module_name.startswith(_UTILITY_PACKAGES)]
         if unloadable:
             raise unloadable[0]
         utilities = [toolset_class for toolset_class in classes if toolset_class.__module__.startswith(_UTILITY_PACKAGES)]
@@ -96,7 +96,7 @@ class LifecycleAction:
 
     def __init__(self, action: Action) -> None:
         self.action = action
-        self._toolset: object | None = None
+        self._toolset: AgentToolSet | None = None
 
     @classmethod
     def load_all(cls) -> list[LifecycleAction]:
@@ -110,18 +110,18 @@ class LifecycleAction:
         return self.action.name
 
     @property
-    def toolset(self) -> object:
+    def toolset(self) -> AgentToolSet:
         """The toolset that defines the action, built once."""
         if self._toolset is None:
             self._toolset = self.action.toolset_class()
         return self._toolset
 
     @property
-    def tool(self) -> object | None:
+    def tool(self) -> AgentTool | None:
         """The toolset's live tool for this action; none when it has no such tool or annotates it ``@noCatalog``."""
         tools = self.toolset.tools
         tool = tools[self.name] if self.name in tools else None
-        if tool is None or noCatalog.annotates(getattr(tool, "callable", tool)):
+        if tool is None or noCatalog.annotates(tool.callable):
             return None
         return tool
 
@@ -736,8 +736,8 @@ class Catalog:
 
         example_paths={example_paths or 'discover from project tree'}
 
-        Each example lands under one practice and one stage on the approach page.
-        Use the same layout as ``catalog/cdd-approach.html``.
+        Each example lands under one practice and one stage on the approach page. Use the same layout as
+        ``catalog/cdd-approach.html``.
 
         **Where each example goes**
 
@@ -751,24 +751,21 @@ class Catalog:
 
         **Step 1 — Collect examples**
 
-        Read every path in ``example_paths``. When the list is empty,
-        ``generate_project_approach`` walks the project tree itself.
+        Read every path in ``example_paths``. When the list is empty, ``generate_project_approach`` walks the
+        project tree itself.
 
         **Step 2 — Classify each file**
 
-        A file belongs to the fidelity whose declared outputs name it: the
-        same file names and patterns the session uses to find a fidelity's
-        files, such as ``.context/story-map.drawio`` for the story map or
-        ``{{bounded_context}}/{{aggregate}}/{{aggregate}}.ts`` for the domain
-        model. ``generate_project_approach`` classifies discovered files this
-        way, so classify the listed files the same way. A file no fidelity
-        declares has no place until the user names one; ask rather than
-        guess from its name.
+        A file belongs to the fidelity whose declared outputs name it: the same file names and patterns the session
+        uses to find a fidelity's files, such as ``.context/story-map.drawio`` for the story map or
+        ``{{bounded_context}}/{{aggregate}}/{{aggregate}}.ts`` for the domain model. ``generate_project_approach``
+        classifies discovered files this way, so classify the listed files the same way. A file no fidelity declares
+        has no place until the user names one; ask rather than guess from its name.
 
         **Step 3 — Confirm the mapping**
 
-        Show a short table: practice, stage, relative path. Edit it until
-        every practice and stage the user cares about has a file.
+        Show a short table: practice, stage, relative path. Edit it until every practice and stage the user cares
+        about has a file.
 
         **Step 4 — Generate**
 
@@ -778,8 +775,8 @@ class Catalog:
         {{"examples": {{"stories": {{"discovery": "stories/story-map.drawio", ...}}}}}}
         ```
 
-        Call ``generate_project_approach`` with ``examples_json``, and with
-        ``project_title`` when the user names the page."""
+        Call ``generate_project_approach`` with ``examples_json``, and with ``project_title`` when the user names the
+        page."""
         tools(self.generate_project_approach)
         return "Project approach slide generated."
 

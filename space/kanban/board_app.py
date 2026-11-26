@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from cdd_guidance.practices.stories.stories import Stories
-from harness.diagnostics.app import LANGUAGE_ADAPTER_FOLDER, App, AppPackage, AppPage, AppServer, NodeScript
+from harness.apps.app import LANGUAGE_ADAPTER_FOLDER, App, AppPackage, AppPage, AppServer, NodeScript
 from harness.installation.app_ports import AppPorts
 
 APP_FOLDER = Path(__file__).resolve().parent / "app"

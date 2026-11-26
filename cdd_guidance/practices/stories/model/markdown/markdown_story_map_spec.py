@@ -1,0 +1,591 @@
+"""Mamba spec for `a Markdown document`. Mirrors `## Documents` in ../../bdd-context.md."""
+
+import sys
+from pathlib import Path
+
+_HERE = Path(__file__).resolve()
+for _candidate in _HERE.parents:
+    if (_candidate / "practices" / "stories" / "src" / "practices" / "stories").is_dir():
+        if str(_candidate) not in sys.path:
+            sys.path.insert(0, str(_candidate))
+        break
+
+from mamba import description, context, it, before
+from expects import equal, have_len, be_true, be_false, expect, raise_error
+
+from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryType, Epic
+from cdd_guidance.practices.stories.model.story_map import Scenario, StepType
+from cdd_guidance.practices.stories.model.story_map import StoryMap
+from cdd_guidance.practices.stories.model.markdown.scenario_file import ScenarioFileReading
+from cdd_guidance.practices.stories.model.markdown.nodes import (
+    MarkdownParseError,
+    MarkdownScenario,
+    MarkdownStory,
+    MarkdownStoryMap,
+)
+from harness.guidance.practice_formats import Written
+
+
+class SpecFixture:
+    def canonical_story_map_4_epics_3_epics(self) -> StoryMap:
+        story_map = StoryMap()
+        for i in range(1, 5):
+            epic = Epic(f"Epic {i}", i)
+            story_map.epics.append(epic)
+        first = story_map.epics[0]
+        for j in range(1, 4):
+            sub = Epic(f"Epic 1.{j}", j)
+            story = Story(f"Story {j}", 1, StoryType.USER)
+            story.scenarios.append(
+                Scenario(name=f"AC text {j}.1", sequential_order=1)
+            )
+            sub.stories.append(story)
+            first.epics.append(sub)
+        return story_map
+
+
+fixture = SpecFixture()
+_DISCOVERY_TITLE = "# Story Map — Product / Feature Name"
+
+
+with description("a Markdown document") as self:
+    with before.each:
+        self.markdown = MarkdownStoryMap()
+
+    with it("should contain only the story map title heading"):
+        # A map without scenarios renders as the discovery story-map document (title, sources, scope).
+        empty_story_map = StoryMap()
+        text = self.markdown.render(empty_story_map)
+        top_headings = [line for line in text.splitlines() if line.startswith("# ")]
+        expect(top_headings).to(equal([_DISCOVERY_TITLE]))
+
+    with context(
+        "that holds a rendered Story Map with 4 Epics and 3 Epics under the first Epic"
+    ):
+        with before.each:
+            self.source = fixture.canonical_story_map_4_epics_3_epics()
+            self.text = self.markdown.render(self.source)
+
+        with it("should contain 4 top-level headings"):
+            top_headings = [
+                line for line in self.text.splitlines() if line.startswith("# ")
+            ]
+            expect(top_headings).to(have_len(4))
+
+        with it("should contain 3 second-level headings under the first top-level heading"):
+            lines = self.text.splitlines()
+            first_index = next(i for i, l in enumerate(lines) if l.startswith("# "))
+            next_top_index = next(
+                (
+                    i
+                    for i in range(first_index + 1, len(lines))
+                    if lines[i].startswith("# ")
+                ),
+                len(lines),
+            )
+            second_headings = [
+                l
+                for l in lines[first_index + 1 : next_top_index]
+                if l.startswith("## ")
+            ]
+            expect(second_headings).to(have_len(3))
+
+        with it("should list every Story as a bullet under its Epic"):
+            lines = self.text.splitlines()
+            story_bullets = [l for l in lines if l.startswith("- ")]
+            expect(story_bullets).to(have_len(3))
+
+        with it("should list every Scenario as an indented bullet under its Story"):
+            lines = self.text.splitlines()
+            ac_bullets = [l for l in lines if l.startswith("  - ")]
+            expect(ac_bullets).to(have_len(3))
+
+        with it("should preserve the sequential order of every node"):
+            lines = self.text.splitlines()
+            first_four_top = [l for l in lines if l.startswith("# ")][:4]
+            names = [line.removeprefix("# ") for line in first_four_top]
+            expect(names).to(equal(["Epic 1", "Epic 2", "Epic 3", "Epic 4"]))
+
+        with context(
+            "with a fifth Epic appended in the source Story Map and re-rendered"
+        ):
+            with before.each:
+                self.source.epics.append(Epic("Epic 5", 5))
+                self.new_text = self.markdown.render(self.source)
+
+            with it("should contain 5 top-level headings"):
+                top_headings = [
+                    l for l in self.new_text.splitlines() if l.startswith("# ")
+                ]
+                expect(top_headings).to(have_len(5))
+
+            with context("the first 4 headings"):
+                with it("should be unchanged"):
+                    prev_top = [
+                        l for l in self.text.splitlines() if l.startswith("# ")
+                    ]
+                    new_top = [
+                        l for l in self.new_text.splitlines() if l.startswith("# ")
+                    ]
+                    expect(new_top[:4]).to(equal(prev_top))
+
+        with context(
+            "with the first Epic removed in the source Story Map and re-rendered"
+        ):
+            with before.each:
+                self.source.epics.pop(0)
+                self.new_text = self.markdown.render(self.source)
+
+            with it("should contain 3 top-level epic headings"):
+                # No scenarios remain, so the map renders as the discovery document under its title.
+                top_headings = [
+                    l
+                    for l in self.new_text.splitlines()
+                    if l.startswith("# ") and l != _DISCOVERY_TITLE
+                ]
+                expect(top_headings).to(have_len(3))
+
+            with context("the headings for the removed Epic and its descendants"):
+                with it("should be absent"):
+                    expect("# Epic 1" in self.new_text).to(be_false)
+                    expect("Epic 1.1" in self.new_text).to(be_false)
+
+        with context(
+            "with the first Epic renamed in the source Story Map and re-rendered"
+        ):
+            with before.each:
+                self.source.epics[0].name = "Epic 1 (renamed)"
+                self.new_text = self.markdown.render(self.source)
+
+            with context("the first heading"):
+                with it("should carry the new name"):
+                    first_heading = next(
+                        l for l in self.new_text.splitlines() if l.startswith("# ")
+                    )
+                    expect(first_heading).to(equal("# Epic 1 (renamed)"))
+
+            with context("the headings under it"):
+                with it("should be unchanged"):
+                    expect("## Epic 1.1" in self.new_text).to(be_true)
+                    expect("## Epic 1.2" in self.new_text).to(be_true)
+                    expect("## Epic 1.3" in self.new_text).to(be_true)
+
+    with context("that is being read back into a MarkdownStoryMap"):
+        with before.each:
+            self.source = fixture.canonical_story_map_4_epics_3_epics()
+            self.text = self.markdown.render(self.source)
+            self.reconstructed = self.markdown.parse(self.text)
+
+        with context("the reconstructed Story Map"):
+            with it(
+                "should hold every Epic, Epic, Story, and Scenario in sequential order"
+            ):
+                expect(self.reconstructed.epics).to(have_len(4))
+                first_epic = self.reconstructed.epics[0]
+                expect(first_epic.epics).to(have_len(3))
+                expect(first_epic.epics[0].stories).to(have_len(1))
+                expect(first_epic.epics[0].stories[0].scenarios).to(
+                    have_len(1)
+                )
+
+    with context("that includes metadata and prose around valid story structure"):
+        with before.each:
+            self.document = """# Story Map - Sample
+
+**Actors:** Customer, System
+_Scope: mixed markdown content should be tolerated._
+
+## Checkout
+- Redeem voucher
+  - voucher is valid
+
+## Context Gaps
+- this bullet should be ignored because it is not under a story node
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should ignore non-structural lines and still parse the story map"):
+            expect(self.reconstructed.epics).to(have_len(1))
+            expect(self.reconstructed.epics[0].epics).to(have_len(1))
+            checkout = self.reconstructed.epics[0].epics[0]
+            expect(checkout.name).to(equal("Checkout"))
+            expect(checkout.stories).to(have_len(1))
+            expect(checkout.stories[0].scenarios).to(have_len(1))
+
+    with context("that uses `(E)/(S)` outline notation"):
+        with before.each:
+            self.document = """# Story Map - pml-my
+
+**Actors:** Customer, System
+
+(E) Authenticate
+    (E) Sign In
+        (S) Self-Care Customer --> View Sign-In Form
+        (S) Self-Care Customer --> Submit Sign-In Credentials
+
+## Context Gaps
+- prose bullets should be ignored in outline mode
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should parse Epics, Epics, and Stories from outline lines"):
+            expect(self.reconstructed.epics).to(have_len(1))
+            expect(self.reconstructed.epics[0].name).to(equal("Authenticate"))
+            expect(self.reconstructed.epics[0].epics).to(have_len(1))
+            sign_in = self.reconstructed.epics[0].epics[0]
+            expect(sign_in.name).to(equal("Sign In"))
+            expect(sign_in.stories).to(have_len(2))
+            expect(sign_in.stories[0].name).to(equal("View Sign-In Form"))
+            expect(sign_in.stories[1].name).to(equal("Submit Sign-In Credentials"))
+
+    with context("that hangs outline stories directly under an Epic"):
+        with before.each:
+            self.document = """# Story Map
+
+(E) Resolve Check
+    (S) Player --> Make Trait Check
+    (S) Player --> Oppose Check
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should keep the stories on the Epic so they are not dropped"):
+            epic = self.reconstructed.epics[0]
+            expect(epic.name).to(equal("Resolve Check"))
+            expect(epic.epics).to(have_len(0))
+            expect(epic.stories).to(have_len(2))
+            expect(epic.stories[0].name).to(equal("Make Trait Check"))
+            expect(epic.stories[1].name).to(equal("Oppose Check"))
+
+    with context("that writes outline headings at column 0"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+### (E) Port Number
+#### (S) Customer --> Enter Porting Number
+### (S) Customer --> Activate Sim
+## (E) Place Order
+### (S) My Paradise --> Create Product Order
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should read each node's depth from its # count"):
+            epic = self.reconstructed.epics[0]
+            expect([sub.name for sub in epic.epics]).to(equal(["Get Sim", "Place Order"]))
+            get_sim = epic.epics[0]
+            expect([sub.name for sub in get_sim.epics]).to(equal(["Port Number"]))
+            expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
+
+        with it("should return a story after a nested sub-epic to the sub-epic its # count names"):
+            get_sim = self.reconstructed.epics[0].epics[0]
+            expect([story.name for story in get_sim.stories]).to(equal(["Select Sim", "Activate Sim"]))
+
+    with context("that labels the evidence under each outline story"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+
+Observed: `SimPicker`; "should list every sim". Inferred: the porting hint in `sim.py`.
+
+- Show Sim Price: the price shows beside each sim. Intended: no spec covers it yet.
+### (S) Customer --> Activate Sim
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should give a story each label written under it, once"):
+            select_sim = self.reconstructed.epics[0].epics[0].stories[0]
+            expect(select_sim.evidence).to(equal(["observed", "inferred", "intended"]))
+
+        with it("should give a story with no label under it no evidence"):
+            activate_sim = self.reconstructed.epics[0].epics[0].stories[1]
+            expect(activate_sim.evidence).to(equal([]))
+
+    # A label that says all there is to say ends its sentence there, with no evidence after it.
+    with context("that labels an outline story with a label ending its own sentence"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+
+Observed. The sim list shows every sim.
+### (S) Customer --> Activate Sim
+
+The activation is observed.
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should give the story that label"):
+            select_sim = self.reconstructed.epics[0].epics[0].stories[0]
+            expect(select_sim.evidence).to(equal(["observed"]))
+
+        with it("should not take the word inside a sentence for a label"):
+            activate_sim = self.reconstructed.epics[0].epics[0].stories[1]
+            expect(activate_sim.evidence).to(equal([]))
+
+    with context("that is rendered as an outline"):
+        with before.each:
+            source = self.markdown.parse("""(E) Onboard A Customer
+    (E) Get Sim
+        (S) Customer --> Select Sim
+        (E) Port Number
+            (S) Customer --> Enter Porting Number
+""")
+            self.text = self.markdown.render(source)
+            self.outline = [
+                line for line in self.text.splitlines() if "(E)" in line or "(S)" in line
+            ]
+
+        with it("should write every heading at column 0 with one more # per level"):
+            expect(self.outline).to(equal([
+                "# (E) Onboard A Customer",
+                "## (E) Get Sim",
+                "### (S) Customer --> Select Sim",
+                "### (E) Port Number",
+                "#### (S) Customer --> Enter Porting Number",
+            ]))
+
+        with it("should read its own output back into the same hierarchy"):
+            parsed = self.markdown.parse(self.text)
+            get_sim = parsed.epics[0].epics[0]
+            expect(get_sim.stories[0].name).to(equal("Select Sim"))
+            expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
+
+    with context("that has stories directly under an Epic with no sub-epic"):
+        with before.each:
+            self.document = """# (E) Onboard A Customer
+## (S) Customer --> Select Sim
+## (S) Customer --> Activate Sim
+## (E) Place Order
+### (S) My Paradise --> Create Product Order
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+            self.text = self.markdown.render(self.reconstructed)
+
+        with it("should keep those stories on the Epic instead of inventing a sub-epic"):
+            epic = self.reconstructed.epics[0]
+            expect([story.name for story in epic.stories]).to(equal(["Select Sim", "Activate Sim"]))
+            expect([sub.name for sub in epic.epics]).to(equal(["Place Order"]))
+
+        with it("should render each such story as ## (S) under # (E)"):
+            outline = [line for line in self.text.splitlines() if "(E)" in line or "(S)" in line]
+            expect(outline).to(equal(self.document.strip().splitlines()))
+
+        with it("should read its own output back into the same tree"):
+            parsed = self.markdown.parse(self.text)
+            epic = parsed.epics[0]
+            expect([story.name for story in epic.stories]).to(equal(["Select Sim", "Activate Sim"]))
+            expect([sub.name for sub in epic.epics]).to(equal(["Place Order"]))
+            expect([story.name for story in epic.epics[0].stories]).to(equal(["Create Product Order"]))
+
+    with context("that uses the old indented heading form"):
+        with it("should still load nested sub-epics and stories"):
+            parsed = self.markdown.parse("""# (E) Onboard A Customer
+    ## (E) Get Sim
+        ### (S) Customer --> Select Sim
+        ### (E) Port Number
+            #### (S) Customer --> Enter Porting Number
+""")
+            get_sim = parsed.epics[0].epics[0]
+            expect(get_sim.stories[0].name).to(equal("Select Sim"))
+            expect(get_sim.epics[0].stories[0].name).to(equal("Enter Porting Number"))
+
+    with context("that uses outline estimate lines"):
+        with before.each:
+            self.document = """# Story Map - Treasury
+
+(E) Move money
+    * approx 22-27 total stories
+    (E) Compose transfer
+        (S) Treasurer --> Draft transfer details
+        * approx 2-3 more stories (validation and entry)
+    (E) Track transfer
+        * approx 2-3 more stories (status views)
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should attach estimates to epics and sub-epics"):
+            epic = self.reconstructed.epics[0]
+            expect(epic.estimate).to(equal("approx 22-27 total stories"))
+            compose = epic.epics[0]
+            expect(compose.estimate).to(equal("approx 2-3 more stories (validation and entry)"))
+            track = epic.epics[1]
+            expect(track.estimate).to(equal("approx 2-3 more stories (status views)"))
+            expect(track.stories).to(have_len(0))
+
+        with it("should round-trip estimates when re-rendered as outline"):
+            text = self.markdown.render(self.reconstructed)
+            round_trip = self.markdown.parse(text)
+            expect(round_trip.epics[0].estimate).to(equal("approx 22-27 total stories"))
+            expect(round_trip.epics[0].epics[0].estimate).to(
+                equal("approx 2-3 more stories (validation and entry)")
+            )
+
+    with context("that uses heading-style stories and numbered acceptance criteria"):
+        with before.each:
+            self.document = """# Acceptance Criteria - Full Application
+
+## Authenticate
+### Sign In
+#### Submit Sign-In Credentials
+1. **WHEN** valid credentials are submitted
+2. **WHEN** unverified email signs in
+"""
+            self.reconstructed = self.markdown.parse(self.document)
+
+        with it("should parse deep headings as Story nodes and numbered lines as Scenarios"):
+            authenticate = self.reconstructed.epics[0]
+            sign_in = authenticate.epics[0]
+            expect(sign_in.stories).to(have_len(1))
+            story = sign_in.stories[0]
+            expect(story.name).to(equal("Submit Sign-In Credentials"))
+            expect(story.scenarios).to(have_len(2))
+
+    with context("that is not a valid Markdown story map"):
+        with context("the read"):
+            with it("should be rejected"):
+                bad_document = "this is not markdown\nno headings\njust prose"
+                expect(lambda: self.markdown.parse(bad_document)).to(
+                    raise_error(MarkdownParseError)
+                )
+
+
+with description("a scenario markdown file with realization fences"):
+    with it("should parse and render call graphs on When steps"):
+        text = """
+### Scenario: pays with card
+
+*Given* a cart with items
+*When* the customer checks out
+
+```realization
+cart.checkout()
+  -> paymentGateway.charge(amount)
+  <- receipt
+```
+
+*Then* the receipt is visible
+"""
+        scenarios = ScenarioFileReading(text, "pay/cart_story.test.md", MarkdownScenario).read()[0].scenarios
+        when = scenarios[0].steps_in(StepType.WHEN)[0]
+        expect(when.call_graph[1].text).to(equal("paymentGateway.charge(amount)"))
+        story = MarkdownStory("")
+        story.scenarios = scenarios
+        rendered = story.scenarios_text()
+        expect("```realization" in rendered).to(equal(True))
+        expect("paymentGateway.charge(amount)" in rendered).to(equal(True))
+
+
+_LINKED_MAP = """# (E) Onboard A Customer
+## (E) Get Sim
+### (S) Customer --> Select Sim
+### (S) Customer --> Activate Sim
+"""
+
+def _workspace(files: dict) -> Path:
+    import tempfile
+
+    root = Path(tempfile.mkdtemp())
+    for rel, text in files.items():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text, encoding="utf-8")
+    return root
+
+
+with description("a Markdown story map rendered in a workspace") as self:
+    with context("where one story has its own markdown file"):
+        with before.each:
+            self.root = _workspace({
+                "story-map.md": _LINKED_MAP,
+                "onboard/get-sim/select_sim_story.test.md": "## Story: Select Sim\n",
+            })
+            source = MarkdownStoryMap().parse(_LINKED_MAP)
+            self.text = MarkdownStoryMap().render(source, Written(folder=Path(self.root)))
+
+        with it("should link that story to its file"):
+            expect(
+                "\n### (S) Customer --> [Select Sim](onboard/get-sim/select_sim_story.test.md)\n" in self.text
+            ).to(be_true)
+
+        with it("should leave a story with no file as plain text"):
+            expect("\n### (S) Customer --> Activate Sim\n" in self.text).to(be_true)
+            expect("[Activate Sim]" in self.text).to(be_false)
+
+        with it("should read the linked story back by its name"):
+            parsed = MarkdownStoryMap().parse(self.text)
+            names = [story.name for story in parsed.epics[0].epics[0].stories]
+            expect(names).to(equal(["Select Sim", "Activate Sim"]))
+
+
+# Where a read is in the text belongs to the reading made for it, so the format that read a map holds none of it.
+_READ_PLACES = {"_file", "_raw_line", "_line_number", "_current_epic", "_sub_epic_stack", "_current_story", "_story_map", "_current_outline_story"}
+
+with description("a Markdown story map format that has read a map"):
+    with context("in heading notation"):
+        with it("should hold no place in the text it read"):
+            markdown = MarkdownStoryMap()
+            markdown.parse("# Place Order\n## Pay\n- Pay With Card\n", "map.md")
+            expect(sorted(name for name in vars(markdown) if name in _READ_PLACES)).to(equal([]))
+
+    with context("in outline notation"):
+        with it("should hold no place in the text it read"):
+            markdown = MarkdownStoryMap()
+            markdown.parse("# (E) Place Order\n## (S) Customer --> Pay With Card\n", "map.md")
+            expect(sorted(name for name in vars(markdown) if name in _READ_PLACES)).to(equal([]))
+
+
+_BACKGROUND_SCENARIOS = """## Story: Add Book To Cart
+
+### Background
+
+*Given* the Bookshop sells Tiny Tales
+
+### Scenario: Add a book already in the Cart
+
+*When* the Customer adds Tiny Tales again
+*Then* the Cart holds two copies
+
+### Scenario: Add a first book
+
+### Background
+
+*Given* the Cart is empty
+
+*When* the Customer adds Tiny Tales
+*Then* the Cart holds Tiny Tales
+"""
+
+_STORY_BACKGROUND_SCENARIOS = """## Story: Add Book To Cart
+
+### Story Background: stock
+
+*Given* the Bookshop holds two copies
+
+### Scenario: Add a first book
+
+*When* the Customer adds Tiny Tales
+*Then* the Cart holds Tiny Tales
+"""
+
+
+with description("a markdown scenarios file read from a file, whose backgrounds each sit under a heading") as self:
+    with before.each:
+        self.story = MarkdownStoryMap().parse(_BACKGROUND_SCENARIOS, "story_tests/add_book_to_cart_story.test.md").descendants.stories()[0]
+
+    with it("should read the background its scenarios share on its heading's line, not its first step's"):
+        expect(self.story.scenarios[0].backgrounds[0].source.start_line).to(equal(3))
+
+    with it("should read a scenario's own background on its heading's line"):
+        expect(self.story.scenarios[1].backgrounds[0].source.start_line).to(equal(14))
+
+    with it("should give the story that shared background on its heading's line"):
+        expect(self.story.backgrounds[0].source.start_line).to(equal(3))
+
+    with context("with a background of the story's own, under a Story Background heading"):
+        with before.each:
+            reading = ScenarioFileReading(_STORY_BACKGROUND_SCENARIOS, "story_tests/add_book_to_cart_story.test.md", MarkdownScenario)
+            reading.read()
+            self.section = next(section for section in reading.sections if section.story_backgrounds)
+
+        with it("should read the story's own background on its heading's line"):
+            expect(self.section.story_backgrounds[0].source.start_line).to(equal(3))

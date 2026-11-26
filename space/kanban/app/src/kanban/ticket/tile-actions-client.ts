@@ -67,12 +67,15 @@ export class TileActionsClient {
   }
 
   // A press chooses the chip's formats in the ticket's session, or leaves them out, and the bar shows the chips Python
-  // answers.
+  // answers once the board is read again: the commands the bar runs name the formats chosen, so a chip shows pressed only
+  // when a Run pressed then sends its formats.
   async toggleFormat(tile: Tile, chip: string): Promise<void> {
     const choice = tile.choices.find(each => each.label === chip)
     if (!choice) return
     const choices = await tile.ticket.chooseFormats(slugsOf(tile.fidelities), chip, !choice.is_chosen)
-    if (choices) this.save(tile, { choices })
+    if (!choices) return
+    await this.page.reader.refresh()
+    this.save(tile, { choices })
   }
 
   // A stage head's bar acts on the ticket's work in that stage, which Python answers taken together; a tile's bar acts
@@ -109,22 +112,21 @@ export class TileActionsClient {
     }
   }
 
-  // Python gives one command naming every fidelity the bar acts on, and the ticket's session, so a stage's work stays a
-  // single turn. The chips add the formats chosen in the session to an action that takes them.
+  // Python gives one command naming every fidelity the bar acts on, the ticket's session, and, for an action that takes
+  // them, the formats the chips chose in the session, so a stage's work stays a single turn.
   async run(tile: Tile): Promise<void> {
-    const command = this.commandOf(tile, tile.action)
-    // The stage says which of its actions take the formats chosen; every other one writes or reads files without one.
-    if (!tile.stage.actionsWithFormats.includes(tile.action)) return this.sendFor(tile, command)
-    const formats = chosenFormats(tile.choices)
-    await this.sendFor(tile, `${command} format=${formats.join(',')}`)
+    await this.sendFor(tile, this.commandOf(tile, tile.action))
   }
 
   validate(tile: Tile): Promise<void> {
     return this.sendFor(tile, this.commandOf(tile, 'validate'))
   }
 
+  // The command as the board shows it now: a chip pressed since the tile opened read the board again, and the command
+  // names the formats the press chose.
   private commandOf(tile: Tile, action: string): string {
-    return this.workOf(tile.ticket, tile)?.commands[action] ?? ''
+    const shown = this.page.board.tickets.find(ticket => ticket.address === tile.ticket.address) ?? tile.ticket
+    return this.workOf(shown, tile)?.commands[action] ?? ''
   }
 
   // The command goes to the tile's ticket's own chat.

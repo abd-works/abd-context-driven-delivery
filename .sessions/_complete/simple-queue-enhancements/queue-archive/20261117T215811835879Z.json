@@ -1,0 +1,33 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T21:58:11.835879+00:00",
+  "prompts": [
+    {
+      "id": "e59ccabe14ef",
+      "text": "Fix ticket close after the session split: merge the branch first, then move the record (background agent, on main)",
+      "steps": [
+        {
+          "text": "Failing spec first: close merges the branch, then moves the record",
+          "state": "done"
+        },
+        {
+          "text": "Rewrite the 'no session files on the branch' spec to the new rule",
+          "state": "done"
+        },
+        {
+          "text": "Fix close on main; unit tier 353/353; commit, push (4191da6b1)",
+          "state": "done"
+        },
+        {
+          "text": "Ticket close heavy spec rerun: 45/45 pass",
+          "state": "done"
+        },
+        {
+          "text": "Merge main into the branch; repin dev",
+          "state": "done"
+        }
+      ],
+      "is_done": true
+    }
+  ]
+}

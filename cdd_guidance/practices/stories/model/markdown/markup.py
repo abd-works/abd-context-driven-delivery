@@ -7,12 +7,16 @@ import re
 from typing import Dict, List, NamedTuple, Optional
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
-from cdd_guidance.practices.stories.model.story_model import Example, Step
+from cdd_guidance.practices.stories.model.story_map import Example, Step
 
 _BOLD_TERM = re.compile(r"\*\*([^*]+)\*\*")
 _ITALIC_VALUE = re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)")
+# An underlined term written as a link, ++[cart](domain-model.md#cart-…)++: the label is the term the step names.
+_LINKED_TERM = re.compile(r"\+\+\[([^\]\n]+)\]\([^)\n]*\)\+\+")
 _STEP_CONTINUATION = re.compile(r"^(And|But)\s+", re.IGNORECASE)
 TABLE_LINE = re.compile(r"^\s*\|(.+)\|\s*$")
+# A step line as markdown writes one: `*Given* a cart`.
+STEP_LINE = re.compile(r"^\s*\*(Given|When|Then|And|But)\*\s")
 
 
 def strip_backticks(text: str) -> str:
@@ -29,6 +33,15 @@ def strip_markup(text: str) -> str:
     while s.startswith("*") and s.endswith("*") and len(s) >= 2:
         s = strip_backticks(s[1:-1].strip())
     return strip_backticks(s)
+
+
+_TERM_MARKS = re.compile(r"\*\*|\+\+|`")
+
+
+def plain_words(text: str) -> str:
+    """A step's words as a reader says them: its links, bold terms, underlined terms, italic values and backticks
+    reduced to the words they mark, for a page that shows the step rather than the markdown it is written in."""
+    return _ITALIC_VALUE.sub(r"\1", _TERM_MARKS.sub("", unlink(text)))
 
 
 class ExampleRowLine(NamedTuple):
@@ -86,8 +99,10 @@ class MarkdownStep(Step):
     def read_from(self, line: str) -> None:
         """Keep line as the one this step was read from, with the keyword and text it says now, and take the concepts,
         values and actor its markup names: its bold terms are the concepts, the first its actor, and its italic values
-        the values."""
+        the values. The step's text keeps its words without their links, so the underlined terms the line links are
+        kept as its linked terms."""
         self.markdown_line = (self.keyword, self.text, line)
+        self.linked_terms = [term.strip() for term in _LINKED_TERM.findall(line)]
         actor = _BOLD_TERM.search(self.text)
         self.concepts = _BOLD_TERM.findall(self.text)
         self.values = [value.strip("`").strip() for value in _ITALIC_VALUE.findall(self.text) if value]
@@ -121,3 +136,22 @@ def step_lines(step: Step) -> List[str]:
     if getattr(step, "call_graph", None):
         lines.extend(["", "```realization", step.call_graph.block(), "```"])
     return lines
+
+
+# How the scenarios template ends a step line that another step line follows: two spaces, a markdown line break.
+_LINE_BREAK = "  "
+# How the scenarios template indents an And or But under the step it continues.
+_CONTINUATION_INDENT = "  "
+
+
+def step_block_lines(steps: List[Step]) -> List[str]:
+    """Steps as the scenarios template writes them: each step, the And and But lines chained onto it indented under
+    it, its realization fence after them, and every step line that another step line follows ending in a line break."""
+    lines: List[str] = []
+    for step in steps:
+        lines.append(step_line(step))
+        lines.extend(_CONTINUATION_INDENT + step_line(extra) for extra in step.ands)
+        if getattr(step, "call_graph", None):
+            lines.extend(["", "```realization", step.call_graph.block(), "```", ""])
+    return [line + _LINE_BREAK if STEP_LINE.match(line) and index + 1 < len(lines) and STEP_LINE.match(lines[index + 1]) else line for index, line in enumerate(lines)]
+

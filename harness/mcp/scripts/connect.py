@@ -44,12 +44,20 @@ def main() -> None:
     from harness.mcp.mcp_address import McpAddress
     from harness.process.claude_chat_process import ClaudeChatProcess
 
-    address = McpAddress()
+    address = lane_address(HOME)
     ensure_server(address)
     if START_FLAG in sys.argv[1:]:
         return
     process = ClaudeChatProcess.from_ancestors()
     print(json.dumps(answer(sys.argv[1:], address, process.pid if process is not None else None)))
+
+
+def lane_address(home: Path) -> McpAddress:
+    """The server the cdd home in home runs: an app started with the dev lane's home talks to the dev lane's server,
+    which serves the feature, whatever project it names."""
+    from harness.mcp.mcp_address import McpAddress
+
+    return McpAddress.of_home(home)
 
 
 def ensure_server(address: McpAddress) -> None:

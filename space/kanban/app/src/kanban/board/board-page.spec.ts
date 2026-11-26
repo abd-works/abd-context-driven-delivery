@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BoardData } from '@cdd/space/kanban/board'
 
 import { BoardPage } from './board-page'
-import { BoardPageView } from './board-page-view'
+import { BoardPageView, UnreadableBandView } from './board-page-view'
 
 // A cdd server that has not answered yet: every request the page sends stays pending, and each one is counted.
 function slowServer() {
@@ -88,6 +88,24 @@ describe('Refactor Kanban Board To Web Domain Access', () => {
 
     it("should show none of the last read's tickets", () => {
       expect(drawnWithCddDown()).not.toContain('Sign up')
+    })
+  })
+})
+
+// Display Board, "Show the other tickets when one ticket's session file does not read": board.show answers, in
+// unreadable, each session.json it could not read with what is wrong in it. That the other tickets show beside the
+// notice is the browser story test's (see-work-on-session-board.story.ui.spec.ts).
+describe('Display Board', () => {
+  describe("with one ticket's session file that does not read", () => {
+    const UNREADABLE = { file: '.sessions/broken/session.json', error: 'C:/shop/.sessions/broken/session.json is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))' }
+    const drawn = (): string => renderToString(createElement(UnreadableBandView, { files: [UNREADABLE] }))
+
+    it('should name the file it could not read', () => {
+      expect(drawn()).toContain('.sessions/broken/session.json was not read')
+    })
+
+    it('should say what is wrong in it', () => {
+      expect(drawn()).toContain('is not a readable JSON object (Expecting property name enclosed in double quotes: line 1 column 2 (char 1))')
     })
   })
 })

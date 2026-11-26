@@ -16,5 +16,155 @@
     "*": ["default", "drawio", "whiteboard"],
     "ux": ["default"],
     "ux.mockup": ["claude_design"]
+  },
+  "code_measures": {
+    "tools": {
+      "paths_through": {
+        "python": "lizard",
+        "typescript": "lizard",
+        "javascript": "lizard"
+      },
+      "readability_score": {
+        "python": "lizard",
+        "typescript": "lizard",
+        "javascript": "lizard"
+      },
+      "total_complexity": {
+        "python": "lizard",
+        "typescript": "lizard",
+        "javascript": "lizard"
+      },
+      "classes_depended_on": {
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
+      },
+      "methods_set_off": {
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
+      },
+      "unshared_method_groups": {
+        "python": "reader",
+        "typescript": "not measured",
+        "javascript": "not measured"
+      },
+      "modules_importing": {
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
+      },
+      "longest_file_lines": {
+        "python": "lizard",
+        "typescript": "lizard",
+        "javascript": "lizard"
+      },
+      "least_maintainability": {
+        "python": "radon",
+        "typescript": "not measured",
+        "javascript": "not measured"
+      },
+      "average_class_complexity": {
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
+      },
+      "copied_code_blocks": {
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
+      },
+      "abstractness": {
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
+      },
+      "instability": {
+        "python": "reader",
+        "typescript": "reader",
+        "javascript": "reader"
+      }
+    },
+    "limits": {
+      "paths_through": 10,
+      "readability_score": 15,
+      "code_lines": 50,
+      "parameters_taken": 3,
+      "total_complexity": 100,
+      "method_count": 30,
+      "classes_depended_on": 14,
+      "methods_set_off": 50,
+      "unshared_method_groups": 1,
+      "import_loops": 0,
+      "modules_importing": 40,
+      "longest_file_lines": 800,
+      "least_maintainability": 20,
+      "average_class_complexity": 15,
+      "copied_code_blocks": 0
+    }
+  },
+  "code_reach": {
+    "publishing_decorators": [
+      "mcp",
+      "agent_tool",
+      "agent_toolset: for_call, session_for, instructions_type, is_served_on_mcp, domain_slug, module_dir",
+      "agent_instructions",
+      "skill",
+      "command",
+      "rules",
+      "hook",
+      "data_field",
+      "tool_subject",
+      "markdown"
+    ],
+    "registries": [
+      "PRACTICE_CATALOGUE.register",
+      "ACTION_CATALOGUE.register",
+      "REGISTERED_PATTERNS.register",
+      "annotation_kinds.register"
+    ],
+    "scanned_bases": [
+      "PracticeGraphRule",
+      "PracticeGuidance",
+      "GuidanceAction",
+      "GraphOverlay",
+      "Component: render, componentDidMount, componentDidUpdate, componentWillUnmount, componentDidCatch, getDerivedStateFromError, getDerivedStateFromProps, shouldComponentUpdate, getSnapshotBeforeUpdate",
+      "DocumentationFormatter: example_passed, example_failed, example_pending, example_group_started, example_group_finished, summary",
+      "ProgressFormatter: example_passed, example_failed, example_pending, summary"
+    ],
+    "entry_points": [
+      "*.py:main",
+      "*/extension.js:activate",
+      "*/extension.js:deactivate"
+    ],
+    "naming_conventions": [],
+    "generated_adapters": [],
+    "instruction_files": [
+      "cdd_guidance/practices/*/*.md",
+      "cdd_guidance/practices/*/model/*/*.md",
+      "cdd_guidance/actions/*/*.md",
+      "cdd_guidance/patterns/*/*.md",
+      "cdd_guidance/agents/*.md",
+      "cdd_guidance/rules/*.md",
+      "harness/*/*.md"
+    ]
+  },
+  "test_code": {
+    "files": [
+      "cdd_guidance/practices/template_checks.py",
+      "cdd_guidance/practices/output_folder.py",
+      "space/repo/built_once.py",
+      "cdd_guidance/practices/agent_bdd/__init__.py",
+      "cdd_guidance/practices/agent_bdd/agent.py",
+      "cdd_guidance/practices/agent_bdd/agent_bdd_common.py",
+      "cdd_guidance/practices/agent_bdd/agent_block.py",
+      "cdd_guidance/practices/agent_bdd/agent_chat_bdd.py",
+      "cdd_guidance/practices/agent_bdd/agent_cli_bdd.py",
+      "cdd_guidance/practices/agent_bdd/conf.py",
+      "cdd_guidance/practices/agent_bdd/conftest.py",
+      "cdd_guidance/practices/agent_bdd/cursor_cli.py",
+      "cdd_guidance/practices/agent_bdd/spec_helpers.py",
+      "cdd_guidance/practices/agent_bdd/yaml_fence.py"
+    ]
   }
 }

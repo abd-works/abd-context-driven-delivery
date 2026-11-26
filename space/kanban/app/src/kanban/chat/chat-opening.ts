@@ -6,9 +6,6 @@ import type { BoardStore } from '../shared/board-store'
 // A ticket's new chat is not opened again for this long, while the person confirms it and it checks in.
 const STARTING_CHAT_MILLISECONDS = 120_000
 
-// The prompt a ticket's new chat opens with. The Claude app gives a new chat no title, so the prompt asks for the ticket's.
-const newChatPrompt = (ticket: string): string => `Title this session "${ticket}". You are the chat of the session board's ticket ${ticket}; work on that ticket. First call sessions.switch with name ${ticket}, so every tool works on its session, then read the session's latest handoff.`
-
 // The tickets whose chats are on their way: opening a ticket's worktree and then its chat in the Claude app takes a
 // while, so the click shows at once that the chat is coming, and until it checks in, clicking the ticket again opens no
 // second one.
@@ -31,15 +28,16 @@ export class ChatOpening {
     return asked !== undefined && Date.now() - asked < STARTING_CHAT_MILLISECONDS
   }
 
-  // A ticket's new chat opens in the Claude app on the ticket's worktree, through Python's chats.open; the app asks the
-  // person to confirm the folder and send. With no worktree there is nothing to open it on, and it is no longer coming.
-  async startFor(ticket: string, worktree: string): Promise<void> {
+  // A ticket's new chat opens in the Claude app on the ticket's worktree with the prompt the ticket wrote
+  // (TicketPrompts.new_chat), through Python's chats.open; the app asks the person to confirm the folder and send. With
+  // no worktree there is nothing to open it on, and it is no longer coming.
+  async startFor(ticket: string, worktree: string, prompt: string): Promise<void> {
     if (!worktree) {
       const { [ticket]: _given, ...starting } = this.store.state.startingChats
       this.store.change({ startingChats: starting })
       return
     }
-    if (await new ChatsClientGenerated(this.api).open(worktree, newChatPrompt(ticket))) this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
+    if (await new ChatsClientGenerated(this.api).open(worktree, prompt)) this.store.toast(`Confirm the folder and send in the Claude app to start the chat of ${ticket}`)
   }
 }
 

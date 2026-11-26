@@ -1,7 +1,7 @@
 """BDD spec for Stories generator - fidelity defaults, transform, contexts."""
 
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(_REPO_ROOT) not in sys.path:
@@ -15,7 +15,7 @@ from expects import be, be_true, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.stories.stories import Stories
-from harness.guidance.practice_formats import RenderRequest
+from harness.guidance.practice_formats import RenderRequest, Rendered
 from harness.markdown.format import Format
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.agent_tools.agent_tools import AgentInstructions
@@ -46,6 +46,29 @@ with description("Stories"):
         with it("should select story_map"):
             expect(self.stories.fidelities.current.name).to(equal("story_map"))
 
+    # A whiteboard is a format the story map is drawn in and read back from, so the file an edit opens may be one.
+    with context("with a story map saved as a whiteboard file that is opened for an edit"):
+        with before.each:
+            import tempfile
+
+            from cdd_guidance.practices.stories.model.story_map import Epic, StoryMap
+            from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryMap
+
+            self.root = Path(tempfile.mkdtemp(prefix="cdd-story-whiteboard-"))
+            story_map = StoryMap()
+            story_map.epics.append(Epic("Move Work On Board", 1))
+            board = self.root / "story-map.whiteboard"
+            board.write_text(WhiteboardStoryMap().render(story_map), encoding="utf-8")
+            self.opened = Stories().story_files(self.root).opened(board)
+
+        with after.each:
+            import shutil
+
+            shutil.rmtree(self.root, ignore_errors=True)
+
+        with it("should hold the epics the whiteboard draws"):
+            expect([epic.name for epic in self.opened.epics]).to(equal(["Move Work On Board"]))
+
     with context("that is constructed with fidelity story_map"):
         with before.each:
             self.stories = Stories(fidelity="story_map")
@@ -75,13 +98,13 @@ with description("Stories"):
                 self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
                 (self.root / "story-map.md").write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
                 names = {"{epic}": "move-work-on-board", "{sub-epic}": "display-board", "{story}": "open-board", "{story_snake}": "open_board"}
-                self.filled = self.stories.fidelities.current.outputs["python"]
+                self.filled = self.stories.fidelities.current.outputs["python"][0]
                 for name, value in names.items():
                     self.filled = self.filled.replace(name, value)
                 story_test = self.root / self.filled
                 story_test.parent.mkdir(parents=True)
                 story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
-                self.model = Stories().read_files([story_test], self.root)
+                self.model = Stories().story_files(self.root).story_map_of([story_test])
 
             with after.each:
                 import shutil
@@ -107,7 +130,7 @@ with description("Stories"):
                 story_test = self.root / "move-work-on-board" / "display-board" / "open-board" / "open_board_story.test.py"
                 story_test.parent.mkdir(parents=True)
                 story_test.write_text('with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n', encoding="utf-8")
-                self.model = Stories().read_files([story_test], self.root)
+                self.model = Stories().story_files(self.root).story_map_of([story_test])
 
             with after.each:
                 import shutil
@@ -116,6 +139,46 @@ with description("Stories"):
 
             with it("should give its scenarios to the Story of the same name on the map in the root's .context"):
                 expect([len(story.scenarios) for story in self.model.descendants.stories()]).to(equal([1]))
+
+        # A story test is validated alone, without its map among the paths. Its story's place is the one the map gives
+        # it, so a rule that counts a sub-epic's stories counts the map's, not the one story whose test was named.
+        with context("with a story test under story_tests read without the story map it names, whose sub-epic holds two stories"):
+            with before.each:
+                import tempfile
+
+                self.root = Path(tempfile.mkdtemp(prefix="cdd-story-layout-"))
+                story_map = self.root / ".context" / "story-map.md"
+                story_map.parent.mkdir(parents=True)
+                story_map.write_text(
+                    "# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n### (S) Person --> Close Board\n\n"
+                    "# (E) Fulfil Order\n\n### (S) Clerk --> Pack Order\n### (S) Clerk --> Ship Order\n",
+                    encoding="utf-8",
+                )
+                story_test = self.root / "story_tests" / "move-work-on-board" / "display-board" / "open-board" / "open_board_story.test.py"
+                story_test.parent.mkdir(parents=True)
+                story_test.write_text(
+                    "# Map: ../../../../.context/story-map.md#s-person----open-board\n"
+                    'with story("Open Board"):\n    with scenario("Open it"):\n        with given("a board"):\n            pass\n',
+                    encoding="utf-8",
+                )
+                flat_test = self.root / "story_tests" / "fulfil-order" / "pack-order" / "pack_order_story.test.py"
+                flat_test.parent.mkdir(parents=True)
+                flat_test.write_text('with story("Pack Order"):\n    with scenario("Pack it"):\n        with given("an order"):\n            pass\n', encoding="utf-8")
+                self.model = Stories().story_files(self.root).story_map_of([story_test, flat_test])
+
+            with after.each:
+                import shutil
+
+                shutil.rmtree(self.root, ignore_errors=True)
+
+            with it("should hold the sub-epic with both stories the map gives it"):
+                expect([story.name for story in self.model.epics[0].epics[0].stories]).to(equal(["Open Board", "Close Board"]))
+
+            with it("should hold a flat epic with no sub-epic of its own name"):
+                expect([sub.name for sub in self.model.epics[1].epics]).to(equal([]))
+
+            with it("should give the story test's scenarios to the map's Story"):
+                expect([scenario.name for scenario in self.model.epics[0].epics[0].stories[0].scenarios]).to(equal(["Open it"]))
 
         # The MCP host serves every project from its own folder, so the paths a call names are read from the project
         # of the session the practice works in, and each node names its file from there.
@@ -131,7 +194,7 @@ with description("Stories"):
                 story_map.parent.mkdir(parents=True)
                 story_map.write_text("# (E) Move Work On Board\n\n## (E) Display Board\n\n### (S) Person --> Open Board\n", encoding="utf-8")
                 stories = Stories(fidelity="scenarios")
-                stories.work_in(Session(Sessions(self.root)).practice("stories"))
+                stories.work_in(Sessions(self.root).named("main").practice("stories"))
                 self.model = stories.formats.read("tests", RenderRequest(Format("markdown"), source=Format("python")))
 
             with after.all:
@@ -157,9 +220,9 @@ with description("Stories"):
     # A module imported under two names loads twice, and an object made by one copy fails isinstance against the other.
     with context("that renders through a format adapter"):
         with it("should use the same adapter class the story model package defines"):
-            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 
-            expect(Stories().formats.adapter_class("markdown")).to(equal(MarkdownStoryModel))
+            expect(Stories().formats.adapter_class("markdown")).to(equal(MarkdownStoryMap))
 
     with context("that is constructed with fidelity acceptance_tests"):
         with it("should default format to python"):
@@ -250,15 +313,14 @@ with description("Stories"):
         with it("should include the stories schema in the practice skill"):
             import tempfile
 
-            from harness.installation.files import FileChannel, FileInstallation
+            from harness.installation.files import SkillInstallation
+            from harness.installation.repository_toolsets import RepositoryToolsets
             from harness.installation.install_target import InstallTarget
 
             stories = Stories()
             tool = stories.tools["instructions"]
             with tempfile.TemporaryDirectory() as tmp:
-                FileInstallation(
-                    InstallTarget(IdeLayout("Cursor"), tmp), FileChannel("skill", True), repo=_REPO_ROOT
-                ).write(tool)
+                SkillInstallation.into(InstallTarget(IdeLayout("Cursor"), tmp), RepositoryToolsets(_REPO_ROOT)).write(tool)
                 text = next(Path(tmp).rglob("SKILL.md")).read_text(encoding="utf-8")
             expect(text).to(contain("storyNode:"))
             expect(text).to(contain("conforms to this schema"))
@@ -273,15 +335,15 @@ with description("Stories"):
             )
 
         with it("should return a dict"):
-            expect(isinstance(self.result, dict)).to(be_true)
+            expect(isinstance(self.result, Rendered)).to(be_true)
 
         with it("should set format to python"):
-            expect(self.result["format"]).to(equal("python"))
+            expect(self.result.format).to(equal("python"))
 
         with it("should set content to a dict of path->file text"):
-            expect(isinstance(self.result["content"], dict)).to(be_true)
-            expect(len(self.result["content"]) > 0).to(be_true)
-            for path, text in self.result["content"].items():
+            expect(isinstance(self.result.content, dict)).to(be_true)
+            expect(len(self.result.content) > 0).to(be_true)
+            for path, text in self.result.content.items():
                 expect(isinstance(path, str)).to(be_true)
                 expect(isinstance(text, str)).to(be_true)
 
@@ -293,7 +355,7 @@ with description("Stories"):
             from space.session import Session, Sessions
 
             self.stories = Stories(fidelity="scenarios")
-            self.stories.work_in(Session(Sessions(self.tempdir.name)).practice("stories"))
+            self.stories.work_in(Sessions(self.tempdir.name).named("main").practice("stories"))
             self.result = self.stories.render(
                 format="typescript",
                 content=_SAMPLE_MARKDOWN,
@@ -303,10 +365,10 @@ with description("Stories"):
         with after.each:
             self.tempdir.cleanup()
 
-        with it("should default code output under tests/"):
-            paths = self.result["content"]
-            expect(any(p.startswith("tests/") for p in paths)).to(be_true)
-            expect("tests/story-test.ts" in paths).to(be_true)
+        with it("should write code under the project's story_tests, where the fidelity declares it"):
+            paths = self.result.content
+            expect(all(p.startswith("story_tests/") for p in paths)).to(be_true)
+            expect("story_tests/story-test.ts" in paths).to(be_true)
 
     with context("whose transform tool writes typescript under tests"):
         with before.each:
@@ -317,10 +379,10 @@ with description("Stories"):
                 source="markdown",
             )
 
-        with it("should emit files under tests/"):
-            paths = self.result["content"]
-            expect(any(p.startswith("tests/") for p in paths)).to(be_true)
-            expect("tests/story-test.ts" in paths).to(be_true)
+        with it("should emit files under story_tests/"):
+            paths = self.result.content
+            expect(all(p.startswith("story_tests/") for p in paths)).to(be_true)
+            expect("story_tests/story-test.ts" in paths).to(be_true)
 
     with context("whose contexts section is expanded at story_map"):
         with before.each:
@@ -540,3 +602,119 @@ with description("a Python story test file"):
             tree = loader.StoryNodeTransformer().visit(ast.parse(source))
             ast.fix_missing_locations(tree)
             expect(compile(tree, "get_sim_story.test.py", "exec").co_filename).to(equal("get_sim_story.test.py"))
+
+
+def _declaring(path: str) -> list:
+    """The Stories fidelities that declare the file at path, named from the project's root, as one of their own."""
+    return [name for name, fidelity in Stories().fidelities.entries.items() if fidelity.declared.includes(path)]
+
+
+# A file list and the graph tree show the files a fidelity declares, so a file no fidelity declares is shown nowhere.
+with description("a file Stories writes under story_tests"):
+    with context("that is the story test of a story directly under an epic, in Python"):
+        with it("should be a file of the scenarios and the acceptance tests fidelities"):
+            expect(_declaring("story_tests/fulfil-order/pack-order/pack_order_story.test.py")).to(equal(["scenarios", "acceptance_tests"]))
+
+    with context("that is the story test of a story directly under an epic, in TypeScript"):
+        with it("should be a file of the scenarios and the acceptance tests fidelities"):
+            expect(_declaring("story_tests/browse-books/search-books/search_books_story.test.ts")).to(equal(["scenarios", "acceptance_tests"]))
+
+    with context("that is the shared story file of an epic that holds its stories directly"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/fulfil-order/fulfil-order.story.shared.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is the domain tier of an epic that holds its stories directly"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/fulfil-order/fulfil-order.story.domain.spec.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is the server tier of an epic that holds its stories directly"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/fulfil-order/fulfil-order.story.server.spec.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is a Python examples file in an epic's examples folder"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/fulfil-order/examples/order_examples.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is a TypeScript examples file in a sub-epic's examples folder"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/check-out/confirm-order/examples/order.examples.ts")).to(equal(["acceptance_tests"]))
+
+    with context("that is the Python step library the story tests import"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("story_tests/story_test.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is a Python examples file beside the code it builds, where Python can import it"):
+        with it("should be a file of the acceptance tests fidelity"):
+            expect(_declaring("src/bookshop/order_examples.py")).to(equal(["acceptance_tests"]))
+
+    with context("that is the TypeScript step library the story tests import"):
+        with it("should be a file of the scenarios and the acceptance tests fidelities, which both seed a new tree with it"):
+            expect(_declaring("story_tests/story-test.ts")).to(equal(["scenarios", "acceptance_tests"]))
+
+    with context("that is the JavaScript step library the story tests import"):
+        with it("should be a file of the scenarios and the acceptance tests fidelities"):
+            expect(_declaring("story_tests/story-test.js")).to(equal(["scenarios", "acceptance_tests"]))
+
+    with context("that is production code beside the story tests"):
+        with it("should be no Stories fidelity's file"):
+            expect(_declaring("src/bookshop/order.py")).to(equal([]))
+
+
+# A step's linked domain term is an edge, names, from the step to the class the link names (the person's answer of
+# 2026-11-20). The schema says which edges a type has, so validate takes an edge it declares as the type's own.
+with description("the Stories schema"):
+    with before.each:
+        schema = (Path(__file__).resolve().parent / "model" / "schema.yaml").read_text(encoding="utf-8")
+        self.step = schema.split("\nstep:\n", 1)[1].split("\n\n", 1)[0].splitlines()
+
+    with it("should give a step the classes its linked domain terms name, which a step with no link lacks"):
+        expect(self.step).to(contain("  names?: [class]"))
+
+
+with description("the files of its folders Stories reads"):
+    with context("at the story map"):
+        with before.each:
+            self.reads = Stories().reads_file_at("story_map")
+
+        with it("should read a story map example"):
+            expect(self.reads("examples", Path("manage-customer-orders/md/story-map.md"))).to(be_true)
+
+        with it("should leave out a scenario example, which is a later fidelity's"):
+            expect(self.reads("examples", Path("manage-customer-orders/md/scenario-inline.md"))).to(equal(False))
+
+        with it("should leave out another markdown file"):
+            expect(self.reads("examples", Path("manage-customer-orders/md/notes.md"))).to(equal(False))
+
+    with context("at no fidelity"):
+        with it("should leave out a whole-map example"):
+            expect(Stories().reads_file_at(None)("examples", Path("telco-website/examples.md"))).to(equal(False))
+
+    with context("at the scenarios"):
+        with it("should read a scenario example"):
+            reads = Stories().reads_file_at("scenarios")
+            expect(reads("examples", Path("manage-customer-orders/md/scenario-inline.md"))).to(be_true)
+
+
+with description("where Stories places a declared path under a fidelity's root"):
+    with before.each:
+        self.stories = Stories()
+
+    with context("that is a story test, under a root inside story_tests"):
+        with it("should land below the folders the root already names"):
+            placed = self.stories.placed_under(PurePosixPath("story_tests/{epic}/{sub-epic}/x.py"), Path("story_tests/billing"))
+            expect(placed).to(equal(Path("story_tests/billing/{sub-epic}/x.py")))
+
+        with context("that names a folder deeper than the path goes"):
+            with it("should land nowhere"):
+                placed = self.stories.placed_under(PurePosixPath("story_tests/{epic}"), Path("story_tests/billing/invoices"))
+                expect(placed).to(equal(None))
+
+    with context("that is a story test, under a root inside .context"):
+        with it("should land in the story_tests beside that .context"):
+            placed = self.stories.placed_under(PurePosixPath("story_tests/{epic}/x.py"), Path("harness/.context/stories"))
+            expect(placed).to(equal(Path("harness/story_tests/{epic}/x.py")))
+
+    with context("that is a .context document, under a root inside .context"):
+        with it("should land in that root itself"):
+            placed = self.stories.placed_under(PurePosixPath(".context/story-map.md"), Path("harness/.context/stories"))
+            expect(placed).to(equal(Path("harness/.context/stories/story-map.md")))

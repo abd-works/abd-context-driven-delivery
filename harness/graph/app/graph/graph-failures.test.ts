@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { CddApi } from '@cdd/cdd-shared';
+import { chatOfPage, type CddApi } from '@cdd/cdd-shared';
 
-import { chatOfPage, GraphFailures, TOAST_MILLISECONDS } from './graph-failures';
+import { GraphFailures, TOAST_MILLISECONDS } from './graph-failures';
 
 // The Graph app's server as the page reaches it: each post is kept in order; a chat send can be made to fail.
 class FakeGraphServer implements CddApi {

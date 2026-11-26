@@ -1,0 +1,216 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T04:45:13.566132+00:00",
+  "prompts": [
+    {
+      "id": "69fd28ef8a97",
+      "text": "Clean Engineering review of the whole codebase: fix violations and approve design proposals",
+      "steps": [
+        {
+          "text": "TypeScript checks, heavy and e2e tiers, fixes",
+          "state": "done"
+        },
+        {
+          "text": "Reinstall for renamed and moved tools",
+          "state": "done"
+        },
+        {
+          "text": "Proposal 22 third pass: code facts only on code classes",
+          "state": "done"
+        },
+        {
+          "text": "Regenerate model documents and diagrams",
+          "state": "done"
+        },
+        {
+          "text": "Validate again and compare with 388 hits",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] hello",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] answer qyuewstiobn]",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] answer the fucking question",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] agreed  fix both -= e2e after so its fine proceed all",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] he third pass of 22: it waits on your answer. Should a node read from markdown answer a default for a source fact it never loaded, or answer that it has no such fact?explain",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] 2.  markdown shouold simpy mnot have these facts",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] progress?",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "048b9364b4e4",
+      "text": "Design proposals, practices lane: 1, 3 (a-e), 9, 22, 21, 12",
+      "is_done": true,
+      "robot": "practices"
+    },
+    {
+      "id": "e7304bfaa129",
+      "text": "Design proposals, framework lane: 16, 17, 18",
+      "is_done": true,
+      "robot": "framework"
+    },
+    {
+      "id": "b2145feb12e9",
+      "text": "Design proposals, session and board lane: 5, 6, 2, 7, 13, 24, 14, 15, 20",
+      "is_done": true,
+      "robot": "session-board"
+    },
+    {
+      "id": "3d24651935c2",
+      "text": "Design proposals still to do: 8 (c)'s node type tables (own pass, compare saved graph.json before and after) and 21's NameFacts (blocked by the guardrails). Done already: 20, 23 with 4 (b)'s TypeScript side, 22's third pass.",
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "bd4b2d1b1ac9",
+      "text": "Design proposal 25, approved in full: one copy_of per story node, and StoryModel renamed StoryMap with story-model.* tools renamed story-map.*",
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "dcf0a5af13fc",
+      "text": "Validate again and explain the jump from 503 findings to 2,733; repin the dev lane; render repo-model.whiteboard; repo-model2.drawio has no markdown source. Done already: heavy and e2e tiers, ooad-model.drawio and repo-model.drawio.",
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "768f4691d3c2",
+      "text": "Recover the BDD observation links 3 (f) lost: teach the call resolver chains of three or more parts on untyped fixtures, compare the whole graph's invokes edges again",
+      "is_done": true,
+      "robot": "Bolt"
+    },
+    {
+      "id": "b6b34afea45a",
+      "text": "Make the unit examples over 100 ms fast: session_spec turned-off practice, render_spec save beside, session_log_spec call naming a folder",
+      "is_done": true,
+      "robot": "Gizmo"
+    },
+    {
+      "id": "2df3e5e00df1",
+      "text": "Close the three old fix-e2e sessions (fix-e2e-18cd597ba, fix-e2e-42d8bf7d5, fix-e2e-a6df2568c): ticket.close each, which removes its worktree under C:\\dev\\abd-cdd-fix-e2e-* and its branch, local and remote. The person confirmed on 2026-11-23 (handoff 2026-11-18, Outstanding 4).",
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "f1a94ce031d5",
+      "text": "Record the five corrections of the 2026-11-18 main session in .sessions/_backlog/corrections.md, as a session block: the-chat-that-ran-a-tier-fixes-it, release-notes-hold-only-version-merges-commits, run-only-new-or-failing-tests-when-asked, answer-what-is-the-failure-in-a-few-words, when-two-chats-contend-the-main-chat-does-the-work-itself (text in .sessions/main/handoff-20261118T173207.md, Key Learnings).",
+      "is_done": true,
+      "robot": "Pixel"
+    },
+    {
+      "id": "e7c48d4eaf9c",
+      "text": "On the person's word only: put the test-runner fix d7b2ce0a2 (a tier runs in a detached worktree at the commit it records; launcher and runner are one run) on main, then repin the stable lane from the main checkout after messaging the sessions that use it.",
+      "is_done": true,
+      "robot": "Widget"
+    },
+    {
+      "id": "ba520b6ac4e3",
+      "text": "After the test-runner fix is on main: run the heavy tier once on main, alone, and report its result (handoff 2026-11-18, Outstanding 3).",
+      "is_done": true,
+      "robot": "Widget"
+    },
+    {
+      "id": "7cd13f1d5664",
+      "text": "Analyze session.err: which exceptions are swallowed, and which raise the chat UI's fix or submit-defect button",
+      "is_done": true,
+      "robot": "Cog"
+    },
+    {
+      "id": "3acf68040445",
+      "text": "Remove the story Sync Chat Bar With Board Selection from the story map (.context/story-map.md, its story test file under story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/, and the drawio/whiteboard renders). The person asked for it to be removed on 2026-11-23; the thin slice no longer lists it.",
+      "is_done": true,
+      "robot": "Zap"
+    },
+    {
+      "id": "799e8b57a686",
+      "text": "Fix Keep Chosen Formats Across Actions In A Fidelity: format picks are already saved on the session (format-choices-client.ts, space/session/practices/guidance_selection.py:255-285), but only generate (cdd_guidance/actions/generate/generate.py:28) and render (cdd_guidance/actions/render/render.py:43) take formats (TAKES_FORMATS in harness/guidance/action_catalogue.py). Make sketch, iterate, document and fix take the formats too, so each action writes the same picked formats. Mark it built in .context/story-map.md when done.",
+      "is_done": true,
+      "robot": "Robot 12"
+    },
+    {
+      "id": "550c4fa1bbcf",
+      "text": "Finish Check Graph Rules When An Artifact Changes: today the Files app checks one open file with Rules on (space/session/session_graph.py:150-157, SessionGraph.alone). Missing: when an artifact in a session is edited, the graph rules run on it with no explicit validate (the postToolUse/afterFileEdit hooks in harness/hooks/hooks.py run nothing graph-related), and the chat bar's violation count updates from that. Mark it built in .context/story-map.md when done.",
+      "is_done": true,
+      "robot": "Robot 13"
+    },
+    {
+      "id": "297ab9a25433",
+      "text": "Fix and finish Fix Graph Violations From Files App: today only the file view has a per-violation Correct on a broken rule's banner, covering only the first broken place (harness/files_app/app/files/file-comments-actions.ts:37-40, file-source-view.tsx:153, source-of-file.ts:105-109, harness/graph/violation_correction.py). Make it Fix this one on every broken place, add Fix rule and Fix all, and offer them in the Files app's graph view as well as the file view, each sending the fix to the chat that opened the page. Mark it built in .context/story-map.md when done.",
+      "is_done": true,
+      "robot": "Robot 14"
+    },
+    {
+      "id": "439eacbb4183",
+      "text": "Implement Link Markdown Steps To Code Through Realizations (.sessions/_backlog/link-markdown-steps-to-code-through-realizations.md on main; copy it to this branch's backlog if missing). The person's direction, 2026-11-23: a scenario's realization links markdown to markdown, just as a code step links to code. Each operation a realization's call graph names is matched to that operation in the accompanying markdown domain model (DDD model, domain-model.md) or class model (Clean Engineering model markdown), and the markdown step gets the same invokes / invokedBy edges to those model operations that a story test's step gets to code, matched through the step's domain-term links (++Ticket++ -> domain-model.md#ticket). A renamed operation or a step with no realization leaves the step unlinked, never wrongly linked. Then let code-steps-invoke-code (or a sibling rule) ask the same of markdown Whens that have a realization, so a When whose realization names no model operation is reported. Today the scenario file parser only reads the realization fence (cdd_guidance/practices/stories/model/markdown/scenario_file.py, scenario_parts.py) and nothing records the step's operations. Name the flow per boundary first (TDD supplement), test on the graph, add the story to the story map and thin slice on main, and move the backlog item to .sessions/_complete on main when done.",
+      "is_done": true,
+      "robot": "Robot 15"
+    },
+    {
+      "id": "5e89fe672e3b",
+      "text": "Sketches appear in the Files viewer: after the sketch action writes its sketch file (for example .context/<name>-sketch.md), the Files app opened from the chat bar lists and opens it like any other session file, without the person asking for it. Seen in the Nov 18 demo (\"bug 1\"): the Files viewer opened without the sketch. Backlog item: .sessions/_backlog/nov-18-demo-fixes/sketch-not-shown-in-the-files-viewer-after-it-is-written.md on main; delete it on main when fixed.",
+      "is_done": true,
+      "robot": "Robot 16"
+    },
+    {
+      "id": "a28a7dbec514",
+      "text": "Backlog tickets need a Delete button that works: a selected Backlog card on the board offers Delete, which removes the item (its markdown file, or its folder for a parent, under .sessions/_backlog/) after one confirmation and redraws the Backlog without it. The person asked on 2026-11-23 after having to delete share-read-only-projects-in-the-board-tools-spec by hand. Check what Delete does today on a Backlog card (ticket.delete may refuse a backlog item) and make it work for backlog items as well as tickets; add the scenario to the story map's ticket maintenance stories.",
+      "steps": [
+        {
+          "text": "Delete on Backlog cards",
+          "state": "done"
+        },
+        {
+          "text": "[interruption] A backlog ticket's text is shown in the Files viewer, just as it is when the ticket is in progress",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Robot 17"
+    },
+    {
+      "id": "afba1fa28a5f",
+      "text": "Render a thin slice drawing properly: render with guidance stories-story-map, format drawio, paths .context/thin-slice.md (1) saves to .context/story-map.drawio, overwriting the story map drawing, instead of .context/thin-slice.drawio; and (2) draws thin-slice.md alone, so every story lands in one row with empty epic bars (thin-slice.md lists only story names per increment). Seen on main on 2026-11-23; both drawings were put back from git. A thin slice render must save as thin-slice.drawio beside thin-slice.md, draw the story map's epics, sub-epics and stories with the thin slice's increments as lanes (as the existing thin-slice.drawio does), and keep that drawing's layout. Add a render spec for it, then redraw .context/thin-slice.drawio on main from the current thin-slice.md (16 increments) and open it in the draw.io viewer to check it before committing.",
+      "is_done": true,
+      "robot": "Zap"
+    },
+    {
+      "id": "a351fb6ec293",
+      "text": "Consolidate the Clean Engineering review into this session's files: everything is all over the place (the person, 2026-11-23). .context/model/repo-review/ (README with a progress table last updated 2026-11-07, round5-round9 per-area reviews and reports, code-metrics-trend.md, remaining-work-plan.md, concern_counts.py, measure_revision.py, metrics_gate.py, the per-area harness-core/harness-upper/space-tools/actions-patterns/practices files) is session work, not durable context, so move it under .sessions/release-1-2-fixes/ and integrate it with what is already there: validation-reports/, violation-history.jsonl, design-proposals.md, release-1-2-fixes-report.md, exploratory-testing/analysis/code-metrics.md, the dump scripts and the handoffs. One folder for the review (for example .sessions/release-1-2-fixes/clean-engineering-review/) with one index that says, in date order, each round, what it found, what was fixed and what is still open, and points at the latest validation report as the current state; drop or merge duplicates rather than keeping two copies of a finding. Keep in .context/model/ only what stays true across sessions (repo-model.md, repo-runtime.md, repo-model.drawio, repo-model-disconnected.md if still used), and fix every link that pointed at .context/model/repo-review/ (handoffs, the session report, the code-metrics analysis, the _backlog and _complete notes). Commit and push the whole worktree when done and say where the index is.",
+      "is_done": true,
+      "robot": "Robot 18"
+    },
+    {
+      "id": "df0406c7fa73",
+      "text": "Replace the \"Wave 6 \u2014 2026-11-21 to 2026-11-23\" section of .sessions/release-1-2-fixes/release-1-2-fixes-report.md with the overview in C:\\Users\\jeffa\\AppData\\Local\\Temp\\claude\\d1ee648ce3660209\\b670f8ce-cdf0-497a-87e0-59113fd9ca06\\scratchpad\\wave6-overview.md. The person called the current section meaningless because it lists commits, not what was found and what was fixed (2026-11-23). Keep the overview's four parts (found, fixed, why 388 became 2,733, open), check its numbers against the validation reports, the judgment files, design-proposals.md and violation-history.jsonl as you place it, correct any that are off, update anything that has moved on since (for example the later validate runs), link the sources by their whole paths, and if the repo-review consolidation has made a review index, point it at this section rather than repeat it. Commit and push the whole worktree.",
+      "is_done": true,
+      "robot": "Robot 19"
+    },
+    {
+      "id": "5ebb9d7e87f6",
+      "text": "Split the class model into one model per module on this branch, as main did in 092e123bb, so the merge to main does not bring back .context/model/repo-model.*. Run C:\\Users\\jeffa\\AppData\\Local\\Temp\\claude\\d1ee648ce3660209\\b670f8ce-cdf0-497a-87e0-59113fd9ca06\\scratchpad\\split_repo_model.py from this worktree's root (copy it first if the scratchpad is gone; it is in main's history only as the result). It splits THIS branch's .context/model/repo-model.md and .drawio, which are newer than main's, unchanged, into {module}/.context/{module}-model.md and .drawio, one per \"# module\" section and drawing page: space/work_state goes to space/.context/space-model.*, and space/kanban keeps its own fuller kanban-model.md. Do not redraw anything; just split. Then delete .context/model/repo-model.md, repo-model.drawio, repo-model2.drawio and repo-model.whiteboard (item 19 of section 7 becomes: render a module's whiteboard from its own model when someone asks for one), point .context/model/repo-runtime.md and every link to repo-model.md (handoffs, the release report, the review index, module cards) at the module models, and check that the Clean Engineering model fidelity finds them (harness/guidance/declared_outputs.py matches {module}-model.md by the last folder name). When main is merged into this branch or this branch into main, the module model files on this branch win. Commit and push the whole worktree.",
+      "is_done": true,
+      "robot": "Robot 20"
+    }
+  ]
+}

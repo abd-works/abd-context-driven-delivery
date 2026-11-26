@@ -12,9 +12,9 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 from expects import contain, equal, expect
-from mamba import before, description, it
+from mamba import before, context, description, it
 
-from harness.agent_tools.agent_tools import AgentToolSet, SubAgentAnnotation
+from harness.agent_tools.agent_tools import ToolsetReference, AgentToolSet, SubAgentAnnotation
 from space.session.session import Session
 
 
@@ -22,7 +22,7 @@ from space.session.session import Session
 # (S) Person --> Debug A Failure From Chat Bar
 with description("a session's debug instructions, which the chat bar's debug button and Fix start"):
     with before.all:
-        self.tool = AgentToolSet.instantiate(Session).tools["debug_session"]
+        self.tool = ToolsetReference.of(Session).made().tools["debug_session"]
         self.prompt = "\n".join(self.tool.prompt)
 
     with it("should be offered as instructions"):
@@ -37,17 +37,69 @@ with description("a session's debug instructions, which the chat bar's debug but
     with it("should write what it captured to a debug report in the session's folder"):
         expect(self.prompt).to(contain("session.write_file"))
 
-    with it("should ask the person for more detail and whether to fix the bug or request help"):
-        expect(self.prompt).to(contain("AskUserQuestion"))
+    with it("should ask the person whether to fix the bug or log a defect"):
+        expect([option in self.prompt for option in ('"Fix the bug"', '"Log a defect"', "AskUserQuestion")]).to(equal([True, True, True]))
 
-    with it("should draft the request for help as an email to the CDD maintainer, for the person to send"):
-        expect(self.prompt).to(contain("mailto:jeff.anderson@abdworks.com"))
+    with it("should suggest a fix in the debug report and in the issue"):
+        expect(self.prompt).to(contain("Suggested fix"))
+
+    with it("should give the defect a status of raised, resolved or to come later"):
+        expect([status in self.prompt for status in ("raised", "resolved", "to come later")]).to(equal([True, True, True]))
+
+    with it("should offer to fix it on another branch, such as a release branch, or to leave it to come later"):
+        expect([option in self.prompt for option in ('"Fix on another branch"', '"Fix later"')]).to(equal([True, True]))
+
+    with context("with the fix to be made on another branch"):
+        with it("should queue it on the prompt queue of the chat that works that branch"):
+            expect(self.prompt).to(contain("prompt-queue.add"))
+
+    with context("with the fix resolved"):
+        with it("should close the issue"):
+            expect(self.prompt).to(contain("gh issue close"))
+
+    with it("should always log the defect as an issue on the CDD repository on GitHub, whichever the person chooses"):
+        expect(self.prompt).to(contain("Always log the defect"))
+
+    with it("should log the defect with gh issue create, so a person or an agent can fix it from there"):
+        expect(self.prompt).to(contain("gh issue create"))
+
+    with it("should no longer email the CDD maintainer"):
+        expect(self.prompt).not_to(contain("mailto:"))
 
     with it("should hand a fix to a background sub-agent"):
         expect(self.prompt).to(contain("run_in_background"))
 
-    with it("should push the fix to main where the person can push there"):
-        expect(self.prompt).to(contain(".permissions.push"))
+    with it("should tell the person the fix goes to this branch and is served on the dev lane"):
+        expect(self.prompt).to(contain("fixes it on this branch and serves it on the dev lane"))
 
-    with it("should open a pull request to the CDD repository where the person cannot"):
-        expect(self.prompt).to(contain("gh pr create"))
+    with it("should never merge the fix to main"):
+        expect(self.prompt).not_to(contain("merge to main"))
+
+    with it("should never push the fix with push_to_main"):
+        expect(self.prompt).not_to(contain("push_to_main"))
+
+    with context("with the chat working in a ticket's worktree of the CDD checkout"):
+        with it("should fix it in that worktree, on that branch, and push it to the branch"):
+            expect(self.prompt).to(contain("work in that worktree on that branch"))
+
+        with it("should serve the fix by repinning the dev lane from the worktree"):
+            expect(self.prompt).to(contain("repin the dev lane with `python scripts/install.py --ide Claude --pin-runtime`"))
+
+        with it("should open each app the fix changed"):
+            expect(self.prompt).to(contain("app.open"))
+
+    with context("with the chat working in the CDD checkout's main"):
+        with it("should push the fix to main and repin the stable lane after messaging its sessions"):
+            expect(self.prompt).to(contain("repin the stable lane"))
+
+    with context("with CDD installed in another project"):
+        with it("should open a pull request to the CDD repository from a fork"):
+            expect(self.prompt).to(contain("gh pr create"))
+
+    with context("with no permission to push to the CDD repository"):
+        with it("should open a pull request instead of pushing"):
+            expect(self.prompt).to(contain("no permission to push"))
+
+    with context("with the fix pushed or its pull request opened"):
+        with it("should link the fix in the defect's issue"):
+            expect(self.prompt).to(contain("gh issue comment"))

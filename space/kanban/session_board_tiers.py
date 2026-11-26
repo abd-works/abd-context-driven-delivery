@@ -4,7 +4,7 @@ The domain tier hands a scenario's steps the domain classes themselves: `Board`,
 `Sessions` as this process holds them, and the `Validate` and `Generate` actions, on a throwaway project.
 
 The server tier hands them the same operations reached through the cdd server, the way an agent or the board app
-reaches them: every call goes to `McpServer.invoke` by its published name, with JSON in and
+reaches them: every call goes to `ProjectToolsets.invoke` by its published name, with JSON in and
 JSON out, on a server started with the board's toolsets on the throwaway project. `BoardTools`, `TicketTools`, and
 `BacklogItemTools` are the Python form of the language adapter the board app reaches the same tools through
 (`@language_adapter` on Board, Ticket, and BacklogItem): one method per tool, named as the tool is.
@@ -22,6 +22,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.installation.data_class import data_of
 from harness.installation.repository_toolsets import RepositoryToolsets
 
@@ -33,7 +34,7 @@ from space.kanban.board import BacklogItemNotFoundError, Board, FidelityNotFound
 from space.kanban.session_board_examples import SURFACE_FIXTURE_PROJECT, SessionsProject  # noqa: E402
 from space.kanban.story_test import held_ticket_in, progress_in  # noqa: E402
 from space.kanban.ticket import Ticket  # noqa: E402
-from harness.mcp.mcp_server import McpServer  # noqa: E402
+from harness.mcp.mcp_server import ProjectToolsets  # noqa: E402
 from harness.chat.chat import Chat  # noqa: E402
 from space.session import Session, Sessions  # noqa: E402
 from cdd_guidance.actions.validate.validate import Validate  # noqa: E402
@@ -45,8 +46,8 @@ TOOLSETS = (
     "space.kanban.ticket:FidelityProgress",
     "space.session.session:Session",
     "space.session.sessions:Sessions",
-    "space.session.practice_session_output:PracticeSessionOutput",
-    "space.session.file_comments:FileComments",
+    "space.session.practices.practice_session_output:PracticeSessionOutput",
+    "space.session.files.file_comments:FileComments",
     "harness.chat.chat:Chat",
     "space.kanban.backlog_item:BacklogItem",
     "cdd_guidance.actions.validate.validate:Validate",
@@ -151,8 +152,8 @@ class CddTools:
     """The cdd server on the project, called as the MCP host calls it: a tool or prompt by name, JSON in and out."""
 
     def __init__(self, project: SessionsProject) -> None:
-        self._server = McpServer(project=project.root)
-        self._server.start(TOOLSETS)
+        self._server = ProjectToolsets(project=project.root)
+        self._server.start([ToolsetReference.parsed(text) for text in TOOLSETS])
 
     def call(self, tool: str, **arguments: Any) -> Any:
         answered = self._server.invoke(tool, arguments)
@@ -418,6 +419,10 @@ class BacklogItemHandle:
     def start_under(self, parent: TicketHandle) -> TicketHandle:
         """``backlog-item.start_under``, naming the parent as the tool names any ticket."""
         return _handle_of(self._cdd, self._cdd.call("backlog-item.start_under", backlog_item=self.title, parent=parent.name))
+
+    def delete(self) -> None:
+        """``backlog-item.delete``, naming the item by its title as the tool names any backlog item."""
+        self._cdd.call("backlog-item.delete", backlog_item=self.title)
 
     def move_before(self, other: BacklogItemHandle) -> BacklogItemHandle:
         """``backlog-item.move_before``, naming the other item by its title as the tool names any backlog item."""

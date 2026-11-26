@@ -7,7 +7,6 @@ import type { ChatData } from '@cdd/harness/chat/chat'
 import { BacklogDraftClient, BacklogItemClient } from '../backlog-item/backlog-item-client'
 import { ChatClient } from '../chat/chat-client'
 import { ActivationClient } from '../ticket/activation-client'
-import { FilesPanelClient } from '../ticket/files-panel-client'
 import { OpenCardClient } from '../ticket/open-card-client'
 import { RootChoiceClient } from '../ticket/root-choice-client'
 import { TicketClient } from '../ticket/ticket-client'
@@ -26,7 +25,7 @@ import { PageLinks } from './page-links'
 import { SidePanelClient } from './side-panel-client'
 
 const CHAT_POLL_MILLISECONDS = 2000
-const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null }
+const NOT_READ_YET: BoardData = { project: '', practices: [], open_tickets: [], active: null, columns: [], fidelities: [], sends_fixes_directly: false, unsaved: null, unreadable: [] }
 
 // Everything the page's views act through, wired once.
 // How much of a chat's id tells two chats with the same name apart.
@@ -41,7 +40,6 @@ export class BoardPage {
   readonly readingApi: BoardApi
   readonly chat: ChatClient
   readonly panels: SidePanelClient
-  readonly files: FilesPanelClient
   readonly build: BuildClient
   readonly editorApp: EditorAppClient
   readonly layout = new BoardLayoutClient(this.store)
@@ -61,9 +59,8 @@ export class BoardPage {
     this.readingApi = new BoardApi(this.store, this.failures, send, projectOfPage(), false)
     this.chat = new ChatClient(this.store, this.api)
     this.panels = new SidePanelClient(this.store, this.api)
-    this.files = new FilesPanelClient(this.store)
     this.build = new BuildClient(this.store, this.failures, send)
-    this.editorApp = new EditorAppClient(this.failures, this.api)
+    this.editorApp = new EditorAppClient(this.failures, this.api, () => this.board.project)
   }
 
   // The board as last read, made once for that read and again only when the store holds a new read, since the views
@@ -77,7 +74,7 @@ export class BoardPage {
   }
 
   async reloadOpen(): Promise<void> {
-    await Promise.all([this.tiles.reload(), this.panels.reload(), this.files.reload()])
+    await Promise.all([this.tiles.reload(), this.panels.reload()])
   }
 
   // A chat goes by its own name in the chat list; two chats with the same name, such as two titled the same in the app,
@@ -123,22 +120,11 @@ export class BoardPage {
     return this.chat.fill(`Open a new ticket with ticket.create${session ? ` session=${session}` : ''}, titled: `)
   }
 
-  // The Files app's page: only the file viewer, opened on the files or the session folder its link names, with the board
-  // read again every two seconds so an open file shows what is on disk now.
-  startFiles(): () => void {
-    const search = typeof location === 'undefined' ? '' : location.search
-    void this.links.openFiles(search)
-    void this.links.openSessionFolder(search)
-    return this.reader.startPolling()
-  }
-
   start(): () => void {
     const search = typeof location === 'undefined' ? '' : location.search
     void this.links.openTicket(search)
     void this.links.openReport(search)
     void this.links.openHelp(search)
-    void this.links.openFiles(search)
-    void this.links.openSessionFolder(search)
     const stopBoard = this.reader.startPolling()
     const chatTimer = setInterval(() => void this.pollChats(), CHAT_POLL_MILLISECONDS)
     void this.pollChats()

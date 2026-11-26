@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stories</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap"><style>body{margin:0;background:#0B0B0B}.cx-epic,.cx-sub{font:600 11px/1.6 'JetBrains Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.08em;color:#4A4A52;padding:4px 0}.cx-sub{padding-left:12px}.cx-story{font:500 13px/1.6 'Inter',system-ui,sans-serif;color:#4A4A52;padding:2px 0 2px 24px}.cx-story.cx-on{color:#E8E8ED;font-weight:600;box-shadow:inset 3px 0 0 #E5531A;margin-top:6px}.cx-scenario{font:600 13px/1.6 'Inter',system-ui,sans-serif;color:#F2A07A;padding:6px 0 0 36px}.cx-steps{font:400 12px/1.5 'JetBrains Mono',ui-monospace,monospace;color:#9B9BA8;white-space:pre-wrap;padding:2px 0 4px 48px}</style></helmet>
+<div style="position: relative; width: 560px; height: 1100px; background: #0B0B0B">
+<div style="position: absolute; inset: 0; overflow: auto; box-sizing: border-box; padding: 20px 20px 40px; background: #111113; border-left: 1px solid #2A2A2A">
+<div class="cx-epic">Queue Prompts For Later</div>
+<div class="cx-sub">Queue Prompts For Later</div>
+<div class="cx-story cx-on">Queue Draft Prompt</div>
+<div class="cx-story cx-on">Open Prompt Queue</div>
+<div class="cx-story cx-on">Edit Queued Prompt</div>
+<div class="cx-story cx-on">Send Queued Prompt Now</div>
+<div class="cx-story cx-on">Reorder Queued Prompts</div>
+<div class="cx-story cx-on">Remove Queued Prompts</div>
+<div class="cx-story cx-on">Play Prompt Queue</div>
+<div class="cx-story cx-on">Wait For Answer Before Moving On</div>
+<div class="cx-story cx-on">Pause Prompt Queue</div>
+<div class="cx-story cx-on">Send Queued Prompts To Sub-Agents</div>
+<div class="cx-story cx-on">Plan Queue From Conversation</div>
+<div class="cx-story cx-on">Attach Images To Queued Prompt</div>
+<div class="cx-scenario">Keep a queued draft&#x27;s image beside its prompt</div>
+<div class="cx-steps">Given the chat&#x27;s prompt queue holds WRITE_THE_SCENARIOS, queued with SCREENSHOT_PNG pasted in its draft
+When the queue attaches SCREENSHOT_PNG to WRITE_THE_SCENARIOS
+Then WRITE_THE_SCENARIOS lists one attached file
+    And that file holds SCREENSHOT_PNG&#x27;s bytes, named for the prompt</div>
+<div class="cx-scenario">Refuse an image for a prompt the queue does not hold</div>
+<div class="cx-steps">Given the chat&#x27;s prompt queue holds WRITE_THE_SCENARIOS
+When the queue attaches SCREENSHOT_PNG to MISSING_PROMPT
+Then it is told no prompt MISSING_PROMPT is on the queue</div>
+<div class="cx-sub">Work Through Prompt Queue</div>
+<div class="cx-story cx-on">Queue Prompts Through The Cdd Server</div>
+<div class="cx-scenario">Queue a list of work on the agent&#x27;s own chat</div>
+<div class="cx-steps">Given the agent&#x27;s chat has an empty prompt queue
+When the agent calls prompt-queue.add_all with Write the scenarios and Run the unit tier, naming no chat
+Then its chat&#x27;s prompt queue holds Write the scenarios, then Run the unit tier</div>
+<div class="cx-scenario">Mark a prompt done once its work is done</div>
+<div class="cx-steps">Given the agent&#x27;s chat queue holds Write the scenarios, then Run the unit tier
+When the agent calls prompt-queue.done with the id of Write the scenarios
+Then its chat&#x27;s prompt queue still holds Write the scenarios, marked done, then Run the unit tier
+    And clearing the queue takes off Write the scenarios and leaves Run the unit tier</div>
+<div class="cx-scenario">Keep each chat&#x27;s queue apart</div>
+<div class="cx-steps">Given the agent&#x27;s chat queue holds Run the unit tier
+When another chat in the same project reads its prompt queue
+Then that queue is empty</div>
+<div class="cx-story cx-on">Queue Handoff Steps On Session Start</div>
+<div class="cx-scenario">Queue the handoff&#x27;s steps when a chat switches to its session</div>
+<div class="cx-steps">Given session alpha&#x27;s latest handoff lists Read the handoff, then Run the unit tier under Approach for Next Agent
+When a chat switches to alpha
+Then the chat&#x27;s prompt queue holds Read the handoff, then Run the unit tier
+    And the switch tells the agent to work through them, marking each one done</div>
+<div class="cx-scenario">Queue a handoff once</div>
+<div class="cx-steps">Given a chat switched to alpha and its prompt queue holds alpha&#x27;s two handoff steps
+When the chat switches to alpha again
+Then its prompt queue still holds two prompts</div>
+<div class="cx-story cx-on">Show Prompt Queue To Agent</div>
+<div class="cx-scenario">Carry the queue beside each prompt while it plays</div>
+<div class="cx-steps">Given the prompt queue plays and holds Write the scenarios, then Run the unit tier
+When the Person sends Fix the Files app
+Then the agent reads the queue beside the prompt, in order, with each prompt&#x27;s id
+    And it is told to finish its work, then take the first prompt, and mark each one done</div>
+<div class="cx-scenario">Carry no queue while paused</div>
+<div class="cx-steps">Given the prompt queue is paused and holds Write the scenarios
+When the Person sends Fix the Files app
+Then the agent reads no queue beside the prompt</div>
+<div class="cx-scenario">Ask for the next prompt when a turn ends</div>
+<div class="cx-steps">Given the prompt queue plays and holds Write the scenarios
+When a turn ends
+Then the chat is sent Take the next prompt on the queue
+    And Write the scenarios stays on the queue until the agent marks it done</div>
+<div class="cx-scenario">Pause when the agent left the prompt it was asked to take</div>
+<div class="cx-steps">Given the agent was asked to take Write the scenarios and it is still first on the queue
+When the turn ends
+Then the queue pauses and says the agent left Write the scenarios on the queue</div>
+<div class="cx-sub">Nest Prompt Steps In Queue</div>
+<div class="cx-story cx-on">Set Steps Of Queued Prompt</div>
+<div class="cx-scenario">Give a queued prompt its steps</div>
+<div class="cx-steps">Given the chat&#x27;s prompt queue holds ++Write the scenarios++ (a), then ++Run the unit tier++ (b)
+    But ++Write the scenarios++ has no steps
+When the agent sets the steps of a to ++Read the epic++, ++Write the stories++, ++Validate the scenarios++, each pending
+Then the queue answers ++Write the scenarios++ with those three steps, in that order, none done
+    And ++Run the unit tier++ still has no steps</div>
+<div class="cx-scenario">Keep each step&#x27;s state as given</div>
+<div class="cx-steps">Given the chat&#x27;s prompt queue holds ++Write the scenarios++ (a)
+When the agent sets the steps of a to ++Read the epic++ done, ++Write the stories++ being worked, ++Validate the scenarios++ pending
+Then the queue answers ++Write the scenarios++ with ++Read the epic++ done, ++Write the stories++ being worked and ++Validate the scenarios++ pending</div>
+<div class="cx-scenario">Replace the steps a prompt had</div>
+<div class="cx-steps">Given ++Write the scenarios++ (a) has the steps ++Read the epic++, ++Write the stories++, ++Validate the scenarios++
+When the agent sets the steps of a to ++Read the epic++ done, ++Validate the scenarios++ pending
+Then the queue answers ++Write the scenarios++ with only ++Read the epic++ done and ++Validate the scenarios++ pending</div>
+<div class="cx-scenario">Refuse steps for a prompt the queue does not hold</div>
+<div class="cx-steps">Given the chat&#x27;s prompt queue holds ++Write the scenarios++ (a)
+    But it holds no prompt with id z
+When the agent sets the steps of z
+Then the agent is told no prompt z is on the queue
+    And the queue still holds ++Write the scenarios++ with no steps</div>
+<div class="cx-story cx-on">Tick Off Prompt Step</div>
+<div class="cx-scenario">Mark one step done</div>
+<div class="cx-steps">Given ++Write the scenarios++ (a) has three steps, none done
+When the agent marks the first step of a done
+Then the queue answers ++Write the scenarios++ with ++Read the epic++ done and the other two not done</div>
+<div class="cx-scenario">Leave the prompt on the queue once every step is done</div>
+<div class="cx-steps">Given ++Write the scenarios++ (a) has three steps, two of them done
+When the agent marks the last step of a done
+Then the queue answers ++Write the scenarios++ with every step done
+    And ++Write the scenarios++ stays on the queue until the agent marks it done with prompt-queue.done, as in Work Through Prompt Queue</div>
+<div class="cx-scenario">Refuse a step the prompt does not have</div>
+<div class="cx-steps">Given ++Write the scenarios++ (a) has three steps
+When the agent marks step 4 of a done
+Then the agent is told ++Write the scenarios++ has three steps
+    And ++Write the scenarios++ still has no step done</div>
+<div class="cx-story cx-on">Copy Task List Onto Working Prompt</div>
+<div class="cx-scenario">Copy the task list onto the working prompt</div>
+<div class="cx-steps">Given the prompt queue plays and the agent was asked to take ++Write the scenarios++ (a)
+When the agent sets its task list to ++Read the epic++ being worked, ++Write the stories++ pending, ++Validate the scenarios++ pending
+Then the queue answers ++Write the scenarios++ with those three steps, ++Read the epic++ being worked
+    And the queue box shows ++Write the scenarios++ with them, as in Show Prompt Steps In Queue</div>
+<div class="cx-scenario">Follow the task list as the agent ticks it off</div>
+<div class="cx-steps">Given ++Write the scenarios++ (a) is the working prompt with ++Read the epic++ being worked and two steps pending
+When the agent advances its task list to ++Write the stories++
+Then the queue answers ++Write the scenarios++ with ++Read the epic++ done and ++Write the stories++ being worked</div>
+<div class="cx-scenario">Tell the agent to keep the steps itself when its task list cannot be seen</div>
+<div class="cx-steps">Given the queue mod cannot see the agent&#x27;s task list
+    And the prompt queue plays and holds ++Write the scenarios++ (a)
+When the person sends ++Fix the Files app++
+Then the queue beside ++Fix the Files app++ tells the agent to set the steps of ++Write the scenarios++ when it takes it and to mark each one done as it goes</div>
+<div class="cx-story cx-on">Queue Sent Prompt As Running</div>
+<div class="cx-scenario">Put a prompt sent straight to the chat on the queue as running</div>
+<div class="cx-steps">Given the chat&#x27;s prompt queue holds ++Run the unit tier++ (b)
+When the person sends ++Fix the Files app++ straight to the chat
+Then the queue holds ++Fix the Files app++ first, marked running, then ++Run the unit tier++
+    And ++Fix the Files app++ is the working prompt its steps are copied onto, as in Copy Task List Onto Working Prompt</div>
+<div class="cx-scenario">Leave play&#x27;s own request off the queue</div>
+<div class="cx-steps">Given the prompt queue plays and holds ++Write the scenarios++ (a)
+When play asks the agent to take the next prompt on the queue
+Then the queue still holds only ++Write the scenarios++
+    And ++Write the scenarios++ is the working prompt</div>
+<div class="cx-story cx-on">Show Prompt Steps In Queue</div>
+<div class="cx-scenario">Show each card&#x27;s progress</div>
+<div class="cx-steps">Given the prompt queue holds ++Write the scenarios++ (a) with one of three steps done, then ++Run the unit tier++ (b) with no steps
+When the person opens the prompt queue
+Then ++Write the scenarios++&#x27; card shows 1/3
+    And ++Run the unit tier++&#x27;s card shows no progress</div>
+<div class="cx-scenario">Show a prompt&#x27;s steps under its card</div>
+<div class="cx-steps">Given the open prompt queue holds ++Write the scenarios++ (a) with ++Read the epic++ done, ++Write the stories++ being worked, ++Validate the scenarios++ pending
+When the person opens the steps of ++Write the scenarios++
+Then ++Read the epic++, ++Write the stories++ and ++Validate the scenarios++ show under its card, in order
+    And ++Read the epic++ is ticked and ++Write the stories++ is marked as being worked</div>
+<div class="cx-scenario">Fold a prompt&#x27;s steps away</div>
+<div class="cx-steps">Given the steps of ++Write the scenarios++ show under its card
+When the person closes them
+Then only the card of ++Write the scenarios++ shows, with 1/3</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":560,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

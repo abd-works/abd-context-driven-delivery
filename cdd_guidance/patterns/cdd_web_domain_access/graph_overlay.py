@@ -9,22 +9,18 @@ from harness.graph.graph import Graph
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.skipped_folders import scanned_files
 
+from cdd_guidance.patterns.cdd_web_domain_access.access_facts import AccessFile
+from cdd_guidance.practices.ddd.ddd import Ddd
+
 
 class WebDomainAccessOverlay(GraphOverlay):
     def read(self, graph: Graph) -> None:
-        from cdd_guidance.practices.ddd.ddd import Ddd
-
         ddd = graph.practices.loaded(Ddd)
         if not graph.folder or ddd is None:
             return
         root = Path(graph.folder)
         ddd_nodes = graph.practices.part_of(ddd)
-        from cdd_guidance.patterns.cdd_web_domain_access.access_facts import AccessFile
-
         for file in scanned_files(root):
-            tier = AccessFile.at(file).tier()
-            if tier is None:
-                continue
-            semantic, facts = tier
-            ddd_nodes.add_file(semantic, file.relative_to(root).as_posix(), file.name).set_facts(facts)
-
+            access = AccessFile.at(root, file)
+            if access.node_type:
+                ddd_nodes.add_file(access.node_type, access.relative, file.name).set_facts(access.facts)

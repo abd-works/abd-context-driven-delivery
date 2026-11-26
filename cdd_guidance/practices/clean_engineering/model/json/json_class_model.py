@@ -13,6 +13,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+from harness.guidance.practice_formats import Written
 
 # One object of a JSON model document as the decoder gives it: the model, a module, a class, a member, or a
 # relationship, each keyed by the names `as_record` writes.
@@ -102,7 +103,7 @@ class JsonModule(Module):
 class JsonCleanEngineeringModel(CleanEngineeringModel):
     module_type = JsonModule
 
-    def parse(self, text: str) -> "JsonCleanEngineeringModel":
+    def parse(self, text: str, file: str = "") -> "JsonCleanEngineeringModel":
         """Read a JSON model document into this model's own modules, and return it."""
         return self.take_record(self._decoded(text))
 
@@ -126,8 +127,8 @@ class JsonCleanEngineeringModel(CleanEngineeringModel):
             raise UnreadableSource("JSON must contain a 'modules' or 'classes' key")
         return self
 
-    def render(self, canonical: Optional[CleanEngineeringModel] = None) -> str:
-        if canonical is not None and canonical is not self:
+    def render(self, canonical: CleanEngineeringModel, written: Written = Written()) -> str:
+        if canonical is not self:
             self.translate_from(canonical)
         return json.dumps(self.as_record(), indent=2)
 

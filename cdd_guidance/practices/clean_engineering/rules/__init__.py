@@ -1,12 +1,16 @@
 """Clean Engineering graph rules — schema slugs with executable checks."""
 
 from cdd_guidance.practices.clean_engineering.rules.class_rules import KeepClassesSingleResponsibility
+from cdd_guidance.practices.clean_engineering.rules.depend_toward_stability import DependTowardStability
 from cdd_guidance.practices.clean_engineering.rules.coupling_rules import (
     DoNotInventParallelObjectModels,
     HideInnerDetails,
     LayerSeparation,
     ShapeClassesAroundResources,
 )
+from cdd_guidance.practices.clean_engineering.rules.code_measure_limits import MEASURE_LIMIT_RULES
+from cdd_guidance.practices.clean_engineering.rules.code_use_rules import CODE_USE_RULES
+from cdd_guidance.practices.clean_engineering.rules.cross_file_rules import CROSS_FILE_RULES
 from cdd_guidance.practices.clean_engineering.rules.operation_checks import CODE_RULES
 from cdd_guidance.practices.clean_engineering.rules.prefer_class_operations import PreferClassOperations
 from cdd_guidance.practices.clean_engineering.rules.typed_and_comments import LimitComments, UseTypedSignatures
@@ -20,6 +24,7 @@ from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import (
 )
 from cdd_guidance.practices.clean_engineering.rules.module_naming_rules import DomainNounsOnly, NoModulePerClass
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
+from cdd_guidance.practices.clean_engineering.rules.refuse_unreadable_input import RefuseUnreadableInput
 from cdd_guidance.practices.clean_engineering.rules.write_interactions import WriteInteractions
 from cdd_guidance.practices.clean_engineering.rules.practice_wide_rules import (
     DeepModule,
@@ -53,7 +58,9 @@ RULES: tuple = (
     NoModulePerClass(),
     WriteInteractions(),
     NoPrototypeSwapping(),
-) + CODE_RULES
+    RefuseUnreadableInput(),
+    DependTowardStability(),
+) + CODE_RULES + MEASURE_LIMIT_RULES + CODE_USE_RULES + CROSS_FILE_RULES
 
 BY_SLUG = {rule.slug: rule for rule in RULES}
 

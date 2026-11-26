@@ -1,6 +1,6 @@
 """Steer Ticket Sessions: the shared scenarios the Python tiers replay.
 
-Scenarios: story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md and story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md.
+Scenarios: story_tests/move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-sessions/open_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md and story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md.
 Map: .context/story-map.md#e-steer-ticket-sessions. Model: .context/kanban-model.md.
 
 Steps reach the board only through the namespace a tier hands them (`world.Ticket`, `world.BacklogItem`, `world.Board`),
@@ -23,6 +23,7 @@ from pathlib import Path
 
 from expects import be_false, be_none, be_true, contain, end_with, equal, expect
 
+from space.kanban.card_name import NAME_LENGTH_LIMIT, TicketNameTakenError, TitleNamesNothingError, TitleTooLongError
 from space.kanban.session_board_examples import (
     ALMOST_SHIPPED,
     BACK_TO_BACKLOG,
@@ -97,7 +98,7 @@ def _(s):
         expect([(item["title"], item["text"]) for item in items]).to(equal([(GIFT_CARDS_IDEA.title, GIFT_CARDS_IDEA.text)]))
 
 
-@shared_stories.scenario("Add Backlog Item", "Start a backlog item in a chosen folder")
+@shared_stories.scenario("Start Backlog Item", "Start a backlog item in a chosen folder")
 def _(s):
     @s.given("the backlog item Gift cards is in the Backlog")
     def _(world):
@@ -129,7 +130,7 @@ def _(s):
         expect(world.started["session"]["workpath"]).to(equal(VISITS_ROOT))
 
 
-@shared_stories.scenario("Add Backlog Item", "Keep the idea file with the new ticket")
+@shared_stories.scenario("Start Backlog Item", "Keep the idea file with the new ticket")
 def _(s):
     @s.given("the backlog item Returns and refunds is the file .sessions/_backlog/returns-and-refunds.md")
     def _(world):
@@ -158,7 +159,7 @@ def _(s):
         expect_backlog(world.data_of(world.Board.load().show()), [])
 
 
-@shared_stories.scenario("Add Backlog Item", "Bring a ticket back from the Backlog with its work")
+@shared_stories.scenario("Start Backlog Item", "Bring a ticket back from the Backlog with its work")
 def _(s):
     @s.given("the ticket sign-up was moved back out of Discovery and waits in the Backlog as the backlog item Sign up")
     def _(world):
@@ -228,7 +229,7 @@ def _(s):
         expect(world.opened["session"]["workpath"]).to(equal(BILLING_ROOT))
 
 
-@shared_stories.scenario("Open Ticket Session", "Choose a ticket's root")
+@shared_stories.scenario("Choose Ticket Workpath And Roots", "Choose a ticket's root")
 def _(s):
     @s.given("checkout-flow works on the whole repository")
     def _(world):
@@ -259,7 +260,7 @@ def _(s):
         expect(all(entry["root"].startswith(VISITS_ROOT) for entry in world.chosen["practices"].values())).to(be_true)
 
 
-@shared_stories.scenario("Open Ticket Session", "Choose one practice's root and go back to its default")
+@shared_stories.scenario("Choose Ticket Workpath And Roots", "Choose one practice's root and go back to its default")
 def _(s):
     @s.given("checkout-flow's Stories practice writes under its default root")
     def _(world):
@@ -338,7 +339,7 @@ def _(s):
         expect(world.project.current_branch()).to(equal("main"))
 
 
-@shared_stories.scenario("Close Active Session", "Offer to commit a branch open in its worktree")
+@shared_stories.scenario("Protect Work When Closing Session", "Offer to commit a branch open in its worktree")
 def _(s):
     @s.given("checkout-flow is the active ticket, its branch open in its own worktree")
     def _(world):
@@ -504,9 +505,9 @@ def _(s):
         expect(ticket_in(world.data_of(world.Board.load().show()), BACK_TO_BACKLOG.name)).to(be_none)
 
 
-@shared_stories.scenario("Move Ticket", "Close a ticket moved on past Implementation")
+@shared_stories.scenario("Move Ticket", "Close a ticket moved on past Hardening")
 def _(s):
-    @s.given("the ticket almost-shipped is in Implementation's Done")
+    @s.given("the ticket almost-shipped is in Hardening's Done")
     def _(world):
         world.project.seed_session(ALMOST_SHIPPED)
 
@@ -538,9 +539,9 @@ def _(s):
     def _(world):
         world.moved = world.data_of(world.Ticket.load(SHIPPED_WORK.name).move_previous())
 
-    @s.then("shipped-work shows in Implementation's Done")
+    @s.then("shipped-work shows in Hardening's Done")
     def _(world):
-        expect_placed(world.moved, "Implementation", is_done=True)
+        expect_placed(world.moved, "Hardening", is_done=True)
 
     @s.and_("its folder is back in .sessions/shipped-work")
     def _(world):
@@ -637,7 +638,7 @@ def _(s):
         expect(worktree.resolve()).to(equal(world.worktree.resolve()))
 
 
-@shared_stories.scenario("Activate Ticket", "Work on the ticket from a chat in its worktree")
+@shared_stories.scenario("Switch Session", "Work on the ticket from a chat in its worktree")
 def _(s):
     @s.given("billing-report is open in its own worktree")
     def _(world):
@@ -670,7 +671,7 @@ def recorded_checkout(world) -> tuple[str, str]:
     return fields.get("branch", ""), str(Path(fields["worktree"]).resolve()) if fields.get("worktree") else ""
 
 
-@shared_stories.scenario("Activate Ticket", "Find a branch and worktree made outside CDD")
+@shared_stories.scenario("Find Ticket Branch And Worktree", "Find a branch and worktree made outside CDD")
 def _(s):
     @s.given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree")
     def _(world):
@@ -694,7 +695,7 @@ def _(s):
         expect(recorded_checkout(world)).to(equal((OUTSIDE_BRANCH, str(world.worktree.resolve()))))
 
 
-@shared_stories.scenario("Activate Ticket", "Correct a branch the session records wrongly")
+@shared_stories.scenario("Find Ticket Branch And Worktree", "Correct a branch the session records wrongly")
 def _(s):
     @s.given("checkout-flow's work is on claude/checkout-flow-cef4bc, open in its own worktree")
     def _(world):
@@ -714,7 +715,7 @@ def _(s):
         expect(recorded_checkout(world)).to(equal((OUTSIDE_BRANCH, str(world.worktree.resolve()))))
 
 
-@shared_stories.scenario("Activate Ticket", "Say which branches could be the session's rather than guess")
+@shared_stories.scenario("Find Ticket Branch And Worktree", "Say which branches could be the session's rather than guess")
 def _(s):
     @s.given("the repository has the branches claude/checkout-flow-cef4bc and claude/checkout-flow-9a1b2c")
     def _(world):
@@ -735,7 +736,7 @@ def _(s):
         expect(recorded_checkout(world)[0]).to(equal(""))
 
 
-@shared_stories.scenario("Activate Ticket", "Leave a branch named as another ticket to that ticket")
+@shared_stories.scenario("Find Ticket Branch And Worktree", "Leave a branch named as another ticket to that ticket")
 def _(s):
     @s.given("checkout-flow-retry is a ticket whose work is on the branch checkout-flow-retry")
     def _(world):
@@ -836,7 +837,13 @@ def _(s):
 
     @s.then("closing offers to delete checkout-flow's branch")
     def _(world):
-        expect((world.closing["own_branch"], world.closing["choices"])).to(equal((CHECKOUT_FLOW.name, ["handoff", "commit", "push", "merge", "delete_branch"])))
+        expect((world.closing["own_branch"], world.closing["choices"])).to(equal((CHECKOUT_FLOW.name, ["handoff", "merge", "delete_branch"])))
+
+    # Closing choice 3 of the exploratory testing: nothing checked out is checkout-flow's, so the main clone's edits are
+    # never committed under its name.
+    @s.but_("closing offers no commit or push of main")
+    def _(world):
+        expect(world.closing["branch"]).to(equal(""))
 
     @s.when("the Person closes checkout-flow, deleting its branch")
     def _(world):
@@ -952,7 +959,7 @@ def _(s):
     def _(world):
         world.opened = world.data_of(world.ticket.session.read_file(path=world.selected["session"]["handoff"]))
 
-    @s.then("the files panel shows the handoff in a tab with its text # Handoff")
+    @s.then("the Files app opens on the handoff, its text # Handoff")
     def _(world):
         expect(world.opened["text"]).to(equal(HANDOFF_TEXT))
 
@@ -970,3 +977,72 @@ def _(s):
     @s.then("the details say No handoff yet")
     def _(world):
         expect(world.selected["session"]["handoff"]).to(equal(""))
+
+
+@shared_stories.scenario("Refuse Unusable Ticket Title", "Refuse a title that gives a ticket no name")
+def _(s):
+    @s.given("the board shows checkout-flow")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+
+    @s.when("the Person opens a new ticket whose title is empty, or 日本語")
+    def _(world):
+        world.refusals = [refusal_of(lambda title=title: world.Ticket.create(title=title)) for title in ("", "日本語")]
+
+    @s.then("the board says the title gives no name, naming the title")
+    def _(world):
+        expect([type(refusal) for refusal in world.refusals]).to(equal([TitleNamesNothingError, TitleNamesNothingError]))
+        expect(str(world.refusals[1])).to(contain("日本語"))
+
+    @s.and_("no session file is written in .sessions itself")
+    def _(world):
+        expect((world.project.sessions / "session.json").exists()).to(be_false)
+
+
+@shared_stories.scenario("Refuse Unusable Ticket Title", "Refuse a title whose name a ticket already has")
+def _(s):
+    @s.given("the ticket pet-visits is titled Pet visits")
+    def _(world):
+        world.project.seed_session(PET_VISITS)
+
+    @s.when("the Person opens a new ticket titled PET VISITS")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.Ticket.create(title=PET_VISITS.title.upper()))
+
+    @s.then("the board says a ticket named pet-visits already exists")
+    def _(world):
+        expect_refused(world.refusal, TicketNameTakenError, "a ticket named pet-visits already exists; give 'PET VISITS' another title")
+
+    @s.and_("pet-visits is still titled Pet visits")
+    def _(world):
+        saved = json.loads((world.project.sessions / PET_VISITS.name / "session.json").read_text(encoding="utf-8"))
+        expect(saved["title"]).to(equal(PET_VISITS.title))
+
+    @s.when("the Person opens a new ticket titled main")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.Ticket.create(title="main"))
+
+    @s.then("the board says a ticket named main already exists")
+    def _(world):
+        expect_refused(world.refusal, TicketNameTakenError, "a ticket named main already exists; give 'main' another title")
+
+
+@shared_stories.scenario("Refuse Unusable Ticket Title", "Refuse a title too long for a name")
+def _(s):
+    @s.given("the board shows checkout-flow")
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+        world.folders = sorted(path.name for path in world.project.sessions.iterdir())
+
+    @s.when("the Person opens a new ticket whose title makes a name longer than 64 characters")
+    def _(world):
+        world.refusal = refusal_of(lambda: world.Ticket.create(title="word " * (NAME_LENGTH_LIMIT // 4)))
+
+    @s.then("the board says the title makes too long a name, naming the limit")
+    def _(world):
+        expect(type(world.refusal)).to(equal(TitleTooLongError))
+        expect(str(world.refusal)).to(contain(f"shorten it to {NAME_LENGTH_LIMIT} or fewer"))
+
+    @s.and_("no session folder is made for it")
+    def _(world):
+        expect(sorted(path.name for path in world.project.sessions.iterdir())).to(equal(world.folders))

@@ -1,4 +1,4 @@
-"""The brace-language reading the TypeScript, JavaScript, and Java class models share."""
+"""The brace-language reading the TypeScript and JavaScript class models share."""
 from __future__ import annotations
 
 import re
@@ -12,32 +12,35 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
 from cdd_guidance.practices.clean_engineering.model.class_stereotypes import ClassHead
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody, CodeLanguage
-from cdd_guidance.practices.clean_engineering.model.bracket_structure import BracketStructure
-from cdd_guidance.practices.clean_engineering.model.type_refs import split_top_level
+from cdd_guidance.practices.source_code import CodeBody, CodeLanguage
+from cdd_guidance.practices.source_code import BracketStructure
+from cdd_guidance.practices.source_code import split_top_level
 
 _CLASS_RE = re.compile(
-    r"(?:export\s+)?(?:abstract\s+)?(?:public\s+|private\s+|protected\s+)?class\s+(\w+)",
+    r"(?:export\s+)?(?:abstract\s+)?class\s+(\w+)",
 )
-# A member declared with no body, ending its signature with `;`: an interface's method (`draw(scale: number): void;`,
-# `void draw(double scale);`) or an abstract one (`abstract area(width: number): number;`).
+# A member declared with no body, ending its signature with `;`: an interface's method (`draw(scale: number): void;`)
+# or an abstract one (`abstract area(width: number): number;`).
 # Everything outside the parameter list stays on one line: the class body arrives with its nested bodies blanked to
 # spaces, and a pattern free to cross lines rescans every blank line below each line start, growing with the square of
 # the body.
 _BODILESS_RE = re.compile(
-    r"^[ \t]*(?:(?:public|protected|private|static|abstract|default|readonly)\s+)*(?:[\w<>\[\],.?]+\s+)?(\w+)\s*\(([^)]*)\)[ \t]*(?::[ \t]*([^;{=\n]+?))?[ \t]*;[ \t]*$",
+    r"^[ \t]*(?:(?:public|protected|private|static|abstract|readonly)\s+)*(?:[\w<>\[\],.?]+\s+)?(\w+)\s*\(([^)]*)\)[ \t]*(?::[ \t]*([^;{=\n]+?))?[ \t]*;[ \t]*$",
     re.M,
 )
 _NOT_MEMBERS = frozenset({"if", "for", "while", "switch", "catch", "return", "super", "this"})
 # A class's heritage clause: `extends Basket implements Auditable, ICart`.
 _HERITAGE_RE = re.compile(r"\b(?:extends|implements)\s+(.+?)(?=\s+implements\b|$)", re.S)
+# A parameter list, whose parameters may hold brackets of their own one deep, as a function type does:
+# `(timed: (send: Send) => Send = send => send)`.
+_PARAMETERS = r"\(((?:[^()]|\([^()]*\))*)\)"
 _METHOD_RE = re.compile(
     r"(?:public|private|protected|static|async|override)?\s*"
     r"(?:public|private|protected|static|async|override)?\s*"
     r"(?:[\w<>\[\],\s?]+\s+)?"
-    r"(\w+)\s*\(([^)]*)\)\s*(?::\s*([^{;]+))?\s*\{",
+    r"(\w+)\s*" + _PARAMETERS + r"\s*(?::\s*([^{;]+))?\s*\{",
 )
-_CTOR_RE = re.compile(r"constructor\s*\(([^)]*)\)\s*\{")
+_CTOR_RE = re.compile(r"constructor\s*" + _PARAMETERS + r"\s*\{")
 # A TypeScript constructor parameter declared with an access modifier, `private readonly page: BoardPage`, declares a
 # field the class holds as well as a parameter.
 _PARAMETER_PROPERTY_RE = re.compile(
@@ -81,7 +84,7 @@ _PRIVATE_RE = re.compile(r"\bprivate\b")
 
 
 class CFamilyParse:
-    """The reading every brace-language class model shares: TypeScript, JavaScript, and Java. The model it is mixed
+    """The reading every brace-language class model shares: TypeScript and JavaScript. The model it is mixed
     into holds the language it reads and fills its own modules, classes, and members from the text."""
 
     language: CodeLanguage
@@ -91,7 +94,7 @@ class CFamilyParse:
     operation_type: type
     property_type: type
 
-    def parse(self, text: str) -> "CFamilyParse":
+    def parse(self, text: str, file: str = "") -> "CFamilyParse":
         """Read the text's classes and top-level functions into this model's one module, and return the model. The
         module keeps the text, and each class and operation the lines it spans."""
         self._text = text
@@ -142,7 +145,7 @@ class CFamilyParse:
 
     def _read_members(self, oclass: OoadClass) -> None:
         """The operations and fields the class body declares, measured once the class holds them."""
-        oclass.operations = self._methods_from_body(oclass.name) + self._bodiless_members()
+        oclass.operations = self._methods_from_body() + self._bodiless_members()
         self._prepend_constructors(oclass)
         oclass.properties = self._fields_from_body()
         self._derive_member_relationships(oclass)
@@ -250,41 +253,77 @@ class CFamilyParse:
                 spans.append((body_start, body_start + len(body)))
         return spans
 
-    def _methods_from_body(self, class_name: str) -> list[Operation]:
+    def _methods_from_body(self) -> list[Operation]:
         operations: list[Operation] = []
         position = 0
         while (match := _METHOD_RE.search(self._class_body, position)) is not None:
-            method_body, body_start = self._method_body(match)
+            return_type, opening = self._return_type_of(match)
+            method_body, body_start = self._method_body(match, opening)
             if method_body is None:
                 position = match.end(1)
                 continue
             # Reading on after the body keeps a statement inside it, such as `for (...) {`, from being taken for the next header.
             position = body_start + len(method_body) + 1
-            operations.append(self._method(match, method_body, class_name))
+            operations.append(self._method(match, method_body, return_type, opening))
         return operations
 
-    def _method_body(self, match: re.Match) -> tuple[str | None, int]:
-        """The braces of the method whose header is match; none for a header that declares no method."""
+    def _return_type_of(self, match: re.Match) -> tuple[str, int]:
+        """The return type the header match writes and where the method's body opens. A return type that writes an
+        object of named fields, `{ page: BoardPage }` or inside a generic, `Promise<{ page: BoardPage }>`, holds braces
+        of its own, so the body opens at the first brace after every bracket of the type is closed, not at the type's
+        own brace."""
+        written, opening = match.group(3), match.end() - 1
+        if written is None:
+            return "", opening
+        angles = written.count("<") - written.count(">")
+        if angles <= 0 and written.strip():
+            return written.strip(), opening
+        braces = 0
+        for index in range(opening, len(self._class_body)):
+            character = self._class_body[index]
+            if character == "{" and angles == 0 and braces == 0 and index > opening:
+                return (written + self._class_body[match.end() - 1 : index]).strip(), index
+            angles += {"<": 1, ">": -1}.get(character, 0)
+            braces += {"{": 1, "}": -1}.get(character, 0)
+        return written.strip(), opening
+
+    def _method_body(self, match: re.Match, opening: int) -> tuple[str | None, int]:
+        """The braces of the method whose header is match, opening at opening; none for a header that declares no
+        method."""
         name_start = match.start(1)
         # A name after a dot is a call on something (`this.store.change(`), not a method this class declares. The
         # check reads the character before the name, since a match can open on the full stop ending a comment above.
         if (name_start > 0 and self._class_body[name_start - 1] == ".") or match.group(1) in _NOT_METHOD_NAMES:
             return None, -1
-        return self._brace_body(self._class_body, match.end() - 1)
+        return self._brace_body(self._class_body, opening)
 
-    def _method(self, match: re.Match, method_body: str, class_name: str) -> Operation:
-        """The method whose header is match, named constructor when it carries its class's name."""
-        name = match.group(1)
-        operation = self._declared_operation(
-            "constructor" if class_name and name == class_name else name, match.group(2) or "", (match.group(3) or "").strip()
-        )
+    def _method(self, match: re.Match, method_body: str, return_type: str, opening: int) -> Operation:
+        """The method whose header is match, which returns return_type and whose body opens at opening."""
+        operation = self._declared_operation(match.group(1), match.group(2) or "", return_type)
         header = match.group(0)
         header_start = match.start() + len(header) - len(header.lstrip())
         operation.line = self._line_at(self._text, self._body_start + header_start)
-        self._apply_method_end_line(operation, match.end() - 1)
+        self._apply_method_end_line(operation, opening)
         filled = self._operation_from_body(operation, method_body)
         self._read_modifiers(filled, match)
+        filled.description = self._doc_comment_above(header_start) or filled.description
         return filled
+
+    def _doc_comment_above(self, header_start: int) -> str:
+        """The doc comment written right above the method whose header starts at header_start, `/** ... */`, with
+        only its decorators between them: its words, without the comment's marks; empty when none is written there."""
+        above = self._class_body[:header_start].rstrip()
+        lines = above.split("\n")
+        while lines and lines[-1].strip().startswith("@"):
+            lines.pop()
+        above = "\n".join(lines).rstrip()
+        if not above.endswith("*/") or "/**" not in above:
+            return ""
+        comment = above[above.rindex("/**") + 3 : -2]
+        if "*/" in comment:
+            return ""
+        words = [line.strip().lstrip("*").strip() for line in comment.split("\n")]
+        return " ".join(word for word in words if word)
 
     def _read_modifiers(self, operation: Operation, match: re.Match) -> None:
         """Whether the method is an accessor, static, or private, as its header and the words before it say."""
@@ -363,7 +402,7 @@ class CFamilyParse:
         default_at = BracketStructure(part).top_level_index("=")
         if default_at >= 0:
             part = part[:default_at].strip()
-        part = re.sub(r"^\s*(public|private|protected|final|readonly)\s+", "", part)
+        part = re.sub(r"^\s*(public|private|protected|readonly)\s+", "", part)
         hint_at = BracketStructure(part).top_level_index(":")
         if hint_at >= 0:
             name, type_hint = part[:hint_at].strip().split()[-1], part[hint_at + 1 :].strip()

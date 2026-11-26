@@ -1,7 +1,7 @@
-import type { AppData } from '@cdd/harness/diagnostics/app'
+import type { AppData } from '@cdd/harness/apps/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
-import type { AppOpeningJson, InstallJson, ServerHealthJson, TestRunJson } from '../../types'
+import type { AppOpeningJson, E2eReviewJson, InstallJson, ServerHealthJson, TestRunJson } from '../../types'
 import { BRAND } from '../shared/brand'
 import { SERVER } from '../shared/cdd-tool'
 import { RECONNECT_TRIES, REPORT_TOOL, ServerHealthClient } from './server-health-client'
@@ -13,11 +13,12 @@ import { RECONNECT_TRIES, REPORT_TOOL, ServerHealthClient } from './server-healt
 // cannot work without, stopped.
 export type Part = { icon: string; label: string; value: string; isUp: boolean; isDown?: boolean; app?: string }
 
-// A part shows as its icon alone: green while it runs or passed, red when the MCP host is down or a scheduled test run
-// failed, grey while an app does not run or a test run has not ended.
+// A part shows as its icon alone: green while it runs or passed; red when the MCP host is down, a scheduled test run
+// failed, or an app did not open; white while an app does not run, and grey while a test run has not ended.
 export function colourOf(part: Part): string {
+  if (part.isDown) return BRAND.error
   if (part.isUp) return BRAND.success
-  return part.isDown ? BRAND.error : BRAND.muted
+  return part.app === undefined ? BRAND.muted : BRAND.text
 }
 
 // What hovering a part's icon shows, its name and how it stands: Files: running :8783.
@@ -26,14 +27,19 @@ export function tooltipOf(part: Part): string {
 }
 
 // Each app's mark in the status row; an app registered later shows the plain one.
-const APP_ICONS: Record<string, string> = { Kanban: '▦', Graph: '◈', 'Story UI': '✎' }
+const APP_ICONS: Record<string, string> = { Kanban: '▦', 'Story UI': '✎' }
 const APP_ICON = '▣'
 const RUNNING: AppData['status'] = 'running'
+// The Graph is a view inside the Files app, so the status row gives it no icon of its own.
+const SHOWN_IN_FILES = 'Graph'
 
-// An app reads its status, and the port it answers on while it runs: running :8778, not running, not installed.
-function appPartOf(app: AppData): Part {
+// An app reads its status, and the port it answers on while it runs: running :8778, not running, not installed. One a
+// person pressed that did not open reads why, and is down until a press opens it.
+function appPartOf(app: AppData, opening: AppOpeningJson): Part {
   const isUp = app.status === RUNNING
-  return { icon: APP_ICONS[app.label] ?? APP_ICON, label: app.label, value: isUp ? `${app.status} :${app.port}` : app.status, isUp, app: app.label }
+  const hasFailed = opening.state === 'failed' && opening.label === app.label
+  const value = hasFailed ? opening.error ?? 'did not open' : isUp ? `${app.status} :${app.port}` : app.status
+  return { icon: APP_ICONS[app.label] ?? APP_ICON, label: app.label, value, isUp, isDown: hasFailed, app: app.label }
 }
 
 // The MCP host and the tools it loaded are one part: running with 236 tools, or down.
@@ -50,14 +56,23 @@ function testRunPartOf(run: TestRunJson): Part {
   return { icon: run.name === 'e2e' ? '◎' : '◉', label, value: `${run.state}, started ${run.started.slice(0, 16)}`, isUp: run.state === 'passed', isDown: run.state === 'failed' }
 }
 
-export function partsOf(health: ServerHealthJson): Part[] {
+// The latest scheduled e2e run's screen review: E2e screens: run-2026-11-17-06-00-00, 3 changed, 1 missed, 0 not
+// judged. Green with nothing missed or unjudged, red once a step is missed by the tests, grey while steps await a verdict.
+function e2eReviewPartOf(review: E2eReviewJson): Part {
+  const missed = review.missed_steps.length
+  const unjudged = review.unjudged_steps.length
+  const value = `${review.run}, ${review.changed_steps.length} changed, ${missed} missed, ${unjudged} not judged`
+  return { icon: '⧉', label: 'E2e screens', value, isUp: missed === 0 && unjudged === 0, isDown: missed > 0 }
+}
+
+export function partsOf(health: ServerHealthJson, opening: AppOpeningJson): Part[] {
   const client = new ServerHealthClient(health.report as ServerHealthData | null)
-  const { apps, isHookServerRunning: isHookRunning } = client
+  const { apps, e2eReview } = client
   return [
     hostPartOf(health),
-    ...apps.map(appPartOf),
-    { icon: '↪', label: 'Hook server', value: isHookRunning ? 'running' : 'not installed', isUp: isHookRunning },
+    ...apps.filter(app => app.label !== SHOWN_IN_FILES).map(app => appPartOf(app, opening)),
     ...client.testRuns.map(testRunPartOf),
+    ...(e2eReview ? [e2eReviewPartOf(e2eReview)] : []),
   ]
 }
 

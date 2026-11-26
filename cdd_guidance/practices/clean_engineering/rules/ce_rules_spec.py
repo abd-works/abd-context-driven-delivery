@@ -4,6 +4,7 @@ Each fixture builds a graph, so every context builds its fixtures and pairs once
 the rule on them."""
 
 import sys
+import tempfile
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[4]
@@ -11,9 +12,12 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from expects import be_true, contain, equal, expect, have_len
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
+from harness.graph.graph import Graph, Node, Source
+from harness.graph.rule_context import RuleCheckContext
 from harness.graph.rule_fixture import SchemaRuleRun
+from harness.graph.saved_graph import NodeIdentity
 
 from cdd_guidance.practices.clean_engineering.rules.fixtures.multi_language_examples import (
     _ELIMINATE_DUPLICATION_CLEAN,
@@ -31,9 +35,10 @@ from cdd_guidance.practices.clean_engineering.rules.fixtures.multi_language_exam
     _USE_EXCEPTIONS_PROPERLY_CLEAN,
     _USE_EXCEPTIONS_PROPERLY_FAULT,
 )
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
+from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
     assert_rule_pair,
-    ce_rule_by_slug,
     files_rule_pair,
     module_example_pair,
     practice_from_class_text,
@@ -61,6 +66,16 @@ def _multilang_pairs(slug: str, fault: dict, clean: dict) -> list:
 def _check_all(pairs: list) -> None:
     for pair in pairs:
         pair.check()
+
+
+def _named_seam_hits(root: Path, card: str, text: str, identity: NodeIdentity, source: Source) -> list:
+    """What named-seam-and-constraint reports on the DDD node identity names, in a project at root holding only the card."""
+    (root / card).parent.mkdir(parents=True)
+    (root / card).write_text(text, encoding="utf-8")
+    graph = Graph()
+    graph.reads.open(root)
+    practice = graph.practices.named("ddd")
+    return SchemaRuleRun(NamedSeamAndConstraint(), RuleCheckContext(practice)).node_hits(Node(practice, identity, source))
 
 
 with description("Clean Engineering graph rules (python .examples pairs)"):
@@ -139,15 +154,15 @@ export class NumberInventorySearch {
         with it("should flag faultyAsset and accept repairedAsset"):
             self.pair.check()
         with it("should allow three domain parameters and flag a fourth"):
-            rule = ce_rule_by_slug("limit-operation-parameters")
+            rule = BY_SLUG["limit-operation-parameters"]
             expect(self.three.hits(rule)).to(equal([]))
             hits = self.four.hits(rule)
             expect(len(hits)).to(equal(1))
             expect(hits[0]).to(contain("maximum 3, excluding self"))
         with it("should not flag create factories that take many parameters"):
-            expect(self.create_factory.hits(ce_rule_by_slug("limit-operation-parameters"))).to(equal([]))
+            expect(self.create_factory.hits(BY_SLUG["limit-operation-parameters"])).to(equal([]))
         with it("should not flag fromFields mapping factories"):
-            expect(self.from_fields.hits(ce_rule_by_slug("limit-operation-parameters"))).to(equal([]))
+            expect(self.from_fields.hits(BY_SLUG["limit-operation-parameters"])).to(equal([]))
         with it("should not flag an operation published as an MCP tool, whose parameters are the tool's argument schema"):
             assert_rule_pair(
                 "limit-operation-parameters",
@@ -204,12 +219,12 @@ export class AccountRepository {
         with it("should flag faultyAsset and accept repairedAsset"):
             self.pair.check()
         with it("should not flag constructor or single-word methods as snake_case on a TypeScript class"):
-            hits = self.node_class.hits(ce_rule_by_slug("use-consistent-naming"))
+            hits = self.node_class.hits(BY_SLUG["use-consistent-naming"])
             expect(hits).to(equal([]))
         with it(
             "should not flag a TypeScript repository with single-word lifecycle verbs and camelCase bulk import/export"
         ):
-            rule = ce_rule_by_slug("use-consistent-naming")
+            rule = BY_SLUG["use-consistent-naming"]
             fixture = self.repository
             repo = next(n for n in fixture.practice.reading.in_graph.nodes("OoadClass") if n.name == "AccountRepository")
             expect(SchemaRuleRun(rule, fixture.context).node_hits(repo)).to(equal([]))
@@ -296,24 +311,24 @@ class Client:
             )
 
         with it("should not flag signOut with one property assignment after a post helper"):
-            hits = self.sign_out.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))
+            hits = self.sign_out.hits(BY_SLUG["state-change-returns-record-or-named-failure"])
             expect(hits).to(equal([]))
         with it("should flag verify when two property assignments lack a returned record"):
-            hits = self.verify.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))
+            hits = self.verify.hits(BY_SLUG["state-change-returns-record-or-named-failure"])
             expect(len(hits)).to(equal(1))
             expect(hits[0]).to(contain("verify"))
 
         with it("should not flag a TypeScript constructor that sets several fields"):
-            expect(self.constructor.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))).to(equal([]))
+            expect(self.constructor.hits(BY_SLUG["state-change-returns-record-or-named-failure"])).to(equal([]))
 
         with it("should not flag a Python __init__ that sets several nested fields"):
-            expect(self.python_init.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))).to(equal([]))
+            expect(self.python_init.hits(BY_SLUG["state-change-returns-record-or-named-failure"])).to(equal([]))
 
         with it("should not flag a JavaScript constructor function its file builds with new"):
-            expect(self.constructor_function.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))).to(equal([]))
+            expect(self.constructor_function.hits(BY_SLUG["state-change-returns-record-or-named-failure"])).to(equal([]))
 
         with it("should flag a capitalised JavaScript function its file never builds with new"):
-            hits = self.capitalised_function.hits(ce_rule_by_slug("state-change-returns-record-or-named-failure"))
+            hits = self.capitalised_function.hits(BY_SLUG["state-change-returns-record-or-named-failure"])
             expect(len(hits)).to(equal(1))
 
     with context("use-intention-revealing-names"):
@@ -349,14 +364,14 @@ export function refreshChatBar($: EngineInterface): void {}
             )
 
         with it("should allow value on a TypeScript property setter"):
-            hits = self.setter.hits(ce_rule_by_slug("use-intention-revealing-names"))
+            hits = self.setter.hits(BY_SLUG["use-intention-revealing-names"])
             expect(hits).to(equal([]))
         with it("should still flag value on an ordinary method parameter"):
-            hits = self.method.hits(ce_rule_by_slug("use-intention-revealing-names"))
+            hits = self.method.hits(BY_SLUG["use-intention-revealing-names"])
             expect(hits).not_to(equal([]))
         # A Claude Code mod hands every hook its engine as $, the name the mod API documents.
         with it("should allow the engine a Claude Code mod hands its hooks as $"):
-            hits = self.mod_hook.hits(ce_rule_by_slug("use-intention-revealing-names"))
+            hits = self.mod_hook.hits(BY_SLUG["use-intention-revealing-names"])
             expect(hits).to(equal([]))
     with context("prefer-instance-operations"):
         with before.all:
@@ -372,14 +387,6 @@ export function refreshChatBar($: EngineInterface): void {}
             self.private_operations = rule_pair(
                 "keep-classes-single-responsibility", f"export class Steps {{\n{public}}}\n", f"export class Steps {{\n{mostly_private}}}\n", lang="typescript"
             )
-
-        with it("should flag faultyAsset and accept repairedAsset"):
-            self.pair.check()
-
-        with it("should count only the public operations of a TypeScript class, not those it declares private"):
-            self.private_operations.check()
-
-        with it("should not count a property's setter or a cached property as public behaviour"):
             behaviour = "".join(f"    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
             held = "".join(
                 f"    @cached_property\n    def step{index}(self) -> int:\n        return {index}\n\n"
@@ -389,13 +396,26 @@ export function refreshChatBar($: EngineInterface): void {}
                 for index in range(11)
             )
             header = "from functools import cached_property\n\n\nclass Steps:\n"
-            rule_pair("keep-classes-single-responsibility", header + behaviour, header + held).check()
+            self.setters_and_cached_properties = rule_pair("keep-classes-single-responsibility", header + behaviour, header + held)
+            held_from_functools = "".join(
+                f"    @functools.cached_property\n    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11)
+            )
+            functools_header = "import functools\n\n\nclass Steps:\n"
+            self.cached_properties_from_functools = rule_pair(
+                "keep-classes-single-responsibility", functools_header + behaviour, functools_header + held_from_functools
+            )
+
+        with it("should flag faultyAsset and accept repairedAsset"):
+            self.pair.check()
+
+        with it("should count only the public operations of a TypeScript class, not those it declares private"):
+            self.private_operations.check()
+
+        with it("should not count a property's setter or a cached property as public behaviour"):
+            self.setters_and_cached_properties.check()
 
         with it("should not count a cached property read from functools as public behaviour"):
-            behaviour = "".join(f"    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
-            held = "".join(f"    @functools.cached_property\n    def step{index}(self) -> int:\n        return {index}\n\n" for index in range(11))
-            header = "import functools\n\n\nclass Steps:\n"
-            rule_pair("keep-classes-single-responsibility", header + behaviour, header + held).check()
+            self.cached_properties_from_functools.check()
     with context("use-typed-signatures"):
         with before.all:
             self.pair = python_example_pair("use-typed-signatures")
@@ -468,21 +488,21 @@ export class NumberExamples {
         with it("should flag faultyAsset and accept repairedAsset"):
             self.pair.check()
         with it("should not flag defaults inside a typed destructured parameter"):
-            expect(self.destructured.hits(ce_rule_by_slug("use-typed-signatures"))).to(equal([]))
+            expect(self.destructured.hits(BY_SLUG["use-typed-signatures"])).to(equal([]))
         with it("should still flag an untyped parameter with a default"):
-            hits = self.untyped_default.hits(ce_rule_by_slug("use-typed-signatures"))
+            hits = self.untyped_default.hits(BY_SLUG["use-typed-signatures"])
             expect(hits).to(contain("Parameter 'maxAttempts' is missing a type annotation."))
             expect(" ".join(hits)).not_to(contain("retry"))
         with it("should not judge plain JavaScript, which has no syntax for a parameter's type"):
-            expect(self.javascript_tree.hits(ce_rule_by_slug("use-typed-signatures"))).to(equal([]))
+            expect(self.javascript_tree.hits(BY_SLUG["use-typed-signatures"])).to(equal([]))
         with it("should still judge the same parameters in TypeScript"):
-            expect(self.typescript_tree.hits(ce_rule_by_slug("use-typed-signatures"))).to(have_len(2))
+            expect(self.typescript_tree.hits(BY_SLUG["use-typed-signatures"])).to(have_len(2))
         with it("should not flag the cls of a Python classmethod"):
-            expect(self.classmethod.hits(ce_rule_by_slug("use-typed-signatures"))).to(equal([]))
+            expect(self.classmethod.hits(BY_SLUG["use-typed-signatures"])).to(equal([]))
         with it("should treat withXxx client field changes as properties"):
-            expect(self.with_field.hits(ce_rule_by_slug("use-typed-signatures"))).to(equal([]))
+            expect(self.with_field.hits(BY_SLUG["use-typed-signatures"])).to(equal([]))
         with it("should not check test code"):
-            rule = ce_rule_by_slug("use-typed-signatures")
+            rule = BY_SLUG["use-typed-signatures"]
             for fixture in self.test_code:
                 expect(fixture.hits(rule)).to(equal([]))
     with context("limit-comments"):
@@ -556,65 +576,32 @@ export class NumberExamples {
             self.extensions.check()
 
     with context("named-seam-and-constraint"):
-        with it("should accept a bounded context that only has bounded-context.md"):
-            import tempfile
-
-            from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
-            from harness.graph.graph import Graph, Node, Source
-            from harness.graph.saved_graph import NodeIdentity
-            from harness.graph.rule_context import RuleCheckContext
-
-            temp = tempfile.TemporaryDirectory()
-            root = Path(temp.name)
-            context_dir = root / "src" / "customer" / ".context"
-            context_dir.mkdir(parents=True)
-            (context_dir / "bounded-context.md").write_text(
+        # Each card is written and its project read once, before the examples, which only run the rule on its node.
+        with before.all:
+            self.cards = tempfile.TemporaryDirectory()
+            self.bounded_context_hits = _named_seam_hits(
+                Path(self.cards.name) / "bounded-context",
+                "src/customer/.context/bounded-context.md",
                 "# Customer\n\nAccount, Customer Profile, Identity verification\n",
-                encoding="utf-8",
-            )
-            graph = Graph()
-            graph.reads.open(Path(str(root)))
-            practice = graph.practice("ddd")
-            practice._temp_dir = temp  # type: ignore[attr-defined]
-            rel = "src/customer/.context/bounded-context.md"
-            node = Node(
-                practice,
                 NodeIdentity(type="BoundedContext", node_id="ddd:BoundedContext:src/customer:Customer", name="Customer"),
-                Source(rel, 1, 3),
+                Source("src/customer/.context/bounded-context.md", 1, 3),
             )
-            rule = NamedSeamAndConstraint()
-            context = RuleCheckContext(practice, root)
-            expect(SchemaRuleRun(rule, context).node_hits(node)).to(equal([]))
+            self.aggregate_hits = _named_seam_hits(
+                Path(self.cards.name) / "aggregate",
+                "src/inventory/numbers/.context/module-context.md",
+                "# numbers\n\n- **Seam (terms):** NumberInventory\n\n## Constraint\n\nUse search flows.\n",
+                NodeIdentity(type="Aggregate", node_id="ddd:Aggregate:src/inventory/numbers", name="numbers"),
+                Source("src/inventory/numbers", 1, 1),
+            )
+
+        with after.all:
+            self.cards.cleanup()
+
+        with it("should accept a bounded context that only has bounded-context.md"):
+            expect(self.bounded_context_hits).to(equal([]))
 
         with it("should accept a DDD aggregate folder with module-context.md"):
-            import tempfile
-
-            from cdd_guidance.practices.clean_engineering.rules.module_graph_rules import NamedSeamAndConstraint
-            from harness.graph.graph import Graph, Node, Source
-            from harness.graph.saved_graph import NodeIdentity
-            from harness.graph.rule_context import RuleCheckContext
-
-            temp = tempfile.TemporaryDirectory()
-            root = Path(temp.name)
-            context_dir = root / "src" / "inventory" / "numbers" / ".context"
-            context_dir.mkdir(parents=True)
-            (context_dir / "module-context.md").write_text(
-                "# numbers\n\n- **Seam (terms):** NumberInventory\n\n## Constraint\n\nUse search flows.\n",
-                encoding="utf-8",
-            )
-            graph = Graph()
-            graph.reads.open(Path(str(root)))
-            practice = graph.practice("ddd")
-            practice._temp_dir = temp  # type: ignore[attr-defined]
-            rel = "src/inventory/numbers"
-            node = Node(
-                practice,
-                NodeIdentity(type="Aggregate", node_id="ddd:Aggregate:src/inventory/numbers", name="numbers"),
-                Source(rel, 1, 1),
-            )
-            rule = NamedSeamAndConstraint()
-            context = RuleCheckContext(practice, root)
-            expect(SchemaRuleRun(rule, context).node_hits(node)).to(equal([]))
+            expect(self.aggregate_hits).to(equal([]))
 
 
 with description("Clean Engineering graph rules (multi-language scanner fixtures)"):
@@ -678,9 +665,9 @@ export class Gate {
         with it("should flag fault snippets in python, typescript, and javascript"):
             _check_all(self.pairs)
         with it("should not count JSX, object literal or arrow-body braces as control flow"):
-            expect(self.jsx.hits(ce_rule_by_slug("simplify-control-flow"))).to(equal([]))
+            expect(self.jsx.hits(BY_SLUG["simplify-control-flow"])).to(equal([]))
         with it("should still count control flow nested inside a callback"):
-            expect(self.callback.hits(ce_rule_by_slug("simplify-control-flow"))).to(
+            expect(self.callback.hits(BY_SLUG["simplify-control-flow"])).to(
                 equal(["Operation 'decide' nests control flow 4 levels deep (max 3)."])
             )
 
@@ -758,7 +745,7 @@ export class CustomerProfile {
             self.typescript_file.check()
 
         with it("should allow an Entity aggregate to construct peer types in the same module"):
-            hits = self.aggregate.hits(ce_rule_by_slug("use-explicit-dependencies"))
+            hits = self.aggregate.hits(BY_SLUG["use-explicit-dependencies"])
             expect(hits).to(equal([]))
 
     with context("use-exceptions-properly"):
@@ -777,7 +764,7 @@ export class CustomerProfile {
             self.bare_except.check()
 
         with it("should accept the optional catch binding in typescript and javascript"):
-            rule = ce_rule_by_slug("use-exceptions-properly")
+            rule = BY_SLUG["use-exceptions-properly"]
             for fixture in self.optional_binding:
                 expect(fixture.hits(rule)).to(equal([]))
 
@@ -1008,16 +995,16 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
             )
 
         with it("should accept a domain extension that joins a framework type beside the domain class it extends"):
-            expect(self.beside_domain.hits(ce_rule_by_slug("extensions-live-with-the-domain"))).to(equal([]))
+            expect(self.beside_domain.hits(BY_SLUG["extensions-live-with-the-domain"])).to(equal([]))
 
         with it("should accept a format class in a package nested under the domain it extends"):
-            expect(self.nested_format.hits(ce_rule_by_slug("extensions-live-with-the-domain"))).to(equal([]))
+            expect(self.nested_format.hits(BY_SLUG["extensions-live-with-the-domain"])).to(equal([]))
 
         with it("should flag a framework holding a domain's extension and accept a format built on the package it extends"):
             self.pair.check()
 
         with it("should still flag an extension kept in the framework package beside the domain"):
-            expect(self.in_framework.hits(ce_rule_by_slug("extensions-live-with-the-domain"))).to(have_len(1))
+            expect(self.in_framework.hits(BY_SLUG["extensions-live-with-the-domain"])).to(have_len(1))
 
     with context("write-interactions"):
         with before.all:
@@ -1025,9 +1012,9 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
             self.arrow = _markdown_class("# Order\n\n- checkout\n  -> payment.charge\n")
 
         with it("should flag a bold Interaction bullet in a markdown class"):
-            expect(self.bold.hits(ce_rule_by_slug("write-interactions"))).not_to(equal([]))
+            expect(self.bold.hits(BY_SLUG["write-interactions"])).not_to(equal([]))
         with it("should accept arrow notation in a markdown class"):
-            expect(self.arrow.hits(ce_rule_by_slug("write-interactions"))).to(equal([]))
+            expect(self.arrow.hits(BY_SLUG["write-interactions"])).to(equal([]))
 
     with context("one-way-deps"):
         with before.all:
@@ -1223,6 +1210,6 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
             self.callback_part.check()
 
         with it("should still flag a library's client the program does not declare"):
-            expect(self.library_client.hits(ce_rule_by_slug("use-explicit-dependencies"))).to(
+            expect(self.library_client.hits(BY_SLUG["use-explicit-dependencies"])).to(
                 equal(["Class 'Embedder' constructs 'OpenAI' inside its constructor."])
             )

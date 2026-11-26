@@ -17,24 +17,29 @@ from typing import Callable, Dict, List, Optional
 
 from cdd_guidance.practices.stories.model.markdown.links import unlink
 from cdd_guidance.practices.stories.model.markdown.markup import ExampleRowLine, MarkdownExample, MarkdownStep, strip_markup
+from cdd_guidance.practices.stories.model.markdown.read_lines import ExampleLine, HeadingLine, HeldLines, KeptLine, ReadLine, StepLines
 from cdd_guidance.practices.stories.model.markdown.scenario_parts import (
-    HEADING_LINE,
-    STEP_LINE,
     BackgroundReading,
     ExamplesTable,
     RealizationFence,
     StorySection,
 )
 from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, source_at
-from cdd_guidance.practices.stories.model.story_model import Background, Scenario, StepType
+from cdd_guidance.practices.stories.model.story_map import Background, Scenario, StepType
 
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
 SCENARIO_HEADING = re.compile(r"^#+\s+Scenario(?:\s+Outline)?(?:\s+\d+)?\s*[:\-]?\s*(.+?)\s*$", re.IGNORECASE)
+# A scenario heading that says the scenario is an outline: the words Scenario Outline open it, whatever its name holds.
+_OUTLINE_HEADING = re.compile(r"^#+\s+Scenario\s+Outline\b", re.IGNORECASE)
 _STORY_HEADING = re.compile(r"^#+\s+Story(?!\s+Background\b)\s*[:\-]?\s*(.+?)\s*$", re.IGNORECASE)
 _ITALIC_STEP = re.compile(r"^\s*\*(Given|When|Then|And|But)\*\s+(.+?)\s*$", re.IGNORECASE)
 _BULLET_STEP = re.compile(r"^\s*[-*]\s+(Given|When|Then|And|But)\b\s*(.+?)\s*$", re.IGNORECASE)
 _H1 = re.compile(r"^#\s+(.+)$")
 _PHASES = {"given": StepType.GIVEN, "when": StepType.WHEN, "then": StepType.THEN}
+# The line that opens and closes a file's front matter.
+_FRONT_MATTER_MARK = "---"
+# The heading the scenarios of a story's section stand under, which ends the notes above them.
+_BEHAVIORS = "behaviors"
 # A Story heading names a file's story only near its top, and its title only on its first lines.
 _STORY_HEADING_LINES = 20
 _TITLE_LINES = 5
@@ -50,12 +55,12 @@ _HEADINGS = (
 )
 
 
-def heading_of(raw: str) -> tuple:
+def _heading_of(raw: str) -> tuple:
     """The kind of heading a line is, with its match; ("", None) for a line that is no heading."""
     return next(((kind, match) for kind, pattern in _HEADINGS for match in [pattern.match(raw)] if match), ("", None))
 
 
-def inferred_story_name(lines: List[str], path: Path) -> str:
+def _inferred_story_name(lines: List[str], path: Path) -> str:
     """The story a file's scenarios belong to before any story heading: a Story heading near the top, else its title,
     else the folder or file it is in."""
     found = _first_match(_STORY_HEADING, lines[:_STORY_HEADING_LINES]) or _first_match(_H1, lines[:_TITLE_LINES])
@@ -84,7 +89,7 @@ class ScenarioFiles:
         self.root = Path(root).resolve()
         self._named_from = Path(base).resolve() if base is not None else self.root
 
-    def sections(self, scenario_type: type, on_file: Optional[Callable[[str], None]] = None) -> List[StorySection]:
+    def sections(self, scenario_class: type, on_file: Optional[Callable[[str], None]] = None) -> List[StorySection]:
         """The story sections of every file, each file read once by a reading made for it; on_file hears each file's
         name as it is read."""
         sections: List[StorySection] = []
@@ -92,7 +97,7 @@ class ScenarioFiles:
             rel = self._name_of(path)
             if on_file is not None:
                 on_file(rel)
-            sections.extend(ScenarioFileReading(path.read_text(encoding="utf-8"), rel, scenario_type).read())
+            sections.extend(ScenarioFileReading(path.read_text(encoding="utf-8"), rel, scenario_class).read())
         return sections
 
     def _files(self) -> List[Path]:
@@ -107,22 +112,23 @@ class ScenarioFileReading:
     (the line being read, the section, the scenario, and the parts that follow its backgrounds, examples table, and
     realization fence). Made for each read, so the scenarios it reads keep only what they were read as."""
 
-    def __init__(self, text: str, rel: str, scenario_type: type) -> None:
+    def __init__(self, text: str, rel: str, scenario_class: type) -> None:
         self.rel = rel
-        self.scenario_type = scenario_type
+        self.scenario_class = scenario_class
         self.lines = text.splitlines()
         self.kept_lines = text.splitlines(keepends=True)
-        self.document_parts: list = []
+        self.document_lines: List[ReadLine] = []
         self.sections: List[StorySection] = []
-        self.tree_heading: Optional[tuple] = None
+        # The heading that names the epic or sub-epic the document's stories are on, said as (level, name).
+        self.tree_heading: Optional[HeadingLine] = None
         self.tree_heading_line = 0
         self.document_examples = None
-        self.container = self.document_parts
+        self.container: List[ReadLine] = self.document_lines
         self.section: Optional[StorySection] = None
         self.scenario = None
         self.scenario_level = 0
         self.number, self.raw, self.kept = 0, "", ""
-        self.story_name = inferred_story_name(self.lines, Path(rel))
+        self.story_name = _inferred_story_name(self.lines, Path(rel))
         self.backgrounds = BackgroundReading()
         self.examples = ExamplesTable()
         self.fence = RealizationFence()
@@ -132,18 +138,40 @@ class ScenarioFileReading:
         for number, raw in enumerate(self.lines, start=1):
             self.number, self.raw = number, raw
             self.kept = self.kept_lines[number - 1] if number - 1 < len(self.kept_lines) else raw
+            self._take_note()
             self._read_line()
         self._close_scenario()
         return self.sections
 
+    def _front_matter(self) -> List[str]:
+        """The front matter the file opens with, between its two `---` lines, those lines included; none when it opens
+        with none."""
+        if not self.lines or self.lines[0].strip() != _FRONT_MATTER_MARK:
+            return []
+        closing = next((index for index, line in enumerate(self.lines[1:], start=1) if line.strip() == _FRONT_MATTER_MARK), None)
+        return self.lines[: closing + 1] if closing is not None else []
+
+    def _take_note(self) -> None:
+        """The line, kept as a note of the story section being read while the section's notes are open: a line under
+        the story's heading before its examples, backgrounds, Behaviors heading, scenarios or first step."""
+        section = self.section
+        if section is None or not section.is_taking_notes or self.number == section.line:
+            return
+        kind, match = _heading_of(self.raw)
+        is_step = _ITALIC_STEP.match(self.raw) or _BULLET_STEP.match(self.raw)
+        ends_notes = is_step or kind not in ("", "heading") or (kind == "heading" and self._level()[1].lower() == _BEHAVIORS)
+        section.is_taking_notes = not ends_notes
+        if section.is_taking_notes:
+            section.notes.append(self.raw)
+
     def _read_line(self) -> None:
         if not self.raw.strip():
             self.backgrounds.blank_line()
-            self.container.append(self.kept)
+            self.container.append(KeptLine(self.kept))
         elif self.fence.accept(self.raw):
-            self.container.append(self.kept)
+            self.container.append(KeptLine(self.kept))
         else:
-            kind, match = heading_of(self.raw)
+            kind, match = _heading_of(self.raw)
             self._read_heading(kind, match) if kind else self._read_text()
 
     def _read_heading(self, kind: str, match: re.Match) -> None:
@@ -153,9 +181,9 @@ class ScenarioFileReading:
         elif kind == "scenario":
             self._scenario_heading(match)
         elif kind == "tree" and self.tree_heading is None and not self.sections:
-            self.tree_heading = (match.group(1), strip_markup(match.group(2)), self.kept)
+            self.tree_heading = HeadingLine(None, (match.group(1), strip_markup(match.group(2))), self.kept)
             self.tree_heading_line = self.number
-            self.document_parts.append(HEADING_LINE)
+            self.document_lines.append(self.tree_heading)
         else:
             self._section_heading("heading" if kind == "tree" else kind, match)
 
@@ -167,29 +195,29 @@ class ScenarioFileReading:
 
     def _scenario_heading(self, match: re.Match) -> None:
         self._close_scenario()
-        scenario = self.scenario_type(strip_markup(match.group(1)))
-        scenario.is_outline = "outline" in self.raw.lower()
+        scenario = self.scenario_class(strip_markup(match.group(1)))
+        scenario.is_outline = _OUTLINE_HEADING.match(self.raw) is not None
         scenario.source = source_at(self.rel, self.number)
-        scenario.markdown_heading = (scenario.name, scenario.is_outline, self.kept)
-        scenario.markdown_parts = [HEADING_LINE]
+        scenario.read_lines = [HeadingLine(scenario, (scenario.name, scenario.is_outline), self.kept)]
         self.scenario = scenario
         self.scenario_level = self._level()[0]
         if self.section is None:
             self._open_section(self.story_name, None)
-        self.section.parts.append(scenario)
+        self.section.lines.append(HeldLines(scenario))
         self.section.scenarios.append(scenario)
-        self.container = scenario.markdown_parts
-        self.backgrounds.heading("scenario", "", True)
+        self.container = scenario.read_lines
+        self.backgrounds.heading("scenario", "", True, source_at(self.rel, self.number))
         self.examples.heading("scenario", 0, "")
 
     def _open_section(self, name: str, heading: Optional[str]) -> StorySection:
+        section = StorySection(name, heading, self.number, self.rel)
         if not self.sections:
             self.document_examples = self.backgrounds.shared.examples
-        section = StorySection(name, heading, self.number)
+            section.front_matter = self._front_matter()
         self.sections.append(section)
-        self.document_parts.append(section)
+        self.document_lines.append(HeldLines(section))
         self.section = section
-        self.container = section.parts
+        self.container = section.lines
         return section
 
     def _section_heading(self, kind: str, match: re.Match) -> None:
@@ -199,11 +227,11 @@ class ScenarioFileReading:
         level, title = self._level()
         if self.scenario is not None and kind != "background" and 0 < level < self.scenario_level:
             self._close_scenario()
-            self.container = self.section.parts if self.section is not None else self.document_parts
+            self.container = self.section.lines if self.section is not None else self.document_lines
         if not self.examples.heading(kind, level, title):
             named = (match.group(1) or "background").strip() if kind == "story-background" else ""
-            self.backgrounds.heading(kind, named, self.scenario is not None)
-        self.container.append(self.kept)
+            self.backgrounds.heading(kind, named, self.scenario is not None, source_at(self.rel, self.number))
+        self.container.append(KeptLine(self.kept))
 
     def _level(self) -> tuple:
         """The line's heading level and its text, as a heading of one to six marks gives them; (0, "") otherwise."""
@@ -218,16 +246,16 @@ class ScenarioFileReading:
             self._step_line(match.group(1), unlink(match.group(2)).strip())
             return
         fields = self.examples.row(self.raw)
-        self.container.append(self.kept if fields is None else self._record_example(fields))
+        self.container.append(KeptLine(self.kept) if fields is None else ExampleLine(self._record_example(fields)))
 
     def _step_line(self, keyword: str, text: str) -> None:
         background = self.backgrounds.owner_of(keyword)
         owner = background if background is not None else self.scenario
         if owner is None:
-            self.container.append(self.kept)
+            self.container.append(KeptLine(self.kept))
             return
         self._take_step(owner, keyword, text)
-        self.container.append((STEP_LINE, owner))
+        self.container.append(StepLines(owner))
         if owner is self.scenario and keyword.lower() in ("when", "then") and owner.steps:
             self.fence.target = owner.steps[-1]
 

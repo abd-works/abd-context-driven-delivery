@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -22,6 +23,16 @@ export class CddNotConnectedError extends Error {
   constructor(detail: string) {
     super(`The cdd server is not connected: ${detail}`)
     this.name = 'CddNotConnectedError'
+  }
+}
+
+// The project folder a connection was made for is not there, such as a ticket's worktree removed while its page stays
+// open. The connect script runs in that folder, and Node words a missing working folder as the program not found
+// (`spawn python.exe ENOENT`), which sends the person to repair a Python and a cdd server that are both fine.
+export class ProjectFolderMissingError extends Error {
+  constructor(readonly folder: string) {
+    super(`The project folder ${folder} is not there: it was moved or removed, such as a ticket's worktree closed since this page opened.`)
+    this.name = 'ProjectFolderMissingError'
   }
 }
 
@@ -79,10 +90,9 @@ class EventStream {
 
 type Session = { url: string; headers: Record<string, string> }
 type Message = { id?: number; method?: string; params?: { progressToken?: number; message?: string }; result?: unknown; error?: { message?: string } }
-type ToolResult = { content?: { text?: string }[]; isError?: boolean }
-// What the cdd server answers for a call still running at its time limit (harness/mcp/tool_calls.py), after the tool's
-// name; and how often a connection asks again, each ask waiting up to the server's own limit, before it gives up.
-const STILL_RUNNING = 'is still running after'
+type ToolResult = { content?: { text?: string }[]; isError?: boolean; structuredContent?: { still_running?: { tool: string; seconds: number } } }
+// How often a connection asks again for a call the cdd server answers is still running at its time limit
+// (harness/mcp/tool_calls.py), each ask waiting up to the server's own limit, before it gives up.
 const STILL_RUNNING_ASKS = 60
 
 const cddHome = (): string => process.env.CDD_HOME ?? join(homedir(), '.cdd')
@@ -95,14 +105,15 @@ export class CddConnection {
   private readonly running = new Map<number, { label: string; step?: string }>()
   private nextId = 1
 
-  constructor(private readonly project: string = SOURCE_ROOT) {}
+  constructor(readonly project: string = SOURCE_ROOT) {}
 
   // A server restarted since this connection opened no longer knows its session and runs nothing for it, so the call
   // is sent once more on a new session rather than failing the page that made it.
   async call<Result>(tool: string, args: Record<string, unknown>): Promise<Result> {
     for (let asked = 1; ; asked += 1) {
-      const text = await this.answerText(tool, args)
-      if (!text.startsWith(`${tool} ${STILL_RUNNING}`)) return this.parsed<Result>(text)
+      const result = await this.answered(tool, args)
+      const text = result.content?.[0]?.text ?? ''
+      if (!result.structuredContent?.still_running) return this.parsed<Result>(text)
       if (asked >= STILL_RUNNING_ASKS) throw new CddToolError(tool, text)
     }
   }
@@ -112,14 +123,14 @@ export class CddConnection {
   // connection's session (restarted), or that did not answer at all (restarting), ran nothing, so the call is sent once
   // more on a new session, whose connect script starts the server when none answers. A call cut off while it was
   // answered may already have run, so it is never sent again.
-  private async answerText(tool: string, args: Record<string, unknown>): Promise<string> {
+  private async answered(tool: string, args: Record<string, unknown>): Promise<ToolResult> {
     const result = (await this.calledOnce(tool, args).catch(failure => {
       if (failure instanceof SessionGoneError || failure instanceof ServerNotAnsweringError) return this.calledOnce(tool, args)
       throw failure
     })) as ToolResult
     const text = result.content?.[0]?.text
     if (result.isError || text === undefined) throw new CddToolError(tool, text ?? 'no result')
-    return text
+    return result
   }
 
   private async calledOnce(tool: string, args: Record<string, unknown>): Promise<unknown> {
@@ -142,7 +153,7 @@ export class CddConnection {
   private connected(): Promise<Session> {
     this.session ??= this.start().catch(failure => {
       this.session = null
-      if (failure instanceof CddNotConnectedError) throw failure
+      if (failure instanceof CddNotConnectedError || failure instanceof ProjectFolderMissingError) throw failure
       throw new CddNotConnectedError(failure instanceof Error ? failure.message : String(failure))
     })
     return this.session
@@ -163,6 +174,7 @@ export class CddConnection {
   // address, it prints the server's address too, so this connection never reads the file the server publishes it in.
   private connectScriptOutput(): Promise<string> {
     const script = join(cddHome(), 'connect.py')
+    if (!statSync(this.project, { throwIfNoEntry: false })?.isDirectory()) return Promise.reject(new ProjectFolderMissingError(this.project))
     return new Promise((resolve, reject) => {
       execFile(process.env.CDD_PYTHON ?? PYTHON, [script, '--address'], { cwd: this.project, timeout: LONGEST_TOOL_MILLISECONDS }, (failure, stdout, stderr) =>
         failure ? reject(new CddNotConnectedError(`${script} failed: ${stderr.trim() || failure.message}`)) : resolve(stdout.trim()),

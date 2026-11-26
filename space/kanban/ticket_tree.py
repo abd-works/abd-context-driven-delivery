@@ -40,12 +40,6 @@ class TicketTree:
         self._ticket = ticket
 
     @property
-    def ancestors(self) -> list[Ticket]:
-        """Its parent, its parent's parent, and so on."""
-        parent = self._ticket.parent
-        return [parent, *parent.tree.ancestors] if parent is not None else []
-
-    @property
     def is_stacked(self) -> bool:
         """Whether it shows inside its parent's card rather than as a card of its own: an open child, not pulled out, of
         an open parent."""
@@ -64,10 +58,8 @@ class TicketTree:
             return []
         # By name: its parent is a ticket of its own, never one of the board's ticket objects.
         parent_name = ticket.parent.name if ticket.parent is not None else None
-        return [other.name for other in ticket.board.tickets if other.name != parent_name and self.can_be_child_of(other)]
-
-    def can_be_child_of(self, parent: Ticket) -> bool:
-        return self._ticket.name not in [parent.name, *(ancestor.name for ancestor in parent.tree.ancestors)]
+        hierarchy = ticket.session.hierarchy
+        return [other.name for other in ticket.board.tickets if other.name != parent_name and hierarchy.can_take_parent(other.session)]
 
     @property
     def furthest_back_child_stage(self) -> Stage | None:

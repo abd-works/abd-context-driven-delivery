@@ -12,6 +12,7 @@ WIRING = [
     'Keep a ticket where it was moved in its column',
     'Keep a backlog item where it was moved',
     'Delete a ticket and its session folder',
+    'Delete a backlog item and its file',
     "Tag a ticket's session",
 ]
 

@@ -26,8 +26,8 @@ from cdd_guidance.practices.ddd.ddd import Ddd
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.agent_tools.agent_tools import ToolsetReference
 
-Car = ToolsetReference("cdd_guidance.practices._examples.car.car:Car").toolset_class
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryModel
+Car = ToolsetReference.parsed("cdd_guidance.practices._examples.car.car:Car").toolset_class
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.stories import Stories
 
 _CLASS_MARKDOWN = """\
@@ -198,17 +198,17 @@ with description("a practice"):
                     self.result = self.practice.render("python", self.source)
 
                 with it("should skip conversion"):
-                    expect(self.result["content"]).to(equal(self.source))
+                    expect(self.result.content).to(equal(self.source))
 
         with context("with an object model"):
             with before.each:
-                self.model = MarkdownStoryModel().parse(_STORY_MAP)
+                self.model = MarkdownStoryMap().parse(_STORY_MAP)
                 self.result = Stories(fidelity="story_map").render(
                     "drawio", self.model
                 )
 
             with it("should render that model into the requested format"):
-                expect(self.result["content"]).to(contain("mxGraphModel"))
+                expect(self.result.content).to(contain("mxGraphModel"))
 
         # The code is read and rendered once; every example only reads the rendered content.
         with context("with a tool whose context lives in the code layer"):
@@ -216,7 +216,7 @@ with description("a practice"):
                 self.root = Path(tempfile.mkdtemp(prefix="story-code-"))
                 leaf = (
                     self.root
-                    / "tests"
+                    / "story_tests"
                     / "manage-customer-orders"
                     / "place-new-order"
                     / "browse-product-catalog"
@@ -230,14 +230,14 @@ with description("a practice"):
                 from space.session import Session, Sessions
 
                 self.tool = Stories(fidelity="story_map", format="python")
-                self.tool.work_in(Session(Sessions(self.root)).practice("stories"))
+                self.tool.work_in(Sessions(self.root).named("main").practice("stories"))
                 self.result = self.tool.render("markdown", self.tool)
 
             with it("should instantiate the object model from that code"):
-                expect(str(self.result["content"])).to(contain("Browse Product Catalog"))
+                expect(str(self.result.content)).to(contain("Browse Product Catalog"))
 
             with it("should render that object model into the requested format"):
-                expect(str(self.result["content"])).to(contain("Manage Customer Orders"))
+                expect(str(self.result.content)).to(contain("Manage Customer Orders"))
 
 
 with description("a class model"):
@@ -248,7 +248,7 @@ with description("a class model"):
                     result = CleanEngineering(fidelity="model").render(
                         "python", _CLASS_MARKDOWN, source="markdown"
                     )
-                    expect(result["content"]).to(contain("class Cart"))
+                    expect(result.content).to(contain("class Cart"))
 
         with context("that has been generated in python"):
             with context("that has been re-rendered in markdown"):
@@ -256,7 +256,7 @@ with description("a class model"):
                     result = CleanEngineering(fidelity="model").render(
                         "markdown", _CLASS_PYTHON, source="python"
                     )
-                    expect(result["content"]).to(contain("Cart"))
+                    expect(result.content).to(contain("Cart"))
 
 
 with description("a story map"):
@@ -267,18 +267,18 @@ with description("a story map"):
                     result = Stories(fidelity="story_map").render(
                         "drawio", _STORY_MAP, source="markdown"
                     )
-                    expect(result["content"]).to(contain("mxGraphModel"))
+                    expect(result.content).to(contain("mxGraphModel"))
 
         with context("that has been generated in drawio"):
             with context("that has been re-rendered in markdown"):
                 with it("should be markdown of that story map"):
                     drawio = Stories(fidelity="story_map").render(
                         "drawio", _STORY_MAP, source="markdown"
-                    )["content"]
+                    ).content
                     result = Stories(fidelity="story_map").render(
                         "markdown", drawio, source="drawio"
                     )
-                    expect(result["content"]).to(contain("Manage Customer Orders"))
+                    expect(result.content).to(contain("Manage Customer Orders"))
 
 
 with description("story scenarios"):
@@ -289,34 +289,38 @@ with description("story scenarios"):
                     result = Stories(fidelity="scenarios").render(
                         "python", _SCENARIOS, source="markdown"
                     )
-                    expect(str(result["content"])).to(contain("Browse Product Catalog"))
+                    expect(str(result.content)).to(contain("Browse Product Catalog"))
 
         with context("that have been generated in python"):
             with context("that have been re-rendered in markdown"):
                 with it("should be markdown of those scenarios"):
                     python_tree = {
-                        "tests/stories/scenarios/browse-product-catalog/browse_product_catalog_story.test.py": (
-                            "Story: Browse Product Catalog\n"
-                            "SCENARIO: Default\n"
+                        "story_tests/stories/scenarios/browse-product-catalog/browse_product_catalog_story.test.py": (
+                            'with story("Browse Product Catalog"):\n'
+                            '    with scenario("Default"):\n'
+                            '        with given("a catalog"):\n'
+                            "            pass\n"
                         )
                     }
                     result = Stories(fidelity="scenarios").render(
                         "markdown", python_tree, source="python"
                     )
-                    expect(str(result["content"])).to(contain("Browse Product Catalog"))
+                    expect(str(result.content)).to(contain("Browse Product Catalog"))
 
     # A call works at the fidelity it names, whatever fidelity the shared practice was made at: the fidelity renders.
     with context("that the scenarios fidelity renders while its practice was made at the story map"):
         with it("should read them in the format the scenarios fidelity works in"):
             python_tree = {
-                "tests/stories/scenarios/browse-product-catalog/browse_product_catalog_story.test.py": (
-                    "Story: Browse Product Catalog\n"
-                    "SCENARIO: Default\n"
+                "story_tests/stories/scenarios/browse-product-catalog/browse_product_catalog_story.test.py": (
+                    'with story("Browse Product Catalog"):\n'
+                    '    with scenario("Default"):\n'
+                    '        with given("a catalog"):\n'
+                    "            pass\n"
                 )
             }
             scenarios = Stories(fidelity="story_map").fidelities["scenarios"]
             result = scenarios.render("markdown", python_tree)
-            expect(str(result["content"])).to(contain("Browse Product Catalog"))
+            expect(str(result.content)).to(contain("Browse Product Catalog"))
 
 
 with description("aggregate model"):
@@ -327,7 +331,7 @@ with description("aggregate model"):
                     result = PRACTICE_CATALOGUE.create("ddd", fidelity="model").render(
                         "python", _CLASS_MARKDOWN, source="markdown"
                     )
-                    expect(result["content"]).to(contain("class Cart"))
+                    expect(result.content).to(contain("class Cart"))
 
         with context("that have been generated in python"):
             with context("that have been re-rendered in markdown"):
@@ -335,7 +339,7 @@ with description("aggregate model"):
                     result = PRACTICE_CATALOGUE.create("ddd", fidelity="model").render(
                         "markdown", _CLASS_PYTHON, source="python"
                     )
-                    expect(result["content"]).to(contain("Cart"))
+                    expect(result.content).to(contain("Cart"))
 
 
 with description("a behavior tree"):
@@ -346,7 +350,7 @@ with description("a behavior tree"):
                     result = Bdd(fidelity="behavior").render(
                         "markdown", _BEHAVIOR_PYTHON, source="python"
                     )
-                    expect(result["content"]).to(contain("a cart"))
+                    expect(result.content).to(contain("a cart"))
 
         with context("that has been generated in markdown"):
             with context("that has been re-rendered in python"):
@@ -354,9 +358,9 @@ with description("a behavior tree"):
                     result = Bdd(fidelity="behavior").render(
                         "python", _BEHAVIOR_MARKDOWN, source="markdown"
                     )
-                    expect(result["content"]).to(contain('with description("a cart"):'))
-                    expect(result["content"]).to(contain('with context("that holds line items"):'))
-                    expect(result["content"]).to(contain('with it("should place an order"):'))
+                    expect(result.content).to(contain('with description("a cart"):'))
+                    expect(result.content).to(contain('with context("that holds line items"):'))
+                    expect(result.content).to(contain('with it("should place an order"):'))
 
 
 with description("a render"):

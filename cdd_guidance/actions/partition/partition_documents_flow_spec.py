@@ -24,7 +24,7 @@ from cdd_guidance.actions.partition.partition import Partition
 from cdd_guidance.context_setup.context_index import ContextIndex
 from cdd_guidance.context_setup.context_setup import ContextSetup
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 
 class FakeEmbeddingProvider:
@@ -115,7 +115,7 @@ def _partitioned(word: str, project: Path) -> str:
 with description("the practices partition indexes by"):
     with before.all:
         self.throwaway = ThrowawayProject()
-        self.offered = list(Partition().practice_slugs)
+        self.offered = [practice.slug for practice in Partition().work.practice_set()]
         self.replies = {word: _partitioned(word, self.throwaway.root) for word in self.offered}
 
     with after.all:

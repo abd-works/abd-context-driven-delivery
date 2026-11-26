@@ -1,16 +1,15 @@
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useState } from 'react';
+import type { Held } from './held';
 import { graphs } from '../graph/graph-page';
 import type { LoadStatus } from './load-status';
 import type { PageFolder } from './page-folder';
 import { normalizeInventoryBundle } from './inventory-bundle';
-import { overlayPathLabel } from '../labels/overlay-labels';
+import { overlayId } from '../labels/overlay-labels';
 import type { ExplorerFilter } from './explorer-filter';
 import { chosen } from '../filter/filter-selection';
 import type { FilterSelection } from '../filter/filter-selection';
 
 const LAST_OVERLAYS = 'cdd-graph-overlays';
-
-type Held<T> = [T, Dispatch<SetStateAction<T>>];
 
 interface OverlaysState {
   available: Held<string[]>;
@@ -79,7 +78,7 @@ export class Overlays {
 
   addNamed(name: string): void {
     const overlays = this.filter.selection.overlays;
-    if (!overlays.some((item) => overlayPathLabel(item) === name || item === name)) {
+    if (!overlays.some((item) => overlayId(item) === name)) {
       void this.apply([...overlays, name]);
     }
   }

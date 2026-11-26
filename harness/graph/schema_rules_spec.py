@@ -4,6 +4,7 @@ from expects import be, be_a, contain, equal, expect
 from mamba import before, description, it
 
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.violation import Finding
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.graph_rules_collection import GraphRulesCollection
 from harness.graph.pattern_overlays import PatternOverlays
@@ -18,7 +19,7 @@ _LERN = tuple(pattern.graph_overlay for pattern in PatternOverlays(["lern_domain
 with description("schema rules on a node"):
     with before.each:
         self.graph = Graph()
-        self.practice = self.graph.practice("clean_engineering")
+        self.practice = self.graph.practices.named("clean_engineering")
         self.operation = Node(
             self.practice,
             NodeIdentity(type="Operation", node_id="clean_engineering:Operation:op", name="save"),
@@ -36,24 +37,24 @@ with description("schema rules on a node"):
         expect(rule.slug).to(equal("limit-operation-parameters"))
 
     with it("should record violations on the collection and the rule"):
-        self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
+        self.operation.rules.entries["limit-operation-parameters"].record(Finding(self.operation, "too many parameters"))
         expect(self.operation.failed_rules).to(equal(["limit-operation-parameters"]))
         expect([violation.message for violation in self.operation.rules["limit-operation-parameters"].violations]).to(
             contain("too many parameters")
         )
 
     with it("should say the rule is failing once it holds a violation"):
-        self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
+        self.operation.rules.entries["limit-operation-parameters"].record(Finding(self.operation, "too many parameters"))
         expect(self.operation.rules["limit-operation-parameters"].is_failing).to(equal(True))
 
     with it("should place a recorded violation at the node's source"):
-        self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
+        self.operation.rules.entries["limit-operation-parameters"].record(Finding(self.operation, "too many parameters"))
         hit = self.operation.rules["limit-operation-parameters"].violations[0]
         source = self.operation.source
         expect((hit.location, hit.line, hit.end_line)).to(equal((source.file, source.start_line, source.end_line)))
 
     with it("should list a recorded violation with its rule"):
-        self.operation.rules.record_violation("limit-operation-parameters", "too many parameters")
+        self.operation.rules.entries["limit-operation-parameters"].record(Finding(self.operation, "too many parameters"))
         listed = [(violation.rule, violation.message) for violation in self.operation.rules.violations]
         expect(listed).to(contain(("limit-operation-parameters", "too many parameters")))
 
@@ -117,7 +118,7 @@ with description("a rule label"):
 with description("a practice's schema in a graph"):
     with before.all:
         self.graph = Graph()
-        self.practice = self.graph.practice("ddd")
+        self.practice = self.graph.practices.named("ddd")
         self.own_storage = set(vars(self.practice))
         self.schema = self.practice.reading.in_graph.rule_run.schema
 
@@ -128,7 +129,7 @@ with description("a practice's schema in a graph"):
         expect(set(vars(self.practice)) - self.own_storage).to(equal(set()))
 
     with it("should read the extended practice's schema from that practice's part of the same graph"):
-        clean = self.graph.practice("clean_engineering")
+        clean = self.graph.practices.named("clean_engineering")
         expect(self.schema.anchor_type("ValueObject")).to(equal("OoadClass"))
         overlays = self.graph.applied_patterns.overlays_for(clean)
         expect(clean.reading.in_graph.rule_run.schema_with(overlays)).to(be(clean.reading.in_graph.rule_run.schema))

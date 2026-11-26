@@ -1,6 +1,5 @@
 import type { BacklogItemData } from '@cdd/space/kanban/backlog-item'
 import { TicketClientGenerated, type TicketData } from '@cdd/space/kanban/ticket'
-import { FileCommentsClientGenerated } from '@cdd/space/session/file-comments'
 import { SessionClientGenerated } from '@cdd/space/session/session'
 
 import type { BoardPage } from '../board/board-page'
@@ -28,7 +27,7 @@ export class TicketClient extends TicketClientGenerated {
   ) {
     super(page.api, json)
     this.onChanged(() => void page.reader.refresh())
-    this.prompts = new TicketChatPrompts(this, page)
+    this.chatPrompts = new TicketChatPrompts(this, page)
     this.work = new TicketWork(this, page)
     this.practices = new TicketPractices(this, page)
     this.face = new TicketFace(this)
@@ -44,8 +43,8 @@ export class TicketClient extends TicketClientGenerated {
   // Its progress on each fidelity the board requires, and the files and reports that progress answers for.
   readonly work: TicketWork
 
-  // What the ticket asks its chat to do for it.
-  readonly prompts: TicketChatPrompts
+  // Sending its chat what the ticket asks of it, in the words Python's TicketPrompts wrote.
+  readonly chatPrompts: TicketChatPrompts
 
   // What its card, details, and panels write about it.
   readonly face: TicketFace
@@ -81,11 +80,6 @@ export class TicketClient extends TicketClientGenerated {
   // the ticket already holds.
   get sessionClient(): SessionClientGenerated {
     return new SessionClientGenerated(this.api, this.session)
-  }
-
-  // The comments a person wrote on the files of its session, kept in the session's folder.
-  get fileComments(): FileCommentsClientGenerated {
-    return FileCommentsClientGenerated.named(this.api, this.session.session_file)
   }
 
   // The chat working on this ticket, which Python names, and every command the board sends for it goes to.

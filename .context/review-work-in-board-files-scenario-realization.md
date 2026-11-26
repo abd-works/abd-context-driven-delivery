@@ -121,11 +121,11 @@ FileView marks the range as SourceView marks a ViolationFocus
 
 ```realization
 FileView.save()
-  -> SessionAdapter.write_file("src/checkout/order.py", text)
-    -> Session.write_file("src/checkout/order.py", text)
-      -> SessionFiles.write(path, text)
-        -> FileManager.write(path, text)  refuses a path outside the roots
-    <- FileText{path, text, language}
+  -> SessionAdapter.write_file("src/checkout/order.py", text, version)  the version read_file answered
+    -> Session.write_file("src/checkout/order.py", text, version)
+      -> SessionFiles.write(path, text, version)
+        -> FileManager.write(path, text, version)  refuses a path outside the roots or inside .git, and a file changed on disk since it was read
+    <- FileText{path, text, version, language}
 ```
 
 ---

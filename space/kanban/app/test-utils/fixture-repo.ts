@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 // A throwaway git repository with no remote, so nothing a spec presses can reach real work.
@@ -10,16 +10,18 @@ export const fixtureRoot = process.env.BOARD_FIXTURE_ROOT ?? join(tmpdir(), 'cdd
 // The server can still be reading a file when a spec resets, and Windows will not remove one that is open.
 const REMOVE_RETRIES = 20
 const REMOVE_RETRY_MILLISECONDS = 100
+// Where the project keeps the violations a person accepted (space/session/validation/accepted_violations.py).
+const ACCEPTED_VIOLATIONS_FILE = 'violations-accepted.json'
 export const STAMP = '2026-11-01T10:00:00Z'
 const STORY_MAP_FILE = '.context/story-map.md'
 const SOURCE_FILE = 'app/checkout/order.py'
 const STORY_MAP_TEXT = ['# Check Out Order', '', '## Payment', '', '- Enter Card Details', '- Handle Payment', '- Confirm Order', ''].join('\n')
 
-// The graph validate saved beside the story map's report, in the shape harness/graph/saved_graph.py writes (version 5).
+// The graph validate saved beside the story map's report, in the shape harness/graph/saved_graph.py writes (version 7).
 const STORY_MAP_NODE = { node_id: 'node-1', name: '', type: 'Story', practice: 'stories', file: STORY_MAP_FILE, line: 6, end_line: 6, stage: '', facts: {} }
 const STORY_MAP_HIT = { rule: 'verb-noun-format', message: 'Name the story with a verb', practice: 'stories', node_id: 'node-1', location: STORY_MAP_FILE, line: 6, end_line: 6 }
 const STORY_MAP_GRAPH = {
-  version: 5,
+  version: 7,
   overlays: [],
   practices: { stories: { source_root: '', root_facts: {}, nodes: [STORY_MAP_NODE], edges: [], violations: [STORY_MAP_HIT] } },
 }
@@ -76,7 +78,7 @@ function writeSessions(root: string): void {
   writeSession(root, { name: 'pricing-rules', title: 'Pricing rules', log: [`${STAMP} move Specification no-chat`, generated('stories', 'scenarios'), validated('Stories', 'scenarios')] })
   writeSession(root, { name: 'ready-to-move', title: 'Ready to move', log: [`${STAMP} done Discovery no-chat`] })
   writeSession(root, { name: 'second-spec', title: 'Second spec', log: [`${STAMP} move Specification no-chat`] })
-  writeSession(root, { name: 'almost-shipped', title: 'Almost shipped', log: [`${STAMP} move Implementation no-chat`, `${STAMP} done Implementation no-chat`] })
+  writeSession(root, { name: 'almost-shipped', title: 'Almost shipped', log: [`${STAMP} move Hardening no-chat`, `${STAMP} done Hardening no-chat`] })
   writeSession(root, { name: 'shipped-work', title: 'Shipped work', folder: join('_complete', 'shipped-work') })
   writeInto(join(root, '.sessions', '_backlog', 'search-the-catalog.md'), '# Search the catalog\n\nAn idea.\n')
   openSession(root, FIRST_OPEN)
@@ -92,10 +94,11 @@ function commitAll(root: string): void {
 }
 
 // The sessions a run of specs changes go back to how they started, with no worktree or branch a click opened for a
-// ticket. The .git folder and the committed files stay.
+// ticket, and no violation a spec accepted on a report. The .git folder and the committed files stay.
 export function resetSessions(root: string): void {
   removeWorktrees(root)
   removeTicketBranches(root)
+  rmSync(join(root, '.context', ACCEPTED_VIOLATIONS_FILE), { force: true })
   rmSync(join(root, '.sessions'), { recursive: true, force: true, maxRetries: REMOVE_RETRIES, retryDelay: REMOVE_RETRY_MILLISECONDS })
   writeSessions(root)
 }
@@ -105,9 +108,26 @@ function removeWorktrees(root: string): void {
   if (!existsSync(join(root, '.git'))) return
   const listed = execFileSync('git', ['worktree', 'list', '--porcelain'], { cwd: root, encoding: 'utf-8' }).split(/\r?\n/)
   const folders = listed.filter(line => line.startsWith('worktree ')).map(line => line.slice('worktree '.length))
-  for (const folder of folders.slice(1)) rmSync(folder, { recursive: true, force: true, maxRetries: REMOVE_RETRIES, retryDelay: REMOVE_RETRY_MILLISECONDS })
+  for (const folder of [...folders.slice(1), ...leftoverWorktreeFolders(root)]) rmSync(folder, { recursive: true, force: true, maxRetries: REMOVE_RETRIES, retryDelay: REMOVE_RETRY_MILLISECONDS })
   // Git keeps a removed folder registered, and will not delete a branch it still counts as checked out there.
   execFileSync('git', ['worktree', 'prune'], { cwd: root, stdio: 'ignore' })
+}
+
+// A ticket's session can still write its log into its worktree just after a reset removed it, which leaves a folder
+// git no longer lists, and the next start of that ticket fails because its folder already exists. A ticket's worktree
+// is the folder beside the repository named after the repository's abbreviated name, as space/repo/worktree.py names it.
+function leftoverWorktreeFolders(root: string): string[] {
+  const parent = dirname(root)
+  const prefix = `${abbreviatedClone(basename(root))}-`
+  return readdirSync(parent, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && entry.name.startsWith(prefix))
+    .map(entry => join(parent, entry.name))
+}
+
+// `cdd-board-surface-fixture` is `cdd-bsf`, as Worktrees._abbreviated in space/repo/worktree.py shortens it.
+function abbreviatedClone(folder: string): string {
+  const [first, ...rest] = folder.split(/[-_]+/).filter(Boolean)
+  return rest.length ? `${first}-${rest.map(token => token[0]).join('')}` : first
 }
 
 // The board saves to git in the background after a change, so a reset right after can meet its index lock for a moment.
@@ -138,8 +158,9 @@ export function createFixtureRepo(root: string): void {
   writeInto(join(root, STORY_MAP_FILE), STORY_MAP_TEXT)
   // A folder of code, so a person choosing a root has a folder to pick: the story map's .context is hidden from that list.
   writeInto(join(root, SOURCE_FILE), '')
-  // Session folders are the board's record, committed on main; only their logs and chat injections stay out of git.
-  writeInto(join(root, '.gitignore'), '.sessions/**/logs/\n.sessions/**/chat-injections/\n')
+  // Session folders are the board's record, committed on main; their logs, chat injections, and the board's progress
+  // cache stay out of git, as space/repo/new_repository.py ignores them in a CDD repository.
+  writeInto(join(root, '.gitignore'), '.sessions/**/logs/\n.sessions/**/chat-injections/\n.sessions/**/progress-cache.json\n')
   writeSessions(root)
   commitAll(root)
 }

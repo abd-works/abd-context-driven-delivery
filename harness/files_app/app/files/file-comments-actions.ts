@@ -1,4 +1,5 @@
-import { FileCommentsClientGenerated, type FileCommentData } from '@cdd/space/session/file-comments'
+import { FileCommentsClientGenerated, type FileCommentData } from '@cdd/space/session/files/file-comments'
+import { NOT_SENT, SENT_TO_CHAT, type FixOne, type FixOutcome, type FixRule } from '@source-view/violation-prompt'
 
 import type { FilesPage } from './files-page'
 
@@ -20,16 +21,46 @@ export class FileCommentsActions {
     return this.page.state.file?.path ?? ''
   }
 
-  // Enter finishes a comment: it is kept on the selected lines, then added to the chat's queue.
-  async addAndSend(lines: CommentLines, text: string): Promise<void> {
+  // Enter finishes a comment: it is kept on the selected lines, then added to the chat's queue. Answers whether the chat
+  // has it.
+  async addAndSend(lines: CommentLines, text: string): Promise<boolean> {
     const path = this.path
-    if (!path || !text.trim()) return
+    if (!path || !text.trim()) return false
     let added: FileCommentData | undefined
     const kept = await this.page.attempt(`The comment on ${path} was not kept`, async () => {
       const answered = await this.comments.add(path, lines.start, lines.end, text.trim())
       added = answered?.comments.at(-1)
     })
-    if (kept && added) await this.send(added.anchor)
+    return kept && added ? this.send(added.anchor) : false
+  }
+
+  // Fix this one on a broken rule's banner: a comment on the place's lines saying what to fix, in the words Python wrote
+  // beside the file's violation, sent to the chat as any comment is, so it shows on the file as a sent comment does.
+  readonly fixOne: FixOne = async asked => {
+    const isSent = await this.addAndSend({ start: asked.startLine, end: asked.endLine }, asked.place.correctionComment ?? '')
+    return isSent ? SENT_TO_CHAT : NOT_SENT
+  }
+
+  // Fix rule on a broken rule's banner: Fix this one's comment on every place the rule is broken in the open file, sent
+  // to the chat together in one prompt.
+  readonly fixRule: FixRule = rule => this.fixPlaces(rule)
+
+  // Fix all on the open file: Fix this one's comment on every place any rule is broken in it, sent together.
+  fixAll(): Promise<FixOutcome> {
+    return this.fixPlaces('')
+  }
+
+  // Python comments on each broken place of rule, or of every rule, as the file view reads them, and sends them together.
+  private async fixPlaces(rule: string): Promise<FixOutcome> {
+    const path = this.path
+    const chat = this.page.link.chat
+    if (!path) return NOT_SENT
+    if (!chat) {
+      this.page.notices.fail(NO_CHAT, 'Sending fixes from the Files app')
+      return NOT_SENT
+    }
+    const isSent = await this.page.attempt(`The fixes on ${path} were not sent`, () => this.comments.fix(path, chat, rule, this.page.state.reads.crossFile))
+    return isSent ? SENT_TO_CHAT : NOT_SENT
   }
 
   async add(lines: CommentLines, text: string): Promise<void> {
@@ -51,10 +82,14 @@ export class FileCommentsActions {
     await this.page.attempt(`The comment ${anchor} was not deleted`, () => this.comments.remove(anchor))
   }
 
-  async send(anchor: string): Promise<void> {
+  // Answers whether the chat has the comment.
+  async send(anchor: string): Promise<boolean> {
     const chat = this.page.link.chat
-    if (!chat) return this.page.notices.fail(NO_CHAT, 'Sending a comment from the Files app')
-    await this.page.attempt(`The comment ${anchor} was not sent`, () => this.comments.send(anchor, chat))
+    if (!chat) {
+      this.page.notices.fail(NO_CHAT, 'Sending a comment from the Files app')
+      return false
+    }
+    return this.page.attempt(`The comment ${anchor} was not sent`, () => this.comments.send(anchor, chat))
   }
 
   async sendOpen(): Promise<void> {
@@ -67,3 +102,4 @@ export class FileCommentsActions {
     await this.page.attempt('The processed comments were not cleared', () => this.comments.clearProcessed())
   }
 }
+

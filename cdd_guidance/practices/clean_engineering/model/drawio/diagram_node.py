@@ -7,8 +7,8 @@ import re
 import xml.etree.ElementTree as ET
 from typing import List, Optional, Tuple
 
+from harness.drawio import CellStyle
 from cdd_guidance.practices.clean_engineering.model.base_class_model import OoadClass
-from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import style_value
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramModule,
@@ -51,8 +51,8 @@ class DrawioVertex:
         geo = ET.SubElement(cell, 'mxGeometry')
         geo.set('x', str(int(self.geometry.x)))
         geo.set('y', str(int(self.geometry.y)))
-        geo.set('width', str(int(self.geometry.width)))
-        geo.set('height', str(int(self.geometry.height)))
+        geo.set('width', str(int(self.geometry.w)))
+        geo.set('height', str(int(self.geometry.h)))
         geo.set('as', 'geometry')
         return cell
 
@@ -78,6 +78,19 @@ class DrawIOClass(DiagramClass, DrawioVertex):
             f'<p style="margin:0px;margin-left:4px;font-size:10px;">{self._properties_html()}</p>'
             f'<hr size="1"/>'
             f'<p style="margin:0px;margin-left:4px;font-size:10px;">{self._operations_html()}</p>'
+            f'{"".join(item.folded_html() for item in self.folded)}'
+        )
+
+    def folded_html(self) -> str:
+        """This class drawn inside another's card: a rule, its stereotypes and name as its own heading, then its
+        properties and operations, each under a rule as on a card of its own."""
+        return (
+            f'<hr size="1"/>'
+            f'<p style="margin:0px;margin-top:4px;text-align:center;">{self._stereotype_html()}<b>{html.escape(self.name)}</b></p>'
+            f'<hr size="1"/>'
+            f'<p style="margin:0px;margin-left:4px;font-size:10px;">{self._properties_html()}</p>'
+            f'<hr size="1"/>'
+            f'<p style="margin:0px;margin-left:4px;font-size:10px;">{self._operations_html()}</p>'
         )
 
     def style(self) -> str:
@@ -85,9 +98,6 @@ class DrawIOClass(DiagramClass, DrawioVertex):
         fill = f'fillColor={self.fill_color};strokeColor=#666666;' if self.fill_color else ''
         module = f'module={self.owning_module};' if self.owning_module else ''
         return f'{CLASS_STYLE}{fill}{module}'
-
-    def _property_lines(self) -> List[str]:
-        return [f"+ {p.name}{(': ' + p.type_hint if p.type_hint else '')}" for p in self.properties]
 
     def _operation_lines(self) -> List[str]:
         return [
@@ -98,10 +108,11 @@ class DrawIOClass(DiagramClass, DrawioVertex):
         ]
 
     def _member_lines(self) -> List[str]:
-        return [self.name] + self._property_lines() + self._operation_lines()
+        own = [self.name] + self.property_lines() + self._operation_lines()
+        return own + [line for item in self.folded for line in item._member_lines()]
 
     def _properties_html(self) -> str:
-        return ''.join(f'{html.escape(line)}<br/>' for line in self._property_lines()) or '<br/>'
+        return ''.join(f'{html.escape(line)}<br/>' for line in self.property_lines()) or '<br/>'
 
     def _operations_html(self) -> str:
         return ''.join(f'{html.escape(line)}<br/>' for line in self._operation_lines()) or '<br/>'
@@ -172,7 +183,7 @@ class DrawIOModule(DiagramModule, DrawioVertex):
         """The module a modules-view cell shows, read from the cell's HTML label; None when the cell's style names
         another kind than this type's, or the label names no module. A plain module reads a cell of any kind, so a
         reader that knows no kind of its own reads every cell as a plain module."""
-        if cls.KIND and style_value(cell.get('style', ''), 'kind') != cls.KIND:
+        if cls.KIND and CellStyle(cell.get('style', '')).value('kind') != cls.KIND:
             return None
         label_html = html.unescape(cell.get('value', ''))
         bold = re.search('<b[^>]*>([^<]+)</b>', label_html, re.IGNORECASE)

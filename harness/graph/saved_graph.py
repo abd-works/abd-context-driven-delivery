@@ -8,9 +8,11 @@ saved violation is the same Violation data a returned node's rule lists, so a re
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, Callable, TypeAlias, TypedDict
 
+from harness.annotations.name import Name
 from harness.graph.edge import Edge, EdgeRecord
 from harness.graph.location import Location
 from harness.graph.violation import Violation, ViolationData
@@ -19,11 +21,14 @@ from harness.installation.json_file import JsonFile, JsonFileUnreadable
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph, Node
+    from harness.guidance.declared_outputs import RenderPlacement
     from harness.guidance.guidance import PracticeGuidance
 
 GRAPH_FILE_NAME = "graph.json"
 # The shape this code writes. A saved graph of any other shape is read as no saved graph, so the next load replaces it.
-SAVED_SHAPE_VERSION = 5
+# Shape 6 names the story map's class StoryMap, where shape 5 named it StoryModel; shape 7 keeps each edge's facts, such
+# as how a class reaches the class it depends on, which a graph saved in shape 6 lacks.
+SAVED_SHAPE_VERSION = 7
 
 # What a node knows about itself beyond its place, by name, as a graph's parser read it and ``graph.json`` keeps it.
 # One fact a node records: plain JSON data, as a parser read it.
@@ -167,7 +172,7 @@ class SavedPractice:
     def from_practice(cls, practice: PracticeGuidance, files: SavedFiles) -> SavedPractice:
         """The practice as the graph that holds it has it now, only its nodes read from files and the edges files
         keeps."""
-        nodes = [node for node in practice.reading.in_graph.nodes() if files.reads(node)]
+        nodes = [node for node in practice.reading.in_graph.nodes() if files.keeps_node(node)]
         edges = [edge for edge in practice.reading.in_graph.edge_index.of() if files.keeps(edge)]
         return cls.from_fields(
             practice.key,
@@ -287,7 +292,7 @@ class SavedGraph:
     @classmethod
     def from_text(cls, text: str, source: str = "") -> SavedGraph:
         """The graph a checked graph's text holds: a saved graph document, or the node list ``graph.return_nodes``
-        answers with, whose violating rules' violations it keeps, each under the practice of its node (a node list keeps
+        answers with, whose rules' violations and candidates it keeps, each under the practice of its node (a node list keeps
         no pattern overlays, so only each practice's own scanners count); empty text holds no practices.
         ``SavedGraphOutdated`` for a saved graph in another shape."""
         document = json.loads(text) if text.strip() else {"version": SAVED_SHAPE_VERSION}
@@ -296,7 +301,7 @@ class SavedGraph:
                 Violation.from_data({"practice": node.get("practice", ""), **hit})
                 for node in document
                 for rule in node.get("rules") or []
-                if rule.get("status") == "violating"
+                if rule.get("status") in ("violating", "candidate")
                 for hit in rule.get("violations") or []
             ])
         if not isinstance(document, dict):
@@ -355,6 +360,20 @@ class SavedGraph:
                 return False
         return self.overlays == list(overlays)
 
+    def scope_name(self, practice_key: str, placement: RenderPlacement, root: Path) -> str:
+        """What the practice's nodes were read from, as a name a declared path's one named part takes: the one file's
+        own name as placement reads it off the fidelity's declared paths (``cart`` for ``cart_spec.py``), else its stem;
+        for several files, the folder holding them all, or, when that is the folder the graph was read from, that
+        folder (root when the graph names none). Empty when the graph holds no file of the practice."""
+        practice = self.practices.get(practice_key)
+        files = sorted({node.file for node in practice.nodes if node.file and PurePosixPath(node.file).suffix}) if practice is not None else []
+        if not files:
+            return ""
+        if len(files) == 1:
+            return Name(placement.own_name_of(Path(files[0])) or PurePosixPath(files[0]).stem).kebab
+        shared = PurePosixPath(os.path.commonpath([PurePosixPath(file).parent.as_posix() or "." for file in files]))
+        return Name(shared.name or Path(practice.source_root or root).name).kebab
+
     def violations(self, practices: list[str] | None = None) -> list[Violation]:
         """Every violation the saved practices hold; with practices, only those the named practices found."""
         return [violation for name, saved in self.practices.items() if not practices or name in practices for violation in saved.violations]
@@ -374,6 +393,11 @@ class SavedFiles:
             return True
         file = (node.source.file or "").replace("\\", "/")
         return any(file == item or file.startswith(f"{item}/") for item in self._named)
+
+    def keeps_node(self, node: Node) -> bool:
+        """Whether a save keeps node: one read from the files, or one holding a violation of a rule that runs over the
+        whole working copy, which a validate reports wherever it is."""
+        return self.reads(node) or any(violation.runs_over_all for violation in node.rules.violations)
 
     def keeps(self, edge: Edge[Node]) -> bool:
         """Whether edge joins two nodes read from the files, or one of them to its practice's root."""

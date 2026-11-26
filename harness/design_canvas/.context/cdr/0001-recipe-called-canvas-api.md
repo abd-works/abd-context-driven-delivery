@@ -7,9 +7,22 @@
 Keep them, as the recipe's API, and keep the rule that uses them in the recipe.
 
 - **The recipe is their caller.** The recipe's steps tell the agent to render into `CanvasVersions.working()`, to write screens into `CanvasVersions.unpublished()`, to release a version with `CanvasVersions.release(N, name)`, and to build each prototype screen as a `FixtureScreen` with its `ScenarioSource`. A markdown recipe is one of the ways the repository uses code, alongside imports and registrations, so these classes are in use.
-- **The render cannot decide versions on its own.** `ClaudeDesignStoryModel.render` returns the canvas's files; which version they go into depends on whether the latest version is already published, which only the person and the published canvas's link (`versions.json`) know. The agent asks the person before overwriting a published version (`never-overwrite-a-published-canvas`), so the choice stays a recipe step rather than a silent rule inside the render.
+- **The render cannot decide versions on its own.** `ClaudeDesignStoryMap.render` returns the canvas's files; which version they go into depends on whether the latest version is already published, which only the person and the published canvas's link (`versions.json`) know. The agent asks the person before overwriting a published version (`never-overwrite-a-published-canvas`), so the choice stays a recipe step rather than a silent rule inside the render.
 - **Prototype screens are written by the agent.** Each screen is a real product screen ported by the agent, so `FixtureScreen` is the helper the agent builds it with, not something a generator can call for it.
 
 ## Consequences
 
 Renaming or reshaping any of the three classes means updating `story_canvas.md` in the same change, as with any other caller. If the render later takes over choosing the version (for example by reading `versions.json` and refusing a published one), it should call `CanvasVersions` and the recipe step should go.
+
+## Since
+
+The fixture screens are the UX practice's now: `FixtureScreen` and `ScenarioSource` live in
+`cdd_guidance/practices/ux/model/claude_design/fixture_screen.py` beside the recipe, with the bar and its methods private
+to them, and `CanvasVersions` answers each version as a *CanvasVersion* (`working()`, `unpublished()`, and the version's
+`release(name)` and `publish_at(url)`).
+
+Since 2026-11-23 (defect r3-gizmo-03), the Render action saves a mockup rendered to `claude_design` itself
+(*RenderedCanvas*, `cdd_guidance/actions/render/rendered_canvas.py`), within this decision: it writes into
+`CanvasVersions.unpublished()`, starts the first version only when the canvas has none, and refuses a published latest
+version with *PublishedVersion*, so starting the version after a published one stays the person's choice and the
+recipe's step. The story canvas is still rendered by the recipe.

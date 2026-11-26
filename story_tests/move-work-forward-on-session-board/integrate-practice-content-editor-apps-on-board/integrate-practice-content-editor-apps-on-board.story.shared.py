@@ -9,7 +9,7 @@ Model: harness/.context/editor-apps/.context/editor-apps-model.md#graph-extended
 A ticket's graph widget opens the Graph app on the ticket's worktree, where the ticket's session is the open one, so the
 graph it loads is the ticket's session graph (`ticket.session.graph`); the board header opens it on the board's own
 project. The Stories story-map row carries the Story UI editor's widget (`BoardFidelity.editor`), which opens the
-row's file in the editor (`StoryModel.load`). Refactor Kanban Board To Web Domain Access replays here only its move the
+row's file in the editor (`StoryMap.load`). Refactor Kanban Board To Web Domain Access replays here only its move the
 agent makes, which the board's next read (`Board.show`) shows; its other two scenarios are the page's TypeScript, in
 space/kanban/app/src/kanban/board/web-domain-access.spec.ts. Left to other increments: Invoke Story Explorer In Session
 Context, the Graph app's refactor, and the Story UI showing only the stories the ticket's session names ("it shows ...
@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from expects import be, contain, equal, expect
 
-from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.story_map import StoryMap
 from harness.installation.data_class import data_of
 from space.kanban.board_app import STORY_UI_APP
 from space.kanban.editor_apps_examples import PRACTICE_ROWS, SEARCH_ORDERS, row_shown
@@ -134,7 +134,7 @@ def _(s):
 
     @s.when("the session open in the project becomes billing-report's, which the board then shows as active")
     def _(world):
-        world.sessions.switch(BILLING_REPORT.name)
+        world.sessions.switch(BILLING_REPORT.name, create=True)
         world.graph = world.app_call().session.graph
         world.graph.load_practice_roots(world.app_call())
 
@@ -163,7 +163,7 @@ def _(s):
     @s.when("the Person opens the Story UI editor from the Stories story map row's editor widget")
     def _(world):
         world.editor = row_shown(world.board(), STORY_MAP_ROW).editor
-        world.opened = StoryModel.load(world.file, call=world.app_call())
+        world.opened = StoryMap.load(world.file, call=world.app_call())
 
     @s.then("the Story UI editor opens on .context/story-map.md")
     def _(world):
@@ -196,7 +196,7 @@ def _(s):
 
     @s.but_("search-orders has no session yet")
     def _(world):
-        world.item = world.board().reads.backlog_item(SEARCH_ORDERS.heading)
+        world.item = world.board().reads.backlog_item_called(SEARCH_ORDERS.heading)
 
     @s.when("the Person looks at search-orders on the board")
     def _(world):

@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import TYPE_CHECKING, Iterable
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
+from harness.guidance.practice_formats import FormatAdapter, TextOrData
 
 from .collections import ContentTypes, NavComponents, Transitions
 from .nodes import ContentType, Control, Interaction, NavComponent, Region, Screen, StoryDemoControl, Transition, UxContext
 from .reference_paths import ReferencePaths
 from .ux_node import UxNode
 
+
+if TYPE_CHECKING:
+    from harness.guidance.guidance import PracticeGuidance
 
 ScreenCopies = dict[int, Screen]
 """Each source screen's copy, by the identity of the source screen, while a map is copied."""
@@ -26,8 +30,9 @@ class ScreenNotOnMap(KeyError):
         self.name = name
 
 
-class UxMap(UxNode):
+class UxMap(UxNode, FormatAdapter):
     _semantic_type_name = "UxMap"
+    graph_facts = ("scope",)
 
     screen_type: type[Screen] = Screen
     region_type: type[Region] = Region
@@ -39,9 +44,22 @@ class UxMap(UxNode):
     """The node types this format's map is made of; a format that writes a node its own way names its subclass here,
     and every reader and copy of the map makes its nodes through them."""
 
-    workspace_files: tuple[str, ...] = ()
-    """Where this format's map sits in a workspace folder, as glob patterns tried in order; ``{folder}`` is the
-    folder's own name. The first pattern that matches a file wins."""
+    holds_screens: bool = True
+    """Whether this format's file holds the map's screens; the UX context file holds only the scope and the notes, so
+    a map read from it has none and is not held to having any."""
+
+    map_file_suffixes: tuple[str, ...] = ()
+    """The file endings this format's map is written with, such as ``.drawio``; none for a format no file is read
+    back from. The graph reading opens only the files that end with one."""
+
+    not_a_map_failures: tuple[type[Exception], ...] = ()
+    """What reading a file fails with when the file is not this format's map after all, such as text that is not its
+    format. The graph reading keeps such a file, with the reason, among the files it could not read."""
+
+    def content_beside(self, file: Path) -> TextOrData:
+        """What a render reads of this format's map from file when the map is written as several files beside it; none
+        for a format whose file alone holds its map, which a render reads as the file's text."""
+        return None
 
     def __init__(self, name: str = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> None:
         # A map is the root of its screens, their parts and the stories they show. One made on no graph is detached, as
@@ -57,6 +75,14 @@ class UxMap(UxNode):
         self.nav_components = NavComponents(self)
         self.context = UxContext()
         self.attach(self.context, "context")
+
+    def join(self, practice: PracticeGuidance) -> None:
+        """Make this map and its whole tree practice's nodes, its context with them: the context is the map's one part
+        that sits in no list, so the map brings it along itself."""
+        super().join(practice)
+        # A map made on a graph joins it while it is still being built, before it has its context to bring.
+        if "context" in vars(self):
+            self.attach(self.context, "context")
 
     @classmethod
     def create(cls, name: str | Graph = "UxMap", sequential_order: int = 0, graph: Graph | None = None) -> "UxMap":
@@ -103,11 +129,14 @@ class UxMap(UxNode):
         copy = screens[id(screen)]
         copy.chrome_of = screens.get(id(screen.chrome_of)) if screen.chrome_of is not None else None
         for region in screen.regions:
-            region_copy = self.region_type(region.name, region.sequential_order)
-            region_copy.area = region.area
-            for control in region.controls:
-                region_copy.append_control(self._control_copy(control, screens))
-            copy.append_region(region_copy)
+            copy.append_region(self._region_copy(region, screens))
+
+    def _region_copy(self, region: Region, screens: ScreenCopies) -> Region:
+        copy = self.region_type(region.name, region.sequential_order)
+        copy.area = region.area
+        for control in region.controls:
+            copy.append_control(self._control_copy(control, screens))
+        return copy
 
     def _control_copy(self, control: Control, screens: ScreenCopies) -> Control:
         demo = isinstance(control, StoryDemoControl)
@@ -116,6 +145,7 @@ class UxMap(UxNode):
         if demo:
             copy.take_story_fields(control)
         copy.states = list(control.states)
+        copy.show_what(control)
         for interaction in control.interactions:
             copy.append_interaction(self._interaction_copy(interaction, screens))
         return copy
@@ -128,38 +158,96 @@ class UxMap(UxNode):
 
     def _take_components(self, source: "UxMap", screens: ScreenCopies) -> None:
         for transition in source.transitions:
-            copy = self.transition_type(transition.name, transition.sequential_order)
-            copy.trigger, copy.nav_type = transition.trigger, transition.nav_type
-            self.transitions.append(copy.joining(screens.get(id(transition.from_screen)), screens.get(id(transition.to_screen))))
+            self.transitions.append(self._transition_copy(transition, screens, transition.sequential_order))
         for content_type in source.content_types:
-            copy = self.content_type_type(content_type.name, content_type.sequential_order)
-            copy.hierarchy = content_type.hierarchy
-            copy.key_actions = list(content_type.key_actions)
-            self.content_types.append(copy)
+            self.content_types.append(self._content_type_copy(content_type, content_type.sequential_order))
         for nav in source.nav_components:
-            copy = self.nav_component_type(nav.name, nav.sequential_order)
-            copy.ux_type = nav.ux_type
-            copy.destinations = [screens[id(screen)] for screen in nav.destinations if id(screen) in screens]
-            self.nav_components.append(copy)
+            self.nav_components.append(self._nav_component_copy(nav, screens, nav.sequential_order))
 
-    @classmethod
-    def from_workspace(cls, root: Path) -> Optional["UxMap"]:
-        """The map this format reads from its file in the workspace folder root; none when the folder has no such file."""
-        loader = cls.create()
-        text = loader.workspace_text(Path(root))
-        return None if text is None else loader.parse(text)
+    def _content_type_copy(self, content_type: ContentType, order: int) -> ContentType:
+        """content_type as one of this map's own, at order."""
+        copy = self.content_type_type(content_type.name, order)
+        copy.hierarchy = content_type.hierarchy
+        copy.key_actions = list(content_type.key_actions)
+        return copy
 
-    def workspace_text(self, root: Path) -> Optional[str]:
-        """The text of this format's map file in the workspace folder root; none when the folder has no such file."""
-        found = self.workspace_file(root)
-        return None if found is None else found.read_text(encoding="utf-8")
+    def _nav_component_copy(self, nav: NavComponent, screens: ScreenCopies, order: int) -> NavComponent:
+        """nav as one of this map's own, at order, reaching the copies of the screens it reaches."""
+        copy = self.nav_component_type(nav.name, order)
+        copy.ux_type = nav.ux_type
+        copy.destinations = [screens[id(screen)] for screen in nav.destinations if id(screen) in screens]
+        return copy
 
-    def workspace_file(self, root: Path) -> Optional[Path]:
-        for pattern in self.workspace_files:
-            matches = sorted(path for path in root.glob(pattern.format(folder=root.name)) if path.is_file())
-            if matches:
-                return matches[0]
-        return None
+    def _transition_copy(self, transition: Transition, screens: ScreenCopies, order: int) -> Transition:
+        """transition as one of this map's own, at order, joining the copies of the screens it joins."""
+        copy = self.transition_type(transition.name, order)
+        copy.trigger, copy.nav_type = transition.trigger, transition.nav_type
+        return copy.joining(screens.get(id(transition.from_screen)), screens.get(id(transition.to_screen)))
+
+    def keep_served_by(self, held: "UxMap") -> None:
+        """Take from held, the map a file already holds, what its screens and controls serve and the domain terms its
+        screens name, for each screen and control this map holds too: a control is the one of the same name on the
+        same screen, in whichever region. What this map holds comes first; nothing it holds is replaced."""
+        for mine, theirs in self._screens_also_in(held):
+            mine.show_what(theirs)
+            for term in theirs.domain_terms:
+                mine.attach_domain_term(term)
+            mine.layout = mine.layout or theirs.layout
+            own = {control.name: control for region in mine.regions for control in region.controls}
+            for control in (control for region in theirs.regions for control in region.controls if control.name in own):
+                own[control.name].show_what(control)
+                own[control.name].control_type = own[control.name].control_type or control.control_type
+
+    def keep_what_only(self, held: "UxMap") -> None:
+        """Take from held, the map a file already holds, everything only it holds, so drawing this map over that file
+        loses nothing: what its screens and controls serve (``keep_served_by``), and each screen, region, control,
+        transition, content type, and nav component this map lacks, after this map's own."""
+        with self.batch_schema_sync():
+            self.keep_served_by(held)
+            screens: ScreenCopies = {id(theirs): mine for mine, theirs in self._screens_also_in(held)}
+            for mine, theirs in self._screens_also_in(held):
+                self._keep_parts_only(mine, theirs, screens)
+            for theirs in [screen for screen in held.screens if id(screen) not in screens]:
+                screens[id(theirs)] = self._screen_copy(theirs)
+                self.append_screen(screens[id(theirs)])
+                self._take_screen_parts(theirs, screens)
+            self._keep_transitions_only(held, screens)
+            self._keep_components_only(held, screens)
+
+    def _screens_also_in(self, held: "UxMap") -> list[tuple[Screen, Screen]]:
+        """Each screen of this map with the screen of the same name held holds."""
+        own = {screen.name: screen for screen in self.screens}
+        return [(own[theirs.name], theirs) for theirs in held.screens if theirs.name in own]
+
+    def _keep_parts_only(self, mine: Screen, theirs: Screen, screens: ScreenCopies) -> None:
+        """Give mine each region only theirs holds, and each of mine's regions the controls only theirs holds in the
+        region of the same name."""
+        own = {region.name: region for region in mine.regions}
+        for region in theirs.regions:
+            if region.name not in own:
+                mine.append_region(self._region_copy(region, screens))
+                continue
+            own[region.name].area = own[region.name].area or region.area
+            named = {control.name for held_region in mine.regions for control in held_region.controls}
+            for control in (control for control in region.controls if control.name not in named):
+                own[region.name].append_control(self._control_copy(control, screens))
+
+    def _keep_transitions_only(self, held: "UxMap", screens: ScreenCopies) -> None:
+        """Give this map each transition only held holds, joining this map's own screens."""
+        own = {(transition.trigger, transition.from_name, transition.to_name) for transition in self.transitions}
+        for transition in held.transitions:
+            if (transition.trigger, transition.from_name, transition.to_name) not in own:
+                self.transitions.append(self._transition_copy(transition, screens, len(self.transitions)))
+
+    def _keep_components_only(self, held: "UxMap", screens: ScreenCopies) -> None:
+        """Give this map each content type and each nav component only held holds, by name, a nav component reaching
+        this map's own screens."""
+        own_types = {content_type.name for content_type in self.content_types}
+        for content_type in (content_type for content_type in held.content_types if content_type.name not in own_types):
+            self.content_types.append(self._content_type_copy(content_type, len(self.content_types)))
+        own_navs = {nav.name for nav in self.nav_components}
+        for nav in (nav for nav in held.nav_components if nav.name not in own_navs):
+            self.nav_components.append(self._nav_component_copy(nav, screens, len(self.nav_components)))
 
     @property
     def story_references(self) -> ReferencePaths:

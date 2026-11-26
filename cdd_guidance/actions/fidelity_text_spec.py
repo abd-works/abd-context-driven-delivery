@@ -27,7 +27,7 @@ from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from space.session import Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 
 _STORY_MAP = "stories-story-map"
 _SCENARIOS = "stories-scenarios"
@@ -62,10 +62,12 @@ def _rule(fidelity) -> str:
 
 
 def _open_project() -> ThrowawayProject:
-    """A throwaway project with its session alpha open, which the actions it is named for log to."""
+    """A throwaway project with its session alpha open, which the actions it is named for log to, and the docs
+    folder the examples name as paths: document and partition refuse a path that is not there."""
     throwaway = ThrowawayProject()
+    (throwaway.root / "docs").mkdir()
     sessions = Sessions(throwaway.root)
-    sessions.opened.open(sessions.create("alpha", throwaway.root))
+    sessions.opened.open(sessions.create("alpha", throwaway.root), "")
     return throwaway
 
 

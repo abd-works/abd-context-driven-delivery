@@ -2,6 +2,7 @@
 project's code, a value is not a collaborator, and a factory is not a misplaced static."""
 
 import sys
+import tempfile
 from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[4]
@@ -14,14 +15,14 @@ from mamba import before, context, description, it
 from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.skipped_folders import skips_folder
 
-from cdd_guidance.practices.clean_engineering.model.production_code import is_spec_file, is_test_code
+from cdd_guidance.practices.source_code.test_files import ProjectTestCode
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 from cdd_guidance.practices.clean_engineering.model.typescript.typescript_class_model import (
     TypeScriptCleanEngineeringModel,
 )
 from cdd_guidance.practices.clean_engineering.rules import RULES
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
-    ce_rule_by_slug,
     module_example_pair,
     practice_from_files,
     practice_from_source,
@@ -35,7 +36,7 @@ def _fixture(source: str, filename: str = "example.py"):
 
 
 def _hits(slug: str, fixture) -> list[str]:
-    return fixture.hits(ce_rule_by_slug(slug))
+    return fixture.hits(BY_SLUG[slug])
 
 
 def _every_rule_hits(fixture) -> dict[str, list[str]]:
@@ -117,9 +118,14 @@ _TEST_FILES = (
     "orders/rule_fixture.py",
     "app/test-utils/fixture-repo.ts",
     "tools/ide_toast/watch_notice_spec.js",
-    "src/OrderTest.java",
+    "story_tests/review-work/files_app_browser.py",
+    "space/session/spec_support/throwaway_project.py",
+    "harness/mcp/mcp_daemon_doubles.py",
+    "tests/test_order.py",
 )
 _PRODUCTION_FILES = (
+    "harness/release/test_runs.py",
+    "space/session/support/session_support.py",
     "orders/order.py",
     "bdd/rules/spec_rules.py",
     "bdd/model/spec_source.py",
@@ -129,19 +135,34 @@ _PRODUCTION_FILES = (
 )
 
 
+# A project's test code, read by name for files that are not there: a project with no config, in an empty folder.
+_NAMED = ProjectTestCode(Path(tempfile.mkdtemp()), [])
+# A pytest file outside a folder of tests, which holds a test function, and a helper there that takes six parameters.
+_PYTEST_FILE = (
+    "def helper(first, second, third, fourth, fifth, sixth):\n    return first\n\n\n"
+    "def test_helper():\n    assert helper(1, 2, 3, 4, 5, 6) == 1\n"
+)
+
+
 with description("test code"):
     with context("named by the conventions specs and their support follow"):
         with it("should read every one as test code"):
-            expect([file for file in _TEST_FILES if not is_test_code(file)]).to(equal([]))
+            expect([file for file in _TEST_FILES if not _NAMED.is_test_code(file)]).to(equal([]))
 
         with it("should read production files whose names only contain a test word as production code"):
-            expect([file for file in _PRODUCTION_FILES if is_test_code(file)]).to(equal([]))
+            expect([file for file in _PRODUCTION_FILES if _NAMED.is_test_code(file)]).to(equal([]))
 
         with it("should read a Python feature spec as a spec"):
-            expect(is_spec_file("class_channel.feature.py")).to(be_true)
+            expect(_NAMED.is_spec("class_channel.feature.py")).to(be_true)
 
         with it("should not read a story test's shared examples as a spec"):
-            expect(is_spec_file("session_board_examples.py")).to(be_false)
+            expect(_NAMED.is_spec("session_board_examples.py")).to(be_false)
+
+    # pytest collects test_*.py wherever it is, so the production rules leave one that holds tests alone.
+    with context("named test_ outside a folder of tests, holding a test function"):
+        with it("should be left alone by the production code rules"):
+            fixture = practice_from_files({"shop/test_cart.py": _PYTEST_FILE})
+            expect(fixture.hits(BY_SLUG["limit-operation-parameters"])).to(equal([]))
 
 
 # Each fixture builds a graph, so every context builds its fixtures once, before its examples, which only run the rules.

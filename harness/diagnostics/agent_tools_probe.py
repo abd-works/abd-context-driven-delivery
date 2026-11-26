@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING
 
 from harness.diagnostics.probe_arguments import OperationArguments, ProbeArguments
 from harness.diagnostics.probe_outcome import ProbeOutcome, ProbeSection, raised_by_a_bug
+from harness.mcp.mcp_server import McpHost
 
 if TYPE_CHECKING:
     from harness.installation.installer import Installer
-    from harness.mcp.mcp_server import McpHost
 
 AGENT_TOOLS_PROBE_SECTION = "agent_tools"
 AGENT_TOOLS_TOOLSET_PREFIXES = ("space.", "harness.", "tools.")
@@ -45,14 +45,6 @@ class ProbeCallTimedOut(TimeoutError):
         self.tool = tool
 
 
-def agent_tools_toolset_ref(ref: str) -> bool:
-    """True when the toolset is one this probe covers: a space, harness, or tools toolset other than guidance."""
-    module = ref.split(":", 1)[0]
-    if any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_EXCLUDES):
-        return False
-    return any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_PREFIXES)
-
-
 class AgentToolsProbe:
     """A probe of the workspace MCP tools one install deployed (space, harness, and tools): ping each, call the light
     ones with probe arguments, and call session and graph tools with ``cdd-diagnostic`` fixtures. Made for its
@@ -74,8 +66,6 @@ class AgentToolsProbe:
     def host(self) -> McpHost:
         """The host this probe calls through."""
         if self._mcp_host is None:
-            from harness.mcp.mcp_server import McpHost
-
             refs = tuple(str(reference) for reference in self.installer.toolsets.references())
             self._mcp_host = McpHost.from_refs(refs, repo=str(self.installer.repo), project=str(self.installer.path))
         return self._mcp_host
@@ -83,20 +73,27 @@ class AgentToolsProbe:
     @property
     def toolset_refs(self) -> tuple[str, ...]:
         """The deployed space, harness, and tools toolsets; every such toolset in the repository before an install."""
-        refs = [ref for ref in self.installer.diagnostics.installed_items("toolset") if agent_tools_toolset_ref(ref)]
+        refs = [ref for ref in self.installer.diagnostics.installed_items("toolset") if self._covers(ref)]
         if refs:
             return tuple(refs)
         refs = (str(reference) for reference in self.installer.toolsets.references())
-        return tuple(ref for ref in refs if agent_tools_toolset_ref(ref))
+        return tuple(ref for ref in refs if self._covers(ref))
+
+    def _covers(self, toolset_ref: str) -> bool:
+        """True when the toolset is one this probe covers: a space, harness, or tools toolset other than guidance."""
+        module = toolset_ref.split(":", 1)[0]
+        if any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_EXCLUDES):
+            return False
+        return any(module.startswith(prefix) for prefix in AGENT_TOOLS_TOOLSET_PREFIXES)
 
     @property
     def published(self) -> list[str]:
         """The installed workspace MCP names the host publishes from the probed toolsets."""
         installed = set(self.installer.diagnostics.installed_items("mcp")) - _NEVER_PROBE
-        server = self.host.checkout_server
+        server = self.host.checkout_toolsets
         refs = set(self.toolset_refs)
         served = {name: tool for name, tool in (*server.tools.items(), *server.prompts.items())}
-        return sorted(name for name, tool in served.items() if name in installed and tool.registration_name in refs)
+        return sorted(name for name, tool in served.items() if name in installed and str(tool.toolset.reference) in refs)
 
     def run(self) -> str:
         """Ping, invoke, and heavy invoke, each phase written to diagnostics.json; the reply holds each phase's colour."""
@@ -153,7 +150,7 @@ class AgentToolsProbe:
     def _skipped_at_start(self) -> list[ProbeOutcome]:
         """A probed toolset, or an installed tool, the host skipped when it started."""
         probed = {*self.toolset_refs, *self.installer.diagnostics.installed_items("mcp")}
-        skipped = self.host.checkout_server.skipped.as_data
+        skipped = self.host.checkout_toolsets.skipped.as_data
         return [ProbeOutcome.from_refusal(item["tool"], f"skipped at start-up: {item['reason']}") for item in skipped if item["tool"] in probed]
 
     def _invoke_one(self, mcp_name: str, arguments: ProbeArguments) -> ProbeOutcome:
@@ -171,7 +168,7 @@ class AgentToolsProbe:
         return self._called_with(mcp_name, OperationArguments(*fixture), "heavy_invoke")
 
     def _invoked_with(self, mcp_name: str, arguments: ProbeArguments, phase: str) -> ProbeOutcome:
-        tool = self.host.checkout_server.enrolled(mcp_name)
+        tool = self.host.checkout_toolsets.enrolled(mcp_name)
         if tool is None:
             return ProbeOutcome.from_refusal(mcp_name, "not enrolled on host")
         return self._called_with(mcp_name, arguments.for_operation(mcp_name, tool.callable), phase)

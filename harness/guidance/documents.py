@@ -27,13 +27,21 @@ def load_document(content: str = "", paths: NamedPaths = None) -> str:
 
 def _read_entry(path: Path) -> str:
     if path.is_dir():
-        files = [
-            item
-            for item in sorted(path.rglob("*"))
-            if item.is_file() and not any(part in _SKIP_PARTS for part in item.parts)
-        ]
-        return "\n\n".join(text for text in map(_text_of, files) if text is not None)
+        return "\n\n".join(text for text in map(_text_of, files_read_from(path)) if text is not None)
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def files_read_from(path: Path) -> list[Path]:
+    """The files a document read from path is made of: the file itself, or each file of the folder, in order, outside
+    version control, environments, and caches. A binary file in a folder is listed, though its text is left out."""
+    if not path.is_dir():
+        return [path]
+    return [item for item in sorted(path.rglob("*")) if item.is_file() and not any(part in _SKIP_PARTS for part in item.parts)]
+
+
+def is_text(file: Path) -> bool:
+    """Whether file holds text a reader can take, rather than an image or another binary file."""
+    return _text_of(file) is not None
 
 
 def _text_of(file: Path) -> str | None:

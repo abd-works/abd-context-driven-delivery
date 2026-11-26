@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 from cdd_guidance.practices.bdd.model.spec_source import reads_like_code
 from cdd_guidance.practices.bdd.rules.layer_isolation import LayerIsolation
@@ -28,10 +29,10 @@ class PlainEnglishOnly(PracticeGraphRule):
     slug = "describe-is-plain-english"
     node_types = ("Description", "Context")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not reads_like_code(node.name or ""):
             return []
-        return [f"{node.type} {node.name!r} reads like code, not plain English."]
+        return [Finding(node, f"{node.type} {node.name!r} reads like code, not plain English.")]
 
 
 class SignatureMarkers(PracticeGraphRule):
@@ -41,10 +42,10 @@ class SignatureMarkers(PracticeGraphRule):
     slug = "framework-syntax"
     node_types = ("Spec",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if node.get_fact("signature_marker", True) or node.get_fact("developed", False):
             return []
-        return ["Spec file is missing a BDD: SIGNATURE marker."]
+        return [Finding(node, "Spec file is missing a BDD: SIGNATURE marker.")]
 
 
 SPEC_RULES: tuple[PracticeGraphRule, ...] = (

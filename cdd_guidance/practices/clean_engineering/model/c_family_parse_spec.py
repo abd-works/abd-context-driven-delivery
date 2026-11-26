@@ -91,6 +91,44 @@ export class BoardReader {
         expect([op.name for op in reader.operations]).to(equal(["apply", "refreshPressed"]))
 
 
+    with it("should read a method whose return type is an object of named fields, with that type and its own body"):
+        source = """
+export class BoardOnProject {
+  page(): Promise<{ page: BoardPage; asked: Asked[] }> {
+    return pageOf(this.board)
+  }
+
+  plain(): { a: number } {
+    return makeA()
+  }
+
+  reset(): void {
+    wipe(this.board)
+  }
+}
+"""
+        board = _class(TypeScriptCleanEngineeringModel().parse(source), "BoardOnProject")
+        expect([(op.name, op.return_type, op.callees) for op in board.operations]).to(
+            equal([("page", "Promise<{ page: BoardPage; asked: Asked[] }>", ["pageOf"]), ("plain", "{ a: number }", ["makeA"]), ("reset", "void", ["wipe"])])
+        )
+
+    with it("should read a method whose parameter has a function type, with that parameter and its own body"):
+        source = """
+export class RunningBoard {
+  unreadPage(timed: (send: Send) => Send = send => send): { page: BoardPage } {
+    return { page: new BoardPage(timed(sendOf(this))) }
+  }
+
+  close(): void {
+    stop(this)
+  }
+}
+"""
+        board = _class(TypeScriptCleanEngineeringModel().parse(source), "RunningBoard")
+        expect([(op.name, [parameter.name for parameter in op.parameters], op.return_type) for op in board.operations]).to(
+            equal([("unreadPage", ["timed"], "{ page: BoardPage }"), ("close", [], "void")])
+        )
+
 with description("CFamilyParse fields"):
     with it("should hold a constructor parameter declared with an access modifier as a field, with its type"):
         source = """

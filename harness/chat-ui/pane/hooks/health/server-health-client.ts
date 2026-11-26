@@ -1,10 +1,10 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { AppData } from '@cdd/harness/diagnostics/app'
+import type { AppData } from '@cdd/harness/apps/app'
 import type { ServerHealthData } from '@cdd/harness/diagnostics/server-health'
 
-import type { HealthViewJson, InstallJson, ServerHealthJson, TestRunJson, ToastedRunsJson } from '../../types'
+import type { E2eReviewJson, HealthViewJson, InstallJson, ServerHealthJson, TestRunJson, ToastedRunsJson } from '../../types'
 import { showFailure, shownAsFailure } from '../error-display/failure-client'
 import { callTool, CddToolFailed } from '../shared/cdd-tool'
 
@@ -16,6 +16,8 @@ export const RECONNECT_TRIES = 3
 const TOOL_PREFIX = 'mcp__plugin_cdd_cdd__'
 const RECONNECT_WAIT_MS = 2000
 const INSTALL_TIMEOUT_MS = 600000
+// What scripts/install.py exits with when the chat's folder is no project to install into (NOT_A_PROJECT_EXIT there).
+const NOT_A_PROJECT_EXIT = 3
 const FIRST_LOOK_WAIT_MS = 5000
 const ERROR_LINES_SHOWN = 1
 
@@ -30,6 +32,8 @@ const healthView = atom({ plugin: 'cdd-board', key: 'healthView' } as const, { a
 const toastedRuns = atom({ plugin: 'cdd-board', key: 'toastedRuns' } as const, { runIds: [] } as ToastedRunsJson)
 // How many toasted runs the chat remembers; older ones have long since been replaced by newer runs.
 const TOASTED_RUNS_KEPT = 20
+// How many missed steps the chat remembers having raised.
+const TOASTED_MISSED_KEPT = 200
 const install = atom({ plugin: 'cdd-board', key: 'install' } as const, { state: 'idle', error: null } as InstallJson)
 
 type Answer = Pick<ServerHealthJson, 'connection' | 'report' | 'problem'>
@@ -47,10 +51,6 @@ export class ServerHealthClient {
     return this.apps.find(app => app.label === label)
   }
 
-  get isHookServerRunning(): boolean {
-    return this.json?.is_hook_server_running ?? false
-  }
-
   // The latest heavy and e2e run the cdd server ran on main, each that has run.
   get testRuns(): TestRunJson[] {
     return ((this.json as { test_runs?: TestRunJson[] } | null)?.test_runs) ?? []
@@ -59,6 +59,17 @@ export class ServerHealthClient {
   // A run that failed after its tier's run before passed: the chat raises a toast for it.
   get newFailures(): TestRunJson[] {
     return this.testRuns.filter(run => run.state === 'failed' && run.is_new_failure)
+  }
+
+  // The latest scheduled e2e run's screen review; none before a scheduled run captured its screens.
+  get e2eReview(): E2eReviewJson | null {
+    return ((this.json as { e2e_review?: E2eReviewJson | null } | null)?.e2e_review) ?? null
+  }
+
+  // Each step the review judged missed by the tests, named by its review so the chat raises its toast once.
+  get missedSteps(): string[] {
+    const review = this.e2eReview
+    return review ? review.missed_steps.map(step => `${review.review_id} ${step}`) : []
   }
 }
 
@@ -108,15 +119,39 @@ export async function hideDetails($: EngineInterface): Promise<void> {
 
 // The MCP host may be what is broken, so the install runs from here and not through a cdd tool.
 export async function runInstall($: EngineInterface): Promise<void> {
+  await installIntoChatFolder($, 'person')
+}
+
+// The folders a chat works with CDD through, in the IDE folder of the folder it works in: its skills and its commands.
+const INSTALLED_FOLDERS = ['.claude/skills', '.claude/commands']
+
+// A chat that starts in a folder CDD was never installed into, or whose install lost its skills or commands, runs the
+// same install Run install runs, so a chat in a new project has CDD's skills and commands without a press.
+export async function installWhenMissing($: EngineInterface): Promise<void> {
+  const folder = await $.session.root()
+  const present = await Promise.all(INSTALLED_FOLDERS.map(installed => $.fs.exists(`${folder}/${installed}`)))
+  if (present.every(Boolean)) return
+  await installIntoChatFolder($, 'chat start')
+}
+
+// The install script refuses a folder that is no project, such as the home folder, a temporary folder or a spare folder
+// the desktop app keeps a chat in. At chat start that is no failure, since nobody asked; a person who pressed Run
+// install is told why.
+async function installIntoChatFolder($: EngineInterface, startedBy: 'person' | 'chat start'): Promise<void> {
+  const context = startedBy === 'person' ? 'Install on the health panel' : 'Starting the chat in a folder without .claude/skills or .claude/commands'
   await update($, install, () => ({ state: 'running', error: null }))
   try {
     const folder = await $.session.root()
     const run = await $.process.run([...(await installCommand($)), folder], { cwd: folder, timeoutMs: INSTALL_TIMEOUT_MS })
+    if (run.exitCode === NOT_A_PROJECT_EXIT && startedBy === 'chat start') {
+      await update($, install, () => ({ state: 'idle', error: null }))
+      return
+    }
     await update($, install, () => (run.exitCode === 0 ? { state: 'installed', error: null } : { state: 'failed', error: lastLines(run.stderr) }))
-    if (run.exitCode !== 0) await showFailure($, `The install failed: ${lastLines(run.stderr)}`, `Install on the health panel, running ${(await installCommand($)).join(' ')} in ${folder}`)
+    if (run.exitCode !== 0) await showFailure($, `The install failed: ${lastLines(run.stderr)}`, `${context}, running ${(await installCommand($)).join(' ')} in ${folder}`)
   } catch (failure) {
     await update($, install, () => ({ state: 'failed', error: String(failure) }))
-    await shownAsFailure($, 'The install did not run', 'Install on the health panel')(failure)
+    await shownAsFailure($, 'The install did not run', context)(failure)
   }
 }
 
@@ -136,6 +171,7 @@ async function recordAnswer($: EngineInterface, answer: Answer): Promise<void> {
   const toolCount = tools.filter(tool => tool.name.startsWith(TOOL_PREFIX)).length
   await update($, serverHealth, () => ({ ...answer, toolCount, attempt: 0 }))
   await toastNewFailures($, new ServerHealthClient(answer.report))
+  await toastMissedSteps($, new ServerHealthClient(answer.report))
 }
 
 // Each new failure of a scheduled test run is raised once, in the chat that reads the report first after it ends.
@@ -144,7 +180,17 @@ async function toastNewFailures($: EngineInterface, health: ServerHealthClient):
   const fresh = health.newFailures.filter(run => !runIds.includes(run.run_id))
   if (fresh.length === 0) return
   for (const run of fresh) $.ui.toast(`The scheduled ${run.name} tests failed on main: ${lastLines(run.summary)}`)
-  await update($, toastedRuns, held => ({ runIds: [...held.runIds, ...fresh.map(run => run.run_id)].slice(-TOASTED_RUNS_KEPT) }))
+  await update($, toastedRuns, held => ({ ...held, runIds: [...held.runIds, ...fresh.map(run => run.run_id)].slice(-TOASTED_RUNS_KEPT) }))
+}
+
+// Each step the scheduled e2e run's screen review judged missed by the tests is raised once: a screen broke and no test
+// failed. The fix happens in a ticket.
+async function toastMissedSteps($: EngineInterface, health: ServerHealthClient): Promise<void> {
+  const { missedSteps = [] } = await read($, toastedRuns)
+  const fresh = health.missedSteps.filter(step => !missedSteps.includes(step))
+  if (fresh.length === 0) return
+  for (const step of fresh) $.ui.toast(`The scheduled e2e review found a screen no test caught: ${step.slice(step.indexOf(' ') + 1)}`)
+  await update($, toastedRuns, held => ({ ...held, missedSteps: [...(held.missedSteps ?? []), ...fresh].slice(-TOASTED_MISSED_KEPT) }))
 }
 
 // The cdd home publishes this mod with the command that installs for a chat's folder: the served checkout's install

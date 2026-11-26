@@ -1,0 +1,28 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T20:52:32.138505+00:00",
+  "prompts": [
+    {
+      "id": "57444b4ecd09",
+      "text": "[decision required] Heavy tests for the queue plugin itself: no harness in the repo runs a Claude Code plugin for real yet. Options: (A, recommended) a headless harness: run claude -p in a scratch project with the prompt-queue plugin and a SpecServer cdd server, and check through the server that a sent prompt is queued above the next item, a mid-work message becomes an interruption step, a system notice is not queued, and set_steps names the working prompt; the desktop-only parts (the app's task list update_plan and wrap_up, the drawn cards, the board's error line) stay checked by the person live. (B) drive the desktop app through Windows UI Automation for everything: complete, but a large new harness. (C) leave the plugin covered by its stubbed plugin tests only. The archive heavy example is done (5/5 pass).",
+      "steps": [
+        {
+          "text": "Find how other mods run against the real surface",
+          "state": "done"
+        },
+        {
+          "text": "Add the archive to the server heavy spec",
+          "state": "done"
+        },
+        {
+          "text": "Write the queue surface heavy spec",
+          "state": "pending"
+        },
+        {
+          "text": "Run them, commit, push",
+          "state": "pending"
+        }
+      ]
+    }
+  ]
+}

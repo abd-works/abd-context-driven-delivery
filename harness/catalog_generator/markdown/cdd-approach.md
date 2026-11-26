@@ -54,6 +54,17 @@ Automate scenario specifications to cover user, system, and module-connecting in
 
 Evaluate every error — technical and functional — and feed results back into the growing knowledge repository.
 
+### Hardening
+
+id: hardening
+items: Exploration | Regression | Readiness
+
+Make the whole release ready for production. Implementation proved each story on its own; hardening looks at the release as one product, wide and deep.
+
+Explore the product for the defects no story's tests were written to find: propose test themes from the evidence, take them from the person, and run tester robots at once, each on its own theme, reporting every defect as it is found.
+
+Run every story's end-to-end tests and judge each screen against the last release's accepted run, so a change made for one story cannot break another unseen.
+
 ### Validate
 
 id: validate

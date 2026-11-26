@@ -6,7 +6,7 @@ import type { CardField } from '../shared/card-field-view'
 import type { TicketClient } from './ticket-client'
 
 const ADD_CHILD: CardField = { action: 'child', label: 'Add child', hint: 'Add a child ticket', field: 'Child title', placeholder: 'Child title, then Enter' }
-const EDIT_TEXT: CardField = { action: 'text', label: 'Edit text', hint: 'Edit what this ticket is about', field: 'Ticket text', placeholder: 'Text, then Enter' }
+const EDIT_TEXT: CardField = { action: 'text', label: 'Edit text', hint: 'Edit what this ticket is about', field: 'Ticket text', placeholder: 'Text; Enter saves, Shift+Enter adds a line', isText: true }
 const TAG: CardField = { action: 'tag', label: 'Tag', hint: "Tag this ticket's session", field: 'Tag', placeholder: 'Tag, then Enter' }
 
 // A child added by hand: the plus opens a title field on the card, Enter adds the child, Escape leaves it.
@@ -16,18 +16,19 @@ export function AddChildView({ ticket }: { ticket: TicketClient }) {
 
 // What the ticket's work is about, written in the idea file its session folder keeps; the field starts from its text.
 export function EditTextView({ ticket }: { ticket: TicketClient }) {
-  return <CardFieldView shape={EDIT_TEXT} isOff={ticket.isMain} typedAtFirst={ticket.text} onEnter={text => ticket.editText(text)} />
+  return <CardFieldView shape={EDIT_TEXT} isOff={!ticket.canEdit} typedAtFirst={ticket.text} onEnter={text => ticket.editText(text)} />
 }
 
 function TagView({ ticket }: { ticket: TicketClient }) {
-  return <CardFieldView shape={TAG} isOff={ticket.isMain} onEnter={word => ticket.tag(word)} />
+  return <CardFieldView shape={TAG} isOff={!ticket.canEdit} onEnter={word => ticket.tag(word)} />
 }
 
-// Delete removes the ticket and its whole session folder, which cannot be undone, so the person confirms it first.
+// Delete removes the ticket and its whole session folder, which cannot be undone, so the board's Delete dialog asks first.
 function DeleteView({ ticket }: { ticket: TicketClient }) {
-  const deleted = () => window.confirm(`Delete ${ticket.title} and its session folder? This cannot be undone.`) && ticket.delete()
+  const { page } = useBoard()
+  const asked = () => page.store.change({ deleting: ticket })
   return (
-    <button className="file-view" aria-label="Delete" title="Delete this ticket and its session folder" disabled={ticket.isMain} onClick={withoutSelecting(deleted)}>
+    <button className="file-view" aria-label="Delete" title="Delete this ticket and its session folder" disabled={ticket.isMain} onClick={withoutSelecting(asked)}>
       <SessionActionIcon action="delete" />
     </button>
   )
@@ -53,7 +54,7 @@ function TicketTextView({ ticket }: { ticket: TicketClient }) {
   return (
     <>
       <div className="ticket-text">{opening}</div>
-      <button className="ticket-text-link" title={`Open ${file}`} onClick={withoutSelecting(() => page.files.openFolder(ticket, 'session', path))}>
+      <button className="ticket-text-link" title={`Open ${file}`} onClick={withoutSelecting(() => page.editorApp.openFilesOn(ticket, { folder: 'session', file: path }))}>
         {isCut ? `More in ${file}` : file}
       </button>
     </>

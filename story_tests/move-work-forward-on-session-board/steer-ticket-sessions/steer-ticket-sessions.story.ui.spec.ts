@@ -2,7 +2,7 @@
  * Steer Ticket Sessions at the browser tier: the scenarios, and the Thens of the Python tiers' scenarios, that only the
  * board app's page shows.
  *
- * Scenarios: story_tests/move-work-forward-on-session-board/steer-ticket-sessions/steer_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md and story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md. The Python tiers replay the
+ * Scenarios: story_tests/move-work-forward-on-session-board/steer-ticket-sessions/open-ticket-sessions/open_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/steer-ticket-sessions/activate-and-move-ticket-sessions/activate_and_move_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/steer-ticket-sessions/close-and-hand-off-ticket-sessions/close_and_hand_off_ticket_sessions_story.test.md, story_tests/move-work-forward-on-session-board/maintain-tickets/maintain_tickets_story.test.md and story_tests/move-work-forward-on-session-board/organize-ticket-hierarchy/organize_ticket_hierarchy_story.test.md. The Python tiers replay the
  * rest from steer-ticket-sessions.story.shared.py.
  *
  * Each scenario runs against the board app built and served on the throwaway fixture project
@@ -15,7 +15,7 @@ import { execFileSync } from 'node:child_process'
 import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { card, catchClaudeLinks, type ClaudeLinks, dragCard, expect, FakeChat, fixtureRoot, openBoard, receivedBy, resetSessions, test, toast, waitForChat, waitForNoChat, writeInto } from '../../../space/kanban/app/tests/story-ui'
+import { card, catchClaudeLinks, type ClaudeLinks, dragCard, expect, FakeChat, fixtureRoot, openBoard, receivedBy, resetSessions, step, test, toast, waitForChat, waitForNoChat, writeInto } from '../../../space/kanban/app/tests/story-ui'
 import type { Page } from '../../../space/kanban/app/tests/story-ui'
 
 const CHAT_CHECKED_IN_MILLISECONDS = 10_000
@@ -70,7 +70,9 @@ test.describe('with no chat connected', () => {
         await expect(backlogCards(page)).toHaveCount(1)
       })
     })
+  })
 
+  test.describe('Start Backlog Item', () => {
     test.describe('Start a backlog item in a chosen folder', () => {
       let links: ClaudeLinks
 
@@ -208,6 +210,41 @@ test.describe('with no chat connected', () => {
         await expect(dialog.getByRole('heading', { name: 'Close session Checkout flow' })).toBeVisible({ timeout: 8_000 })
         await expect(dialog.getByRole('checkbox', { name: 'Commit changes on checkout-flow' })).not.toBeChecked()
         await expect(dialog.getByRole('checkbox', { name: 'Push checkout-flow to origin' })).not.toBeChecked()
+      })
+    })
+  })
+
+  test.describe('Protect Work When Closing Session', () => {
+    // The reset before the next scenario removes the worktree and its branch.
+    test.afterEach(async ({ page }) => {
+      await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click()
+    })
+
+    // Deleting a worktree or a branch without a commit takes the work nobody committed with it, so the Close dialog
+    // shows Python's warning and the files it means while those are the choices made.
+    test('Warn on the board before a close deletes work nobody committed', async ({ page }) => {
+      const dialog = page.getByRole('dialog')
+      await step(page, 'Given checkout-flow is open in its own worktree, which holds a change to app/checkout/order.py and a new file notes.txt that nobody committed', async () => {
+        checkOutMainAlone()
+        const worktree = `${fixtureRoot}-checkout-flow`
+        git('worktree', 'add', '-b', 'checkout-flow', worktree)
+        writeInto(join(worktree, 'app', 'checkout', 'order.py'), 'def order():\n    return "changed in the worktree"\n')
+        writeInto(join(worktree, 'notes.txt'), 'A note nobody committed.\n')
+        await openBoard(page)
+      })
+      await step(page, 'When the Person closes checkout-flow, choosing to delete its worktree', async () => {
+        await card(page, 'checkout-flow').getByRole('button', { name: 'Close' }).first().click()
+        await dialog.getByRole('checkbox', { name: 'Delete the worktree of checkout-flow' }).check()
+      })
+      await step(page, 'Then the close dialog warns that deleting the worktree without a commit loses the work in app/checkout/order.py and notes.txt', async () => {
+        await expect(dialog.getByRole('alert')).toContainText("Deleting checkout-flow's worktree or branch without a commit loses the work nobody committed")
+        await expect(dialog.getByRole('alert').getByRole('listitem')).toHaveText(['app/checkout/order.py', 'notes.txt'])
+      })
+      await step(page, 'When the Person also chooses to commit checkout-flow', async () => {
+        await dialog.getByRole('checkbox', { name: 'Commit changes on checkout-flow' }).check()
+      })
+      await step(page, 'Then the close dialog no longer warns of lost work', async () => {
+        await expect(dialog.getByRole('alert')).toHaveCount(0)
       })
     })
   })

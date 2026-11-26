@@ -18,7 +18,7 @@ from tools.prompt_notify.prompt_notify import PromptNotify
 
 
 def _toast(tool_name: str, action) -> tuple[str, str] | None:
-    return PromptNotify().detect_echo(HookPayload({"tool_name": tool_name, "tool_input": {}}), toolsets=[action])
+    return PromptNotify(echo_toolsets=[action]).detect_echo(HookPayload({"tool_name": tool_name, "tool_input": {}}))
 
 
 with description("a guidance action's tool call, as the prompt-notify hook sees it"):

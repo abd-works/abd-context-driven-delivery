@@ -1,0 +1,32 @@
+2026-11-16 — prompt-queue band
+Mistake: the queue was drawn as a plain text row of the band, reading as part of the CDD chat bar, with text buttons ("▸ 3 queued", "Sub-agent mode: off").
+Correction: the queue is its own bordered box above the chat bar with a gap below it; the expand control is a stack image, sub-agent mode and the other controls are images, and their words are hover tooltips.
+
+2026-11-16 — The stack image (the one control that opens the queue) never showed in the desktop chat bar once its
+count was drawn as SVG <text>; I redrew the image twice without checking that it showed at all.
+Correction: the count is drawn as seven-segment line paths inside the SVG, with no <text>. When the person says
+an image is wrong, first check that it is drawn at all.
+
+2026-11-16 — Asked to make the queue look like a stack of task boxes, I changed the collapsed view, which the
+person had not asked to change. Correction: the collapsed view is back as it was (stack image, controls and the
+next prompt on hover); the expanded queue is the stack, each task a bordered card, each card under it a little
+narrower, like a pile.
+
+2026-11-16 — Revealing the controls on hover made the stack image vanish on the desktop, so the person could not
+click it to open the queue; I guessed at its size instead of removing the cause. Correction: no hover reveal. At
+rest the box shows the stack image and the next prompt; the controls show only in the open queue.
+
+2026-11-16 — Asked to use the prompt box's wording for the empty queue, I deleted the Ctrl and Enter key caps, which
+the person still wanted. Correction: the wording is on the left and the key caps, drawn like the chat's mic button,
+are back on the right. A request to change one part of a view is not a request to remove the rest.
+2026-11-17 — Generated: card text box with minWidth=0 overflow=hidden to truncate long prompts. Mistake: clipping the box cut the card button's rounded ends and height (cards looked square and short). Correction: keep the rounded button unwrapped and cut the text to the columns left (cutToFit/textColumnsOf in queue-view.tsx).
+2026-11-17 — Generated: cut and padded card text to computed columns and drew hover buttons absolutely to make cards fill the chat box. Mistake: cards had filled the whole width before (c0fbbff0d); my layout changes broke it. Correction: restore the c0fbbff0d card row exactly, only moving progress and attachment count before the text.
+
+2026-11-17 — The queue's pointer placement, corrected four times. Mistakes: a wide column of its own (floated off the card, wasted room); arrows inside the task slot (still a gap); one grey bar around arrows and text. Correction: the pointer is its own small grey bar over the card's LEFT end, drawn exactly as the card's ↵ ✎ ↑ ↓ ✕ bar is at its RIGHT end (same background, gap and padding), and the narrow task column stays as it was. Copy the existing right-hand bar's look rather than inventing a new layout.
+2026-11-17 — Then the pointer bar sat in the card's row and pushed the card's text to the right. Correction: it lies over the card (position absolute, top 0, left 0, as the icon buttons' press areas do), so the text never moves.
+2026-11-17 — Then the arrows stood alone as separate buttons beside the card. Correction: the arrows are part of the card: a grey bar (LOOK.keyCap, the right-hand bar's background) at the start of the card's own box, touching its text pill with no gap, inside a column every card keeps so no text moves. Never draw the pointer as buttons standing by themselves.
+2026-11-17 — Final: the card's pointer is placed exactly as the card's right-hand buttons are: a solid grey bar (keyCap, paddingX xs, gap 1) drawn OVER the card's left end (position absolute, top 0, bottom 0, left 1, centred on the line), covering the start of the text the way ↵ ✎ ↑ ↓ ✕ cover its end. Not a column, not beside the card, not pushing the text.
+
+2026-11-17 Robot list side: I put the robots on the right with the open queue to their left. The person wanted the robots on the LEFT, the open queue to their right. Fixed by swapping them; read "open queue to the left" with the earlier message before placing.
+
+2026-11-17 Demo cards with short paths: Run8 parts 2 and 3 said demo/run8/... while part 1 gave the full path, so robots given only the card words could not find the files. Every demo card now names the full path from the repository root.

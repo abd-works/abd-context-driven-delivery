@@ -16,7 +16,7 @@ from expects import contain, equal, expect, have_key
 from mamba import after, before, context, description, it
 from harness.installation.installer import Installer
 from harness.hooks.hook_server import HookPayload
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 import tools.prompt_log.prompt_log as pl  # noqa: E402
 

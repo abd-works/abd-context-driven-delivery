@@ -41,9 +41,9 @@ with description("an annotated toolset whose operation answers an open dict"):
 with description("a file that may reach the CDD domain"):
     with context("named as a route"):
         with it("should become an AccessRoute carrying its tool calls"):
-            tier = AccessFile("board-routes.ts", "router.get('/x', () => tools.call('board.show'));\n").tier()
-            expect(tier).to(equal(("AccessRoute", {"tool_calls": [[1, ".call("]]})))
+            route = AccessFile("board-routes.ts", "router.get('/x', () => tools.call('board.show'));\n")
+            expect((route.node_type, route.facts)).to(equal(("AccessRoute", {"tool_calls": [[1, ".call("]]})))
 
     with context("that reaches nothing"):
         with it("should become no node"):
-            expect(AccessFile("board.css", "body {}\n").tier()).to(equal(None))
+            expect(AccessFile("board.css", "body {}\n").node_type).to(equal(""))

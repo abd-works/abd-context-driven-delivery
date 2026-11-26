@@ -13,24 +13,23 @@ from harness.annotations.name import Name
 from cdd_guidance.practices.output_folder import OutputFolder
 from mamba import describe, context, it, before, shared_context, included_context
 
-from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryModel
-from cdd_guidance.practices.stories.model.json.nodes import JsonStoryModel
-from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryModel
-from cdd_guidance.practices.stories.model.miro.nodes import MiroStoryModel
-from cdd_guidance.practices.stories.model.story_model import StoryModel
+from cdd_guidance.practices.stories.model.drawio.nodes import DrawIOStoryMap
+from cdd_guidance.practices.stories.model.json.nodes import JsonStoryMap
+from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownScenario, MarkdownStoryMap
+from cdd_guidance.practices.stories.model.miro.nodes import MiroStoryMap
+from cdd_guidance.practices.stories.model.story_map import StoryMap
 from cdd_guidance.practices.stories.stories import Stories
-from cdd_guidance.practices.stories.model.java.java_story_model import JavaStoryModel
-from cdd_guidance.practices.stories.model.javascript.javascript_story_model import JavaScriptStoryModel
-from cdd_guidance.practices.stories.model.python.python_story_model import PythonStoryModel
-from cdd_guidance.practices.stories.model.typescript.typescript_story_model import TypeScriptStoryModel
-from cdd_guidance.practices.stories.model.code_story_model import CodeStoryNode
-from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryModel
+from cdd_guidance.practices.stories.model.javascript.javascript_story_map import JavaScriptStoryMap
+from cdd_guidance.practices.stories.model.python.python_story_map import PythonStoryMap
+from cdd_guidance.practices.stories.model.typescript.typescript_story_map import TypeScriptStoryMap
+from cdd_guidance.practices.stories.model.code_story_map import CodeStoryNode
+from cdd_guidance.practices.stories.model.whiteboard.nodes import WhiteboardStoryMap
 
 EXPECTED = Path(__file__).resolve().parent / "_examples" / "expected"
 ACTUAL = Path(__file__).resolve().parent / "_examples" / "actual"
 
 _DIAGRAM = ("drawio", "miro", "whiteboard")
-_CODE = ("typescript", "python", "javascript", "java")
+_CODE = ("typescript", "python", "javascript")
 _FLUENT = ("typescript", "javascript")
 
 
@@ -38,7 +37,7 @@ def _kebab(name: str) -> str:
     return Name(name).title_slug or "unnamed"
 
 
-def walk(story_map: StoryModel) -> list:
+def walk(story_map: StoryMap) -> list:
     """Every epic, story, background, scenario, step, and, and increment, in map order."""
     entries = [entry for epic in story_map.epics for entry in _epic_entries(epic, 0)]
     for increment in story_map.increments:
@@ -192,8 +191,8 @@ def _read_tree(folder: Path) -> dict:
     return files
 
 
-def _write_markdown(source: StoryModel, folder: Path) -> None:
-    markdown = MarkdownStoryModel(source)
+def _write_markdown(source: StoryMap, folder: Path) -> None:
+    markdown = MarkdownStoryMap().copy_of(source)
     _write(folder / "story-map.md", markdown.save())
 
     def visit(epic, parts: list) -> None:
@@ -212,7 +211,7 @@ def _write_markdown(source: StoryModel, folder: Path) -> None:
 
 
 _SOURCES = ("markdown", "drawio", "typescript")
-_CHANNELS = ("markdown", "json", "drawio", "miro", "whiteboard", "typescript", "python", "javascript", "java")
+_CHANNELS = ("markdown", "json", "drawio", "miro", "whiteboard", "typescript", "python", "javascript")
 
 
 def _expected_typescript() -> dict:
@@ -224,23 +223,22 @@ def _expected_typescript() -> dict:
     return files
 
 
-def load_source(name: str) -> StoryModel:
+def load_source(name: str) -> StoryMap:
     if name == "markdown":
-        return Stories().read_folder(EXPECTED)
+        return Stories().story_files(EXPECTED).story_map_in(EXPECTED)
     if name == "drawio":
-        return DrawIOStoryModel().load((EXPECTED / "story-map.drawio").read_text(encoding="utf-8"))
-    return TypeScriptStoryModel().load(_expected_typescript())
+        return DrawIOStoryMap().parse((EXPECTED / "story-map.drawio").read_text(encoding="utf-8"))
+    return TypeScriptStoryMap().load(_expected_typescript())
 
 
 _CODE_MAPS = {
-    "typescript": TypeScriptStoryModel,
-    "python": PythonStoryModel,
-    "javascript": JavaScriptStoryModel,
-    "java": JavaStoryModel,
+    "typescript": TypeScriptStoryMap,
+    "python": PythonStoryMap,
+    "javascript": JavaScriptStoryMap,
 }
 
 
-def save_channel(source_name: str, target: str, source: StoryModel) -> StoryModel:
+def save_channel(source_name: str, target: str, source: StoryMap) -> StoryMap:
     """Write source through the target channel, then read the written files back."""
     folder = ACTUAL / f"from-{source_name}" / f"to-{target}"
     OutputFolder(folder).clear()
@@ -249,32 +247,32 @@ def save_channel(source_name: str, target: str, source: StoryModel) -> StoryMode
     return _read_channel(folder, target)
 
 
-def _write_channel(folder: Path, target: str, source: StoryModel) -> None:
+def _write_channel(folder: Path, target: str, source: StoryMap) -> None:
     if target == "markdown":
         _write_markdown(source, folder)
     elif target == "json":
-        _write(folder / "story-graph.json", JsonStoryModel().render(JsonStoryModel(source)))
+        _write(folder / "story-graph.json", JsonStoryMap().render(JsonStoryMap().copy_of(source)))
     elif target == "drawio":
-        _write(folder / "story-map.drawio", DrawIOStoryModel(source).save())
+        _write(folder / "story-map.drawio", DrawIOStoryMap().copy_of(source).save())
     elif target == "miro":
-        _write(folder / "story-map.svg", MiroStoryModel(source).save())
+        _write(folder / "story-map.svg", MiroStoryMap().copy_of(source).save())
     elif target == "whiteboard":
-        _write(folder / "story-map.whiteboard", WhiteboardStoryModel(source).save())
+        _write(folder / "story-map.whiteboard", WhiteboardStoryMap().copy_of(source).save())
     else:
         _write_tree(folder, _CODE_MAPS[target](source).save())
 
 
-def _read_channel(folder: Path, target: str) -> StoryModel:
+def _read_channel(folder: Path, target: str) -> StoryMap:
     if target == "markdown":
-        return MarkdownStoryModel.from_workspace(folder)
+        return MarkdownStoryMap().read_folder(folder, folder)
     if target == "json":
-        return JsonStoryModel().parse((folder / "story-graph.json").read_text(encoding="utf-8"))
+        return JsonStoryMap().parse((folder / "story-graph.json").read_text(encoding="utf-8"))
     if target == "drawio":
-        return DrawIOStoryModel().load((folder / "story-map.drawio").read_text(encoding="utf-8"))
+        return DrawIOStoryMap().parse((folder / "story-map.drawio").read_text(encoding="utf-8"))
     if target == "miro":
-        return MiroStoryModel().load((folder / "story-map.svg").read_text(encoding="utf-8"))
+        return MiroStoryMap().parse((folder / "story-map.svg").read_text(encoding="utf-8"))
     if target == "whiteboard":
-        return WhiteboardStoryModel().load((folder / "story-map.whiteboard").read_text(encoding="utf-8"))
+        return WhiteboardStoryMap().parse((folder / "story-map.whiteboard").read_text(encoding="utf-8"))
     return _CODE_MAPS[target]().load(_read_tree(folder))
 
 
@@ -450,15 +448,6 @@ with describe("a story map"):
                 with it("should bring that story back"):
                     names = _story_names(_as_loaded(self, walk(self.loaded)))
                     expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(True))
-        with describe("to java"):
-            with before.all:
-                _open(self, "markdown", "java")
-            with included_context("a story map saved through a channel"):
-                pass
-            with context("with a story that has no scenarios"):
-                with it("should bring that story back"):
-                    names = _story_names(_as_loaded(self, walk(self.loaded)))
-                    expect(_kebab(_STORY_WITHOUT_SCENARIOS) in names).to(equal(True))
 
     with describe("from drawio"):
         with describe("to markdown"):
@@ -501,11 +490,6 @@ with describe("a story map"):
                 _open(self, "drawio", "javascript")
             with included_context("a story map saved through a channel"):
                 pass
-        with describe("to java"):
-            with before.all:
-                _open(self, "drawio", "java")
-            with included_context("a story map saved through a channel"):
-                pass
 
     with describe("from typescript"):
         with describe("to markdown"):
@@ -546,10 +530,5 @@ with describe("a story map"):
         with describe("to javascript"):
             with before.all:
                 _open(self, "typescript", "javascript")
-            with included_context("a story map saved through a channel"):
-                pass
-        with describe("to java"):
-            with before.all:
-                _open(self, "typescript", "java")
             with included_context("a story map saved through a channel"):
                 pass

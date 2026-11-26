@@ -9,12 +9,13 @@ each cell as the cell type the format names for it, and each cell reads itself i
 
 from __future__ import annotations
 
-from cdd_guidance.practices.clean_engineering.model.base_class_model import Module
-from cdd_guidance.practices.ddd.model.markdown.nodes import MarkdownBoundedContext, MarkdownIntegration
-from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap
+from cdd_guidance.practices.clean_engineering.model import Module
+from cdd_guidance.practices.ddd.model.nodes import Aggregate, BoundedContext, BoundedContextMap, Integration
 
 # What a drawn map is called on the page it is drawn on.
 _TITLE = "Bounded Context Map"
+# How the title of a Clean Engineering modules view ends, which names its system rather than a map.
+MODULES_TITLE_ENDING = "Modules Context"
 
 
 class MapCell:
@@ -57,7 +58,10 @@ class AggregateCell(MapCell):
         return cell
 
     def depend_on_aggregate(self, target: Aggregate, pattern: str) -> None:
-        """An arrow to the aggregate an integration reaches, named by the integration's pattern."""
+        """An arrow to the aggregate an integration reaches, named by the integration's pattern; one arrow per aggregate,
+        named by the first integration, when several of its members are reached."""
+        if target.module_path in self.dependencies:
+            return
         self.dependencies.append(target.module_path)
         self.dependency_labels[target.module_path] = pattern
 
@@ -67,7 +71,7 @@ class AggregateCell(MapCell):
     def read_integrations_into(self, drawn: BoundedContextMap) -> None:
         source = drawn.aggregate_at(self.name)
         for dependency in self.external_deps():
-            integration = MarkdownIntegration.from_aggregate(drawn.aggregate_at(dependency))
+            integration = Integration.from_aggregate(drawn.aggregate_at(dependency))
             integration.pattern = self.dependency_labels.get(dependency, "")
             source.integrations.append(integration)
 
@@ -76,13 +80,16 @@ class DrawnBoundedContextMap(BoundedContextMap):
     """A map drawn as a Clean Engineering model of some drawn format: its contexts and aggregates are its own modules.
     Each format names its context and aggregate cell types and renders and parses the drawing itself."""
 
-    bounded_context_type = MarkdownBoundedContext
     context_cell_type: type[ContextCell] = ContextCell
     aggregate_cell_type: type[AggregateCell] = AggregateCell
 
     def __init__(self) -> None:
         super().__init__()
         self.name = _TITLE
+
+    @property
+    def holds_document_words(self) -> bool:
+        return False
 
     @property
     def modules_title(self) -> str:
@@ -94,7 +101,7 @@ class DrawnBoundedContextMap(BoundedContextMap):
         fidelity); otherwise the map. The drawing takes the map's own name."""
         self.title = source.title
         if source.has_class_cards:
-            source.write_classes(self)
+            source.write_classes(self, draws_repository_in_root=True)
         else:
             self.modules = self._cells(source)
 
@@ -116,7 +123,9 @@ class DrawnBoundedContextMap(BoundedContextMap):
     def read_drawing(self) -> "DrawnBoundedContextMap":
         """Read the modules the drawing parsed into this map, and return it: the class view's classes are the cards of
         the aggregates their modules name; each cell of the modules view reads itself in, then each draws its
-        integrations."""
+        integrations. A drawing holds none of the words round the map's title, so a drawing read before by the same
+        format lends this one none either: they come from the document the drawing keeps."""
+        self.opening, self.description = [], []
         if any(module.classes for module in self.modules):
             return self.read_class_model(self)
         self.contexts = []

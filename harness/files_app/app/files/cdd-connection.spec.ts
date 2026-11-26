@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { CddConnection } from '@cdd/cdd-connection'
 
@@ -25,8 +27,23 @@ function connectionFromBeforeRestart(): CddConnection {
   return connection
 }
 
+// Seed: a project folder that is not there, such as a ticket's worktree removed while its page stays open.
+const REMOVED_PROJECT = join(tmpdir(), 'cdd-connection-project-removed')
+
 describe('cdd connection', () => {
   afterEach(() => vi.unstubAllGlobals())
+
+  describe('that is made for a project folder that is not there', () => {
+    const calling = () => new CddConnection(REMOVED_PROJECT).call('session.show', {})
+
+    it('should refuse the call, naming the folder as not there', async () => {
+      await expect(calling()).rejects.toThrow(`The project folder ${REMOVED_PROJECT} is not there`)
+    })
+
+    it('should say nothing of the Python program, which is where it was', async () => {
+      await expect(calling().catch(failure => String(failure.message).toLowerCase().includes('python'))).resolves.toBe(false)
+    })
+  })
 
   describe('that opened its session before the cdd server restarted', () => {
     it('should answer the next call on a new session rather than fail it', async () => {
@@ -49,8 +66,10 @@ describe('cdd connection', () => {
       vi.stubGlobal('fetch', async (_url: string, init: { body: string }) => {
         const { id } = JSON.parse(init.body) as { id: number }
         asks.push(id)
-        const text = asks.length === 1 ? 'session.file is still running after 10 seconds; it was not started again.' : '{"text":"the file"}'
-        return Response.json({ jsonrpc: '2.0', id, result: { content: [{ text }] } })
+        const stillRunning = asks.length === 1
+        const text = stillRunning ? 'session.file is still running after 10 seconds; it was not started again.' : '{"text":"the file"}'
+        const structuredContent = stillRunning ? { still_running: { tool: 'session.file', seconds: 10 } } : undefined
+        return Response.json({ jsonrpc: '2.0', id, result: { content: [{ text }], structuredContent } })
       })
       return asks
     }

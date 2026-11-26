@@ -5,13 +5,13 @@ import { FileViewIcon } from '../shared/icons'
 import type { FidelityProgressClient } from './fidelity-progress-client'
 import type { TicketClient } from './ticket-client'
 
-// Opens the files panel on the fidelities given: the whole card's on a card, one fidelity's in its action bar.
+// Opens the Files app on the fidelities given: the whole card's on a card, one fidelity's in its action bar.
 export function FileViewsView({ ticket, progress }: { ticket: TicketClient; progress: FidelityProgressClient[] }) {
   const { page } = useBoard()
   // A press on a card would also select it; opening its files is enough.
   const opened = (event: MouseEvent) => {
     if (event.currentTarget.closest('.ticket-card')) event.stopPropagation()
-    void page.files.openFiles(ticket, progress)
+    void page.editorApp.openFilesOn(ticket, { fidelities: progress.map(entry => entry.fidelity.slug) })
   }
   return (
     <span className="file-views">

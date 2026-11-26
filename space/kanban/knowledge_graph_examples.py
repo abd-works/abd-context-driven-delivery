@@ -68,8 +68,11 @@ BILLING_REPORT = TicketScope(
 
 
 def roots_loaded(graph: Graph, project: Path) -> dict[str, str]:
-    """Interaction: each practice tree the graph loaded, by practice, with the folder it was read from, from the project."""
-    return {key: root.relative_to(project).as_posix() for key, root in graph.practices.roots_by_key.items()}
+    """Interaction: each practice tree the graph loaded, by practice, with the folders it was read from, from the
+    project: each of the practice's session roots the graph's load named."""
+    named = set(graph.scope.named or [])
+    read = {practice.key: [root for root in practice.session_roots if root in named] for practice in graph.practices.chosen}
+    return {key: ", ".join(root.relative_to(project.resolve()).as_posix() for root in roots) for key, roots in read.items()}
 
 
 def files_read(graph: Graph, project: Path) -> list[str]:

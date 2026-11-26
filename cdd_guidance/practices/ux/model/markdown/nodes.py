@@ -1,12 +1,16 @@
-"""Markdown channel - the map's scope and its UxContext notes and invariants; it carries no screens."""
+"""Markdown channel - the map's scope and its UxContext notes and invariants; it carries no screens, so a render
+from a source that holds only screens leaves the context file already there as it is."""
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import List, Optional
 
 from cdd_guidance.practices.ux.model.ux_map import UxMap
+from harness.guidance.practice_formats import Written
 
 _TITLE = "# UX context"
+_CONTEXT_FILE_NAME = "ux-context.md"
 _SCOPE = "Scope: "
 _INVARIANTS = "Invariants"
 _NOTES = "Notes"
@@ -20,15 +24,20 @@ class MarkdownUxMap(UxMap):
     A hand-written context file reads too: any other line, or a bullet under any other heading, is a note.
     """
 
-    workspace_files = (".context/ux-context.md", "ux-context.md", ".context/context.md", "context.md")
+    map_file_suffixes = (".md",)
+    holds_screens = False
 
-    def parse(self, content: str) -> UxMap:
+    def reads_file(self, file: Path, text: str) -> bool:
+        """The UX context file, ``ux-context.md``; any other markdown file is another document."""
+        return file.name == _CONTEXT_FILE_NAME
+
+    def parse(self, text: str, file: str = "") -> UxMap:
         """A new map of this format, read from a markdown context file."""
         ux_map = type(self).create()
-        ux_map.read_context(content)
+        ux_map._read_context(text)
         return ux_map
 
-    def read_context(self, content: str) -> None:
+    def _read_context(self, content: str) -> None:
         """Read the file line by line into this map's scope and context: a bullet goes in the list of the heading it
         is under, and any other line is a note."""
         under: Optional[List[str]] = None
@@ -53,9 +62,50 @@ class MarkdownUxMap(UxMap):
     def _list_under(self, heading: str) -> List[str]:
         return self.context.invariants if heading == _INVARIANTS else self.context.notes
 
-    def render(self, canonical: UxMap) -> str:
-        """canonical's context: copied into a markdown map, which writes itself."""
-        return self.copy_of(canonical).save()
+    def render(self, canonical: UxMap, written: Written = Written()) -> str:
+        """canonical's context: copied into a markdown map, which writes itself. The context file as it is now is
+        written onto instead of replaced: every line a person wrote stays where it is, the invariants and notes the
+        file lacks are added after the ones it holds, and the scope line says the scope canonical has. A source that
+        holds no scope, invariant, or note, such as the drawing, leaves the file as it is."""
+        context = self.copy_of(canonical)
+        if not written.previous:
+            return context.save()
+        return context._written_onto(written.previous, self.parse(written.previous))
+
+
+    def _written_onto(self, previous: str, held: UxMap) -> str:
+        """previous, the context file's text, with what this map holds and held, the map read from that text, lacks."""
+        lines = previous.splitlines()
+        if self.scope and self.scope != held.scope:
+            lines = self._with_scope(lines)
+        gained = [item for item in self.context.invariants if item not in held.context.invariants]
+        lines = self._with_items(lines, _INVARIANTS, gained)
+        known = [*held.context.notes, *held.context.invariants]
+        lines = self._with_items(lines, _NOTES, [item for item in self.context.notes if item not in known])
+        return "\n".join(lines) + "\n"
+
+    def _with_scope(self, lines: List[str]) -> List[str]:
+        """lines with this map's scope on the scope line; with no such line, on a line of its own under the title."""
+        at = next((index for index, line in enumerate(lines) if line.strip().startswith(_SCOPE)), -1)
+        if at >= 0:
+            return [*lines[:at], f"{_SCOPE}{self.scope}", *lines[at + 1:]]
+        under = next((index + 1 for index, line in enumerate(lines) if line.strip() == _TITLE), 0)
+        return [*lines[:under], "", f"{_SCOPE}{self.scope}", *lines[under:]]
+
+    def _with_items(self, lines: List[str], heading: str, items: List[str]) -> List[str]:
+        """lines with items as bullets after the last line under heading; with no such heading, under a new one after
+        what the file holds."""
+        if not items:
+            return lines
+        bullets = [f"{_ITEM}{item}" for item in items]
+        at = next((index for index, line in enumerate(lines) if line.strip() == f"{_SECTION}{heading}"), -1)
+        if at < 0:
+            while lines and not lines[-1].strip():
+                lines = lines[:-1]
+            return [*lines, "", f"{_SECTION}{heading}", *bullets]
+        following = next((index for index in range(at + 1, len(lines)) if lines[index].startswith(_SECTION)), len(lines))
+        last = max(index for index in range(at, following) if lines[index].strip()) + 1
+        return [*lines[:last], *bullets, *lines[last:]]
 
     def save(self) -> str:
         lines = [_TITLE, ""]

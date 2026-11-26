@@ -21,7 +21,7 @@ with description("an MCP sketch prompt"):
         repo = Path(__file__).resolve().parents[3]
         host = McpHost.from_repo(repo)
         prose = "Three client perspectives: prospect onboarding and active account."
-        result = str(host.checkout_server.invoke("sketch.sketch", {"guidance": prose}))
+        result = str(host.checkout_toolsets.invoke("sketch.sketch", {"guidance": prose}))
         expect(result).to(contain("Conduct a relentless grilling interview"))
         expect("ModuleNotFoundError" in result).to(equal(False))
 
@@ -31,7 +31,7 @@ with description("an MCP sketch prompt"):
         repo = Path(__file__).resolve().parents[3]
         host = McpHost.from_repo(repo)
         result = str(
-            host.checkout_server.invoke(
+            host.checkout_toolsets.invoke(
                 "sketch.sketch",
                 {"guidance": ["cdd_guidance.practices.bdd.bdd:Bdd"]},
             )
@@ -40,15 +40,15 @@ with description("an MCP sketch prompt"):
 
     with it("should include each practice sketch template and rules"):
         from harness.mcp.mcp_server import McpHost
-        from space.session.throwaway_project import ThrowawayProject
+        from space.session.spec_support.throwaway_project import ThrowawayProject
 
         # A project of its own, where every practice is on: this repository's main session may have practices off.
         project = ThrowawayProject()
         try:
             host = McpHost.from_repo(_REPO_ROOT)
-            host.checkout_server.project = project.root
+            host.checkout_toolsets.project = project.root
             result = str(
-                host.checkout_server.invoke(
+                host.checkout_toolsets.invoke(
                     "sketch.sketch",
                     {"guidance": ["stories", "clean-engineering-model"]},
                 )

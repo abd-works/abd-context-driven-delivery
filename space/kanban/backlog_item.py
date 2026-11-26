@@ -2,37 +2,24 @@
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 
 from harness.agent_tools import agent_toolset
 from harness.annotations.annotation import hosted_only
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.agent_tools.tool_call import ToolCall
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.files import command
-from harness.annotations.name import Name
 from space.kanban.board import BACKLOG_COLUMN, Board, Card, Column
+from space.kanban.card_name import BacklogItemTakenError, CardName
 # Imported for real, not only for type checking: the backlog-item.start_under tool reads its parent's type to load the
 # ticket the call names.
 from space.kanban.ticket import Ticket
 from space.session.idea_file import IdeaFile
-from space.session.session_record import SESSION_FILE
+from harness.process.log_timestamp import LogTimestamp
+from space.session.session_log import LogLine
 from harness.mcp.mcp_annotations import mcp
-
-
-# How long the system may take to hand a file to the app it opens that kind of file with.
-OPEN_WITH_SYSTEM_SECONDS = 30
-
-
-def open_with_system(path: Path) -> None:
-    """Hand path to the app this computer opens its kind of file with, as a double-click in the file browser does."""
-    if sys.platform == "win32":
-        os.startfile(path)  # noqa: S606 - a file of the Backlog, opened as the person's own file browser would
-    else:
-        subprocess.run(["open" if sys.platform == "darwin" else "xdg-open", str(path)], check=True, timeout=OPEN_WITH_SYSTEM_SECONDS)
 
 
 class BacklogNestingError(ValueError):
@@ -47,10 +34,6 @@ class BacklogOrderTools:
     """A backlog item's published moves within the Backlog's order: just above or just below another item, as dragging it
     there does. The Backlog keeps that order, in .sessions/_board.json."""
 
-    column: Column
-    key: str
-    board: Board
-
     @mcp
     @agent_tool
     @noSessionLog
@@ -64,8 +47,7 @@ class BacklogOrderTools:
     @noSessionLog
     def move_after(self, other: BacklogItem) -> BacklogItem:
         """Move the backlog item just below other in the Backlog, as dragging it onto other's bottom edge does; the Backlog keeps that order, in .sessions/_board.json. Committed on main and pushed."""
-        column = self.column.place_after(self, other)
-        self.board.sessions.saves.later(f"sessions: move {self.key} after {other.key} in {column.name}")
+        super().move_after(other)
         return self
 
 
@@ -77,15 +59,14 @@ class BacklogItem(BacklogOrderTools, Card):
 
     def __init__(self, path: Path, board: Board) -> None:
         super().__init__(board)
-        self._path = path
-        # The idea the item holds: its heading is the item's title, and the text under it its text.
-        self._idea = IdeaFile(path)
+        # Where the idea's file lies in the Backlog, which moves it.
+        self._place = board.backlog_folder.place_of(path)
 
     @classmethod
     @tool_subject
-    def load(cls, backlog_item: str, *, project: Path | str) -> BacklogItem:
-        """The backlog item titled backlog_item on the board of project."""
-        return Board.load(project).reads.backlog_item_called(backlog_item)
+    def load(cls, backlog_item: str, *, project: Path | str, call: ToolCall | None = None) -> BacklogItem:
+        """The backlog item titled backlog_item on the board of project, read for call."""
+        return Board.load(project, call).reads.backlog_item_called(backlog_item)
 
     @classmethod
     @mcp
@@ -93,9 +74,13 @@ class BacklogItem(BacklogOrderTools, Card):
     @agent_tool
     @noSessionLog
     def create(cls, title: str, text: str = "", *, project: Path | str) -> BacklogItem:
-        """Add an idea to the Backlog, as the + on the board's Backlog column does: one markdown file, with title as its heading and text under it, committed on main and pushed. Run as the backlog slash command, the words after the command are the title, and any further lines its text."""
+        """Add an idea to the Backlog, as the + on the board's Backlog column does: one markdown file, with title as its heading and text under it, committed on main and pushed. A title that gives no file name, or the name of an idea already in the Backlog, is refused, so no idea is written over. Run as the backlog slash command, the words after the command are the title, and any further lines its text."""
         board = Board.load(project)
-        item = cls(board.sessions.backlog_folder / f"{Name(title).title_slug}.md", board)
+        file = board.sessions.backlog_folder / f"{CardName(title).for_new_card()}.md"
+        # An idea's file is its only copy, kept as that file or inside a folder of its name once it has children.
+        if file.exists() or file.with_suffix("").exists():
+            raise BacklogItemTakenError(title, board.repo.path_from_top(file))
+        item = cls(file, board)
         item._idea.write(title, text)
         board.sessions.saves.later(f"sessions: add {title} to the Backlog")
         return item
@@ -140,29 +125,36 @@ class BacklogItem(BacklogOrderTools, Card):
     def ticket(self) -> str:
         """The name of the ticket whose folder the item holds, a ticket moved back with its work; empty for an idea that
         has never been a ticket."""
-        return self._held_ticket_folder.name if self._holds_ticket else ""
+        return self._place.ticket_folder.name if self._place.holds_ticket else ""
 
     @property
     @data_field
     def parent(self) -> str:
         """The title of the item whose folder keeps this one's file, as its child; empty for an item of its own."""
-        parent_file = self._parent_file
+        parent_file = self._place.parent_file
         return self._board.placement.make_backlog_item(parent_file).title if parent_file is not None else ""
 
     @property
     @data_field
     def is_stacked(self) -> bool:
         """Whether it shows inside its parent's card rather than as a card of its own: a child does."""
-        return self._parent_file is not None
+        return self._place.parent_file is not None
 
     @property
     @data_field
     def children(self) -> list[BacklogItem]:
         """The items whose files its folder keeps beside its own: stacked inside its card, and started with it as its
         children. Sent whole, since a stacked child shows in no column."""
-        if not self._is_kept_in_own_folder or self._holds_ticket:
+        if not self._place.is_in_own_folder or self._place.holds_ticket:
             return []
         return [item for item in self._board.backlog_items if item.path.parent == self._path.parent and item.path != self._path]
+
+    @property
+    @data_field
+    def parent_choices(self) -> list[str]:
+        """The titles of the items a person can drop it on to make it their child: any it is not already the child of,
+        and that nest_under would not refuse."""
+        return [item.title for item in self._board.backlog_items if item.title != self.parent and not self._nesting_refusal(item)]
 
     @property
     @data_field
@@ -173,7 +165,7 @@ class BacklogItem(BacklogOrderTools, Card):
     @property
     def last_activity(self) -> str:
         """When the item's file last changed; a backlog item has no session log to read."""
-        return self._timestamp(datetime.fromtimestamp(self._path.stat().st_mtime).astimezone())
+        return str(LogTimestamp(datetime.fromtimestamp(self._path.stat().st_mtime).astimezone()))
 
     @mcp
     @agent_tool
@@ -181,13 +173,14 @@ class BacklogItem(BacklogOrderTools, Card):
     def start(self, scope: str = "feature", path: str = "") -> Ticket:
         """Start the backlog item titled backlog_item: open a ticket for it in Discovery, or bring back the ticket that was moved here, with its work. Its file goes into the ticket's session folder, text and all, and the change is committed on main and pushed. Its children start with it, each as a story ticket that is its child. scope is feature, story, or slice; path is the folder in the repository its session works on. Then run ticket.activate to open the ticket's own worktree, and do its work in a chat started there (start_session with cwd set to the ticket's worktree), not in this chat."""
         children = self.children
-        ticket = self._ticket_brought_back(self._held_ticket_folder) if self._holds_ticket else self._ticket_opened(scope, path)
+        ticket = self._ticket_brought_back(self._place.ticket_folder) if self._place.holds_ticket else self._ticket_opened(scope, path)
         # An item kept inside its folder went back with the folder; a file beside it or on its own moves in now.
         if self._path.exists():
             ticket.session.folder.keep_file(self._path)
         for child in children:
             child.start("story", path).reassign_parent(ticket)
-        self._remove_emptied_folder()
+        self._place.remove_emptied_folder()
+        self._board.placement.reread()
         return ticket
 
     @mcp
@@ -209,20 +202,22 @@ class BacklogItem(BacklogOrderTools, Card):
     @mcp
     @agent_tool
     @noSessionLog
-    def open_file(self) -> BacklogItem:
-        """Open the backlog item titled backlog_item's file in the app this computer opens markdown files with, as the link under its text on the board does."""
-        open_with_system(self._path)
-        return self
+    def delete(self) -> None:
+        """Delete the backlog item titled backlog_item, as Delete on its selected card does: its markdown file goes, or, for an item kept in a folder of its own name (a parent with its children, or a ticket moved back with its work), that whole folder. A child's file goes alone, and its parent stays. A file or folder a running program holds open refuses the delete with everything still in place. Committed on main and pushed."""
+        title = self.title
+        self._place.remove()
+        self._moved(f"sessions: delete {title} from the Backlog")
 
     @mcp
     @agent_tool
     @noSessionLog
     def nest_under(self, parent: BacklogItem) -> BacklogItem:
         """Make the backlog item titled backlog_item a child of parent, as dragging it onto parent's card in the Backlog does: its file moves into parent's folder, beside the file of parent's own name that holds parent's text; a parent kept as one file becomes that folder first. The Backlog nests one level: an item with children of its own cannot become a child, a child cannot take one, and neither can an item kept with a ticket's work. Committed on main and pushed."""
-        if parent.path != self._path and parent.path.parent == self._path.parent and parent._is_kept_in_own_folder:
+        if parent.path != self._path and parent.path.parent == self._path.parent and parent._place.is_in_own_folder:
             return self
         self._refuse_nesting_under(parent)
-        self._move_file_into(parent._folder_for_children(), f"sessions: nest {self.title} under {parent.title} in the Backlog")
+        self._place.move_under(parent._place)
+        self._moved(f"sessions: nest {self.title} under {parent.title} in the Backlog")
         return self
 
     @mcp
@@ -230,76 +225,48 @@ class BacklogItem(BacklogOrderTools, Card):
     @noSessionLog
     def leave_parent(self) -> BacklogItem:
         """Take the backlog item titled backlog_item out of its parent, as dragging it out of its parent's card onto the Backlog does: its file moves back to the Backlog folder, an item of its own again. Committed on main and pushed."""
-        if self._parent_file is not None:
-            self._move_file_into(self._board.sessions.backlog_folder, f"sessions: take {self.title} out of its parent in the Backlog")
+        if self._place.parent_file is not None:
+            self._place.move_out()
+            self._moved(f"sessions: take {self.title} out of its parent in the Backlog")
         return self
 
-    # The ticket folder an item holds: the folder it is kept in, or a folder of its name beside it.
+    # Its file as it lies now, which a move can have taken elsewhere.
     @property
-    def _held_ticket_folder(self) -> Path:
-        return self._path.parent if self._is_kept_in_own_folder else self._path.with_suffix("")
+    def _path(self) -> Path:
+        return self._place.file
 
-    # A folder holds a ticket's work when it keeps a session's record; a parent's folder keeps only ideas.
+    # The idea the item holds: its heading is the item's title, and the text under it its text.
     @property
-    def _holds_ticket(self) -> bool:
-        return (self._held_ticket_folder / SESSION_FILE).is_file()
-
-    @property
-    def _is_kept_in_own_folder(self) -> bool:
-        return self._path.parent.name == self._path.stem
-
-    # The file of the parent whose folder keeps this item's file, beside the parent's own; none for an item of its own.
-    @property
-    def _parent_file(self) -> Path | None:
-        folder = self._path.parent
-        if folder.parent != self._board.sessions.backlog_folder or self._is_kept_in_own_folder:
-            return None
-        return folder / f"{folder.name}.md"
+    def _idea(self) -> IdeaFile:
+        return IdeaFile(self._place.file)
 
     def _refuse_nesting_under(self, parent: BacklogItem) -> None:
-        folder = parent._held_ticket_folder
-        reason = (
-            "it is the same item" if parent.path == self._path
-            else "it has children of its own" if self.children
-            else "it is a child itself" if parent.is_stacked
-            else "it is kept with a ticket's work" if self._holds_ticket or parent._holds_ticket
-            else f"{parent.title}'s folder already keeps a file called {self._path.name}" if (folder / self._path.name).exists() or self._path.stem == folder.name
-            else ""
-        )
+        reason = self._nesting_refusal(parent)
         if reason:
             raise BacklogNestingError(self.title, parent.title, reason)
 
-    # The folder that keeps this item's children: its own folder, made from its one file the first time it takes one.
-    def _folder_for_children(self) -> Path:
-        if not self._is_kept_in_own_folder:
-            folder = self._path.with_suffix("")
-            folder.mkdir()
-            self._move_file_into(folder, "")
-        return self._path.parent
+    def _nesting_refusal(self, parent: BacklogItem) -> str:
+        """Why this item cannot become parent's child; empty when it can. The Backlog nests one level, in plain idea
+        folders."""
+        folder = parent._place.ticket_folder
+        return (
+            "it is the same item" if parent.path == self._path
+            else "it has children of its own" if self.children
+            else "it is a child itself" if parent.is_stacked
+            else "it is kept with a ticket's work" if self._place.holds_ticket or parent._place.holds_ticket
+            else f"{parent.title}'s folder already keeps a file called {self._path.name}" if (folder / self._path.name).exists() or self._path.stem == folder.name
+            else ""
+        )
 
-    # Move the item's file, never its idea's only copy lost, into folder; a parent's folder left empty goes with it.
-    def _move_file_into(self, folder: Path, saved_as: str) -> None:
-        left = self._path.parent
-        moved = folder / self._path.name
-        self._path.replace(moved)
-        self._path = moved
-        self._idea = IdeaFile(moved)
-        if left != self._board.sessions.backlog_folder and not any(left.iterdir()):
-            left.rmdir()
+    # Its file moved: the board reads its cards again, and the move is committed on main and pushed.
+    def _moved(self, saved_as: str) -> None:
         self._board.placement.reread()
-        if saved_as:
-            self._board.sessions.saves.later(saved_as)
-
-    def _remove_emptied_folder(self) -> None:
-        folder = self._held_ticket_folder
-        if self._is_kept_in_own_folder and folder.is_dir() and not any(folder.iterdir()):
-            folder.rmdir()
-        self._board.placement.reread()
+        self._board.sessions.saves.later(saved_as)
 
     def _ticket_brought_back(self, kept_folder: Path) -> Ticket:
         return self._board.placement.ticket_of(self._board.sessions.held.load(kept_folder).folder.reopen())
 
     def _ticket_opened(self, scope: str, path: str) -> Ticket:
         ticket = self._board.placement.open_ticket(self.title, scope, path)
-        ticket.work.record(f"backlog {self._path}")
+        ticket.work.record(LogLine("backlog", paths=[self._path]))
         return ticket

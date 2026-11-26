@@ -1,13 +1,17 @@
 """Story files in the brace languages: TypeScript and JavaScript read and spell stories the same way."""
 from __future__ import annotations
 
+import posixpath
 import re
+from pathlib import Path
 from typing import List, Optional
 
+from cdd_guidance.practices.source_code import CodeLanguage
 from cdd_guidance.practices.stories.model.brace_story_file import BraceStoryFile
-from cdd_guidance.practices.stories.model.code_story_model import CodeScenario, CodeStory, CodeStoryModel, StorySyntax, unescaped
-from cdd_guidance.practices.stories.model.story_model import Background, Epic, Story
-from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryWriting, background_examples_line, example_names_of, story_description
+from cdd_guidance.practices.stories.model.code_story_map import CodeScenario, CodeStory, CodeStoryMap, StorySyntax, unescaped
+from cdd_guidance.practices.stories.model.story_file import StoryFile
+from cdd_guidance.practices.stories.model.story_map import Background, Story
+from cdd_guidance.practices.stories.model.story_writing import StepClause, StoryFilePlace, StoryWriting, background_examples_line, example_names_of, story_description, story_notes_lines
 
 
 class BraceSyntax(StorySyntax):
@@ -106,7 +110,7 @@ class BraceScenario(CodeScenario):
 class BraceStory(CodeStory):
     """A story read from a brace-language story file: TypeScript and JavaScript read it the same way."""
 
-    scenario_type = BraceScenario
+    scenario_class = BraceScenario
     syntax = BraceScenario.syntax
 
 
@@ -129,17 +133,23 @@ class BraceStoryWriting(StoryWriting):
     and_body_depth = 2
     chains_repeated_phase = True
 
-    def file_header(self, epic: Epic, parent: str) -> List[str]:
-        names = example_names_of(list(epic.stories))
-        example_import = [f"import {{ {', '.join(names)} }} from \"./examples\"{self.statement_end}"] if names else []
-        return ["/**", f" * Epic: {epic.name}", f" * Orders: {epic.order_path()}", " */", "", self.story_test_import(parent), *example_import, ""]
+    def __init__(self, language: CodeLanguage, helpers: str) -> None:
+        """helpers is the step library a story file imports, named from the workspace root without its extension."""
+        super().__init__(language)
+        self.helpers = helpers
+
+    def file_header(self, place: StoryFilePlace) -> List[str]:
+        names = example_names_of(place.stories)
+        examples = posixpath.relpath(place.examples_folder, place.folder)
+        example_import = [f"import {{ {', '.join(names)} }} from \"{examples}\"{self.statement_end}"] if names else []
+        return ["/**", f" * Epic: {place.epic.name}", f" * Orders: {place.orders}", " */", "", self.story_test_import(place.folder), *example_import, ""]
 
     def story_test_import(self, parent: str) -> str:
-        """The line that imports the story-test helpers into a story file written under parent."""
+        """The line that imports the story-test helpers into a story file written in the folder parent."""
         raise NotImplementedError(f"{type(self).__name__} must import its story-test helpers")
 
     def story_open(self, story: "Story") -> List[str]:
-        lines = ["/**", f" * Story: {story.name}", *story_description(story, " * "), " */", ""]
+        lines = ["/**", f" * Story: {story.name}", *story_description(story, " * "), *story_notes_lines(story, " * "), " */", ""]
         return lines + background_examples_line(story, "// ") + [f"story({self._quoted(story.name)}, () => {{"]
 
     def story_background_lines(self, background: "Background") -> List[str]:
@@ -159,10 +169,11 @@ class BraceStoryWriting(StoryWriting):
         return lines + [f"{indent}}});"]
 
 
-class BraceStoryModel(CodeStoryModel):
+class BraceStoryMap(CodeStoryMap):
     """A story tree in a brace language, whose story files BraceStoryFile reads."""
 
-    writing_type = BraceStoryWriting
+    writing_class = BraceStoryWriting
 
-    def story_file(self, content: str) -> BraceStoryFile:
-        return BraceStoryFile(self.language, content)
+    def story_file(self, path: str, content: str, project: Optional[Path] = None) -> StoryFile:
+        """The story file at path, read block by block."""
+        return BraceStoryFile(self, path, content, project if project is not None else self.project)

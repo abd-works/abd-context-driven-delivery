@@ -45,38 +45,38 @@ class _CountingReads(Graph):
 
     def __init__(self) -> None:
         super().__init__()
-        self.reads = 0
+        self.working_copy_reads = 0
         read = self.build._read_working_copy
 
         def counted() -> None:
-            self.reads += 1
+            self.working_copy_reads += 1
             read()
 
         self.build._read_working_copy = counted
 
 
 def _nodes(graph: Graph) -> list[tuple]:
-    found = graph.practice("clean_engineering").reading.in_graph.nodes()
+    found = graph.practices.named("clean_engineering").reading.in_graph.nodes()
     return sorted((node.node_id, node.type, node.source.file, node.source.start_line, node.source.end_line) for node in found)
 
 
 def _violations(graph: Graph) -> list[tuple]:
-    found = graph.practice("clean_engineering").reading.in_graph.nodes()
+    found = graph.practices.named("clean_engineering").reading.in_graph.nodes()
     return sorted((violation.rule, violation.node_id, violation.line, violation.message) for node in found for violation in node.rules.violations)
 
 
 def _ddd_nodes(graph: Graph) -> list[tuple]:
     """DDD's building blocks: the type and the class of each."""
     blocks = ("EntityRoot", "Entity", "ValueObject", "Repository", "DomainService", "Factory", "Specification")
-    return sorted((node.type, node.name) for node in graph.practice("ddd").reading.in_graph.nodes() if node.type in blocks)
+    return sorted((node.type, node.name) for node in graph.practices.named("ddd").reading.in_graph.nodes() if node.type in blocks)
 
 
 def _ddd_edges(graph: Graph) -> list[tuple]:
-    return sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in graph.practice("ddd").reading.in_graph.edge_index.of())
+    return sorted((edge.kind, edge.parent.node_id, edge.child.node_id) for edge in graph.practices.named("ddd").reading.in_graph.edge_index.of())
 
 
 def _class_names(graph: Graph) -> list[str]:
-    return sorted(node.name for node in graph.practice("clean_engineering").reading.in_graph.nodes("OoadClass"))
+    return sorted(node.name for node in graph.practices.named("clean_engineering").reading.in_graph.nodes("OoadClass"))
 
 
 class _CountedTakes:
@@ -124,7 +124,7 @@ class _SerialisedHere:
 
 def _practice_state(graph: Graph, key: str) -> dict:
     """One practice's nodes where they sit with their facts, its edges, and its violations, as a build leaves them."""
-    part = graph.practice(key).reading.in_graph
+    part = graph.practices.named(key).reading.in_graph
     found = part.nodes()
     return {
         "nodes": sorted((node.node_id, node.type, node.source.file, node.source.start_line, node.source.end_line, _facts(node)) for node in found),
@@ -161,7 +161,7 @@ with description("a graph built for a chat's call"):
         shutil.rmtree(self.root, ignore_errors=True)
 
     with it("should read the working copy in a worker process, never in the process answering chats"):
-        expect(self.apart.reads).to(equal(0))
+        expect(self.apart.working_copy_reads).to(equal(0))
 
     with it("should hold the nodes a build in this process holds"):
         expect(_nodes(self.apart)).to(equal(_nodes(self.here)))
@@ -178,7 +178,7 @@ with description("a graph built for a chat's call"):
             expect(_class_names(self.apart)).to(equal(["Cart", "Wallet"]))
 
         with it("should still read nothing in the process answering chats"):
-            expect(self.apart.reads).to(equal(0))
+            expect(self.apart.working_copy_reads).to(equal(0))
 
         # A build that failed left the graph with its rules' findings dropped, which a validate then read as clean.
         with context("again, by a worker that fails"):
@@ -205,7 +205,7 @@ with description("a graph built for a chat's call"):
             self.in_process.load_files(str(self.root), ["clean_engineering"], ["src/cart.ts"], call=_IN_PROCESS)
 
         with it("should read the working copy in this process"):
-            expect(self.in_process.reads).to(equal(1))
+            expect(self.in_process.working_copy_reads).to(equal(1))
 
     with context("that is opened again from its saved graph"):
         with before.all:
@@ -217,7 +217,7 @@ with description("a graph built for a chat's call"):
             expect(_violations(self.reopened)).to(equal(_violations(self.here)))
 
         with it("should run no build to open it"):
-            expect(self.reopened.reads).to(equal(0))
+            expect(self.reopened.working_copy_reads).to(equal(0))
 
     with context("that holds DDD beside the Clean Engineering practice it extends"):
         with before.all:
@@ -323,7 +323,7 @@ with description("a graph built for a chat's call"):
                 apart.reads.open_saved(self.every)
                 apart.refresh([_READ_BY_EACH_PRACTICE[1]], _FROM_A_CHAT)
                 with _SerialisedHere() as self.serialised:
-                    apart.reads.refreshed([file], checked / "apart.json", _FROM_A_CHAT)
+                    apart.reads.refreshed([file], checked / "apart.json", apart=True)
                 self.checked_here = SavedGraph.from_file(checked / "here.json").document
                 self.checked_apart = SavedGraph.from_file(checked / "apart.json").document
 
@@ -352,10 +352,20 @@ with description("a graph built for a chat's call"):
     with context("whose worker reports its progress"):
         with before.all:
             self.heard: list[str] = []
-            from harness.agent_tools.progress import reporting_to
+            from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 
-            with reporting_to(self.heard.append):
+            with CALLS_BEING_ANSWERED.answering(ToolCall(reporter=self.heard.append)):
                 _CountingReads().load_files(str(self.root), ["clean_engineering"], ["src"], call=_FROM_A_CHAT)
 
         with it("should pass on the worker's reports, before its own of what the worker built"):
             expect(self.heard.count("Loading saved clean_engineering nodes")).to(equal(2))
+
+    with context("that holds no practice, as the graph of a session with every practice turned off does"):
+        with before.all:
+            self.folder = Path(tempfile.mkdtemp(prefix="cdd-graph-no-practice-"))
+            (self.folder / "cart.py").write_text("class Cart:\n    pass\n", encoding="utf-8")
+            self.none_held = Graph([])
+
+        with it("should build in a worker that holds no practice either, and read no node"):
+            self.none_held.load_files(str(self.folder), [], ["cart.py"], call=_FROM_A_CHAT)
+            expect(list(self.none_held.practices.opened)).to(equal([]))

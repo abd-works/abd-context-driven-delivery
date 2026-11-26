@@ -2,33 +2,37 @@ import { Component, useCallback, useEffect, useState, useSyncExternalStore, type
 
 import type { FileEntryData, SessionFileData } from '@cdd/space/session/session'
 
-import type { FileFolder } from './file-bar'
-import { FileSourceView } from './file-source-view'
+import { entryClassesOf, publishedOf, type FileFolder, type PublishedFile } from './file-bar'
+import type { SourceCallout } from '@source-view/source-callouts'
+
+import { FailureBandView } from './failure-band-view'
+import { FormatAlignmentView } from './format-alignment-view'
+import { FileView } from './file-view'
 import { FilesGraphView } from './files-graph-view'
 import type { FilesPage } from './files-page'
-import { drawioPageOf, isDrawio, revealLabelOf } from './files-paths'
+import { drawioPageOf, isDrawio, isWhiteboard, missingNoteOf, revealLabelOf } from './files-paths'
 import { formatGlyphOf } from './format-chips'
 import { applyTheme, storedTheme, type FilesTheme } from './files-theme'
 
 const fileNameOf = (path: string): string => path.split('/').at(-1) ?? path
-// A design canvas's canvas.json is named by its version's folder: `design-canvas/version-2/project/canvas.json` is version-2.
-const canvasNameOf = (path: string): string => path.split('/').at(-3) ?? path
 
 function useFilesState(page: FilesPage) {
   return useSyncExternalStore(page.store.subscribe, () => page.store.state)
 }
 
-// One file the link names: a file not there yet says so, and a file published at a link, such as a design canvas, opens
-// there, in Claude Design, in a tab of its own; a .drawio file also offers its draw.io editor in a tab of its own.
+// One file the link names: a file it cannot open says why, not generated yet or deleted on this branch; a whiteboard
+// opens as a canvas; a design canvas opens in Claude Desktop's artifact panel; a .drawio file also offers its draw.io
+// editor in a tab of its own.
 function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEntryData; isOpen: boolean }) {
-  if (entry.link) return <PublishedFileView entry={entry} />
-  const classes = ['file-entry', isOpen ? 'is-open' : '', entry.exists ? '' : 'is-missing', entry.is_changed ? 'is-changed' : ''].filter(Boolean).join(' ')
-  const hint = entry.exists ? entry.path : `${entry.path}: not generated yet`
+  const published = publishedOf(entry)
+  if (published?.kind === 'whiteboard') return <WhiteboardEntryView page={page} entry={entry} published={published} isOpen={isOpen} />
+  if (published) return <PublishedFileView page={page} entry={entry} published={published} />
+  const hint = entry.exists ? entry.path : `${entry.path}: ${missingNoteOf(entry)}`
   return (
     <li className="file-entry-row">
-      <button className={classes} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
+      <button className={entryClassesOf(entry, isOpen)} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void page.open(entry.path)} onContextMenu={menuOn(page, entry.path)}>
         {fileNameOf(entry.path)}
-        {entry.exists ? null : <span className="file-entry-note"> not generated yet</span>}
+        {entry.exists ? null : <span className="file-entry-note"> {missingNoteOf(entry)}</span>}
       </button>
       {isDrawio(entry.path) && entry.exists ? <DrawioTabLinkView page={page} path={entry.path} /> : null}
     </li>
@@ -40,19 +44,69 @@ function FileEntryView({ page, entry, isOpen }: { page: FilesPage; entry: FileEn
 // a script opens can be refused.
 function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
   return (
-    <a className="drawio-tab-link" href={drawioPageOf(path, page.link.chat)} target="_blank" rel="noreferrer" title={`${path}: opens in the draw.io editor in a tab of its own`}>
+    <a className="drawio-tab-link" href={drawioPageOf(path, page.link.chat, page.link.project)} target="_blank" rel="noreferrer" title={`${path}: opens in the draw.io editor in a tab of its own`}>
       ↗
     </a>
   )
 }
 
-// A design canvas: its version's folder names it, and it opens at the link it is published at.
-function PublishedFileView({ entry }: { entry: FileEntryData }) {
+// A whiteboard on a board in Claude opens that board, in Claude Desktop's artifact panel, or in a browser when no chat
+// opened the page; one not on a board yet opens beside the file list as its board drawn on a canvas, never as the
+// file's text. One not on disk says why, as any file not on disk does.
+function WhiteboardEntryView({ page, entry, published, isOpen }: { page: FilesPage; entry: FileEntryData; published: PublishedFile; isOpen: boolean }) {
+  const hint = !entry.exists ? `${entry.path}: ${missingNoteOf(entry)}` : published.link ? `${entry.path}: opens its board in Claude` : `${entry.path}: not on a board in Claude yet`
+  const note = entry.exists ? (published.link ? 'whiteboard' : 'whiteboard, not on a board in Claude yet') : `whiteboard, ${missingNoteOf(entry)}`
+  const press = async () => {
+    if (!(await page.press(entry))) window.open(published.link, '_blank', 'noreferrer')
+  }
+  return (
+    <li className="file-entry-row">
+      <button className={entryClassesOf(entry, isOpen)} title={hint} aria-current={isOpen ? 'true' : undefined} disabled={!entry.exists} onClick={() => void press()} onContextMenu={menuOn(page, entry.path)}>
+        {published.name}
+        <span className="file-entry-note"> {note}</span>
+      </button>
+      {published.link ? <BoardLinkView page={page} entry={entry} published={published} /> : null}
+    </li>
+  )
+}
+
+// The board in Claude a whiteboard was published to: it opens in Claude Desktop's artifact panel, beside the chat; a page
+// no chat opened opens the link in a browser instead.
+function BoardLinkView({ page, entry, published }: { page: FilesPage; entry: FileEntryData; published: PublishedFile }) {
+  const open = async (event: { preventDefault: () => void }) => {
+    event.preventDefault()
+    if (!(await page.openPublished(entry))) window.open(published.link, '_blank', 'noreferrer')
+  }
+  return (
+    <a className="drawio-tab-link board-link" href={published.link} onClick={event => void open(event)} rel="noreferrer" title={`${entry.path}: opens its board in Claude's artifact panel`}>
+      ↗
+    </a>
+  )
+}
+
+// A design canvas: it opens in Claude Desktop's artifact panel, beside the chat, never as the file's text; a page no
+// chat opened opens the link in a browser instead. One not published yet says so and opens nothing.
+function PublishedFileView({ page, entry, published }: { page: FilesPage; entry: FileEntryData; published: PublishedFile }) {
+  const path = entry.path
+  if (!published.link) {
+    return (
+      <li>
+        <button className="file-entry is-missing" title={`${path}: no ${published.kind} published in Claude yet`} disabled>
+          {published.name}
+          <span className="file-entry-note"> {published.kind}, not published yet</span>
+        </button>
+      </li>
+    )
+  }
+  const open = async (event: { preventDefault: () => void }) => {
+    event.preventDefault()
+    if (!(await page.openPublished(entry))) window.open(published.link, '_blank', 'noreferrer')
+  }
   return (
     <li>
-      <a className="file-entry is-published" href={entry.link} target="_blank" rel="noreferrer" title={`${entry.path}: opens the design canvas at ${entry.link}`}>
-        {canvasNameOf(entry.path)}
-        <span className="file-entry-note"> ↗ design canvas</span>
+      <a className="file-entry is-published" href={published.link} onClick={event => void open(event)} rel="noreferrer" title={`${path}: opens the ${published.kind} in Claude's artifact panel`}>
+        {published.name}
+        <span className="file-entry-note"> ↗ {published.kind}</span>
       </a>
     </li>
   )
@@ -207,7 +261,7 @@ function PracticeTogglesView({ page }: { page: FilesPage }) {
           style={{ '--practice-colour': practice.colour } as CSSProperties}
           aria-pressed={practice.is_selected}
           title={`${practice.short_name}: ${practice.is_selected ? 'on, press to turn it off here and on the chat bar' : 'off, press to turn it on here and on the chat bar'}`}
-          onClick={() => void page.guidance.togglePractice(practice.key)}
+          onClick={() => void page.guidance.toggle('practice', practice.key)}
         >
           {practice.short_name}
         </button>
@@ -242,7 +296,23 @@ function DrawioFileView({ page, path }: { page: FilesPage; path: string }) {
         <span className="source-path">{path}</span>
         <DrawioTabLinkView page={page} path={path} />
       </div>
-      <iframe className="drawio-frame" title={`${path} in the draw.io editor`} src={drawioPageOf(path, page.link.chat)} />
+      <iframe className="drawio-frame" title={`${path} in the draw.io editor`} src={drawioPageOf(path, page.link.chat, page.link.project)} />
+    </section>
+  )
+}
+
+// A whiteboard file is only a pointer to its board in Claude: the file view says where the board is and opens it, and
+// draws nothing from the file.
+function WhiteboardPointerView({ page, path }: { page: FilesPage; path: string }) {
+  const entry = page.fileBar.entries.find(each => each.path === path)
+  const published = entry ? publishedOf(entry) : null
+  return (
+    <section className="open-file" aria-label={path}>
+      <div className="comment-toolbar">
+        <span className="source-path">{path}</span>
+        {entry && published?.link ? <BoardLinkView page={page} entry={entry} published={published} /> : null}
+      </div>
+      <p className="files-note">{published?.link ? 'This whiteboard is its board in Claude: open it with ↗.' : 'This whiteboard is not on a board in Claude yet.'}</p>
     </section>
   )
 }
@@ -252,8 +322,11 @@ function OpenFileView({ page }: { page: FilesPage }) {
   const path = state.file?.path ?? ''
   // The open file's selected lines, added to the chat's context; made once per file, so the editor keeps its action.
   const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(path, lines), [page, path])
+  // Go to file on a fold-out opens what it shows in its own file; made once, so the open fold-outs stay as they are.
+  const goToFile = useCallback((foldOut: SourceCallout) => void page.graph.goToFile(foldOut), [page])
   if (!state.openPath) return <p className="files-note">Choose a file.</p>
   if (isDrawio(state.openPath)) return <DrawioFileView page={page} path={state.openPath} />
+  if (isWhiteboard(state.openPath)) return <WhiteboardPointerView page={page} path={state.openPath} />
   if (!state.file) return <p className="files-note">Opening {state.openPath}…</p>
   const isOneOfSeveral = state.moreFiles.length > 0
   return (
@@ -262,7 +335,7 @@ function OpenFileView({ page }: { page: FilesPage }) {
       {isOneOfSeveral ? <OpenFilesBarView page={page} /> : null}
       {isOneOfSeveral ? <OpenFileHeadView page={page} path={state.file.path} /> : null}
       {page.openFiles.isCollapsed(state.file.path) ? null : (
-        <FileSourceView key={state.file.path} file={state.file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(state.file.path)} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileView key={state.file.path} file={state.file} callouts={page.callouts} frames={page.frames} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(state.file.path)} onGoToFile={goToFile} members={state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
       {state.moreFiles.map(file => (
         <MoreFileView key={file.path} page={page} file={file} />
@@ -298,11 +371,12 @@ function OpenFileHeadView({ page, path }: { page: FilesPage; path: string }) {
 // A file open beside the first, holding a node selected in the graph view.
 function MoreFileView({ page, file }: { page: FilesPage; file: SessionFileData }) {
   const addLines = useCallback((lines: { start: number; end: number }) => void page.chatContext.add(file.path, lines), [page, file.path])
+  const goToFile = useCallback((foldOut: SourceCallout) => void page.graph.goToFile(foldOut), [page])
   return (
     <section className="open-file more-file" aria-label={file.path}>
       <OpenFileHeadView page={page} path={file.path} />
       {page.openFiles.isCollapsed(file.path) ? null : (
-        <FileSourceView file={file} actions={page.comments} onAddToContext={addLines} openAround={page.selectedLinesIn(file.path)} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
+        <FileView file={file} callouts={page.callouts} frames={page.frames} actions={page.comments} onAddToContext={addLines} openAround={page.linesShownIn(file.path)} onGoToFile={goToFile} members={page.state.graph.members} keys={page.foldKeys} fail={wrapFailed(page)} />
       )}
     </section>
   )
@@ -323,7 +397,7 @@ function ToastsView({ page }: { page: FilesPage }) {
 
 // The chat bar's icon for each stage (harness/chat-ui/pane/hooks/chat-bar/stage-client.ts STAGE_ICONS), so a stage looks
 // the same on the bar and here.
-const STAGE_ICONS: Record<string, string> = { Discovery: '⌕', Specification: '▤', Implementation: '⚙' }
+const STAGE_ICONS: Record<string, string> = { Discovery: '⌕', Specification: '▤', Implementation: '⚙', Hardening: '⛨' }
 
 // A button for each stage, before the practices, as the chat bar's stage buttons: filled orange while selected. A press
 // selects the stage beside those selected, or no longer, here and on the chat bar.
@@ -336,8 +410,8 @@ function ScopeTogglesView({ page }: { page: FilesPage }) {
       <button type="button" className={`scope-toggle ${scope === 'all' ? 'is-shown' : ''}`} aria-pressed={scope === 'all'} aria-label="All session files" title="All session files: every file of the stages, practices and formats selected, older work included" onClick={() => page.showScope('all')}>
         ▤
       </button>
-      <button type="button" className={`scope-toggle ${scope === 'session' ? 'is-shown' : ''}`} aria-pressed={scope === 'session'} aria-label="This session" title={`This session: the ${page.fileBar.changedCount} files this session's branch changed, among those its stages, practices and formats select`} onClick={() => page.showScope('session')}>
-        Δ<sup className="scope-count">{page.fileBar.changedCount}</sup>
+      <button type="button" className={`scope-toggle ${scope === 'session' ? 'is-shown' : ''}`} aria-pressed={scope === 'session'} aria-label="This session" title={`This session: the ${page.fileBar.sessionWorkCount} files of this session's own work (those its branch changed, or in a folder with no git, those its fidelities declare), among those its stages, practices and formats select`} onClick={() => page.showScope('session')}>
+        Δ<sup className="scope-count">{page.fileBar.sessionWorkCount}</sup>
       </button>
     </div>
   )
@@ -355,7 +429,7 @@ function StageTogglesView({ page }: { page: FilesPage }) {
           className={`stage-toggle ${stage.is_selected ? 'is-shown' : ''}`}
           aria-pressed={stage.is_selected}
           title={`${stage.title}: ${stage.is_selected ? 'selected, press to hide its files here and on the chat bar' : 'press to show its files here and on the chat bar'}`}
-          onClick={() => void page.guidance.toggleStage(stage.name)}
+          onClick={() => void page.guidance.toggle('stage', stage.name)}
         >
           {STAGE_ICONS[stage.title] ?? stage.title}
         </button>
@@ -379,7 +453,7 @@ function FormatTogglesView({ page }: { page: FilesPage }) {
           className={`format-toggle ${format.is_selected ? 'is-chosen' : 'is-not-made'}`}
           aria-pressed={format.is_selected}
           title={`${format.label}: offered by ${format.offered}; ${format.is_selected ? 'selected, press to show every format' : 'press to show only the formats selected'}`}
-          onClick={() => void page.guidance.toggleFormat(format.label)}
+          onClick={() => void page.guidance.toggle('format', format.label)}
         >
           {formatGlyphOf(format.label)}
         </button>
@@ -452,6 +526,8 @@ export function FilesPageView({ page }: { page: FilesPage }) {
     <main className="files-page">
       <FilesHeadView page={page} />
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
+      <FailureBandView page={page} />
+      <FormatAlignmentView page={page} />
       <div className={`files-body ${fileBar.isOpen ? '' : 'is-bar-collapsed'}`} style={fileBar.isOpen ? { gridTemplateColumns: `${fileBar.width}px auto 1fr` } : undefined}>
         <nav className="files-side">
           <FileBarButtonsView page={page} />

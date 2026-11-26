@@ -8,7 +8,7 @@ import { TipView } from '../shared/tip-view'
 import { ActionButtonView, pickerRowsOf } from './action-button-view'
 import { formatGlyphOf, REPO_GLYPH, repoWordOf, SESSION_GLYPH, sessionWordOf } from './bar-columns'
 import type { FormatChips } from './format-choices-client'
-import { toggleFormat, togglePractice, toggleStage } from './guidance-client'
+import { toggleGuidance } from './guidance-client'
 import { toggleOverlay, toggleOverlayList, type OverlayChips } from './overlay-choices-client'
 import { askChatToFixBoard, restartServer, runDebug, runHandoff, type ChatBarClient } from './chat-bar-client'
 import type { FailureClient } from '../error-display/failure-client'
@@ -17,7 +17,7 @@ import { openReport, openSessionFolder, openStageFiles } from './fidelity-files-
 import { openHelp } from './fidelity-help-client'
 import type { PracticeDotClient } from './fidelity-progress-client'
 import { CARD_SCOPE, SessionCardView } from './session-card-view'
-import { openClose, toggleRepoListWithRepos } from './session-client'
+import { makeRepository, openClose, toggleRepoListWithRepos } from './session-client'
 import { toggleSessionList } from './session-dialogs-client'
 import { CloseView, RepoListView, repoListRowsOf, SessionListView, sessionListRowsOf } from './session-dialogs-view'
 import type { StageClient } from './stage-client'
@@ -54,9 +54,9 @@ export function PracticeDotView($: EngineInterface, elements: ElementTable, dot:
   const { Box } = elements
   const violating = dot.violating
   return (
-    <Box key={`practice-${dot.key}`} flexDirection="row" gap={0} backgroundColor={dot.isOn ? BRAND.selectedTint : undefined}>
-      {GlyphButtonView(elements, `dot-${dot.key}`, '■', dot.shade, () => togglePractice($, dot.sessionFile, dot.practice), dot.isOn)}
-      {violating ? GlyphButtonView(elements, `violations-${dot.key}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
+    <Box key={`practice-${dot.practice}`} flexDirection="row" gap={0} backgroundColor={dot.isOn ? BRAND.selectedTint : undefined}>
+      {GlyphButtonView(elements, `dot-${dot.practice}`, '■', dot.shade, () => toggleGuidance($, dot.sessionFile, 'practice', dot.practice), dot.isOn)}
+      {violating ? GlyphButtonView(elements, `violations-${dot.practice}`, String(dot.violationCount), BRAND.error, () => openReport($, violating)) : null}
       {PracticeTipView($, elements, dot)}
     </Box>
   )
@@ -65,7 +65,7 @@ export function PracticeDotView($: EngineInterface, elements: ElementTable, dot:
 // The practice's fidelities above its dot on hover, each a button that opens its help.
 function PracticeTipView($: EngineInterface, { Box, Button, Text }: ElementTable, dot: PracticeDotClient) {
   return (
-    <Box position="absolute" top={-1} left={0} paddingX={1} gap={1} flexDirection="row" backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
+    <Box position="absolute" bottom={1} left={0} paddingX={1} gap={1} flexDirection="row" backgroundColor={BRAND.raised} display="none" hover={{ display: 'flex' }}>
       {dot.fidelities.map(fidelity => (
         <Button key={`help-${fidelity.slug}`} plain onPress={() => openHelp($, fidelity)}>
           <Text color={BRAND.text}>{fidelity.slug}</Text>
@@ -87,10 +87,10 @@ function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar 
   const stages = chatBar.stages.filter(stage => stage.canShow)
   if (!stages.length) return null
   return (
-    <Box key="stage-buttons" flexDirection="row" gap={1}>
+    <Box key="stage-buttons" flexDirection="row" gap={1} flexShrink={0}>
       {stages.map((stage: StageClient) => (
         <Box key={`stage-${stage.stage}`} width={STAGE_BUTTON_COLUMNS} justifyContent="center" backgroundColor={stage.isShown ? BRAND.accent : undefined}>
-          {GlyphButtonView(elements, `stage-button-${stage.stage}`, stage.icon, stage.isShown ? BRAND.onAccent : stage.ink, () => toggleStage($, chatBar.sessionFile, stage.stage.toLowerCase()))}
+          {GlyphButtonView(elements, `stage-button-${stage.stage}`, stage.icon, stage.isShown ? BRAND.onAccent : stage.ink, () => toggleGuidance($, chatBar.sessionFile, 'stage', stage.stage.toLowerCase()))}
           {TipView(elements, stage.stage, stage.isCurrent ? 'the session is here' : '', BRAND.muted)}
         </Box>
       ))}
@@ -102,22 +102,19 @@ function StageButtonsView($: EngineInterface, elements: ElementTable, { chatBar 
 // tickets to open; each shows its name above it on hover, and + shows the session card too. The line under the chat
 // names the repository and branch, so the icons alone keep the line short. A ticket's own chat works only on that
 // ticket, so it shows the name alone: a press opens the session's folder in the files pane, its card showing on hover.
-// A chat in a plain folder, in any session, has neither other repositories nor tickets nor a branch to close, so it
-// shows the folder's path alone, read only, and no close button.
 function SessionNameView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { chatBar } = draw
   const { Box, Button, Text } = elements
   if (chatBar.isMain) return MainChatListsView($, elements, draw)
-  const name = chatBar.isPlainFolder
-    ? <Text weight="semibold" color={BRAND.text} wrap="truncate-start">{chatBar.folder}</Text>
-    : (
-      <Button key="session-name-button" plain onPress={() => openSessionFolder($)}>
-        <Text weight="semibold" color={BRAND.text}>{chatBar.sessionName}</Text>
-      </Button>
-    )
+  const name = (
+    <Button key="session-name-button" plain onPress={() => openSessionFolder($)}>
+      <Text weight="semibold" color={BRAND.text} wrap="truncate-end">{chatBar.sessionName}</Text>
+    </Button>
+  )
+  // The name is the one part of the line that gives way: it shrinks and is cut short, so the buttons beside it stay in view.
   return (
-    <Box key="session-name" flexDirection="row" gap={1}>
-      <Box flexDirection="row" hover={{ scope: CARD_SCOPE }}>{name}</Box>
+    <Box key="session-name" flexDirection="row" gap={1} flexShrink={1} minWidth={0}>
+      <Box flexDirection="row" flexShrink={1} minWidth={0} hover={{ scope: CARD_SCOPE }}>{name}</Box>
     </Box>
   )
 }
@@ -189,10 +186,10 @@ function FilesButtonView($: EngineInterface, elements: ElementTable, { chatBar }
 function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBar, push }: ChatBarDraw) {
   const { Box } = elements
   return (
-    <Box key="session-buttons" flexDirection="row" gap={1}>
-      {chatBar.isClone ? push.buttons : null}
+    <Box key="session-buttons" flexDirection="row" gap={1} flexShrink={0}>
+      {push.buttons}
       {IconButtonView(elements, 'restart-button', '↻', 'restart cdd server', () => restartServer($))}
-      {chatBar.isMain || chatBar.isPlainFolder ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
+      {chatBar.isMain ? null : IconButtonView(elements, 'close-button', '✕', 'close session', () => openClose($, chatBar))}
     </Box>
   )
 }
@@ -210,7 +207,7 @@ function FormatChipsView($: EngineInterface, elements: ElementTable, { chatBar, 
         const colour = isOn ? BRAND.onAccent : BRAND.muted
         return (
           <Box key={`format-${choice.label}`} paddingX={1} backgroundColor={isOn ? BRAND.accent : undefined}>
-            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleFormat($, chatBar.sessionFile, choice.label))}
+            {GlyphButtonView(elements, `format-chip-${choice.label}`, formatGlyphOf(choice.label), colour, () => toggleGuidance($, chatBar.sessionFile, 'format', choice.label))}
             {TipView(elements, choice.label, `offered by ${choice.offered}`, BRAND.muted)}
           </Box>
         )
@@ -260,10 +257,29 @@ function OverlayListView($: EngineInterface, { Box, Button, Text }: ElementTable
 
 // The line, left to right: the stage button, │, fidelity dots and the action chip, then at the right end the session
 // name, its buttons, the health mark, and the version badge.
+// CDD works in a git repository: a session's tickets get branches, worktrees and chats of their own. In a folder that is
+// no repository the line asks for the repository first and offers nothing else; the folder's path is the part that
+// gives way when the line is full.
+function RepositoryRequiredView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
+  const { Box, Button, Text } = elements
+  return (
+    <Box key="line" flexDirection="row" gap={1} alignItems="center">
+      <Box flexDirection="row" flexShrink={1} minWidth={0}>
+        <Text color={BRAND.muted} wrap="truncate-start">{`${draw.chatBar.folder} is no git repository, and CDD works in one`}</Text>
+      </Box>
+      <Button key="make-repository-button" label="Create the git repository" onPress={() => makeRepository($)} />
+      <Box flexGrow={1} />
+      {draw.health.band}
+      {draw.version.badge}
+    </Box>
+  )
+}
+
 function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { Box, Text } = elements
   const { chatBar } = draw
   if (!chatBar.hasSession) return <Box key="line" flexDirection="row" gap={1}><Box flexGrow={1} />{SessionNameView($, elements, draw)}{draw.health.band}{draw.version.badge}</Box>
+  if (chatBar.isPlainFolder) return RepositoryRequiredView($, elements, draw)
   return (
     <Box key="line" flexDirection="row" gap={1} alignItems="center">
         {StageButtonsView($, elements, draw)}
@@ -278,12 +294,13 @@ function LineView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw)
   )
 }
 
-// The fidelity dots, the overlay and format chips, the action button, and the files, handoff, and debug buttons.
+// The fidelity dots, the overlay and format chips, the action button, and the files, handoff, and debug buttons. The column
+// never shrinks: a shrunk column drew its last buttons, debug first, under the session name, out of sight.
 function FidelityColumnView($: EngineInterface, elements: ElementTable, draw: ChatBarDraw) {
   const { chatBar } = draw
   const { Box } = elements
   return (
-    <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center">
+    <Box key="fidelity-column" flexDirection="row" gap={1} alignItems="center" flexShrink={0}>
       {chatBar.practiceDots.map(dot => PracticeDotView($, elements, dot))}
       {OverlayChipsView($, elements, draw)}
       {FormatChipsView($, elements, draw)}
@@ -339,8 +356,8 @@ export function ChatBarView($: EngineInterface, elements: ElementTable, draw: Ch
       {draw.version.dialog}
       {draw.push.dialog}
       {CloseView($, elements, draw)}
-      {SessionCardView($, elements, draw)}
-      {ListRoomView(elements, draw)}
+      {chatBar.isPlainFolder ? null : SessionCardView($, elements, draw)}
+      {chatBar.isPlainFolder ? null : ListRoomView(elements, draw)}
       {LineView($, elements, draw)}
     </Box>
   )

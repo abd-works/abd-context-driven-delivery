@@ -11,7 +11,7 @@ import importlib
 import sys
 from pathlib import Path
 
-from harness.agent_tools.progress import reporting_to
+from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 from harness.graph.graph import Graph
 from harness.graph.graph_build import BuildOrder
 from harness.mcp.tool_calls import ThrottledReporter
@@ -27,8 +27,9 @@ def main(arguments: list[str]) -> None:
     order = BuildOrder.from_text(Path(arguments[0]).read_text(encoding="utf-8"))
     for module in order.modules:
         importlib.import_module(module)
-    with reporting_to(ThrottledReporter(_report_line)):
-        built = Graph().build.carry_out(order)
+    # The build is this process's one call; whoever started the worker reads its progress lines.
+    with CALLS_BEING_ANSWERED.answering(ToolCall(reporter=ThrottledReporter(_report_line))):
+        built = Graph(order.held_practices()).build.carry_out(order)
     Path(arguments[1]).write_text(built.text, encoding="utf-8")
     changes = order.changes(built)
     if changes is not None:

@@ -83,7 +83,7 @@ with description("the stories a graph reads at acceptance tests"):
             (root / name).parent.mkdir(parents=True, exist_ok=True)
             (root / name).write_text(text, encoding="utf-8")
         graph = Graph()
-        self.practice = graph.practice("stories")
+        self.practice = graph.practices.named("stories")
         self.practice.fidelities.current = self.practice.fidelities.entries["acceptance_tests"]
         graph.load_working_copy(str(root), {"stories": str(root)}, force=True)
 

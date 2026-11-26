@@ -95,7 +95,7 @@ with description("a templates folder beside the module"):
 with description("an asset locator"):
     with context("that locates shared examples on a CleanEngineering"):
         with before.each:
-            scope = MarkdownScope(_CLEAN_ENGINEERING_DIR, "clean_engineering", fidelity="modules", format="python")
+            scope = MarkdownScope(_CLEAN_ENGINEERING_DIR, "clean_engineering", format="python", template_name="modules")
             self.location = AssetLocator(scope, "examples").locate()
 
         with it("should resolve to kind folder"):
@@ -131,7 +131,7 @@ with description("an asset locator"):
 
     with context("that locates shared templates on a Stories with markdown format"):
         with before.each:
-            scope = MarkdownScope(_STORIES_DIR, "stories", fidelity="story_map", format="markdown")
+            scope = MarkdownScope(_STORIES_DIR, "stories", format="markdown", template_name="story_map")
             self.location = AssetLocator(scope, "templates").locate()
 
         with it("should resolve to the fidelity-named markdown file"):
@@ -167,10 +167,24 @@ with description("a markdown scope"):
             scope = MarkdownScope.of(SampleTool())
             expect((scope.folder.name, scope.slug)).to(equal(("sample_tool", "sample_tool")))
 
-    with context("at another fidelity"):
-        with it("should keep the folder and read that fidelity"):
-            scope = MarkdownScope(_STORIES_DIR, "stories", fidelity="story_map").at(fidelity="scenarios")
-            expect((scope.folder, scope.fidelity)).to(equal((_STORIES_DIR, "scenarios")))
+    with context("in another format"):
+        with it("should keep the folder and the part of the document it reads, and read that format"):
+            within = ("Fidelities", "story_map")
+            scope = MarkdownScope(_STORIES_DIR, "stories", format="markdown", within=within).at("drawio")
+            expect((scope.folder, scope.within, scope.format)).to(equal((_STORIES_DIR, within, "drawio")))
+
+    with context("that names no other format"):
+        with it("should keep its own"):
+            expect(MarkdownScope(_STORIES_DIR, "stories", format="markdown").at(None).format).to(equal("markdown"))
+
+    with context("of an owner that filters the files of its folders"):
+        with before.each:
+            kept = lambda label, path: path.stem != "left-out"  # noqa: E731
+            self.scope = MarkdownScope(_STORIES_DIR, "stories", reads_file=kept)
+
+        with it("should hand the filter to a folder it locates"):
+            location = AssetLocator(self.scope, "examples").locate()
+            expect(location.reads_file).to(equal(self.scope.reads_file))
 
 
 with description("a markdown section containing a yaml fence"):
@@ -262,3 +276,48 @@ with description("a heading a link names by its anchor"):
     with context("that no heading has"):
         with it("should name no lines"):
             expect(self.text.anchored_lines("no-such-heading")).to(be_none)
+
+    with context("that names a heading holding a link, as a story map's story links its scenarios"):
+        with it("should be found by the anchor made from the words the heading shows"):
+            linked = MarkdownText("# Story Map\n\n### (S) Person --> [Delete Ticket](../story_tests/remove_tickets_story.test.md)\n\nThe Person removes a ticket.\n")
+            expect(linked.anchored_lines("s-person----delete-ticket")).to(equal((3, 5)))
+
+
+with description("a parsed document shared between readers"):
+    with before.each:
+        self.document = MarkdownText(
+            "# Practice\n\n## Fidelities\n\n### story_map\n\nScope the solution.\n\n### scenarios\n\nDefine the behavior.\n"
+        )
+
+    with context("that one reader has asked for the block under two headings"):
+        with before.each:
+            self.kept_before = set(vars(self.document))
+            self.document.headings()
+            self.block = self.document.block_under("Fidelities", "scenarios")
+
+        with it("should answer that block"):
+            expect(self.block).to(equal("Define the behavior."))
+
+        with it("should keep nothing of that reader's question, so a second reader's answer is its own"):
+            expect(set(vars(self.document))).to(equal(self.kept_before))
+
+
+with description("a block under headings"):
+    with before.each:
+        self.document = MarkdownText(
+            "# Practice\n\n## Fidelities\n\n### Story_Map\n\n#### Guidance\n\nScope it.\n\n### scenarios\n\nDefine it.\n"
+        )
+
+    with it("should match each heading in any case"):
+        expect(self.document.block_under("fidelities", "story_map")).to(equal("#### Guidance\n\nScope it."))
+
+    with it("should follow each heading one level further down"):
+        expect(self.document.block_under("Fidelities", "story_map", "guidance")).to(equal("Scope it."))
+
+    with context("that the document does not have"):
+        with it("should answer nothing"):
+            expect(self.document.block_under("Fidelities", "tactics")).to(equal(""))
+
+    with context("whose first heading the document does not have"):
+        with it("should answer nothing"):
+            expect(self.document.block_under("Stages", "scenarios")).to(equal(""))

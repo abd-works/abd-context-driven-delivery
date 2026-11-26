@@ -7,15 +7,15 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from expects import be, be_none, equal, expect, raise_error
+from expects import be, be_none, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.graph import model_node
-from harness.graph.model_node import ModelDetached, ModelReferences, schema_sync_paused
+from harness.graph.model_node import ModelDetached, ModelReferences, ModelWithoutPractice, schema_sync_paused
 from harness.graph.graph import Graph
 from harness.graph.spec_support import GraphsMade
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Increment, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map import Epic, Increment, Story, StoryMap
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.model.nodes import Region, Screen
 from cdd_guidance.practices.ux.ux import Ux
@@ -104,7 +104,7 @@ with description("a model object's practice"):
 
 with description("an owner that refers to objects it does not own"):
     with before.each:
-        self.story_map = StoryModel()
+        self.story_map = StoryMap()
         self.epic = Epic("Shop")
         self.story = Story("Place order")
         self.epic.stories.append(self.story)
@@ -147,3 +147,19 @@ with description("schema edges paused while models are parsed"):
 
         with it("should resume when the outer pause ends"):
             expect(self.after_outer).to(equal(False))
+
+
+with description("a model class asked which parameters its constructor takes"):
+    with it("should name the parameters its own constructor declares"):
+        import inspect
+
+        expect(list(inspect.signature(Story).parameters)[:2]).to(equal(["name", "sequential_order"]))
+
+
+class _ModelOfNoPractice(model_node.ModelNode):
+    """A model class whose practice never named itself on it, as one whose practice's module was not imported."""
+
+
+with description("a model object whose class names no practice"):
+    with it("should refuse to say which practice it belongs to, naming its class"):
+        expect(lambda: _ModelOfNoPractice("orphan", 0).practice_kind).to(raise_error(ModelWithoutPractice, contain("_ModelOfNoPractice")))

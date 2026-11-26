@@ -3,33 +3,34 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
+from harness.agent_tools.tool_call import ToolCall
 from harness.catalog_generator.catalog_examples import CatalogFidelity
 from harness.chat.chat import Chat, Chats
-from harness.diagnostics.app import App
+from harness.apps.app import App
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile
 from harness.mcp.mcp_annotations import mcp
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.guidance.stages import STAGES, ApproachStage, StageScope
-from space.repo.repo import Repo
-from space.session.session_record import SESSION_FILE
-from space.session.session_log import LogTimestamp
+from space.kanban.backlog_folder import BacklogFolder
+from space.kanban.card_name import CardName, TicketNameTakenError
+from space.kanban.unreadable_session_file import UnreadableSessionFile
 from space.session.session_saves import SaveFailure
-from space.session.sessions import BoardPractices, Sessions
+from space.kanban.board_practices import BOARD_PRACTICES, BoardPractices
+from space.session.sessions import Sessions, SessionsRead
 
 if TYPE_CHECKING:
     from harness.catalog_generator.catalog_practice import CatalogPractice
     from space.kanban.backlog_item import BacklogItem
     from space.kanban.ticket import Ticket
-    from space.repo.repo import Branch
-    from space.repo.worktree import Worktree
+    from space.repo.repo import Branch, Repo
     from space.session import Session
 
 BACKLOG_COLUMN = "Backlog"
@@ -52,9 +53,10 @@ class ColumnNotFoundError(LookupError):
 
 class NotAStageError(ValueError):
     """Raised when a caller names a column that is not a stage, such as the Backlog or Complete, where a stage is wanted:
-    a ticket moved into it, or a WIP limit set on it."""
+    a ticket moved into it, or a WIP limit set on it. It names the column."""
 
     def __init__(self, stage: str) -> None:
+        self.stage = stage
         super().__init__(f"{stage!r} is not a stage a ticket can be moved into")
 
 
@@ -69,16 +71,18 @@ class FidelityNotFoundError(LookupError):
 
 
 class TicketNotFoundError(LookupError):
-    """Raised when a tool names a ticket the board does not show."""
+    """Raised when a tool names a ticket the board does not show. It names the ticket."""
 
     def __init__(self, ticket: str) -> None:
+        self.ticket = ticket
         super().__init__(f"no ticket named {ticket!r} on the board")
 
 
 class BacklogItemNotFoundError(LookupError):
-    """Raised when a tool names a backlog item the board does not show."""
+    """Raised when a tool names a backlog item the board does not show. It names the item's title."""
 
     def __init__(self, backlog_item: str) -> None:
+        self.backlog_item = backlog_item
         super().__init__(f"no backlog item titled {backlog_item!r} on the board")
 
 
@@ -93,28 +97,35 @@ class FolderOutsideRepositoryError(ValueError):
 
 
 class CardNotInColumnError(ValueError):
-    """Raised when a card is to be placed before another, and either is not a card of its own in the column."""
+    """Raised when a card is to be placed before or after another, and either is not a card of its own in the column.
+    It names the card and the column."""
 
     def __init__(self, card: str, column: str) -> None:
+        self.card = card
+        self.column = column
         super().__init__(f"{card!r} is not a card of its own in {column}")
 
 
 @language_adapter(language="typescript")
 @agent_toolset
 class Board:
-    """Show every work session as a ticket on a kanban: Backlog, Discovery, Specification, Implementation, and Complete."""
+    """Show every work session as a ticket on a kanban: Backlog, Discovery, Specification, Implementation, Hardening, and Complete."""
 
     # The board is read after every cdd call and every prompt, so its tools stay out of the session log.
     # Every ticket is in exactly one column; the board stores no ticket state.
 
 
-    def __init__(self, repo: Repo, practices: BoardPractices) -> None:
-        self._repo = repo
+    def __init__(self, sessions: Sessions, practices: BoardPractices | None = None, call: ToolCall | None = None) -> None:
         # The sessions of the board's repository, as this process holds them: each one a ticket, and which is open.
-        self._sessions = Sessions.of_project(repo.root)
+        self._sessions = sessions
+        # The call the board is read for, whose chat it shows the open session of and opens new chats beside; none for
+        # a board read outside a call, which shows the checkout folder's own open session.
+        self.call = call
+        self._repo = sessions.repo
         # The catalog's view of each practice the board works through, which names its pages and its fidelities' skills,
         # held for the checkout by its sessions, since a board is made for every call. Its stages and tickets ask it.
-        self.catalogued_practices = practices
+        # A board that works through fewer practices than CDD has is handed its own.
+        self.catalogued_practices = practices if practices is not None else BOARD_PRACTICES.of(sessions)
         self._stages = [Stage(stage, self) for stage in STAGES]
         self._columns: list[Column] = [Backlog(self), *self._stages, Complete(self)]
         self.shared = BoardFile(self)
@@ -122,11 +133,16 @@ class Board:
 
     @classmethod
     @tool_subject
-    def load(cls, project: Path | str) -> Board:
-        """The board of project, with every practice chosen; a tool call is handed the project the call names, the folder
-        the calling chat works in. Every checkout's board lists the repository's own ``.sessions``."""
-        sessions = Sessions.of_project(project)
-        return cls(sessions.repo, sessions.board_practices)
+    def load(cls, project: Path | str, call: ToolCall | None = None) -> Board:
+        """The board of project, with every practice chosen, read for call; a tool call is handed the project the call
+        names, the folder the calling chat works in, and the call itself. Every checkout's board lists the repository's
+        own ``.sessions``."""
+        return cls(Sessions.of_project(project), call=call)
+
+    @property
+    def chat(self) -> str:
+        """The id of the chat the board is read for; empty for a call that names none, or a read outside a call."""
+        return self.call.chat_id if self.call is not None else ""
 
     @property
     def repo(self) -> Repo:
@@ -135,11 +151,6 @@ class Board:
     @property
     def sessions(self) -> Sessions:
         return self._sessions
-
-    @property
-    def file(self) -> Path:
-        """The file that holds what this repository's sessions share on the board."""
-        return self.sessions.folder / _BOARD_FILE
 
     @property
     @data_field
@@ -159,6 +170,14 @@ class Board:
 
     @property
     @data_field
+    def unreadable(self) -> list[UnreadableSessionFile]:
+        """Each ticket's session.json the board could not read, such as one cut off half way, with what is wrong in
+        it; none while every one reads. Such a ticket is on no column until its file is repaired, every other ticket
+        shows as it is, and the file is never written over."""
+        return self.reads.unreadable
+
+    @property
+    @data_field
     def project(self) -> str:
         return self._repo.root.name
 
@@ -168,15 +187,10 @@ class Board:
         return self.placement.reads
 
     @property
-    def worktrees(self) -> dict[Branch, Worktree]:
+    def worktrees(self) -> dict[Branch, Repo]:
         """Each branch's worktree, listed once per board read rather than once per ticket: the board is read after every
         call. A project that is no clone has none."""
         return self.reads.worktrees
-
-    @property
-    def branches(self) -> list[Branch]:
-        """Every local branch, listed once per board read rather than once per ticket, so each ticket finds its own."""
-        return self.reads.branches
 
     @property
     @data_field
@@ -191,7 +205,7 @@ class Board:
 
     @property
     def stages(self) -> list[Stage]:
-        """The columns work moves through, Discovery to Implementation, in order."""
+        """The columns work moves through, Discovery to Hardening, in order."""
         return list(self._stages)
 
     def stage(self, name: str) -> Stage:
@@ -220,13 +234,13 @@ class Board:
         return self.reads.tickets
 
     @property
-    def ticket_names(self) -> set[str]:
-        """Every ticket's name, listed once per board read."""
-        return self.reads.ticket_names
-
-    @property
     def backlog_items(self) -> list[BacklogItem]:
         return self.reads.backlog_items
+
+    @property
+    def backlog_folder(self) -> BacklogFolder:
+        """The Backlog's folder, which answers which of its files are ideas and where each lies."""
+        return BacklogFolder(self._sessions.backlog_folder)
 
     @property
     def cards(self) -> list[Card]:
@@ -242,9 +256,9 @@ class Board:
     @property
     @data_field
     def active(self) -> Ticket | None:
-        """The ticket of the session saved as open, main's own ticket while main is. Sent whole, so
+        """The ticket of the session the board's chat has open, main's own ticket while main is. Sent whole, so
         a reader such as the chat bar draws the active session from it without finding the ticket again by its name."""
-        return self.placement.ticket(self.sessions.opened.name_for())
+        return self.placement.ticket(self.sessions.opened.name_for(self.chat))
 
     def column(self, name: str) -> Column:
         found = next((column for column in self._columns if column.name == name), None)
@@ -256,7 +270,7 @@ class Board:
     @agent_tool
     @noSessionLog
     def show(self) -> Board:
-        """Return the session board: Backlog, Discovery, Specification, Implementation, and Complete, with every ticket's progress through Generate and Validate, and the active ticket."""
+        """Return the session board: Backlog, Discovery, Specification, Implementation, Hardening, and Complete, with every ticket's progress through Generate and Validate, and the active ticket."""
         return self
 
     @mcp
@@ -272,7 +286,7 @@ class Board:
     @noSessionLog
     def set_sends_fixes_directly(self, sends: bool) -> Board:
         """Set whether a report's Fix sends straight to the ticket's chat as a message, or puts it in the chat's prompt to edit before sending; kept for the repository in the board's file."""
-        self.shared.keep(sends_fixes_directly=sends)
+        self.shared.set_sends_fixes_directly(sends)
         return self
 
     @mcp
@@ -341,12 +355,23 @@ class CardPlacement:
 
     def open_ticket(self, title: str, scope: str, path: str = "") -> Ticket:
         """A new ticket titled title in Discovery, its session working on path, a folder in the repository given from its
-        top or in full (its top when empty). A folder outside the repository raises ``FolderOutsideRepositoryError``."""
+        top or in full (its top when empty). A folder outside the repository raises ``FolderOutsideRepositoryError``; a
+        title that gives no name, one too long, or the name of a session already there is refused by ``CardName`` or
+        ``TicketNameTakenError`` before any folder is made."""
         root = self._board.repo.root.resolve()
         workpath = (root / path).resolve() if path else root
         if not workpath.is_relative_to(root):
             raise FolderOutsideRepositoryError(path, str(root))
-        return self.ticket_of(self._board.sessions.create(title, workpath, title=title, scope=scope))
+        return self.ticket_of(self._board.sessions.create(self.free_name_for(title), workpath, title=title, scope=scope))
+
+    def free_name_for(self, title: str) -> str:
+        """The name a new ticket titled title gets, refused while a session has it, main or one open or closed: opening
+        it again would write the new title over that session's record."""
+        name = CardName(title).for_new_card()
+        sessions = self._board.sessions
+        if sessions.named(name) is not None or sessions.folder_of(name).exists():
+            raise TicketNameTakenError(title, name)
+        return name
 
     def make_ticket(self, session: Session) -> Ticket:
         """The ticket the board places for session, as it reads it now."""
@@ -377,13 +402,22 @@ class BoardFile:
     def __init__(self, board: Board) -> None:
         self._board = board
 
+    @property
+    def _file(self) -> Path:
+        """The file that holds what this repository's sessions share on the board."""
+        return self._board.sessions.folder / _BOARD_FILE
+
     @cached_property
     def _held(self) -> dict:
-        return JsonFile(self._board.file).read()
+        return JsonFile(self._file).read()
 
     @property
     def sends_fixes_directly(self) -> bool:
         return bool(self._held.get("sends_fixes_directly", False))
+
+    def set_sends_fixes_directly(self, sends: bool) -> None:
+        """Keep whether a report's Fix sends straight to the ticket's chat, beside whatever else the file holds."""
+        self._keep(sends_fixes_directly=sends)
 
     def wip_limit(self, stage: Stage) -> int:
         """How many tickets stage holds before its count shows as over its limit: the one a person set, else the default."""
@@ -391,7 +425,7 @@ class BoardFile:
 
     def set_wip_limit(self, stage: Stage, limit: int) -> None:
         """Keep stage's limit beside the other stages' limits and whatever else the sessions share there."""
-        self.keep(wip_limits={**self._held.get("wip_limits", {}), stage.name: limit})
+        self._keep(wip_limits={**self._held.get("wip_limits", {}), stage.name: limit})
 
     def order_in(self, column: Column) -> list[str]:
         """The keys of column's cards in the order a person last placed them; none before they have placed any."""
@@ -399,13 +433,13 @@ class BoardFile:
 
     def keep_order(self, column: Column, keys: list[str]) -> None:
         """Keep column's cards in the order keys gives them, beside whatever else the file holds."""
-        self.keep(order={**self._held.get("order", {}), column.name: list(keys)})
+        self._keep(order={**self._held.get("order", {}), column.name: list(keys)})
 
-    def keep(self, **values: object) -> None:
+    def _keep(self, **values: object) -> None:
         """Write values into the file, keeping whatever else it holds."""
         held = self._held
         held.update(values)
-        JsonFile(self._board.file).write(held)
+        JsonFile(self._file).write(held)
 
 
 class BoardReads:
@@ -417,17 +451,22 @@ class BoardReads:
 
     @cached_property
     def sessions(self) -> list[Session]:
-        return self._board.sessions.all()
+        """Every session whose session.json reads; one that does not is among ``unreadable`` instead, so a single
+        damaged file never takes every other ticket off the board."""
+        return self._read_apart.sessions
+
+    @cached_property
+    def unreadable(self) -> list[UnreadableSessionFile]:
+        return [UnreadableSessionFile(self._board.repo, failure) for failure in self._read_apart.failures]
+
+    @cached_property
+    def _read_apart(self) -> SessionsRead:
+        return self._board.sessions.read_apart()
 
     @cached_property
     def tickets(self) -> list[Ticket]:
         board = self._board
         return [board.placement.make_ticket(session) for session in self.sessions]
-
-    @cached_property
-    def ticket_names(self) -> set[str]:
-        """Every ticket's name, read from the sessions without making the tickets, so a ticket being made can ask."""
-        return {session.name for session in self.sessions}
 
     @cached_property
     def children(self) -> dict[str, list[Ticket]]:
@@ -441,18 +480,7 @@ class BoardReads:
     @cached_property
     def backlog_items(self) -> list[BacklogItem]:
         board = self._board
-        folder = board.sessions.backlog_folder
-        if not folder.is_dir():
-            return []
-        # An item is a file in the Backlog, or a folder holding a file of its own name: a ticket moved back keeps its
-        # whole folder, history and all. A folder beside a file of its name is that file's ticket, not a second item.
-        # A folder that holds no ticket's work is a parent: every other markdown file in it is one of its children.
-        files = list(folder.glob("*.md"))
-        kept = [entry / f"{entry.name}.md" for entry in folder.iterdir() if entry.is_dir() and not (folder / f"{entry.name}.md").exists()]
-        parents = [path for path in kept if path.is_file()]
-        children = [child for parent in parents if not (parent.parent / SESSION_FILE).is_file() for child in parent.parent.glob("*.md") if child != parent]
-        found = sorted([*files, *parents, *children], key=lambda path: path.stem)
-        return [board.placement.make_backlog_item(path) for path in found]
+        return [board.placement.make_backlog_item(path) for path in board.backlog_folder.idea_files()]
 
     @cached_property
     def chats(self) -> list[Chat]:
@@ -471,13 +499,10 @@ class BoardReads:
         once for every ticket that looks for its chat."""
         return self._chats_by_name.get(name)
 
-    def backlog_item(self, title: str) -> BacklogItem | None:
-        """The backlog item titled title, of those this read found."""
-        return next((item for item in self.backlog_items if item.title == title), None)
-
     def backlog_item_called(self, title: str) -> BacklogItem:
-        """The backlog item titled title; raises ``BacklogItemNotFoundError`` when the board has none."""
-        found = self.backlog_item(title)
+        """The backlog item titled title, of those this read found; raises ``BacklogItemNotFoundError`` when the board
+        has none."""
+        found = next((item for item in self.backlog_items if item.title == title), None)
         if found is None:
             raise BacklogItemNotFoundError(title)
         return found
@@ -487,15 +512,8 @@ class BoardReads:
         return self.children.get(ticket.name, [])
 
     @cached_property
-    def branches(self) -> list[Branch]:
-        return self._board.repo.branches
-
-    @cached_property
-    def worktrees(self) -> dict[Branch, Worktree]:
-        repo = self._board.repo
-        if not repo.is_clone:
-            return {}
-        return {tree.branch: tree for tree in repo.worktrees if tree.branch is not None}
+    def worktrees(self) -> dict[Branch, Repo]:
+        return self._board.repo.worktrees.by_branch
 
 
 @identity("name")
@@ -586,14 +604,14 @@ class Stage(Column):
 
     @classmethod
     @tool_subject
-    def load(cls, stage: str, *, project: Path | str) -> Stage:
-        """The stage named stage, such as Discovery, on the board of project."""
-        return Board.load(project).stage(stage)
+    def load(cls, stage: str, *, project: Path | str, call: ToolCall | None = None) -> Stage:
+        """The stage named stage, such as Discovery, on the board of project, read for call."""
+        return Board.load(project, call).stage(stage)
 
     @property
     def steps(self) -> list[str]:
         """What every fidelity goes through in this stage, in order: generate, then validate."""
-        return self._approach.steps
+        return [action.name for action in ACTION_CATALOGUE.steps]
 
     @property
     @data_field
@@ -605,19 +623,14 @@ class Stage(Column):
     @data_field
     def actions(self) -> list[str]:
         """Every action a person can run on a fidelity in this stage: its steps first, then the others."""
-        return self._approach.actions
+        return [action.name for action in ACTION_CATALOGUE.on_fidelities]
 
     @property
     @data_field
     def producing_actions(self) -> list[str]:
         """The actions that write a fidelity's files, which an action bar offers with formats."""
-        return self._approach.producing_actions
+        return [action.name for action in ACTION_CATALOGUE.producing]
 
-    @property
-    @data_field
-    def actions_with_formats(self) -> list[str]:
-        """The actions whose command takes the formats an action bar's chips pick, generate and render."""
-        return self._approach.actions_with_formats
 
     @property
     @data_field(reference=True)
@@ -650,8 +663,15 @@ class Stage(Column):
 
     @property
     @data_field
+    def ticket_count(self) -> int:
+        """How many tickets the stage's head shows: every card in it but main's, which is no ticket of its own and draws
+        no card. Its limit is compared with this number."""
+        return len([ticket for ticket in self.cards if not ticket.is_main])
+
+    @property
+    @data_field
     def is_over_limit(self) -> bool:
-        return len(self.cards) > self.wip_limit
+        return self.ticket_count > self.wip_limit
 
     @property
     @data_field
@@ -713,8 +733,12 @@ class Card(ABC):
         self._board.sessions.saves.later(f"sessions: move {self.key} before {other.key} in {column.name}")
         return self
 
-    def _timestamp(self, moment: datetime) -> str:
-        return str(LogTimestamp(moment))
+    def move_after(self, other: Card) -> Card:
+        """A person's move of this card just below other in their column: the column keeps that order, committed on
+        main and pushed."""
+        column = self.column.place_after(self, other)
+        self._board.sessions.saves.later(f"sessions: move {self.key} after {other.key} in {column.name}")
+        return self
 
 
 class RequiredFidelity:
@@ -936,3 +960,31 @@ class ColumnOverview:
     def tickets(self) -> list[Ticket]:
         """The open tickets in the column, by name: a stage's cards; none in Backlog or Complete."""
         return list(self._stage.cards) if self._stage is not None else []
+
+    @property
+    @data_field
+    def items(self) -> list[BacklogItemOverview]:
+        """The Backlog's own items in the order the board keeps, each by its title with its children by theirs, which the
+        session list offers to start; none in a stage or Complete."""
+        if not isinstance(self._column, Backlog):
+            return []
+        return [BacklogItemOverview(item) for item in self._column.items]
+
+
+class BacklogItemOverview:
+    """A backlog item as the overview sends it: its title and its children's titles, without its idea's text, since the
+    chat bar reads the overview every turn and the Backlog's text can run past an MCP answer's size limit."""
+
+    def __init__(self, item: BacklogItem) -> None:
+        self._item = item
+
+    @property
+    @data_field
+    def title(self) -> str:
+        return self._item.title
+
+    @property
+    @data_field(reference=True)
+    def children(self) -> list[BacklogItem]:
+        """The items its folder keeps with it, each by its title."""
+        return self._item.children

@@ -1,6 +1,6 @@
 ---
 description: "testing approach — test shape ladder"
-globs: "**/*.py,**/*.js,**/*.ts,**/*.java,**/*.c,**/*.cs"
+globs: "**/*.py,**/*.js,**/*.ts,**/*.c,**/*.cs"
 alwaysApply: true
 ---
 

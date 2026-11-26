@@ -11,14 +11,15 @@ from harness.graph.pattern_overlays import PatternOverlays
 from harness.mcp.mcp_annotations import long_call, mcp
 from space.kanban.format_choice import FormatChoice
 from space.kanban.overlay_choice import OverlayChoice
-from space.session.file_manager import FileEntry
+from space.session.files.file_manager import FileEntry
+from space.session.practices.practice_session_output import publication_of
 
 if TYPE_CHECKING:
     from space.kanban.ticket import TicketWork
     from space.session import Session
 
 
-class FormatNotOffered(ValueError):
+class FormatNotOfferedError(ValueError):
     """A chip label the fidelities an action bar acts on do not offer, so there is no chip to turn on or off."""
 
     def __init__(self, label: str, fidelities: list[str], chips: list[FormatChoice]) -> None:
@@ -39,38 +40,46 @@ class TicketChoices:
     @mcp
     @agent_tool
     @noSessionLog
-    def fidelity_files(self, fidelities: list[str]) -> dict[str, dict[str, list[FileEntry]]]:
-        """Return the files a person reviews for each of fidelities, slugs such as stories-story-map, on ticket, by slug and then by format, as each fidelity-progress.files answers them: one call for a page listing many fidelities, sharing one look at what the branch changed."""
-        return {slug: self.work.progress_of(slug).files() for slug in fidelities}
+    def fidelity_files(self, fidelities: list[str], linked: list[str] | None = None) -> dict[str, dict[str, list[FileEntry]]]:
+        """Return the files a person reviews for each of fidelities, slugs such as stories-story-map, on ticket, by slug and then by format, as each fidelity-progress.files answers them: one call for a page listing many fidelities, sharing one look at what the branch changed. Each file says whether a page lists it (is_listed) for the stages, practices and formats the session selected and linked, the fidelities the page's link names (fidelities when none are named), and whether it is the session's own work (is_session_work)."""
+        listing = self.session.guidance.listing(fidelities if linked is None else linked)
+        return {
+            slug: {format: [listing.of_fidelity(slug, format, entry) for entry in entries] for format, entries in self.work.progress_of(slug).files().items()}
+            for slug in fidelities
+        }
 
     @long_call
     @mcp
     @agent_tool
     @noSessionLog
-    def root_files(self) -> list[FileEntry]:
-        """Return every file under the folder ticket's session works in, each with its path from the project, whether the branch changed it, its format, and the fidelities whose files it is, so a page narrows it by the stages, practices, and formats selected; a file no fidelity declares names none."""
+    def root_files(self, linked: list[str] | None = None) -> list[FileEntry]:
+        """Return every file under the folder ticket's session works in, each with its path from the project, whether the branch changed it, its format, and the fidelities whose files it is (none for a file no fidelity declares), the link a design canvas or a whiteboard is published at, whether a page lists it (is_listed) for the stages, practices and formats the session selected and linked, the fidelities the page's link names, and whether it is the session's own work (is_session_work)."""
         session = self.session
         progress = self.work.progress
         repo = session.repo.root
-        return [entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]) for entry in session.session_files.under_root()]
+        listing = session.guidance.listing(linked or [])
+        return [
+            listing.of_root(entry.belonging_to([each.fidelity.slug for each in progress if each.holds(repo / entry.path)]).linked(publication_of(repo / entry.path)))
+            for entry in session.session_files.under_root()
+        ]
 
     @mcp
     @agent_tool
     @noSessionLog
     def format_choices(self, fidelities: list[str]) -> list[FormatChoice]:
-        """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file in it already, and whether it is chosen for them in the session."""
-        read = [(progress.fidelity, progress.files()) for progress in (self.work.progress_of(slug) for slug in fidelities)]
+        """Return the format chips of an action bar on ticket over fidelities, slugs such as stories-story-map: each group of formats they offer, the format each fidelity uses from it, how many offer it and have a file of its own in it already (UX front-end code's views, not the IA and mockup files a person reviews for it), and whether it is chosen for them in the session."""
+        read = [(progress.fidelity, progress.fidelity.session_output.written.files()) for progress in (self.work.progress_of(slug) for slug in fidelities)]
         return FormatChoice.offered_by(read)
 
     @mcp
     @agent_tool
     @noSessionLog
     def choose_formats(self, fidelities: list[str], label: str, is_chosen: bool) -> list[FormatChoice]:
-        """Turn the chip label, such as markdown or diagram, on or off for fidelities, slugs such as stories-story-map, on ticket: each fidelity chooses, or leaves out, the format it uses from that group in the session, the same choice the Story UI's toggles make; return the chips again. A label no chip has, such as drawio, which the diagram chip stands for, is refused with FormatNotOffered naming the labels offered."""
+        """Turn the chip label, such as markdown or diagram, on or off for fidelities, slugs such as stories-story-map, on ticket: each fidelity chooses, or leaves out, the formats it uses from that group in the session, every one of a diagram it writes (its drawio file and its whiteboard board), the same choice the Story UI's toggles make; return the chips again. A label no chip has, such as drawio, which the diagram chip stands for, is refused with FormatNotOfferedError naming the labels offered."""
         chips = self.format_choices(fidelities)
         chip = next((chip for chip in chips if chip.label == label), None)
         if chip is None:
-            raise FormatNotOffered(label, fidelities, chips)
+            raise FormatNotOfferedError(label, fidelities, chips)
         chip.choose(is_chosen)
         return self.format_choices(fidelities)
 

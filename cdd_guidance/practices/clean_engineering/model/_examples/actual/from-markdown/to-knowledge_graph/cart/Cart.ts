@@ -297,9 +297,7 @@ class CartRepository {
 
 @Exception()
 class CartException {
-  // << association >>
   operation: CartOperation;
-  // << association >>
   customer: Customer;
   message: string;
   cause: Error;

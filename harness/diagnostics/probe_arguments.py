@@ -111,7 +111,7 @@ class ProbeArguments:
         if mcp_name == "sketch.save_sketch" and "content" in names:
             return {"content": ""}
         if mcp_name == "sessions.switch":
-            return {"name": "_cdd_mcp_probe"}
+            return {"name": "_cdd_mcp_probe", "create": True}
         if mcp_name.startswith("echo.") and "body" in names:
             return {"body": "agent-tools-diagnostics probe"}
         return {}

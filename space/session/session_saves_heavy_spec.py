@@ -16,6 +16,7 @@ if str(_REPO_ROOT) not in sys.path:
 from harness.git.git import RepoConnectError
 from space.repo.built_once import BuiltOnce
 from space.repo.repo import Repo
+from space.kanban.progress_cache import PROGRESS_CACHE_FILE  # registers the board's progress caches as left out of every save
 from space.session.session_saves import SessionSaves
 
 _WAIT_SECONDS = 20
@@ -85,7 +86,7 @@ with description("the saves of a real clone's session folders on main"):
 
     with context("that is queued beside a session's progress cache"):
         with before.each:
-            (self.folder / "checkout-flow" / "progress-cache.json").write_text("{}\n", encoding="utf-8")
+            (self.folder / "checkout-flow" / PROGRESS_CACHE_FILE).write_text("{}\n", encoding="utf-8")
             self.saves.later("sessions: checkout-flow move Specification")
             _until(lambda: _subject(self.clone) == "sessions: checkout-flow move Specification")
 

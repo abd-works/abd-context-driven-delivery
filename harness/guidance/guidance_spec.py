@@ -19,8 +19,11 @@ from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeWithFidelities,
 )
 from harness.guidance.fixtures.split_tool.split_tool import SplitPracticeGuidance
+from harness.guidance.guidance import PracticeGuidance
 from harness.markdown import HTML, Markdown
 from harness.hooks.hook_server import HookPayload
+from harness.hooks.hooks import Hook
+from harness.mcp.mcp_annotations import Mcp
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 import cdd_guidance.actions  # noqa: F401 - registers the actions with the action catalogue
 
@@ -98,12 +101,12 @@ with description("context guidance"):
 
             expect(Hook.annotates(inject)).to(equal(True))
             expect(Hook.disabled_on(inject)).to(equal(True))
-            expect(Hook.name_annotated_on(inject)).to(equal("postToolUse"))
+            expect(Hook.name_given(inject)).to(equal("postToolUse"))
 
         with it("should list inject_rules on tools but not enroll a disabled hook"):
             guidance = SampleGuidance(format="markdown")
             expect("inject_rules" in guidance.tools).to(equal(True))
-            expect(guidance.tools["inject_rules"].install_to_hook).to(equal(False))
+            expect(guidance.tools["inject_rules"].is_published_to(Hook)).to(equal(False))
             expect("inject_rules" in guidance.rules.tools).to(equal(True))
 
         with it("should rehost inject_rules on the practice so install enrolls CleanEngineering"):
@@ -311,7 +314,7 @@ with description("a guidance collection of context guidance children") as self:
     with context("with the instructions property read on the collection"):
         with it("should list instructions on the collection tools"):
             expect("instructions" in self.collection.tools).to(equal(True))
-            expect(self.collection.tools["instructions"].install_to_mcp).to(equal(True))
+            expect(self.collection.tools["instructions"].is_published_to(Mcp)).to(equal(True))
 
         with it("should join each child instructions string"):
             text = self.collection.instructions
@@ -354,6 +357,13 @@ with description("practice guidance with fidelities examples and templates besid
     with context("with the examples property read on practice guidance"):
         with it("should return examples folder content as a separate property not inside instructions"):
             expect(self.guidance.examples).to(contain("example file not inlined"))
+
+    with context("with the guidance instruction expanded"):
+        with it("should show the examples under a heading that takes structure from the sources, not from them"):
+            text = self.guidance.instruction("guidance").expand({}).instructions
+            heading = "## Examples\n\nThese examples show notation, naming, depth, and tone."
+            takes_structure = "take the structure of what you write from your sources, never from an example.\n\n"
+            expect(text.index(heading) < text.index(takes_structure) < text.index("example file not inlined")).to(equal(True))
 
     with context("with a markdown-backed property read as HTML on practice guidance"):
         with it("should return HTML formatted from that property extract"):
@@ -441,8 +451,12 @@ with description("a fidelity read from its practice's document"):
         with it("should give the file its template is read from"):
             expect(self.story_map.template_file.as_posix()).to(contain("stories/templates/md/story-map.md"))
 
-        with it("should read its template from that file"):
-            expect(self.story_map.templates).to(equal(self.story_map.template_file.read_text(encoding="utf-8").strip()))
+        with it("should read its template from that file, each marker for a value its practice holds written as that value"):
+            written = self.story_map.template_file.read_text(encoding="utf-8").strip()
+            expect(self.story_map.templates).to(equal(self.story_map.markdown_scope.filled(written)))
+
+        with it("should hand an author no marker for a value its practice holds"):
+            expect("{{child_band" in self.story_map.templates).to(equal(False))
 
     with context("with a path its outputs name"):
         with it("should declare a file at the end of that path"):
@@ -462,7 +476,7 @@ with description("a fidelity read from its practice's document"):
             expect(self.stories.document is self.stories.document).to(equal(True))
 
         with it("should give the fidelity its block from that document"):
-            expect(self.story_map.section).to(equal(self.stories.document.fidelity_block("story_map")))
+            expect(self.story_map.section).to(equal(self.stories.document.block_under("Fidelities", "story_map")))
 
 
 with description("the guidance classes whose tools run only through what holds them"):

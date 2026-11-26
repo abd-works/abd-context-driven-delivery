@@ -287,5 +287,5 @@ class ContextSetup:
         tools(self.smoke_test)
         tools(self.scout_app)
         tools(self.complete_capture)
-        tools(self.context_index.embed())
+        tools(self.context_index.embed)
         return "Live app captured and indexed."

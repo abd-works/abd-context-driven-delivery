@@ -1,0 +1,25 @@
+{
+  "chat": "5b5466c3-9f1f-4998-ace2-5da34679e50c",
+  "taken_off": "2026-11-18T20:17:30.971256+00:00",
+  "prompts": [
+    {
+      "id": "45059dfeed77",
+      "text": "[interruption] go",
+      "is_done": false,
+      "steps": [
+        {
+          "text": "[interruption] give me ascreen shot of my bot queoe",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] now im jelaous yuor visla is beter",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] backlog it :)",
+          "state": "pending"
+        }
+      ]
+    }
+  ]
+}

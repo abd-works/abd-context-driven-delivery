@@ -1,0 +1,10 @@
+{
+  "chat": "5b5466c3-9f1f-4998-ace2-5da34679e50c",
+  "taken_off": "2026-11-18T17:44:26.785266+00:00",
+  "prompts": [
+    {
+      "id": "9dc2f7eafd74",
+      "text": "Make install-latest repin the lane the chat bar runs on"
+    }
+  ]
+}

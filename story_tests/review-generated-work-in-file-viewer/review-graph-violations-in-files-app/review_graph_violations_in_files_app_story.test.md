@@ -9,7 +9,7 @@ section: body
 
 ### Domain terms
 
-- ++live graph++ — the session's knowledge graph as it stands now, read again for a file when that file changes (`FileGraphs.file_alone`), holding every violation found in the files read.
+- ++live graph++ — the session's knowledge graph as it stands now, read again for a file when that file changes (`SessionGraph.alone`), holding every violation found in the files read.
 - ++violation++ — a rule a node breaks, with its practice, file and the lines it covers.
 - ++graph view++ — the Files app's file bar showing the practice trees of the session's graph for the files it lists.
 - ++fix++ — the action the chat runs for a violation, a rule, or every violation shown, with the node, file and lines, rule, excerpt and message.
@@ -25,20 +25,17 @@ section: body
 
 | violation | practice | rule | file | lines |
 | --- | --- | --- | --- | --- |
-| ++Process Ticket Archive name++ | Stories | verb-noun-format | .context/story-map.md | 311 to 313 |
-| ++Handle Ticket Deletion name++ | Stories | verb-noun-format | .context/story-map.md | 315 to 317 |
-| ++Move Ticket size++ | Stories | right-size-story-nodes | .context/story-map.md | 269 to 271 |
-| ++Ticket details budget++ | UX | screen-story-budget | harness/.context/information-architecture.drawio | 8 to 10 |
+| ++Process Ticket Archive name++ | Stories | story-name-captures-system-mechanic | .context/story-map.md | 311 to 313 |
+| ++Handle Ticket Deletion name++ | Stories | story-name-captures-system-mechanic | .context/story-map.md | 315 to 317 |
 | ++Activate Ticket name++ | Clean Engineering | use-intention-revealing-names | space/kanban/ticket.py | 460 to 460 |
 
-*Handle Ticket Deletion name* and *Process Ticket Archive name* are the verb-noun-format examples since 2026-11-16 (decided by the person): the real check passes *Delete Ticket*, a verb and a noun, and also an opening word it does not list, such as *Ticket*, so the examples open with a generic verb (handle, process), which the graph lists for the judgment.
+*Move Ticket size*, a right-size-story-nodes example, and *Ticket details budget*, a screen-story-budget example drawn in the information architecture's diagram, whose reader records no stories per screen, left the examples on 2026-11-17 (decided by the person): the switch is shown with the three above. *Handle Ticket Deletion name* and *Process Ticket Archive name* are the verb-noun-format examples since 2026-11-16 (decided by the person): the real check passes *Delete Ticket*, a verb and a noun, and also an opening word it does not list, such as *Ticket*, so the examples open with a generic verb (handle, process), which the graph lists for the judgment. Since 2026-11-22 verb-noun-format passes a generic verb and the judged rule story-name-captures-system-mechanic lists the story as a candidate, so these two are its examples: the graph view shows each as a candidate, not as an error.
 
 ### checkout-flow violation counts
 
 | fidelity | count |
 | --- | --- |
-| Stories story map | 3 |
-| UX information architecture | 1 |
+| Stories story map | 2 |
 | Clean Engineering code | 1 |
 
 ## Story: Show Only Violating Nodes In Files App
@@ -53,14 +50,15 @@ section: body
 
 #### Scenario: The Violations switch keeps only nodes that break a rule
 
-*Given* the Files app shows checkout-flow's graph with Stories, UX and Clean Engineering on  
+*Given* the Files app shows checkout-flow's graph with Stories and Clean Engineering on  
 *When* the Person turns on Violations  
-*Then* the graph view holds only the nodes of Process Ticket Archive name, Handle Ticket Deletion name, Move Ticket size, Ticket details budget and Activate Ticket name
+*Then* the graph view holds only the nodes of Process Ticket Archive name, Handle Ticket Deletion name and Activate Ticket name  
+  *And* each of them lists only the rules it breaks or is a candidate for
 
 #### Scenario: Choosing a rule keeps only the nodes that break it
 
 *Given* the Files app shows checkout-flow's violating nodes  
-*When* the Person chooses the rule verb-noun-format  
+*When* the Person chooses the rule story-name-captures-system-mechanic  
 *Then* the graph view holds only Process Ticket Archive name and Handle Ticket Deletion name
 
 ## Story: See Rules Under Node In Files App
@@ -76,14 +74,14 @@ section: body
 
 *Given* the Files app shows checkout-flow's graph  
 *When* the Person opens the rules of the Handle Ticket Deletion story  
-*Then* verb-noun-format shows broken  
+*Then* story-name-captures-system-mechanic shows a candidate  
   *And* its other rules show passing, or as prompts where they have no check  
   *And* Handle Ticket Deletion is marked in the tree as breaking a rule
 
 #### Scenario: Hovering a broken rule shows its message
 
 *Given* the rules of the Handle Ticket Deletion story are open  
-*When* the Person hovers over verb-noun-format  
+*When* the Person hovers over story-name-captures-system-mechanic  
 *Then* the graph view shows Handle Ticket Deletion name's message
 
 ## Story: Open Violation In Files App Source
@@ -121,16 +119,35 @@ section: body
 
 #### Scenario: Fixing a rule sends every violation of it
 
-*Given* verb-noun-format holds Process Ticket Archive name and Handle Ticket Deletion name  
-*When* the Person fixes the rule verb-noun-format  
-*Then* the chat receives one fix for both verb-noun-format violations
+*Given* story-name-captures-system-mechanic holds Process Ticket Archive name and Handle Ticket Deletion name  
+*When* the Person fixes the rule story-name-captures-system-mechanic  
+*Then* the chat receives one fix for both story-name-captures-system-mechanic candidates
 
 #### Scenario: Fixing all sends every violation the graph view shows
 
-*Given* the graph view shows only the Stories practice's 3 violations  
+*Given* the graph view shows only the Stories practice's 2 violations  
 *When* the Person fixes all  
-*Then* the chat receives one fix for Process Ticket Archive name, Handle Ticket Deletion name and Move Ticket size  
-  *But* not for the UX or Clean Engineering violations, which the graph view does not show
+*Then* the chat receives one fix for Process Ticket Archive name and Handle Ticket Deletion name  
+  *But* not for the Clean Engineering violation, which the graph view does not show
+
+#### Scenario: Fixing a rule in the file view comments on each place it breaks
+
+*Given* the Files app shows checkout-flow's story map with its rules, opened from checkout-chat, which has checked in  
+*When* the Person fixes the rule story-name-captures-system-mechanic in the file view  
+*Then* the checkout-chat queue holds one fill with a fix comment on Process Ticket Archive's line and one on Handle Ticket Deletion's line  
+  *And* both comments show on the story map as sent
+
+#### Scenario: Fixing one place in the file view sends it alone
+
+*Given* the Files app shows checkout-flow's story map with its rules, opened from checkout-chat, which has checked in  
+*When* the Person fixes story-name-captures-system-mechanic on Handle Ticket Deletion's line in the file view  
+*Then* the checkout-chat queue holds one fill with the fix comment on Handle Ticket Deletion's line alone
+
+#### Scenario: Fixing all in the file view sends every broken place
+
+*Given* the Files app shows checkout-flow's story map with its rules, opened from checkout-chat, which has checked in  
+*When* the Person fixes all in the file view  
+*Then* the checkout-chat queue holds one fill with a fix comment on every place a rule breaks the story map
 
 #### Scenario: A fixed violation leaves the graph view once its file is read again
 
@@ -149,10 +166,10 @@ section: body
 
 #### Scenario: Fix in the action picker fixes the selected fidelities' violations
 
-*Given* checkout-flow's live graph holds 5 violations  
+*Given* checkout-flow's live graph holds 3 violations  
   *And* only the Stories story map dot is selected on the chat bar  
 *When* the Person runs Fix from the action picker  
-*Then* the chat receives the fix for Process Ticket Archive name, Handle Ticket Deletion name and Move Ticket size
+*Then* the chat receives the fix for Process Ticket Archive name and Handle Ticket Deletion name
 
 ## Story: Count Session Violations From Live Graph
 
@@ -164,16 +181,16 @@ section: body
 
 #### Scenario: Each fidelity dot counts its violations from the live graph
 
-*Given* checkout-flow's live graph holds 5 violations  
+*Given* checkout-flow's live graph holds 3 violations  
 *When* the chat bar reads checkout-flow's session  
-*Then* the Stories story map dot shows 3, the UX information architecture dot 1 and the Clean Engineering code dot 1
+*Then* the Stories story map dot shows 2 and the Clean Engineering code dot 1
 
 #### Scenario: A file read again updates the dots without a validate
 
-*Given* the Stories story map dot shows 3  
+*Given* the Stories story map dot shows 2  
   *But* no validate has run since  
 *When* the Files app reads story-map.md again, after Process Ticket Archive name was fixed  
-*Then* the Stories story map dot shows 2
+*Then* the Stories story map dot shows 1
 
 #### Scenario: A session not generated yet shows no counts
 
@@ -193,7 +210,7 @@ section: body
 
 #### Scenario Outline: Each tile counts its fidelity's violations from the live graph
 
-*Given* checkout-flow's live graph holds 5 violations  
+*Given* checkout-flow's live graph holds 3 violations  
 *When* the board shows checkout-flow's ${fidelity} tile  
 *Then* the tile shows ${count} violations
 
@@ -201,6 +218,5 @@ section: body
 
 | fidelity | count |
 | --- | --- |
-| Stories story map | 3 |
-| UX information architecture | 1 |
+| Stories story map | 2 |
 | Clean Engineering code | 1 |

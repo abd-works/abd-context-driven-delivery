@@ -71,17 +71,17 @@ class ServiceStart:
         stopped = self._stop(self._hook_command)
         daemon = HookDaemon(self.repo)
         daemon.spawn()
-        address = self._waited(daemon.live_address)
-        ok = address is not None
+        running = self._waited(daemon.running)
+        ok = running is not None
         return PingReport().emit(
             {
                 "ok": ok,
                 "ping": "pong" if ok else "down",
-                "host": address.host if ok else None,
-                "port": address.port if ok else None,
-                "pid": address.pid if ok else None,
+                "host": daemon.address.host if ok else None,
+                "port": daemon.address.port if ok else None,
+                "pid": running.pid if ok else None,
                 "stopped": stopped,
-                "log": "" if ok else str(daemon.log_path),
+                "log": "" if ok else str(daemon.log.path),
             }
         )
 

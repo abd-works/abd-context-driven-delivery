@@ -58,6 +58,26 @@ with description("guidance diagnostics install"):
         expect(item["mcp"]).to(equal("render.render"))
         expect(item["color"]).to(equal("green"))
 
+    # The probe makes each action for no session, so the paths it names (a temp file, the practices' own folders) are
+    # read as given; an action made for a session refuses a path outside that session's root.
+    with it("should probe document with the practices' folders as its paths, and show it passing"):
+        tree = Path(tempfile.mkdtemp())
+        installer = _installer(
+            tree,
+            {
+                "installs": [
+                    {
+                        "mcp": {"items": ["document.document"]},
+                        "toolset": {"items": ["cdd_guidance.actions.document.document:Document"]},
+                    }
+                ]
+            },
+        )
+        GuidanceProbe(installer, ["stories", "clean-engineering-model"]).actions()
+        data = json.loads((tree / "diagnostics.json").read_text(encoding="utf-8"))
+        item = data["guidance"]["actions"]["items"][0]
+        expect((item["mcp"], item["color"])).to(equal(("document.document", "green")))
+
     with it("should install guidance-diagnostics as a slash command with MCP invoke"):
         tree = Path(tempfile.mkdtemp())
         try:

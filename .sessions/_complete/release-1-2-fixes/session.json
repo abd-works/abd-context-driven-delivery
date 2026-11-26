@@ -1,0 +1,65 @@
+{
+  "name": "release-1-2-fixes",
+  "title": "release 1.2 fixes",
+  "scope": "feature",
+  "branch": "release-1-2-fixes",
+  "worktree": "C:\\dev\\abd-cdd-release-1-2-fixes",
+  "guidance": {
+    "stages": [
+      "discovery"
+    ],
+    "version": 7
+  },
+  "practices": {
+    "stories": {
+      "fidelities": {
+        "story_map": {
+          "formats": [
+            "drawio",
+            "whiteboard"
+          ]
+        }
+      }
+    },
+    "ddd": {
+      "fidelities": {
+        "bounded_context": {
+          "formats": [
+            "drawio",
+            "whiteboard"
+          ]
+        }
+      }
+    },
+    "ux": {
+      "fidelities": {
+        "ia": {
+          "formats": [
+            "drawio",
+            "whiteboard"
+          ]
+        }
+      }
+    },
+    "clean_engineering": {
+      "fidelities": {
+        "modules": {
+          "formats": [
+            "drawio",
+            "whiteboard"
+          ]
+        }
+      }
+    },
+    "bdd": {
+      "fidelities": {
+        "behavior": {
+          "formats": []
+        }
+      }
+    }
+  },
+  "stage": "Hardening",
+  "stage_mark": "done",
+  "dropped_work": []
+}

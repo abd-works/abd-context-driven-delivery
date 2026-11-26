@@ -1,5 +1,5 @@
-// Collapse Open Files, as story_tests/review-generated-work-in-file-viewer/switch-files-app-between-files-and-graph/
-// switch_files_app_between_files_and_graph_story.test.md writes it (Open Several Files From Graph Nodes). Only the page
+// Collapse Open Files, as story_tests/review-generated-work-in-file-viewer/open-graph-nodes-in-files-app/
+// open_graph_nodes_in_files_app_story.test.md writes it (Open Several Files From Graph Nodes). Only the page
 // shows it: the session answers the same files whether they show whole or collapsed.
 import { beforeEach, describe, expect, it } from 'vitest'
 

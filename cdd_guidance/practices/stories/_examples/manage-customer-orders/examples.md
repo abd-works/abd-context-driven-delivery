@@ -1,8 +1,8 @@
 # Stories examples
 
-Reference trees under this folder. Prefer generating fresh trees via
-`Stories.transform` / `generate` at the active fidelity rather than copying
-these verbatim when the hybrid layout differs.
+Reference trees under this folder. They show notation, naming, and depth.
+Their epics and nesting belong to their own domains: take a map's structure
+from its sources, never by copying these trees.
 
 ## Markdown (`md/`) — discovery documents
 

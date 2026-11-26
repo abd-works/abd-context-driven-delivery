@@ -1,8 +1,10 @@
 """Repos - the repositories kept beside one another, and opening one in a chat of its own."""
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
@@ -13,7 +15,8 @@ from mamba import after, before, context, description, it
 
 from harness.mcp.cdd_home import CddHome
 from harness.git.git import Git
-from space.repo.repos import CddConfig, FolderIsAWorktreeError, PathIsAFileError, NotAReposFolderError, Repos, RepoNameRequiredError
+from space.repo.new_repository import FolderIsAWorktreeError
+from space.repo.repos import CddConfig, InstallFailedError, NotAReposFolderError, PublishFailedError, Repos, RepoNameRequiredError, UnknownVisibilityError
 
 
 def _repository(folder: Path) -> Path:
@@ -112,27 +115,21 @@ with description("Repos") as self:
         with it("should refuse"):
             expect(lambda: self.repos.open(" ", publish=False, install=False, start_chat=False)).to(raise_error(RepoNameRequiredError))
 
-    with context("opening a plain folder in a chat of its own"):
-        with before.each:
-            self.plain = self.top / "notes"
-            self.plain.mkdir()
-            self.answer = self.repos.open_folder(str(self.plain), start_chat=False)
+    with context("opening a repository with a visibility GitHub does not offer"):
+        with it("should refuse, naming the visibility"):
+            expect(lambda: self.repos.open("shop", visibility="secret", publish=True, install=False, start_chat=False)).to(
+                raise_error(UnknownVisibilityError, contain("secret"))
+            )
 
-        with it("should leave it a plain folder, with no repository created"):
-            expect((self.plain / ".git").exists()).to(equal(False))
+    with context("publishing a new repository on a machine without the GitHub CLI"):
+        with it("should refuse, saying to install gh or open it without publishing"):
+            with patch("space.repo.repos.shutil.which", return_value=None):
+                opening = lambda: self.repos.open("shop", publish=True, install=False, start_chat=False)
+                expect(opening).to(raise_error(PublishFailedError, contain("gh", "publish false")))
 
-        with it("should say how to start the folder's own chat"):
-            expect(self.answer).to(contain(f"cwd {self.plain}"))
-
-        with it("should open the session named after the folder in that chat"):
-            expect(self.answer).to(contain("call sessions.switch with name notes"))
-
-    with context("opening a folder that is not there yet"):
-        with it("should make the folder"):
-            self.repos.open_folder(str(self.top / "new" / "notes"), start_chat=False)
-            expect((self.top / "new" / "notes").is_dir()).to(equal(True))
-
-    with context("opening a file as a folder"):
-        with it("should refuse it"):
-            (self.top / "notes.txt").write_text("x", encoding="utf-8")
-            expect(lambda: self.repos.open_folder(str(self.top / "notes.txt"), start_chat=False)).to(raise_error(PathIsAFileError))
+    with context("installing CDD into a new repository whose install fails"):
+        with it("should refuse, naming the folder and what the install said"):
+            failed = subprocess.CompletedProcess([], 1, stdout="", stderr="no module named harness")
+            with patch("space.repo.repos.subprocess.run", return_value=failed):
+                opening = lambda: self.repos.open("shop", publish=False, install=True, start_chat=False)
+                expect(opening).to(raise_error(InstallFailedError, contain(".claude", "no module named harness")))

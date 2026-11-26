@@ -1,22 +1,22 @@
 """SchemaEdges. The relationship edges every practice's ``schema.yaml`` names, recorded between the model objects on one
 graph.
 
-Child lists already record their own edge, and belongsTo is the back-edge for those lists. Every other relationship the
-schema names is recorded here when both nodes are on the graph: a field read from evidence (``invokes``, ``hasType``) when
-the owning object's source or names show it, and any other field when the owner holds the target in the list attribute
-named for the field.
+Child lists already record their own edge, and belongsTo is the back-edge for those lists; each practice names its own
+(``PracticeNodeTypes.child_lists``). Every other relationship the schema names is recorded here when both nodes are on the graph: a field the owning object's practice reads from evidence
+(``invokes``, ``hasType``) when that practice says its source or names show it (``PracticeNodeTypes.links``), and any
+other field when the owner holds the target in the list attribute named for the field.
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import cached_property
 from typing import TYPE_CHECKING
 
 from harness.graph.edge import EdgeType
-from harness.guidance.schema import VALUE_TYPES, Schema
+from harness.graph.practice_node_types import NODE_TYPE_TABLES
+from harness.guidance.schema import Schema
 from harness.annotations.name import Name
 
 if TYPE_CHECKING:
@@ -26,62 +26,23 @@ if TYPE_CHECKING:
     from harness.guidance.guidance import PracticeGuidance
 
 
-# Child-list edges. A model object's child list records these itself.
-CHILD_LISTS = frozenset(
-    {
-        "decomposedInto",
-        "background",
-        "scenarios",
-        "steps",
-        "examples",
-        "increments",
-        "stories",
-        "participants",
-        "parameters",
-        "screens",
-        "descriptions",
-        "contexts",
-        "observations",
-        "aggregates",
-        "ands",
-        "belongsTo",
-    }
-)
-
-# The explorer leaves scopes out of the serialized graph.
-_SKIPPED = CHILD_LISTS | {"scopes"}
-
-# Schema keys whose node type is not the key capitalised, in the order the reverse lookup reads them.
-_NODE_TYPES = {
-    "class": "OoadClass",
-    "subEpic": "Epic",
-    "given": "Step",
-    "when": "Step",
-    "then": "Step",
-    "map": "UxMap",
-    "node": "NodeRoot",
-    "client": "ClientRoot",
-    "share": "StoryShared",
-    "server": "ServerSpec",
-    "domain": "DomainSpec",
-    "playwright": "PlaywrightSpec",
-    "view": "DomainView",
-}
+# Kinds left out of the schema edges besides the child lists: the explorer leaves scopes out of the serialized graph.
+_NOT_RECORDED = frozenset({"scopes"})
 
 _PHASES = {"given": "given", "when": "when", "then": "then"}
 
 _DISPLAY = {"demonstrates": "grouped"}
 
-# Fields a node's evidence decides (its source text, callees, names); every other field is the nodes it holds.
-_EVIDENCE_KINDS = frozenset(
-    {"invokes", "observes", "demonstrates", "retrievedUsing", "uses", "specifiedBy", "given", "dependsOn", "hasType", "returnType"}
-)
 
+def records(kind: str) -> bool:
+    """Whether the schema edges record kind: not a child list, which its model object records itself and whose
+    back-edge is belongsTo, nor a kind the explorer leaves out."""
+    return not NODE_TYPE_TABLES.is_child_list(kind) and kind not in _NOT_RECORDED
 
 
 class SchemaKey:
-    """One type key in a ``schema.yaml`` and the explorer node type it names: ``class`` is ``OoadClass``; any other key
-    is capitalised."""
+    """One type key in a ``schema.yaml`` and the explorer node type it names: the node type the practice or pattern
+    whose schema names it gives (``NODE_TYPE_TABLES``), such as ``OoadClass`` for ``class``; any other key capitalised."""
 
     def __init__(self, key: str) -> None:
         self.key = key
@@ -89,12 +50,12 @@ class SchemaKey:
     @classmethod
     def from_node_type(cls, node_type: str) -> SchemaKey:
         """The schema key an explorer node type is written as, the reverse of ``node_type``."""
-        named = next((key for key, mapped in _NODE_TYPES.items() if mapped == node_type), None)
+        named = NODE_TYPE_TABLES.key_of(node_type)
         return cls(named if named is not None else node_type[:1].lower() + node_type[1:])
 
     @property
     def node_type(self) -> str:
-        return _NODE_TYPES.get(self.key) or self._capitalised
+        return NODE_TYPE_TABLES.node_type_of(self.key) or self._capitalised
 
     @property
     def node_types(self) -> tuple[str, ...]:
@@ -125,7 +86,7 @@ class SchemaField:
 
     def links_from(self, owner: ModelNode) -> bool:
         """True when this field is a relationship a node like owner records here."""
-        if self.owner != owner.semantic_type() or self.kind in _SKIPPED:
+        if self.owner != owner.semantic_type() or not records(self.kind):
             return False
         return not self.phase or owner.phase == self.phase
 
@@ -149,70 +110,20 @@ class SchemaFields:
         """The relationships owner_type names back to target_type, other than forward and the child lists."""
         found: list[str] = []
         for field in self.fields:
-            if field.owner != owner_type or field.kind == forward or field.kind in _SKIPPED:
+            if field.owner != owner_type or field.kind == forward or not records(field.kind):
                 continue
             if target_type in field.targets and field.kind not in found:
                 found.append(field.kind)
         return found
 
     def _fields_of(self, schema: Schema) -> list[SchemaField]:
-        found: list[SchemaField] = []
-        for key, kind in schema.types.items():
-            for name, value in kind.fields:
-                targets = [target for target in re.findall(r"[A-Za-z]\w*", value.strip()) if target not in VALUE_TYPES]
-                if targets and '"' not in value:
-                    found.append(SchemaField(SchemaKey(key), name, tuple(SchemaKey(target).node_type for target in targets)))
-        return found
-
-
-class NodeEvidence:
-    """What a model object's source shows: the names it mentions, calls, and reads, and the module it sits in."""
-
-    def __init__(self, node: ModelNode) -> None:
-        self.node = node
-
-    @cached_property
-    def text(self) -> str:
-        source = getattr(self.node, "source", None)
-        stored = getattr(source, "__dict__", {}).get("text") if source is not None else None
-        return stored if isinstance(stored, str) else ""
-
-    @property
-    def callees(self) -> list[str]:
-        return list(getattr(self.node, "callees", []) or [])
-
-    def mentions(self, name: str) -> bool:
-        return bool(self.text and name) and re.search(rf"\b{re.escape(name)}\b", self.text) is not None
-
-    def reads(self, name: str) -> bool:
-        """True when the source reads a property called name: ``.name`` not followed by a call."""
-        return bool(self.text and name) and re.search(rf"\.{re.escape(name)}\b(?!\s*\()", self.text) is not None
-
-    def calls(self, name: str) -> bool:
-        """True when the source, or the source of a step under it, calls name."""
-        if not self.text or not name:
-            return False
-        text = "\n".join([self.text, *(NodeEvidence(step).text for step in self._steps_under())])
-        return re.search(rf"(?<![\w]){re.escape(name)}\s*\(", text) is not None
-
-    def invokes(self, name: str) -> bool:
-        return self.calls(name) or name in self.callees
-
-    @property
-    def module(self) -> ModelNode | None:
-        """The Module node this object sits under, through its parents; none when it sits under none."""
-        current, seen = self.node, set()
-        while current is not None and id(current) not in seen:
-            seen.add(id(current))
-            if getattr(current, "semantic_type", lambda: "")() == "Module":
-                return current
-            current = getattr(current, "parent", None)
-        return None
-
-    def _steps_under(self) -> list[ModelNode]:
-        if not hasattr(self.node, "subtree"):
-            return []
-        return [node for node in self.node.subtree() if node is not self.node and node.semantic_type() == "Step"]
+        """Each relationship of each type of schema that names a type, with the node types it names."""
+        return [
+            SchemaField(SchemaKey(key), relationship.name, tuple(SchemaKey(target).node_type for target in relationship.targets))
+            for key, kind in schema.types.items()
+            for relationship in kind.relationships
+            if relationship.targets
+        ]
 
 
 class SchemaEdges:
@@ -279,54 +190,20 @@ class SchemaEdges:
                     self._record(inverse, target, owner)
 
     def _linked_targets(self, field: SchemaField, owner: ModelNode) -> list[ModelNode]:
-        """The nodes owner links to through field: for a field read from evidence, the targets its evidence matches;
-        for any other, the nodes owner holds in the list attribute named for the field (``showsSteps`` is ``shows_steps``)."""
-        if field.kind not in _EVIDENCE_KINDS:
+        """The nodes owner links to through field: for a field owner's practice reads from evidence, the targets its
+        evidence links (``PracticeNodeTypes.links``); for any other, the nodes owner holds in the list attribute named
+        for the field (``showsSteps`` is ``shows_steps``)."""
+        types = owner.practice.reading.types
+        if field.kind not in types.evidence_kinds:
             held = getattr(owner, Name(field.kind).snake, None)
             if not isinstance(held, (list, tuple)):
                 return []
             return [item for item in held if item is not owner and hasattr(item, "semantic_type") and item.semantic_type() in field.targets]
         targets = [target for type_name in field.targets for target in self._by_type.get(type_name, ())]
-        return [target for target in targets if target is not owner and self._matches(field.kind, owner, target)]
+        return [target for target in targets if target is not owner and types.links(owner, field.kind, target)]
 
     def _record(self, kind: str, parent: ModelNode, child: ModelNode) -> None:
         edge_type = EdgeType.from_kind(kind, _DISPLAY.get(kind, "relationship"))
         self.graph.edges.record(edge_type, parent, child)
         if parent.practice is not child.practice:
             self.graph.edges.record(edge_type, child, parent)
-
-    def _matches(self, kind: str, owner: ModelNode, target: ModelNode) -> bool:
-        evidence = NodeEvidence(owner)
-        if kind == "invokes":
-            return evidence.invokes(target.name)
-        if kind in {"observes", "demonstrates"}:
-            return evidence.mentions(target.name)
-        if kind == "retrievedUsing":
-            return evidence.reads(target.name) or evidence.calls(target.name)
-        if kind == "uses":
-            return self._epic_uses(owner, target)
-        if kind == "specifiedBy":
-            return owner.name.casefold() == target.name.casefold()
-        if kind == "given":
-            return target.semantic_type() == "Step" and target.phase == "given" and target in list(getattr(owner, "steps", []) or [])
-        if kind == "dependsOn":
-            return target.name in [*(getattr(owner, "collaborators", []) or []), *(getattr(owner, "dependencies", []) or [])]
-        if kind in {"hasType", "returnType"}:
-            hint = getattr(owner, "type_hint" if kind == "hasType" else "return_type", "") or ""
-            return re.search(rf"\b{re.escape(target.name)}\b", str(hint)) is not None if target.name else False
-        return False
-
-    def _epic_uses(self, epic: ModelNode, module: ModelNode) -> bool:
-        """True when an epic's examples name a class of the module, or its steps call one of the module's members."""
-        if epic.semantic_type() != "Epic" or module.semantic_type() != "Module":
-            return False
-        members = [node for node in self.nodes if NodeEvidence(node).module is module]
-        classes = [node for node in members if node.semantic_type() == "OoadClass"]
-        operations = [node for node in members if node.semantic_type() in {"Operation", "Property"}]
-        for node in epic.subtree():
-            evidence = NodeEvidence(node)
-            if node.semantic_type() == "Example" and any(evidence.mentions(found.name) for found in classes):
-                return True
-            if node.semantic_type() == "Step" and any(evidence.invokes(member.name) for member in operations):
-                return True
-        return False

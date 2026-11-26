@@ -8,6 +8,7 @@ import os
 import re
 from pathlib import Path
 
+from harness.git.checkout import Checkout
 from harness.process.claude_chat_process import claude_config_folder, is_desktop_spare
 
 
@@ -92,8 +93,8 @@ class ChatPointer:
     def from_claude_chat(cls, chat_id: str) -> ChatPointer | None:
         """A Claude Code chat's pointer, found by its id alone: its transcript is the file named for that id under the
         Claude projects folder, in the folder of the project the chat started in. None when no such transcript is there."""
-        found = _ClaudeProjects().transcript_of(chat_id)
-        return cls.of(chat_id, found) if found is not None else None
+        found = cls.from_claude_session(chat_id)
+        return cls.of(chat_id, found.transcript) if found is not None else None
 
     @classmethod
     def from_request(cls, chat_id: str) -> ChatPointer | None:
@@ -118,7 +119,7 @@ class ChatPointer:
         this follows the chat where the folder it started in does not. None when the transcript records no folder that
         is still there."""
         folder = self._latest_recorded_folder()
-        return self._checkout_holding(folder) if folder is not None else None
+        return Checkout.holding(folder).folder if folder is not None else None
 
     def _latest_recorded_folder(self) -> Path | None:
         if self.transcript is None or not self.transcript.is_file():
@@ -132,11 +133,6 @@ class ChatPointer:
             transcript.seek(0, os.SEEK_END)
             transcript.seek(max(0, transcript.tell() - _FOLDER_SEARCH_BYTES))
             return transcript.read().decode("utf-8", errors="replace")
-
-    def _checkout_holding(self, folder: Path) -> Path:
-        """The checkout holding folder, the folder the chat recorded last: the folder itself when no checkout holds it."""
-        resolved = folder.resolve()
-        return next((above for above in (resolved, *resolved.parents) if (above / ".git").exists()), resolved)
 
     @classmethod
     def in_log_line(cls, line: str) -> ChatPointer | None:

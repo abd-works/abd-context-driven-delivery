@@ -23,6 +23,12 @@ section: body
      acting, is `(S:system)`; a story about the system's own technical work is `(S:technical)`. Write the
      kind only when it is not a user story, so every channel (drawio, miro, sketch, json) keeps it.
 
+     Shape (`child-count-fits-layer`): repeat the epic block for every epic the sources describe.
+     Give an epic sub-epics when its stories fall into separate outcomes, and keep it flat when they
+     are one outcome. How many epics there are and how each nests come from the sources, never from
+     this template or an example: a node holding sub-epics groups {{child_band.holding_sub_epics}}, a sub-epic holds {{child_band.sub_epic}} stories,
+     and a flat epic holds {{child_band.flat_epic}}.
+
      Headings start at column 0; the # count is the depth (epic #, sub-epic ##, its stories ###,
      a nested sub-epic ###, its stories ####). Never indent a heading: markdown reads an indented
      line as code, so it gets no anchor and links to it do not land. -->
@@ -34,12 +40,16 @@ section: body
 ---
 
 # (E) Epic Verb–Noun
-## (E) Sub-Epic Verb–Noun
+## (E) First Sub-Epic Verb–Noun
 ### (S) Actor --> [Story Verb–Noun]({epic}/{sub-epic}/{story_snake}_story.test.md)
-### (S) Actor --> Story Verb–Noun
-### (S:system) System --> Story Verb–Noun
-## (E) Sub-Epic Verb–Noun
-### (S) Actor --> Story Verb–Noun
+### (S) Actor --> Second Story Verb–Noun
+### (S:system) System --> Third Story Verb–Noun
+## (E) Second Sub-Epic Verb–Noun
+### (S) Actor --> Fourth Story Verb–Noun
+### (S) Actor --> Fifth Story Verb–Noun
+## (E) Third Sub-Epic Verb–Noun
+### (S) Actor --> Sixth Story Verb–Noun
+### (S) Actor --> Seventh Story Verb–Noun
 
 ---
 

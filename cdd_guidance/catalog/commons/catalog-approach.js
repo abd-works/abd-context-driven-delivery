@@ -7,7 +7,7 @@
   var NAV_GAP_PX = 16;
   var PRODUCT_ENGINEERING = 'product-engineering';
   var ITERATE_AND_LEARN = 'iterate-and-learn';
-  var REFINE_STAGES = ['discovery', 'specification', 'implementation'];
+  var REFINE_STAGES = ['discovery', 'specification', 'implementation', 'hardening'];
 
   function navigationHeight() {
     var nav = document.querySelector('.site-nav');

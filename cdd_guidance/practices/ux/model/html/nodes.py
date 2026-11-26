@@ -5,7 +5,6 @@ from __future__ import annotations
 import html
 import json
 from pathlib import Path
-from typing import Optional
 
 from cdd_guidance.practices.ux.model.explorer_tree import ExplorerTree
 from cdd_guidance.practices.ux.model.json.nodes import JsonControl, JsonStoryDemoControl, JsonUxMap
@@ -46,11 +45,11 @@ class HtmlControl(JsonControl):
             f'{self._name_attr()}{self._flag(visual, "hidden")}>{_text(self.label)}</div>'
         )
 
-    def data_attributes(self) -> str:
+    def _data_attributes(self) -> str:
         """Where its interactions go, then the Story Demo runner's attributes."""
         return f"{self._interaction_attrs()}{self._demo_attrs()}"
 
-    def input_key(self) -> str:
+    def _input_key(self) -> str:
         """The field a number input fills: its bound field, else its name."""
         return self.bound_field or self.name
 
@@ -82,7 +81,7 @@ class HtmlControl(JsonControl):
     def _button(self, visual: set) -> str:
         return (
             f'<button type="button" class="control button{self._flag(visual, "primary")}{self._flag(visual, "selected")}'
-            f'{self._flag(visual, "disabled")}"{self._name_attr()}{self.data_attributes()}{self._flag(visual, "hidden")}>'
+            f'{self._flag(visual, "disabled")}"{self._name_attr()}{self._data_attributes()}{self._flag(visual, "hidden")}>'
             f"{_text(self.label)}</button>"
         )
 
@@ -96,7 +95,7 @@ class HtmlControl(JsonControl):
         return (
             f'<label class="control{self._flag(visual, "disabled")}"{self._name_attr()}{self._flag(visual, "hidden")}>{_text(self.label)} '
             f'<input type="number" min="1" step="1" value="1" '
-            f'data-input-field="{_text(self.input_key())}" /></label>'
+            f'data-input-field="{_text(self._input_key())}" /></label>'
         )
 
     def _bound_list(self, visual: set) -> str:
@@ -104,7 +103,7 @@ class HtmlControl(JsonControl):
         # item_story_steps => clicking an item runs its When; else set_input => clicking an item only selects it.
         return (
             f'<div class="control" data-type="bound-list" data-bound-list'
-            f'{self._name_attr()}{self.data_attributes()}{self._flag(visual, "hidden")}>'
+            f'{self._name_attr()}{self._data_attributes()}{self._flag(visual, "hidden")}>'
             f'<div class="field dimmed">(list loads with story)</div></div>'
         )
 
@@ -128,22 +127,22 @@ class HtmlControl(JsonControl):
         role = ' data-role="folder"' if visual & {"expanded", "collapsed"} else ""
         return (
             f'<div class="tree-node{self._flag(visual, "selected")}" data-type="tree"{self._name_attr()}{role}'
-            f'{self.data_attributes()}{self._flag(visual, "hidden")}><span class="twist">{twist}</span>{_text(self.label)}</div>'
+            f'{self._data_attributes()}{self._flag(visual, "hidden")}><span class="twist">{twist}</span>{_text(self.label)}</div>'
         )
 
     def _list(self, visual: set) -> str:
         return (
             f'<div class="control{self._flag(visual, "selected")}{self._flag(visual, "disabled")}" data-type="list"'
-            f'{self._name_attr()}{self.data_attributes()}{self._flag(visual, "hidden")}>{_text(self.label)}</div>'
+            f'{self._name_attr()}{self._data_attributes()}{self._flag(visual, "hidden")}>{_text(self.label)}</div>'
         )
 
 
 class HtmlStoryDemoControl(JsonStoryDemoControl, HtmlControl):
     """A Story Demo control in the review page: it also carries the steps it runs and the input it fills."""
 
-    def input_key(self) -> str:
+    def _input_key(self) -> str:
         """The scenario input it fills, else its bound field, else its name."""
-        return self.set_input or super().input_key()
+        return self.set_input or super()._input_key()
 
     def _demo_values(self) -> dict:
         return {
@@ -177,16 +176,26 @@ class HtmlUxMap(JsonUxMap):
     document, so this is the JSON format inside a page: parse reads back the document the shell carries; HTML
     written any other way is not a parse source. Its controls are HtmlControls, which write their own markup."""
 
-    workspace_files = ("{folder}.html", "index.html", "mockup.html", "ux.html", "*.html")
+    map_file_suffixes = (".html",)
+    not_a_map_failures = (*JsonUxMap.not_a_map_failures, UxMapNotEmbedded)
+
+    def reads_file(self, file: Path, text: str) -> bool:
+        """A page this format rendered, which carries its map in a ux-map-json comment; any other page holds no map."""
+        return _MODEL_MARKER in text
     control_type = HtmlControl
     story_demo_control_type = HtmlStoryDemoControl
 
-    def parse(self, content: str) -> UxMap:
-        start = content.find(_MODEL_MARKER)
-        end = content.find(_COMMENT_END, start + len(_MODEL_MARKER)) if start >= 0 else -1
+    def parse(self, text: str, file: str = "") -> UxMap:
+        return type(self).from_document(self.carried_document(text))
+
+    def carried_document(self, text: str) -> JsonDocument:
+        """The map's JSON document the page carries in its ux-map-json comment; a page with none is refused as
+        *UxMapNotEmbedded*."""
+        start = text.find(_MODEL_MARKER)
+        end = text.find(_COMMENT_END, start + len(_MODEL_MARKER)) if start >= 0 else -1
         if end < 0:
             raise UxMapNotEmbedded("This HTML has no ux-map-json comment; render the map to HTML to read it back.")
-        return super().parse(content[start + len(_MODEL_MARKER):end].strip())
+        return json.loads(text[start + len(_MODEL_MARKER):end].strip())
 
     def save(self) -> str:
         shell = _SHELL_PATH.read_text(encoding="utf-8")
@@ -204,7 +213,7 @@ class HtmlUxMap(JsonUxMap):
             "@@STORY_IMPORTS@@": self._module_imports(self.story_references, "data-ux-story-ref"),
             "@@OBJECT_IMPORTS@@": self._module_imports(self.object_references, "data-ux-object-ref"),
             "@@TRANSITIONS_JS@@": ",\n".join(
-                "    " + self._script_json({"from": self._name_of(t.from_screen), "to": self._name_of(t.to_screen), "trigger": t.trigger})
+                "    " + self._script_json({"from": t.from_name, "to": t.to_name, "trigger": t.trigger})
                 for t in self.transitions
             ),
             # ">" is written as its JSON escape, so no value can close the comment the map is carried in.
@@ -217,9 +226,6 @@ class HtmlUxMap(JsonUxMap):
 
     def _module_imports(self, paths: ReferencePaths, marker: str) -> str:
         return "\n".join(f'  <script type="module" src="{_text(path)}" {marker}></script>' for path in paths)
-
-    def _name_of(self, screen: Optional[Screen]) -> str:
-        return screen.name if screen is not None else ""
 
     def _ensure_hint(self) -> str:
         if self.story_references or self.object_references:
@@ -234,8 +240,9 @@ class HtmlUxMap(JsonUxMap):
         hidden = " hidden" if index else ""
         regions = "".join(self._region_html(region) for region in screen.regions)
         stories_attr = ""
-        if screen.story_keys:
-            joined = _text(", ".join(screen.story_keys))
+        stories = [link.key for link in screen.story_links]
+        if stories:
+            joined = _text(", ".join(stories))
             stories_attr = f' data-for-story="{joined}"'
         layout_attr = f' data-layout="{_text(screen.layout)}"' if screen.layout else ""
         return (
@@ -244,7 +251,7 @@ class HtmlUxMap(JsonUxMap):
             f"<h2>{_text(screen.name)}</h2>"
             f'<p class="layout">{_text(screen.layout) or "-"}</p>'
             f'<div class="regions">{regions}</div>'
-            f'<p class="screen-stories">Stories: {_text(" . ".join(screen.story_keys)) or "-"}</p>'
+            f'<p class="screen-stories">Stories: {_text(" . ".join(stories)) or "-"}</p>'
             f"</article>"
         )
 

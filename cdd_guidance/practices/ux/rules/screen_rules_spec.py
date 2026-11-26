@@ -10,38 +10,9 @@ _REPO = Path(__file__).resolve().parents[4]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from harness.graph.graph import Graph
-from harness.graph.rule_context import RuleCheckContext
-from harness.graph.rule_fixture import SchemaRuleRun
 
-from cdd_guidance.practices.stories.model.story_model import Epic, Story, StoryModel
-from cdd_guidance.practices.ux.model.nodes import Screen
-from cdd_guidance.practices.ux.model.ux_map import UxMap
+from cdd_guidance.practices.ux.rules.rule_examples import ScreenExample
 from cdd_guidance.practices.ux.rules.screen_rules import ScreenNamesUseDomainTerms, ScreenStoryBudget
-
-_STORIES = ("Browse Catalog", "Search Catalog", "Filter Catalog", "Compare Products", "Save Product")
-
-
-class ScreenExample:
-    """A story map and a UX map on one graph; the screen lists the first ``shown`` stories."""
-
-    def __init__(self, screen_name: str, shown: int) -> None:
-        self.graph = Graph()
-        story_map = StoryModel(self.graph)
-        epic = Epic("Shop Online", 1)
-        for order, name in enumerate(_STORIES, start=1):
-            epic.stories.append(Story(name, order))
-        story_map.epics.append(epic)
-        ux_map = UxMap.create(self.graph)
-        self.screen = Screen(screen_name, 0)
-        ux_map.append_screen(self.screen)
-        for name in _STORIES[:shown]:
-            self.screen.show_story(name)
-
-    def violations(self, rule) -> list[str]:
-        """What the rule reports on the screen where validate runs it."""
-        return SchemaRuleRun(rule, RuleCheckContext(self.screen.practice, None)).node_hits(self.screen)
-
 
 with description("a screen checked against the screen-story-budget rule"):
     with context("that shows five stories"):
@@ -49,7 +20,7 @@ with description("a screen checked against the screen-story-budget rule"):
             self.example = ScreenExample("Catalog", 5)
 
         with it("should record that it shows each story"):
-            practice = self.example.graph.practice("ux")
+            practice = self.example.graph.practices.named("ux")
             expect([edge.child.name for edge in practice.reading.in_graph.edge_index.of("shows")]).to(have_len(5))
 
         with it("should be over the budget"):

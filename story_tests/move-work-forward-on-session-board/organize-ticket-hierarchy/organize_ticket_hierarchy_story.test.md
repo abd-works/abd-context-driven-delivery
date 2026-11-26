@@ -88,7 +88,7 @@ The realizations name the operations these scenarios need. Built (2026-11-11): t
 CardPlacement.ticket("checkout-flow")
   <- checkout-flow
 checkout-flow.add_child("Enter card details")
-  -> self.session.hierarchy.open_child("Enter card details", scope="story")
+  -> self.session.hierarchy.open_child("enter-card-details", "Enter card details", scope="story")
   <- enter-card-details In progress in Discovery, its parent checkout-flow
 ```
 
@@ -113,6 +113,17 @@ pet-visits.reassign_parent(checkout-flow)
 
 *Then* checkout-flow's card holds pet-visits
 *And* no column shows pet-visits as a card of its own
+
+#### Scenario: Refuse a child whose title makes the name of a ticket already there
+
+> Test: organize-ticket-hierarchy.story.shared.py, replayed by the domain spec.
+
+> Evidence: found while closing exploratory-testing defect gizmo-05: a child titled as its parent opened the parent's own session again and made it its own parent. A child's name is checked as any new ticket's (`CardPlacement.free_name_for`).
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow is on the [board](../../../space/kanban/.context/kanban-model.md#board)
+*When* the Person adds the child ticket CHECKOUT FLOW to checkout-flow
+*Then* the board says a ticket named checkout-flow already exists
+*And* checkout-flow has no parent
 
 ## Story: Display Child Tickets In Parent
 
@@ -274,7 +285,7 @@ enter-card-details.reassign_parent(None)
 *When* the Person starts Gift cards as a child of checkout-flow
 
 ```realization
-BoardReads.backlog_item("Gift cards")
+BoardReads.backlog_item_called("Gift cards")
   <- Gift cards
 CardPlacement.ticket("checkout-flow")
   <- checkout-flow
@@ -385,7 +396,7 @@ ticket.create("Enter card details", scope="story", parent="checkout-flow")
   -> CardPlacement.ticket("checkout-flow")
   <- checkout-flow
   -> checkout-flow.add_child("Enter card details")
-     -> self.session.hierarchy.open_child("Enter card details", scope="story")
+     -> self.session.hierarchy.open_child("enter-card-details", "Enter card details", scope="story")
      <- the session .sessions/checkout-flow/enter-card-details
      -> enter-card-details.branch
         -> self.parent.branch

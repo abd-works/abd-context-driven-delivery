@@ -9,7 +9,6 @@ import type { FidelityProgressClient } from '../ticket/fidelity-progress-client'
 import type { ReportClient } from '../ticket/report-client'
 import type { ColumnClient } from '../board/column-client'
 import type { TicketClient } from '../ticket/ticket-client'
-import type { FilesByFidelity } from '../ticket/ticket-work'
 
 export type Toast = { id: number; text: string; isFailure: boolean }
 export type Region = 'board' | 'details'
@@ -22,12 +21,17 @@ export type Tile = { ticket: TicketClient; place: string; stage: ColumnClient; f
 
 // A dialog or panel holds the ticket it is about, so its actions reach that ticket's tools without looking it up again.
 // The Close dialog holds what a person has ticked, starting from what Python chooses at first; what closing offers, as
-// Python answers it; and the branch the ticket's work is on, empty while nothing checked out is its own.
+// Python answers it; the branch the ticket's work is on, empty while nothing checked out is its own; and the files in its
+// worktree that nobody committed, with Python's warning that deleting the worktree or branch without a commit loses them.
 export type Closing = {
   ticket: TicketClient
+  // The closed ticket it was dropped above, which it is put above once it has closed; none for any other close.
+  above: string | null
   leaving: string[]
   offeredLeaving: string[]
   leavingBranch: string
+  unsavedWork: string[]
+  warning: string
 }
 
 // The roots dialog: the ticket's workpath on top and each practice's practice root under it. Starting a backlog item asks for its workpath
@@ -40,26 +44,8 @@ export type RootChoice = {
 
 // A report panel holds the progress whose report it shows, or none for the violations of every fidelity of its ticket.
 export type ReportPanel = { kind: 'report'; ticket: TicketClient; progress: FidelityProgressClient | null; report: ReportClient; closedRules: string[]; isExpanded: boolean }
-// Where a files panel's tabs come from: the fidelities of the ticket's stage, its session folder, or its workpath.
-export type FilesSource = 'fidelities' | 'session' | 'workpath'
-export type FilesPanel = {
-  kind: 'files'
-  ticket: TicketClient
-  source: FilesSource
-  // The fidelities of the ticket's stage, whose practices the panel offers as filters; none for a folder.
-  progress: FidelityProgressClient[]
-  files: FilesByFidelity
-  // The practices whose files show as tabs, and whether only the files the ticket's branch changed show.
-  practicesOn: string[]
-  changedOnly: boolean
-  activeTab: string
-  // The open file as the session reads it, with its comments, folds and violations; none for a file not there yet.
-  shown: SessionFileData | null
-  lines: Record<string, number>
-  isExpanded: boolean
-}
 export type HelpPanel = { kind: 'help'; help: HelpData; isExpanded: boolean }
-export type SidePanel = ReportPanel | FilesPanel | HelpPanel
+export type SidePanel = ReportPanel | HelpPanel
 
 export type BoardState = {
   board: BoardData | null
@@ -72,6 +58,8 @@ export type BoardState = {
   dragged: string | null
   tiles: Tile[]
   closing: Closing | null
+  // The ticket the Delete dialog asks about, until the person deletes it or cancels.
+  deleting: TicketClient | null
   rootChoice: RootChoice | null
   draft: BacklogDraft
   panels: SidePanel[]
@@ -115,6 +103,7 @@ const initialState = (): BoardState => ({
   dragged: null,
   tiles: [],
   closing: null,
+  deleting: null,
   rootChoice: null,
   draft: EMPTY_DRAFT,
   panels: [],

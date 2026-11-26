@@ -14,7 +14,7 @@ from harness.graph.graph import Graph
 
 from cdd_guidance.practices.bdd.model.bdd_model import BddModel
 from cdd_guidance.practices.bdd.model.nodes import Context, Description, Observation
-from cdd_guidance.practices.clean_engineering.model.call_graph import CallGraph
+from cdd_guidance.practices.source_code import CallGraph
 
 
 with description("a bdd spec on a graph"):
@@ -36,7 +36,7 @@ with description("a bdd spec on a graph"):
         expect(self.observation.graph).to(be(self.graph))
 
     with it("should record contexts, observations, and belongsTo"):
-        practice = self.graph.practice("bdd")
+        practice = self.graph.practices.named("bdd")
         contexts = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edge_index.of("contexts")]
         observations = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edge_index.of("observations")]
         belongs = [(edge.parent.name, edge.child.name) for edge in practice.reading.in_graph.edge_index.of("belongsTo")]
@@ -126,4 +126,4 @@ with description("a sketch that carries behavior under headings"):
         named = selected.contexts[0]
         expect(named.name).to(equal("with only a name"))
         expect(named.observations[0].name).to(equal("should reuse the existing session from the environment"))
-        expect(named.observations[0].surface_lines[0]).to(equal("session.select(name)"))
+        expect([entry.text for entry in named.observations[0].call_graph]).to(equal(["session.select(name)"]))

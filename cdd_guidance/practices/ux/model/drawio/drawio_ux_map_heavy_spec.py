@@ -1,19 +1,24 @@
 """Draw.io UX channel - CLI Detailed IA + Site Map against the UxMap sketch."""
 
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from unittest.mock import patch
 
-from expects import be, equal, expect, raise_error
+from expects import be, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 _REPO = Path(__file__).resolve().parents[5]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliTimedOut, DrawioUxMap, UnreadableDrawio
-from cdd_guidance.practices.ux.model.nodes import Region, Screen, Transition
+from cdd_guidance.practices.ux.model.drawio import nodes as drawio_nodes
+from cdd_guidance.practices.ux.model.drawio.nodes import DrawioCliFailed, DrawioCliMissing, DrawioCliTimedOut, DrawioUxMap
+from harness.drawio import UnreadableDrawio
+from cdd_guidance.practices.ux.model.nodes import ContentType, Control, NavComponent, Region, Screen, StoryDemoControl, StoryStep, Transition
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import made
+from harness.guidance.practice_formats import Written
 
 
 class SpecFixture:
@@ -42,11 +47,114 @@ class SpecFixture:
         return ux_map
 
 
+    def mockup(self) -> DrawioUxMap:
+        """Book Details, whose Add To Cart region holds a number and two buttons, and Checkout, whose Payment region is
+        a form."""
+        ux_map = DrawioUxMap.create()
+        details = Screen("Book Details", 0)
+        details.append_region(made(Region, "Book Summary", 0, area="body"))
+        add = made(Region, "Add To Cart", 1, area="body")
+        for order, (name, kind) in enumerate([("Quantity", "number"), ("Add to cart", "button"), ("Back to list", "button")]):
+            add.append_control(made(Control, name, order, control_type=kind))
+        details.append_region(add)
+        checkout = Screen("Checkout", 1)
+        payment = made(Region, "Payment", 0, area="body")
+        for order, (name, kind) in enumerate([("Street", "text"), ("Country", "dropdown"), ("Save this card", "checkbox"), ("Pay", "button")]):
+            payment.append_control(made(Control, name, order, control_type=kind))
+        checkout.append_region(payment)
+        ux_map.append_screen(details)
+        ux_map.append_screen(checkout)
+        ux_map.transitions.append(made(Transition, "Check out", 0, from_screen=details, to_screen=checkout, trigger="Check out", nav_type="top nav"))
+        return ux_map
+
+
+    def mockup_serving_stories(self) -> DrawioUxMap:
+        """The mockup, whose Book Details serves a linked story, a scenario and a step, and whose Quantity and Add to
+        cart controls serve a step and a scenario of their own."""
+        ux_map = self.mockup()
+        details = ux_map.find_screen("Book Details")
+        details.show_story(_STORY_LINK)
+        details.show_story("View Book & Cover")
+        details.show_scenario(_SCENARIO_LINK)
+        details.show_step(_STEP_LINK)
+        quantity, add_to_cart, _back = details.regions[1].controls
+        quantity.show_step(_STEP_LINK)
+        add_to_cart.show_story(_STORY_LINK)
+        add_to_cart.show_scenario(_SCENARIO_LINK)
+        add_to_cart.show_scenario("Add Book To Cart › Add a second book")
+        return ux_map
+
+
+    def mockup_with_story_demo(self) -> DrawioUxMap:
+        """Checkout, whose Payment form ends in a Story Demo control named Pay Button and labelled Pay, which runs a
+        story step and serves a story."""
+        ux_map = DrawioUxMap.create()
+        checkout = Screen("Checkout", 0)
+        payment = made(Region, "Payment", 0, area="body")
+        payment.append_control(made(Control, "Card Number", 0, control_type="text", label="Card number"))
+        pay = made(StoryDemoControl, "Pay Button", 1, control_type="button", label="Pay", story_steps=[StoryStep("when", "the Customer pays")])
+        pay.show_story("Pay For Order")
+        payment.append_control(pay)
+        checkout.append_region(payment)
+        ux_map.append_screen(checkout)
+        return ux_map
+
+
+    def bookshop_shared(self) -> DrawioUxMap:
+        """The mockup with the Bookshop's content types, Book and Order, and its Main Nav and Checkout Steps nav
+        components, each reaching screens of the map."""
+        ux_map = self.mockup()
+        details, checkout = ux_map.screens
+        ux_map.content_types.append(made(ContentType, "Book", 0, hierarchy="Book List > Book", key_actions=["Add to cart", "Save for later"]))
+        ux_map.content_types.append(made(ContentType, "Order", 1, hierarchy="Orders > Order", key_actions=[]))
+        ux_map.nav_components.append(made(NavComponent, "Main Nav", 0, ux_type="top nav", destinations=[details, checkout]))
+        ux_map.nav_components.append(made(NavComponent, "Checkout Steps", 1, ux_type="breadcrumb", destinations=[checkout]))
+        return ux_map
+
+
+def shared_of(ux_map: DrawioUxMap) -> tuple[list, list]:
+    """Each content type and each nav component of ux_map, as what it holds."""
+    return (
+        [(kind.name, kind.hierarchy, kind.key_actions) for kind in ux_map.content_types],
+        [(nav.name, nav.ux_type, [screen.name for screen in nav.destinations]) for nav in ux_map.nav_components],
+    )
+
+
+def boxes_on(rendered: str, page: str) -> list[tuple[str, float, float, float, float]]:
+    """Each vertex cell drawn at the top of page, with its text and its box."""
+    found = ET.fromstring(rendered).find(f".//diagram[@name='{page}']")
+    return [
+        (cell.get("value", ""), *(float(cell.find("mxGeometry").get(side)) for side in ("x", "y", "width", "height")))
+        for cell in found.iter("mxCell") if cell.get("vertex") == "1" and cell.get("parent") == "1"
+    ]
+
+
+def overlap(first: tuple, second: tuple) -> bool:
+    _, x1, y1, w1, h1 = first
+    _, x2, y2, w2, h2 = second
+    return x1 < x2 + w2 and x2 < x1 + w1 and y1 < y2 + h2 and y2 < y1 + h1
+
+
+_STORY_FILE = "story_tests/shop/fill-cart/fill_cart_story.test.md"
+_STORY_LINK = f"[Add Book To Cart]({_STORY_FILE}#story-add-book-to-cart)"
+_SCENARIO_LINK = f"[Add Book To Cart › Add one book]({_STORY_FILE}#scenario-add-one-book)"
+_STEP_LINK = f"[Add Book To Cart › Add one book › the Customer adds 2 copies]({_STORY_FILE}#scenario-add-one-book)"
+
+
+def served_by(node) -> tuple[list[str], list[str], list[str]]:
+    return (node.story_keys, node.scenario_keys, node.step_keys)
+
+
+def controls_of(ux_map: DrawioUxMap, screen: str, region: str) -> list[tuple[str, str]]:
+    held = next(found for found in ux_map.find_screen(screen).regions if found.name == region)
+    return [(control.name, control.control_type) for control in held.controls]
+
+
 fixture = SpecFixture()
 
 
 with description("a UX map drawn as a draw.io information architecture"):
-    with before.each:
+    with before.all:
         self.source = fixture.site_map()
         self.rendered = DrawioUxMap.create().render(self.source)
 
@@ -57,7 +165,7 @@ with description("a UX map drawn as a draw.io information architecture"):
         expect("host=\"drawio-ux\"" in self.rendered).to(equal(True))
 
     with context("that is read back"):
-        with before.each:
+        with before.all:
             self.parsed = DrawioUxMap.create().parse(self.rendered)
 
         with it("should read back the screen names from the Site Map page"):
@@ -79,23 +187,142 @@ with description("a UX map drawn as a draw.io information architecture"):
             from harness.graph.graph import Graph
 
             graph = Graph()
-            self.parsed.join(graph.practice("ux"))
+            self.parsed.join(graph.practices.named("ux"))
             expect(self.parsed.find_screen("Character Sheet").regions[0].graph).to(be(graph))
+
+        with it("should read back the stories the drawing shows under the screen"):
+            expect(self.parsed.find_screen("Character Sheet").story_keys).to(equal(["Update Ability Rank"]))
+
+        with it("should read back the domain terms the drawing shows under the screen"):
+            expect(self.parsed.find_screen("Character Sheet").domain_terms).to(equal(["Character"]))
+
+        with it("should read back the screen's layout"):
+            expect(self.parsed.find_screen("Character Sheet").layout).to(equal("sidebar"))
+
+        with it("should read back the area each region fills"):
+            expect([region.area for region in self.parsed.find_screen("Character Sheet").regions]).to(equal(["panel", "body"]))
+
+    with context("of a mockup whose regions hold controls, that is read back"):
+        with before.all:
+            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup()))
+
+        with it("should read back only the regions the mockup has"):
+            expect([region.name for region in self.parsed.find_screen("Book Details").regions]).to(
+                equal(["Book Summary", "Add To Cart"])
+            )
+
+        with it("should read back a region's controls with their types, its buttons last"):
+            expect(controls_of(self.parsed, "Book Details", "Add To Cart")).to(
+                equal([("Quantity", "number"), ("Add to cart", "button"), ("Back to list", "button")])
+            )
+
+        with it("should read back a form's fields and its button"):
+            expect(controls_of(self.parsed, "Checkout", "Payment")).to(
+                equal([("Street", "text"), ("Country", "dropdown"), ("Save this card", "checkbox"), ("Pay", "button")])
+            )
+
+        with it("should read back a transition's kind of navigation"):
+            expect(self.parsed.transitions[0].nav_type).to(equal("top nav"))
+
+    with context("of a mockup whose screen and controls serve stories, scenarios and steps, that is read back"):
+        with before.all:
+            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup_serving_stories()))
+            self.details = self.parsed.find_screen("Book Details")
+            self.controls = {control.name: control for control in self.details.regions[1].controls}
+
+        with it("should read back what the screen serves, each linked one with its target"):
+            expect(served_by(self.details)).to(equal(([_STORY_LINK, "View Book & Cover"], [_SCENARIO_LINK], [_STEP_LINK])))
+
+        with it("should read back the step a control serves"):
+            expect(served_by(self.controls["Quantity"])).to(equal(([], [], [_STEP_LINK])))
+
+        with it("should read back the story and the scenarios another control serves"):
+            expect(served_by(self.controls["Add to cart"])).to(
+                equal(([_STORY_LINK], [_SCENARIO_LINK, "Add Book To Cart › Add a second book"], []))
+            )
+
+        with it("should give a control that serves nothing no story, scenario or step"):
+            expect(served_by(self.controls["Back to list"])).to(equal(([], [], [])))
+
+        with it("should still read back only the regions the mockup has"):
+            expect([region.name for region in self.details.regions]).to(equal(["Book Summary", "Add To Cart"]))
+
+    with context("of a mockup whose controls are named otherwise than they are labelled, one a Story Demo control, that is read back"):
+        with before.all:
+            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup_with_story_demo()))
+            self.controls = self.parsed.find_screen("Checkout").regions[0].controls
+
+        with it("should read back each control's name"):
+            expect([control.name for control in self.controls]).to(equal(["Card Number", "Pay Button"]))
+
+        with it("should read back the label each control shows"):
+            expect([control.label for control in self.controls]).to(equal(["Card number", "Pay"]))
+
+        with it("should read back the story the Story Demo control serves"):
+            expect(self.controls[1].story_keys).to(equal(["Pay For Order"]))
+
+    with context("with content types and nav components, that is read back"):
+        with before.all:
+            self.source = fixture.bookshop_shared()
+            self.rendered = DrawioUxMap.create().render(self.source)
+            self.parsed = DrawioUxMap.create().parse(self.rendered)
+
+        with it("should read back the content types and nav components that went in"):
+            expect(shared_of(self.parsed)).to(equal(shared_of(self.source)))
+
+        with it("should still read back only the screens the map has"):
+            expect([screen.name for screen in self.parsed.screens]).to(equal(["Book Details", "Checkout"]))
+
+        with it("should draw no note over a screen or over another note on the Site Map"):
+            boxes = boxes_on(self.rendered, "Site Map")
+            crossing = [(a[0], b[0]) for index, a in enumerate(boxes) for b in boxes[index + 1:] if overlap(a, b)]
+            expect(crossing).to(equal([]))
+
+    with context("of a mockup, drawn again over a drawing that shows what the mockup does not"):
+        with before.all:
+            held = fixture.mockup_serving_stories()
+            held.find_screen("Book Details").regions[0].append_control(made(Control, "Cover", 0, control_type="image"))
+            held.append_screen(Screen("Wish List", 2))
+            previous = DrawioUxMap.create().render(held)
+            self.parsed = DrawioUxMap.create().parse(DrawioUxMap.create().render(fixture.mockup(), Written(previous)))
+            self.details = self.parsed.find_screen("Book Details")
+
+        with it("should keep the screen only the drawing showed"):
+            expect([screen.name for screen in self.parsed.screens]).to(equal(["Book Details", "Checkout", "Wish List"]))
+
+        with it("should keep the control only the drawing showed, in its region"):
+            expect(controls_of(self.parsed, "Book Details", "Book Summary")).to(equal([("Cover", "image")]))
+
+        with it("should keep what the drawing said a screen and a control serve"):
+            expect((served_by(self.details), served_by(self.details.regions[1].controls[0]))).to(
+                equal((([_STORY_LINK, "View Book & Cover"], [_SCENARIO_LINK], [_STEP_LINK]), ([], [], [_STEP_LINK])))
+            )
 
     with context("that is not XML"):
         with it("should refuse it as an unreadable diagram"):
             expect(lambda: DrawioUxMap.create().parse("<mxfile><diagram>")).to(raise_error(UnreadableDrawio))
 
     with context("with a command line that runs past its timeout"):
-        with before.each:
+        with before.all:
             self.writer = DrawioUxMap.create()
             self.writer.cli_timeout_seconds = 0.001
 
         with it("should stop it and say it timed out"):
             expect(lambda: self.writer.render(self.source)).to(raise_error(DrawioCliTimedOut))
 
+    with context("with no command line vendored beside it"):
+        with it("should refuse to draw, naming where the command line should be"):
+            with patch.object(drawio_nodes, "_CLI", Path("missing") / "drawio_ux.mjs"):
+                expect(lambda: DrawioUxMap.create().render(self.source)).to(raise_error(DrawioCliMissing, contain("drawio_ux.mjs")))
+
+    with context("with a command line that fails"):
+        with it("should refuse to draw, with what the command line said"):
+            failed = subprocess.CompletedProcess([], 1, stdout="", stderr="layout broke")
+            with patch.object(drawio_nodes.subprocess, "run", return_value=failed):
+                expect(lambda: DrawioUxMap.create().render(self.source)).to(raise_error(DrawioCliFailed, contain("layout broke")))
+
     with context("that holds three screens side by side with transitions between them"):
-        with before.each:
+        with before.all:
             ux_map = DrawioUxMap.create()
             screens = {}
             for order, name in enumerate(["Board", "Editor", "Explorer"]):

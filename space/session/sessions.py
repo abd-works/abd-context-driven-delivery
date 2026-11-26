@@ -6,74 +6,26 @@ import threading
 from functools import cached_property
 from pathlib import Path
 
+from harness.installation.json_file import JsonFileUnreadable
 from harness.agent_tools import agent_tool, agent_toolset
 from harness.agent_tools.agent_tools import tool_subject
 from harness.agent_tools.tool_call import SESSION_OPENING, ToolCall
-from harness.catalog_generator.catalog_practice import CatalogPractice
-from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 from harness.installation.files import command
 from harness.mcp.mcp_annotations import mcp
 from harness.annotations.name import Name
 from space.repo.repo import Repo
-from space.session.file_manager import FileManager
+from space.session.files.file_manager import FileManager
 from space.session.session_saves import SERVED_SAVES, SessionSaves
-from space.session.answer_reads import ServedAnswers
+from harness.process.answer_reads import ServedAnswers
 from space.session.open_sessions import OpenSessions
 from space.session.session import MAIN_SESSION_NAME, Session, SessionNotFoundError
-from space.session.session_folder import COMPLETE_FOLDER
-from space.session.session_record import SESSION_FILE
-from space.session.session_roots import SessionRoots
-from space.work_state import SESSIONS_FOLDER
+from space.session.session_record import SESSION_FILE, SessionFields
+from space.session.checkout_worktrees import CheckoutWorktrees
+from space.work_state import COMPLETE_FOLDER, SESSIONS_FOLDER
 
 BACKLOG_FOLDER = "_backlog"
 # Folders in `.sessions` whose names start with this are the ones the sessions share, such as the backlog.
 _SHARED_FOLDER_MARK = "_"
-class PracticeNotFoundError(LookupError):
-    """Raised when a caller names a practice, such as clean_engineering, that the board or ticket does not have. It
-    names the practice and what was searched for it."""
-
-    def __init__(self, practice: str, within: str) -> None:
-        self.practice = practice
-        self.within = within
-        super().__init__(f"no practice named {practice!r} on {within}")
-
-
-class BoardPractices:
-    """*BoardPractices* are the practices a checkout's session board works through, each as the catalog shows it: its
-    name, colour, fidelities, pages, and skills. They are the same for every session, so they are made once for the
-    checkout and kept by its *Sessions*; every board read asks them for a practice by its class, which the board's own
-    instance and each session's share, rather than searching the list again."""
-
-    def __init__(self, catalogued: list[CatalogPractice]) -> None:
-        # Each practice's catalog view by the practice's class, in the order the board shows them.
-        self._by_class = {type(entry.practice): entry for entry in catalogued}
-
-    @property
-    def catalogued(self) -> list[CatalogPractice]:
-        """The catalog's view of each practice, in the order the board shows them."""
-        return list(self._by_class.values())
-
-    def of(self, kind: type) -> CatalogPractice:
-        """The catalog's view of the practice of class kind, the class of the board's own instance and of every
-        session's."""
-        found = self._by_class.get(kind)
-        if found is None:
-            raise PracticeNotFoundError(kind.__name__, "the board")
-        return found
-
-    def works_through(self, kind: type) -> bool:
-        """Whether the practice of class kind is one the board works through."""
-        return kind in self._by_class
-
-    def keyed(self, key: str) -> CatalogPractice:
-        """The catalog's view of the board's practice whose folder name is key, such as clean_engineering, as a tool
-        names it."""
-        found = next((entry for entry in self._by_class.values() if entry.practice.key == key), None)
-        if found is None:
-            raise PracticeNotFoundError(key, "the board")
-        return found
-
-
 @agent_toolset
 class Sessions:
     """The work sessions of one checkout: open ones in ``.sessions/{name}/``, closed ones in ``.sessions/_complete/``.
@@ -90,8 +42,8 @@ class Sessions:
         # The checkout holding the project, made once: every session this loads works in it.
         self.repo = Repo.of_project(project)
         self.root = self.repo.root
-        # Where each session works, derived from one ``git worktree list`` read again after a moment.
-        self.roots = SessionRoots(self)
+        # The worktrees and branches each session's checkout is found among, listed once and read again after a moment.
+        self.worktrees = CheckoutWorktrees(self)
         # Which folders in ``.sessions`` hold a session, and the one Session held for each.
         self.listing = SessionListing(self)
         self.held = HeldSessions(self)
@@ -105,15 +57,6 @@ class Sessions:
     def of_project(cls, project: Path) -> Sessions:
         """The sessions of project, the project the running call names, as this process holds them between calls."""
         return SERVED_SESSIONS.of_project(project)
-
-    @cached_property
-    def board_practices(self) -> BoardPractices:
-        """Every practice CDD has, as the catalog shows it, made once for this checkout's board with the one skill
-        install their slash commands are named by: what the board shows of a practice, its name, colour, fidelities,
-        pages, and skills, is the same for every session, so no single session's instances stand for it, and no other
-        reader changes these. The board is made again for every call, so it is held here, where the process keeps the
-        checkout's sessions."""
-        return BoardPractices(CatalogPractice.of_practices(PRACTICE_CATALOGUE.create_all()))
 
     @cached_property
     def file_manager(self) -> FileManager:
@@ -137,6 +80,11 @@ class Sessions:
         """Where sessions wait before work starts, and where a session moved back is held."""
         return self.folder / BACKLOG_FOLDER
 
+    @property
+    def closed_folder(self) -> Path:
+        """Where closed sessions are kept, each in its own folder under its name."""
+        return self.folder / COMPLETE_FOLDER
+
     def folder_of(self, name: str) -> Path:
         """The folder of the session called name, in the repository's own ``.sessions``."""
         return self.folder / name
@@ -144,31 +92,63 @@ class Sessions:
     def all(self) -> list[Session]:
         """Every session the board shows: main first, the default session that works on the whole repository, then the
         work sessions, open ones before closed; never the folders the sessions share."""
-        return [self.held.load(self.folder_of(MAIN_SESSION_NAME)), *(self.held.load(folder) for folder in self.listing.work_folders())]
+        return [self.held.load(folder) for folder in self._shown_folders()]
+
+    def _shown_folders(self) -> list[Path]:
+        return [self.folder_of(MAIN_SESSION_NAME), *self.listing.work_folders()]
+
+    def read_apart(self) -> SessionsRead:
+        """Every session ``all`` lists whose session.json reads, with the failure of each one that does not, such as a
+        file cut off half way: a reader that shows many sessions, such as the board, shows the rest and names the file,
+        where ``all`` stops at the first."""
+        read = SessionsRead()
+        for folder in self._shown_folders():
+            try:
+                read.sessions.append(self.held.load(folder))
+            except JsonFileUnreadable as failure:
+                read.failures.append(failure)
+        return read
 
     def named(self, name: str) -> Session | None:
         """The session called name: the main session, or a work session, open before closed; none when there is none.
         Only that session's folder is read, so a tool that names one session does not load every other."""
+        found = self.folder_named(name)
+        return self.held.load(found) if found is not None else None
+
+    def folder_named(self, name: str) -> Path | None:
+        """The record folder of the session called name: main's, or a work session's, open before closed; none when
+        there is none."""
         if name == MAIN_SESSION_NAME:
-            return self.held.load(self.folder_of(name))
+            return self.folder_of(name)
         if not self.listing.is_work_session(name):
             return None
         open_folder = self.folder / name
-        candidates = (open_folder, self.folder / COMPLETE_FOLDER / name) if self.listing.is_open(open_folder) else (self.folder / COMPLETE_FOLDER / name,)
-        found = next((folder for folder in candidates if folder.is_dir()), None)
-        return self.held.load(found) if found is not None else None
+        candidates = (open_folder, self.closed_folder / name) if self.listing.is_open(open_folder) else (self.closed_folder / name,)
+        return next((folder for folder in candidates if folder.is_dir()), None)
 
     def with_file(self, session_file: str) -> Session:
         """The session whose session.json is session_file, a path from this checkout's top or an absolute one, read
         without opening it. A board command names its ticket's session this way, because it runs in whichever chat it
         is sent to, and that chat's open session can be another. The main session always exists, as ``named`` and
-        ``switch`` treat it, so its own session.json path finds it before anything has written that file."""
+        ``switch`` treat it, so its own session.json path finds it before anything has written that file. A bare name,
+        such as ``checkout-flow``, finds the session ``named`` finds, as ``switch`` opens it by that name."""
+        if self._is_bare_name(session_file):
+            return self._by_name(session_file)
         named = Path(session_file)
         found = named if named.is_absolute() else self.root / named
         is_main = found.name == SESSION_FILE and found.parent.resolve() == self.folder_of(MAIN_SESSION_NAME).resolve()
         if not session_file or not (found.is_file() or is_main):
             raise SessionNotFoundError(session_file)
         return self.held.load(found.parent)
+
+    def _is_bare_name(self, session_file: str) -> bool:
+        return bool(session_file) and Path(session_file).name == session_file and session_file != SESSION_FILE
+
+    def _by_name(self, name: str) -> Session:
+        found = self.named(name)
+        if found is None:
+            raise SessionNotFoundError(name)
+        return found
 
     def create(self, name: str, workpath: Path | None = None, *, title: str = "", scope: str = "", parent: str = "") -> Session:
         """A new session called name, its name, title, scope, and parent written once in its ``session.json``. workpath
@@ -177,10 +157,14 @@ class Sessions:
         session = self.held.at(self.folder / Name(name).title_slug)
         chosen = Path(workpath).resolve() if workpath is not None else None
         kept = self.repo.path_from_top(chosen) if chosen is not None and chosen != self.root else ""
-        fields = (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", kept))
-        session.record.save_fields(**{key: value for key, value in fields if value})
-        session.repo_path = self.roots.checkout_of(session)
-        session.workpath = self.roots.root_of(session)
+        given = {key: value for key, value in (("name", session.name), ("title", title), ("scope", scope), ("parent", parent), ("workpath", kept)) if value}
+
+        def made(fields: SessionFields) -> None:
+            for key, value in given.items():
+                setattr(fields, key, value)
+
+        session.record.update(made, ", ".join(f"{key} {value}" for key, value in given.items()))
+        session.placed()
         session.log.seed_first_loop()
         return session
 
@@ -194,16 +178,28 @@ class Sessions:
     @mcp
     @command(name="switch-session")
     @agent_tool
-    def switch(self, name: str = "", workpath: Path | None = None, call: ToolCall | None = None) -> str:
-        """Open the session called ``name`` for this chat, creating its folder when missing. Returns how to keep its log.
+    def switch(self, name: str = "", workpath: Path | None = None, create: bool = False, call: ToolCall | None = None) -> str:
+        """Open the session called ``name`` for this chat. Returns how to keep its log.
 
         ``name`` defaults to the session this chat has open, then to its open ``branch``.
+        A name no session has is refused, naming the sessions there are, so a misspelt name never makes a session and a
+        card on the board nobody asked for; pass ``create`` true only when the person asked for a new session, and it
+        makes the session's folder.
         ``workpath`` is a folder a new session works in; without one its root is derived: its worktree, else the checkout.
         A switch writes nothing in the checkout and does not touch branches or worktrees: when the session has its own
         worktree and the call's chat works elsewhere, the answer opens by saying to start a chat in that worktree.
         A chat in a ticket's own worktree always opens that ticket's session, whatever name it asks for, because the
         worktree holds only that ticket's work; the answer says so when it asked for another."""
-        return self.opened.switch(name, workpath, call)
+        return self.opened.switch(name, workpath, create, call).instructions
+
+
+class SessionsRead:
+    """*SessionsRead* is one read of a checkout's sessions that went on past a session.json it could not read: the
+    sessions that read, in the board's order, and the failure of each that did not, which names its file."""
+
+    def __init__(self) -> None:
+        self.sessions: list[Session] = []
+        self.failures: list[JsonFileUnreadable] = []
 
 
 class SessionListing:
@@ -217,7 +213,7 @@ class SessionListing:
         if not self._sessions.folder.is_dir():
             return []
         open_folders = [folder for folder in sorted(self._sessions.folder.iterdir()) if self.is_open(folder)]
-        closed = self._sessions.folder / COMPLETE_FOLDER
+        closed = self._sessions.closed_folder
         closed_folders = sorted(folder for folder in closed.iterdir() if folder.is_dir()) if closed.is_dir() else []
         return open_folders + closed_folders
 
@@ -228,10 +224,13 @@ class SessionListing:
         return folder.is_dir() and self.is_work_session(folder.name) and not self.is_left_behind(folder)
 
     def is_left_behind(self, folder: Path) -> bool:
-        """Whether folder, among the open sessions, is only what a closed session of its name left there, such as a
-        progress cache written before its move or a folder Windows would not let go of: it holds no session.json, and
-        the session is kept among the closed ones. The board would otherwise list that session twice."""
-        return not (folder / SESSION_FILE).is_file() and (self._sessions.folder / COMPLETE_FOLDER / folder.name).is_dir()
+        """Whether folder, among the open sessions, is only what a closed or deleted session of its name left there,
+        such as a progress cache written before its move or a folder Windows would not let go of: it holds no
+        session.json, and the session is kept among the closed ones or the folder holds no file at all. The board would
+        otherwise list that session twice, or a deleted one again."""
+        if (folder / SESSION_FILE).is_file():
+            return False
+        return (self._sessions.closed_folder / folder.name).is_dir() or not any(inner.is_file() for inner in folder.rglob("*"))
 
     def open_names(self) -> list[str]:
         """The names of the open work sessions in the repository's own .sessions."""
@@ -241,8 +240,8 @@ class SessionListing:
 
 
 class HeldSessions:
-    """The one *Session* a checkout's sessions hold for each session folder, made the first time it is read, so every
-    call in a session, from any chat, works on the same object, and held under the folder it moves to."""
+    """The one *Session* a checkout's sessions hold for each record folder, made the first time it is read, so every
+    call in a session, from any chat, works on the same object, and held under the record folder it moves to."""
 
     def __init__(self, sessions: Sessions) -> None:
         self._sessions = sessions
@@ -250,37 +249,31 @@ class HeldSessions:
         self._held_lock = threading.Lock()
 
     def load(self, folder: Path) -> Session:
-        """The session kept in folder, read without opening it: the one object these sessions hold for that folder,
-        working in the root ``root_of`` derives now, so a worktree opened or a workpath chosen since is seen."""
-        session = self.at(Path(folder))
-        session.repo_path = self._sessions.roots.checkout_of(session)
-        workpath = self._sessions.roots.root_of(session)
-        if session.workpath is None or session.work_root != workpath:
-            session.workpath = workpath
-        return session
+        """The session whose record folder is folder, read without opening it: the one object these sessions hold for
+        that folder, placed where it works now, so a worktree opened or a workpath chosen since is seen."""
+        return self.at(Path(folder)).placed()
 
     def at(self, folder: Path) -> Session:
-        """The one Session held for folder, made the first time it is asked for."""
+        """The one Session held for the record folder folder, made the first time it is asked for, its work kept beside
+        its record until it is placed."""
         key = folder.resolve()
         with self._held_lock:
             held = self._held.get(key)
             if held is None:
-                held = self._held[key] = Session(self._sessions)
-                held.session_path = folder
-                held.name = folder.name
+                held = self._held[key] = Session(self._sessions, folder)
             return held
 
     def moved(self, session: Session, moved_from: Path) -> None:
-        """Hold session under the folder it moved to, such as ``.sessions/_complete/alpha``, so reading it there finds
-        the same object."""
+        """Hold session under the record folder it moved to, such as ``.sessions/_complete/alpha``, so reading it there
+        finds the same object."""
         with self._held_lock:
             self._held.pop(Path(moved_from).resolve(), None)
-            self._held[session.session_path.resolve()] = session
+            self._held[session.record_folder.resolve()] = session
 
     def removed(self, session: Session) -> None:
-        """Hold session no more, its folder deleted."""
+        """Hold session no more, its folders deleted."""
         with self._held_lock:
-            self._held.pop(session.session_path.resolve(), None)
+            self._held.pop(session.record_folder.resolve(), None)
 
 
 class CallSessions:
@@ -308,6 +301,15 @@ class CallSessions:
         # Each call, and each hook event, finds its sessions here, so each begins an answer of its own.
         held.answers.begin()
         return held
+
+    def forget_under(self, folder: Path) -> None:
+        """Let go of the sessions of every checkout inside folder, such as a spec's throwaway project once it is removed,
+        so their graphs and practices are not kept for as long as the process runs; a later call in a project there
+        makes its sessions again."""
+        top = folder.resolve()
+        with self._lock:
+            for root in [root for root in self._of_project if root.is_relative_to(top)]:
+                del self._of_project[root]
 
     def saved_in(self, project: Path) -> Session:
         return self.of_project(project).current()

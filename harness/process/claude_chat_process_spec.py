@@ -8,10 +8,10 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from expects import be_none, equal, expect
+from expects import be_none, contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from harness.process.claude_chat_process import ClaudeChatProcess
+from harness.process.claude_chat_process import ClaudeChatProcess, ClaudeSessionFileUnreadable
 
 SHELL = 41
 CHAT = 42
@@ -61,3 +61,30 @@ with description("the Claude Code chat a header helper runs for"):
     with context("with no Claude Code process above the helper"):
         with it("should be none"):
             expect(ClaudeChatProcess.from_ancestors(StandInProcessTree(set()))).to(be_none)
+
+
+with description("the session file Claude Code keeps for a chat process"):
+    with before.each:
+        self.config = Path(tempfile.mkdtemp())
+        self.prior_config = os.environ.get("CLAUDE_CONFIG_DIR")
+        os.environ["CLAUDE_CONFIG_DIR"] = str(self.config)
+        (self.config / "sessions").mkdir()
+
+    with after.each:
+        if self.prior_config is None:
+            os.environ.pop("CLAUDE_CONFIG_DIR", None)
+        else:
+            os.environ["CLAUDE_CONFIG_DIR"] = self.prior_config
+
+    with context("that holds text that is not JSON"):
+        with before.each:
+            (self.config / "sessions" / f"{CHAT}.json").write_text('{"sessionId": "abc', encoding="utf-8")
+
+        with it("should refuse to say which session the process runs, naming the file"):
+            expect(lambda: ClaudeChatProcess(CHAT).session_id).to(
+                raise_error(ClaudeSessionFileUnreadable, contain(f"{CHAT}.json"))
+            )
+
+    with context("that is not there"):
+        with it("should say the process runs no session"):
+            expect(ClaudeChatProcess(CHAT).session_id).to(equal(""))

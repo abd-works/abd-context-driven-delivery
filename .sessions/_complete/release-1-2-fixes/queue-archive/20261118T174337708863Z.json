@@ -1,0 +1,11 @@
+{
+  "chat": "5b5466c3-9f1f-4998-ace2-5da34679e50c",
+  "taken_off": "2026-11-18T17:43:37.708863+00:00",
+  "prompts": [
+    {
+      "id": "e1c14634a7de",
+      "text": "Remove the duplicate \" (1)\" language adapters and regenerate the TypeScript adapters",
+      "is_done": true
+    }
+  ]
+}

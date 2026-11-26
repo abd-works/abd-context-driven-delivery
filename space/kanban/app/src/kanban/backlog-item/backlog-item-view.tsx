@@ -97,14 +97,26 @@ function ItemTextView({ item, isSelected }: { item: BacklogItemClient; isSelecte
     <div className="item-text-line">
       {isSelected && item.text ? <div className="ticket-text">{opening}</div> : null}
       {isSelected ? (
-        <button className="ticket-text-link" title={`Open ${item.path}`} onClick={withoutSelecting(() => item.openFile())}>
+        <button className="ticket-text-link" title={`Open ${item.path}`} onClick={withoutSelecting(() => void item.openInFiles())}>
           {isCut ? `More in ${item.path}` : item.path}
         </button>
       ) : null}
       <button className="file-view" aria-label={EDIT_ITEM_TEXT.label} title={EDIT_ITEM_TEXT.hint} onClick={withoutSelecting(() => setTyped(item.text))}>
         <SessionActionIcon action={EDIT_ITEM_TEXT.action} />
       </button>
+      {isSelected ? <DeleteItemView item={item} /> : null}
     </div>
+  )
+}
+
+// Delete removes the item's file, or its whole folder for a parent, which cannot be undone, so the person confirms it first.
+function DeleteItemView({ item }: { item: BacklogItemClient }) {
+  const what = item.childItems.length ? `${item.title} and its children` : item.title
+  const deleted = () => window.confirm(`Delete ${what} from the Backlog? This cannot be undone.`) && void item.delete()
+  return (
+    <button className="file-view" aria-label="Delete" title="Delete this item from the Backlog" onClick={withoutSelecting(deleted)}>
+      <SessionActionIcon action="delete" />
+    </button>
   )
 }
 
@@ -119,10 +131,11 @@ function ItemTextEditorView({ typedField, typed }: { typedField: ReturnType<type
   )
 }
 
-// A child kept in its parent's folder: a row in its parent's card, its text as its tooltip. It drags like a card: onto
-// another card, or out onto the Backlog, where it is an item of its own again.
+// A child kept in its parent's folder: a row in its parent's card, its text as its tooltip, offering Delete once
+// selected. It drags like a card: onto another card, or out onto the Backlog, where it is an item of its own again.
 function ChildItemRowView({ child }: { child: BacklogItemClient }) {
-  const { state } = useBoard()
+  const { page, state } = useBoard()
+  const isSelected = page.board.selectedItem?.title === child.title
   const shape = ['child-row', state.dragged === child.address ? 'is-dragged' : ''].filter(Boolean).join(' ')
   const select = (event: MouseEvent) => {
     event.stopPropagation()
@@ -131,6 +144,7 @@ function ChildItemRowView({ child }: { child: BacklogItemClient }) {
   return (
     <div className={shape} data-child-item={child.title} title={child.text} draggable {...useItemDrag(child)} onClick={select}>
       <span className="child-row-title">{child.title}</span>
+      {isSelected ? <DeleteItemView item={child} /> : null}
     </div>
   )
 }

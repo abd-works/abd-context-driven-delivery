@@ -18,11 +18,14 @@ export type CardSpot = 'left' | 'right' | 'only'
 
 const ACTIVE_BORDER_WIDTH = 3
 
-// The open card covers the closed one from the same corner and grows out to the width of a tile in the details.
-// Sizes are from the card's edge: the card's border, the list's 8px padding and the column's 1px border.
+// The gap between a column's two lists of cards (.card-lists in board.css).
+const LIST_GAP_PX = 8
+
+// The open card covers the closed one from the same corner and grows across both of its column's lists, stopping at
+// the far list's edge so it never runs past the column. 100% is the closed card inside its borders.
 function openCardPlace(ticket: TicketClient, spot: CardSpot, opensLeft: boolean) {
   const border = ticket.isActive ? ACTIVE_BORDER_WIDTH : 1
-  const span = spot === 'only' ? `100% + ${2 * (9 + border)}px` : `200% + ${4 * border + 26}px`
+  const span = spot === 'only' ? `100% + ${2 * border}px` : `200% + ${4 * border + LIST_GAP_PX}px`
   return { width: `calc(${span})`, top: -border, left: opensLeft ? 'auto' : -border, right: opensLeft ? -border : 'auto', opensLeft }
 }
 
@@ -129,7 +132,7 @@ function useCannotFill(ticket: TicketClient): boolean {
 }
 
 function SplitActionView({ ticket }: { ticket: TicketClient }) {
-  return <SessionActionView action="split" label="Split" hint="Split into child tickets, one per story" isOff={useCannotFill(ticket)} onPress={() => ticket.prompts.fillSplit()} />
+  return <SessionActionView action="split" label="Split" hint="Split into child tickets, one per story" isOff={useCannotFill(ticket)} onPress={() => ticket.chatPrompts.fillSplit()} />
 }
 
 // What a card does for its session, as icons in its bottom-left corner.
@@ -139,9 +142,9 @@ function SessionActionsView({ ticket }: { ticket: TicketClient }) {
   return (
     <span className="file-views">
       <SessionActionView action="next" label={ticket.face.runNextLabel} hint={ticket.face.runNextHint} isOff={!ticket.nextStep.canRun} onPress={() => ticket.nextStep.run()} />
-      <SessionActionView action="handoff" label="Handoff" hint="Write a handoff for this session" isOff={cannotFill} onPress={() => ticket.prompts.fillHandoff()} />
+      <SessionActionView action="handoff" label="Handoff" hint="Write a handoff for this session" isOff={cannotFill} onPress={() => ticket.chatPrompts.fillHandoff()} />
       {ticket.isOpen ? (
-        <SessionActionView action="close" label="Close" hint={ticket.prompts.closeHint} isOff={false} onPress={() => ticket.prompts.startClose()} />
+        <SessionActionView action="close" label="Close" hint={ticket.chatPrompts.closeHint} isOff={false} onPress={() => ticket.chatPrompts.startClose()} />
       ) : ticket.isMain ? null : (
         <SessionActionView action="activate" label="Activate" hint="Open this ticket in its own worktree" isOff={ticket.isClosed} onPress={() => page.activation.activate(ticket)} />
       )}

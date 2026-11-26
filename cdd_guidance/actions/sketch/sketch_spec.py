@@ -16,9 +16,9 @@ from expects import be_true, contain, equal, expect
 from mamba import after, before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 from cdd_guidance.actions.sketch.sketch import Sketch
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
@@ -39,24 +39,19 @@ with description("Sketch toolset") as self:
 
     with context("with its tools listed"):
         with it("exposes find_template, save_sketch, list_sketches as tools"):
-            tools = AgentToolSet.instantiate(Sketch).tools
+            tools = ToolsetReference.of(Sketch).made().tools
             expect(tools["find_template"].kind).to(equal("tool"))
             expect(tools["save_sketch"].kind).to(equal("tool"))
             expect(tools["list_sketches"].kind).to(equal("tool"))
 
         with it("exposes sketch as an action with find_template and save_sketch"):
-            sketch = AgentToolSet.instantiate(Sketch).tools["sketch"]
+            sketch = ToolsetReference.of(Sketch).made().tools["sketch"]
             expect(sketch.kind).to(equal("instructions"))
             expect("find_template" in sketch.tools).to(be_true)
             expect("save_sketch" in sketch.tools).to(be_true)
             expect("review_sketch" in sketch.tools).to(be_true)
 
-    with context("sketch_template property"):
-        with it("returns the default template when agent_dir was not set at construction"):
-            sketcher = Sketch()
-            content = sketcher.sketch_template
-            expect(content).to(contain("heading-and-indent notation"))
-
+    with context("find_template tool"):
         with it("returns the agent-dir template when agent_dir was set at construction"):
             import tempfile
             with tempfile.TemporaryDirectory() as agent_dir:
@@ -65,10 +60,9 @@ with description("Sketch toolset") as self:
                 template_path = templates_dir / "test-sketch.md"
                 template_path.write_text("# constructed agent template\n", encoding="utf-8")
                 sketcher = Sketch(agent_dir=agent_dir)
-                content = sketcher.sketch_template
+                content = sketcher.find_template()
                 expect(content).to(contain("constructed agent template"))
 
-    with context("find_template tool"):
         with it("falls back to the default template when no agent_dir template exists"):
             sketcher = Sketch()
             content = sketcher.find_template(agent_dir="")
@@ -212,6 +206,11 @@ with description("Sketch toolset") as self:
             expect(joined).to(contain("Batch similar questions"))
             expect(joined).to(contain("does not run forever"))
 
+        with it("instructs keeping the questions when the person asks to hurry or to proceed"):
+            joined = "\n".join(self.body.prompt)
+            expect(joined).to(contain("hurry-keeps-the-questions"))
+            expect(joined).to(contain("ask fewer, sharper questions"))
+
         with it("includes the grill_with_context body in sketch"):
             joined = "\n".join(self.body.prompt)
             expect(joined).to(contain("(Recommended)"))
@@ -236,6 +235,17 @@ with description("Sketch toolset") as self:
         with it("says the rules are an AI check on the sketch, not a graph query"):
             expect(self.prose).to(contain("not a graph query"))
 
+    with context("sketch action expanded for a call naming the UX information architecture"):
+        with before.each:
+            from cdd_guidance.practices.ux.ux import Ux
+
+            arguments = {"guidance": [Ux(fidelity="ia")]}
+            sketcher = Sketch().for_call(ToolCall(arguments))
+            self.prose = AgentInstructions.for_callable(Sketch.sketch, sketcher).expand(arguments).instructions
+
+        with it("should say to draw each screen in the design canvas, not as an ASCII box"):
+            expect(self.prose).to(contain("Draw screens in the design canvas, never as ASCII boxes"))
+
 
 with description("a sketch action"):
     with context("that expands with context tools"):
@@ -254,9 +264,7 @@ with description("a sketch action"):
 with description("PracticeGuidance operations for sketch"):
     with it("should not expose sketch on practice Guidance"):
         cls = type(
-            AgentToolSet.instantiate(
-                "cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle"
-            )
+            ToolsetReference.parsed("cdd_guidance.builders.create_practice_guidance._examples.car_chronicle.car_chronicle:CarChronicle").made()
         )
         practice = cls()
         expect("sketch" in practice.tools).to(equal(False))

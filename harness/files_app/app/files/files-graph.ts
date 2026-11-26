@@ -1,17 +1,27 @@
 import type { CddApi, CddProgress } from '@cdd/cdd-shared'
-import type { FilterData, NodeSourceData } from '@cdd/harness/graph/graph'
+import { ChatClientGenerated } from '@cdd/harness/chat/chat'
+import { NOT_SENT, SENT_TO_CHAT, type FixOutcome } from '@source-view/violation-prompt'
+import type { FilterChoicesData, GraphRuleData, GraphRulesCollectionData, NodeSourceData } from '@cdd/harness/graph/graph'
 import type { ExplorerEntryData, RangeData, SessionClientGenerated } from '@cdd/space/session/session'
 import { NO_CHOICES, chosen, nodeFilter, type FilterSelection } from '@graph-app/filter/filter-selection'
 
 import type { FileBar } from './file-bar'
 import type { FilesNotices } from './files-notices'
 import type { FilesStore, SelectedNode } from './files-state'
+import type { SourceCallout } from '@source-view/source-callouts'
+import { reasonOf, saidBy } from './reason'
 
-const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure))
+// Where this browser remembers whether the person opened the graph view's node filter.
+const STORED_FILTERS_SHOWN = 'cdd-files-graph-filters-shown'
 
 // How often a read under way asks the cdd server what it is doing, in milliseconds.
 const PROGRESS_EVERY = 400
 const pause = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
+
+const NO_CHAT = 'No chat opened this page, so the fix was not sent: open the Files app from the chat bar.'
+
+// Which Fix was pressed in the graph view: Fix all names neither, Fix rule the rule, Fix this one the rule and its node.
+export type GraphFix = { rule?: string; nodeId?: string }
 
 // The list a tool answered: none is an empty list, and anything else, such as the text or error a server lane answers
 // for a call it cannot run, is that tool's failure, so the page shows it rather than drawing it as a list.
@@ -23,28 +33,40 @@ export function listAnswered<Item>(tool: string, answer: unknown): Item[] {
 
 // The choices graph_filter_choices answered: none offers nothing, and anything without its lists of node types, those
 // offered, connectors and rules is that tool's failure, so the node filter never draws a list it was not given.
-export function choicesAnswered(answer: unknown): FilterData {
+export function choicesAnswered(answer: unknown): FilterChoicesData {
   if (answer === null || answer === undefined) return NO_CHOICES
   const lists = ['node_types', 'offered_node_types', 'relationships', 'rules'] as const
-  if (typeof answer === 'object' && lists.every(list => Array.isArray((answer as Record<string, unknown>)[list]))) return answer as FilterData
+  if (typeof answer === 'object' && lists.every(list => Array.isArray((answer as Record<string, unknown>)[list]))) return answer as FilterChoicesData
   throw new Error(`session.graph_filter_choices answered no choices: ${saidBy(answer)}`)
 }
 
-const saidBy = (answer: unknown): string => {
-  if (typeof answer === 'string') return answer
-  const error = (answer as { error?: unknown } | null)?.error
-  return error !== undefined ? String(error) : JSON.stringify(answer)
-}
-
 // An entry below another is a node's entry; the rules a node lists sit beside them and show with the violations.
+// The lines a section fold-out names, in the file it names, as a range of that file.
+const sectionRange = (foldOut: SourceCallout): RangeData => ({ path: foldOut.path, start_line: foldOut.startLine, end_line: foldOut.endLine, content: foldOut.text, anchor: '' }) as RangeData
+
 export const isEntry = (child: unknown): child is ExplorerEntryData => typeof child === 'object' && child !== null && 'children_left_out' in child
+// The group the graph sends first under every node, open or closed, holding the rules the node is judged by.
+const isRulesGroup = (child: unknown): child is GraphRulesCollectionData => typeof child === 'object' && child !== null && (child as { type?: string }).type === 'rules'
+// The lines a broken rule names: each place its violations point at.
+const violationRange = (hit: GraphRuleData['violations'][number]): RangeData => ({ path: hit.location, start_line: hit.line ?? 1, end_line: hit.end_line ?? hit.line ?? 1, content: '', anchor: '' })
+
+// Whether a rule found something on its node, as the graph says (GraphRule.is_failing): a violation, or a candidate a
+// rule that requires a judge listed for a reading. Either is shown with its message and opens the lines it names.
+export const isFailing = (rule: GraphRuleData): boolean => rule.status === 'violating' || rule.status === 'candidate'
+
+// A rule's title, which a hover shows: its name, and what it found on its node when it found something.
+export function ruleTitleOf(rule: GraphRuleData): string {
+  const messages = isFailing(rule) ? rule.violations.map(hit => hit.message).filter(Boolean) : []
+  return messages.length ? `Rule ${rule.name}: ${messages.join('\n')}` : `Rule ${rule.name}`
+}
 
 // The graph view of the Files app's file bar: the session's graph holding only the nodes of the files the bar lists, so
 // it is filtered as the file list is, read again whenever the bar lists other files, showing the cdd server's progress
 // while it reads. Its node filter, the Graph app's, is a filter other than the file list that applies with it: it
 // narrows the nodes of the files listed and never widens the list, and a change of either reads the graph again with
 // both. Selecting a node opens its file at its lines, or each file below it when it is a folder; selecting more
-// opens each of their files. Everything it shows is the session's answer, held in the store.
+// opens each of their files. Fix this one, Fix rule and Fix all send the fix Python writes for what the view shows to
+// the chat that opened the page. Everything it shows is the session's answer, held in the store.
 export class FilesGraph {
   constructor(
     private readonly store: FilesStore,
@@ -53,6 +75,7 @@ export class FilesGraph {
     private readonly fileBar: FileBar,
     private readonly notices: FilesNotices,
     private readonly showNodes: (selected: SelectedNode[]) => Promise<void>,
+    private readonly chat: string,
   ) {}
 
   // The files the graph is read for: those the bar lists that are there to read.
@@ -91,25 +114,36 @@ export class FilesGraph {
     try {
       const trees = listAnswered<ExplorerEntryData>('session.graph_trees', await this.session.graphTrees(paths, this.nodeFilter))
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, trees, branches: {}, isReading: false } } : {}))
+      await this.readOpenBranches(readFor)
     } catch (failure) {
       this.store.change(({ graph }) => ({ graph: { ...graph, trees: [], isReading: false, problem: `The graph did not read: ${reasonOf(failure)}` } }))
-      this.notices.fail(`The Files app did not read the session's graph: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_trees')
+      this.notices.fail(`The Files app did not read the session's graph: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_trees', { kind: 'graph_view' })
       return
     }
+    await this.readMembers(readFor)
+    await this.readFilterChoices(readFor)
+  }
+
+  // The members a call in a shown file opens. A read that fails leaves none, and is told to the page.
+  private async readMembers(readFor: string): Promise<void> {
     try {
       const members = listAnswered<NodeSourceData>('session.graph_members', await this.session.graphMembers())
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, members } } : {}))
     } catch (failure) {
       this.store.change(({ graph }) => ({ graph: { ...graph, members: [] } }))
-      this.notices.fail(`The Files app did not read the graph's members: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_members')
+      this.notices.fail(`The Files app did not read the graph's members: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_members', { kind: 'graph_view' })
     }
+  }
+
+  // What the node filter offers for the filter in use. A read that fails leaves no choices, and is told to the page.
+  private async readFilterChoices(readFor: string): Promise<void> {
     try {
       const { filter } = this.store.state.graph
       const choices = choicesAnswered(await this.session.graphFilterChoices(filter.practices, filter.node_types))
       this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, choices } } : {}))
     } catch (failure) {
       this.store.change(({ graph }) => ({ graph: { ...graph, choices: NO_CHOICES } }))
-      this.notices.fail(`The Files app did not read the graph's node filter: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_filter_choices')
+      this.notices.fail(`The Files app did not read the graph's node filter: ${reasonOf(failure)}`, 'Showing the graph view, calling session.graph_filter_choices', { kind: 'graph_view' })
     }
   }
 
@@ -134,7 +168,27 @@ export class FilesGraph {
       const filter = isNewTypes ? chosen(next, choices) : next
       this.store.change(({ graph }) => ({ graph: { ...graph, filter, choices } }))
     } catch (failure) {
-      this.notices.fail(`The Files app did not filter the graph: ${reasonOf(failure)}`, 'Filtering the graph view, calling session.graph_filter_choices')
+      this.notices.fail(`The Files app did not filter the graph: ${reasonOf(failure)}`, 'Filtering the graph view, calling session.graph_filter_choices', { kind: 'graph_view' })
+    }
+  }
+
+  // Whether the node filter shows above the trees: closed until the person opens it, then as this browser remembers. A
+  // browser that keeps nothing, such as a private window, refuses with a DOMException and the filter stays closed.
+  get areFiltersShown(): boolean {
+    try {
+      return window.localStorage.getItem(STORED_FILTERS_SHOWN) === 'shown'
+    } catch (refusal) {
+      if (!(refusal instanceof DOMException)) throw refusal
+      return false
+    }
+  }
+
+  // Remembers in this browser whether the person opened or closed the node filter; a browser that keeps nothing forgets.
+  showFilters(isShown: boolean): void {
+    try {
+      window.localStorage.setItem(STORED_FILTERS_SHOWN, isShown ? 'shown' : 'closed')
+    } catch (refusal) {
+      if (!(refusal instanceof DOMException)) throw refusal
     }
   }
 
@@ -143,12 +197,46 @@ export class FilesGraph {
     return (this.store.state.graph.branches[entry.node_id] ?? entry).children.filter(isEntry)
   }
 
+  // Go to file on a fold-out: the node it shows opens in its own file at its lines, as selecting it at its home in the
+  // tree opens it; a section a markdown link opens is no node, so its file opens at the lines it names.
+  async goToFile(foldOut: SourceCallout): Promise<void> {
+    try {
+      const ranges = foldOut.kind === 'section' ? [sectionRange(foldOut)] : listAnswered<RangeData>('session.graph_node_ranges', await this.session.graphNodeRanges(foldOut.id, this.paths))
+      if (!ranges.length) return
+      const selected = ranges.map(lines => ({ nodeId: foldOut.id, lines }))
+      this.store.change(({ graph }) => ({ graph: { ...graph, selected } }))
+      await this.showNodes(selected)
+    } catch (failure) {
+      this.notices.fail(`The Files app did not open the file of ${foldOut.title}: ${reasonOf(failure)}`, 'Go to file on a fold-out, calling session.graph_node_ranges', { kind: 'file_display' })
+    }
+  }
+
+  // The rules entry is judged by, passing, broken and left to the agent's judgement, as the graph sent them with it.
+  rulesOf(entry: ExplorerEntryData): GraphRuleData[] {
+    const group = (this.store.state.graph.branches[entry.node_id] ?? entry).children.find(isRulesGroup)
+    return group ? group.children : []
+  }
+
+  breaksARule(entry: ExplorerEntryData): boolean {
+    return this.rulesOf(entry).some(isFailing)
+  }
+
   isOpen(entry: ExplorerEntryData): boolean {
     return this.store.state.graph.openNodes.includes(entry.node_id)
   }
 
   isSelected(entry: ExplorerEntryData): boolean {
     return this.store.state.graph.selected.some(selected => selected.nodeId === entry.node_id)
+  }
+
+  // Reads each node the person has open again, for the files and node filter the trees were just read for: a branch
+  // read for the old list holds the old list's nodes, so an open node would go on showing them.
+  private async readOpenBranches(readFor: string): Promise<void> {
+    const paths = this.paths
+    const filter = this.nodeFilter
+    const read = await Promise.all(this.store.state.graph.openNodes.map(async nodeId => [nodeId, await this.session.graphBranch(nodeId, paths, filter)] as const))
+    const branches = Object.fromEntries(read.filter((each): each is readonly [string, ExplorerEntryData] => each[1] !== null))
+    this.store.change(({ graph }) => (graph.readFor === readFor ? { graph: { ...graph, branches: { ...graph.branches, ...branches } } } : {}))
   }
 
   // Opens or closes an entry, reading the entries its answer left out the first time it opens.
@@ -160,13 +248,15 @@ export class FilesGraph {
       const branch = await this.session.graphBranch(entry.node_id, this.paths, this.nodeFilter)
       if (branch) this.store.change(({ graph }) => ({ graph: { ...graph, branches: { ...graph.branches, [entry.node_id]: branch } } }))
     } catch (failure) {
-      this.notices.fail(`The Files app did not open ${entry.name} in the graph: ${reasonOf(failure)}`, 'Opening a node in the graph view, calling session.graph_branch')
+      this.notices.fail(`The Files app did not open ${entry.name} in the graph: ${reasonOf(failure)}`, 'Opening a node in the graph view, calling session.graph_branch', { kind: 'graph_view' })
     }
   }
 
   // Selects the node, alone or, with also, beside those already selected, then opens each file it covers at its lines: a
-  // member's own file, or every listed file below a folder such as a package. A node read from no lines of a file selects
-  // nothing.
+  // member's own file, or every listed file below a folder such as a package. A node shown under a relationship group,
+  // such as the operation a step or another operation invokes, or an example a scenario uses, is that node: its own
+  // file opens at its own lines, never the file of the node the group sits under. A node read from no lines of a file
+  // selects nothing.
   async select(entry: ExplorerEntryData, also: boolean = false): Promise<void> {
     try {
       const ranges = listAnswered<RangeData>('session.graph_node_ranges', await this.session.graphNodeRanges(entry.node_id, this.paths))
@@ -176,7 +266,41 @@ export class FilesGraph {
       this.store.change(({ graph }) => ({ graph: { ...graph, selected } }))
       await this.showNodes(selected)
     } catch (failure) {
-      this.notices.fail(`The Files app did not open ${entry.name}: ${reasonOf(failure)}`, 'Selecting a node in the graph view, calling session.graph_node_ranges')
+      this.notices.fail(`The Files app did not open ${entry.name}: ${reasonOf(failure)}`, 'Selecting a node in the graph view, calling session.graph_node_ranges', { kind: 'file_display' })
     }
+  }
+
+  // Fix this one, Fix rule or Fix all: the fix Python writes for the broken rules the view shows, as the trees were read
+  // for the files listed and the node filter, fills the prompt of the chat that opened the page for the person to
+  // review and send. A page no chat opened, a view that no longer shows the rule broken, or a chat that does not take
+  // it, says why in a toast.
+  async fix({ rule = '', nodeId = '' }: GraphFix = {}): Promise<FixOutcome> {
+    const context = 'A Fix in the Files app graph view, calling session.graph_fix_prompt'
+    if (!this.chat) {
+      this.notices.fail(NO_CHAT, context)
+      return NOT_SENT
+    }
+    try {
+      const prompt = await this.session.graphFixPrompt(this.paths, this.nodeFilter, rule, nodeId)
+      if (!prompt) {
+        this.notices.fail(rule ? `The graph view no longer shows ${rule} broken there: read the files again if it should be.` : 'The graph view shows no broken rule to fix.', context)
+        return NOT_SENT
+      }
+      await ChatClientGenerated.named(this.api, this.chat).send('fill', prompt)
+      return SENT_TO_CHAT
+    } catch (failure) {
+      this.notices.fail(`The fix was not sent: ${reasonOf(failure)}`, context, { kind: 'graph_view' })
+      return NOT_SENT
+    }
+  }
+
+  // Selects a rule entry carries: a broken rule opens the lines its violations name, unfolded, as a selected node opens
+  // its own; any other rule opens the node it sits under.
+  async selectRule(entry: ExplorerEntryData, rule: GraphRuleData): Promise<void> {
+    const named = isFailing(rule) ? rule.violations.filter(hit => hit.location && hit.line) : []
+    if (!named.length) return this.select(entry)
+    const selected = named.map(hit => ({ nodeId: entry.node_id, lines: violationRange(hit) }))
+    this.store.change(({ graph }) => ({ graph: { ...graph, selected } }))
+    await this.showNodes(selected)
   }
 }

@@ -89,6 +89,14 @@ button:disabled { cursor: default; opacity: 0.5; }
 .graph-tree ul { padding-left: 1.25rem; }
 .tree-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-2xs); min-width: 0; }
 .tree-twist, .tree-twist-spacer { width: var(--space-md); flex: 0 0 var(--space-md); padding: 0; border: none; background: transparent; color: var(--muted); font-size: var(--text-xs); }
+/* The Filters toggle opens like a tree row: no box, the arrow muted as a twist's, its label muted until pointed at. */
+.graph-filters-toggle { display: inline-flex; align-items: center; gap: var(--space-2xs); margin-bottom: var(--space-2xs); padding: var(--space-2xs) 0; border: none; background: transparent; color: var(--muted); font-weight: 500; }
+.graph-filters-toggle > span { width: var(--space-md); color: var(--muted); font-size: var(--text-xs); text-align: center; }
+.graph-filters-toggle:hover, .graph-filters-toggle[aria-expanded='true'] { color: var(--text); }
+/* Fix all beside the Filters toggle, and Fix this one and Fix rule beside a broken rule: small, so the tree stays readable. */
+.graph-node-filter-bar > .violation-correct { float: right; }
+.graph-rule-fixes { display: inline-flex; gap: var(--space-2xs); margin-left: var(--space-xs); }
+.graph-rule-fixes .copy-prompt, .graph-node-filter-bar .copy-prompt { padding: 0 var(--space-xs); font-size: var(--text-xs); }
 .graph-node { display: inline-flex; align-items: center; gap: var(--space-2xs); min-width: 0; padding: var(--space-2xs) 0; border: none; background: transparent; font-weight: 500; text-align: left; }
 .graph-node .node-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .graph-node.selected { color: var(--select); font-weight: 600; }
@@ -118,7 +126,52 @@ button:disabled { cursor: default; opacity: 0.5; }
 .copy-prompt { align-self: center; }
 
 .file-source { position: relative; min-width: 0; }
-.file-source-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-2xs); }
+.file-source-bar { display: flex; justify-content: flex-end; gap: var(--space-xs); margin-bottom: var(--space-2xs); }
+.file-render-toggle { display: inline-flex; margin-right: auto; }
+.file-render-toggle button { font-size: var(--text-xs); }
+.file-render-toggle button:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.file-render-toggle button:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-width: 0; }
+.file-render-toggle button.is-on { border-color: var(--accent); color: var(--accent); }
+.file-rendered { min-width: 0; overflow-x: auto; }
+.file-rendered .markdown-page { max-width: 60rem; line-height: 1.55; }
+.file-rendered .markdown-page table { border-collapse: collapse; margin: var(--space-xs) 0; }
+.file-rendered .markdown-page th,
+.file-rendered .markdown-page td { border: 1px solid var(--border); padding: var(--space-2xs) var(--space-xs); text-align: left; vertical-align: top; }
+.file-rendered .markdown-page pre,
+.file-rendered.rendered-json pre { font-family: var(--font-mono); font-size: var(--text-xs); padding: var(--space-xs); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow-x: auto; }
+.file-rendered .markdown-page code { font-family: var(--font-mono); }
+.file-rendered .markdown-page img,
+.file-rendered.rendered-svg svg { max-width: 100%; height: auto; }
+/* A rendered page's facts, callouts and tree levels. Its front matter shows small above the page. A line that holds
+   callouts ends in a mark naming them; open, what they name shows under the line, shaded once, a callout inside
+   another one shade deeper, as in the source view. */
+.file-rendered .markdown-page .front-matter { margin-bottom: var(--space-xs); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted); }
+.file-rendered .markdown-page .indented[data-indent='1'] { margin-left: 1ch; }
+.file-rendered .markdown-page .indented[data-indent='2'] { margin-left: 2ch; }
+.file-rendered .markdown-page .indented[data-indent='3'] { margin-left: 3ch; }
+.file-rendered .markdown-page .indented[data-indent='4'] { margin-left: 4ch; }
+.file-rendered .markdown-page .indented[data-indent='6'] { margin-left: 6ch; }
+.file-rendered .markdown-page .indented[data-indent='8'] { margin-left: 8ch; }
+.file-rendered .markdown-page .indented[data-indent='10'] { margin-left: 10ch; }
+.file-rendered .markdown-page .indented[data-indent='12'] { margin-left: 12ch; }
+.file-rendered .markdown-page .indented > pre { margin: var(--space-2xs) 0; }
+.file-rendered .rendered-callout-mark { margin-left: var(--space-xs); padding: 0 var(--space-2xs); border: none; background: transparent; color: var(--muted); font-family: inherit; font-size: var(--text-xs); font-style: italic; font-weight: 400; cursor: pointer; white-space: normal; }
+.file-rendered .rendered-callout-mark::before { content: '\25B8\00A0'; color: var(--accent); font-style: normal; }
+.file-rendered .rendered-callout-mark.is-open::before { content: '\25BE\00A0'; }
+.file-rendered .rendered-callout-mark:hover { color: var(--accent); }
+.file-rendered .rendered-callout-mark.callout-missing,
+.file-rendered .rendered-callout-mark.callout-missing::before { color: var(--warning); }
+.file-rendered .rendered-callout-block { display: block; margin: var(--space-2xs) 0 var(--space-xs); font-size: 0.9rem; font-weight: 400; font-style: normal; text-align: left; white-space: normal; }
+.file-rendered .callout-section { margin-left: 1rem; padding: var(--space-2xs) var(--space-xs); border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); overflow-x: auto; }
+.file-rendered .callout-section + .callout-section { margin-top: var(--space-2xs); }
+.file-rendered .callout-section.callout-missing { border-left-color: var(--warning); color: var(--warning); font-style: italic; }
+.file-rendered .callout-go-to { display: block; margin-bottom: var(--space-2xs); padding: 0; border: none; background: transparent; color: var(--muted); font-family: var(--font-mono); font-size: var(--text-xs); cursor: pointer; }
+.file-rendered .callout-go-to:hover { color: var(--accent); text-decoration: underline; }
+.file-rendered .callout-code { font-family: var(--font-mono); font-size: var(--text-xs); }
+.file-rendered .callout-code .callout-text { white-space: pre; min-height: 1.4em; line-height: 1.4; }
+.file-rendered .callout-section .markdown-page { max-width: none; }
+.file-rendered .callout-section .markdown-page > :first-child { margin-top: 0; }
+iframe.file-rendered.rendered-html { width: 100%; height: 80vh; border: 1px solid var(--border); border-radius: var(--radius-sm); background: #ffffff; }
 .file-wrap { font-size: var(--text-xs); }
 .file-wrap.is-on { border-color: var(--accent); color: var(--accent); }
 .comment-box { position: absolute; z-index: 20; width: min(32rem, 80%); display: grid; gap: var(--space-2xs); padding: var(--space-xs); background: var(--surface); border: 1px solid var(--select); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); }
@@ -136,6 +189,16 @@ button:disabled { cursor: default; opacity: 0.5; }
 .source-snippet .file-comment-marker.is-processed::after { background: var(--success); }
 .source-snippet .file-violation { background: color-mix(in srgb, var(--error) 8%, transparent); }
 .source-snippet .file-change { width: 3px !important; margin-left: 3px; }
+/* The nodes selected in the graph view: one orange line beside their lines (files/file-marks.ts), the text unshaded,
+   in place of the source view's own shaded selected lines. */
+.file-source .source-snippet .selected-lines { background-color: transparent; box-shadow: none; }
+.source-snippet .file-selected-range { width: 3px !important; margin-left: 0; background: var(--accent); }
+/* The code in Cursor's default looks (files/files-theme.ts): the editor shows its theme's own background, which
+   Monaco sets as --vscode-editor-background, not the page's raised colour the shared source view paints it with. */
+.file-source .source-snippet,
+.file-source .source-snippet .monaco-editor,
+.file-source .source-snippet .monaco-editor-background,
+.file-source .source-snippet .margin { background: var(--vscode-editor-background) !important; }
 .source-snippet .file-change.is-changed { background: var(--select); }
 .source-snippet .file-change.is-added { background: var(--success); }
 .source-snippet .file-change.is-removed { border-top: 3px solid var(--error); }
@@ -167,3 +230,12 @@ a.file-entry.is-published:hover { text-decoration: underline; }
 .stage-toggles { display: flex; gap: var(--space-2xs); align-self: center; }
 .stage-toggle { padding: 1px 8px; border-radius: var(--radius-sm); color: var(--accent); border-color: var(--border); }
 .stage-toggle.is-shown { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* A node's rules in the graph view, marked as the Graph app marks them: passing, broken, or left to the agent's
+   judgement; a node that breaks one of them is marked in the tree. */
+.graph-tree .rule-status.passing { color: var(--success); }
+.graph-tree .rule-status.violating { color: var(--error); }
+.graph-tree .rule-status.prompt { color: var(--muted); }
+.graph-tree .graph-node.tree-violating,
+.graph-tree .graph-node.tree-violating .kind-mark { color: var(--error); }
+.graph-tree .rules-group { cursor: default; }

@@ -11,10 +11,9 @@ import { collect as collectStory } from "./story-test-core.js";
 
 export class PlayDualRunner {
   /**
-   * @param {{ paintReflect?: { apply(snapshot: object): void }, thenFeedback?: { apply(result: object): void }, storyDemoFrame?: { emphasis: { emphasize(step: object): void }, bind?(snapshot: object): void }, explorerFrame?: { highlightStep(step: object): void } }} [collaborators]
+   * @param {{ thenFeedback?: { apply(result: object): void }, storyDemoFrame?: { emphasis: { emphasize(step: object): void }, bind?(snapshot: object): void }, explorerFrame?: { highlightStep(step: object): void } }} [collaborators]
    */
   constructor(collaborators = {}) {
-    this._paintReflect = collaborators.paintReflect ?? null;
     this._thenFeedback = collaborators.thenFeedback ?? null;
     this._storyDemoFrame = collaborators.storyDemoFrame ?? null;
     this._explorerFrame = collaborators.explorerFrame ?? null;
@@ -70,7 +69,6 @@ export class PlayDualRunner {
 
   /** Show what the step left behind on both frames, and a Then's result in the explorer. */
   _reflect(snapshot, step, result) {
-    this._paintReflect?.apply(snapshot);
     this._storyDemoFrame?.bind?.(snapshot);
     this._explorerFrame?.highlightStep(step);
     this._storyDemoFrame?.emphasis.emphasize(step);

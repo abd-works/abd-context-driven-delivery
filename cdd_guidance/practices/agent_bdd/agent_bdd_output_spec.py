@@ -11,7 +11,7 @@ from mamba import after, before, description, it
 from cdd_guidance.practices.agent_bdd.agent_bdd import AgentBdd
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 with description("an agent BDD practice writing its artifact"):
     with before.all:

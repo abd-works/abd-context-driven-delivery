@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
+from harness.drawio import CellStyle
 from harness.graph.violation import Violation
 
 from cdd_guidance.practices.clean_engineering.model.drawio.page.drawio_page import (
     STRAIGHT_TOLERANCE,
-    DrawioPage,
+    ClassDiagramPage,
     Segment,
-    style_number,
 )
 from cdd_guidance.practices.clean_engineering.model.drawio.scanners._drawio_base import DrawioScanner
 
@@ -23,7 +23,7 @@ _ENTERING_HEADING = {"left": "right", "right": "left", "top": "down", "bottom": 
 class EdgesApproachPerpendicularScanner(DrawioScanner):
     RULE = "edges-approach-perpendicular"
 
-    def scan_page(self, page: DrawioPage) -> list[Violation]:
+    def scan_page(self, page: ClassDiagramPage) -> list[Violation]:
         violations = []
         for edge in page.edges:
             if edge.get("source", "") not in page.boxes or edge.get("target", "") not in page.boxes:
@@ -41,7 +41,7 @@ class EdgesApproachPerpendicularScanner(DrawioScanner):
         """Why this end of the edge meets its box side at an angle or the wrong way, or None when it meets it head-on."""
         prefix = "exit" if end == "source" else "entry"
         style = edge.get("style", "")
-        side = self._anchor_side(style_number(style, f"{prefix}X"), style_number(style, f"{prefix}Y"))
+        side = self._anchor_side(CellStyle(style).number(f"{prefix}X"), CellStyle(style).number(f"{prefix}Y"))
         expected, actual = _AXIS_OF_SIDE.get(side or ""), self._axis(segment)
         if expected and actual and actual != expected:
             return f"{end} segment goes {actual} but anchor is on the {side} side (expected {expected})"

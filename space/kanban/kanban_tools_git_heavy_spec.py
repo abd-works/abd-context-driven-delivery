@@ -21,10 +21,10 @@ from harness.chat.chat import Chat  # noqa: E402
 from harness.installation.data_class import DataClass  # noqa: E402
 from space.repo.repo import Branch, Repo  # noqa: E402
 from space.session import Sessions  # noqa: E402
-from space.session.progress_cache import PROGRESS_CACHE_FILE  # noqa: E402
+from space.kanban.progress_cache import PROGRESS_CACHE_FILE  # noqa: E402
 
 from space.kanban.board_tools_examples import ProjectTools  # noqa: E402
-from space.session.throwaway_project import OPEN_PROJECTS
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS
 
 # The session records with nothing left off origin's main: none uncommitted, none unpushed.
 SAVED = {"uncommitted": "", "unpushed": ""}
@@ -33,35 +33,51 @@ SAVE_WAIT_SECONDS = 20
 SAVE_POLL_SECONDS = 0.2
 
 
+def repository_with_two_tickets(project: ProjectTools) -> ProjectTools:
+    """The project made a git repository with one commit, holding two tickets."""
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=project.root, check=False)
+    # A CDD project ignores the board's progress cache, which it writes beside each ticket's records after a read.
+    (project.root / ".gitignore").write_text(f".sessions/**/{PROGRESS_CACHE_FILE}\n", encoding="utf-8")
+    subprocess.run(["git", "add", ".gitignore"], cwd=project.root, check=True)
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "start"], cwd=project.root, check=True)
+    project.ticket("pet-visits", title="Pet visits")
+    project.ticket("sign-up", title="Sign up")
+    return project
+
+
 with description("the board tools") as self:
+    # A context whose examples only read what one action left makes its project once, in a before.all, as
+    # shared_project; every other example gets a project of its own.
+    with before.all:
+        self.shared_project = None
+
     with before.each:
-        self.project = ProjectTools()
+        self.project = self.shared_project or ProjectTools()
 
     with after.each:
-        OPEN_PROJECTS.close_all()
-        patch.stopall()
+        if self.shared_project is None:
+            OPEN_PROJECTS.close_all()
+            patch.stopall()
 
     # (E) See Work On Session Board
     # (S) Person --> Activate Ticket
     with context("with a git repository and two tickets"):
         with before.each:
-            subprocess.run(["git", "init", "-q", "-b", "main"], cwd=self.project.root, check=False)
-            # A CDD project ignores the board's progress cache, which it writes beside each ticket's records after a read.
-            (self.project.root / ".gitignore").write_text(f".sessions/**/{PROGRESS_CACHE_FILE}\n", encoding="utf-8")
-            subprocess.run(["git", "add", ".gitignore"], cwd=self.project.root, check=True)
-            subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "start"], cwd=self.project.root, check=True)
-            self.project.ticket("pet-visits", title="Pet visits")
-            self.project.ticket("sign-up", title="Sign up")
+            if self.project is not self.shared_project:
+                repository_with_two_tickets(self.project)
 
         # (S) Person --> Open Ticket Session
         # A ticket opens from main in its own worktree, where its own chat works; the chat that opened it stays on main.
+        # Opening it is the one action here: every example reads what it left, so it opens once for them all.
         with context("that opens a ticket from the repository's own folder"):
-            with before.each:
-                self.project.call("ticket.activate", ticket="sign-up")
-                self.opened = Path(self.project.ticket_json("sign-up")["worktree"])
+            with before.all:
+                self.shared_project = repository_with_two_tickets(ProjectTools())
+                self.shared_project.call("ticket.activate", ticket="sign-up")
+                self.opened = Path(self.shared_project.ticket_json("sign-up")["worktree"])
 
-            with after.each:
-                subprocess.run(["git", "worktree", "remove", "--force", str(self.opened)], cwd=self.project.root, check=False)
+            with after.all:
+                subprocess.run(["git", "worktree", "remove", "--force", str(self.opened)], cwd=self.shared_project.root, check=False)
+                self.shared_project.close()
 
             with it("should open the ticket's own worktree on its branch"):
                 branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=self.opened, check=True, capture_output=True, text=True)
@@ -100,8 +116,8 @@ with description("the board tools") as self:
             with it("should offer to delete its worktree when closing it"):
                 expect(self.project.call("ticket.close_choices", ticket="sign-up")["choices"]).to(contain("delete_worktree"))
             with context("that is opened again"):
-                with before.each:
-                    self.project.call("ticket.activate", ticket="sign-up")
+                with before.all:
+                    self.shared_project.call("ticket.activate", ticket="sign-up")
 
                 with it("should keep the worktree it has"):
                     expect(Path(self.project.ticket_json("sign-up")["worktree"]).resolve()).to(equal(self.opened.resolve()))
@@ -226,10 +242,6 @@ with description("the board tools") as self:
 
             # git deletes no branch a worktree has checked out, so deleting the branch takes its worktree with it.
             with it("should delete its worktree when closing deletes its branch"):
-                # Deleting the worktree pushes its work first, so the project needs an origin to push to.
-                origin = Path(tempfile.mkdtemp(prefix="kanban-origin-"))
-                subprocess.run(["git", "init", "-q", "--bare", str(origin)], check=True)
-                subprocess.run(["git", "remote", "add", "origin", str(origin)], cwd=self.project.root, check=True)
                 self.project.call("ticket.close", ticket="sign-up", leaving=["delete_branch"])
                 expect(self.opened.exists()).to(be_false)
 
@@ -284,7 +296,7 @@ with description("the board tools") as self:
 
         with context("with the active ticket on no branch of its own"):
             with before.each:
-                Sessions(self.project.root).switch("pet-visits")
+                Sessions(self.project.root).switch("pet-visits", create=True)
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left has no branch yet"):
@@ -294,7 +306,7 @@ with description("the board tools") as self:
                 expect(self.project.call("ticket.work_branch", ticket="pet-visits")).to(equal({"name": "main", "exists": True, "is_checked_out": True}))
 
             with it("should offer to close it with a handoff and a commit and push of main"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": []}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "", "choices": ["handoff", "commit", "push"], "chosen": [], "unsaved_work": [], "warning": ""}))
 
             with it("should leave the branch checked out as it was"):
                 self.project.call("ticket.close", ticket="pet-visits", leaving=["commit", "merge"])
@@ -305,24 +317,26 @@ with description("the board tools") as self:
         with context("with the active ticket's own branch in git but checked out nowhere"):
             with before.each:
                 subprocess.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
-                Sessions(self.project.root).switch("pet-visits")
+                Sessions(self.project.root).switch("pet-visits", create=True)
 
-            with it("should offer to close it with a delete of its branch, naming that branch"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "main", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": []}))
+            # Nothing checked out is its own, so closing it commits and pushes nothing: the main clone's edits are never
+            # committed under its name.
+            with it("should offer to close it with a merge and a delete of its branch, naming that branch, and no commit or push of main"):
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": [], "unsaved_work": [], "warning": ""}))
 
         with context("with the active ticket on its own branch"):
             with before.each:
                 subprocess.run(["git", "checkout", "-q", "-b", "pet-visits"], cwd=self.project.root, check=True)
                 subprocess.run(["git", "config", "user.name", "t"], cwd=self.project.root, check=True)
                 subprocess.run(["git", "config", "user.email", "t@t"], cwd=self.project.root, check=True)
-                Sessions(self.project.root).switch("pet-visits")
+                Sessions(self.project.root).switch("pet-visits", create=True)
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             with it("should say the ticket being left is on its branch"):
                 expect(self.project.call("ticket.branch", ticket="pet-visits")["is_checked_out"]).to(be_true)
 
             with it("should offer to close it with a merge into main and a delete of its branch, neither chosen at first"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": []}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "pet-visits", "own_branch": "pet-visits", "choices": ["handoff", "commit", "push", "merge", "delete_branch"], "chosen": [], "unsaved_work": [], "warning": ""}))
 
             with it("should put the repository's folder on main when it closes, whatever was chosen"):
                 self.project.call("ticket.close", ticket="pet-visits", leaving=["commit"])
@@ -343,16 +357,32 @@ with description("the board tools") as self:
                 files = self.project.call("fidelity-progress.files", ticket="pet-visits", fidelity="bdd-behavior")["python"]
                 expect({entry["path"]: entry["is_changed"] for entry in files}).to(equal({"src/mine_spec.py": True, "src/theirs_spec.py": False}))
 
+        # The main session works in the repository's own folder, on whatever branch that folder has checked out, so what
+        # the folder changed is the main session's work, as a ticket's branch changes are the ticket's.
+        with context("with specs in the repository, the main session open, and the folder on a branch that changed one"):
+            with before.each:
+                (self.project.root / "src").mkdir()
+                (self.project.root / "src" / "theirs_spec.py").write_text("", encoding="utf-8")
+                subprocess.run(["git", "add", "src"], cwd=self.project.root, check=True)
+                subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "spec"], cwd=self.project.root, check=True)
+                subprocess.run(["git", "checkout", "-q", "-b", "someone-else"], cwd=self.project.root, check=True)
+                Sessions(self.project.root).switch("main")
+                (self.project.root / "src" / "mine_spec.py").write_text("", encoding="utf-8")
+
+            with it("should mark the files the folder changed as the main session's changes"):
+                files = self.project.call("fidelity-progress.files", ticket="main", fidelity="bdd-behavior")["python"]
+                expect({entry["path"]: entry["is_changed"] for entry in files}).to(equal({"src/mine_spec.py": True, "src/theirs_spec.py": False}))
+
         with context("with the active ticket's branch not checked out, and another branch checked out"):
             with before.each:
                 subprocess.run(["git", "branch", "pet-visits"], cwd=self.project.root, check=True)
                 subprocess.run(["git", "checkout", "-q", "-b", "someone-else"], cwd=self.project.root, check=True)
-                Sessions(self.project.root).switch("pet-visits")
+                Sessions(self.project.root).switch("pet-visits", create=True)
                 (self.project.root / "work.txt").write_text("work\n", encoding="utf-8")
 
             # Nothing checked out is its own, so nothing is committed or pushed; its branch can still be merged and deleted.
             with it("should offer to close it with a handoff and a merge and delete of its branch, and no commit or push"):
-                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": []}))
+                expect(self.project.call("ticket.close_choices", ticket="pet-visits")).to(equal({"branch": "", "own_branch": "pet-visits", "choices": ["handoff", "merge", "delete_branch"], "chosen": [], "unsaved_work": [], "warning": ""}))
 
 
     # The shapes in data.py are the only agreement between the two languages: the language adapter is written from them.

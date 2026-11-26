@@ -3,16 +3,19 @@
 from __future__ import annotations
 
 import json
+from abc import ABC, abstractmethod
 from functools import cached_property
 from pathlib import Path
+from enum import Enum
 from typing import TYPE_CHECKING, Callable, TypeVar
 
 from harness.agent_tools import agent_toolset
 from harness.annotations.annotation import hosted_only
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subject
-from harness.chat.chat import Chat, links_of_run
+from harness.agent_tools.tool_call import ToolCall
+from harness.chat.chat import Chat, Chats
 from harness.guidance.guidance import FidelityGuidance, PracticeGuidance
-from harness.guidance.stages import GENERATE, RENDER, VALIDATE
+from harness.guidance.action_catalogue import ACTION_CATALOGUE
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import long_call, mcp
@@ -27,38 +30,118 @@ from space.kanban.board import (
     Help,
     Stage,
 )
+from harness.graph.location import Location
+from harness.graph.violation import FoundBy, FoundOn, Violation
 from space.kanban.report import Report, ReportFile
 from space.kanban.ticket_choices import TicketChoices
-from space.kanban.ticket_checkout import LeaveChoices, TicketCheckout
+from space.kanban.ticket_checkout import LeaveChoices, Leaving, TicketCheckout
 from space.kanban.ticket_tree import NotAChildError, ParentLoopError, TicketTree
 from space.repo.repo import Branch
 from space.session import Session
-from space.session.session import MAIN_SESSION_NAME
-from space.session.progress_cache import HAS_OUTPUT, VIOLATION_COUNT
-from space.session.session_log import LogEntry
-from space.session.file_manager import FileEntry
+from space.kanban.progress_cache import ACCEPTED_COUNT, HAS_OUTPUT, PROGRESS_CACHES, VIOLATION_COUNT
+from space.session.session_log import LogLine
+from space.session.practices.guidance_selection import GuidanceSelection
+from space.session.session_record import OwnedFields
+from space.session.files.file_manager import FileEntry
 
 if TYPE_CHECKING:
     from space.kanban.backlog_item import BacklogItem
 
 GRAPH_RULE_VIOLATION = "graph-rule"
 MOVED_INTO = "move"
-MARKED_DONE = "done"
-MARKED_IN_PROGRESS = "in-progress"
-# The session.json fields that record a ticket's stage and its mark there.
+
+
+class StageMark(Enum):
+    """The mark a person gives a ticket in a stage: done, or in progress. Its value is the word its session's log and
+    session.json keep."""
+
+    DONE = "done"
+    IN_PROGRESS = "in-progress"
+
+
+# The session.json fields the board keeps for a ticket: its stage and its mark there, and the files whose work its
+# latest close dropped (``record.extra("ticket")``).
 _STAGE_FIELD = "stage"
+_DROPPED_WORK_FIELD = "dropped_work"
 # What a ticket worked out about itself and keeps until it next writes something.
 Remembered = TypeVar("Remembered")
 _STAGE_MARK_FIELD = "stage_mark"
-# The actions that check or convert a fidelity's output, so they wait until there is some.
-ONCE_THERE_IS_OUTPUT = (VALIDATE, RENDER)
+_TICKET_FIELDS = "ticket"
 
 
-class MainStaysOpenError(ValueError):
-    """Raised when a tool would close, archive, or shelve main, the default session, which stays on the board."""
+def _generate() -> str:
+    """The step that writes a fidelity's files, as the session log names it: the action catalogue's writing step."""
+    return ACTION_CATALOGUE.writing_step.name
 
-    def __init__(self, action: str) -> None:
-        super().__init__(f"main is the default session and stays open; it cannot {action}")
+
+def _validate() -> str:
+    """The step that checks a fidelity's files, as the session log names it: the action catalogue's checking step."""
+    return ACTION_CATALOGUE.checking_step.name
+
+
+def _needing_output() -> list[str]:
+    """The actions that check or convert a fidelity's output, so they wait until there is some."""
+    return [action.name for action in ACTION_CATALOGUE.needing_output]
+
+
+def _ticket_stage_of(session: Session) -> str:
+    """The stage a session's ticket stands in on the board of the project whose sessions hold it, such as `Discovery`;
+    empty for one that is closed."""
+    column = Board.load(session.sessions.root).placement.make_ticket(session).column
+    return column.name if isinstance(column, Stage) else ""
+
+
+# Before anyone chose stages for a session, its guidance selection shows its ticket's stage selected.
+GuidanceSelection.start_on_ticket_stage_with(_ticket_stage_of)
+
+
+class TicketPrompts:
+    """*TicketPrompts* are what a ticket asks its chat to do for it, each naming the ticket's session, because a prompt
+    runs in whichever chat it is sent to, whose open session can be another ticket's."""
+
+    def __init__(self, ticket: str, session_file: str) -> None:
+        self._ticket = ticket
+        self._session_file = session_file
+
+    def _in_session(self, prompt: str) -> str:
+        return f"{prompt} session={self._session_file}"
+
+    @property
+    @data_field
+    def split(self) -> str:
+        """Split the ticket into child tickets, one for each story on its story map."""
+        name = self._ticket
+        return self._in_session(f"Split ticket {name} into child tickets, one per story on its story map: call ticket.create with parent {name} for each story.")
+
+    @property
+    @data_field
+    def handoff(self) -> str:
+        return self._in_session(f"Write a handoff for ticket {self._ticket} with /space-session-handoff-session")
+
+    @property
+    @data_field
+    def set_up_roots(self) -> str:
+        """Propose roots for the pieces the ticket works on, in every practice, and set them once the person confirms."""
+        return self._in_session(f"Set up the roots of ticket {self._ticket}'s session with session.set_up_roots")
+
+    @property
+    @data_field
+    def close_session(self) -> str:
+        """Close the chat's session, which leaves the ticket where it is: moving it into Complete is what completes it."""
+        return self._in_session("/space:session:close-session")
+
+    @property
+    @data_field
+    def new_chat(self) -> str:
+        """The prompt a ticket's new chat opens with. The Claude app gives a new chat no title, so it asks for the
+        ticket's, then opens the ticket's session and reads its latest handoff."""
+        name = self._ticket
+        return (
+            f'Title this session "{name}". You are the chat of the session board\'s ticket {name}; work on that '
+            f"ticket. First call sessions.switch with name {name}, so every tool works on its session, then read the "
+            "session's latest handoff. When the switch says the session's roots are unchecked, set them up with "
+            "session.set_up_roots before generating anything, so they cover exactly the pieces the ticket works on."
+        )
 
 
 class StagePlace:
@@ -88,6 +171,8 @@ class TicketCheckoutTools:
     do. Each asks the ticket's *TicketCheckout*."""
 
     checkout: TicketCheckout
+    session: Session
+    moves: TicketMoves
     forget_reads: Callable[[], None]
 
     @mcp
@@ -101,14 +186,14 @@ class TicketCheckoutTools:
     @agent_tool
     @noSessionLog
     def work_branch(self) -> Branch:
-        """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, in the repository or in its own worktree, else the default branch while the repository has it checked out, as for a session with no branch of its own. Any other branch checked out is not ticket's, so its own branch comes back not checked out and leaving commits nothing."""
+        """Return the branch ticket's work is on, which leaving ticket commits and pushes: its own branch while it is checked out, in the repository or in its own worktree, else the default branch while the repository has it checked out, as for a session with no branch of its own. Any other branch checked out is not ticket's, and neither is the default branch while its own branch is checked out nowhere, such as after its worktree was deleted, so its own branch comes back not checked out and leaving commits nothing."""
         return self.checkout.work_branch
 
     @mcp
     @agent_tool
     def assign_chat(self, chat: str = "") -> Ticket:
         """Make chat, the id of a connected chat, ticket's chat, kept in its session.json, so every command the board sends for ticket goes there and no chat named after it is looked for; an empty chat gives ticket back to the chat named after it."""
-        self.checkout.assign_chat(chat)
+        self.session.checkout.assign_chat(chat)
         self.forget_reads()
         return self
 
@@ -116,7 +201,7 @@ class TicketCheckoutTools:
     @agent_tool
     @noSessionLog
     def close_choices(self) -> LeaveChoices:
-        """Return what closing ticket can do with its work, none chosen at first, so closing does only what the person ticks: a handoff always; a commit and a push of the branch its work is on while a checkout has it, which branch names; and, for its own branch, which own_branch names, a merge into main, a delete of the branch, and a delete of its worktree while it has one."""
+        """Return what closing ticket can do with its work, none chosen at first, so closing does only what the person ticks: a handoff always; a commit and a push of the branch its work is on while a checkout has it, which branch names; and, for its own branch, which own_branch names, a merge into main, a delete of the branch, and a delete of its worktree while it has one. unsaved_work names the files in its worktree with changes nobody committed, and warning says deleting the worktree or branch without a commit loses them."""
         return self.checkout.close_choices
 
     @long_call
@@ -124,10 +209,11 @@ class TicketCheckoutTools:
     @agent_tool
     @noSessionLog
     def activate(self) -> Ticket:
-        """Open ticket in its own worktree, where its own chat works on it: the worktree it has, else a new one on its own branch, made when missing, after the session folders not yet committed are committed on main and pushed. Sessions open only from main: the chat that asks keeps its own session, the repository's own folder stays on main, and nothing is left or moved."""
-        self.checkout.open()
-        self.forget_reads()
-        return self
+        """Open ticket in its own worktree, where its own chat works on it: the worktree it has, else a new one on its own branch, made when missing, after the session folders not yet committed are committed on main and pushed. A closed ticket reopens first, as moving it out of Complete does: its folder back among the open sessions, on the stage it was closed from. Sessions open only from main: the chat that asks keeps its own session, the repository's own folder stays on main, and nothing is left or moved."""
+        opened = self.moves.reopened()
+        opened.checkout.open()
+        opened.forget_reads()
+        return opened
 
 
 @hosted_only
@@ -141,14 +227,14 @@ class TicketMoveTools:
     @agent_tool
     @noSessionLog
     def move_next(self) -> Ticket:
-        """Move ticket on: from In progress to its stage's Done, from Done to the next column, whatever its work. Out of Implementation it closes, but main, the default session, stays in Implementation's Done. A ticket with children moves only with them, so it is refused."""
+        """Move ticket on: from In progress to its stage's Done, from Done to the next column, whatever its work. Out of Hardening, the last stage, it closes, but main, the default session, stays in Hardening's Done. A ticket with children moves only with them, so it is refused."""
         return self.moves.move_next()
 
     @mcp
     @agent_tool
     @noSessionLog
     def move_previous(self) -> Ticket | BacklogItem:
-        """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Implementation; out of Discovery it goes to the Backlog with its work, but main stays in Discovery. A ticket with children moves only with them, so it is refused."""
+        """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Hardening, the last stage; out of Discovery it goes to the Backlog with its work, but main stays in Discovery. A ticket with children moves only with them, so it is refused."""
         return self.moves.move_previous()
 
     @mcp
@@ -162,9 +248,10 @@ class TicketMoveTools:
     @agent_tool
     @noSessionLog
     def move_before(self, other: Ticket) -> Ticket:
-        """Move ticket just above other in their column, as dragging it there does; the column keeps that order, in .sessions/_board.json. Committed on main and pushed."""
-        super().move_before(other)
-        return self
+        """Move ticket just above other, as dragging it there does. Where other is in another column, or in its stage's other list, ticket goes there first: into other's stage, In progress or Done as other is, and beside a closed ticket it closes with its work left as it is. The column keeps that order, in .sessions/_board.json. Committed on main and pushed. A ticket with children moves only with them, so a move to another column is refused."""
+        beside = self.moves.move_beside(other)
+        Card.move_before(beside, other)
+        return beside
 
 
 @hosted_only
@@ -184,8 +271,9 @@ class TicketTreeTools:
     @agent_tool
     @noSessionLog
     def add_child(self, title: str) -> Ticket:
-        """Open a child ticket of ticket titled title, a story In progress in Discovery, working where ticket works. Committed on main and pushed."""
-        return self.board.placement.ticket_of(self.session.hierarchy.open_child(title, scope="story"))
+        """Open a child ticket of ticket titled title, a story In progress in Discovery, working where ticket works. A title that gives no name, one too long, or the name of a ticket already there is refused, as for any new ticket. Committed on main and pushed."""
+        placement = self.board.placement
+        return placement.ticket_of(self.session.hierarchy.open_child(placement.free_name_for(title), title, scope="story"))
 
     @mcp
     @agent_tool
@@ -203,7 +291,7 @@ class TicketTreeTools:
     @noSessionLog
     def reassign_parent(self, parent: Ticket | None = None) -> Ticket:
         """Make parent ticket's parent, as dragging ticket onto it does, or none, so ticket is a ticket of its own (Alt-dragging it out of its parent); either way it is no longer pulled out. Committed on main and pushed."""
-        if parent is not None and not self.tree.can_be_child_of(parent):
+        if parent is not None and not self.session.hierarchy.can_take_parent(parent.session):
             raise ParentLoopError(self.name, parent.name)
         self.session.hierarchy.set_parent(parent.session if parent is not None else None)
         self.forget_reads()
@@ -217,34 +305,39 @@ class TicketEnding:
     its whole folder. Main, the default session, never leaves; each ending's move is committed on main and pushed."""
 
     name: str
-    is_main: bool
     session: Session
     board: Board
     checkout: TicketCheckout
+    board_fields: OwnedFields
 
     def _refuse_main(self, action: str) -> None:
-        if self.is_main:
-            raise MainStaysOpenError(action)
+        self.session.refuse_if_main(action)
+
+    def _end_session(self) -> None:
+        """End the ticket's session for the chat the board is read for: when that chat has it open, main becomes open."""
+        self.board.sessions.opened.close(self.session, self.board.chat)
 
     @long_call
     @mcp
     @agent_tool
     @noSessionLog
     def close(self, leaving: list[str] | None = None) -> Ticket:
-        """Close ticket: leaving names what to do with its work first (handoff, commit, push, merge, delete_branch, delete_worktree); then its session ends, its folder moves to _complete/, that move is committed on main and pushed, and it shows in Complete. The repository's own folder stays on main."""
+        """Close ticket: leaving names what to do with its work first, and the close does only that (handoff, commit, push, merge, delete_branch, delete_worktree; any other is refused with UnknownLeavingStepError, before anything changes), its work committed where it is and its branch merged before anything is removed or moved, so a merge git refuses, or a worktree a running program holds open, stops the close with ticket still open; then its session ends, its record folder moves to _complete/ with the work the merge brought beside it, that move is committed on main and pushed, and it shows in Complete; a worktree deleted without a commit goes as it is, and the closed ticket's dropped_work names the files whose uncommitted work went with it. The repository's own folder stays on main, and what is uncommitted there is never committed for a ticket that has its own worktree: a merge that would run over it is refused with EditsInTheWayOfMergeError before anything changes."""
         self._refuse_main("close")
-        leaving = leaving or []
+        chosen = Leaving(leaving or [])
         checkout = self.checkout
-        checkout.write_handoff(leaving)
-        # A worktree something still holds open fails to delete; deleting it first stops the close with nothing changed.
-        checkout.free_worktree(leaving)
-        checkout.keep_landing_release(leaving)
-        self.session.close()
+        checkout.refuse_edits_merge_would_overwrite(chosen)
+        checkout.write_handoff(chosen)
+        # The work is saved and the branch merged while the ticket still has its worktree and its open session, so a
+        # merge git refuses leaves both as they were. The branch also merges before the record moves: the session's work
+        # folder on the branch lands beside the record in main's .sessions, and the move takes both among the closed
+        # sessions. Moved first, git would find the work folder added inside a folder main renamed, and refuse the merge.
+        checkout.save_work(chosen)
+        checkout.keep_landing_release(chosen)
+        self.board_fields.save(**{_DROPPED_WORK_FIELD: checkout.leave_branch(chosen)})
+        self._end_session()
         closed = self.board.placement.ticket_of(self.session.folder.move_to_closed())
-        # The work is saved after the folder moves, so the move is committed with it.
-        checkout.save_work(leaving)
         checkout.return_to_default_branch()
-        # The ticket's record is kept on main, so its move among the closed sessions is committed and pushed there.
         self.board.sessions.saves.now(f"sessions: close {self.name}")
         return closed
 
@@ -252,9 +345,10 @@ class TicketEnding:
     @agent_tool
     @noSessionLog
     def archive(self) -> Ticket:
-        """Archive ticket: its session ends, its folder moves to _archive/, that move is committed on main and pushed, and it leaves the board. Main never archives."""
+        """Archive ticket: its own worktree is removed, its work committed and pushed on its branch first, which stays; then its session ends, its folder moves to _archive/, that move is committed on main and pushed, and it leaves the board. Main never archives."""
         self._refuse_main("archive")
-        self.session.close()
+        self.checkout.free_worktree()
+        self._end_session()
         archived = self.board.placement.ticket_of(self.session.folder.move_to_archive())
         self.board.sessions.saves.now(f"sessions: archive {self.name}")
         return archived
@@ -263,33 +357,37 @@ class TicketEnding:
     @agent_tool
     @noSessionLog
     def delete(self) -> None:
-        """Delete ticket: its session ends and its folder, log, and files are removed, that removal committed on main and pushed, and it leaves the board. Main never deletes."""
+        """Delete ticket: its own worktree is removed, its work committed and pushed on its branch first, which stays; then its session ends and its folder, log, and files are removed, that removal committed on main and pushed, and it leaves the board. A worktree or a session folder a running program holds open refuses the delete with ticket's record still whole. Main never deletes."""
         self._refuse_main("be deleted")
-        self.session.close()
+        self.checkout.free_worktree()
         self.session.folder.remove()
+        self._end_session()
         self.board.placement.reread()
 
     def to_backlog(self) -> BacklogItem:
         """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
         the item brings the ticket back with its work."""
         self._refuse_main("go to the Backlog")
-        self.session.close()
+        self._end_session()
         kept_in_backlog = self.board.placement.ticket_of(self.session.folder.move_to_backlog())
         return self.board.placement.backlog_item_of(kept_in_backlog)
 
 
 @hosted_only
 class TicketTextTools:
-    """A ticket's published edits to what its session says about its work: its text and its tags, each kept by its session."""
+    """A ticket's published edits to what its session says about its work: its text and its tags, each kept by its session.
+    Main, the default session, is no one piece of work, so it takes neither."""
 
     session: Session
     forget_reads: Callable[[], None]
+    _refuse_main: Callable[[str], None]
 
     @mcp
     @agent_tool
     @noSessionLog
     def edit_text(self, text: str) -> Ticket:
-        """Write text as what ticket's work is about, in the idea file its session folder keeps, <name>.md, under its heading; the file is made when ticket has none. Committed on main and pushed."""
+        """Write text as what ticket's work is about, in the idea file its session folder keeps, <name>.md, under its heading; the file is made when ticket has none. Committed on main and pushed. Main, the default session, is refused."""
+        self._refuse_main("have its text edited")
         self.session.keep_text(text)
         self.forget_reads()
         return self
@@ -298,7 +396,8 @@ class TicketTextTools:
     @agent_tool
     @noSessionLog
     def tag(self, word: str) -> Ticket:
-        """Tag ticket's session with word, kept in its session.json beside its other tags. Committed on main and pushed."""
+        """Tag ticket's session with word, kept in its session.json beside its other tags. Committed on main and pushed. Main, the default session, is refused."""
+        self._refuse_main("be tagged")
         self.session.add_tag(word)
         self.forget_reads()
         return self
@@ -345,17 +444,17 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
 
     @classmethod
     @tool_subject
-    def load(cls, ticket: str, *, project: Path | str) -> Ticket:
-        """The ticket named ticket on the board of project, read from its own session alone."""
-        return Board.load(project).placement.ticket_called(ticket)
+    def load(cls, ticket: str, *, project: Path | str, call: ToolCall | None = None) -> Ticket:
+        """The ticket named ticket on the board of project, read for call from its own session alone."""
+        return Board.load(project, call).placement.ticket_called(ticket)
 
     @classmethod
     @mcp
     @agent_tool
     @noSessionLog
-    def create(cls, title: str, scope: str = "feature", parent: str = "", path: str = "", *, project: Path | str) -> Ticket:
+    def create(cls, title: str, scope: str = "feature", parent: str = "", path: str = "", *, project: Path | str, call: ToolCall | None = None) -> Ticket:
         """Open a new ticket titled title in Discovery, its record committed on main and pushed. scope is feature, story, or slice; parent names the ticket it was split from; path is the folder in the repository its session works on. Then run ticket.activate to open the ticket's own worktree, and do its work in a chat started there (start_session with cwd set to the ticket's worktree), not in this chat."""
-        board = Board.load(project)
+        board = Board.load(project, call)
         opened = board.placement.open_ticket(title, scope, path)
         if parent:
             opened.session.hierarchy.set_parent(board.sessions.named(parent))
@@ -373,7 +472,7 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
     def is_main(self) -> bool:
         """Whether this is main, the default session: every chat in the repository's own folder works on it, and it
         never closes, archives, or goes to the Backlog."""
-        return self.name == MAIN_SESSION_NAME
+        return self._session.is_main
 
     @property
     def title(self) -> str:
@@ -466,8 +565,8 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
     @property
     @data_field
     def is_active(self) -> bool:
-        """Whether its session is the one saved as open, which the agent works in."""
-        return self._remember("is_active", lambda: self._board.sessions.opened.name_for() == self.name)
+        """Whether its session is the one the board's chat has open, which the agent works in."""
+        return self._remember("is_active", lambda: self._board.sessions.opened.name_for(self._board.chat) == self.name)
 
     @property
     @data_field
@@ -510,7 +609,7 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
             return all(child.is_done for child in children_here)
         marked = self.marks.latest_in(column)
         if marked is not None:
-            return marked == MARKED_DONE
+            return marked is StageMark.DONE
         return all(progress.is_done for progress in self.work.enabled if progress.stage is column)
 
     @property
@@ -552,18 +651,39 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
 
     @property
     @data_field
+    def dropped_work(self) -> list[str]:
+        """The files whose changes nobody committed that went with its worktree when it was last closed, since commit was
+        not chosen, so the close's answer names what was lost; none when nothing was."""
+        return list(self.board_fields.get(_DROPPED_WORK_FIELD) or [])
+
+    @property
+    def board_fields(self) -> OwnedFields:
+        """The fields the board keeps for it in its session.json: its stage, its mark there, and its dropped work."""
+        return self._session.record.extra(_TICKET_FIELDS)
+
+    @property
+    @data_field
     def new_chat_link(self) -> str:
         """The claude://code/new link that opens the ticket's chat in the Claude app on its worktree, with a prompt typed
         in for the person to send; empty while it has no worktree. The app starts no chat a person did not send, so the
         board and the chat bar open this link rather than ask an agent to start one."""
         if not self.worktree:
             return ""
-        prompt = (
-            f'Title this session "{self.name}". You are the chat of the session board\'s ticket {self.name}; work on that '
-            f"ticket. First call sessions.switch with name {self.name}, so every tool works on its session, then read the "
-            "session's latest handoff."
-        )
-        return links_of_run().link_to_new(self.worktree, prompt)
+        return Chats.load(self._board.call).new_chat(self.worktree, self.prompts.new_chat).link
+
+    @property
+    @data_field
+    def prompts(self) -> TicketPrompts:
+        """What the ticket asks its chat to do for it, worded here beside the tools they name: split it, write its
+        handoff, set up its roots, close its session, and start as its new chat."""
+        return TicketPrompts(self.name, self._session.session_file_from_project)
+
+    @property
+    @data_field
+    def can_edit(self) -> bool:
+        """Whether a person may edit its text and tags: any ticket's but main's, the default session, which is no one
+        piece of work; edit_text and tag refuse main."""
+        return not self.is_main
 
     @property
     @data_field
@@ -635,8 +755,8 @@ class TicketMoves:
         self._ticket = ticket
 
     def move_next(self) -> Ticket:
-        """From In progress to its stage's Done, from Done to the next column; out of Implementation it closes, but main
-        stays in Implementation's Done."""
+        """From In progress to its stage's Done, from Done to the next column; out of Hardening, the last stage, it closes, but
+        main stays in Hardening's Done."""
         ticket = self._ticket
         ticket.tree.refuse_moving_a_parent()
         column = ticket.column
@@ -645,7 +765,7 @@ class TicketMoves:
         place = self.next_place
         if place is None:
             return ticket if ticket.is_main else ticket.close([])
-        return ticket.marks.mark(MARKED_DONE, column) if place.is_done else ticket.marks.enter(place.stage)
+        return ticket.marks.mark(StageMark.DONE, column) if place.is_done else ticket.marks.enter(place.stage)
 
     @property
     def next_place(self) -> StagePlace | None:
@@ -662,18 +782,18 @@ class TicketMoves:
 
     def move_previous(self) -> Ticket | BacklogItem:
         """From Done to its stage's In progress, from In progress to the previous column's Done; out of Complete it
-        reopens in Implementation; out of Discovery it goes to the Backlog with its work, but main stays in Discovery."""
+        reopens in Hardening, the last stage; out of Discovery it goes to the Backlog with its work, but main stays in Discovery."""
         ticket = self._ticket
         ticket.tree.refuse_moving_a_parent()
         column = ticket.column
         if not isinstance(column, Stage):
-            reopened, final = ticket.board.placement.ticket_of(ticket.session.folder.reopen()), ticket.board.stages[-1]
+            reopened, final = self.reopened(), ticket.board.stages[-1]
             reopened.marks.enter(final)
-            return reopened.marks.mark(MARKED_DONE, final)
+            return reopened.marks.mark(StageMark.DONE, final)
         place = self.previous_place
         if place is None:
             return ticket if ticket.is_main else ticket.to_backlog()
-        return ticket.marks.place(place.stage, MARKED_DONE) if place.is_done else ticket.marks.mark(MARKED_IN_PROGRESS, column)
+        return ticket.marks.place(place.stage, StageMark.DONE) if place.is_done else ticket.marks.mark(StageMark.IN_PROGRESS, column)
 
     @property
     def previous_place(self) -> StagePlace | None:
@@ -688,6 +808,14 @@ class TicketMoves:
         earlier = column.previous_stage
         return StagePlace(earlier, True) if earlier is not None else None
 
+    def reopened(self) -> Ticket:
+        """The ticket on a stage: itself while it is on one; out of Complete, reopened, its folder back among the open
+        sessions and the ticket read there, on the stage it was closed from until a move places it."""
+        ticket = self._ticket
+        if not ticket.is_closed:
+            return ticket
+        return ticket.board.placement.ticket_of(ticket.session.folder.reopen())
+
     def move_to(self, stage: str, done: bool) -> Ticket | BacklogItem:
         """Straight into stage's In progress, or its Done when done; out of Complete it reopens first; into the Backlog
         it becomes a backlog item that keeps its whole folder."""
@@ -696,8 +824,19 @@ class TicketMoves:
         if stage == BACKLOG_COLUMN:
             return ticket.to_backlog()
         target = ticket.board.stage(stage)
-        moved = ticket if isinstance(ticket.column, Stage) else ticket.board.placement.ticket_of(ticket.session.folder.reopen())
-        return moved.marks.place(target, MARKED_DONE if done else MARKED_IN_PROGRESS)
+        return self.reopened().marks.place(target, StageMark.DONE if done else StageMark.IN_PROGRESS)
+
+    def move_beside(self, other: Ticket) -> Ticket:
+        """Into the column and list other is in, so the ticket can be placed next to it: itself where it is there
+        already; closed, its work left as it is, beside a closed ticket; else in other's stage, In progress or Done as
+        other is."""
+        ticket = self._ticket
+        if other.is_closed:
+            return ticket if ticket.is_closed else ticket.close([])
+        if not ticket.is_closed and ticket.column is other.column and ticket.is_done == other.is_done:
+            return ticket
+        ticket.tree.refuse_moving_a_parent()
+        return self.reopened().marks.place(other.column, StageMark.DONE if other.is_done else StageMark.IN_PROGRESS)
 
 
 class TicketWork:
@@ -711,20 +850,14 @@ class TicketWork:
         # The enabled part of that reading, with the reading it was picked from.
         self._enabled: tuple[list[FidelityProgress], list[FidelityProgress]] | None = None
         # Its session's log entries as last read; none until asked for, and none again once a line is written.
-        self._entries: list[LogEntry] | None = None
+        self._entries: list[LogLine] | None = None
 
     @property
-    def entries(self) -> list[LogEntry]:
+    def entries(self) -> list[LogLine]:
         """Its session's log entries, read once with its progress, so its stage and its progress read the same lines."""
         if self._entries is None:
             self._entries = self._ticket.session.log.entries
         return self._entries
-
-    @cached_property
-    def _session_file(self) -> str:
-        """Its session's session.json as a path from the project, which every command names: one per action on every
-        fidelity, so it is worked out once. A ticket whose folder moves is read again as another ticket."""
-        return self._ticket.session.session_file_from_project
 
     @cached_property
     def _required(self) -> list[RequiredFidelity]:
@@ -736,8 +869,7 @@ class TicketWork:
     @property
     def progress(self) -> list[FidelityProgress]:
         if self._read is None:
-            entries = self.entries
-            self._read = [FidelityProgress.from_log(required, entries, self._ticket) for required in self._required]
+            self._read = [FidelityProgress.from_log(required, self._ticket) for required in self._required]
         return self._read
 
     @property
@@ -757,7 +889,7 @@ class TicketWork:
         moves = [index for index, entry in enumerate(entries) if entry.verb == MOVED_INTO]
         since = entries[moves[-1] + 1:] if moves else entries
         for entry in reversed(since):
-            if entry.verb not in (GENERATE, VALIDATE):
+            if entry.verb not in (_generate(), _validate()):
                 continue
             stage = next((progress.stage for progress in self.enabled if entry.names(progress.fidelity)), None)
             if stage is not None:
@@ -778,20 +910,13 @@ class TicketWork:
         found = next((required for required in self._required if required.fidelity.slug == slug), None)
         if found is None:
             raise FidelityNotFoundError(slug, f"ticket {self._ticket.name!r}")
-        return FidelityProgress.from_log(found, self.entries, self._ticket)
+        return FidelityProgress.from_log(found, self._ticket)
 
     def in_stage(self, stage: Stage) -> StageWork:
         """Its work in stage: the progress of every fidelity stage requires whose practice its session works on."""
         return StageWork(self._ticket, stage, [progress for progress in self.enabled if progress.stage is stage])
 
-    def command(self, action: str, fidelities: list[FidelityGuidance]) -> str:
-        """The command that runs action on fidelities in the ticket's session, one command for them all so the chat
-        works on them in one turn. It names the session, because the chat that runs it can have another session open,
-        and no format, so the action works in the format each fidelity keeps in that session."""
-        named = " ".join(fidelity.slug for fidelity in fidelities)
-        return f"/actions-{action} {named} session={self._session_file}"
-
-    def record(self, line: str) -> None:
+    def record(self, line: LogLine) -> None:
         """Write line to the ticket's session log; its progress is read from the log again next time it is asked for."""
         self._ticket.session.log.record(line)
         self._read = None
@@ -801,12 +926,17 @@ class TicketWork:
 
 class StageMarks:
     """*StageMarks* are the moves and marks a person made on one ticket's stages: the stage it was last moved into, and
-    in that stage whether it was last marked done or in progress. They are the ticket's record, kept in its session.json
-    (``stage``, ``stage_mark``), so the stage never depends on which log lines a branch has. Each move or mark is also a
-    log line, the history agentic improvement reads; a ticket moved before the record existed is read from its log."""
+    in that stage whether it was last marked done or in progress. They are the board's own fields in the ticket's
+    session.json (``stage``, ``stage_mark``, through ``record.extra("ticket")``), so the stage never depends on which
+    log lines a branch has. Each move or mark is also a log line, the history agentic improvement reads; a ticket moved
+    before the record existed is read from its log."""
 
     def __init__(self, ticket: Ticket) -> None:
         self._ticket = ticket
+
+    @property
+    def _fields(self) -> OwnedFields:
+        return self._ticket.board_fields
 
     @property
     def moved_into(self) -> Stage | None:
@@ -817,41 +947,53 @@ class StageMarks:
             name = moved.stage if moved is not None else ""
         return next((stage for stage in self._ticket.board.stages if stage.name == name), None)
 
-    def latest_in(self, stage: Stage) -> str | None:
+    def latest_in(self, stage: Stage) -> StageMark | None:
         """The latest mark a person made in stage since entering it; none when they have made none."""
         if self._recorded_stage is not None:
-            mark = str(self._ticket.session.record.fields.get(_STAGE_MARK_FIELD, "") or "")
-            return mark if self._recorded_stage == stage.name and mark else None
-        latest = self._ticket.session.log.latest(MOVED_INTO, MARKED_DONE, MARKED_IN_PROGRESS, stage=stage.name)
-        return latest.verb if latest is not None and latest.verb != MOVED_INTO else None
+            mark = str(self._fields.get(_STAGE_MARK_FIELD) or "")
+            return StageMark(mark) if self._recorded_stage == stage.name and mark else None
+        latest = self._ticket.session.log.latest(MOVED_INTO, *(mark.value for mark in StageMark), stage=stage.name)
+        return StageMark(latest.verb) if latest is not None and latest.verb != MOVED_INTO else None
 
     @property
     def _recorded_stage(self) -> str | None:
         """The stage session.json records; none for a ticket whose moves are only in its log."""
-        recorded = self._ticket.session.record.fields.get(_STAGE_FIELD)
+        recorded = self._fields.get(_STAGE_FIELD)
         return str(recorded) if recorded else None
 
     def enter(self, stage: Stage) -> Ticket:
         """Move the ticket into stage's In progress."""
-        return self.mark(MOVED_INTO, stage)
+        self._write(None, stage)
+        return self._ticket
 
-    def mark(self, mark: str, stage: Stage) -> Ticket:
-        """Mark the ticket done or in progress in stage, or move it into stage, keeping the result in session.json, which
-        is committed on main and pushed."""
+    def mark(self, mark: StageMark, stage: Stage) -> Ticket:
+        """Mark the ticket done or in progress in stage, keeping the result in session.json, which is committed on main
+        and pushed."""
         self._write(mark, stage)
         return self._ticket
 
-    def place(self, stage: Stage, mark: str) -> Ticket:
+    def place(self, stage: Stage, mark: StageMark) -> Ticket:
         """Put the ticket in stage, entering it first unless it is there, then mark it there: one commit on main, pushed,
         for both."""
         if self._ticket.column is not stage:
-            self._write(MOVED_INTO, stage)
+            self._write(None, stage)
         return self.mark(mark, stage)
 
-    def _write(self, mark: str, stage: Stage) -> None:
-        self._ticket.session.record.save_fields(**{_STAGE_FIELD: stage.name, _STAGE_MARK_FIELD: "" if mark == MOVED_INTO else mark})
-        self._ticket.work.record(f"{mark} {stage.name}")
+    def _write(self, mark: StageMark | None, stage: Stage) -> None:
+        """Keep the ticket in stage with mark, none when it was only moved there, and log the move or the mark."""
+        self._fields.save(**{_STAGE_FIELD: stage.name, _STAGE_MARK_FIELD: mark.value if mark is not None else ""})
+        self._ticket.work.record(LogLine(mark.value if mark is not None else MOVED_INTO, subject=stage.name))
 
+
+class NoReportToAcceptInError(LookupError):
+    """A person accepted, or took back the acceptance of, a violation of a fidelity that has no validation report. It
+    names the fidelity and the violation asked for."""
+
+    def __init__(self, fidelity: str, rule: str, location: str) -> None:
+        self.fidelity = fidelity
+        self.rule = rule
+        self.location = location
+        super().__init__(f"{fidelity} has no validation report, so it lists no violation of {rule} at {location}; validate it first")
 
 
 class LoggedWork:
@@ -866,43 +1008,76 @@ class LoggedWork:
 
     def failed_again(self) -> LoggedWork:
         """This work with its latest validate failed, so validate is to do again."""
-        return LoggedWork([action for action in self.done_actions if action == GENERATE], True, self.lines_logged)
+        return LoggedWork([action for action in self.done_actions if action == _generate()], True, self.lines_logged)
+
+    def validated(self, steps: list[str]) -> LoggedWork:
+        """This work with its latest validate passed, its done actions in the order of steps, its stage's."""
+        return LoggedWork([action for action in steps if action in (*self.done_actions, _validate())], False, self.lines_logged)
+
+
+class Work(ABC):
+    """*Work* is a ticket's work on some fidelities of one stage: one fidelity's progress (*FidelityProgress*) or a
+    stage's work taken together (*StageWork*). Each answers the command a chat runs for every action of its stage on its
+    fidelities, which the ticket's session's guidance selection writes (``GuidanceSelection.command``): the one place a
+    command and its ``format=`` are written."""
+
+    _ticket: Ticket
+
+    @property
+    @abstractmethod
+    def stage(self) -> Stage: ...
+
+    @property
+    @abstractmethod
+    def fidelities(self) -> list[FidelityGuidance]:
+        """The fidelities its commands name."""
+
+    @property
+    @data_field
+    def commands(self) -> dict[str, str]:
+        """The command a chat runs for each action its stage offers on its fidelities, such as
+        ``/actions-generate ux-mockup session=.sessions/checkout-flow/session.json format=html``."""
+        return self._ticket.session.guidance.commands_on(self.fidelities)
+
+    def command(self, action: str) -> str:
+        """The command that runs action on its fidelities in its ticket's session, with the formats chosen there for an
+        action that takes them."""
+        return self.commands[action]
 
 
 @identity("ticket", "fidelity")
 @language_adapter(language="typescript")
 @agent_toolset
-class FidelityProgress:
+class FidelityProgress(Work):
     """*FidelityProgress* is how far one fidelity has got through its stage's actions on one ticket."""
 
     # Validate is done when its latest line names no graph-rule violations and the latest report's judgment fails no
-    # rule; a fidelity whose latest validate passes is done.
+    # rule, or when a person accepted every violation its latest report names; a fidelity whose latest validate passes
+    # is done.
 
     def __init__(self, required: RequiredFidelity, logged: LoggedWork, ticket: Ticket) -> None:
         self._required = required
-        self._fidelity = required.fidelity
-        self._stage = required.stage
         self._logged = logged
-        self._done_actions = logged.done_actions
-        self._has_violations = logged.has_violations
         self._ticket = ticket
 
     @classmethod
-    def from_log(cls, required: RequiredFidelity, entries: list[LogEntry], ticket: Ticket) -> FidelityProgress:
-        """Read the actions done on this fidelity from its session's log entries, finding it by name, never by position;
-        the latest report's judgment can still fail a validate the log shows passing."""
+    def from_log(cls, required: RequiredFidelity, ticket: Ticket) -> FidelityProgress:
+        """Read the actions done on this fidelity from its ticket's session log entries, finding it by name, never by
+        position; the latest report's judgment can still fail a validate the log shows passing."""
+        entries = ticket.work.entries
         naming = [(index, entry.verb) for index, entry in enumerate(entries) if entry.names(required.fidelity)]
-        validations = [index for index, verb in naming if verb == VALIDATE]
+        validations = [index for index, verb in naming if verb == _validate()]
         latest_validation = validations[-1] if validations else None
         has_violations = latest_validation is not None and GRAPH_RULE_VIOLATION in entries[latest_validation].words
         validated = latest_validation is not None and not has_violations
         # Only the generate tool writes a generate line: an action started inside another, such as the generate a
         # Sketch prompt expands, logs nothing (GuidanceAction.log_running), so every generate line counts.
-        done_verbs = {verb for _index, verb in naming if verb == GENERATE}
-        done_verbs |= {VALIDATE} if validated else set()
+        done_verbs = {verb for _index, verb in naming if verb == _generate()}
+        done_verbs |= {_validate()} if validated else set()
         logged = LoggedWork([action for action in required.stage.steps if action in done_verbs], has_violations, len(naming))
         read = cls(required, logged, ticket)
-        return read.with_violations() if read._is_judged_failing else read
+        judged = read._with_violations() if read._is_judged_failing else read
+        return judged._with_accepted_left_out()
 
     @classmethod
     @tool_subject
@@ -920,7 +1095,7 @@ class FidelityProgress:
     def holds(self, file: Path) -> bool:
         """Whether file is one of this fidelity's in its ticket's session, changed by the session or not; none while its
         practice works in no session."""
-        output = self._fidelity.session_output
+        output = self._required.fidelity.session_output
         return output is not None and output.written.holds(file)
 
     @property
@@ -928,13 +1103,13 @@ class FidelityProgress:
     def fidelity(self) -> FidelityGuidance:
         """The fidelity this progress is on, as its ticket's session holds it; sent by its slug, such as
         stories-story-map, because its guidance text is read through its help, never with every ticket."""
-        return self._fidelity
+        return self._required.fidelity
 
     @property
     @data_field(reference=True)
     def stage(self) -> Stage:
         """The stage that requires the fidelity, sent by its name, since the stage sends its tickets."""
-        return self._stage
+        return self._required.stage
 
     @property
     @data_field(reference=True)
@@ -948,41 +1123,29 @@ class FidelityProgress:
     def is_enabled(self) -> bool:
         """Whether the ticket's session works on this fidelity's practice, as the fidelity, which works in that session,
         answers it."""
-        return self._fidelity.session_output.is_enabled
+        return self._required.fidelity.session_output.is_enabled
 
     @property
     def _practice(self) -> PracticeGuidance:
-        return self._fidelity.practice_guidance
+        return self._required.fidelity.practice_guidance
 
     @property
-    def done_actions(self) -> list[str]:
-        return list(self._done_actions)
-
-    @property
-    def remaining_actions(self) -> list[str]:
+    def _remaining_actions(self) -> list[str]:
         """Its stage's actions not yet done: a fidelity generated and validated without violations is done."""
-        return [action for action in self._stage.steps if action not in self._done_actions]
+        return [action for action in self._required.stage.steps if action not in self._logged.done_actions]
 
     @property
     @data_field
     def next_action(self) -> str:
         """What Run next does on this fidelity: the first of its stage's actions not done, which is validate again
         while it has violations, or nothing once it is done."""
-        remaining = self.remaining_actions
+        remaining = self._remaining_actions
         return remaining[0] if remaining else ""
 
     @property
-    @data_field
-    def commands(self) -> dict[str, str]:
-        """The command a chat runs for each action its stage offers on this fidelity, such as
-        ``/actions-generate ux-mockup session=.sessions/checkout-flow/session.json``."""
-        return {action: self.command(action) for action in self._stage.actions}
-
-    def command(self, action: str) -> str:
-        """The command that runs action on this fidelity in its ticket's session. It names the session, because the
-        chat that runs it can have another session open, and no format, so the action works in the format the fidelity
-        keeps in that session."""
-        return self._ticket.work.command(action, [self._fidelity])
+    def fidelities(self) -> list[FidelityGuidance]:
+        """Its one fidelity, which its commands name."""
+        return [self._required.fidelity]
 
     @property
     @data_field
@@ -990,31 +1153,31 @@ class FidelityProgress:
         """Every action of its stage, in the stage's order; Validate and Render only once there is output to
         check or convert: an action on the fidelity is recorded, or a file it declares is already there, such as one a
         person wrote. A person can check the same output again as often as they like."""
-        has_output = bool(self._done_actions) or self._has_files
-        return [action for action in self._stage.actions if has_output or action not in ONCE_THERE_IS_OUTPUT]
+        has_output = bool(self._logged.done_actions) or self._has_files
+        return [action for action in self._required.stage.actions if has_output or action not in _needing_output()]
 
     @cached_property
     def _has_files(self) -> bool:
         """Read once per reading of the progress, since the board and its stage's work both ask. A file named by its
         whole path, such as one a person wrote, is looked for on every read; a pattern's search walks folders, so it runs
         again only after Generate or Validate logs a line on the fidelity or its session declares other paths for it."""
-        output = self._fidelity.session_output
+        output = self._required.fidelity.session_output
         if output is None:
             return False
         if output.written.has_named_output():
             return True
-        key = json.dumps([self._fidelity.declared.output_paths(), self._logged.lines_logged], sort_keys=True)
-        return self._ticket.session.progress_cache.of(self._fidelity.slug).answer(HAS_OUTPUT, key, output.written.has_found_output)
+        key = json.dumps([self._required.fidelity.session_output.written.output_paths(), self._logged.lines_logged], sort_keys=True)
+        return PROGRESS_CACHES.of(self._ticket.session).of(self._required.fidelity.slug).answer(HAS_OUTPUT, key, output.written.has_found_output)
 
     @property
     @data_field
     def has_violations(self) -> bool:
         """Whether its latest validate left violations, so it is validated again once they are fixed."""
-        return self._has_violations
+        return self._logged.has_violations
 
     @property
     def is_done(self) -> bool:
-        return not self.remaining_actions
+        return not self._remaining_actions
 
     @property
     @data_field
@@ -1022,17 +1185,17 @@ class FidelityProgress:
         """done, violations, in_progress, or not_started: what the board pane colours."""
         if self.is_done:
             return "done"
-        if self._has_violations:
+        if self._logged.has_violations:
             return "violations"
-        return "in_progress" if self._done_actions else "not_started"
+        return "in_progress" if self._logged.done_actions else "not_started"
 
     @property
     @data_field(key="actions")
     def action_states(self) -> ActionStates:
         """Each action as to_do, in_progress, or done. A validate that left violations is in progress until they are fixed."""
-        states = {action: "done" if action in self._done_actions else "to_do" for action in self._stage.steps}
-        if self._has_violations:
-            states[VALIDATE] = "in_progress"
+        states = {action: "done" if action in self._logged.done_actions else "to_do" for action in self._required.stage.steps}
+        if self._logged.has_violations:
+            states[_validate()] = "in_progress"
         return ActionStates(states)
 
     @property
@@ -1046,7 +1209,7 @@ class FidelityProgress:
     def latest_report(self) -> ReportFile | None:
         """Its latest validation report in its ticket's session that has its result, else its latest; none when it has
         none. Found once per reading of the progress."""
-        return ReportFile.from_fidelity(self._fidelity)
+        return ReportFile.from_fidelity(self._required.fidelity)
 
     @property
     @data_field
@@ -1057,11 +1220,59 @@ class FidelityProgress:
     @cached_property
     def _violation_count(self) -> int:
         """Counted once per reading of the progress, since the board and its stage's work both ask, and counted again
-        only once Validate writes a report in the session or the latest report or its saved graph changes."""
+        only once Validate writes a report in the session, the latest report or its saved graph changes, or a person
+        accepts a violation or takes an acceptance back."""
+        return self._counted(VIOLATION_COUNT, lambda: self._latest_read.violation_count)
+
+    @cached_property
+    def _accepted_count(self) -> int:
+        """How many violations its latest report leaves out because a person accepted them, kept as its count is."""
+        return self._counted(ACCEPTED_COUNT, lambda: self._latest_read.accepted_count)
+
+    def _counted(self, question: str, count: Callable[[], int]) -> int:
+        """What count answers about its latest report, kept in its session's progress cache until the report can read
+        otherwise; none while it has no violations."""
         latest = self.latest_report
-        if not self._has_violations or latest is None:
+        if not self._logged.has_violations or latest is None:
             return 0
-        return self._ticket.session.progress_cache.of(self._fidelity.slug).answer(VIOLATION_COUNT, latest.version, lambda: latest.report().violation_count)
+        return PROGRESS_CACHES.of(self._ticket.session).of(self._required.fidelity.slug).answer(question, latest.version, count)
+
+    @cached_property
+    def _latest_read(self) -> Report:
+        """Its latest report read once per reading of the progress, for each count taken from it."""
+        return self.latest_report.report()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def accept_violation(self, rule: str, message: str, location: str, line: int = 0, node_id: str = "") -> Report:
+        """Accept one violation of this fidelity's latest validation report as it is, and return the report without it. Name the violation as the report shows it: its rule, message, location, line (0 when it has none), and node_id (empty when it is on no node). It is kept in the project's .context/violations-accepted.json, by its rule, the id of its node, and its message, so no later validate, report, or count names it; a finding on no node is kept by its rule, its file, and the content of its line. It shows again when its message, its node's id, or that content changes. Refused when the report lists no such violation."""
+        self._latest_report_or_refuse(rule, location).accept(self._shown_as(rule, message, Location(location, line or None), node_id))
+        return self._report_read_again()
+
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def reopen_violation(self, rule: str, message: str, location: str, line: int = 0, node_id: str = "") -> Report:
+        """Take back the acceptance of one violation this fidelity's latest validation report lists under accepted, and return the report with it open again. Name the violation as the report shows it: its rule, message, location, line (0 when it has none), and node_id (empty when it is on no node). Refused when the report lists no such violation."""
+        self._latest_report_or_refuse(rule, location).reopen(self._shown_as(rule, message, Location(location, line or None), node_id))
+        return self._report_read_again()
+
+    def _latest_report_or_refuse(self, rule: str, location: str) -> ReportFile:
+        """Its latest report; *NoReportToAcceptInError*, naming the violation asked for, while it has none."""
+        latest = self.latest_report
+        if latest is None:
+            raise NoReportToAcceptInError(self._required.fidelity.slug, rule, location)
+        return latest
+
+    def _shown_as(self, rule: str, message: str, location: Location, node_id: str) -> Violation:
+        """The violation a page names by what its report showed of it."""
+        return Violation(FoundBy(rule, "", FoundOn(node_id)), message, location)
+
+    def _report_read_again(self) -> Report:
+        """Its latest report read after an acceptance changed, with what its ticket worked out before forgotten."""
+        self._ticket.forget_reads()
+        return FidelityProgress(self._required, self._logged, self._ticket).report()
 
     @mcp
     @agent_tool
@@ -1083,17 +1294,24 @@ class FidelityProgress:
     @noSessionLog
     def files(self) -> dict[str, list[FileEntry]]:
         """List the files a person reviews for this fidelity by format in its ticket's session, each with its path from the project, whether it exists, and the published link of a design canvas, formats in the order files are shown (``Format.file_order``: markdown, code, diagrams). They are the files it declares, or those of the fidelities its practice document says it reviews files of (UX front-end code: its IA and mockup). A pattern lists the files the ticket worked on, not every match in the repository."""
-        files = self._fidelity.declared.files_to_review()
+        files = self._required.fidelity.session_output.written.files_to_review()
         return dict(sorted(files.items(), key=lambda formats: Format(formats[0]).file_order))
 
-    def with_violations(self) -> FidelityProgress:
+    def _with_violations(self) -> FidelityProgress:
         """This progress with its latest validate failed, so validate is to do again."""
         return FidelityProgress(self._required, self._logged.failed_again(), self._ticket)
+
+    def _with_accepted_left_out(self) -> FidelityProgress:
+        """This progress with its latest validate passed when a person accepted every violation its latest report
+        names, so an accepted violation holds no fidelity back; itself while any is still open."""
+        if not self._logged.has_violations or self._violation_count or not self._accepted_count:
+            return self
+        return FidelityProgress(self._required, self._logged.validated(self._required.stage.steps), self._ticket)
 
     @property
     def _is_judged_failing(self) -> bool:
         """A validate the log shows passing still failed when the judgment the validating agent added to its report fails a rule."""
-        if VALIDATE not in self._done_actions:
+        if _validate() not in self._logged.done_actions:
             return False
         latest = self.latest_report
         return latest is not None and latest.is_judged_failing
@@ -1110,7 +1328,7 @@ class ActionStates:
         """Where each action stands across several fidelities: done only once it is done on all of them, in progress
         once it is under way on any, else to do."""
         if not every:
-            return cls({action: "to_do" for action in (GENERATE, VALIDATE)})
+            return cls({action: "to_do" for action in (_generate(), _validate())})
         taken = every[0]
         for states in every[1:]:
             taken = taken._with(states)
@@ -1130,15 +1348,15 @@ class ActionStates:
     @property
     @data_field
     def generate(self) -> str:
-        return self._states[GENERATE]
+        return self._states[_generate()]
 
     @property
     @data_field
     def validate(self) -> str:
-        return self._states[VALIDATE]
+        return self._states[_validate()]
 
 
-class StageWork:
+class StageWork(Work):
     """*StageWork* is a ticket's work in one stage taken together: the progress of each fidelity the stage requires
     whose practice the ticket's session works on. A stage head's action bar shows how far it has got and acts on all of
     it at once."""
@@ -1154,8 +1372,10 @@ class StageWork:
         return self._stage
 
     @property
+    @data_field(reference=True)
     def progress(self) -> list[FidelityProgress]:
-        """The progress of each fidelity it holds."""
+        """The progress of each fidelity it holds, each a fidelity of the stage whose practice the session works on, in
+        the order the stage requires them; sent by reference, since the ticket sends each in full."""
         return list(self._progress)
 
     @property
@@ -1177,11 +1397,9 @@ class StageWork:
         return sum(progress.violation_count for progress in self._progress)
 
     @property
-    @data_field
-    def commands(self) -> dict[str, str]:
-        """The command a chat runs for each action its stage offers, naming every one of its fidelities."""
-        fidelities = [progress.fidelity for progress in self._progress]
-        return {action: self._ticket.work.command(action, fidelities) for action in self._stage.actions}
+    def fidelities(self) -> list[FidelityGuidance]:
+        """Each of its fidelities, which one command names together."""
+        return [progress.fidelity for progress in self._progress]
 
     @property
     @data_field

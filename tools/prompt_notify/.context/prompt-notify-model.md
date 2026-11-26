@@ -33,10 +33,10 @@ on_pre_tool_use(payload: HookPayload): dict
 	-> PromptNotify.install_ide_toast_extension
 	-> PromptNotify.handle
 	-> PromptNotify.show_toast(user_message, payload.workspace_roots)
-handle(payload: HookPayload, toolsets: list | None): dict
+handle(payload: HookPayload): dict
 	// an empty tool_name allows quietly
 	// tries detect_echo before detect; the match becomes user_message "{Kind} → {label}"
-detect_echo(payload: HookPayload, toolsets: list | None): tuple[str, str] | None
+detect_echo(payload: HookPayload): tuple[str, str] | None
 	// never treats an inherited begin as the toast for instructions
 	// never toasts open_workspace, end, or begin from an inherited begin
 	-> PromptNotify.echo_toolsets
@@ -44,12 +44,10 @@ detect(payload: HookPayload): tuple[str, str] | None
 	// never toasts an action from a path
 	// names a rule when the path is a rules path
 echo_toolsets: list
-	// the toolsets RepositoryToolsets lists in the CDD checkout, loaded once by the hook server's notifier and kept; a toolset that fails to load raises
-show_toast(toast: str, workspace_roots: list[Path]): list[Path]
+	// the toolsets its maker gave it, as a spec does; else the toolsets RepositoryToolsets lists in the CDD checkout, loaded once by the hook server's notifier and kept; a toolset that fails to load raises
+show_toast(toast: str, workspace_roots: list[Path | str]): list[Path]
 	// the operation the hook server calls for each merged toast, on the one PromptNotify it registered
-	-> PromptNotify.show_ide_toast
-show_ide_toast(echo: str, workspace_roots: list[Path | str]): list[Path]
-	-> ToastFile(folder).show(echo, now) for each workspace folder
+	-> ToastFile(folder).show(toast, now) for each workspace folder
 install_ide_toast_extension(): Path
 	// copies ide_toast into the Cursor extensions folder once per process
 

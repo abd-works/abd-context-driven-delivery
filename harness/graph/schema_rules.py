@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from harness.graph.pattern_overlays import GraphOverlay
 from harness.graph.schema_conformance import FRAMEWORK_RULES, RequiredRelationship
@@ -19,8 +20,8 @@ from harness.guidance.guidance import PracticeGuidance
 from harness.guidance.rule import RulesCollection
 from harness.guidance.schema import Schema
 
-# Fields every schema type may carry that describe the type itself, not a relationship.
-_TYPE_FIELDS = frozenset({"is", "fidelity", "name", "path"})
+if TYPE_CHECKING:
+    from harness.graph.graph import Node
 
 
 class PracticeSchema:
@@ -39,7 +40,7 @@ class PracticeSchema:
     @cached_property
     def types(self) -> frozenset[str]:
         """Every node type the practice's schema and the patterns' schemas name."""
-        found = type_names(self._base) | self._added.types
+        found = _type_names(self._base) | self._added.types
         found.update(self._direct_rules)
         found.update(self._supertypes)
         return frozenset(found)
@@ -67,7 +68,7 @@ class PracticeSchema:
         part = practice.reading.in_graph
         return part.rule_run.schema_with(overlays) if part is not None else PracticeSchema(practice, overlays)
 
-    def for_node(self, node) -> PracticeSchema:
+    def for_node(self, node: Node) -> PracticeSchema:
         """This schema with only the overlays that add their rules to node, as its practice's part of the graph keeps it:
         a Python class carries none of the rules of LERN, which is constrained to TypeScript."""
         kept = tuple(overlay for overlay in self.overlays if overlay.adds_rules_to(node))
@@ -77,7 +78,7 @@ class PracticeSchema:
         """The rule slugs a node of this type carries, with those of each type its practice says it also carries."""
         table = self._rules
         listed = self.practice.reading.rule_types.get(node_type, ())
-        return merged(table.get(node_type, ()), *(table.get(other, ()) for other in listed), tuple(FRAMEWORK_RULES))
+        return _merged(table.get(node_type, ()), *(table.get(other, ()) for other in listed), tuple(FRAMEWORK_RULES))
 
     def anchor_type(self, node_type: str) -> str | None:
         """The extended practice's type this node type is, such as ``OoadClass`` for a DDD entity; a practice's own
@@ -226,18 +227,18 @@ class PracticeSchema:
     @cached_property
     def _direct_rules(self) -> dict[str, tuple[str, ...]]:
         """Rule slugs each type's ``rules:`` block lists, in the practice's schema and the patterns' schemas."""
-        found = rules_of(self._base)
+        found = _rules_of(self._base)
         for node_type, slugs in self._added.rules.items():
-            found[node_type] = merged(found.get(node_type, ()), slugs)
+            found[node_type] = _merged(found.get(node_type, ()), slugs)
         return found
 
     @cached_property
     def _supertypes(self) -> dict[str, str]:
         """Each node type with the ``is:`` reference its schema type names: a local type, an anchor word, or
         ``practice.type``. A pattern's ``is:`` naming the same practice's same type extends it rather than replacing it."""
-        found = supertypes_of(self._base)
+        found = _supertypes_of(self._base)
         for schema in self._added.schemas:
-            for node_type, reference in supertypes_of(schema).items():
+            for node_type, reference in _supertypes_of(schema).items():
                 if not self._names_itself(node_type, reference):
                     found[node_type] = reference
         return found
@@ -251,7 +252,7 @@ class PracticeSchema:
         anchor = self.anchor_type(node_type)
         if anchor:
             inherited.append(anchored_rules.get(anchor, ()))
-        return merged(self._direct_rules.get(node_type, ()), *inherited)
+        return _merged(self._direct_rules.get(node_type, ()), *inherited)
 
     def _supertype_chain(self, node_type: str) -> tuple[str, ...]:
         """node_type, then each local supertype its ``is:`` names, up to the first anchor word."""
@@ -302,23 +303,21 @@ class SchemaOverlays:
     @cached_property
     def types(self) -> set[str]:
         """Every node type the patterns' schemas name."""
-        return {node_type for schema in self.schemas for node_type in type_names(schema)}
+        return {node_type for schema in self.schemas for node_type in _type_names(schema)}
 
     @cached_property
     def rules(self) -> dict[str, tuple[str, ...]]:
         """The rules the patterns' schemas and rule files declare, without the practice's own."""
         found: dict[str, tuple[str, ...]] = {}
         for schema in [*self.schemas, *(Schema.load(path) for path in self._files("rules.yaml"))]:
-            for node_type, slugs in rules_of(schema).items():
-                found[node_type] = merged(found.get(node_type, ()), slugs)
+            for node_type, slugs in _rules_of(schema).items():
+                found[node_type] = _merged(found.get(node_type, ()), slugs)
         return found
 
     @cached_property
     def relationship_kinds(self) -> frozenset[str]:
         """The relationship fields the patterns' schemas give the practice's types, such as ``route``."""
-        return frozenset(
-            name for schema in self.schemas for kind in schema.types.values() for name, value in kind.fields if value and name not in _TYPE_FIELDS
-        )
+        return frozenset(relationship.name for schema in self.schemas for kind in schema.types.values() for relationship in kind.relationships)
 
     def pattern_adding(self, node_type: str, slug: str, base_types: frozenset[str]) -> str | None:
         """The name of the applied pattern whose schema declares the rule on this type, or declares a type the
@@ -338,25 +337,25 @@ class SchemaOverlays:
         return sorted(path for path in found if path.is_file())
 
 
-def rules_of(schema: Schema) -> dict[str, tuple[str, ...]]:
+def _rules_of(schema: Schema) -> dict[str, tuple[str, ...]]:
     """Node type with the rule slugs its schema types list; ``given``, ``when``, and ``then`` are each a Step."""
     found: dict[str, tuple[str, ...]] = {}
     for key, slugs in schema.rules().items():
         node_type = SchemaKey(key).node_type
-        found[node_type] = merged(found.get(node_type, ()), slugs)
+        found[node_type] = _merged(found.get(node_type, ()), slugs)
     return found
 
 
-def supertypes_of(schema: Schema) -> dict[str, str]:
+def _supertypes_of(schema: Schema) -> dict[str, str]:
     """Each node type with the ``is:`` reference its schema type names."""
     return {SchemaKey(key).node_type: kind.supertype for key, kind in schema.types.items() if kind.supertype}
 
 
-def type_names(schema: Schema) -> set[str]:
+def _type_names(schema: Schema) -> set[str]:
     """Every node type a schema names."""
     return {SchemaKey(key).node_type for key in schema.types}
 
 
-def merged(*slug_lists: tuple[str, ...]) -> tuple[str, ...]:
+def _merged(*slug_lists: tuple[str, ...]) -> tuple[str, ...]:
     """The slugs of each list in order, each once."""
     return tuple(dict.fromkeys(slug for slugs in slug_lists for slug in slugs))

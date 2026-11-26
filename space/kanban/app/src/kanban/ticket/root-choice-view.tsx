@@ -44,12 +44,20 @@ function RootsListView({ ticket }: { ticket: TicketClient }) {
         <PracticeRootView key={practice.key} ticket={ticket} practice={practice} />
       ))}
       <div className="dialog-actions">
+        <button className="action" type="button" title="The ticket's chat proposes roots for the pieces the ticket works on, in every practice, and sets them once you confirm" onClick={() => void setUpWithChat()}>
+          Set up with the chat
+        </button>
         <button className="action primary" type="button" autoFocus onClick={() => page.roots.close()}>
           Done
         </button>
       </div>
     </>
   )
+
+  async function setUpWithChat(): Promise<void> {
+    await ticket.chatPrompts.fillSetUpRoots()
+    page.roots.close()
+  }
 }
 
 // One practice's root: the folder it writes under, chosen or its default, with a way back to the default once chosen.

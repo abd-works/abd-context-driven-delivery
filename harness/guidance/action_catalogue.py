@@ -5,11 +5,62 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable, Iterator, Protocol
 
-from harness.agent_tools.agent_tools import InstallDestination
-from harness.installation.files import Skill  # noqa: F401 - defining Skill registers the skill channel this reads
-from harness.annotations.annotation import annotation_kinds
+from harness.installation.files import Skill
+from harness.annotations.annotation import Annotation, annotation_kinds
 from harness.annotations.class_folder import class_folder
 from harness.annotations.class_registry import ClassRegistry
+
+# What an action does on a fidelity's stage, beside its place among the stage's actions: every fidelity goes through it
+# (``STEP``, as generate and validate do), it takes the formats a person picks (``TAKES_FORMATS``, as every action that
+# writes or converts a fidelity's files from its guidance does), it checks a fidelity's files rather than writing them
+# (``CHECKS``, as validate does), or it converts a fidelity's files into other formats (``CONVERTS``, as render does). An
+# action that checks or converts waits until there is output.
+STEP: str = "step"
+TAKES_FORMATS: str = "takes_formats"
+CHECKS: str = "checks"
+CONVERTS: str = "converts"
+
+
+class OnStage(Annotation):
+    """Annotate an action's operation, such as generate, with where it sits among the actions a person runs on a
+    fidelity in its stage: its place in the order a board lists them (``rank``) and what it does there (``STEP``,
+    ``TAKES_FORMATS``, ``CHECKS``, ``CONVERTS``), as ``@on_stage(1, STEP, TAKES_FORMATS)``. The action catalogue reads
+    each action's place by this annotation (``Action.place``), so an action is added to the stages, renamed, or moved by
+    changing its own annotation, never a list of names."""
+
+    flag = "_on_stage"
+    copied = False
+
+    def __new__(cls, rank: int, *traits: str):
+        return object.__new__(cls)
+
+    def __init__(self, rank: int, *traits: str) -> None:
+        self.rank = rank
+        self._traits = frozenset(traits)
+
+    @property
+    def step(self) -> bool:
+        """Whether every fidelity goes through the action in its stage."""
+        return STEP in self._traits
+
+    @property
+    def takes_formats(self) -> bool:
+        """Whether the action's command takes the formats a person picks."""
+        return TAKES_FORMATS in self._traits
+
+    @property
+    def checks(self) -> bool:
+        """Whether the action checks a fidelity's files rather than writing them."""
+        return CHECKS in self._traits
+
+    @property
+    def needs_output(self) -> bool:
+        """Whether the action works on output a fidelity already has: one that checks it or converts it."""
+        return CHECKS in self._traits or CONVERTS in self._traits
+
+
+on_stage = OnStage
+
 
 class WorkedFidelity(Protocol):
     """The fidelity an action runs on, as this module names it: guidance.py's *FidelityGuidance* answers it. Naming only
@@ -59,9 +110,15 @@ class Action:
         """The toolset's own folder, which holds its guide and module context."""
         return class_folder(self._toolset_class)
 
-    def run_on(self, fidelity: WorkedFidelity, **arguments: Any) -> Any:
+    @property
+    def place(self) -> OnStage | None:
+        """Where the action sits among the actions a person runs on a fidelity in its stage; none for an action run on
+        no fidelity's stage, such as repair."""
+        return OnStage.recorded_on(self.operation)
+
+    def _run_on(self, fidelity: WorkedFidelity, **arguments: Any) -> Any:
         """Run this action on fidelity with arguments, through the runner its catalogue holds."""
-        return self._catalogue.runner.run(self, fidelity, arguments)
+        return self._catalogue._registered_runner.run(self, fidelity, arguments)
 
     def __repr__(self) -> str:
         return f"Action({self._name!r}, {self._toolset_class.__name__})"
@@ -86,14 +143,14 @@ class FidelityAction:
         return self.action.name
 
     def __call__(self, **arguments: Any) -> Any:
-        return self.action.run_on(self.fidelity, **arguments)
+        return self.action._run_on(self.fidelity, **arguments)
 
 
 class FidelityActions:
     """The actions of catalogue that work on one fidelity, each held for it and made once, by the action's name."""
 
     def __init__(self, fidelity: WorkedFidelity, catalogue: ActionCatalogue) -> None:
-        self._held = {action.name: FidelityAction(action, fidelity) for action in catalogue.fidelity_actions}
+        self._held = {action.name: FidelityAction(action, fidelity) for action in catalogue._fidelity_actions}
 
     def __getattr__(self, name: str) -> FidelityAction:
         held = self.__dict__.get("_held", {})
@@ -119,26 +176,28 @@ class ActionCatalogue:
     def __init__(self) -> None:
         self._toolsets: ClassRegistry[object] = ClassRegistry(lambda toolset_class: class_folder(toolset_class).name)
         self._actions: tuple[Action, ...] | None = None
+        self._on_fidelities: tuple[Action, ...] | None = None
         self._runner: ActionRunner | None = None
 
     def register(self, *toolset_classes: type) -> None:
         """Hold toolset_classes as the action toolsets CDD ships, in the order they are listed."""
         self._toolsets.register(*toolset_classes)
         self._actions = None
+        self._on_fidelities = None
 
     def run_actions_with(self, runner: ActionRunner) -> None:
         """Have every action of this catalogue run on a fidelity through runner."""
         self._runner = runner
 
     @property
-    def runner(self) -> ActionRunner:
+    def _registered_runner(self) -> ActionRunner:
         """The runner the module that defines how actions run registered when it was imported."""
         if self._runner is None:
             raise ActionsNotRegistered()
         return self._runner
 
     @property
-    def fidelity_actions(self) -> tuple[Action, ...]:
+    def _fidelity_actions(self) -> tuple[Action, ...]:
         """The actions that work on a fidelity, in catalogue order; none while no runner is registered."""
         runner = self._runner
         return tuple(action for action in self.actions if runner is not None and runner.works_on_fidelities(action))
@@ -157,7 +216,7 @@ class ActionCatalogue:
                 Action(name, toolset, self)
                 for toolset in self.toolsets
                 for name, member in vars(toolset).items()
-                if annotation_kinds.publishes(InstallDestination.SKILL, member)
+                if Skill.publishes(member)
             )
         return self._actions
 
@@ -165,12 +224,48 @@ class ActionCatalogue:
     def names(self) -> tuple[str, ...]:
         return tuple(action.name for action in self.actions)
 
-    def has(self, name: str) -> bool:
-        return name in self.names
+    @property
+    def on_fidelities(self) -> tuple[Action, ...]:
+        """Every action a person runs on a fidelity in its stage, in the order they sit: partition, which turns a source
+        into what generate works from, then the steps, then the others a person runs in place of the next step. The same
+        in every stage; made once and kept."""
+        if self._on_fidelities is None:
+            placed = [(place, action) for action in self.actions if (place := action.place) is not None]
+            self._on_fidelities = tuple(action for _place, action in sorted(placed, key=lambda entry: entry[0].rank))
+        return self._on_fidelities
 
-    def action(self, name: str) -> Action | None:
-        """The action called name, such as repair; none when no toolset installs it."""
-        return next((action for action in self.actions if action.name == name), None)
+    @property
+    def steps(self) -> tuple[Action, ...]:
+        """What every fidelity goes through in its stage, in order: generate, then validate. A fidelity is done once its
+        latest validate passes."""
+        return tuple(action for action in self.on_fidelities if action.place.step)
+
+    @property
+    def writing_step(self) -> Action:
+        """The step that writes a fidelity's files: generate."""
+        return next(action for action in self.steps if not action.place.checks)
+
+    @property
+    def checking_step(self) -> Action:
+        """The step that checks a fidelity's files: validate."""
+        return next(action for action in self.steps if action.place.checks)
+
+    @property
+    def producing(self) -> tuple[Action, ...]:
+        """The actions that write a fidelity's files: every action on a fidelity but validate, which checks them."""
+        return tuple(action for action in self.on_fidelities if not action.place.checks)
+
+    @property
+    def taking_formats(self) -> tuple[Action, ...]:
+        """The actions whose command takes the formats a person picks: generate, iterate, sketch and document write a
+        fidelity in them and render converts it into them, so each writes the same formats once they are picked;
+        validate reads a fidelity's files in the formats they already have, and partition indexes a source."""
+        return tuple(action for action in self.on_fidelities if action.place.takes_formats)
+
+    @property
+    def needing_output(self) -> tuple[Action, ...]:
+        """The actions that work on a fidelity's output, so they wait until there is some: validate and render."""
+        return tuple(action for action in self.on_fidelities if action.place.needs_output)
 
 
 # The actions are classes' operations, and a class is defined once per process, so the catalogue of them is one per

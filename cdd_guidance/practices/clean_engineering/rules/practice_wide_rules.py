@@ -5,7 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
+from cdd_guidance.practices.clean_engineering.reading.folder_facts import FOLDER_TYPES
+import cdd_guidance.practices.clean_engineering.rules.rule_numbers as rule_numbers
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
 
 if TYPE_CHECKING:
@@ -13,11 +16,8 @@ if TYPE_CHECKING:
     from harness.graph.rule_context import RuleCheckContext
 
 _MAX_SIBLING_IMPORTS = 8
-# The share of a module's methods its seam may hold: the public methods of the classes that leave it.
-_MAX_SEAM_SHARE = 0.35
 # A module of fewer methods than this cannot hide much behind any interface, so it is not measured.
 _MIN_MEASURED_METHODS = 10
-_FOLDER_TYPES = ("Module", "Package")
 
 
 class OneWayDeps(PracticeGraphRule):
@@ -32,34 +32,37 @@ class OneWayDeps(PracticeGraphRule):
     """
 
     slug = "one-way-deps"
-    node_types = ("Module", "Package")
+    node_types = FOLDER_TYPES
 
-    def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
-        folders = _folders(context)
+    def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
+        folders = self._folders(context)
         return [hit for folder in folders for hit in self._folder_cycles(folder)] + [
             hit for folder in folders for hit in self._file_cycles(folder)
         ]
 
-    def _folder_cycles(self, folder: "Node") -> list[tuple[str, str]]:
+    def _folder_cycles(self, folder: "Node") -> list[Finding]:
         return [
-            (
-                folder.node_id,
+            Finding(
+                folder,
                 f"Circular import: '{folder.name}' imports '{imported}', which imports back into "
                 f"'{folder.name}' through a cycle of {size} modules; dependencies must flow one way.",
             )
             for imported, size in folder.get_fact("import_cycles") or []
         ]
 
-    def _file_cycles(self, folder: "Node") -> list[tuple[str, str]]:
+    def _file_cycles(self, folder: "Node") -> list[Finding]:
         return [
-            (
-                folder.node_id,
+            Finding(
+                folder,
                 f"Circular import in '{folder.name}': '{importer}' imports '{imported}', which imports "
                 f"back into '{importer}' through a cycle of {size} files; move the shared code "
                 "to the file that owns it so dependencies flow one way.",
             )
             for importer, imported, size in folder.get_fact("file_import_cycles") or []
         ]
+
+    def _folders(self, context: "RuleCheckContext") -> list["Node"]:
+        return [folder for kind in FOLDER_TYPES for folder in context.nodes(kind)]
 
 
 class LowCoupling(ProductionCodeRule):
@@ -69,14 +72,12 @@ class LowCoupling(ProductionCodeRule):
     slug = "low-coupling"
     node_types = ("Module",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         imported = node.get_fact("sibling_modules_imported") or []
         if len(imported) <= _MAX_SIBLING_IMPORTS:
             return []
-        return [
-            f"Module '{node.name}' imports from {len(imported)} sibling modules "
-            f"(>{_MAX_SIBLING_IMPORTS}); reduce fan-out."
-        ]
+        return [Finding(node, f"Module '{node.name}' imports from {len(imported)} sibling modules "
+            f"(>{_MAX_SIBLING_IMPORTS}); reduce fan-out.")]
 
 
 class DeepModule(PracticeGraphRule):
@@ -95,20 +96,20 @@ class DeepModule(PracticeGraphRule):
     slug = "deep-module"
     node_types = ("Module",)
 
-    def check_practice(self, context: "RuleCheckContext") -> list[tuple[str, str]]:
-        hits: list[tuple[str, str]] = []
+    def check_practice(self, context: "RuleCheckContext") -> list[Finding]:
+        hits: list[Finding] = []
         for module in context.nodes("Module"):
             methods = module.get_fact("operations_total") or 0
             seam = module.get_fact("seam_operations") or 0
-            if methods >= _MIN_MEASURED_METHODS and seam > self._allowed_seam(methods):
-                hits.append((module.node_id, self._exposure_message(module, seam, methods)))
+            if methods >= _MIN_MEASURED_METHODS and seam > self.allowed_seam(methods):
+                hits.append(Finding(module, self._exposure_message(module, seam, methods)))
         return hits
 
     def _exposure_message(self, module: "Node", seam: int, methods: int) -> str:
         public = list(module.get_fact("public_classes") or {})
         return (
             f"Module '{module.name}' exposes {seam} of its {methods} methods to other modules, more than the "
-            f"{self._allowed_seam(methods)} that {round(100 * _MAX_SEAM_SHARE)}% allows; they are the public methods of "
+            f"{self.allowed_seam(methods)} that {round(100 * rule_numbers.MOST_SEAM_SHARE)}% allows; they are the public methods of "
             f"its {len(public)} public classes of {module.get_fact('subtree_class_count') or 0}: "
             f"{', '.join(self._named(public))}. Hide more behind fewer public methods."
         )
@@ -118,9 +119,10 @@ class DeepModule(PracticeGraphRule):
         names = [key.rsplit(":", 1)[-1] for key in public]
         return [name if names.count(name) == 1 else key for name, key in zip(names, public)]
 
-    def _allowed_seam(self, methods: int) -> int:
-        """How many of a module's methods its seam may hold: 35% of them, rounded down, since a count over it fails."""
-        return int(round(_MAX_SEAM_SHARE * methods, 9))
+    def allowed_seam(self, methods: int) -> int:
+        """How many of a module's methods its seam may hold: the share the rule allows (``MOST_SEAM_SHARE``), rounded
+        down, since a count over it fails."""
+        return int(round(rule_numbers.MOST_SEAM_SHARE * methods, 9))
 
 
 class ExtensionsLiveWithTheDomain(ProductionCodeRule):
@@ -131,33 +133,32 @@ class ExtensionsLiveWithTheDomain(ProductionCodeRule):
     `ddd/model`), it is where it belongs. The build keeps what a class extends on it (``extends_domain``)."""
 
     slug = "extensions-live-with-the-domain"
+    # Requires a judge: whether a class extends another package's domain is read from what it is for; the check matches its name and its fields.
+    requires_judge = True
     node_types = ("OoadClass",)
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         extension = node.get_fact("extends_domain") or {}
         if not extension:
             return []
         home = extension["home"]
-        return [
-            f"Class '{node.name}' extends {', '.join(extension['extended'])} from '{home}' with this package's "
+        return [Finding(node, f"Class '{node.name}' extends {', '.join(extension['extended'])} from '{home}' with this package's "
             f"{', '.join(extension['own'])}: it is an extension of '{home}' and belongs there, so this package does not "
-            "depend on it."
-        ]
+            "depend on it.")]
 
 
 class SourceParses(PracticeGraphRule):
     """A source file its language cannot parse is read into no class, so every other rule passes it without a look.
-    Specs are judged too: a spec that does not parse cannot run, and nothing else reports it."""
+    The module that holds the file reports it, or the folder that holds it when no module does. Specs are judged too: a spec that does not parse cannot run, and nothing else reports it."""
 
     slug = "source-parses"
-    node_types = ("Module",)
+    node_types = FOLDER_TYPES
 
-    def check(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
+        if not node.has_fact("unreadable_sources"):
+            # A folder reads its module's facts as its own, and the module has already reported these files.
+            return []
         return [
-            f"Source file {entry}; fix it so its classes can be checked."
+            Finding(node, f"Source file {entry}; fix it so its classes can be checked.")
             for entry in node.get_fact("unreadable_sources", []) or []
         ]
-
-
-def _folders(context: "RuleCheckContext") -> list["Node"]:
-    return [folder for kind in _FOLDER_TYPES for folder in context.nodes(kind)]

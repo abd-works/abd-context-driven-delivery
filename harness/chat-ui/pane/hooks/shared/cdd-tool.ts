@@ -22,7 +22,12 @@ export class CddToolFailed extends Error {
 // of that folder's branch and worktree, not of the folder the chat connected from, and names the chat as
 // conversation_id, so the server answers with the session this chat has open, as it does for the agent's own calls.
 export async function callTool<T>($: EngineInterface, tool: string, args: ToolArguments): Promise<T> {
-  const text = await callToolText($, tool, args)
+  return replyOf<T>(tool, await callToolText($, tool, args))
+}
+
+// What tool answered, read as JSON; an answer that is not JSON, such as the error text the cdd server sends when the
+// call failed, is a CddToolFailed carrying that text.
+export function replyOf<T>(tool: string, text: string): T {
   try {
     return JSON.parse(text) as T
   } catch {

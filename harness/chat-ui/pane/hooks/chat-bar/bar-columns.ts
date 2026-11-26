@@ -4,10 +4,9 @@ import type { ChatBarClient } from './chat-bar-client'
 // puts it. The buttons at the right end of the line leave a list little room, so a list wider than the room from its
 // button to the line's end is moved left by the difference, counted in cells, rather than cut off at the edge.
 
-// The canvas's glyph for each format group; a group with none shows its name.
-// A format that is a group of its own, such as BDD's call graphs in realization, gets a glyph here; one not listed shows
-// its first and last letter, as an overlay does, so a long name never widens the chat bar.
-export const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>', canvas: '▦', realization: '⇢', thin_slice: '☰' }
+// The canvas's glyph for each format group a person can choose. A group with no glyph here shows its first and last
+// letter, as an overlay does, so a long name never widens the chat bar.
+const FORMAT_GLYPHS: Record<string, string> = { markdown: 'M↓', diagram: '◇', code: '</>', canvas: '▦' }
 export const formatGlyphOf = (label: string): string => FORMAT_GLYPHS[label] ?? `${label.charAt(0).toUpperCase()}${label.slice(-1)}`
 
 const GAP = 1
@@ -15,11 +14,11 @@ const HEALTH_MARK = 1
 // A list box's round border and its padding, on both sides.
 const LIST_FRAME = 4
 
-// The icons after the session name at the right end, as SessionButtonsView draws them: push and push & merge in a
-// repository, restart, and close in a ticket's own chat, a gap between each.
+// The icons after the session name at the right end, as SessionButtonsView draws them: push and push & merge, restart,
+// and close in a ticket's own chat, a gap between each.
 function sessionButtonCellsOf(chatBar: ChatBarClient): number {
   if (!chatBar.hasSession) return 0
-  const icons = (chatBar.isClone ? 2 : 0) + 1 + (chatBar.isMain || chatBar.isPlainFolder ? 0 : 1)
+  const icons = 2 + 1 + (chatBar.isMain ? 0 : 1)
   return GAP + icons + (icons - 1) * GAP
 }
 

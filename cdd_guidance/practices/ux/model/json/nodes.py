@@ -7,6 +7,7 @@ transition, a tab, or a destination names a screen that is already there."""
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any, Optional
 
 from cdd_guidance.practices.ux.model.nodes import (
@@ -16,17 +17,37 @@ from cdd_guidance.practices.ux.model.nodes import (
     NavComponent,
     Region,
     Screen,
+    ServesStories,
     StoryDemoControl,
+    StoryStep,
     Transition,
-    story_steps_from,
 )
 from cdd_guidance.practices.ux.model.ux_map import UxMap
+from harness.guidance.practice_formats import Written
 
+# The names a UX map's JSON file goes by.
+_MAP_FILE_NAMES = ("ux-map.json", "ux.json")
 # The kind a Story Demo control's record names, so it reads back as one.
 _STORY_DEMO = "StoryDemoControl"
 
 
-class JsonControl(Control):
+class JsonServesStories(ServesStories):
+    """What a screen or a control serves as the JSON document writes it: the stories, scenarios, and steps, each a
+    list of names or of markdown links."""
+
+    def read_served(self, record: dict[str, Any]) -> None:
+        for story in record.get("story_names", []):
+            self.show_story(story)
+        for scenario in record.get("scenario_names", []):
+            self.show_scenario(scenario)
+        for step in record.get("step_names", []):
+            self.show_step(step)
+
+    def served_record(self) -> dict[str, Any]:
+        return {"story_names": self.story_keys, "scenario_names": self.scenario_keys, "step_names": self.step_keys}
+
+
+class JsonControl(Control, JsonServesStories):
     """A control as the JSON document writes it: its fields, its states, and each interaction, a link to a screen
     written as that screen's name."""
 
@@ -37,6 +58,7 @@ class JsonControl(Control):
         control = (ux_map.story_demo_control_type if demo else cls)(record.get("name", f"Control {index}"), index)
         control.control_type, control.label = record.get("control_type", ""), record.get("label", "")
         control.bound_field = record.get("bound_field", "")
+        control.read_served(record)
         if demo:
             control.read_story_fields(record)
         control.read_states_and_interactions(record, ux_map)
@@ -58,9 +80,10 @@ class JsonControl(Control):
             "label": self.label,
             "bound_field": self.bound_field,
             "states": list(self.states),
+            **self.served_record(),
             "interactions": [
                 {"name": interaction.name, "trigger": interaction.trigger, "effect": interaction.effect,
-                 "destination": _name_of(interaction.destination)}
+                 "destination": interaction.destination_name}
                 for interaction in self.interactions
             ],
         }
@@ -72,9 +95,9 @@ class JsonStoryDemoControl(StoryDemoControl, JsonControl):
 
     def read_story_fields(self, record: dict[str, Any]) -> None:
         """The steps the record says this control runs, the input it fills, and how it shows its items."""
-        self.story_steps = story_steps_from(record.get("story_steps"))
+        self.story_steps = StoryStep.from_values(record.get("story_steps"))
         self.set_input = record.get("set_input", "") or ""
-        self.item_story_steps = story_steps_from(record.get("item_story_steps"))
+        self.item_story_steps = StoryStep.from_values(record.get("item_story_steps"))
         self.item_value = record.get("item_value", "") or ""
         self.item_label = record.get("item_label", "") or ""
 
@@ -105,7 +128,7 @@ class JsonRegion(Region):
         return {"name": self.name, "area": self.area, "controls": [control.as_record() for control in self.controls]}
 
 
-class JsonScreen(Screen):
+class JsonScreen(Screen, JsonServesStories):
     """A screen as the JSON document writes it: its fields, what it shows, and each region's record."""
 
     @classmethod
@@ -121,12 +144,7 @@ class JsonScreen(Screen):
         shows, and its regions."""
         self.chrome_of = ux_map.screen_named(record.get("chrome_of", ""))
         self.inactive_tabs = list(record.get("inactive_tabs", []))
-        for story in record.get("story_names", []):
-            self.show_story(story)
-        for scenario in record.get("scenario_names", []):
-            self.show_scenario(scenario)
-        for step in record.get("step_names", []):
-            self.show_step(step)
+        self.read_served(record)
         self.domain_terms = list(record.get("domain_terms", []))
         self.domain_concepts = list(record.get("domain_concepts", []))
         self.image = record.get("image", "")
@@ -140,11 +158,9 @@ class JsonScreen(Screen):
             "slug": self.slug,
             "layout": self.layout,
             "description": self.description,
-            "chrome_of": _name_of(self.chrome_of),
+            "chrome_of": self.chrome_of_name,
             "inactive_tabs": list(self.inactive_tabs),
-            "story_names": self.story_keys,
-            "scenario_names": self.scenario_keys,
-            "step_names": self.step_keys,
+            **self.served_record(),
             "domain_terms": list(self.domain_terms),
             "domain_concepts": list(self.domain_concepts),
             "image": self.image,
@@ -165,8 +181,8 @@ class JsonTransition(Transition):
     def as_record(self) -> dict[str, Any]:
         return {
             "name": self.name,
-            "from_screen": _name_of(self.from_screen),
-            "to_screen": _name_of(self.to_screen),
+            "from_screen": self.from_name,
+            "to_screen": self.to_name,
             "trigger": self.trigger,
             "nav_type": self.nav_type,
         }
@@ -176,7 +192,7 @@ class JsonContentType(ContentType):
     """A content type as the JSON document writes it: its name, its hierarchy, and its key actions."""
 
     @classmethod
-    def from_record(cls, record: dict[str, Any], index: int, ux_map: "JsonUxMap") -> "JsonContentType":
+    def from_record(cls, record: dict[str, Any], index: int) -> "JsonContentType":
         content_type = cls(record.get("name", f"ContentType {index}"), index)
         content_type.hierarchy = record.get("hierarchy", "")
         content_type.key_actions = list(record.get("key_actions", []))
@@ -201,7 +217,12 @@ class JsonNavComponent(NavComponent):
 
 
 class JsonUxMap(UxMap):
-    workspace_files = ("ux-map.json", "**/ux-map.json", "ux.json", "**/ux.json")
+    map_file_suffixes = (".json",)
+    not_a_map_failures = (json.JSONDecodeError,)
+
+    def reads_file(self, file: Path, text: str) -> bool:
+        """A JSON file named as a UX map is, ``ux-map.json`` or ``ux.json``; any other JSON file is something else."""
+        return file.name in _MAP_FILE_NAMES
     screen_type = JsonScreen
     region_type = JsonRegion
     control_type = JsonControl
@@ -210,19 +231,24 @@ class JsonUxMap(UxMap):
     content_type_type = JsonContentType
     nav_component_type = JsonNavComponent
 
-    def parse(self, content: str | dict) -> UxMap:
+    def parse(self, text: str | dict, file: str = "") -> UxMap:
         """A new map of this format read from a JSON document: its own fields, then each screen, each transition,
         content type, and navigation component reading its own record."""
-        document = self._document_of(content)
-        ux_map = type(self).create(name=document.get("name", "UxMap"))
-        ux_map.read_record(document)
+        return type(self).from_document(self._document_of(text))
+
+    @classmethod
+    def from_document(cls, document: dict[str, Any]) -> "JsonUxMap":
+        """A new map of this format read from a decoded JSON document: its own fields, then each screen, each
+        transition, content type, and navigation component reading its own record."""
+        ux_map = cls.create(name=document.get("name", "UxMap"))
+        ux_map._read_record(document)
         return ux_map
 
     def _document_of(self, content: str | dict[str, Any]) -> dict[str, Any]:
         """The JSON document content holds: decoded from text, or the document itself."""
         return json.loads(content) if isinstance(content, str) else content
 
-    def read_record(self, document: dict[str, Any]) -> None:
+    def _read_record(self, document: dict[str, Any]) -> None:
         with self.batch_schema_sync():
             self.scope = document.get("scope", "")
             self.story_references = document.get("story_references", [])
@@ -237,7 +263,7 @@ class JsonUxMap(UxMap):
             for index, record in enumerate(document.get("transitions", [])):
                 self.transitions.append(self.transition_type.from_record(record, index, self))
             for index, record in enumerate(document.get("content_types", [])):
-                self.content_types.append(self.content_type_type.from_record(record, index, self))
+                self.content_types.append(self.content_type_type.from_record(record, index))
             for index, record in enumerate(document.get("nav_components", [])):
                 self.nav_components.append(self.nav_component_type.from_record(record, index, self))
 
@@ -245,14 +271,14 @@ class JsonUxMap(UxMap):
         """The screen a record names, or none for a record that names none."""
         return self.find_screen(name) if name else None
 
-    def render(self, canonical: UxMap) -> str:
+    def render(self, canonical: UxMap, written: Written = Written()) -> str:
         """canonical in this format: copied into a map of this format, which writes itself."""
         return self.copy_of(canonical).save()
 
     def save(self) -> str:
-        return json.dumps(self.map_record(), indent=2) + "\n"
+        return json.dumps(self.document(), indent=2) + "\n"
 
-    def map_record(self) -> dict[str, Any]:
+    def document(self) -> dict[str, Any]:
         """This map as the JSON document it reads back: each screen, transition, content type, and navigation
         component writes its own record."""
         return {
@@ -267,7 +293,3 @@ class JsonUxMap(UxMap):
             "content_types": [content_type.as_record() for content_type in self.content_types],
             "nav_components": [nav.as_record() for nav in self.nav_components],
         }
-
-
-def _name_of(screen: Optional[Screen]) -> str:
-    return screen.name if screen is not None else ""

@@ -43,7 +43,8 @@ body{margin:0}
 .sm-box-top{border-radius:4px 4px 0 0;margin-top:2px}
 .sm-box-bottom{border-radius:0 0 4px 4px;margin-bottom:2px}
 .sm-box-top.sm-box-bottom{border-radius:4px}
-.sm-step-on{color:#E8E8ED;font-weight:600}
+.sm-step-on{color:#FFFFFF;font-weight:600;background:rgba(229,83,26,0.38);box-shadow:inset 6px 0 0 #E5531A}
+.sm-step-on:hover{background:rgba(229,83,26,0.44)}
 .sm-k4{padding-left:34px;white-space:pre-wrap;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;line-height:18px;color:#9B9BA8}
 .sm-sel{background:rgba(229,83,26,0.18);box-shadow:inset 3px 0 0 #E5531A;color:#E8E8ED;font-weight:600}
 .sm-dot{display:inline-block;width:10px;flex-shrink:0;color:#4A4A52}
@@ -152,7 +153,12 @@ this.shownSelection = key;
 selected.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 outlineRows(story, template) {
-if (template.indexOf('${') < 0 || typeof CanvasFixtures === 'undefined') return [];
+if (typeof CanvasFixtures === 'undefined') return [];
+// An outline named without a placeholder runs each example row as "<outline>: <row>".
+if (template.indexOf('${') < 0) {
+const prefix = template + ': ';
+return CanvasFixtures.scenarios(story).filter((name) => name.indexOf(prefix) === 0).map((name) => ({ name: name, label: name.slice(prefix.length) }));
+}
 const pattern = new RegExp('^' + template.split(/\$\{[^}]*\}/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(.+?)') + '$');
 return CanvasFixtures.scenarios(story).filter((name) => pattern.test(name)).map((name) => ({ name: name, label: name.match(pattern).slice(1).join(' · ') }));
 }
@@ -209,7 +215,7 @@ const ck = sk + '-' + ci;
 rows.push(Object.assign({ label: sc.n, is_background: Boolean(sc.b), is_scenario: !sc.b, ...copyOf(sc.f, s.n + ' › ' + sc.n), cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on sm-box sm-box-top' + (st.open[ck] ? '' : ' sm-box-bottom') : ''), pick: () => (sc.b || (g === st.g && ci === st.c && st.open[ck]) ? toggle(ck)() : go(g, ci, 0)) }, chev(st.open[ck])));
 if (!st.open[ck]) return;
 this.outlineRows(s.n, sc.n).forEach((ex) => rows.push({ label: ex.label, is_example: true, cls: 'sm-row sm-k3 sm-ex' + (g === st.g && ci === st.c ? ' sm-box' + (ex.name === exampleOf(g, ci) ? ' sm-step-on' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, 0, ex.name) }));
-sc.t.forEach((tp, ti) => rows.push(sc.b ? { label: tp.x, cls: 'sm-row sm-k4 sm-given', mark: '', markCls: 'sm-nomark', pick: () => {} } : { label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c ? ' sm-box' + (ti === st.t ? ' sm-step-on' : '') + (ti === sc.t.length - 1 ? ' sm-box-bottom' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti) }));
+sc.t.forEach((tp, ti) => rows.push(sc.b ? { label: tp.x, cls: 'sm-row sm-k4 sm-given', mark: '', markCls: 'sm-nomark', pick: () => {} } : { label: tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c ? ' sm-box' + (ti === st.t ? ' sm-step-on' : '') + (ti === sc.t.length - 1 ? ' sm-box-bottom' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti, g === st.g && ci === st.c ? st.x : null) }));
 });
 });
 });
@@ -224,7 +230,7 @@ const at = flat.findIndex((f) => f[0] === st.g && f[1] === st.c && f[2] === st.t
 return {
 live: live,
 storyName: S[st.g].n,
-goToStory: (name, scenario) => {
+goToStory: (name, scenario, step) => {
 const g = S.findIndex((s) => s.n === name);
 if (g < 0) return;
 let c = scenario ? S[g].c.findIndex((sc) => sc.n === scenario) : 0;
@@ -234,10 +240,18 @@ c = S[g].c.findIndex((sc) => this.outlineRows(S[g].n, sc.n).some((r) => r.name =
 x = c >= 0 ? scenario : null;
 }
 if (c < 0 && g === st.g) return;
-go(g, scenarioOf(g, c), 0, x);
+const at = scenarioOf(g, c);
+const groups = (S[g].c[at] || { t: [] }).t;
+const matches = (tp) => tp.x.split('\n').some((line) => line === step || line.startsWith(step));
+// In the scenario on show, look past the group on show first, so a second action moves on to its own outcome.
+const from = g === st.g && at === st.c ? st.t + 1 : 0;
+const ahead = groups.findIndex((tp, ti) => ti >= from && matches(tp));
+const t = step ? Math.max(0, ahead >= 0 ? ahead : groups.findIndex(matches)) : 0;
+go(g, at, t, x);
 },
 scenarioName: scen.b ? (S[st.g].c.map((sc, ci) => (sc.b ? null : exampleOf(st.g, ci) || sc.n)).find(Boolean) || scen.n) : (exampleOf(st.g, st.c) || scen.n),
 stepText: step.x,
+stepIndex: scen.t[st.t] ? st.t : 0,
 showShot: !scen.p && imgs.length > 0,
 showNothing: !scen.p && imgs.length === 0,
 img: imgs[idx] || '',

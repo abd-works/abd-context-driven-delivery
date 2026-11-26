@@ -18,12 +18,15 @@ from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal, NotRequired, Union, get_args, get_origin, get_type_hints
 
-from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, ClassMember, InstallDestination, OnSubject, ToolsetMembers
+from harness.agent_tools.agent_tools import AgentTool, AgentToolSet, ClassMember, OnSubject, ToolsetMembers
 from harness.agent_tools.parameter_schema import TypeHint
+from harness.annotations.annotation import annotation_kinds
 from harness.annotations.name import Name
-from harness.installation.destination import Installation
+from harness.installation.destination import InstallPlace
 from harness.installation.data_class import DataClass, SourceFile
-from harness.installation.ide_layout import IdeLayout
+from harness.installation.install_record import InstallRecord
+from harness.installation.install_target import InstallTarget
+from harness.installation.repository_toolsets import RepositoryToolsets
 
 _FOLDER = "language-adapters"
 _TYPESCRIPT = "typescript"
@@ -334,7 +337,7 @@ class TypeScriptToolset:
 
     def __init__(self, toolset: AgentToolSet, folder: Path, peers: dict[str, TypeScriptToolset]) -> None:
         self.toolset = toolset
-        self._tools = sorted(toolset.tools_for(InstallDestination.MCP), key=lambda tool: tool.mcp_name)
+        self._tools = sorted(toolset.tools_published_to(annotation_kinds.answering_calls), key=lambda tool: tool.mcp_name)
         self._folder = PurePosixPath(folder.as_posix())
         self._peers = peers
         self._shapes: dict[str, type] = {}
@@ -468,6 +471,9 @@ class TypeScriptToolset:
             return f"Record<string, {self.hint_type(get_args(hint)[1])}>"
         if isinstance(hint, type) and issubclass(hint, Enum):
             return " | ".join(json.dumps(member.value).replace('"', "'") for member in hint)
+        if isinstance(hint, type) and issubclass(hint, str):
+            # A string of a kind of its own, such as a board element's id, is sent as the string it is.
+            return "string"
         return _SCALAR_TYPES.get(hint, "unknown")
 
     def _reference_type(self, hint: TypeHint) -> str:
@@ -846,13 +852,12 @@ class TypeScriptViews:
         return _HINT_INPUTS.get(hint, "json")
 
 
-class LanguageAdapterInstallation(Installation):
-    """Records annotated toolsets during the install walk, then writes them together, because their files import each other."""
+class LanguageAdapters(InstallPlace):
+    """The language adapters an install writes: it records annotated toolsets during the install walk, then writes them
+    together, because their files import each other. It writes no channel of a tool, so it is not an *Installation*."""
 
-    channel = "language-adapter"
-
-    def __init__(self, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> None:
-        super().__init__(layout, path, repo)
+    def __init__(self, target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None) -> None:
+        super().__init__(target, record, repository)
         self._recorded: list[AgentToolSet] = []
 
     def record(self, toolset: AgentToolSet) -> None:
@@ -860,10 +865,23 @@ class LanguageAdapterInstallation(Installation):
         if _TYPESCRIPT in DataClass.of(type(toolset)).languages:
             self._recorded.append(toolset)
 
-    def write_all(self) -> list[Path]:
-        """Write every recorded toolset, with the connection and the browser-safe code they share."""
+    def write_all(self, whole: bool = False) -> list[Path]:
+        """Write every recorded toolset, with the connection and the browser-safe code they share. whole says the
+        recorded toolsets are every one the repository adapts, so each other file in the folder, such as a copy a file
+        manager left beside one, is removed and the folder holds the adapters alone."""
         if not self._recorded:
             return []
+        written = self._write_recorded()
+        if whole:
+            self._remove_unwritten(set(written))
+        return written
+
+    def _remove_unwritten(self, written: set[Path]) -> None:
+        for path in (self.path / _FOLDER / _TYPESCRIPT).rglob("*"):
+            if path.is_file() and path not in written:
+                path.unlink()
+
+    def _write_recorded(self) -> list[Path]:
         peers = self._typescript_toolsets()
         root = self.path / _FOLDER / _TYPESCRIPT
         shared = {_CONNECTION_FILE: self._connection(), _SHARED_FILE: self._template(_SHARED_FILE), _VIEWS_FILE: self._template(_VIEWS_FILE), _MANIFEST_FILE: _MANIFEST}
@@ -899,11 +917,11 @@ class LanguageAdapterInstallation(Installation):
     def _typescript_toolsets(self) -> dict[str, TypeScriptToolset]:
         peers: dict[str, TypeScriptToolset] = {}
         for toolset in self._recorded:
-            peers[type(toolset).__name__] = TypeScriptToolset(toolset, self.folder_for(toolset), peers)
+            peers[type(toolset).__name__] = TypeScriptToolset(toolset, self.relative_folder(toolset.install_folder), peers)
         return peers
 
     def _written(self, path: Path, text: str) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
-        self.track_write(path)
+        self.wrote(path)
         return path

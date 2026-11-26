@@ -78,21 +78,25 @@ class HookExercise:
     def _ping(self) -> CheckReport:
         from harness.hooks.hook_daemon import HookDaemon
 
-        address = HookDaemon(self.repo).live_address()
-        if address is None:
+        daemon = HookDaemon(self.repo)
+        running = daemon.running()
+        if running is None:
             return {"ping": "down"}
-        return {"ping": "pong", "host": address.host, "port": address.port, "pid": address.pid}
+        return {"ping": "pong", "host": daemon.address.host, "port": daemon.address.port, "pid": running.pid}
 
     def _live_injects(self) -> CheckReport:
         """Whether the running hook daemon injects a fidelity's rules, with the reason when it could not be asked."""
-        from harness.hooks.hook_daemon import HookDaemon, HookDaemonUnavailable
+        from harness.hooks.hook_daemon import HookDaemon, HookPortTaken
+        from harness.process.server_daemon import ServerDidNotStart
 
         sample = self._example_for("modules", "clean-engineering")
         if sample is None:
             return {"live_injects": False, "live_error": "no clean-engineering modules example found"}
         try:
-            result = HookDaemon(self.repo).ensure().handle_stdin(json.dumps(self._payload(sample)).encode("utf-8"))
-        except (HookDaemonUnavailable, OSError) as error:
+            daemon = HookDaemon(self.repo)
+            daemon.ensure()
+            result = daemon.address.handle_stdin(json.dumps(self._payload(sample)).encode("utf-8"))
+        except (ServerDidNotStart, HookPortTaken, OSError) as error:
             return {"live_injects": False, "live_error": f"{type(error).__name__}: {error}"}
         return {"live_injects": "domain-nouns-only" in (result.get("additional_context") or "")}
 
@@ -115,14 +119,14 @@ class HookExercise:
 
     def _practices(self) -> list[PracticeGuidance]:
         """Every installed practice with fidelities, found the way the installer finds toolsets."""
-        from harness.agent_tools.agent_tools import AgentToolSet
+        from harness.agent_tools.agent_tools import ToolsetReference
         from harness.guidance.guidance import PracticeGuidance
         from harness.installation.repository_toolsets import RepositoryToolsets
 
         practice_classes = [
             toolset for toolset in RepositoryToolsets(self.repo).classes() if issubclass(toolset, PracticeGuidance)
         ]
-        practices = [AgentToolSet.instantiate(toolset) for toolset in practice_classes]
+        practices = [ToolsetReference.of(toolset).made() for toolset in practice_classes]
         return [practice for practice in practices if practice.fidelities.entries]
 
     def _exercise_practice(self, practice: PracticeGuidance) -> list[CheckReport]:
@@ -168,8 +172,8 @@ class HookExercise:
         from space.session.sessions import Sessions
 
         result = self._server().handle_stdin(json.dumps(self._payload(path)).encode("utf-8"))
-        injected = result.additional_context or ""
-        folder = Sessions(self.repo).current().session_path
+        injected = result.messages.additional_context or ""
+        folder = Sessions(self.repo).current().work_folder
         chat = folder / "last-chat-injected-rules.md"
         remembered = folder / "chat-injections" / "hook-exercise.md"
         chat_text = chat.read_text(encoding="utf-8") if chat.is_file() else ""

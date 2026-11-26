@@ -9,9 +9,9 @@ from __future__ import annotations
 import re
 from typing import List, Sequence, Tuple
 
-from cdd_guidance.practices.clean_engineering.model.code_body import BraceCall, CodeBody, InsideLines, WrittenBlock
-from cdd_guidance.practices.stories.model.code_story_model import unescaped
-from cdd_guidance.practices.stories.model.story_file import CodeBlock, StoryFile
+from cdd_guidance.practices.source_code import BraceCall, CodeBody, CodeLanguage, InsideLines, WrittenBlock
+from cdd_guidance.practices.stories.model.code_story_map import unescaped
+from cdd_guidance.practices.stories.model.story_file import BlockStoryFile, StoryBlock
 
 _QUOTED = r"(['\"`])((?:\\.|(?!\1).)*)\1"
 _STORY = re.compile(r"(?m)^[ \t]*(?:shareStory|story)\s*\(\s*" + _QUOTED)
@@ -21,10 +21,10 @@ _STEP = re.compile(r"(?<![.\w])(given|when|then|and|but)\s*\(\s*(['\"`])((?:\\.|
 _CHAINED = re.compile(r"\s*\.(and|but)\s*\(\s*(['\"`])((?:\\.|(?!\2).)*)\2")
 
 
-class BraceStoryFile(StoryFile):
+class BraceStoryFile(BlockStoryFile):
     """One brace-language story file: its story calls, and the calls inside each."""
 
-    def story_blocks(self) -> List[CodeBlock]:
+    def story_blocks(self) -> List[StoryBlock]:
         return self.calls(_STORY, range(0, len(self.text)), group=2)
 
     def calls(self, pattern: re.Pattern, span: range, group: int = 0) -> List["BraceBlock"]:
@@ -67,7 +67,7 @@ class BraceStoryFile(StoryFile):
         return BraceCall(self.text, start, unescaped(name))
 
 
-class BraceBlock:
+class BraceBlock(StoryBlock):
     """One call in a brace-language story file whose callback holds code."""
 
     def __init__(self, file: BraceStoryFile, call: BraceCall) -> None:
@@ -83,12 +83,31 @@ class BraceBlock:
         return self.file.line(self.call.start), self.file.line(self.call.end - 1)
 
     @property
+    def opening_line(self) -> int:
+        """The line, counted from 0, its call is written on: for a step chained onto another, the line of its
+        ``.and``, which may be the line the step before it closes on."""
+        text = self.file.text
+        start = self.call.start
+        while start < len(text) and text[start].isspace():
+            start += 1
+        return self.file.line(start)
+
+    @property
+    def is_chained(self) -> bool:
+        """Whether it is a step chained onto the one before it (``.and(...)``), not a statement of its own."""
+        return self.file.text[self.call.start :].lstrip().startswith(".")
+
+    @property
     def inside_lines(self) -> List[str]:
         return self.file.lines[slice(*self._inside)]
 
     @property
     def body(self) -> CodeBody:
         return CodeBody(self.call.body, self.file.language)
+
+    @property
+    def language(self) -> CodeLanguage:
+        return self.file.language
 
     @property
     def body_text(self) -> str:
@@ -105,20 +124,20 @@ class BraceBlock:
         written.close = self.file.lines[inner_end : end + 1]
         return written
 
-    def split_inside(self, children: Sequence[CodeBlock]) -> Tuple[List[str], List[List[str]], List[str]]:
+    def split_inside(self, children: Sequence[StoryBlock]) -> Tuple[List[str], List[List[str]], List[str]]:
         return InsideLines(self.file.lines, self._inside).split([child.line_span for child in children])
 
-    def scenarios(self) -> List[CodeBlock]:
+    def scenarios(self) -> List[StoryBlock]:
         return self.file.calls(_SCENARIO, range(self.call.brace + 1, self.call.inner_end), group=2)
 
-    def backgrounds(self, scenarios: Sequence[CodeBlock]) -> List[CodeBlock]:
+    def backgrounds(self, scenarios: Sequence[StoryBlock]) -> List[StoryBlock]:
         first = scenarios[0].call.start if scenarios else self.call.inner_end
         return self.file.calls(_BACKGROUND, range(self.call.brace + 1, first))
 
-    def steps(self, skip: Sequence[CodeBlock]) -> List[CodeBlock]:
+    def steps(self, skip: Sequence[StoryBlock]) -> List[StoryBlock]:
         return self.file.step_calls(self.call.brace + 1, self.call.inner_end, skip)
 
-    def setup(self, children: Sequence[CodeBlock]) -> CodeBody:
+    def setup(self, children: Sequence[StoryBlock]) -> CodeBody:
         first, last = self._inside
         covered = {line for child in children for line in range(child.line_span[0], child.line_span[1] + 1)}
         kept = [self.file.lines[index] for index in range(first, last) if index not in covered]

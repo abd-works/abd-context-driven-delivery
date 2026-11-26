@@ -1,0 +1,11 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T22:06:32.804800+00:00",
+  "prompts": [
+    {
+      "id": "a448a02ee7c0",
+      "text": "After demo/history/log.md holds the last 10 commit subjects, add one plain-English line at its top summing up what those commits did. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done.",
+      "is_done": true
+    }
+  ]
+}

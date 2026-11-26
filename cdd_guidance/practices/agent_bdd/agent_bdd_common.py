@@ -121,28 +121,29 @@ class JudgeResult:
 
     @classmethod
     def from_stdout(cls, stdout: str, elapsed_seconds: float = 0.0) -> JudgeResult:
-        parsed = cls(verdict="ERROR", reason="")._parsed(stdout)
-        return cls(
-            verdict=parsed.verdict,
-            reason=parsed.reason,
-            elapsed_seconds=elapsed_seconds,
-        )
+        verdict, reason = JudgeAnswer(stdout).verdict()
+        return cls(verdict=verdict, reason=reason, elapsed_seconds=elapsed_seconds)
 
-    def _parsed(self, stdout: str) -> JudgeResult:
-        line_verdict = self._verdict_from_json_lines(stdout)
+
+class JudgeAnswer:
+    """What a judge agent wrote, read for its verdict: a JSON verdict alone on a line, else one wrapped in prose."""
+
+    def __init__(self, text: str) -> None:
+        self._text = text
+        self._decoder = json.JSONDecoder()
+
+    def verdict(self) -> tuple[str, str]:
+        line_verdict = self._verdict_from_json_lines()
         if line_verdict is not None:
-            return JudgeResult(verdict=line_verdict[0], reason=line_verdict[1])
-        embedded = self._preferred_embedded_verdict(stdout)
+            return line_verdict
+        embedded = self._preferred_embedded_verdict()
         if embedded is not None:
-            return JudgeResult(verdict=embedded[0], reason=embedded[1])
-        return JudgeResult(
-            verdict="ERROR",
-            reason=f"no parseable verdict in output:\n{stdout[:500]}",
-        )
+            return embedded
+        return "ERROR", f"no parseable verdict in output:\n{self._text[:500]}"
 
-    def _verdict_from_json_lines(self, stdout: str) -> tuple[str, str] | None:
+    def _verdict_from_json_lines(self) -> tuple[str, str] | None:
         last_fail: tuple[str, str] | None = None
-        for line in reversed(stdout.splitlines()):
+        for line in reversed(self._text.splitlines()):
             parsed = self._parse_judge_json(line.strip())
             if parsed is None:
                 continue
@@ -153,8 +154,8 @@ class JudgeResult:
                 last_fail = (verdict, reason)
         return last_fail
 
-    def _preferred_embedded_verdict(self, stdout: str) -> tuple[str, str] | None:
-        embedded = self._embedded_judge_verdicts(stdout)
+    def _preferred_embedded_verdict(self) -> tuple[str, str] | None:
+        embedded = self._embedded_judge_verdicts()
         for verdict, reason in reversed(embedded):
             if verdict == "PASS":
                 return verdict, reason
@@ -178,12 +179,10 @@ class JudgeResult:
             return None
         return verdict, reason
 
-    def _embedded_judge_verdicts(self, text: str) -> list[tuple[str, str]]:
-        self._judge_text = text
-        self._decoder = json.JSONDecoder()
+    def _embedded_judge_verdicts(self) -> list[tuple[str, str]]:
         found: list[tuple[str, str]] = []
         index = 0
-        while index < len(self._judge_text):
+        while index < len(self._text):
             start = self._next_verdict_start(index)
             if start < 0:
                 break
@@ -193,14 +192,14 @@ class JudgeResult:
         return found
 
     def _next_verdict_start(self, index: int) -> int:
-        start = self._judge_text.find('{"verdict"', index)
+        start = self._text.find('{"verdict"', index)
         if start >= 0:
             return start
-        return self._judge_text.find('{"Verdict"', index)
+        return self._text.find('{"Verdict"', index)
 
     def _decode_embedded_verdict(self, start: int) -> tuple[tuple[str, str] | None, int]:
         try:
-            obj, end = self._decoder.raw_decode(self._judge_text, start)
+            obj, end = self._decoder.raw_decode(self._text, start)
         except json.JSONDecodeError:
             return None, start + 1
         return self._parse_judge_json(json.dumps(obj)), end
@@ -324,7 +323,7 @@ class AgentSession:
         log.write(f"creating new session for {session_file.name} in {workspace} ...")
         chat_id = cli.create_chat(str(workspace.resolve()))
         session = cls(chat_id=chat_id, session_file=session_file)
-        session.record.save()
+        session.save()
         log.write(f"session created: {session.chat_id}")
         return session
 
@@ -528,10 +527,10 @@ class ToolsetRequest:
 
     def toolset_on(self, project: Path) -> AgentToolSet:
         """The toolset made from this request's context, for the session it names in project."""
-        from harness.agent_tools.agent_tools import AgentToolSet
+        from harness.agent_tools.agent_tools import ToolsetReference
 
         try:
-            return AgentToolSet.instantiate({"toolset": self.toolset, "context": self._context_on(project)})
+            return ToolsetReference.parsed(self.toolset).made(**self._context_on(project))
         except TypeError as exc:
             raise AgentHarnessError(str(exc)) from exc
 

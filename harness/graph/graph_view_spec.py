@@ -9,6 +9,7 @@ from harness.installation.data_class import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from harness.graph.edge import EdgeType
+from harness.graph.violation import Finding
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import SavedGraph, SavedPractice
@@ -24,13 +25,13 @@ with description("a graph"):
         with before.all:
             self.graph = Graph()
             self.graph.reads.open(_HERE)
-            self.practice = self.graph.practice("clean_engineering")
+            self.practice = self.graph.practices.named("clean_engineering")
             self.failure = Node(
                 self.practice,
                 NodeIdentity(type="Operation", node_id="clean_engineering:Operation:failure.ts:failure:Account", name="failure"),
                 Source(".", 1, 1)
             )
-            self.failure.rules.record_violation("limit-operation-parameters", "too many")
+            self.failure.rules.entries["limit-operation-parameters"].record(Finding(self.failure, "too many"))
             self.register = Node(
                 self.practice,
                 NodeIdentity(type="Operation", node_id="clean_engineering:Operation:register.ts:register:Account", name="register"),
@@ -38,27 +39,26 @@ with description("a graph"):
             )
             root = self.practice.reading.in_graph.root
             root.children.extend([self.failure, self.register])
-            self.graph.explorer.filter.select_violations(["limit-operation-parameters"])
 
         with it("should list the failed rule on the failing operation"):
             expect(self.failure.failed_rules).to(equal(["limit-operation-parameters"]))
 
         with it("should list the rule that did not fail"):
-            expect(self.register.passing_rules).to(contain("limit-operation-parameters"))
+            expect(self.register.rules.passing_slugs).to(contain("limit-operation-parameters"))
 
         with it("should leave the failed rule out of the passing rules"):
-            expect("limit-operation-parameters" in self.failure.passing_rules).to(equal(False))
+            expect("limit-operation-parameters" in self.failure.rules.passing_slugs).to(equal(False))
 
         with it("should return the operation that fails"):
             import json
-            returned = [node["name"] for node in data_of(self.graph.return_nodes())]
+            returned = [node["name"] for node in data_of(self.graph.return_nodes({"violations": True, "rules": ["limit-operation-parameters"]}))]
             expect(returned).to(equal(["failure"]))
 
     with context("with a relationship selected"):
         with before.all:
             self.graph = Graph()
             self.graph.reads.open(_HERE)
-            self.practice = self.graph.practice("clean_engineering")
+            self.practice = self.graph.practices.named("clean_engineering")
             self.module = Node(self.practice, NodeIdentity(type="Module", node_id="id:module", name="account-credentials"), Source(".", 1, 1))
             self.class_node = Node(self.practice, NodeIdentity(type="OoadClass", node_id="id:class", name="AccountCredentials"), Source(".", 1, 1))
             self.other = Node(self.practice, NodeIdentity(type="OoadClass", node_id="id:other", name="Customer"), Source(".", 1, 1))
@@ -67,7 +67,6 @@ with description("a graph"):
             root = self.practice.reading.in_graph.root
             root.children.extend([self.module, self.class_node, self.other])
             self.graph.edges.record(EdgeType("owns", 2, "direct"), self.module, self.class_node)
-            self.graph.explorer.filter.select_relationships(["owns"])
 
         with it("should keep the stage from the query on the node"):
             expect(self.class_node.stage).to(equal("implementation"))
@@ -78,14 +77,14 @@ with description("a graph"):
 
         with it("should return the nodes on the selected edge"):
             import json
-            returned = {node["name"] for node in data_of(self.graph.return_nodes())}
+            returned = {node["name"] for node in data_of(self.graph.return_nodes({"relationships": ["owns"]}))}
             expect(returned).to(equal({"account-credentials", "AccountCredentials"}))
 
     with context("with a saved node that carries a stage"):
         with before.all:
             graph = Graph()
             saved = {"nodes": [_saved_node("id", "AccountCredentials", "OoadClass", "account.ts", 4, "implementation")]}
-            graph.restored_from(SavedGraph([], {"clean_engineering": SavedPractice.from_record("clean_engineering", saved)}))
+            graph.practices.restore(SavedGraph([], {"clean_engineering": SavedPractice.from_record("clean_engineering", saved)}))
             self.node = graph.node("id")
 
         with it("should store the stage on the node"):
@@ -94,7 +93,7 @@ with description("a graph"):
     with context("with a package between a module and a class"):
         with before.all:
             graph = Graph()
-            root = graph.practice("clean_engineering").reading.in_graph.root
+            root = graph.practices.named("clean_engineering").reading.in_graph.root
             module, package = "clean_engineering:Module:src/domain:domain", "clean_engineering:Package:src/domain/customer:customer"
             customer = "clean_engineering:OoadClass:src/domain/customer/Customer.ts:Customer"
             saved = SavedPractice.from_record("clean_engineering", {
@@ -109,8 +108,8 @@ with description("a graph"):
                     {"parent": package, "child": customer, "kind": "owns", "order": 2, "display": "direct"},
                 ],
             })
-            graph.restored_from(SavedGraph([], {"clean_engineering": saved}))
-            self.tree = data_of(graph.practice("clean_engineering").reading.in_graph.root.tree.serialize())
+            graph.practices.restore(SavedGraph([], {"clean_engineering": saved}))
+            self.tree = data_of(graph.practices.named("clean_engineering").reading.in_graph.root.tree.serialize())
 
         with it("should parent the package on the module"):
             package = next(child for child in self.tree["children"][0]["children"] if child["name"] == "customer")

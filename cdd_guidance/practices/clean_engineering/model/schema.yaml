@@ -32,7 +32,9 @@ module:
     - use-typed-signatures
     - general-purpose-surface
     - temporal-independence
+    - seam-names-current-code
     - one-way-deps
+    - depend-toward-stability
     - extensions-live-with-the-domain
     - low-coupling
     - layer-separation
@@ -40,6 +42,11 @@ module:
     - language-modules-one-section
     - modules-not-model-blocks
     - source-parses
+    - limit-module-file-lines
+    - keep-module-files-maintainable
+    - limit-average-class-complexity
+    - limit-modules-importing
+    - limit-copied-code-blocks
 
 package:
   fidelity: modules
@@ -51,8 +58,12 @@ package:
     - id is the module id, then this package name, joined by dots
     - a package groups classes inside a module
   rules:
+    - do-not-invent-parallel-object-models
     - one-way-deps
+    - depend-toward-stability
     - layer-separation
+    - source-parses
+    - merge-one-class-packages
 
 class:
   fidelity: model
@@ -79,6 +90,7 @@ class:
     - keep-classes-single-responsibility
     - shape-classes-around-resources
     - put-logic-on-the-owning-resource
+    - hold-state-on-the-object-not-in-parameters
     - hide-inner-details
     - use-explicit-dependencies
     - external-system-interface-is-one-way
@@ -95,6 +107,14 @@ class:
     - layer-separation
     - extensions-live-with-the-domain
     - write-interactions
+    - limit-class-complexity
+    - limit-class-methods
+    - keep-class-methods-sharing-data
+    - limit-class-coupling
+    - limit-class-response
+    - delete-unused-classes
+    - check-use-the-graph-cannot-see
+    - connect-disconnected-classes
 
 relationship:
   fidelity: model
@@ -132,6 +152,7 @@ operation:
     - limit-operation-parameters
     - avoid-vague-parameter-names
     - errors-out-of-existence
+    - refuse-unreadable-input
     - state-change-returns-record-or-named-failure
     - domain-exception-carries-context
     - write-invariants
@@ -148,6 +169,14 @@ operation:
     - put-logic-on-the-owning-resource
     - use-property-not-accessor
     - eliminate-duplication
+    - hold-state-on-the-object-not-in-parameters
+    - use-consistent-naming
+    - limit-paths-through-a-function
+    - keep-functions-readable
+    - limit-function-lines
+    - delete-unused-operations
+    - check-use-the-graph-cannot-see
+    - make-module-only-operations-private
 
 property:
   fidelity: model
@@ -167,11 +196,17 @@ property:
     - use-property-not-accessor
     - hide-inner-details
     - keep-operations-small-focused
+    - delete-unused-operations
+    - check-use-the-graph-cannot-see
     - simplify-control-flow
     - use-exceptions-properly
     - never-swallow-exceptions
+    - refuse-unreadable-input
     - limit-operation-parameters
     - write-interactions
+    - limit-paths-through-a-function
+    - keep-functions-readable
+    - limit-function-lines
 
 parameter:
   fidelity: model

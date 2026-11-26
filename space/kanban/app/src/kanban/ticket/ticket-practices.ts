@@ -1,4 +1,4 @@
-import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practice-session-output'
+import { PracticeSessionOutputClientGenerated } from '@cdd/space/session/practices/practice-session-output'
 
 import type { BoardPage } from '../board/board-page'
 import type { TicketClient } from './ticket-client'

@@ -20,12 +20,15 @@ from cdd_guidance.patterns.lern_domain_driven.practices.stories.rules.shared_sto
     OutlineEntriesLoopOverExamples,
     TierBoundRepositoryAccessor,
 )
+from cdd_guidance.patterns.lern_domain_driven.graph_overlay import _LernReading
 from cdd_guidance.patterns.lern_domain_driven.lern_domain_driven import LernDomainDriven
-from cdd_guidance.patterns.lern_domain_driven.tier_facts import (
+from cdd_guidance.patterns.lern_domain_driven.fact_files import (
     AggregateFolder,
-    TierFile,
+    NodeRootFile,
+    RouteFile,
+    StoryTestFile,
 )
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.source_code import SourceText
 from cdd_guidance.practices.clean_engineering.rules.no_prototype_swapping import NoPrototypeSwapping
 from harness.graph.graph import Graph, Node, Source
 from harness.graph.saved_graph import NodeIdentity
@@ -36,27 +39,32 @@ def checks(practice, *patterns):
     """The graph rules practice checks in a graph that applies patterns."""
     graph = Graph()
     graph.overlays = PatternOverlays(list(patterns)).paths
-    return graph.practice(practice).reading.checks()
+    return graph.practices.named(practice).reading.checks()
+
+
+def test_setup_text(root):
+    """The test setup text a LERN reading of the working copy at root finds."""
+    return _LernReading(LernDomainDriven().graph_overlay, Graph(), root).setup_text
 
 
 def tier_node(name, node_type, facts, file="src/a/a-node.ts"):
     """A graph node carrying the facts the LERN recorder would set on it."""
-    node = Node(Graph().practice("ddd"), NodeIdentity(type=node_type, node_id=f"ddd:{node_type}:{file}", name=name), Source(file, 1, 1))
+    node = Node(Graph().practices.named("ddd"), NodeIdentity(type=node_type, node_id=f"ddd:{node_type}:{file}", name=name), Source(file, 1, 1))
     for key, value in facts.items():
         node.set_fact(key, value)
     return node
 
 
 def node_root(text, setup_text=""):
-    return tier_node("x-node", "NodeRoot", TierFile(text).node_root_facts(setup_text))
+    return tier_node("x-node", "NodeRoot", NodeRootFile("x-node.ts", text, setup_text).facts)
 
 
 def route(text):
-    return tier_node("x-routes", "Route", TierFile(text).route_facts())
+    return tier_node("x-routes", "Route", RouteFile("x-routes.ts", text).facts)
 
 
 def story_file(text, node_type="StoryShared"):
-    return tier_node("x.story.shared.ts", node_type, TierFile(text).story_facts(), file="tests/x/x.story.shared.ts")
+    return tier_node("x.story.shared.ts", node_type, StoryTestFile("tests/x/x.story.shared.ts", text, node_type).facts, file="tests/x/x.story.shared.ts")
 
 
 with description("the lern_domain_driven pattern rules"):
@@ -136,7 +144,7 @@ with description("the lern_domain_driven pattern rules"):
 
         with it("should flag a web path literal outside the paths module and ignore API paths"):
             facts = {"web_path_literals": AggregateFolder(self.root, self.folder).web_path_literals()}
-            messages = OneHomeForWebPaths().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)
+            messages = [finding.message for finding in OneHomeForWebPaths().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)]
             expect(messages).to(have_len(1))
             expect(messages[0]).to(contain("/onboarding/done"))
 
@@ -152,23 +160,23 @@ with description("the lern_domain_driven pattern rules"):
             (self.root / self.folder / "subscription.ts").write_text(
                 "export class Sim { static fromRequest(req) { const body = req.body ?? {}; } }\n", encoding="utf-8")
             facts = {"core_request_reads": AggregateFolder(self.root, self.folder).core_request_reads()}
-            messages = PostedBodyParsedInNode().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)
+            messages = [finding.message for finding in PostedBodyParsedInNode().check(tier_node("subscription", "Aggregate", facts, file=self.folder), None)]
             expect(messages).to(have_len(1))
             expect(messages[0]).to(contain("framework-free core"))
 
         with it("should flag a repository instance the test setup never resets"):
             (self.root / "tests" / "vitest.setup.ts").write_text("otherRepository._reset();\n", encoding="utf-8")
-            expect(ResetEveryRepository().check(node_root(self.node_text, LernDomainDriven().test_setup_text(self.root)), None)).to(have_len(1))
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(have_len(1))
 
         with it("should pass once the repositories file lists it"):
             (self.root / "tests" / "repositories.ts").write_text("export const all = [subscriptionRepositoryNode];\n", encoding="utf-8")
-            expect(ResetEveryRepository().check(node_root(self.node_text, LernDomainDriven().test_setup_text(self.root)), None)).to(equal([]))
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(equal([]))
 
         with it("should pass once the step library's repositories file lists it"):
             library = self.root / "test-utils" / "story-test"
             library.mkdir(parents=True)
             (library / "repositories.ts").write_text("export const all = [subscriptionRepositoryNode];\n", encoding="utf-8")
-            expect(ResetEveryRepository().check(node_root(self.node_text, LernDomainDriven().test_setup_text(self.root)), None)).to(equal([]))
+            expect(ResetEveryRepository().check(node_root(self.node_text, test_setup_text(self.root)), None)).to(equal([]))
 
     with description("shared story rules"):
         with it("should flag a context cast and pass the tier-bound accessor"):
@@ -214,9 +222,12 @@ with description("the lern_domain_driven pattern rules"):
             )
             expect(DomainOperationsInlineInSteps().check(story_file(gesture, "PlaywrightSpec"), None)).to(equal([]))
 
+    # A rule of the code fidelity, so each class is one Clean Engineering's reading put at code: its operations have bodies.
     with description("no-prototype-swapping (Clean Engineering)"):
         with it("should flag a prototype swap and pass a factory"):
-            swapped = {"prototype_swap": SourceText("Object.setPrototypeOf(loaded, XNode.prototype);").prototype_swap(1)}
-            factory = {"prototype_swap": SourceText("return this.blank(id);").prototype_swap(1)}
-            expect(NoPrototypeSwapping().check(tier_node("XRepositoryNode", "OoadClass", swapped), None)).to(have_len(1))
-            expect(NoPrototypeSwapping().check(tier_node("XRepositoryNode", "OoadClass", factory), None)).to(equal([]))
+            swapped = tier_node("XRepositoryNode", "OoadClass", {"prototype_swap": SourceText("Object.setPrototypeOf(loaded, XNode.prototype);").prototype_swap(1)})
+            factory = tier_node("XRepositoryNode", "OoadClass", {"prototype_swap": SourceText("return this.blank(id);").prototype_swap(1)})
+            for read in (swapped, factory):
+                read.read_at("code")
+            expect(NoPrototypeSwapping().check(swapped, None)).to(have_len(1))
+            expect(NoPrototypeSwapping().check(factory, None)).to(equal([]))

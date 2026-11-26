@@ -30,7 +30,7 @@ from harness.graph.location import Location
 from harness.graph.violation import FoundBy, FoundOn, Violation
 from space.kanban.board import Board
 from space.repo.mock_repo import MockGit
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 from space.work_state import WorkState
 
 STAMP = "2026-11-01T10:00:00Z"
@@ -39,11 +39,12 @@ STORY_MAP_TEXT = "# Check Out Order\n\n## Payment\n\n- Enter Card Details\n- Han
 STORY_MAP_REPORT = "stories-story-map-20261101T100000"
 
 
-def saved_practice(practice: str, node_id: str, file: str, line: int, *hits: tuple[str, str]) -> SavedPractice:
+def saved_practice(practice: str, node_id: str, file: str, line: int, *hits: tuple[str, str], requires_judge: bool = False) -> SavedPractice:
     """Seed: one practice of a graph validate saved, as the saved graph keeps it: one story node at file and line, and
-    each hit, a rule and its message, on that node."""
+    each hit, a rule and its message, on that node; with requires_judge, each hit is a candidate a rule that requires a
+    judge listed."""
     node = SavedNode({"node_id": node_id, "name": "", "type": "Story", "practice": practice, "file": file, "line": line, "end_line": line, "stage": "", "facts": {}})
-    found = [Violation(FoundBy(rule, practice, FoundOn(node_id)), message, Location(file, line)) for rule, message in hits]
+    found = [Violation(FoundBy(rule, practice, FoundOn(node_id), requires_judge), message, Location(file, line)) for rule, message in hits]
     return SavedPractice.from_fields(practice, "", {}, [node], [], found)
 
 
@@ -145,7 +146,7 @@ BACK_TO_BACKLOG = SessionSeed("back-to-backlog", "Back to backlog", (generated("
 PRICING_RULES = SessionSeed("pricing-rules", "Pricing rules", (MOVED_INTO_SPECIFICATION, generated("stories", "scenarios"), validated("Stories", "scenarios")))
 READY_TO_MOVE = SessionSeed("ready-to-move", "Ready to move", (f"{STAMP} done Discovery no-chat",))
 SECOND_SPEC = SessionSeed("second-spec", "Second spec", (MOVED_INTO_SPECIFICATION,))
-ALMOST_SHIPPED = SessionSeed("almost-shipped", "Almost shipped", (f"{STAMP} move Implementation no-chat", f"{STAMP} done Implementation no-chat"))
+ALMOST_SHIPPED = SessionSeed("almost-shipped", "Almost shipped", (f"{STAMP} move Hardening no-chat", f"{STAMP} done Hardening no-chat"))
 SHIPPED_WORK = SessionSeed("shipped-work", "Shipped work", folder="_complete")
 SEARCH_THE_CATALOG = BacklogFileSeed("search-the-catalog.md", "Search the catalog", "An idea.")
 SURFACE_FIXTURE_PROJECT = "cdd-board-surface-fixture"
@@ -349,10 +350,10 @@ class SessionsProject(ThrowawayProject):
     def seed_session(self, seed: SessionSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name
         folder.mkdir(parents=True, exist_ok=True)
-        # A chosen workpath counts only when its folder is there (SessionRoots.root_of), so the seed makes it.
+        # A chosen workpath counts only when its folder is there (Session.placed), so the seed makes it.
         workpath = self.root / seed.workpath
         workpath.mkdir(parents=True, exist_ok=True)
-        fields = {"name": seed.name, "title": seed.title, "scope": "feature", "workpath": str(workpath), "repo_path": str(self.root), **seed.fields}
+        fields = {"name": seed.name, "title": seed.title, "scope": "feature", "workpath": str(workpath), **seed.fields}
         (folder / "session.json").write_text(json.dumps(fields), encoding="utf-8")
         (folder / "session.log").write_text("".join(f"{line}\n" for line in seed.log), encoding="utf-8")
         return folder
@@ -382,7 +383,9 @@ class SessionsProject(ThrowawayProject):
         WorkState(self.root).session = seed.name
 
     def seed_wip_limits(self, limits: dict[str, int]) -> None:
-        Board.load(self.root).file.write_text(json.dumps({"wip_limits": limits}), encoding="utf-8")
+        board = Board.load(self.root)
+        for stage, limit in limits.items():
+            board.shared.set_wip_limit(board.stage(stage), limit)
 
     def seed_report(self, seed: SessionSeed, report: ReportSeed) -> Path:
         folder = self.sessions / seed.folder / seed.name / "validation-reports"

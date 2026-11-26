@@ -2,17 +2,21 @@
 for every other chat (``.context/cdr/0003-two-lanes-main-stable-features-dev.md``)."""
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any
 
-from harness.agent_tools.tool_call import ToolCall
+from harness.agent_tools.tool_call import ToolCall, ToolRequest
+from harness.git.checkout import Checkout
 from harness.mcp.cdd_home import CddHome
-from harness.mcp.mcp_address import McpAddress
+from harness.mcp.mcp_address import BUILTIN_LIST_TOOLS, DEV_LANE_FOLDER, DEV_PORT_AFTER_STABLE, McpAddress
 from harness.mcp.mcp_daemon import McpDaemon, ServedCheckout
 
 # How long the stable lane waits for the dev lane to answer one tool call. The chat is told a call is still running at
 # the tool's own time limit; this only bounds how long the stable lane's worker thread keeps waiting after that.
 LANE_CALL_SECONDS = 60 * 60
+
+logger = logging.getLogger(__name__)
 
 
 class LaneCallFailed(Exception):
@@ -23,29 +27,6 @@ class LaneCallFailed(Exception):
         self.lane = lane
         self.tool = tool
         self.kind = failure.get("kind", "")
-
-
-class LaneCall:
-    """A chat's tool call as one lane hands it to another: the tool, its arguments, the project it works on, and the
-    chat that sent it. The receiving lane builds its own *ToolCall* from it."""
-
-    def __init__(self, tool: str, arguments: dict[str, Any], project: str, chat: str) -> None:
-        self.tool = tool
-        self.arguments = arguments
-        self.project = project
-        self.chat = chat
-
-    @classmethod
-    def from_call(cls, call: ToolCall) -> LaneCall:
-        return cls(call.request.tool, dict(call.arguments), str(call.project or ""), call.chat_id)
-
-    @classmethod
-    def from_data(cls, data: dict[str, Any]) -> LaneCall:
-        return cls(str(data.get("tool") or ""), dict(data.get("arguments") or {}), str(data.get("project") or ""), str(data.get("chat") or ""))
-
-    @property
-    def as_data(self) -> dict[str, Any]:
-        return {"tool": self.tool, "arguments": self.arguments, "project": self.project, "chat": self.chat}
 
 
 class ServerLane:
@@ -81,13 +62,31 @@ class ServerLane:
         """``checkout`` as this lane installs and serves it."""
         return ServedCheckout(self.daemon, checkout)
 
+    def return_to_main_when_feature_gone(self) -> str:
+        """When the worktree this lane's served feature came from is gone, serve no feature, so the lane's chats run on
+        main, and stop its server, which still runs the removed feature's code; answer what was done, or nothing."""
+        said = self.home.return_to_main_when_feature_gone()
+        if said:
+            self.daemon.stop()
+        return said
+
+    def tools_for(self, project: Path) -> list[dict[str, Any]]:
+        """The tools this lane's server serves, as data, listed for a chat working on project, starting the server first
+        when none answers."""
+        self.daemon.ensure()
+        listing = ToolCall(project=project, request=ToolRequest(tool=BUILTIN_LIST_TOOLS))
+        reply = self.daemon.address.send_lane_call(listing, LANE_CALL_SECONDS)
+        if reply.failure:
+            raise LaneCallFailed(self.name, BUILTIN_LIST_TOOLS, reply.failure)
+        return list(reply.answer or [])
+
     def answer(self, call: ToolCall) -> object:
         """Have this lane's server answer call, starting it first when none answers."""
         self.daemon.ensure()
-        reply = self.daemon.address.send_lane_call(LaneCall.from_call(call).as_data, LANE_CALL_SECONDS)
-        if reply.get("failure"):
-            raise LaneCallFailed(self.name, call.request.tool, reply["failure"])
-        return reply.get("answer")
+        reply = self.daemon.address.send_lane_call(call, LANE_CALL_SECONDS)
+        if reply.failure:
+            raise LaneCallFailed(self.name, call.request.tool, reply.failure)
+        return reply.answer
 
 
 class ServerLanes:
@@ -97,10 +96,6 @@ class ServerLanes:
 
     STABLE = "stable"
     DEV = "dev"
-    # The dev lane's home sits inside the stable lane's, so one ``CDD_HOME`` names both.
-    DEV_FOLDER = "dev"
-    # The dev lane answers on the port after the stable lane's, so a throwaway pair from a spec stays a pair.
-    DEV_PORT_AFTER_STABLE = 1
     # The dev lane's app servers answer this far above the stable lane's, on ports no app's ports file names, so a
     # feature's Files, board, and Graph servers run beside main's.
     DEV_APP_PORT_OFFSET = 1000
@@ -111,8 +106,8 @@ class ServerLanes:
         self.stable = ServerLane(self.STABLE, stable_home, stable_address)
         self.dev = ServerLane(
             self.DEV,
-            CddHome(stable_home.folder / self.DEV_FOLDER),
-            dev_address or McpAddress(stable_address.port + self.DEV_PORT_AFTER_STABLE),
+            CddHome(stable_home.folder / DEV_LANE_FOLDER),
+            dev_address or McpAddress(stable_address.port + DEV_PORT_AFTER_STABLE),
             self.DEV_APP_PORT_OFFSET,
         )
 
@@ -120,29 +115,26 @@ class ServerLanes:
     def from_serving(cls, home: CddHome, address: McpAddress | None = None) -> ServerLanes:
         """The lanes as the server running from home on address sees them, whichever of the two it is; with no address,
         on the lanes' own ports."""
-        if home.folder.name != cls.DEV_FOLDER:
+        if home.folder.name != DEV_LANE_FOLDER:
             return cls(home, address)
-        stable_address = McpAddress(address.port - cls.DEV_PORT_AFTER_STABLE) if address is not None else None
+        stable_address = McpAddress(address.port - DEV_PORT_AFTER_STABLE) if address is not None else None
         return cls(CddHome(home.folder.parent), stable_address)
 
     def for_project(self, project: Path) -> ServerLane:
-        if self._is_in_main_checkout(Path(project).resolve()):
+        if Checkout.holding(project).is_main:
             return self.stable
         return self.dev
 
     def other_lane_answering(self, serving: CddHome, project: Path | None) -> ServerLane | None:
         """The lane that answers project's calls instead of the server running from serving: the dev lane, when serving
         is the stable lane, project belongs to the dev lane, and a feature is served there. Until one is, the dev
-        lane's chats run on main, so the stable lane answers them itself."""
+        lane's chats run on main, so the stable lane answers them itself, as it does once the served feature's worktree
+        is gone, which it then says in its log."""
         if project is None or serving.folder != self.stable.home.folder:
             return None
+        returned = self.dev.home.return_to_main_when_feature_gone()
+        if returned:
+            logger.warning("%s", returned)
         if self.for_project(project) is not self.dev or not self.dev.home.is_installed:
             return None
         return self.dev
-
-    def _is_in_main_checkout(self, project: Path) -> bool:
-        for folder in (project, *project.parents):
-            marker = folder / ".git"
-            if marker.exists():
-                return marker.is_dir()
-        return False

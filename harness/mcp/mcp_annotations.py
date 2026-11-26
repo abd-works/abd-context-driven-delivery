@@ -4,13 +4,13 @@ They live apart from the server, which loads the MCP SDK, so a toolset that only
 it."""
 from __future__ import annotations
 
-from harness.agent_tools.agent_tools import InstallDestination
 from harness.annotations.annotation import Annotation, Destination
 
 
 class Mcp(Destination):
     flag = "_mcp"
-    channel = InstallDestination.MCP
+    channel = "mcp"
+    answers_calls = True
 
 
 mcp = Mcp

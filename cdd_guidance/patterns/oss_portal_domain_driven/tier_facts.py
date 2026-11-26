@@ -2,7 +2,7 @@
 
 The overlay sets these on the ClientRoot, View, BffRoot, BffRoute, ServiceRoot, ServiceRoute, Proxy, Migration, and
 Aggregate nodes; the OSS rules read them with ``get_fact`` and never open a file. Story files are read with the LERN
-pattern's *TierFile*, because the OSS pattern keeps LERN's shared-story layout.
+pattern's *StoryTestFile* and *BehaviorFile*, because the OSS pattern keeps LERN's shared-story layout.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from cdd_guidance.practices.clean_engineering.model.operation_metrics import SourceText
+from cdd_guidance.practices.source_code import SourceText
 
 # A gateway or service address in browser code: an Apigee base path (`/v1/...`), a Cloud Run URL, or an Apigee host.
 _GATEWAY_ADDRESS = re.compile(r"""(['"`])(?:https?://[^'"`]*)?/v\d+/[^'"`]*\1|\.run\.app\b|\bapigee\b""", re.IGNORECASE)

@@ -12,8 +12,8 @@ from typing import Dict, List, Optional
 
 from cdd_guidance.practices.stories.model.markdown.map_reading import described
 from cdd_guidance.practices.stories.model.markdown.markup import strip_markup
-from cdd_guidance.practices.stories.model.story_map_files import StoryMapFiles, path_from, source_at
-from cdd_guidance.practices.stories.model.story_model import Increment, Story, StoryModel
+from cdd_guidance.practices.stories.model.story_map_files import NEW_THIN_SLICE_FILE, StoryMapFiles, path_from, source_at
+from cdd_guidance.practices.stories.model.story_map import Increment, Story, StoryMap
 
 _INCREMENT_H3 = re.compile(r"^###\s+Increment\s+(\d+)\s*:\s*(.+?)\s*$", re.IGNORECASE)
 _KV_OUTCOME = re.compile(r"^\*\*Outcome\s*:\*\*\s*(.+)$", re.IGNORECASE)
@@ -21,6 +21,8 @@ _KV_SLICING = re.compile(r"^\*\*Slicing\s+notes\s*:\*\*\s*(.+)$", re.IGNORECASE)
 _KV_STORIES = re.compile(r"^\*\*Stories(?:\s+in\s+this\s+increment)?\s*:?\*\*", re.IGNORECASE)
 _KV_DECISION = re.compile(r"^\*\*Decision\s+prompt\s*:\*\*\s*(.+)$", re.IGNORECASE)
 _BULLET = re.compile(r"^\s*[-*]\s+(.+)$")
+# A bullet that names its story in emphasis and says more after it: `*Submit Order* (partly built: ...)`.
+_NAMED_WITH_NOTE = re.compile(r"^(\*{1,2}|_)(?P<name>.+?)\1(?=\s|$)")
 _STORIES_LABEL = "**Stories in this increment:**"
 _NEW_THIN_SLICE = ["# Thin slicing", "", "## Increments", ""]
 
@@ -77,8 +79,11 @@ class MarkdownIncrement(Increment):
         return written + [self._bullet(story) for story in self.stories if id(story) not in shown]
 
     def _bullet_as_read(self, raw: str, story: Optional[Story], name: str) -> str:
-        """A bullet as it was written, while it names no story of the map or its story keeps the name it was read with."""
-        return raw if story is None or story.name == name else self._bullet(story)
+        """A bullet as it was written, while it names no story of the map or its story keeps the name it was read with;
+        a renamed story's bullet takes the new name and keeps what it said after the old one."""
+        if story is None or story.name == name:
+            return raw
+        return raw.replace(f"*{name}*", f"*{story.name}*", 1) if f"*{name}*" in raw else self._bullet(story)
 
     def _bullet(self, story: Story) -> str:
         return f"- *{story.name}*"
@@ -94,6 +99,18 @@ class ThinSlice:
         self.above = reading.above
         self.first_number = reading.first_number
         self.text_as_read = text
+
+    @classmethod
+    def from_folder(cls, folder: Path, story_map: StoryMap, project: Path) -> "ThinSlice":
+        """The thin slice in folder (``StoryMapFiles.thin_slicing``), its increments read onto story_map, each delivering
+        story_map's own stories and naming its file from project; a new `thin-slice.md` in folder when it holds none."""
+        found = StoryMapFiles(folder).thin_slicing()
+        path = found if found is not None else Path(folder) / NEW_THIN_SLICE_FILE
+        text = found.read_text(encoding="utf-8") if found is not None else ""
+        reading = _ThinSliceReading(story_map, path_from(Path(project).resolve(), path))
+        for increment in reading.read(text.splitlines() if found is not None else list(_NEW_THIN_SLICE)):
+            story_map.increments.append(increment)
+        return cls(path, reading, text)
 
     def text(self, increments: List[MarkdownIncrement]) -> str:
         """The thin slice delivering increments: its lines above them, then each increment in order, one added since
@@ -116,23 +133,13 @@ class ThinSlice:
         return [self.path]
 
 
-def thin_slice_in(folder: Path, story_map: StoryModel, project: Path) -> ThinSlice:
-    """The thin slice in folder (``StoryMapFiles.thin_slicing``), its increments read onto story_map, each delivering
-    story_map's own stories and naming its file from project; a new `thin-slice.md` in folder when it holds none."""
-    found = StoryMapFiles(folder).thin_slicing()
-    path = found if found is not None else Path(folder) / "thin-slice.md"
-    text = found.read_text(encoding="utf-8") if found is not None else ""
-    reading = _ThinSliceReading(story_map, path_from(Path(project).resolve(), path))
-    for increment in reading.read(text.splitlines() if found is not None else list(_NEW_THIN_SLICE)):
-        story_map.increments.append(increment)
-    return ThinSlice(path, reading, text)
 
 
 class _ThinSliceReading:
     """One read of a thin slice's lines onto a story map: the lines above its first increment, the increments read, and
     whether the stories of the last one are being read."""
 
-    def __init__(self, story_map: "StoryModel", file: str) -> None:
+    def __init__(self, story_map: "StoryMap", file: str) -> None:
         self.story_map = story_map
         self.file = file
         self.above: List[str] = []
@@ -189,10 +196,15 @@ class _ThinSliceReading:
         """A story bullet: the increment delivers the map's story of that name; a name the map lacks is kept as written."""
         if self._stories_by_name is None:
             self._stories_by_name = self.story_map.descendants.stories_by_name()
-        story = self._stories_by_name.get(strip_markup(named))
+        story = self._stories_by_name.get(self._story_name(named))
         found = [story] if story is not None else []
         increment.lines.bullets.append((raw, found[0] if found else None, found[0].name if found else ""))
         increment.stories.extend(found)
+
+    def _story_name(self, named: str) -> str:
+        """The story a bullet names: its emphasized words when it says more after them, else the whole bullet."""
+        emphasized = _NAMED_WITH_NOTE.match(named.strip())
+        return strip_markup(emphasized.group("name")) if emphasized else strip_markup(named)
 
     def _read_field(self, stripped: str, increment: MarkdownIncrement) -> bool:
         """Keep the outcome, slicing notes or decision prompt the line gives increment; true when the line is the label

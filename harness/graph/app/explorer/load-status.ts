@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { Held } from './held';
+import { LOADING_GRAPH } from '../graph/query-progress';
 import type { CddProgress } from '@cdd/cdd-shared';
-import { reasonOf } from '../graph/graph-failures';
+import { reasonOf } from '@cdd/cdd-page-failures';
 import { failures, graphs } from '../graph/graph-page';
 
 // How often the page reads the cdd server's progress while it shows.
 const PROGRESS_READ_MS = 400;
-const LOADING = 'Loading the graph…';
-
-type Held<T> = [T, Dispatch<SetStateAction<T>>];
 
 interface LoadStatusState {
   loading: Held<boolean>;
@@ -45,7 +44,7 @@ export class LoadStatus {
   }
 
   // A load or an overlay change starts: the pane shows label, and the last error goes.
-  begin(label: string = LOADING): void {
+  begin(label: string = LOADING_GRAPH): void {
     this.state.loading[1](true);
     this.state.label[1](label);
     this.state.error[1]('');
@@ -76,7 +75,7 @@ export function useLoadStatus(): LoadStatus {
   const loadingNow = useRef(false);
   const loading = useState(false);
   loadingNow.current = loading[0];
-  return new LoadStatus({ loading, label: useState(LOADING), log: useState<string[]>([]), error: useState(''), loadingNow });
+  return new LoadStatus({ loading, label: useState(LOADING_GRAPH), log: useState<string[]>([]), error: useState(''), loadingNow });
 }
 
 // Read the cdd server's progress every PROGRESS_READ_MS while the page shows, into status's log.

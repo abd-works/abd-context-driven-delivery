@@ -1,14 +1,13 @@
-import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import type { Held } from './held';
 import type { FilterSelection } from '../filter/filter-selection';
 import type { ExplorerFilter } from './explorer-filter';
 import { readSavedOverlays, type Overlays } from './overlays';
 import { normalizeInventoryBundle } from './inventory-bundle';
-import { reasonOf } from '../graph/graph-failures';
+import { reasonOf } from '@cdd/cdd-page-failures';
 import { api, failures, graphs } from '../graph/graph-page';
 import type { LoadStatus } from './load-status';
 import { openedFolder, type PageFolder } from './page-folder';
-
-type Held<T> = [T, Dispatch<SetStateAction<T>>];
 
 interface GraphLoadState {
   folder: PageFolder;

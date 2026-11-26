@@ -1,10 +1,10 @@
 """What a graph reads, and when: the reads a call asks of a graph, each run alone. The graph makes its reads once and
-keeps them (``graph.reads``); its MCP operations hand each call to them in one line."""
+keeps them (``graph.reads``); its MCP operations choose what to read and hand the read to them. Whether a build runs
+apart, in a worker process, is said by the graph's toolset from the call it answers, so no read takes the call."""
 
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -14,48 +14,24 @@ from harness.graph.graph_build import BuildStep, BuildTask, CheckedFiles
 from harness.graph.load_scope import LoadScope
 
 if TYPE_CHECKING:
-    from harness.agent_tools.tool_call import ToolCall
     from harness.graph.graph import Graph
-
-
-@dataclass(frozen=True)
-class WorkingCopyRead:
-    """A read of a working copy a call asks for: its folder, the source root of each practice under it, the folder the
-    graph is saved in when it is not the working copy, the pattern overlays to apply, and whether to rebuild even when
-    the saved graph holds what is asked."""
-
-    folder: str
-    practices: dict[str, str]
-    database: str | None = None
-    overlays: list[str] = field(default_factory=list)
-    force: bool = False
-
-
-@dataclass(frozen=True)
-class FilesRead:
-    """A read of only some files a call asks for: the folder they sit in, the practices that read them, the files or
-    folders themselves, and the pattern overlays to apply."""
-
-    folder: str
-    practices: list[str]
-    files: list[str]
-    overlays: list[str] = field(default_factory=list)
 
 
 class GraphReads:
     """The reads a call asks of one graph, which the graph makes once and keeps (``graph.reads``): open it on a folder,
-    with or without its saved graph; load a working copy, its practices' session roots, or some files; refresh the
-    files an action wrote; make sure it holds the whole working copy; and apply pattern overlays. A load, a refresh,
-    and a write each run alone: calls in one session can arrive at once."""
+    with or without its saved graph; load the practices chosen, from the saved graph when it holds them; read only the
+    files being edited; load its practices' session roots; refresh the files an action wrote; make sure it holds the
+    whole working copy; and apply pattern overlays. A load, a refresh, and a write each run alone: calls in one session
+    can arrive at once, so a caller that chooses what to read first holds ``changing`` while it chooses and reads."""
 
     def __init__(self, graph: Graph) -> None:
         self._graph = graph
-        self._changing = threading.RLock()
+        self.changing = threading.RLock()
 
     def open(self, folder: Path) -> None:
         """Open the graph on folder with every practice it holds rooted there, holding no node yet."""
         graph = self._graph
-        with self._changing:
+        with self.changing:
             # Holding no node yet, the graph stands on none of the working copy until a load reads it.
             graph.scope = LoadScope(folder, [])
             graph.practices.choose({practice: folder for practice in graph.practices.held.values()})
@@ -69,80 +45,117 @@ class GraphReads:
         no node until a load reads it."""
         self.open(folder)
         graph = self._graph
-        with self._changing:
+        with self.changing:
             saved = graph.saved_file.read()
             if saved is None:
                 return
             graph.overlays = list(saved.overlays)
-            graph.practices.reopen(saved, folder)
+            graph.practices.reopen(saved)
             if saved.holds(graph.practices.roots_by_key, graph.overlays):
                 graph.scope = LoadScope(folder)
 
-    def working_copy(self, read: WorkingCopyRead, call: ToolCall | None) -> GraphLoaded:
-        """Open each practice read names on its source root and build, from the saved graph when it holds them."""
+    def load(self, force: bool, apart: bool) -> GraphLoaded:
+        """Read each chosen practice from its root, with the graph's overlays: from the saved graph when it holds every
+        one of them on the same root with the same overlays and the load is not forced, else from the working copy,
+        which is then saved; in a worker process when apart."""
         graph = self._graph
-        with self._changing:
-            graph.scope = LoadScope(Path(read.database or read.folder).resolve())
-            graph.practices.choose({graph.practices.named(key): (Path(read.folder) / root).resolve() for key, root in read.practices.items()})
-            graph.overlays = list(read.overlays)
-            return graph.build.load(read.force, call)
-
-    def practice_roots(self, call: ToolCall | None) -> GraphLoaded:
-        """Open each practice the graph holds on the folder its session names for it, and build; a practice with no
-        root, or whose folder is not written yet, is left out."""
-        graph = self._graph
-        with self._changing:
-            roots = {practice: root for practice in graph.practices.held.values() if (root := practice.session_root) is not None and root.is_dir()}
-            if not roots:
-                return GraphLoaded("No practice root of a session is there to read, so nothing was loaded.")
-            graph.scope = LoadScope(graph.scope.folder)
-            graph.practices.choose(roots)
-            return graph.build.load(False, call)
-
-    def files(self, read: FilesRead, call: ToolCall | None) -> GraphLoaded:
-        """Build each practice read names from only its files, as they are now, and run its rules on them."""
-        graph = self._graph
-        with self._changing:
-            root = Path(read.folder).resolve()
-            graph.scope = LoadScope.of_paths(root, read.files)
-            graph.practices.choose({graph.practices.named(key): root for key in read.practices})
-            graph.overlays = list(read.overlays)
-            report_progress("Reading the edited files")
+        with self.changing:
+            report_progress("Checking the saved graph")
+            saved = None if force else graph.saved_file.holding(graph.practices.roots_by_key, graph.overlays)
+            if saved is not None:
+                report_progress("Loading the saved graph")
+                graph.build.run(BuildTask(BuildStep.CHECK, apart=apart), state=saved.of_practices(list(graph.practices.roots_by_key)))
+                return GraphLoaded("Loaded the saved graph.")
+            report_progress("Scanning the folder")
             graph.practices.open_chosen()
-            graph.build.run(BuildTask(BuildStep.READ), call)
-            return GraphLoaded(f"Loaded {len(graph.scope.edited_files or [])} edited files.")
+            graph.build.run(BuildTask(BuildStep.READ, saves=True, apart=apart))
+            return GraphLoaded("Loaded the working copies.")
 
-    def refresh(self, paths: list[str], call: ToolCall | None) -> GraphLoaded:
+    def edited_files(self, apart: bool) -> GraphLoaded:
+        """Build each chosen practice from only the files the graph's scope names, as they are now, and run its rules
+        on them; the saved graph is never touched."""
+        with self.changing:
+            return GraphLoaded(f"Loaded {self._read_named('Reading the edited files', apart)} edited files.")
+
+    def practice_roots(self, apart: bool) -> GraphLoaded:
+        """Read each practice the graph holds from the files under the folders its session names for it, as a load of
+        those same files does (``graph.load_files``): every practice is opened on the graph's folder, the session's
+        project, so each node's file is named from the project's root, and the files read are those under every
+        practice's roots, so a practice that reads what another practice read, as DDD reads Clean Engineering's
+        classes, sees the code under its own roots too. A practice with no root, or whose folders are not written yet,
+        is left out; nothing is saved, since the graph holds only the files under the roots."""
+        graph = self._graph
+        with self.changing:
+            folder = graph.scope.folder
+            roots = {practice: folders for practice in graph.practices.held.values() if (folders := [root for root in practice.session_roots if root.is_dir()])}
+            if folder is None or not roots:
+                return GraphLoaded("No practice root of a session is there to read, so nothing was loaded.")
+            graph.scope = LoadScope.of_paths(folder, [str(root) for folders in roots.values() for root in folders])
+            graph.practices.choose({practice: folder.resolve() for practice in roots})
+            return GraphLoaded(f"Loaded {self._read_named('Reading the practice roots', apart)} files under the practice roots.")
+
+    def refresh(self, paths: list[str], apart: bool) -> GraphLoaded:
         """Read again exactly the files at paths into the graph held in memory."""
-        with self._changing:
-            return self._graph.build.refresh(paths, call)
+        with self.changing:
+            return self._refresh(paths, BuildTask(BuildStep.REFRESH, apart=apart))
 
-    def hold_whole(self, call: ToolCall | None = None) -> None:
+    def hold_whole(self, apart: bool = False) -> None:
         """Make sure the graph holds the whole working copy across every practice it holds, reading it, or the saved
         graph when that holds it, when it does not yet: a validate judges links across practices, which a graph holding
         only some files cannot."""
         graph = self._graph
-        with self._changing:
+        with self.changing:
             if graph.scope.over_whole or graph.scope.folder is None:
                 return
             graph.scope = LoadScope(graph.scope.folder)
-            graph.build.load(False, call)
+            self.load(False, apart)
 
-    def refreshed(self, paths: list[str], checked: Path, call: ToolCall | None = None) -> None:
+    def refreshed(self, paths: list[str], checked: Path, apart: bool = False) -> None:
         """Refresh the graph with exactly the files at paths and write the nodes read from them, as they save, at
         checked, as one change: no other call's load or refresh comes between the two, so a call that checks the files
         it names sees the graph its own refresh left, whatever other calls in the session do at the same time. The build
-        writes them, in its worker for a chat's call, so the server answering chats never serialises them."""
-        with self._changing:
-            self._graph.build.refresh(paths, call, CheckedFiles(paths, checked))
+        writes them, in its worker when apart, so the server answering chats never serialises them."""
+        with self.changing:
+            self._refresh(paths, BuildTask(BuildStep.REFRESH, checked=CheckedFiles(paths, checked), apart=apart))
 
-    def apply_overlays(self, overlays: list[str], call: ToolCall | None) -> Graph:
+    def apply_overlays(self, overlays: list[str], apart: bool) -> Graph:
         """Apply pattern overlays and, when a folder is open with practices chosen, load it again with them; answer the
         graph, which now applies them."""
         graph = self._graph
-        with self._changing:
+        with self.changing:
             graph.overlays = list(overlays or [])
             if graph.scope.folder is not None and graph.practices.chosen:
                 graph.scope = LoadScope(graph.scope.folder)
-                graph.build.load(False, call)
+                self.load(False, apart)
         return graph
+
+    def _read_named(self, progress: str, apart: bool) -> int:
+        """Build each chosen practice from only the files the graph's scope names, as they are now, and run its rules on
+        them, telling the caller progress first; answer how many files were read."""
+        graph = self._graph
+        report_progress(progress)
+        graph.practices.open_chosen()
+        graph.build.run(BuildTask(BuildStep.READ, apart=apart))
+        return len(graph.scope.edited_files or [])
+
+    def _refresh(self, paths: list[str], task: BuildTask) -> GraphLoaded:
+        """Read again the files at paths in the graph's folder, and the files a practice reads together with them; when
+        task checks files, write the nodes read from the files it names, whether or not anything was refreshed."""
+        graph = self._graph
+        scope = graph.scope.refreshing(paths)
+        if scope.named and graph.practices.chosen:
+            report_progress(f"Refreshing {len(scope.named)} files")
+            graph.scope = scope.also_naming(self._read_with(scope.named))
+            graph.build.run(task)
+            return GraphLoaded(f"Refreshed {len(scope.named)} files.")
+        if task.checked is not None:
+            task.checked.write(graph)
+        if scope.folder is None or not graph.practices.chosen:
+            return GraphLoaded("No graph is open, so nothing was refreshed.")
+        return GraphLoaded("None of those files is in the graph's folder, so nothing was refreshed.")
+
+    def _read_with(self, files: list[Path]) -> list[Path]:
+        """The files each chosen practice reads together with files, which a refresh of files then reads again too: a
+        practice that builds one tree from several files, read from only some of them, would leave a different graph
+        than the load that read them all."""
+        return [path for practice in self._graph.practices.chosen for path in practice.reading.read_with(files)]

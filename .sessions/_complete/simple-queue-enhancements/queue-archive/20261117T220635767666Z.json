@@ -1,0 +1,10 @@
+{
+  "chat": "60be2cd0-d264-44b3-8635-0cebd8d9c856",
+  "taken_off": "2026-11-17T22:06:35.767666+00:00",
+  "prompts": [
+    {
+      "id": "05507de4415f",
+      "text": "After demo/progress/log.md has its four timed lines, add a last line saying how many seconds passed between the first and the fourth. Then mark this card done on chat 60be2cd0-d264-44b3-8635-0cebd8d9c856: prompt-queue.show, find this card, prompt-queue.done."
+    }
+  ]
+}

@@ -7,15 +7,16 @@ from typing import Iterable, List, Optional
 
 from harness.graph.model_node import ModelChildren
 from harness.graph.graph import Graph
+from harness.guidance.practice_formats import FormatAdapter
 
-from cdd_guidance.practices.clean_engineering.model.code_body import CodeBody
+from cdd_guidance.practices.source_code import CodeBody
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleContext, PublicSources
 from cdd_guidance.practices.clean_engineering.model.ooad_node import OoadNode
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.script_imports import ClassReference, ScriptImports
-from cdd_guidance.practices.clean_engineering.model.source_facts import ClassSourceFacts
+from cdd_guidance.practices.source_code import ClassReference, ScriptImports
+from cdd_guidance.practices.clean_engineering.model.source_facts import CONSTRUCTOR_NAMES, ClassSourceFacts
 from cdd_guidance.practices.clean_engineering.model.type_refs import domain_type_names
 
 
@@ -99,16 +100,10 @@ class OoadClass(OoadNode):
     graph_facts = (
         "bases",
         "stereotypes",
-        "method_count",
-        "operation_shapes",
-        "property_names",
         "held_fields",
-        "constructs",
         "composes_peers",
         "peer_names",
         "module_helpers",
-        "prose_comment",
-        "prototype_swap",
         "bold_interaction_lines",
         "bold_invariant_lines",
     )
@@ -137,9 +132,26 @@ class OoadClass(OoadNode):
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
         # What its source says, as its parser reads it: the lines it spans and the facts they give.
-        self.source_facts = ClassSourceFacts(self)
+        self.source_facts = self._source_facts()
+        # The lines, counted in the lines it spans, of each bold Interaction and Invariant bullet its markdown card
+        # writes; none until its source facts load.
+        self.bold_interaction_lines: List[int] = []
+        self.bold_invariant_lines: List[int] = []
         # Where each relationship drawn from it lands: on the properties it types, or among its dependencies.
         self.arrows = ClassArrows(self)
+        # The classes drawn inside this class's card, as a root's card holds the repository that keeps it, and the
+        # class whose card draws this one when it is folded into another.
+        self.folded: List["OoadClass"] = []
+        self.folded_into = ""
+
+    def _source_facts(self) -> ClassSourceFacts:
+        """The facts its source gives, which a class read from code extends with the measures of its code."""
+        return ClassSourceFacts(self)
+
+    def fold(self, other: "OoadClass") -> None:
+        """Draw other inside this class's card, under its own heading, in place of a card of its own."""
+        other.folded_into = self.name
+        self.folded.append(other)
 
     @property
     def properties(self) -> List["Property"]:
@@ -179,6 +191,7 @@ class OoadClass(OoadNode):
     def update_self(self, source: "OoadNode") -> None:
         """Copy what the class itself says; its properties and operations are reconciled as children."""
         assert isinstance(source, OoadClass)
+        self.name = source.name
         self.intent = source.intent
         self.stereotypes = list(source.stereotypes)
         self.module_path = list(source.module_path)
@@ -186,12 +199,29 @@ class OoadClass(OoadNode):
         self.collaborators = list(source.collaborators)
         self.dependencies = [item.clone() for item in getattr(source, "dependencies", [])]
 
+    def take_words_from(self, earlier: "OoadClass") -> None:
+        """Keep the intent and the member words it has, and take earlier's where it has none, member by member; a
+        constructor is one member whatever its format calls it."""
+        self.intent = self.intent or earlier.intent
+        for members, earlier_members in ((self.operations, earlier.operations), (self.properties, earlier.properties)):
+            had = {earlier.member_key(member): member for member in earlier_members}
+            for member in members:
+                kept = had.get(self.member_key(member))
+                if kept is not None:
+                    member.take_words_from(kept)
+
+    def member_key(self, member: "Operation | Property") -> str:
+        """The member's name; a constructor is one member whatever its format calls it."""
+        return "constructor" if member.name in {self.name, *CONSTRUCTOR_NAMES} else member.name
+
     def clone(self) -> "OoadClass":
         cloned = type(self)(self.name, self.sequential_order)
         cloned.update_self(self)
         cloned.line = self.line
         cloned.properties = [item.clone() for item in self.properties]
         cloned.operations = [item.clone() for item in self.operations]
+        for folded in self.folded:
+            cloned.fold(folded.clone())
         return cloned
 
     def as_record(self) -> dict:
@@ -296,6 +326,8 @@ class Module(OoadNode):
     class_type: type = OoadClass
     graph_facts = (
         "has_module_context",
+        "card_seam_terms",
+        "card_dependencies",
         "has_bounded_context",
         "modules_heading",
         "names_seam",
@@ -314,6 +346,8 @@ class Module(OoadNode):
         # What its module card says: its purpose, its public seam and the terms it names, its constraint, and the
         # modules it depends on. Its parser or a translation fills them.
         self.description = ""
+        # Its language: the lines that open its card and define the terms a caller uses.
+        self.language = ""
         self.seam = ""
         self.constraint = ""
         self.seam_terms: List[str] = []
@@ -381,12 +415,28 @@ class Module(OoadNode):
 
     def update_self(self, source: "OoadNode") -> None:
         assert isinstance(source, Module)
+        self.name = source.name or self.name
         self.description = source.description
+        self.language = source.language
         self.seam = source.seam
         self.constraint = source.constraint
         self.seam_terms = list(source.seam_terms)
         self.dependencies = list(source.dependencies)
         self.preamble = source.preamble
+
+    def take_words_from(self, earlier: "Module") -> None:
+        """Keep the language, constraint, and description it has, and take earlier's where it has none, or where a
+        drawing cut its description short and ended it with three dots."""
+        self.language = self.language or earlier.language
+        self.constraint = self.constraint or earlier.constraint
+        drawn = self.description
+        if drawn.endswith("...") and earlier.description.startswith(drawn[:-3].rstrip()):
+            self.description = earlier.description
+
+    def take_dependencies_off(self, earlier: "Module", shown: set[str]) -> None:
+        """Take earlier's dependencies on modules not among shown, the modules a drawing holds: a drawing shows a
+        dependency only as an arrow to a module on it, so one on a module it does not hold comes from earlier."""
+        self.dependencies += [name for name in earlier.dependencies if name not in shown and name not in self.dependencies]
 
     def clone(self) -> "Module":
         cloned = type(self)(self.name, self.sequential_order)
@@ -459,10 +509,13 @@ class ModuleSourceFacts:
         self._module.public_source_internal = public.internal_notes()
 
 
-class CleanEngineeringModel(OoadNode):
+class CleanEngineeringModel(OoadNode, FormatAdapter):
     _semantic_type_name = "CleanEngineeringModel"
     # The kind of module this model holds; a format's model names its own.
     module_type: type = Module
+    # Whether its format writes a model's prose: a class's intent, and the notes and calls under a member. A drawing
+    # writes none, so a document written from one keeps the prose it already had.
+    writes_prose = True
 
     def __init__(self, name: str | Graph = "", sequential_order: int = 1, graph: Optional[Graph] = None) -> None:
         opened = isinstance(name, Graph)
@@ -533,6 +586,21 @@ class CleanEngineeringModel(OoadNode):
         assert isinstance(source, CleanEngineeringModel)
         self.name = source.name
 
+    def take_words_from(self, earlier: "CleanEngineeringModel") -> None:
+        """Give each module and class this model still holds the words earlier held for it, where this model has none,
+        and each module its dependencies on modules this model does not hold: a render from a drawing, which writes no
+        prose and draws no arrow to a module it does not show, keeps them from the document it is written onto."""
+        modules = {module.name: module for module in earlier.modules}
+        shown = {module.name for module in self.modules}
+        for module in self.modules:
+            if module.name in modules:
+                module.take_words_from(modules[module.name])
+                module.take_dependencies_off(modules[module.name], shown)
+        classes = {oclass.name: oclass for oclass in earlier.every_class()}
+        for oclass in self.every_class():
+            if oclass.name in classes:
+                oclass.take_words_from(classes[oclass.name])
+
     def clone(self) -> "CleanEngineeringModel":
         cloned = type(self)(self.name, self.sequential_order)
         for module in self.modules:
@@ -542,7 +610,7 @@ class CleanEngineeringModel(OoadNode):
     def save(self) -> str:
         raise NotImplementedError(f"{type(self).__name__} must implement save")
 
-    def parse(self, text: str) -> "CleanEngineeringModel":
+    def parse(self, text: str, file: str = "") -> "CleanEngineeringModel":
         raise NotImplementedError(f"{type(self).__name__} must implement parse")
 
     def load_module(self, source: Module) -> Module:

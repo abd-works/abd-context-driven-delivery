@@ -1,32 +1,33 @@
+import { ChatToldFailures, reasonOf } from '@cdd/cdd-page-failures';
 import type { CddApi } from '@cdd/cdd-shared';
 import { ChatClientGenerated } from '@cdd/harness/chat/chat';
+import { GraphClientGenerated } from '@cdd/harness/graph/graph';
+
+import { NOT_SENT, SENT_TO_CHAT, type FixAsked, type FixOutcome } from '../source/violation-prompt';
 
 // How long a failure stays on the page as a toast.
 export const TOAST_MILLISECONDS = 8_000;
-// The query the chat bar puts in every app link it opens: the chat that opened the page.
-const CHAT_QUERY = 'chat';
 
-export const reasonOf = (failure: unknown): string => (failure instanceof Error ? failure.message : String(failure));
-
-// The chat that opened the page, as its link names it; none for a page no chat opened.
-export function chatOfPage(): string {
-  return new URLSearchParams(window.location.search).get(CHAT_QUERY)?.trim() ?? '';
-}
+const NO_CHAT = 'No chat opened this page, so the fix was not sent: open the Graph app from the chat bar.';
 
 type ToastsListener = (toasts: string[]) => void;
 
 // Every failure the Graph app meets: shown on the page as a toast and sent to the chat that opened the page, which shows
 // it on its chat bar as it shows its own, so the person can have the chat fix it. Each failure is shown and sent once,
-// however often the progress read every few hundred milliseconds meets it again.
-export class GraphFailures {
-  private readonly toldChat = new Set<string>();
+// however often the progress read every few hundred milliseconds meets it again. A fix of a broken rule goes to
+// the same chat.
+export class GraphFailures extends ChatToldFailures {
+  private readonly shownOnce = new Set<string>();
   private toasts: string[] = [];
   private readonly listeners = new Set<ToastsListener>();
 
+  // api is the page's way to its server, which the chat is told through and a fix sent through.
   constructor(
-    readonly api: CddApi,
-    readonly chat: string,
-  ) {}
+    private readonly api: CddApi,
+    chat: string,
+  ) {
+    super(chat, () => api);
+  }
 
   get shown(): string[] {
     return this.toasts;
@@ -38,18 +39,41 @@ export class GraphFailures {
     return () => this.listeners.delete(listener);
   }
 
-  fail(failure: string, context: string): void {
-    if (this.toldChat.has(failure)) return;
+  // Fix this one in the Graph app: the whole fix fills the prompt of the chat that opened the page, as a file comment
+  // sent from the Files app does, for the person to review and send. The Graph app keeps no session's comments, so the
+  // fix goes to the chat directly; a page no chat opened, or a chat that does not take it, says why in a toast.
+  // Python writes the fix, from the node and the rule it breaks there; a node that no longer breaks it has none.
+  readonly fixOne = async (asked: FixAsked): Promise<FixOutcome> => {
+    const rule = asked.rule;
+    const context = `Fix this one, on ${rule} in the Graph app`;
+    if (!this.chat) {
+      this.fail(NO_CHAT, context);
+      return NOT_SENT;
+    }
+    try {
+      const prompt = await new GraphClientGenerated(this.api).correctionPrompt(asked.nodeId, rule);
+      if (!prompt) {
+        this.fail(`The graph holds no fix for ${rule} on this node: load the folder again if it should.`, context);
+        return NOT_SENT;
+      }
+      await ChatClientGenerated.named(this.api, this.chat).send('fill', prompt);
+      return SENT_TO_CHAT;
+    } catch (cause) {
+      this.fail(`The fix for ${rule} was not sent: ${reasonOf(cause)}`, context);
+      return NOT_SENT;
+    }
+  };
+
+  // A failure already shown once is not shown again, as it is not sent again.
+  protected show(failure: string): void {
+    if (this.shownOnce.has(failure)) return;
+    this.shownOnce.add(failure);
     this.toast(failure);
-    this.tellChat(failure, context);
-    this.toldChat.add(failure);
   }
 
   // A failure that cannot reach the chat stays on the page, since telling the chat again would fail the same way.
-  private tellChat(failure: string, context: string): void {
-    if (!this.chat) return;
-    const told = ChatClientGenerated.named(this.api, this.chat).send('failure', JSON.stringify({ failure, context }));
-    void told.catch((reason) => this.toast(`The chat was not told: ${reasonOf(reason)}`));
+  protected notTold(reason: string): void {
+    this.toast(`The chat was not told: ${reason}`);
   }
 
   // A toast already showing is not shown twice: toasts are known by their text, and two alike confuse the list.

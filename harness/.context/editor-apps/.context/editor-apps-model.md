@@ -6,7 +6,7 @@ format: md
 
 # Practice Content Editor Apps
 
-**Sources / context:** `.context/story-map.md` (Integrate Practice Content Editor Apps In Chat Bar, lines 801-831; Integrate Practice Content Editor Apps On Board, lines 573-599, the 2026-11-12 notes); `story_tests/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md`; `story_tests/move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md`; module cards `harness/.context/module-context.md`, `harness/graph/.context/module-context.md`, `harness/chat-ui/pane/.context/module-context.md`, `space/kanban/.context/module-context.md`, `harness/design_canvas/.context/module-context.md`, `cdd_guidance/practices/stories/model/.context/story-model.md`; code read: `harness/diagnostics/server_health.py`, `harness/installation/app_ports.py`, `space/kanban/board_app.py`, `harness/chat-ui/pane/hooks/board-chat/board-server.ts:40-120`, `harness/chat-ui/pane/hooks/health/server-health-wording.ts`, `harness/chat-ui/pane/hooks/chat-bar/format-choices-client.ts`, `space/kanban/format_choice.py`, `space/session/practice_session_output.py`, `harness/guidance/guidance.py:461-700`, `harness/graph/graph.py:1243-1420`, `cdd_guidance/practices/stories/model/story_model.py`, `../story-ui/packages/story-map-workspace/stories/stories.ts` (the TypeScript domain this replaces); `.sessions/integrate-practice-content-editor-apps/refactor-guardrails.md`.
+**Sources / context:** `.context/story-map.md` (Integrate Practice Content Editor Apps In Chat Bar, lines 801-831; Integrate Practice Content Editor Apps On Board, lines 573-599, the 2026-11-12 notes); `story_tests/move-work-forward-from-chat-bar/integrate-practice-content-editor-apps-in-chat-bar/integrate_practice_content_editor_apps_in_chat_bar_story.test.md`; `story_tests/move-work-forward-on-session-board/integrate-practice-content-editor-apps-on-board/integrate_practice_content_editor_apps_on_board_story.test.md`; module cards `harness/.context/module-context.md`, `harness/graph/.context/module-context.md`, `harness/chat-ui/pane/.context/module-context.md`, `space/kanban/.context/module-context.md`, `harness/design_canvas/.context/module-context.md`, `cdd_guidance/practices/stories/model/.context/story-model.md`; code read: `harness/diagnostics/server_health.py`, `harness/installation/app_ports.py`, `space/kanban/board_app.py`, `harness/chat-ui/pane/hooks/board-chat/board-server.ts:40-120`, `harness/chat-ui/pane/hooks/health/server-health-wording.ts`, `harness/chat-ui/pane/hooks/chat-bar/format-choices-client.ts`, `space/kanban/format_choice.py`, `space/session/practices/practice_session_output.py`, `harness/guidance/guidance.py:461-700`, `harness/graph/graph.py:1243-1420`, `cdd_guidance/practices/stories/model/story_map.py`, `../story-ui/packages/story-map-workspace/stories/stories.ts` (the TypeScript domain this replaces); `.sessions/integrate-practice-content-editor-apps/refactor-guardrails.md`.
 
 **Python model files:** `harness/.context/editor-apps/*.py`, one family file per class family, each naming the module it belongs to in its first line; this document is canonical.
 
@@ -19,9 +19,9 @@ This increment adds **three new types and three named failures** and extends **t
 | `harness/diagnostics` | *App*, *AppStatus*, *AppNotStarted*, *AppNotRegistered* | *ServerHealth* | `kanban_app_port`, `kanban_app_url`, `graph_app_port`, `reports_graph_app_on`, `reports_kanban_app_on` |
 | `harness/guidance` | — | *PracticeGuidance*, *FidelityGuidance* | — |
 | `harness/graph` | — | *Graph* | — |
-| `space/session` | *FormatNotOffered* | *Session*, *FidelitySessionOutput* | `kept_format`, `keep_format` |
+| `space/session` | *FormatNotOfferedError* | *Session*, *FidelitySessionOutput* | `kept_format`, `keep_format` |
 | `space/kanban` | — | *Ticket*, *FidelityProgress*, *FormatChoice* | `starts_picked`; *BoardPage* and its `rebuild` (moved onto *App*) |
-| `cdd_guidance/practices/stories/model` | *OpenedStoryMap*, *StoryMapEditRefused*, *StoryNodeNotFound* | *StoryNode*, *StoryModel*, *Epic*, *Story*, *Scenario*, *Step* | — |
+| `cdd_guidance/practices/stories/model` | *OpenedStoryMap*, *StoryMapEditRefused*, *StoryNodeNotFound* | *StoryNode*, *StoryMap*, *Epic*, *Story*, *Scenario*, *Step* | — |
 | `cdd_guidance/practices/stories/app` | the Story UI editor's page: *StoryMapClient*, *StoryMapApi*, its views | — | the Story UI's TypeScript domain (`stories.ts`, `stories-server.ts`, the JSON and MongoDB stores) |
 
 ---
@@ -30,7 +30,7 @@ This increment adds **three new types and three named failures** and extends **t
 
 What an app is, how far it has got (installed, running), and how it is readied. Until this increment the chat bar worked this out in TypeScript (`board-server.ts`: `runningBoardUrl`, `openedBoard`) for the board only, and *BoardPage* rebuilt the board's page; both moved here, so the chat bar, the board and an agent ready every app the same way.
 
-Decided while coding (implementation, 2026-11-12): *App* lives in harness/diagnostics, beside *ServerHealth*, not in harness/installation, because `open` is an `@mcp` operation and harness/installation imports no harness/mcp (harness/mcp imports it). harness/graph sits below harness/diagnostics, so the Graph app is made and registered in `harness/diagnostics/app.py` from `GRAPH_APP_PORTS`. An *App* takes its folder and its server's ports rather than an *AppPorts*: a ports file names several servers (the Graph app's `app` and `web`), and the Story UI editor's folder (`cdd_guidance/practices/stories/app`) is not the folder of the board's ports file that it answers on.
+Decided while coding (implementation, 2026-11-12): *App* lives in harness/diagnostics, beside *ServerHealth*, not in harness/installation, because `open` is an `@mcp` operation and harness/installation imports no harness/mcp (harness/mcp imports it). harness/graph sits below harness/diagnostics, so the Graph app is made and registered in `harness/apps/app.py` from `GRAPH_APP_PORTS`. An *App* takes its folder and its server's ports rather than an *AppPorts*: a ports file names several servers (the Graph app's `app` and `web`), and the Story UI editor's folder (`cdd_guidance/practices/stories/app`) is not the folder of the board's ports file that it answers on.
 
 ### App
 
@@ -56,7 +56,7 @@ One CDD web app a person opens beside the chat: the Story UI editor, the Graph a
 ----
 + register() -> App
 	// registering a label again replaces the earlier app rather than listing it twice
-+ load(app: str, *, project: Path) -> App  <<classmethod>> <<tool_subject>>
++ load(app: str) -> App  <<classmethod>> <<tool_subject>>
 	// the registered app whose label the call names (the adapter's identity, as Ticket.load names a ticket); a label no module registered is refused with AppNotRegistered
 + open() -> App  <<mcp>> <<agent_tool>>
 	-> self.install
@@ -129,7 +129,7 @@ Canonical: `harness/guidance/.context/practice-guidance-model.md`.
 
 + editor: App | None  <<class field>>
 	// the app that edits this practice's files: the Story UI editor for Stories, none for every other practice; space/kanban, which makes the Story UI editor's App, sets it on Stories (Stories.editor = STORY_UI_APP), so no practice imports space
-+ session_root: Path | None
++ session_roots: list[Path]
 	// derived: the folder the session this practice works in names for it (its PracticeSessionOutput.folder); none outside a session. work_in keeps the session output it is given so this reads it
 ----
 + work_in(session_output) -> None  (changed: also keeps session_output)
@@ -153,9 +153,9 @@ Canonical: `harness/guidance/.context/practice-guidance-model.md`.
 Canonical: `harness/graph/.context/module-context.md`.
 
 + load_practice_roots(call: ToolCall | None = None) -> GraphLoaded  <<mcp>> <<agent_tool>>
-	-> practice.session_root (each practice it holds)
+	-> practice.session_roots (each practice it holds)
 	-> self.build.load
-	// opens each practice it holds on the root its session names, applies the session's overlays, and builds: the Graph app's whole load, with no folder or practice key passed in. A practice with no session_root, or whose root folder is not written yet, is left out
+	// reads each practice it holds from the files under the roots its session names for it (the practice's folder and every folder added to one of its fidelities), each practice opened on the project's folder so every node's file is named from the project's root, as load_files reads the same files; applies the session's overlays: the Graph app's whole load, with no folder or practice key passed in. A practice with no session_roots, or whose folders are not written yet, is left out
 
 **Invariants**
 
@@ -176,14 +176,14 @@ Decided while coding (implementation, 2026-11-12): *Session* gains nothing. The 
 ### PracticeSessionOutput (extended)
 
 + design_view: str  <<data_field>>
-	-> CanvasVersions.in_practice_root(self.output_root).link(latest)
+	-> CanvasVersions.in_practice_root(self.output_root).latest.link
 	// the claude.ai link recorded for the latest version of the design canvas under the folder this practice writes under (the UX practice's); empty while the practice is off or none is recorded. The chat bar's file viewer opens the first practice's that has one
 
 ### FidelitySessionOutput (extended)
 
 <<language_adapter typescript>> <<agent_toolset>> <<identity session_file, practice_name, name>>
 
-Canonical: `space/session/practice_session_output.py`. It kept the one format a fidelity was last given; it now keeps the formats chosen for it, which the chat bar's chips, the board's chips and the Story UI's toggles all change, so every page shows one choice.
+Canonical: `space/session/practices/practice_session_output.py`. It kept the one format a fidelity was last given; it now keeps the formats chosen for it, which the chat bar's chips, the board's chips and the Story UI's toggles all change, so every page shows one choice.
 
 + session_file: str  <<data_field>>
 + practice_name: str  <<data_field>>
@@ -196,13 +196,13 @@ Canonical: `space/session/practice_session_output.py`. It kept the one format a 
 ----
 + load(session: str, practice: str, fidelity: str, *, call) -> FidelitySessionOutput  <<classmethod>> <<tool_subject>>
 + choose_format(format: str, is_chosen: bool) -> FidelitySessionOutput  <<mcp>> <<agent_tool>>
-	// replaces keep_format (deleted); a format chosen again keeps its place; a format the fidelity does not offer is refused with FormatNotOffered
+	// replaces keep_format (deleted); a format chosen again keeps its place; a format the fidelity does not offer is refused with FormatNotOfferedError
 
-### FormatNotOffered
+### FormatNotOfferedError
 
 <<Domain Exception>>
 
-+ FormatNotOffered(fidelity: FidelityGuidance, format: str)
++ FormatNotOfferedError(fidelity: FidelityGuidance, format: str)
 
 **Invariants**
 
@@ -248,7 +248,7 @@ Its `rebuild` is `App.install` of the CDD Kanban's *App* (`KANBAN_APP`); `script
 
 ## cdd_guidance/practices/stories/model
 
-Canonical: `cdd_guidance/practices/stories/model/story_model.py`, `opened_story_map.py`; spec `story_map_edits_spec.py`. The story map's backend moves out of TypeScript: the Story UI's `StoryMapModel`, `EpicModel`, `SubEpicModel`, `StoryModel`, `ScenarioModel` and `StoryMapRepository` (`stories.ts`, `stories-server.ts`) are not carried into `cdd_guidance/practices/stories/app`, and the page uses the generated clients of these Python classes. No JSON story map is kept: an edit saves the map in the file it was read from and renders it to the chosen formats.
+Canonical: `cdd_guidance/practices/stories/model/story_map.py`, `opened_story_map.py`; spec `story_map_edits_spec.py`. The story map's backend moves out of TypeScript: the Story UI's `StoryMapModel`, `EpicModel`, `SubEpicModel`, `StoryMap`, `ScenarioModel` and `StoryMapRepository` (`stories.ts`, `stories-server.ts`) are not carried into `cdd_guidance/practices/stories/app`, and the page uses the generated clients of these Python classes. No JSON story map is kept: an edit saves the map in the file it was read from and renders it to the chosen formats.
 
 Every edit answers the **story map**, not the node it changed (`standard-mutation-response`): the page redraws the whole map as its file now holds it.
 
@@ -261,7 +261,7 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 + shown_name: str  <<data_field key="name">>
 + description_text: str  <<data_field key="description">>
 	// what the story map says about it: the paragraphs under its heading in an outline story map (the story map's own: the lines above its first epic; an increment's: its outcome and slicing notes in the thin slice); written back unchanged (decided 2026-11-12 by the person)
-+ story_map: StoryModel
++ story_map: StoryMap
 	// derived: the story map at the top of its parent chain
 + parts: list[StoryNode]
 	// the nodes a path goes through below it
@@ -269,23 +269,23 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 + path: str
 ----
 + load(node: str, *, call) -> StoryNode  <<classmethod>> <<tool_subject>>
-	-> StoryModel.load (the file the node names)
-	-> StoryModel.descendants.node_at
+	-> StoryMap.load (the file the node names)
+	-> StoryMap.descendants.node_at
 	// a node of another kind than the toolset's is refused with StoryNodeNotFound
 + holding(part: StoryNode) -> list[StoryNode]
 	// the list of its own that holds part; each kind answers its own
-+ rename(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ rename(name: str) -> StoryMap  <<mcp>> <<agent_tool>>
 	-> self.story_map.opened.save
-+ move_before(other: StoryNode) -> StoryModel  <<mcp>> <<agent_tool>>
++ move_before(other: StoryNode) -> StoryMap  <<mcp>> <<agent_tool>>
 	-> self.story_map.descendants.node_at(other.path)
 	-> self.story_map.opened.save
 	// refuses with StoryMapEditRefused when other is not a node of its own kind; it then takes other's parent and the place before it
-+ remove() -> StoryModel  <<mcp>> <<agent_tool>>
++ remove() -> StoryMap  <<mcp>> <<agent_tool>>
 	-> self.story_map.opened.save
-+ edit_description(description: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ edit_description(description: str) -> StoryMap  <<mcp>> <<agent_tool>>
 	-> self.story_map.opened.save
 
-### StoryModel (extended)
+### StoryMap (extended)
 
 <<language_adapter typescript>> <<agent_toolset>> <<identity file>>
 
@@ -302,19 +302,19 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 + slicing: ThinSlice | None
 	// the file that keeps its increments and writes them on a save; none for a map that keeps none, such as a scenario file
 ----
-+ load(file: str, *, call) -> StoryModel  <<classmethod>> <<tool_subject>>
++ load(file: str, *, call) -> StoryMap  <<classmethod>> <<tool_subject>>
 	-> call.session.session_files.file_manager.read (refuses a file outside the session's roots with PathOutsideRootsError)
 	-> call.session.graph.practices.of(Stories).open_file
-	// a markdown story map or scenario file is read by itself (MarkdownStoryModel.opened_from), with the thin slice beside a story map, so a save keeps every line it does not change; a story test is merged onto its story map to be read
+	// a markdown story map or scenario file is read by itself (MarkdownStoryMap.opened_from), with the thin slice beside a story map, so a save keeps every line it does not change; a story test is merged onto its story map to be read
 	-> OpenedStoryMap(the map read, the file, the session), which the map keeps
-+ open_in_session(*, call) -> StoryModel  <<classmethod>> <<mcp>> <<agent_tool>>
++ open_in_session(*, call) -> StoryMap  <<classmethod>> <<mcp>> <<agent_tool>>
 	// the first story map file the open session's Stories practice declares: the page with no file follows the session open in the project, so a ticket activated on the board shows its own map on the next read
-+ show() -> StoryModel  <<mcp>> <<agent_tool>>
-+ new_epic(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ show() -> StoryMap  <<mcp>> <<agent_tool>>
++ new_epic(name: str) -> StoryMap  <<mcp>> <<agent_tool>>
 	-> self.opened.save
 + descendants: Descendants
 	// node_at(path): the node a tool's path names
-+ new_increment(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ new_increment(name: str) -> StoryMap  <<mcp>> <<agent_tool>>
 	-> self.opened.save
 	// refuses with StoryMapEditRefused when it keeps no increments (no slicing)
 + opened: OpenedStoryMap | UnopenedStoryMap
@@ -345,16 +345,16 @@ Every edit answers the **story map**, not the node it changed (`standard-mutatio
 + segment_prefix = "example:"
 + naming_columns = ("example", "name")
 ----
-+ edit_field(field: str, value: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ edit_field(field: str, value: str) -> StoryMap  <<mcp>> <<agent_tool>>
 	// the column that names it (`example`, or `name` while it says its name) renames it; a column its row does not have is refused with StoryMapEditRefused
 	-> self.story_map.opened.save
-+ rename(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ rename(name: str) -> StoryMap  <<mcp>> <<agent_tool>>
 	// renames the column of its row that names it too, and keeps its place in its scope's Examples
 	-> Examples.rename
 	-> self.story_map.opened.save
-+ remove() -> StoryModel  <<mcp>> <<agent_tool>>  (from StoryNode; it leaves its scope's Examples, Examples.drop)
-+ move_before(other) -> StoryModel  <<mcp>> <<agent_tool>>  (from StoryNode; refused by Scenario.holding)
-+ edit_description(description) -> StoryModel
++ remove() -> StoryMap  <<mcp>> <<agent_tool>>  (from StoryNode; it leaves its scope's Examples, Examples.drop)
++ move_before(other) -> StoryMap  <<mcp>> <<agent_tool>>  (from StoryNode; refused by Scenario.holding)
++ edit_description(description) -> StoryMap
 	// refused, and no tool offers it: a row holds no description
 
 ### MarkdownExample (new, cdd_guidance/practices/stories/model/markdown/markup.py)
@@ -372,10 +372,10 @@ An example read from a row of a markdown examples table (*ScenarioFileReading* m
 + segment_prefix = "increment:"
 	// its path is `increment:{slug}`, apart from any epic's
 ----
-+ add_story(story: Story) -> StoryModel  <<mcp>> <<agent_tool>>
++ add_story(story: Story) -> StoryMap  <<mcp>> <<agent_tool>>
 	// a story is delivered by one increment at most: it leaves the increment that held it
 	-> self.story_map.opened.save
-+ remove_story(story: Story) -> StoryModel  <<mcp>> <<agent_tool>>
++ remove_story(story: Story) -> StoryMap  <<mcp>> <<agent_tool>>
 	-> self.story_map.opened.save
 // rename, move_before, remove and edit_description come from StoryNode
 
@@ -391,7 +391,7 @@ The thin slice a markdown story map keeps its increments in (`thin-slice.md` bes
 
 The file a story map was opened from in a session, and the one owner of its writes.
 
-+ OpenedStoryMap(story_map: StoryModel, path: Path, session: Session)
++ OpenedStoryMap(story_map: StoryMap, path: Path, session: Session)
 	// the session's own Stories practice (session.graph.practices.of(Stories)) reads and writes the file
 	// it keeps the map as its own format writes it on opening, which a save compares the file with
 ------
@@ -410,24 +410,24 @@ The file a story map was opened from in a session, and the one owner of its writ
 ### Epic (extended)
 
 + epics, stories  <<data_field>>
-+ new_epic(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
-+ new_story(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ new_epic(name: str) -> StoryMap  <<mcp>> <<agent_tool>>
++ new_story(name: str) -> StoryMap  <<mcp>> <<agent_tool>>
 
 ### Story (extended)
 
 + scenarios  <<data_field>>; kind: str  <<data_field key="story_type">>
-+ new_scenario(name: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ new_scenario(name: str) -> StoryMap  <<mcp>> <<agent_tool>>
 
 ### Scenario (extended)
 
 + steps  <<data_field>>
-+ new_step(step_type: str, text: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ new_step(step_type: str, text: str) -> StoryMap  <<mcp>> <<agent_tool>>
 	// step_type is given, when or then (StepType)
 
 ### Step (extended)
 
 + keyword, ands  <<data_field>>; written_text: str  <<data_field key="text">>
-+ edit_text(text: str) -> StoryModel  <<mcp>> <<agent_tool>>
++ edit_text(text: str) -> StoryMap  <<mcp>> <<agent_tool>>
 
 ### StoryMapEditRefused, StoryNodeNotFound
 
@@ -448,25 +448,25 @@ The file a story map was opened from in a session, and the one owner of its writ
 
 The Story UI editor, moved from its own repository (`C:/dev/story-ui`) beside the Stories practice. It keeps no domain, no store and no routes of its own:
 
-- `story-map/story-map-client.ts` — *StoryMapClient* extends the generated `StoryModelClientGenerated` with what only the page knows: which node client an id the views hand back takes, and how a drag the views report as a new order becomes one `move_before`.
+- `story-map/story-map-client.ts` — *StoryMapClient* extends the generated `StoryMapClientGenerated` with what only the page knows: which node client an id the views hand back takes, and how a drag the views report as a new order becomes one `move_before`.
 - `story-map/story-map-api.ts` — *StoryMapApi*, the page's `CddApi` over the board's server; a failed call says what failed and how to fix it, answers null, and the page keeps the map Python last sent (`fail-loud-on-mcp`).
 - `story-map/story-map-view-models.ts`, `story-map/story-map-views.tsx` — the Story UI's views, drawing the generated data.
-- `story-map-routes.ts` — `storyMapRoutes` (the generated routes of StoryModel, Epic, Story, Scenario, Step, Example, Increment, FidelitySessionOutput and Chat) and `storyMapBuild` (the built page), which the board's server mounts; `story-map-page.ts` — the page's path, `/story-map`.
+- `story-map-routes.ts` — `storyMapRoutes` (the generated routes of StoryMap, Epic, Story, Scenario, Step, Example, Increment, FidelitySessionOutput and Chat) and `storyMapBuild` (the built page), which the board's server mounts; `story-map-page.ts` — the page's path, `/story-map`.
 
 ## Interactions across modules
 
 | Caller | Operation | Owner |
 |---|---|---|
 | chat bar status row press | `App.open` | harness/installation |
-| chat bar file viewer tile | `StoryModel.load(file)` | stories model |
+| chat bar file viewer tile | `StoryMap.load(file)` | stories model |
 | chat bar file viewer link | `PracticeSessionOutput.design_view` | space/session |
 | Story UI edit | `StoryNode.rename` and the other edits, then `OpenedStoryMap.save` | stories model |
-| Story UI increment view | `StoryModel.new_increment`, `Increment.add_story`, `Increment.remove_story` | stories model |
+| Story UI increment view | `StoryMap.new_increment`, `Increment.add_story`, `Increment.remove_story` | stories model |
 | Story UI acceptance-test link | `Chat.send(open_file)`, then the chat bar's files pane shows it at the chat's next check-in (`FileManager.read` through `session.read_file`) | harness/chat, harness/chat-ui |
 | Story UI example cell | `Example.edit_field`, `Example.remove`, then `OpenedStoryMap.save` | stories model |
 | Story UI epic or sub-epic description | `Epic.edit_description`, then `OpenedStoryMap.save` | stories model |
-| Story UI with no file | `StoryModel.open_in_session`, read every two seconds | stories model |
+| Story UI with no file | `StoryMap.open_in_session`, read every two seconds | stories model |
 | Story UI format toggle, chat bar chip | `FidelitySessionOutput.choose_format`, `Ticket.choose_formats` | space/session, space/kanban |
 | Graph app open | `Graph.load_practice_roots` on the session open in the project (the chat's open session) | harness/graph, space/session |
-| board story-map row widget | `BoardFidelity.editor` then `App.open`, opened on the ticket's worktree, where `StoryModel.open_in_session` shows the ticket's story map | space/kanban, harness/diagnostics |
+| board story-map row widget | `BoardFidelity.editor` then `App.open`, opened on the ticket's worktree, where `StoryMap.open_in_session` shows the ticket's story map | space/kanban, harness/diagnostics |
 | board graph widget | `Graph.load_practice_roots` on the ticket's session graph | harness/graph |

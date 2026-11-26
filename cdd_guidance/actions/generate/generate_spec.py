@@ -17,14 +17,15 @@ from expects import contain, equal, expect
 from mamba import after, before, context, description, it
 
 from cdd_guidance.actions.generate.generate import Generate
+from harness.agent_tools.agent_tools import ToolsetReference
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance.fixtures.sample_tool.sample_tool_host import (
     SamplePracticeGuidance,
 )
-from harness.mcp.mcp_server import McpServer
+from harness.mcp.mcp_server import ProjectToolsets
 from space.session import Sessions
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 import cdd_guidance.patterns  # noqa: F401 - registers the patterns a session can overlay
 
 
@@ -100,7 +101,7 @@ with description("a generate action on practice guidance") as self:
             self.project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
             (self.project / ".git").mkdir()
             sessions = Sessions(self.project)
-            sessions.opened.open(sessions.create("alpha", self.project))
+            sessions.opened.open(sessions.create("alpha", self.project), "")
             self.action = _made_for(self.project)
 
         with after.each:
@@ -121,6 +122,34 @@ with description("a generate action on practice guidance") as self:
 
             with it("should name the roles a folder can hold of the pattern"):
                 expect(self.prose).to(contain("- lern_domain_driven: Boot, View, Client, Routes, Node, Domain, Store"))
+
+        # A Claude Design canvas is made by the rules of story_canvas.md and claude_design.md: an agent handed only their
+        # path in a step misses every one of them, and the greybox shell's template teaches the wrong artifact.
+        with context("that generates the UX mockup in the claude_design format"):
+            with before.each:
+                ux = Sessions(self.project).current().practice("ux")
+                mockup = ux.of_fidelity(ux.fidelities.called("mockup"))
+                mockup.choose_formats(["claude_design"], True)
+                mockup.choose_formats(["html"], False)
+                self.prose = _expanded_generate(_made_for(self.project), {"guidance": ["ux-mockup"]}).instructions
+
+            with it("should give the story canvas rules"):
+                expect(self.prose).to(contain("explorer-drives-the-screen", "real-screens-not-screenshots", "walk-before-publish"))
+
+            with it("should give the Claude Design screen rules"):
+                expect(self.prose).to(contain("shown-on-edges"))
+
+            with it("should give the canvas template, not the greybox shell's"):
+                expect(self.prose).to(contain("StoryScreen("))
+                expect(self.prose).not_to(contain("AI mockup template (Story Demo shell)"))
+
+            with it("should save the canvas in the UX practice's root"):
+                expect(self.prose).to(contain(f"claude_design: {self.project.resolve().as_posix()}/ux/design-canvas/{{version}}/project/canvas.json"))
+
+        with context("that generates the UX mockup in the html format"):
+            with it("should give the greybox shell's template"):
+                prose = _expanded_generate(_made_for(self.project), {"guidance": ["ux-mockup"]}).instructions
+                expect(prose).to(contain("AI mockup template (Story Demo shell)"))
 
         # The process says what to do first, so it opens the reply: a long reply is read from the top, and an agent that
         # meets the rules first treats the reply as a rulebook and skips the order of work.
@@ -150,6 +179,64 @@ with description("a generate action on practice guidance") as self:
             with it("should render it from the earlier fidelity's file in the format it has"):
                 expect(self.prose).to(contain("source drawio, and paths .context/story-map.drawio"))
 
+        # Requested 2026-11-17: a whiteboard written by Generate goes on its board in Claude, as one Render writes does.
+        with context("that generates the story map to a whiteboard"):
+            with before.each:
+                self.expanded = _expanded_generate(self.action, {"guidance": "stories-story-map format=whiteboard"})
+
+            with it("should say to publish each whiteboard file to its board in Claude"):
+                expect(self.expanded.instructions).to(contain("is not finished until each .whiteboard file it saved is on its board in Claude"))
+
+            with it("should list record_board, which keeps the address of a board it created"):
+                expect("record_board" in self.expanded.tools).to(equal(True))
+
+        # Seen 2026-11-21 (r3-sparky-11): acceptance tests with TypeScript chosen were handed Clean Engineering's Python
+        # class template and no shape for the story test files the save line names.
+        with context("that generates acceptance tests in each code language"):
+            # One project for every example: each generate takes most of an example's time budget.
+            with before.all:
+                self.languages_project = Path(tempfile.mkdtemp(prefix="cdd-generate-"))
+                (self.languages_project / ".git").mkdir()
+                sessions = Sessions(self.languages_project)
+                sessions.opened.open(sessions.create("alpha", self.languages_project), "")
+                action = _made_for(self.languages_project)
+                self.typescript = _expanded_generate(action, {"guidance": "stories-acceptance-tests format=typescript"}).instructions
+                self.python = _expanded_generate(action, {"guidance": "stories-acceptance-tests format=python"}).instructions
+
+            with after.all:
+                shutil.rmtree(self.languages_project, ignore_errors=True)
+
+            with context("with TypeScript chosen"):
+                with it("should hand over the TypeScript shape of the shared scenarios each tier replays"):
+                    expect(self.typescript).to(contain("Acceptance tests template (TypeScript)"))
+
+                with it("should hand over Clean Engineering's reference written in TypeScript"):
+                    expect(self.typescript).to(contain("Conceptual Clean Engineering Reference (TypeScript style)"))
+
+                with it("should hand over no Python template"):
+                    expect(self.typescript).not_to(contain("(Python style)"))
+
+            with context("with Python chosen"):
+                with it("should hand over the Python shape of the shared scenarios each tier replays"):
+                    expect(self.python).to(contain("Acceptance tests template (Python)"))
+
+        with context("that generates a fidelity that writes no whiteboard"):
+            with it("should say nothing of publishing to a board"):
+                prose = _expanded_generate(self.action, {"guidance": "stories-scenarios"}).instructions
+                expect(prose).not_to(contain("on its board in Claude"))
+
+        # Seen 2026-11-17: a session overlaying a pattern, whose roots name harness/**/.context, failed Generate while
+        # recording the pattern in that path taken as a folder.
+        with context("that overlays a pattern, its fidelity writing under a folder pattern with a wildcard"):
+            with before.each:
+                session = Sessions(self.project).current()
+                session.choose_overlays(["lern_domain_driven"])
+                session.practice("stories").choose_root("harness/**/.context")
+
+            with it("should still answer, leaving the patterns of that folder to the agent"):
+                prose = _expanded_generate(_made_for(self.project), {"guidance": ["stories-story-map"]}).instructions
+                expect(prose).to(contain("story-map.md"))
+
         with context("that generates a fidelity in a format its earlier fidelity already has a file in"):
             with before.each:
                 (self.project / ".context").mkdir(exist_ok=True)
@@ -177,8 +264,8 @@ with description("a generate action on practice guidance") as self:
         # An agent acting on a command needs the session's folders, or it guesses where paths start and where files go.
         with context("that an agent runs it as an MCP command"):
             with before.each:
-                server = McpServer(project=self.project)
-                server.start(("cdd_guidance.actions.generate.generate:Generate",))
+                server = ProjectToolsets(project=self.project)
+                server.start((ToolsetReference.parsed("cdd_guidance.actions.generate.generate:Generate"),))
                 self.reply = server.invoke("generate.generate", {"guidance": "stories-story-map"})
 
             with it("should name the session's session.json"):
@@ -199,8 +286,8 @@ with description("a generate action on practice guidance") as self:
                 other.mkdir(parents=True)
                 (self.project / "src").mkdir(exist_ok=True)
                 (other / "session.json").write_text('{"name": "beta", "workpath": "' + (self.project / "src").as_posix() + '"}', encoding="utf-8")
-                server = McpServer(project=self.project)
-                server.start(("cdd_guidance.actions.generate.generate:Generate",))
+                server = ProjectToolsets(project=self.project)
+                server.start((ToolsetReference.parsed("cdd_guidance.actions.generate.generate:Generate"),))
                 self.reply = server.invoke("generate.generate", {"guidance": "stories-story-map session=.sessions/beta/session.json"})
 
             with it("should describe that session, not the one open"):
@@ -215,8 +302,8 @@ with description("a generate action on practice guidance") as self:
 
         with context("that the same cdd server has already generated once"):
             with before.each:
-                server = McpServer(project=self.project)
-                server.start(("cdd_guidance.actions.generate.generate:Generate",))
+                server = ProjectToolsets(project=self.project)
+                server.start((ToolsetReference.parsed("cdd_guidance.actions.generate.generate:Generate"),))
                 server.invoke("generate.generate", {"guidance": "stories-story-map"})
                 server.invoke("generate.generate", {"guidance": "stories-scenarios"})
 
@@ -229,6 +316,27 @@ with description("a generate action on practice guidance") as self:
 
             with it("should log a generate line that names the practice, fidelity, and format"):
                 expect(_generate_line(self.project)).to(contain(" ux ia drawio "))
+
+        # The person's decision (2026-11-22): nobody fills the record of a module's test tiers by hand; the generate
+        # that writes the module's tests fills it, and asks for what it cannot tell.
+        with context("that generates BDD development for a module the session writes its specs under"):
+            with before.each:
+                (self.project / "shop" / ".context").mkdir(parents=True)
+                (self.project / "shop" / ".context" / "module-context.md").write_text("# shop\n", encoding="utf-8")
+                self.session = Sessions(self.project).current()
+                self.session.practice("bdd").guidance.fidelities.called("development").session_output.choose_root("shop")
+                self.prose = _expanded_generate(self.action, {"guidance": ["bdd-development"]}).instructions
+
+            with it("should record the unit tier for that module in session.json"):
+                expect(self.session.test_tiers.recorded).to(equal({"shop": {"unit": "mamba"}}))
+
+            with it("should ask the agent to decide the server and web tiers and record them"):
+                expect(self.prose).to(contain("cannot tell whether shop", "session.record_test_tier"))
+
+        with context("that generates a fidelity that keeps no test tiers"):
+            with it("should say nothing of test tiers"):
+                prose = _expanded_generate(self.action, {"guidance": ["stories-story-map"]}).instructions
+                expect(prose).not_to(contain("session.record_test_tier"))
 
     with context("with Bdd listed"):
         with it("should run generate using the practice default generate_output"):

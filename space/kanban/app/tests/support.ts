@@ -42,6 +42,14 @@ export async function openWholeBoard(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Expand board' }).click()
 }
 
+// A reload reads the board from its files again, and draws it as it opens, with the details below it; the whole board
+// is expanded again so the step's screen shows the cards it reads.
+export async function readBoardAgain(page: Page): Promise<void> {
+  await page.reload()
+  await expect(page.locator('.board-column').first()).toBeVisible({ timeout: 20_000 })
+  await page.getByRole('button', { name: 'Expand board' }).click()
+}
+
 export const card = (page: Page, ticket: string): Locator => page.locator(`.ticket-card[data-ticket="${ticket}"]`)
 
 // A person grabs a card by its title; a drag cannot start on the buttons further down it.
@@ -54,6 +62,8 @@ const DRAG_STEPS = 10
 export type DragPlaces = { grab?: { x: number; y: number }; onTop?: boolean; onBottom?: boolean }
 const NEAR_THE_TOP_EDGE = 4
 const BELOW_THE_LAST_CARD = 24
+// How far inside the page's side edges a drag grabs and drops, so the mouse never rests on the edge itself.
+const SIDEWAYS_MARGIN = 20
 
 // The links of the new chats the cdd server opened since the spec started watching. The run's cdd server keeps each one
 // in the file CDD_OPENED_CHATS names (see playwright.config.ts) instead of handing it to the system, which would open a
@@ -70,6 +80,19 @@ export class ClaudeLinks {
   get opened(): string[] {
     return existsSync(this.file) ? readFileSync(this.file, 'utf-8').split(/\r?\n/).filter(Boolean) : []
   }
+}
+
+// The Files app as running, and every page the board opens in a window of its own kept on the page, so a spec reads the
+// Files app's link a press opens instead of opening it: the board shows no file itself.
+const FILES_APP_RUNNING = { label: 'Files', status: 'running', port: 9783, url: 'http://127.0.0.1:9783/', server: { folder: 'harness/files_app/app', command: ['node', 'serve.ts'] } }
+
+export async function catchFilesAppLinks(page: Page): Promise<() => Promise<URL[]>> {
+  await page.route('**/api/app/Files/open', route => route.fulfill({ json: FILES_APP_RUNNING }))
+  await page.addInitScript(() => {
+    const opened: string[] = []
+    Object.assign(window, { openedWindows: opened, open: (url: string) => void opened.push(String(url)) })
+  })
+  return async () => (await page.evaluate(() => (window as unknown as { openedWindows: string[] }).openedWindows)).map(url => new URL(url))
 }
 
 export function catchClaudeLinks(): ClaudeLinks {
@@ -92,6 +115,7 @@ export async function holdOver(page: Page, dragged: Locator, target: Locator, { 
   const labels = target.locator(':scope.card-list > .list-label')
   if (await labels.count()) await labels.first().scrollIntoViewIfNeeded()
   await dragged.scrollIntoViewIfNeeded()
+  await showBothSideways(page, dragged, target, grab)
   const from = (await dragged.boundingBox())!
   await page.mouse.move(from.x + grab.x, from.y + grab.y)
   await page.mouse.down()
@@ -99,12 +123,34 @@ export async function holdOver(page: Page, dragged: Locator, target: Locator, { 
   const to = (await target.boundingBox())!
   const [top, bottom] = await shownRange(page)
   // A drop on a card makes the dragged ticket its child, so a drag onto a list drops where no card is: on the list's
-  // label while the board shows it, else below the list's cards.
+  // label while the board shows it, else below the list's cards. The label is used wherever it is inside the board
+  // region: an opened card makes its list taller than the region, so below the cards would be clamped onto one.
   const isList = await target.evaluate(element => element.classList.contains('card-list'))
   const label = isList && (await labels.count()) ? await labels.first().boundingBox() : null
+  const region = await page.locator('.board-region').boundingBox()
+  const isLabelShown = !!label && (!region || (label.y >= region.y && label.y + label.height <= region.y + region.height))
   const down = onTop ? NEAR_THE_TOP_EDGE : onBottom ? to.height - NEAR_THE_TOP_EDGE : isList ? await belowTheLastCard(target, to) : Math.min(to.height / 2, 60)
-  const y = label && label.y >= top && label.y + label.height <= bottom ? label.y + label.height / 2 : Math.max(top, Math.min(to.y + down, bottom))
+  const y = isLabelShown ? label!.y + label!.height / 2 : Math.max(top, Math.min(to.y + down, bottom))
   await page.mouse.move(to.x + to.width / 2, y, { steps: DRAG_STEPS })
+}
+
+// The board is wider than the page and scrolls sideways, so a person dragging to a column off the page's edge scrolls
+// first: the board region is scrolled until the point the card is grabbed at and the middle of the target, where it is
+// dropped, are both on the page. A drop past the page's edge is never dropped at all.
+async function showBothSideways(page: Page, dragged: Locator, target: Locator, grab: { x: number }): Promise<void> {
+  const region = page.locator('.board-region')
+  const shown = await region.boundingBox()
+  const from = await dragged.boundingBox()
+  const to = await target.boundingBox()
+  if (!shown || !from || !to) return
+  const grabbed = from.x + grab.x
+  const dropped = to.x + to.width / 2
+  const left = Math.max(shown.x, 0) + SIDEWAYS_MARGIN
+  const right = Math.min(shown.x + shown.width, page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) - SIDEWAYS_MARGIN
+  const lowest = Math.min(grabbed, dropped)
+  const highest = Math.max(grabbed, dropped)
+  const scroll = highest > right ? Math.min(highest - right, lowest - left) : lowest < left ? -Math.min(left - lowest, right - highest) : 0
+  if (scroll !== 0) await region.evaluate((element, by) => element.scrollBy({ left: by }), scroll)
 }
 
 // The part of the board region on screen, so a drop never lands above the board or on the details below it.

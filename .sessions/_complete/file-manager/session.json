@@ -1,0 +1,114 @@
+{
+  "name": "file-manager",
+  "title": "file-manager",
+  "scope": "feature",
+  "workpath": "harness",
+  "branch": "file-manager",
+  "worktree": "C:\\dev\\abd-cdd-file-manager",
+  "guidance": {
+    "stages": [
+      "specification",
+      "implementation"
+    ],
+    "version": 127
+  },
+  "practices": {
+    "stories": {
+      "formats": {
+        "story_map": [],
+        "scenarios": [
+          "python"
+        ],
+        "acceptance_tests": [
+          "python"
+        ]
+      },
+      "enabled": true
+    },
+    "ux": {
+      "formats": {
+        "ia": [
+          "drawio",
+          "markdown"
+        ],
+        "mockup": [
+          "claude_design",
+          "html"
+        ],
+        "front_end_code": [
+          "html",
+          "typescript"
+        ]
+      },
+      "enabled": false
+    },
+    "clean_engineering": {
+      "formats": {
+        "modules": [],
+        "code": [
+          "python"
+        ],
+        "model": [
+          "python"
+        ]
+      },
+      "enabled": false
+    },
+    "bdd": {
+      "formats": {
+        "behavior": [
+          "python"
+        ],
+        "realization": [
+          "python"
+        ],
+        "development": [
+          "python"
+        ]
+      },
+      "enabled": false
+    },
+    "ddd": {
+      "enabled": false,
+      "formats": {
+        "bounded_context": [
+          "markdown",
+          "whiteboard"
+        ],
+        "model": [
+          "markdown",
+          "drawio",
+          "whiteboard",
+          "python"
+        ],
+        "tactics": [
+          "python"
+        ]
+      }
+    }
+  },
+  "outputs": {
+    "stories": {
+      "root": "../.context",
+      "scenarios": {
+        "roots": [
+          "../story_tests/review-generated-work-in-file-viewer",
+          "../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes",
+          "../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar",
+          "../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude"
+        ]
+      },
+      "acceptance_tests": {
+        "roots": [
+          "../story_tests/review-generated-work-in-file-viewer",
+          "../story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes",
+          "../story_tests/move-work-forward-from-chat-bar/check-cdd-server-health-in-chat-bar",
+          "../story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude"
+        ]
+      }
+    }
+  },
+  "overlays": [
+    "cdd_claude_mod"
+  ]
+}

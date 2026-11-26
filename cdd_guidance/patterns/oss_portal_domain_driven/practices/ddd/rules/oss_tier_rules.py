@@ -8,6 +8,7 @@ import re
 from typing import TYPE_CHECKING
 
 from harness.graph.practice_rule import PracticeGraphRule
+from harness.graph.violation import Finding
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -30,8 +31,8 @@ class BrowserCallsOnlyTheBff(PracticeGraphRule):
     slug = "browser-calls-only-the-bff"
     node_types = _BROWSER
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return _hits(node, "gateway_calls", "{file}:{line}: `{found}` calls the gateway or a service from the browser; call the aggregate's BFF route instead.")
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in _hits(node, "gateway_calls", "{file}:{line}: `{found}` calls the gateway or a service from the browser; call the aggregate's BFF route instead.")]
 
 
 class TokensStayOnTheServer(PracticeGraphRule):
@@ -40,8 +41,8 @@ class TokensStayOnTheServer(PracticeGraphRule):
     slug = "tokens-stay-on-the-server"
     node_types = _BROWSER
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return _hits(node, "token_handling", "{file}:{line}: `{found}` handles a token in the browser; keep the token in the BFF session.")
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in _hits(node, "token_handling", "{file}:{line}: `{found}` handles a token in the browser; keep the token in the BFF session.")]
 
 
 class ViewsRenderOnly(PracticeGraphRule):
@@ -50,8 +51,8 @@ class ViewsRenderOnly(PracticeGraphRule):
     slug = "views-render-only"
     node_types = ("DomainView",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return _hits(node, "view_fetches", "{file}:{line}: `{found}` fetches in a view; put the call on the client and render what it holds.")
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in _hits(node, "view_fetches", "{file}:{line}: `{found}` fetches in a view; put the call on the client and render what it holds.")]
 
 
 class MaintainLayerPurity(PracticeGraphRule):
@@ -61,13 +62,13 @@ class MaintainLayerPurity(PracticeGraphRule):
     slug = "maintain-layer-purity"
     node_types = (*_BROWSER, *_BFF, "Aggregate")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if node.type == "Aggregate":
             return [
-                f"{node.source.file}/{node.name}.ts:{line}: imports `{module}`; the domain core stays framework-free."
+                Finding(node, f"{node.source.file}/{node.name}.ts:{line}: imports `{module}`; the domain core stays framework-free.")
                 for line, module in node.get_fact("framework_imports", [])
             ]
-        return _hits(node, "layer_crossings", "{file}:{line}: imports `{found}`, a tier this file's runtime may not reach.")
+        return [Finding(node, message) for message in _hits(node, "layer_crossings", "{file}:{line}: imports `{found}`, a tier this file's runtime may not reach.")]
 
 
 class BffDecidesNextPage(PracticeGraphRule):
@@ -76,9 +77,9 @@ class BffDecidesNextPage(PracticeGraphRule):
     slug = "bff-decides-next-page"
     node_types = ("Aggregate",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"{relative}:{line}: browser path {path!r} is a literal; import it from the aggregate's `*-paths.ts`."
+            Finding(node, f"{relative}:{line}: browser path {path!r} is a literal; import it from the aggregate's `*-paths.ts`.")
             for relative, line, path in node.get_fact("web_path_literals", [])
         ]
 
@@ -89,8 +90,8 @@ class RepositoryOwnsAggregateLifecycle(PracticeGraphRule):
     slug = "repository-owns-aggregate-lifecycle"
     node_types = (*_BFF, *_SERVICE)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return _hits(node, "sql_outside_repository", "{file}:{line}: `{found}` is SQL outside `{{Domain}}RepositorySql`; move it into the repository.")
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in _hits(node, "sql_outside_repository", "{file}:{line}: `{found}` is SQL outside `{{Domain}}RepositorySql`; move it into the repository.")]
 
 
 class NoCrossServiceTables(PracticeGraphRule):
@@ -99,8 +100,8 @@ class NoCrossServiceTables(PracticeGraphRule):
     slug = "no-cross-service-tables"
     node_types = _SERVICE
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return _hits(node, "other_service_imports", "{file}:{line}: imports `{found}` from another service; call that service's Apigee path instead.")
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in _hits(node, "other_service_imports", "{file}:{line}: imports `{found}` from another service; call that service's Apigee path instead.")]
 
 
 class SanitisedErrorsOnly(PracticeGraphRule):
@@ -109,8 +110,8 @@ class SanitisedErrorsOnly(PracticeGraphRule):
     slug = "sanitised-errors-only"
     node_types = _SERVICE
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return _hits(node, "unsanitised_errors", "{file}:{line}: `{found}` sends a raw error; reply with the error-catalogue contract.")
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in _hits(node, "unsanitised_errors", "{file}:{line}: `{found}` sends a raw error; reply with the error-catalogue contract.")]
 
 
 class PublishEventsFromTheOwningService(PracticeGraphRule):
@@ -119,8 +120,8 @@ class PublishEventsFromTheOwningService(PracticeGraphRule):
     slug = "publish-events-from-the-owning-service"
     node_types = (*_BROWSER, *_BFF)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return _hits(node, "event_publishes", "{file}:{line}: `{found}` publishes outside the owning service; publish from `{{Domain}}Service` after the transaction commits.")
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in _hits(node, "event_publishes", "{file}:{line}: `{found}` publishes outside the owning service; publish from `{{Domain}}Service` after the transaction commits.")]
 
 
 class SecretsFromSecretManager(PracticeGraphRule):
@@ -129,8 +130,8 @@ class SecretsFromSecretManager(PracticeGraphRule):
     slug = "secrets-from-secret-manager"
     node_types = (*_BROWSER, *_BFF, *_SERVICE)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return _hits(node, "hardcoded_secrets", "{file}:{line}: a credential is written in code; read it from Secret Manager at start-up.")
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in _hits(node, "hardcoded_secrets", "{file}:{line}: a credential is written in code; read it from Secret Manager at start-up.")]
 
 
 class NoPersonalDataInLogs(PracticeGraphRule):
@@ -139,8 +140,8 @@ class NoPersonalDataInLogs(PracticeGraphRule):
     slug = "no-personal-data-in-logs"
     node_types = (*_BFF, *_SERVICE)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
-        return _hits(node, "personal_data_logged", "{file}:{line}: `{found}` logs personal data; log the record identifier and trace only.")
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        return [Finding(node, message) for message in _hits(node, "personal_data_logged", "{file}:{line}: `{found}` logs personal data; log the record identifier and trace only.")]
 
 
 class OneProxyPerService(PracticeGraphRule):
@@ -149,10 +150,10 @@ class OneProxyPerService(PracticeGraphRule):
     slug = "one-proxy-per-service"
     node_types = ("Proxy",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if node.get_fact("base_paths", []):
             return []
-        return [f"{node.source.file}: the proxy declares no `<BasePath>`; give it `/v1/<service>`."]
+        return [Finding(node, f"{node.source.file}: the proxy declares no `<BasePath>`; give it `/v1/<service>`.")]
 
 
 class VersionBreakingChanges(PracticeGraphRule):
@@ -161,9 +162,9 @@ class VersionBreakingChanges(PracticeGraphRule):
     slug = "version-breaking-changes"
     node_types = ("Proxy",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         return [
-            f"{node.source.file}: base path {path!r} has no major version; use `/v<n>/<service>`."
+            Finding(node, f"{node.source.file}: base path {path!r} has no major version; use `/v<n>/<service>`.")
             for path in node.get_fact("base_paths", [])
             if not _VERSIONED_BASE_PATH.match(path)
         ]
@@ -177,7 +178,7 @@ class StandardPolicyChain(PracticeGraphRule):
     node_types = ("Proxy",)
     _ORDER = ("jwt-validation", "spike-arrest", "json-threat-protection")
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         messages = [f"{node.source.file}: the proxy has no `{policy}` policy from the standard chain." for policy in node.get_fact("missing_policies", [])]
         if not node.get_fact("tls_enabled", False):
             messages.append(f"{node.source.file}: no target endpoint enables TLS (`<SSLInfo><Enabled>true</Enabled>`).")
@@ -185,7 +186,7 @@ class StandardPolicyChain(PracticeGraphRule):
         expected = [policy for policy in self._ORDER if policy in ran]
         if ran != expected:
             messages.append(f"{node.source.file}: the flow runs {', '.join(ran)}; the chain order is {', '.join(expected)}.")
-        return messages
+        return [Finding(node, message) for message in messages]
 
 
 class ExpandAndContractMigrations(PracticeGraphRule):
@@ -194,7 +195,7 @@ class ExpandAndContractMigrations(PracticeGraphRule):
     slug = "expand-and-contract-migrations"
     node_types = ("Migration",)
 
-    def check(self, node: Node, context: RuleCheckContext) -> list[str]:
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
         if not node.get_fact("migration_step", ""):
-            return [f"{node.source.file}: the migration's name says neither expand, backfill, nor contract."]
-        return _hits(node, "destructive_statements", "{file}:{line}: `{found}` in an expand step; move it to a contract migration released after the old code retires.")
+            return [Finding(node, f"{node.source.file}: the migration's name says neither expand, backfill, nor contract.")]
+        return [Finding(node, message) for message in _hits(node, "destructive_statements", "{file}:{line}: `{found}` in an expand step; move it to a contract migration released after the old code retires.")]

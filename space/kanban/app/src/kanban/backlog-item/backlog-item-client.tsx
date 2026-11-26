@@ -43,10 +43,9 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
     this.page.store.change({ selected: this.page.board.selectedItem === this ? '' : this.address })
   }
 
-  // Whether it can take dragged as its child: the Backlog nests one level, and never in a folder kept with a ticket's work.
+  // Whether it can take dragged as its child: Python names the items dragged can be dropped on to become their child.
   canTakeAsChild(dragged: BacklogItemClient): boolean {
-    const isFolderOfWork = Boolean(this.ticket || dragged.ticket)
-    return dragged.title !== this.title && dragged.parent !== this.title && !this.isStacked && !dragged.childItems.length && !isFolderOfWork
+    return dragged.parentChoices.includes(this.title)
   }
 
   // What dropping dragged at depth (0 at the card's top edge, 1 at its bottom) does: near an edge it goes above or below;
@@ -61,11 +60,30 @@ export class BacklogItemClient extends BacklogItemClientGenerated {
   async take(dragged: BacklogItemClient, drop: ItemDrop): Promise<void> {
     if (drop === 'child') {
       await dragged.nestUnder(this.title)
+      // Where each item can go next is Python's answer (parent_choices), so the board is read again before the toast.
+      await this.page.reader.refresh()
       this.page.store.toast(`${dragged.title} is now a child of ${this.title}`)
       return
     }
     if (dragged.isStacked) await dragged.leaveParent()
     await (drop === 'before' ? dragged.moveBefore(this.title) : dragged.moveAfter(this.title))
+  }
+
+  // Its file in the Files app, as a ticket's text file opens there. The Files app reads every file through a session, and
+  // an item has none until it starts, so it opens through main's, the board's default session.
+  async openInFiles(): Promise<void> {
+    const main = this.page.board.mainTicket
+    if (!main) return this.page.failures.fail(`${this.path} did not open: the board has no main session for the Files app to read it through.`, `Opening ${this.title}'s file in the Files app`)
+    await this.page.editorApp.openFilesOn(main, { folder: 'session', file: this.path })
+  }
+
+  // Deleted, the item is no longer selected, and the board is read again to draw the Backlog without it.
+  override async delete(): Promise<null> {
+    await super.delete()
+    this.page.store.change({ selected: '' })
+    await this.page.reader.refresh()
+    this.page.store.toast(`${this.title} deleted from the Backlog`)
+    return null
   }
 
   // Dropped on a ticket's card, the item starts as that ticket's child, and the board is read again to show it there.

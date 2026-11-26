@@ -2,7 +2,7 @@ import type { FormEvent, KeyboardEvent } from 'react'
 
 import { useBoard } from '../shared/board-context'
 import type { Closing } from '../shared/board-store'
-import { closingHeading } from './activation-client'
+import { closingHeading, losesWork } from './activation-client'
 
 const NONE_YET = 'none yet'
 
@@ -53,6 +53,22 @@ function CloseGroupView({ closing }: { closing: Closing }) {
   )
 }
 
+// Python's warning and the files it means, shown while the choices made would delete the worktree or the branch without
+// a commit, so the person sees what goes before pressing Close session.
+function LosingWorkView({ closing }: { closing: Closing }) {
+  if (!losesWork(closing)) return null
+  return (
+    <div className="dialog-warning" role="alert">
+      <p className="dialog-warning-text">{closing.warning}</p>
+      <ul className="dialog-warning-files" aria-label="Uncommitted files">
+        {closing.unsavedWork.map(file => (
+          <li key={file}>{file}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function DialogActionsView() {
   const { page } = useBoard()
   return (
@@ -84,6 +100,7 @@ export function ActivationView() {
       <form role="dialog" aria-modal="true" aria-labelledby="close-title" className="dialog" onSubmit={submit}>
         <h2 id="close-title">{closingHeading(closing)}</h2>
         <CloseGroupView closing={closing} />
+        <LosingWorkView closing={closing} />
         <DialogActionsView />
       </form>
     </div>

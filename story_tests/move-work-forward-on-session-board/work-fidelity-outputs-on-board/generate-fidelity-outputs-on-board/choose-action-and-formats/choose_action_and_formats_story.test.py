@@ -41,48 +41,25 @@ with story("Choose Action And Formats"):
             pass
         with and_("the markdown chip reads 1 of 2 with the hint markdown: 1 of 2 done, selected"):
             pass
-    with scenario("Keep Run off with no format picked"):
-        # Evidence: observed: tile-client.spec 'should keep Run off until a format is chosen'.
+    with scenario("Keep the last format picked"):
+        # Evidence: observed: practice_session_output_spec 'with one format chosen, left out'; generate-fidelity-outputs.story.ui.spec 'Keep the last format picked'.
         with given("billing-report's story map is already in markdown"):
             pass
-        with but_("no format is picked"):
+        with and_("markdown is the only chip picked on the story_map bar"):
             pass
-        with when("the session board draws the story_map bar"):
-            # Board page -> TileActionsClient.barOf(billing-report, Discovery, story_map tile) <- runOff: true
+        with when("the Person unpicks the markdown chip"):
+            # Person -> TileActionsClient.toggleFormat(story_map tile, 'markdown') -> Ticket.choose_formats -> FidelityFormats.choose_from -> FidelitySessionOutput.choose_formats -> LastFormatLeftOut
             pass
-        with then("Run is off"):
+        with then("a toast says markdown is the only format chosen for story_map"):
             pass
-    with scenario("Keep Run off on a render with nothing to render"):
-        # Evidence: observed: tile-client.spec 'should keep Run off on a render with nothing to render'.
-        with given("billing-report's story map has no file"):
+        with and_("the markdown chip stays picked"):
             pass
-        with when("the Person chooses render on the story_map bar"):
-            # Person -> TileActionsClient.chooseAction(story_map tile, 'render')
+    with scenario("Choose a format for a practice switched off"):
+        # Evidence: observed: practice_session_output_spec 'of a practice switched off'.
+        with given("UX is switched off for billing-report's session"):
             pass
-        with then("Run is off"):
+        with when("Claude Code chooses drawio for UX's ia"):
+            # Claude Code -> FidelitySessionOutput.choose_format('drawio', True)
             pass
-    with scenario("Keep Run off with no chat"):
-        # Evidence: observed: tile-client.spec 'should keep Run off with no chat connected', 'should keep Run off on a locked ticket'.
-        with given("the story_map bar has the markdown chip picked"):
-            pass
-        with but_("no chat is connected"):
-            pass
-        with when("the session board draws the story_map bar"):
-            # Board page -> ChatClient.canSend <- false
-            # Board page -> TileActionsClient.barOf(billing-report, Discovery, story_map tile) <- runOff: true
-            pass
-        with then("Run is off"):
-            pass
-    with scenario("Keep Run off on a locked ticket"):
-        # Evidence: observed: tile-client.spec 'should keep Run off with no chat connected', 'should keep Run off on a locked ticket'.
-        with given("Active session only is on"):
-            pass
-        with and_("billing-report is not the active [ticket](../../../.context/kanban-model.md#ticket--card)"):
-            pass
-        with and_("billing-report's story_map bar has the markdown chip picked"):
-            pass
-        with when("the session board draws billing-report's story_map bar"):
-            # Board page -> TileActionsClient.barOf(billing-report, Discovery, story_map tile) <- isLocked: true, runOff: true
-            pass
-        with then("Run is off"):
+        with then("billing-report's session.json keeps drawio chosen for ia"):
             pass

@@ -20,7 +20,8 @@ from harness.hooks.hook_server import HookPayload
 from harness.hooks.hooks import Hook, Hooks, hook
 from harness.annotations.annotation import noCatalog
 from harness.installation.ide_layout import installed_guidance_kind
-from space.session.session_log import HookLog, LogTimestamp
+from harness.process.log_timestamp import LogTimestamp
+from space.session.session_log import HookLog
 
 # A long prompt or file is shown by its first lines, cut at a length a person can still scan in the log.
 _PREVIEW_LINES = 8
@@ -152,7 +153,7 @@ class PromptLog:
     def __init__(self, log: Path | None = None) -> None:
         self._log = log
 
-    def log_for(self, payload: HookPayload) -> HookLog:
+    def _log_for(self, payload: HookPayload) -> HookLog:
         """The log payload's entry is written to: the toolset's own file, else the prompt log of the session the event
         works in."""
         if self._log is not None:
@@ -160,7 +161,7 @@ class PromptLog:
         return payload.session.folder.hook_log(_LOG_NAME)
 
     def _append(self, payload: HookPayload, entry: PromptLogEntry) -> None:
-        self.log_for(payload).append(entry.text)
+        self._log_for(payload).append(entry.text)
 
     @hook("beforeSubmitPrompt")
     def before_submit_prompt(self, payload: HookPayload) -> dict:

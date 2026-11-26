@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
-    from cdd_guidance.practices.stories.model.graph_reading import StoryTree
+    from cdd_guidance.practices.stories.model.story_tree import StoryTree
 
     from .nodes import Screen
 

@@ -8,10 +8,12 @@ import copy
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, TypedDict
 
+from harness.graph.practice_rule import SCOPE_ALL, SCOPE_PATHS
 from harness.graph.location import Location
 from harness.installation.data_class import SourceFile, data_field
 
 if TYPE_CHECKING:
+    from harness.graph.graph import Node
     from harness.graph.graph_rules_collection import GraphRule
 
 # A judgment or scanner that cannot tie its finding to a file names this place.
@@ -74,14 +76,20 @@ class FoundBy:
     """What found a violation: the rule, the practice that checks it, and the node it was found on, when it names
     one."""
 
-    def __init__(self, rule: str, practice: str = "", found_on: FoundOn = NO_NODE) -> None:
+    def __init__(self, rule: str, practice: str = "", found_on: FoundOn = NO_NODE, requires_judge: bool = False, scope: str = SCOPE_PATHS) -> None:
         self.rule = rule
         self.practice = practice
         self.found_on = found_on
+        # Whether the rule requires a judge, so what it found is a candidate for a reading, not an error.
+        self.requires_judge = requires_judge
+        # Where the rule runs for a validate given paths (``PracticeGraphRule.scope``).
+        self.scope = scope
 
 
-# A violation is an error: no rule reports a lesser severity.
+# What a checked rule finds is an error: a program decided it.
 SEVERITY = "error"
+# What a rule that requires a judge finds is a candidate: a place for a judge or a person to read, which may be fine.
+CANDIDATE = "candidate"
 # How many lines before and after a violation's own a reader is shown with it.
 QUOTED_LINES_BEFORE = 2
 QUOTED_LINES_AFTER = 4
@@ -89,7 +97,8 @@ NOWHERE = Location()
 
 
 class Violation:
-    """A rule broken at one place: what found it (the rule, the practice that checks it, and the node it was found on),
+    """A rule broken at one place, or, for a rule that requires a judge, a candidate for a judge to read (``severity``):
+    what found it (the rule, the practice that checks it, and the node it was found on),
     the message, and the file and lines (``location``). A finding that names no node, such as a draw.io scanner's or a judged
     rule's, leaves the node out; one that names no file is at ``unknown``."""
 
@@ -103,7 +112,7 @@ class Violation:
     def from_data(cls, sent: ViolationData) -> Violation:
         """A violation sent as data, the way ``data_of`` writes it for ``graph.return_nodes`` and the saved graph."""
         found_on = FoundOn(str(sent.get("node_id") or ""), str(sent.get("subject") or ""))
-        found_by = FoundBy(str(sent.get("rule") or ""), str(sent.get("practice") or ""), found_on)
+        found_by = FoundBy(str(sent.get("rule") or ""), str(sent.get("practice") or ""), found_on, sent.get("severity") == CANDIDATE, str(sent.get("scope") or SCOPE_PATHS))
         location = Location(str(sent.get("location") or ""), sent.get("line"), sent.get("end_line"))
         return cls(found_by, str(sent.get("message") or ""), location)
 
@@ -151,7 +160,34 @@ class Violation:
     @property
     @data_field
     def severity(self) -> str:
-        return SEVERITY
+        """``candidate`` when the rule that found it requires a judge, else ``error``."""
+        return CANDIDATE if self.is_candidate else SEVERITY
+
+    @property
+    def is_candidate(self) -> bool:
+        """Whether a rule that requires a judge listed this for a reading, so nothing has decided it is wrong."""
+        return self._found_by.requires_judge
+
+    @property
+    @data_field
+    def scope(self) -> str:
+        """Where the rule that found it runs for a validate given paths: ``paths`` or ``all``."""
+        return self._found_by.scope
+
+    @property
+    def runs_over_all(self) -> bool:
+        """Whether the rule that found it runs over the whole working copy, whatever paths a validate is given."""
+        return self.scope == SCOPE_ALL
+
+    def is_reported_for(self, paths: list[str], judge_all: bool) -> bool:
+        """Whether a validate given paths (none: every place) reports it: one in those paths, as every validate does; one
+        anywhere, of a rule that runs over the whole working copy; but a candidate of such a rule outside those paths only
+        when the validate asks for the judged pass (judge_all), since reading every candidate in a repository is work a
+        person chooses to start."""
+        in_paths = not paths or self.is_under(paths)
+        if self.runs_over_all:
+            return in_paths or judge_all or not self.is_candidate
+        return in_paths
 
     @property
     @data_field
@@ -208,15 +244,21 @@ class Violation:
         return f"Violation({self.rule!r}, {self.described!r} at {self.location}:{self.line})"
 
 
-class Finding(str):
-    """A rule's message that names the lines it was found on when they are not its node's, such as a module helper only
-    one class uses, which a class rule finds on the class but is on the helper's own lines. A viewer marks those lines."""
+class Finding:
+    """One thing a rule's check found: the node it found it on, what it says, and the lines it is on when they are not
+    the node's own, such as a module helper only one class uses, which a class rule finds on the class but is on the
+    helper's own lines. A viewer marks those lines. A checked rule may also list a finding no program can decide, such as
+    two bodies that match once their names are set aside, as a candidate for a judge (candidate); a judged rule's
+    findings are all candidates."""
 
-    def __new__(cls, message: str, line: int, end_line: int | None = None) -> Finding:
-        found = super().__new__(cls, message)
-        found.line = line
-        found.end_line = end_line or line
-        return found
+    def __init__(self, node: Node, message: str, lines: tuple[int, int] | None = None, candidate: bool = False) -> None:
+        self.node = node
+        self.message = message
+        self.lines = lines
+        self.candidate = candidate
+
+    def __repr__(self) -> str:
+        return f"Finding({self.node.name!r}, {self.message!r})"
 
 
 class NodeViolation(Violation):
@@ -224,18 +266,19 @@ class NodeViolation(Violation):
     node and its practice, so its rule, practice, node, and subject are theirs, not copies. A saved graph keeps it as
     the same data as any violation, which names them by slug, key, and id."""
 
-    def __init__(self, found_by: GraphRule, message: str, location: Location = NOWHERE) -> None:
+    def __init__(self, found_by: GraphRule, message: str, location: Location = NOWHERE, candidate: bool = False) -> None:
         super().__init__(FoundBy(""), message, location)
         self.found_by = found_by
+        # Listed for a judge by a rule a program otherwise decides.
+        self._candidate = candidate
 
     @classmethod
-    def at_node(cls, found_by: GraphRule, message: str) -> NodeViolation:
-        """A violation the rule found_by found on its node, at the node's place in its file, or on the lines a Finding
-        names."""
+    def at_node(cls, found_by: GraphRule, finding: Finding) -> NodeViolation:
+        """A violation the rule found_by found on its node, on the lines finding names, else at the node's place in its
+        file."""
         source = found_by.node.source
-        if isinstance(message, Finding):
-            return cls(found_by, message, Location(source.file or "", message.line, message.end_line))
-        return cls(found_by, message, Location(source.file or "", source.start_line, source.end_line))
+        start, end = finding.lines if finding.lines is not None else (source.start_line, source.end_line)
+        return cls(found_by, finding.message, Location(source.file or "", start, end), finding.candidate)
 
     @property
     @data_field
@@ -257,3 +300,12 @@ class NodeViolation(Violation):
     def subject(self) -> str:
         node = self.found_by.node
         return f"{node.type} `{node.name}`"
+
+    @property
+    def is_candidate(self) -> bool:
+        return self._candidate or self.found_by.requires_judge
+
+    @property
+    @data_field
+    def scope(self) -> str:
+        return self.found_by.scope

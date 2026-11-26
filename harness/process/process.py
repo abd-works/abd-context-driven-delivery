@@ -12,6 +12,7 @@ import socket
 import subprocess
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import IO
 
@@ -37,6 +38,13 @@ _WMI_SECONDS = 60
 _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 # The exit code Windows reports for a process that has not exited.
 _STILL_ACTIVE = 259
+# Windows counts a process's start in 100-nanosecond steps from the first day of 1601.
+_WINDOWS_EPOCH = datetime(1601, 1, 1, tzinfo=timezone.utc)
+_FILETIME_STEPS_PER_MICROSECOND = 10
+# How long ``ps`` may take to answer when one process started.
+_START_QUERY_SECONDS = 10
+# How ``ps -o lstart=`` writes a start in the C locale: Thu Nov 19 10:00:00 2026.
+_PS_START_FORMAT = "%a %b %d %H:%M:%S %Y"
 # How long a stop waits between looks at whether the process has ended.
 _POLL_SECONDS = 0.05
 # How long a connect to a port of this computer waits. A listening server accepts at once; where nothing listens,
@@ -305,6 +313,41 @@ class RunningProcess:
         finally:
             kernel.CloseHandle(handle)
         return not answered or code.value == _STILL_ACTIVE
+
+    @property
+    def started_at(self) -> datetime | None:
+        """When the process started, as the operating system keeps it; none when no process has the id. The system
+        gives an ended process's id to a later one, so the id alone does not say which process a file meant: the id
+        together with this time does."""
+        if self.pid <= 0:
+            return None
+        if sys.platform == "win32":
+            return self._started_on_windows()
+        return self._started_by_ps()
+
+    def _started_on_windows(self) -> datetime | None:
+        kernel = ctypes.windll.kernel32
+        handle = kernel.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, self.pid)
+        if not handle:
+            return None
+        created, exited, kernel_time, user_time = (ctypes.c_ulonglong() for _ in range(4))
+        try:
+            answered = kernel.GetProcessTimes(handle, *(ctypes.byref(time_kept) for time_kept in (created, exited, kernel_time, user_time)))
+        finally:
+            kernel.CloseHandle(handle)
+        if not answered:
+            return None
+        return _WINDOWS_EPOCH + timedelta(microseconds=created.value // _FILETIME_STEPS_PER_MICROSECOND)
+
+    def _started_by_ps(self) -> datetime | None:
+        try:
+            answer = subprocess.run(["ps", "-o", "lstart=", "-p", str(self.pid)], capture_output=True, text=True, check=False,
+                                    timeout=_START_QUERY_SECONDS, env={**os.environ, "LC_ALL": "C"}).stdout.strip()
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if not answer:
+            return None
+        return datetime.strptime(" ".join(answer.split()), _PS_START_FORMAT).astimezone(timezone.utc)
 
     @property
     def listening_ports(self) -> list[int]:

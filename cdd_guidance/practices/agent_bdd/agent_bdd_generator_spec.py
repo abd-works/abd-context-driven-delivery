@@ -6,7 +6,7 @@ from typing import Any
 
 from expects import be_true, equal, expect
 from mamba import after, before, context, description, it
-from space.session.throwaway_project import OPEN_PROJECTS, ThrowawayProject
+from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 _AGENT_BDD_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _AGENT_BDD_DIR.parents[2]
@@ -20,7 +20,7 @@ for _p in [
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 import cdd_guidance.practices  # noqa: F401
 from harness.markdown import Markdown
 from harness.agent_tools import AgentToolSet
@@ -45,7 +45,7 @@ class _AgentBddSpecFixture:
         self._format_name = format_name
 
     def load(self) -> AgentToolSet:
-        toolset_cls = type(AgentToolSet.instantiate(_AGENT_BDD_TOOLSET))
+        toolset_cls = type(ToolsetReference.parsed(_AGENT_BDD_TOOLSET).made())
         return toolset_cls(format=self._format_name)
 
 

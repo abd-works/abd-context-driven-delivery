@@ -5,72 +5,36 @@ sit below all of them."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Generic, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, NotRequired, TypedDict, TypeVar
+
+from harness.graph.practice_node_types import NODE_TYPE_TABLES
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
 
 # What an edge joins: two nodes on a graph, or, in a saved graph, the ids of those nodes.
 End = TypeVar("End")
+# What an edge keeps about the relationship it records, by name, each a list of plain words, such as how one class
+# reaches the class it depends on (``reached``) and the members it reaches it through (``through``).
+EdgeFacts = dict[str, list[str]]
 
 
 class EdgeRecord(TypedDict):
-    """An edge as ``graph.json`` writes it: the ids of its ends and its EdgeType's fields."""
+    """An edge as ``graph.json`` writes it: the ids of its ends, its EdgeType's fields, and its facts when it keeps any."""
 
     parent: str
     child: str
     kind: str
     order: int
     display: str
+    facts: NotRequired[EdgeFacts]
 
 
 # How an edge's nodes are shown under its parent: as children (``direct``) or under a child named for the kind.
 Display = str
 
-# Where each edge kind's group sits under a node in the explorer tree, lowest first. A practice orders its groups
-# by these numbers, and graph.json saves them on each edge, so every loader and model reads them through EdgeType.
-EDGE_ORDER: dict[str, int] = {
-    "decomposedInto": 1,
-    "relative": 1,
-    "root": 1,
-    "descriptions": 1,
-    "participants": 1,
-    "screens": 1,
-    "owns": 2,
-    "background": 2,
-    "contexts": 2,
-    "parameters": 2,
-    "aggregates": 2,
-    "given": 2,
-    "scenarios": 3,
-    "properties": 3,
-    "observations": 3,
-    "steps": 4,
-    "demonstrates": 4,
-    "shownOn": 4,
-    "specifiedBy": 4,
-    "specifies": 4,
-    "examples": 5,
-    "belongsTo": 5,
-    "hasParameter": 6,
-    "increments": 6,
-    "accesses": 6,
-    "hasType": 7,
-    "returnType": 7,
-    "stories": 7,
-    "associates": 7,
-    "observes": 8,
-    "demonstratedThrough": 8,
-    "ands": 9,
-    "uses": 9,
-    "invokedBy": 9,
-    "returns": 10,
-    "retrievedUsing": 11,
-    "invokes": 12,
-    "dependsOn": 13,
-    "usedBy": 14,
-}
-# A kind only a pattern overlay's schema names: a child sits with the owned children, a relationship after them.
+# A kind no practice or pattern places (``NodeTypeTables.order_of``): a child sits with the owned children, a relationship
+# after them.
 _DIRECT_KIND_ORDER = 2
 _RELATIONSHIP_KIND_ORDER = 7
 # Kinds no one filters by: belongsTo is the back-edge of every child list, and scopes is left out of the explorer tree.
@@ -93,25 +57,39 @@ class EdgeType:
 
     @classmethod
     def from_kind(cls, kind: str, display: Display = "direct") -> EdgeType:
-        """The edge type of kind, at the place ``EDGE_ORDER`` gives it, or after its display's other kinds."""
-        default = _DIRECT_KIND_ORDER if display == "direct" else _RELATIONSHIP_KIND_ORDER
-        return cls(kind, EDGE_ORDER.get(kind, default), display)
+        """The edge type of kind, at the place the practice or pattern that names it gives it (``NODE_TYPE_TABLES``),
+        or after its display's other kinds. ``graph.json`` saves the place on each edge, so every loader and model reads
+        it through here."""
+        order = NODE_TYPE_TABLES.order_of(kind)
+        if order is None:
+            order = _DIRECT_KIND_ORDER if display == "direct" else _RELATIONSHIP_KIND_ORDER
+        return cls(kind, order, display)
 
 
 class Edge(Generic[End]):
-    """One edge: the EdgeType of its kind, which says where its group sits and how its nodes show, and the two ends it
-    joins. On a graph the ends are nodes; a saved graph keeps the same edge with the ids of its nodes (``saved``), which
-    a restore turns back into nodes."""
+    """One edge: the EdgeType of its kind, which says where its group sits and how its nodes show, the two ends it
+    joins, and the facts it keeps about the relationship, which a rule reads as it reads a node's. On a graph the ends
+    are nodes; a saved graph keeps the same edge with the ids of its nodes (``saved``), which a restore turns back into
+    nodes."""
 
-    def __init__(self, type: EdgeType, parent: End, child: End) -> None:
+    def __init__(self, type: EdgeType, parent: End, child: End, facts: EdgeFacts | None = None) -> None:
         self.type = type
         self.parent = parent
         self.child = child
+        self.facts: EdgeFacts = {}
+        self.keep_facts(facts or {})
 
     @classmethod
     def from_record(cls, record: EdgeRecord) -> Edge[str]:
         edge_type = EdgeType(str(record["kind"]), int(record.get("order") or 0), str(record.get("display") or "direct"))
-        return Edge(edge_type, str(record["parent"]), str(record["child"]))
+        return Edge(edge_type, str(record["parent"]), str(record["child"]), record.get("facts"))
+
+    def keep_facts(self, facts: EdgeFacts) -> None:
+        """Add each value of facts to the fact of its name, once and in the order they come: one class reaching another
+        in two ways keeps both."""
+        for name, values in facts.items():
+            kept = self.facts.setdefault(name, [])
+            kept.extend(value for value in dict.fromkeys(values) if value not in kept)
 
     @property
     def kind(self) -> str:
@@ -124,7 +102,7 @@ class Edge(Generic[End]):
     @property
     def saved(self) -> Edge[str]:
         """This edge of a graph as a saved graph keeps it, by the ids of its nodes."""
-        return Edge(self.type, self.parent.node_id, self.child.node_id)
+        return Edge(self.type, self.parent.node_id, self.child.node_id, self.facts)
 
     @property
     def key(self) -> tuple[str, str, str]:
@@ -133,8 +111,11 @@ class Edge(Generic[End]):
 
     @property
     def record(self) -> EdgeRecord:
-        """This saved edge as ``graph.json`` writes it."""
-        return {"parent": self.parent, "child": self.child, "kind": self.type.kind, "order": self.type.order, "display": self.type.display}
+        """This saved edge as ``graph.json`` writes it; an edge that keeps no fact writes none."""
+        written: EdgeRecord = {"parent": self.parent, "child": self.child, "kind": self.type.kind, "order": self.type.order, "display": self.type.display}
+        if self.facts:
+            written["facts"] = {name: list(values) for name, values in self.facts.items()}
+        return written
 
 
 class EdgeIndex:
@@ -162,15 +143,20 @@ class EdgeIndex:
         """Offer a kind of edge in the explorer's filter, before any edge of it is recorded."""
         self.types[edge_type.kind] = edge_type
 
-    def record(self, edge_type: EdgeType, parent: Node, child: Node) -> bool:
-        """Record an edge of edge_type from parent to child, once; whether it was new. The first edge of a kind sets
-        where its kind sits."""
+    def record(self, edge_type: EdgeType, parent: Node, child: Node, facts: EdgeFacts | None = None) -> bool:
+        """Record an edge of edge_type from parent to child, once, keeping facts on it; whether it was new. An edge
+        recorded again keeps the facts given now beside those it kept. The first edge of a kind sets where its kind
+        sits."""
         kind = edge_type.kind
         pairs = self._pairs.setdefault(kind, set())
         if (id(parent), id(child)) in pairs:
+            if facts:
+                held = next(edge for edge in self._from_parent[kind][id(parent)] if edge.child is child)
+                held.keep_facts(facts)
+                self._changed()
             return False
         self.types.setdefault(kind, edge_type)
-        edge = Edge(edge_type, parent, child)
+        edge = Edge(edge_type, parent, child, facts)
         self._edges.setdefault(kind, []).append(edge)
         pairs.add((id(parent), id(child)))
         self._from_parent.setdefault(kind, {}).setdefault(id(parent), []).append(edge)

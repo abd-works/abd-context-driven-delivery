@@ -4,11 +4,13 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 
-from expects import be_above, contain, equal, expect
+from expects import be_above, be_none, contain, equal, expect
 from harness.installation.data_class import data_of  # noqa: E402
 from mamba import before, context, description, it
 
 from harness.graph.graph import Graph, Node, Source
+from harness.graph.node_filter import Filter
+from harness.graph.violation import Finding
 from harness.graph.saved_graph import NodeIdentity
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
@@ -28,14 +30,11 @@ with description("rule categories"):
         with before.each:
             self.graph = Graph()
             self.graph.reads.open(Path("."))
-            self.practice = self.graph.practice("clean_engineering")
+            self.practice = self.graph.practices.named("clean_engineering")
             self.failure = Node(self.practice, NodeIdentity(type="Operation", node_id="clean_engineering:Operation:failure", name="failure"), Source(".", 1, 2))
             self.register = Node(self.practice, NodeIdentity(type="Operation", node_id="clean_engineering:Operation:register", name="register"), Source(".", 3, 4))
             self.account = Node(self.practice, NodeIdentity(type="OoadClass", node_id="clean_engineering:OoadClass:AccountCredentials", name="AccountCredentials"), Source(".", 1, 8))
-            self.failure.rules.record_violation(
-                "limit-operation-parameters",
-                "Operation 'failure' takes 4 parameters (maximum 3, excluding self).",
-            )
+            self.failure.rules.entries["limit-operation-parameters"].record(Finding(self.failure, "Operation 'failure' takes 4 parameters (maximum 3, excluding self)."))
             root = self.practice.reading.in_graph.root
             root.children = [self.failure, self.register, self.account]
             for node in (self.failure, self.register, self.account):
@@ -67,21 +66,21 @@ with description("rule categories"):
 
         with context("with violations of the parameter rule"):
             with before.each:
-                self.graph.explorer.filter.select_violations(["limit-operation-parameters"])
+                self.request = {"violations": True, "rules": ["limit-operation-parameters"]}
+                self.wanted = Filter(self.graph, self.request)
 
             with it("should attach the violation on the serialized operation"):
-                rule = rule_on(data_of(self.failure.tree.serialize()), "limit-operation-parameters")
+                rule = rule_on(data_of(self.failure.tree.serialize().kept_by(self.wanted)), "limit-operation-parameters")
                 expect(rule["status"]).to(equal("violating"))
                 expect(len(rule["violations"])).to(be_above(0))
 
-            with it("should leave the passing rule off the serialized operation"):
-                names = [child["name"] for child in data_of(self.register.tree.serialize())["children"]]
-                expect("rules" in names).to(equal(False))
+            with it("should leave the operation that passes the rule out of what the filter keeps"):
+                expect(self.register.tree.serialize().kept_by(self.wanted)).to(be_none)
 
             with it("should attach that violation on the nodes the filter returns"):
                 self.failure.practice.reading.in_graph.hold(self.failure)
                 self.register.practice.reading.in_graph.hold(self.register)
-                returned = data_of(self.graph.return_nodes())
+                returned = data_of(self.graph.return_nodes(self.request))
                 failure = next(node for node in returned if node["name"] == "failure")
                 expect([rule["status"] for rule in failure["rules"]]).to(equal(["violating"]))
                 expect("register" in [node["name"] for node in returned]).to(equal(False))

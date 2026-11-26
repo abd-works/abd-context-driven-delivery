@@ -1,4 +1,7 @@
-export type QueryStep = {
+// The headline a load shows until the cdd server reports a step of it.
+export const LOADING_GRAPH = 'Loading the graph…';
+
+type QueryStep = {
   index: number;
   total: number;
   name: string;
@@ -47,7 +50,7 @@ class ProgressReading {
   get progress(): QueryProgress {
     const current = this.current;
     const compiled = current ? `${current.phase} ${current.index}/${current.total} ${current.name}`.replace(' 0/0 ', ' ') : '';
-    const headline = compiled ? (this.detail.startsWith('(') ? `${compiled} ${this.detail}` : compiled) : this.status || 'Loading the graph…';
+    const headline = compiled ? (this.detail.startsWith('(') ? `${compiled} ${this.detail}` : compiled) : this.status || LOADING_GRAPH;
     return { headline, steps: this.uniqueSteps().slice(-STEPS_KEPT), detail: this.detail || this.status, index: this.index, total: this.total };
   }
 

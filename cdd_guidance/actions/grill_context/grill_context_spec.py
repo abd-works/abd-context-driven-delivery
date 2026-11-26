@@ -18,9 +18,9 @@ from mamba import before, context, description, it
 
 from harness.agent_tools.agent_tools import AgentInstructions
 from cdd_guidance.actions.grill_context.grill_context import GrillContext
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from space.session import Session, Sessions
-from space.session.session_files import NamedPathNotFoundError
+from space.session.files.session_files import NamedPathNotFoundError
 from harness.guidance.practice_catalogue import PRACTICE_CATALOGUE
 import cdd_guidance.practices  # noqa: F401 - registers the practices with the practice catalogue
 
@@ -33,7 +33,7 @@ def _import_format_adapters() -> None:
 
 def _session_at(folder: Path) -> Session:
     """A session that works in folder and keeps no log."""
-    session = Session(Sessions(folder))
+    session = Sessions(folder).named("main")
     session.workpath = Path(folder)
     return session
 
@@ -41,23 +41,23 @@ def _session_at(folder: Path) -> Session:
 with description("GrillContext toolset"):
     with context("with its tools listed"):
         with it("should expose explore_context_files as a tool"):
-            tools = AgentToolSet.instantiate(GrillContext).tools
+            tools = ToolsetReference.of(GrillContext).made().tools
             expect(tools["explore_context_files"].kind).to(equal("tool"))
 
         with it("should expose read_context_file as a tool"):
-            tools = AgentToolSet.instantiate(GrillContext).tools
+            tools = ToolsetReference.of(GrillContext).made().tools
             expect(tools["read_context_file"].kind).to(equal("tool"))
 
         with it("should expose write_grill_answer as a tool"):
-            tools = AgentToolSet.instantiate(GrillContext).tools
+            tools = ToolsetReference.of(GrillContext).made().tools
             expect(tools["write_grill_answer"].kind).to(equal("tool"))
 
         with it("should expose grill as an action"):
-            tools = AgentToolSet.instantiate(GrillContext).tools
+            tools = ToolsetReference.of(GrillContext).made().tools
             expect(tools["grill"].kind).to(equal("instructions"))
 
         with it("should include the grill_with_context body in grill"):
-            tools = AgentToolSet.instantiate(GrillContext).tools
+            tools = ToolsetReference.of(GrillContext).made().tools
             expect(tools["grill"].kind).to(equal("instructions"))
             gwc = tools["grill_with_context"]
             expect("explore_context_files" in gwc.tools).to(be_true)
@@ -282,9 +282,7 @@ with description("a grill action"):
 with description("PracticeGuidance operations for grill"):
     with it("should not expose grill on practice Guidance"):
         cls = type(
-            AgentToolSet.instantiate(
-                "cdd_guidance.practices.bdd.bdd:Bdd"
-            )
+            ToolsetReference.parsed("cdd_guidance.practices.bdd.bdd:Bdd").made()
         )
         practice = cls()
         expect("grill" in practice.tools).to(equal(False))

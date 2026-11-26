@@ -15,7 +15,7 @@ from harness.mcp.mcp_server import McpHost
 from space.session import Sessions
 import cdd_guidance.actions  # noqa: F401 - the generate action the host loads, imported with the spec rather than by its first example
 
-_FILE_MANAGER = "space.session.file_manager:FileManager"
+_FILE_MANAGER = "space.session.files.file_manager:FileManager"
 _GENERATE = "cdd_guidance.actions.generate.generate:Generate"
 
 
@@ -53,7 +53,7 @@ with description("a cdd server answering every chat"):
             with before.each:
                 for project, name in ((self.orders, "orders"), (self.billing, "billing")):
                     sessions = Sessions(project)
-                    sessions.opened.open(sessions.create(name, project))
+                    sessions.opened.open(sessions.create(name, project), "")
 
             with it("should log each call in the session of the project it names"):
                 self.host.dispatch("generate.generate", {"guidance": "stories-story-map"}, self.orders)

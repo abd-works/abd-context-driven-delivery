@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from harness.graph.violation import Finding
+
 from typing import TYPE_CHECKING
 
 from cdd_guidance.practices.clean_engineering.rules.production_code_rule import ProductionCodeRule
@@ -17,7 +19,7 @@ class WriteInteractions(ProductionCodeRule):
     slug = "write-interactions"
     node_types = ("Operation", "Property", "Invariant", "OoadClass")
 
-    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[str]:
+    def check_production(self, node: "Node", context: "RuleCheckContext") -> list[Finding]:
         hits = [
             (line, f"Line {line}: use `-> collaborator.operation` sketch notation, not bold **Interaction:** bullets.")
             for line in node.get_fact("bold_interaction_lines", [])
@@ -25,4 +27,4 @@ class WriteInteractions(ProductionCodeRule):
             (line, f"Line {line}: use `//` under the operation for invariants, not bold **Invariant:** bullets.")
             for line in node.get_fact("bold_invariant_lines", [])
         ]
-        return [message for _line, message in sorted(hits, key=lambda hit: hit[0])][:_MAX_HITS]
+        return [Finding(node, message) for message in [message for _line, message in sorted(hits, key=lambda hit: hit[0])][:_MAX_HITS]]

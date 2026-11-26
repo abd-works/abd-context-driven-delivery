@@ -1,0 +1,96 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T19:27:26.454891+00:00",
+  "prompts": [
+    {
+      "id": "35c0fff2b371",
+      "text": "Queue checks itself: cards get clean titles, only real work is queued, and every placement is checked once made",
+      "is_done": true
+    },
+    {
+      "id": "12f1a2d1049b",
+      "text": "Leaving sub-agent (bot) mode removes the robots from the queue, and Flush or deleting items takes their robots off too (the person, 2026-11-24)",
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "77161d56919a",
+      "text": "A message the person sends goes to the chat and creates no card; the chat is told to create the card when the message is work",
+      "is_done": true
+    },
+    {
+      "id": "4eaa7ab698f4",
+      "text": "Record the fixed plugin folders in the MCP module's docs (release-1-2-fixes, harness/mcp/.context only): CDR 0003, module-context.md and mcp-model.md say that Claude Code watches one fixed folder per cdd plugin, ~/.cdd/chat-plugins/{name}, which every install and repin points at the approved lane's published folder (a junction on Windows), so a repin and /reload-plugins reach every chat with no cache and no app restart; and that main's chats now load whichever lane was pinned last. Commit and push.",
+      "is_done": true,
+      "robot": "Gizmo"
+    },
+    {
+      "id": "9dc3f1f914c2",
+      "text": "Story map scenarios for today's queue and plugin work (.context/story-map.md and story_tests/ only, on release-1-2-fixes and on main): talk (a question, an answer, a comment) is answered and never queued; the board viewer's state never becomes a card or step title; leaving sub-agent mode takes every robot off; a robot goes by its sub-agent's name and pressing it opens that agent's view in the background tasks panel; a repin and a reload of the plugins load the approved lane's mods from the fixed chat-plugins folder, never a cached copy. Mark each Built with its test. Commit and push.",
+      "steps": [
+        {
+          "text": "Scenario: talk is answered and never queued",
+          "state": "done"
+        },
+        {
+          "text": "Scenario: the board viewer's state never becomes a title",
+          "state": "done"
+        },
+        {
+          "text": "Scenario: leaving sub-agent mode takes every robot off",
+          "state": "done"
+        },
+        {
+          "text": "Scenario: a robot goes by its sub-agent's name and opens its view",
+          "state": "done"
+        },
+        {
+          "text": "Scenario: a repin and reload load the approved lane's mods from chat-plugins",
+          "state": "done"
+        },
+        {
+          "text": "Mark each Built with its test, on release-1-2-fixes and main; commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "50e7424f9390",
+      "text": "Release report (.sessions/release-1-2-fixes/release-1-2-fixes-report.md only): add today's work in the found / fixed / open form: the whiteboard render creating its Claude board (4fd0c38d8), issue 105's lanes (6f23c41d6), plugins loaded from the fixed chat-plugins folder and never a cache (b123d6925 and the junction commit), the queue keeping only work and robots leaving with bot mode (3c5dbc74b). Commit and push.",
+      "is_done": true,
+      "robot": "Cog"
+    },
+    {
+      "id": "c4ca6c80f9e1",
+      "text": "[for Sparky] Thin slice on main (.context/thin-slice.md only): put today's release-1-2-fixes tickets in the Defect Fixing increment: the whiteboard render creating its Claude board, issue 105's lanes, plugins loaded from the fixed chat-plugins folder and never a cache, the queue keeping only work, robots leaving with bot mode, and the robots matching the Claude pane's background tasks. Commit and push on main.",
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "73657834896b",
+      "text": "[for Sparky] Main's own stories for the stable lane (.context/story-map.md on main is Rivet's; use story_tests/ on main only if Rivet has not, else report): after the stable lane is repinned from the main checkout, the fixed chat-plugins folders lead to the stable lane's mods; check this with an install into a throwaway CDD_HOME from a main worktree and report what the folders lead to.",
+      "steps": [
+        {
+          "text": "Install from a main worktree into a throwaway CDD_HOME",
+          "state": "done"
+        },
+        {
+          "text": "Read where the chat-plugins folders lead",
+          "state": "done"
+        },
+        {
+          "text": "Write the story test on main if Rivet has not",
+          "state": "done"
+        },
+        {
+          "text": "Report what the folders lead to",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Sparky"
+    }
+  ]
+}

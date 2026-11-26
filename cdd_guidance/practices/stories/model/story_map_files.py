@@ -38,6 +38,8 @@ _MARKDOWN = ".md"
 STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
 # The markdown a map's increments are written in, in the order a folder is searched for them.
 THIN_SLICING_FILES = ("thin-slicing.md", "thin-slice.md", "thin-slices.md", "increments.md")
+# The name a map's first thin slice is written under, in a folder that holds none yet.
+NEW_THIN_SLICE_FILE = "thin-slice.md"
 
 
 def is_story_map_file(path: Path | str) -> bool:
@@ -88,10 +90,11 @@ class StoryMapFiles:
                 return (markdown or maps)[0]
         return None
 
-    def story_graph_text(self) -> Optional[str]:
-        """The story map this folder holds saved as JSON (``story-graph.json``), as text; none when it holds none."""
+    def story_graph(self) -> Optional[Path]:
+        """The story map this folder holds saved as JSON (``story-graph.json``); none when it holds none."""
         saved = self.folder / STORY_GRAPH_FILE
-        return saved.read_text(encoding="utf-8") if saved.is_file() else None
+        return saved if saved.is_file() else None
+
 
     def markdown_below(self) -> List[Path]:
         """The markdown story maps this folder holds: its own when it has one, else every one in the folders below it."""

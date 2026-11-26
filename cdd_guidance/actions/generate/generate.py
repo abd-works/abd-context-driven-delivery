@@ -1,22 +1,29 @@
-"""Generate — run generate on each provided context tool."""
+"""Generate — run generate on each listed guidance."""
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from harness.guidance.guidance import FidelityGuidance, Guidance, PracticeGuidance
 from harness.guidance_actions import GuidanceArg, GuidanceAction
-from harness.guidance.stages import STEP, TAKES_FORMATS, on_stage
+from harness.guidance_actions.generated_patterns import GeneratedPatterns
+from harness.guidance.action_catalogue import STEP, TAKES_FORMATS, on_stage
 from harness.agent_tools import agent_instructions, agent_toolset, instructions, tools
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
 from cdd_guidance.actions.render.render import Render
+from cdd_guidance.actions.render.rendered_file import WHITEBOARD
 from cdd_guidance.actions.validate.validate import Validate
+
+# A path that names no one folder: a template to fill, or a wildcard.
+_NOT_ONE_FOLDER = re.compile(r"[{*?]")
+
 
 @agent_toolset
 class Generate(GuidanceAction):
-    """Generate artifacts for provided context tools."""
+    """Generate artifacts for the listed guidance."""
 
     @on_stage(1, STEP, TAKES_FORMATS)
     @mcp
@@ -35,9 +42,12 @@ class Generate(GuidanceAction):
         earlier = self._earlier_renders()
         instructions(earlier)
         self.run(self._generate_item, action="generate")
-        places = self._where_outputs_go()
-        instructions(places)
-        patterns = self.graph.applied_patterns.record_content(self._output_folders()) if self._session is not None else ""
+        places_and_records = self._places_and_records()
+        instructions(places_and_records)
+        if self._writes_whiteboard():
+            tools(self._render().publish_board)
+            tools(self._render().record_board)
+        patterns = GeneratedPatterns(self.graph.applied_patterns).record_content(self._output_folders()) if self._session is not None else ""
         instructions(patterns)
         "After the artifact is written, call validate with this same guidance and paths set to the files you wrote: validate refreshes the session's graph with exactly those files, so the graph rules run on them as they are now."
         tools(self._validate().validate)
@@ -46,9 +56,14 @@ class Generate(GuidanceAction):
     def _process_first(self) -> str:
         """The order of work the listed fidelities' supplements give, each once, ahead of every rule: a long reply is read
         from the top, and the process says what to do first."""
-        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        processes = dict.fromkeys(fidelity.process for fidelity in worked if fidelity is not None and fidelity.process)
+        processes = dict.fromkeys(fidelity.process for fidelity in self._listed_fidelities if fidelity.process)
         return "\n\n".join(processes)
+
+    @property
+    def _listed_fidelities(self) -> list[FidelityGuidance]:
+        """The fidelity this generate works at on each listed practice; a practice with none is left out."""
+        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
+        return [fidelity for fidelity in worked if fidelity is not None]
 
     def _validate(self) -> Validate:
         """Validate as a tool, so its rules are injected again when it is called."""
@@ -89,7 +104,7 @@ class Generate(GuidanceAction):
 
     def _existing_files(self, fidelity: FidelityGuidance) -> dict[str, list[str]]:
         """The files fidelity has in this session, by the format it declares them in, each a path from the project."""
-        return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.declared.files().items()}
+        return {label: [entry.path for entry in entries if entry.exists] for label, entries in fidelity.session_output.written.files().items()}
 
 
     def _generate_item(self, worked: Guidance | str) -> str:
@@ -102,23 +117,40 @@ class Generate(GuidanceAction):
         text = worked.own_instructions if isinstance(worked, FidelityGuidance) else worked.instructions
         return "\n\n".join(part.strip() for part in (text, worked.generate_output()) if part and part.strip())
 
+    def _places_and_records(self) -> str:
+        """Where each format written is saved, then what the supplements keep in the session as its files are written."""
+        return "\n\n".join(part for part in (self._where_outputs_go(), self._supplement_records()) if part)
+
     def _where_outputs_go(self) -> str:
-        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        outputs = [fidelity.declared.output_paths() for fidelity in worked if fidelity is not None]
+        outputs = [fidelity.session_output.written.output_paths() for fidelity in self._listed_fidelities]
         places = [f"{label}: {', '.join(paths)}" for listed in outputs for label, paths in listed.items()]
         if not places:
             return ""
         return f"Save each format you write at its path, filling any {{name}} from the work: {'; '.join(places)}"
 
+    def _supplement_records(self) -> str:
+        """What the supplements of each listed fidelity keep in the session as its files are written, such as TDD's
+        record of the test tiers a module uses, with what each leaves the agent to decide and record; nothing outside a
+        session, which has no record to keep it in."""
+        if self._session is None:
+            return ""
+        records = (fidelity.supplement_records() for fidelity in self._listed_fidelities)
+        return "\n\n".join(record for record in records if record)
+
     def _output_folders(self) -> list[Path]:
         """The folder of each file a listed fidelity writes, once each; the pattern overlays record their patterns at
-        the root of each. A templated path's folder is left to the agent."""
-        worked = [self.work.fidelity_of(item) for item in self.listed() if isinstance(item, PracticeGuidance)]
-        paths = [path for fidelity in worked if fidelity is not None for listed in fidelity.declared.output_paths().values() for path in listed]
-        return list(dict.fromkeys(self.session.paths.path_named(path).parent for path in paths if "{" not in path))
+        the root of each. A templated path's folder, or one a wildcard names, such as harness/**/.context, is no one
+        folder, so it is left to the agent."""
+        paths = [path for fidelity in self._listed_fidelities for listed in fidelity.session_output.written.output_paths().values() for path in listed]
+        return list(dict.fromkeys(self.session.paths.path_named(path).parent for path in paths if not _NOT_ONE_FOLDER.search(path)))
+
+    def _writes_whiteboard(self) -> bool:
+        """Whether a listed fidelity writes a whiteboard, which goes on its board in Claude once written."""
+        return any(Format(label).name == WHITEBOARD for fidelity in self._listed_fidelities for label in fidelity.session_output.written.output_paths())
 
     @agent_instructions
     def generate_fixes_from_validate(self) -> str:
         """The fixes step that follows a validate, which an action such as Satisfy names after asking for validate."""
         "Apply the fixes the latest validate report names before considering generate done, in every format of the fidelity: its documents, its diagrams, and its code, so they still mirror each other."
+        "A fix keeps the behaviour: before changing code to clear a finding, name the scenarios and tests that state what that code does today; where none covers the behaviour about to be reshaped, write that test first and see it pass on the code as it is; after the change run them again. A finding cleared by changing what the code does is not fixed."
         return ""

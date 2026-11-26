@@ -8,7 +8,7 @@ from pathlib import Path
 from expects import be_empty, be_true, equal, expect
 from mamba import before, description, it
 
-from cdd_guidance.practices.stories.model.story_model import Epic
+from cdd_guidance.practices.stories.model.story_map import Epic
 from harness.graph.graph import Graph
 
 _SAMPLE = Path(__file__).resolve().parents[3] / "harness" / "graph" / "_examples" / "input"
@@ -24,8 +24,8 @@ with description("story tests read into the graph beside the Clean Engineering m
     with before.all:
         self.graph = Graph()
         self.graph.load_files(str(_SAMPLE), ["clean_engineering", "stories"], ["."])
-        self.stories = self.graph.practice("stories")
-        self.clean = self.graph.practice("clean_engineering")
+        self.stories = self.graph.practices.named("stories")
+        self.clean = self.graph.practices.named("clean_engineering")
 
     with it("should record each step an operation is invoked by under invokedBy"):
         expect(len(self.clean.reading.in_graph.edge_index.of("invokedBy")) > 0).to(be_true)

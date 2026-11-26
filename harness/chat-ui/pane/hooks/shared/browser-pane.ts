@@ -22,10 +22,11 @@ function saidBy(answer: McpAnswer): string {
   return answer.content.map(block => block.text ?? '').join(' ').trim()
 }
 
-// Opens a page in the Claude desktop app's browser pane, beside the chat, calling the pane's server directly: a tool call
-// would go through the desktop's permission hooks, which refuse a plugin's call. A tab already on the page's origin is
-// moved to the page and brought to the front rather than opening another. Returns why it did not open, empty once it
-// did; it never opens the page anywhere else, so a pane that does not answer is seen and fixed.
+// Opens a page in the Claude desktop app's browser pane, beside the chat, calling the pane's server directly. A tab
+// already on the page's origin is moved to the page and brought to the front rather than opening another. In auto mode
+// Claude Desktop refuses the plugin's own call but runs the same call made by Claude, so the page is handed to Claude to
+// open. Returns why it did not open, empty once it did or once Claude was asked; it never opens the page anywhere else,
+// so a pane that does not answer is seen and fixed.
 export async function openInBrowserPane($: EngineInterface, url: string): Promise<string> {
   try {
     const why = await openedTab($, url)
@@ -34,9 +35,37 @@ export async function openInBrowserPane($: EngineInterface, url: string): Promis
     const shown = await $.mcp.call(DESKTOP_VIEW, SHOW_PANE, { pane: PREVIEW_PANE })
     return shown.isError ? `the tab opened, but ${DESKTOP_VIEW} ${SHOW_PANE} failed: ${saidBy(shown) || 'no reason given'}` : ''
   } catch (failure) {
-    return `${BROWSER_PANE} could not be called: ${hookReasonOf(reasonOf(failure))}`
+    const reason = reasonOf(failure)
+    if (!AUTO_MODE_REFUSAL.test(reason)) return whyPaneNotCalled(reason)
+    return handedToClaude($, url)
   }
 }
+
+// What Claude is asked when the pane refused the chat bar's own call in auto mode.
+export function askedToOpen(url: string): string {
+  return `Open ${url} in Claude's Browser pane beside this chat (${BROWSER_PANE} ${OPEN_PANE_TAB} with that url), then show the pane. The chat bar asked: in auto mode the pane refuses the bar's own call.`
+}
+
+// Claude asked to open url, empty once the chat took the request; a chat that dropped it, such as one in the middle of a
+// turn, leaves the person the way to let the bar open pages itself.
+async function handedToClaude($: EngineInterface, url: string): Promise<string> {
+  const answer = await $.prompt.submit({ text: askedToOpen(url), asUser: true })
+  return answer.drop === undefined ? '' : `${AUTO_MODE_ADVICE} (Claude was not asked to open it: the chat dropped the request, ${answer.drop || 'no reason given'}.)`
+}
+
+// What the person is told when the browser pane refused the call, from the refusal's own reason.
+export function whyPaneNotCalled(reason: string): string {
+  if (AUTO_MODE_REFUSAL.test(reason)) return AUTO_MODE_ADVICE
+  return `${BROWSER_PANE} could not be called: ${hookReasonOf(reason)}`
+}
+
+// Claude Desktop's auto mode refuses a plugin's own call to the browser pane. The person can lift that by choosing
+// another permission mode, so they are told where that choice is rather than shown the hook's wording.
+const AUTO_MODE_REFUSAL = /in auto mode .* doesn't run this tool when a plugin's own code calls it/is
+const AUTO_MODE_ADVICE =
+  "Claude's Browser pane can't be opened from the chat bar while the chat is in Auto mode. " +
+  'To let it open pages there, click the permission mode menu at the bottom of the chat box and choose Bypass permissions. ' +
+  'Or ask Claude in the chat to open it for you.'
 
 async function openedTab($: EngineInterface, url: string): Promise<string> {
   const open = await tabOn($, new URL(url).origin)

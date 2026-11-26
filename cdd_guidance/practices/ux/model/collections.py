@@ -11,7 +11,7 @@ from .ux_node import UxNode
 
 
 class UxComponentCollection:
-    """One kind of UxComponent on the map, with append / remove / find. Appending records the map's edge to it."""
+    """One kind of UxComponent on the map, in the order it was appended. Appending records the map's edge to it."""
 
     _item_type: type[UxComponent] = UxComponent
     _edge_kind = ""
@@ -28,20 +28,6 @@ class UxComponentCollection:
             )
         self._items.append(component)
         self._owner._renumber(self._items)
-
-    def remove(self, name: str) -> UxComponent:
-        for index, item in enumerate(self._items):
-            if item.name == name:
-                removed = self._items.pop(index)
-                self._owner._renumber(self._items)
-                return removed
-        raise KeyError(f"{self._item_type.__name__} {name!r} not found in {self._edge_kind}")
-
-    def find(self, name: str) -> UxComponent:
-        for item in self._items:
-            if item.name == name:
-                return item
-        raise KeyError(f"{self._item_type.__name__} {name!r} not found in {self._edge_kind}")
 
     def __iter__(self) -> Iterator[UxComponent]:
         return iter(self._items)

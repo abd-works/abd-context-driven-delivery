@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from expects import be_true, contain, equal, expect
+from expects import be_true, contain, equal, expect, have_key
 from mamba import before, context, description, it
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -11,8 +11,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import cdd_guidance.practices  # noqa: F401
-from cdd_guidance.practices.clean_engineering.model.code_body import JAVA, JAVASCRIPT, PYTHON, TYPESCRIPT, CodeBody
-from harness.agent_tools.agent_tools import AgentToolSet
+from cdd_guidance.practices.source_code import JAVASCRIPT, PYTHON, TYPESCRIPT, CodeBody
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 
 _TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 
@@ -71,13 +71,26 @@ total(): Decimal
 empty(): None
 """
 
+_ACCOUNT_MARKDOWN = """# Accounts
+
+*Accounts* opens accounts.
+
+## Accounts
+
+*Accounts* opens an account.
+
+------
+----
+new_account(credentials?: AccountCredentials): AccountCredentials
+"""
+
 _PYTHON_TOTAL = 'return sum((item.price for item in self.items), Decimal("0"))'
 _TYPESCRIPT_TOTAL = "return this.items.reduce((sum, item) => sum + item.price, 0);"
 
 
 def _render(target: str, content: str, source: str, previous: str = "") -> str:
-    toolset = type(AgentToolSet.instantiate(_TOOLSET))(fidelity="model")
-    return toolset.render(format=target, content=content, source=source, previous=previous)["content"]
+    toolset = type(ToolsetReference.parsed(_TOOLSET).made())(fidelity="model")
+    return toolset.render(format=target, content=content, source=source, previous=previous).content
 
 
 def _bodies(language: str, text: str) -> dict:
@@ -92,7 +105,7 @@ def _bodies(language: str, text: str) -> dict:
     }
 
 
-_LANGUAGES = {"python": PYTHON, "typescript": TYPESCRIPT, "javascript": JAVASCRIPT, "java": JAVA}
+_LANGUAGES = {"python": PYTHON, "typescript": TYPESCRIPT, "javascript": JAVASCRIPT}
 
 with description("an operation body"):
     with context("that was read from python"):
@@ -129,7 +142,7 @@ with description("an operation body"):
 
     with context("that is empty"):
         with it("should write only the line that marks it still to write"):
-            expect(CodeBody("", None).lines_in(JAVA, "    ", "// BDD: SIGNATURE")).to(
+            expect(CodeBody("", None).lines_in(TYPESCRIPT, "    ", "// BDD: SIGNATURE")).to(
                 equal(["    // BDD: SIGNATURE"])
             )
 
@@ -191,9 +204,9 @@ with description("a class model rendered to code"):
             with it("should read back the same bodies"):
                 expect(_bodies("typescript", self.rendered)).to(equal(_bodies("typescript", _CART_TYPESCRIPT)))
 
-        with context("that is rendered to java"):
+        with context("that is rendered to javascript"):
             with it("should carry each typescript body as a commented note inside its method"):
-                expect(_render("java", _CART_TYPESCRIPT, "typescript")).to(contain(f"        // {_TYPESCRIPT_TOTAL}"))
+                expect(_render("javascript", _CART_TYPESCRIPT, "typescript")).to(contain(f"    // {_TYPESCRIPT_TOTAL}"))
 
     with context("that was read from markdown"):
         with context("that is rendered to python with the previous python file"):
@@ -206,6 +219,16 @@ with description("a class model rendered to code"):
             with it("should make an operation new to the model fail until it is written"):
                 expect(self.rendered).to(contain("    def empty(self) -> None:\n        raise NotImplementedError"))
 
+        with context("with a parameter the model marks as one a caller may leave out"):
+            with before.each:
+                self.rendered = _render("python", _ACCOUNT_MARKDOWN, "markdown")
+
+            with it("should write the parameter the way Python does, with no value when left out"):
+                expect(self.rendered).to(contain("def new_account(self, credentials: AccountCredentials | None = None) -> AccountCredentials:"))
+
+            with it("should write a file Python parses"):
+                expect(_bodies("python", self.rendered)).to(have_key("Accounts.new_account"))
+
         with context("that is rendered to each code language"):
             with it("should make every operation fail until it is written, in each language"):
                 languages = tuple(_LANGUAGES)
@@ -214,3 +237,213 @@ with description("a class model rendered to code"):
                     for language in languages
                 ]
                 expect(unfinished).to(equal([True] * len(languages)))
+
+
+with description("a body written in one language and kept as comments in another") as self:
+    with before.each:
+        from cdd_guidance.practices.source_code import PYTHON, TYPESCRIPT, CodeBody
+
+        self.python = CodeBody("self.items.append(item)\nreturn item", PYTHON)
+        self.kept = "\n".join(self.python.lines_in(TYPESCRIPT, "    ", ""))
+        self.read_back = CodeBody.from_written(self.kept, TYPESCRIPT)
+        self.own = CodeBody.from_written("// add the item\nthis.items.push(item);", TYPESCRIPT)
+
+    with it("should read back as the body in the language it was written in"):
+        expect((self.read_back.language.name, self.read_back.text)).to(equal(("python", "self.items.append(item)\nreturn item")))
+
+    with it("should read a body with comments of its own as that language's body"):
+        expect((self.own.language.name, self.own.text)).to(equal(("typescript", "// add the item\nthis.items.push(item);")))
+
+
+# Seen 2026-11-21 (r3-widget-07): a render of Python code to TypeScript declared no property, imported nothing, called
+# no base constructor, and extended Python's ValueError, so the file did not compile.
+_BOOKSHOP_CODE = Path(__file__).resolve().parent / "fixtures" / "bookshop" / "code"
+
+
+def _bookshop_in_typescript(file: str) -> str:
+    return _render("typescript", (_BOOKSHOP_CODE / file).read_text(encoding="utf-8"), "python")
+
+
+with description("Python code rendered to TypeScript"):
+    with context("whose constructor assigns fields the class does not declare"):
+        with before.all:
+            self.rendered = _bookshop_in_typescript("ordering/cart.py")
+
+        with it("should declare a field typed as its assignment writes it, in TypeScript's spelling"):
+            expect(self.rendered).to(contain("  lines: CartLine[];"))
+
+        with it("should declare a field typed as the parameter it is assigned from"):
+            expect(self.rendered).to(contain("  customerId: string;"))
+
+        with it("should import the classes the file uses from other files"):
+            expect(self.rendered).to(contain('import { Book, OutOfStock } from "src/catalogue/book";'))
+
+        with it("should extend TypeScript's Error where Python extends ValueError"):
+            expect(self.rendered).to(contain("class EmptyCart extends Error {"))
+
+    with context("whose subclass's constructor calls its base class's constructor"):
+        with before.all:
+            self.rendered = _bookshop_in_typescript("fulfilment/shipment.py")
+            self.express = self.rendered[self.rendered.index("class ExpressShipment"):]
+
+        with it("should call the base class's constructor with the arguments the Python passes"):
+            expect(self.express).to(contain("    super(order, address);\n"))
+
+        with it("should assign only the fields the base class does not"):
+            expect(self.express).not_to(contain("this.order = order;"))
+
+
+with description("a markdown class model rendered to TypeScript"):
+    with before.all:
+        model = (Path(__file__).resolve().parent / "fixtures" / "bookshop" / "ordering-model.md").read_text(encoding="utf-8")
+        self.rendered = _render("typescript", model, "markdown")
+
+    with it("should write a list property as a TypeScript array"):
+        expect(self.rendered).to(contain("  lines: CartLine[];"))
+
+    with it("should write a parameter's type in TypeScript's spelling"):
+        expect(self.rendered).to(contain("  add(book: Book, quantity: number): CartLine {"))
+
+    with it("should write a call the model notes as the operation is named in TypeScript"):
+        expect(self.rendered).to(contain("    Book.isInStock();"))
+
+
+# Requested 2026-11-24 (r3-bolt-07, r3-widget-07): a body written in code is translated into the other language,
+# statement by statement, not carried over as a comment; a statement outside what translates is the only one kept so.
+_CART_WITH_BODIES = '''\
+class OutOfStock(ValueError):
+    """A book that cannot be added."""
+
+
+class Cart:
+    """The books a customer has chosen."""
+
+    def __init__(self, customer_id: str) -> None:
+        self.customer_id = customer_id
+        self.lines: list[CartLine] = []
+
+    def add(self, book: Book, quantity: int) -> CartLine:
+        """Add a line for the book; a book out of stock is refused."""
+        # a book out of stock is refused
+        if quantity <= 0 or not book.is_in_stock(quantity):
+            raise OutOfStock(f"{book.title} is out of stock")
+        for line in self.lines:
+            if line.book is book:
+                line.quantity += quantity
+                return line
+        line = CartLine(book, quantity)
+        self.lines.append(line)
+        return line
+
+    def is_empty(self) -> bool:
+        return len(self.lines) == 0
+
+    def titles(self) -> list[str]:
+        return [line.book.title for line in self.lines if line.quantity > 0]
+
+    def total(self) -> int:
+        return sum(line.subtotal() for line in self.lines)
+'''
+
+_ADD_IN_TYPESCRIPT = """\
+  add(book: Book, quantity: number): CartLine {
+    // a book out of stock is refused
+    if (quantity <= 0 || !book.isInStock(quantity)) {
+      throw new OutOfStock(`${book.title} is out of stock`);
+    }
+    for (const line of this.lines) {
+      if (line.book === book) {
+        line.quantity += quantity;
+        return line;
+      }
+    }
+    const line = new CartLine(book, quantity);
+    this.lines.push(line);
+    return line;
+  }
+"""
+
+_CART_IN_TYPESCRIPT = """\
+class Cart {
+  lines: CartLine[];
+
+  constructor(lines: CartLine[]) {
+    this.lines = lines;
+  }
+
+  count(): number {
+    let counted = 0;
+    for (const line of this.lines) {
+      if (line.quantity > 0 && line.book !== null) {
+        counted += line.quantity;
+      }
+    }
+    return counted;
+  }
+
+  named(title: string): CartLine[] {
+    return this.lines.filter((line) => line.book.title === title);
+  }
+}
+"""
+
+_COUNT_IN_PYTHON = """\
+    def count(self) -> float:
+        counted = 0
+        for line in self.lines:
+            if line.quantity > 0 and line.book is not None:
+                counted += line.quantity
+        return counted
+"""
+
+
+with description("a body written in code, rendered into the other language"):
+    with context("from Python to TypeScript"):
+        with before.all:
+            self.rendered = _render("typescript", _CART_WITH_BODIES, "python")
+
+        with it("should translate a guard, a loop, a raise, a local and a call, statement by statement"):
+            expect(self.rendered).to(contain(_ADD_IN_TYPESCRIPT))
+
+        with it("should translate the constructor's assignments into the constructor"):
+            expect(self.rendered).to(contain("  constructor(customerId: string) {\n    this.customerId = customerId;\n    this.lines = [];\n  }\n"))
+
+        with it("should translate len into length"):
+            expect(self.rendered).to(contain("    return this.lines.length === 0;\n"))
+
+        with it("should translate a list comprehension into filter and map"):
+            expect(self.rendered).to(contain("    return this.lines.filter((line) => line.quantity > 0).map((line) => line.book.title);\n"))
+
+        with it("should keep a statement it cannot translate as Python under a note that names it"):
+            expect(self.rendered).to(contain("    // python statement to translate:\n    // return sum(line.subtotal() for line in self.lines)\n"))
+
+        with it("should leave no whole body to translate"):
+            expect(self.rendered).not_to(contain("python body to translate"))
+
+    with context("from Python to TypeScript and back"):
+        with before.all:
+            self.back = _render("python", _render("typescript", _CART_WITH_BODIES, "python"), "typescript")
+
+        with it("should come back as Python statements"):
+            expect(self.back).to(contain(
+                "        if quantity <= 0 or not book.isInStock(quantity):\n"
+                "            raise OutOfStock(f'{book.title} is out of stock')\n"
+                "        for line in self.lines:\n"
+                "            if line.book == book:\n"
+            ))
+
+        with it("should keep the note above the statement it was written over"):
+            expect(self.back).to(contain("        # a book out of stock is refused\n        if quantity"))
+
+        with it("should leave no whole body to translate"):
+            expect(self.back).not_to(contain("body to translate"))
+
+    with context("from TypeScript to Python"):
+        with before.all:
+            self.rendered = _render("python", _CART_IN_TYPESCRIPT, "typescript")
+
+        with it("should translate a local, a loop, a guard and an addition"):
+            expect(self.rendered).to(contain(_COUNT_IN_PYTHON))
+
+        with it("should translate filter into a list comprehension"):
+            expect(self.rendered).to(contain("        return [line for line in self.lines if line.book.title == title]\n"))

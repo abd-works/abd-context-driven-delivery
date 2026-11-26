@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { CddApi } from '@cdd/cdd-shared'
 import type { FileEntryData } from '@cdd/space/session/session'
 
-import { treeOf, type FileFolder } from './file-bar'
+import { entryClassesOf, publishedOf, treeOf, type FileFolder } from './file-bar'
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
 import { FILE_BAR_WIDTH } from './files-state'
@@ -14,12 +14,14 @@ import { FILE_BAR_WIDTH } from './files-state'
 const STORY_MAP = '.context/story-map.md'
 const ORDER = 'src/checkout/order.py'
 const CART = 'src/checkout/cart.py'
+const SKETCH = '.context/checkout-flow-sketch.md'
 
 // The files of each fidelity the page asks for, as ticket.fidelity_files answers them.
 const byFidelity = (body: Record<string, unknown> | undefined, files: Record<string, FileEntryData[]>) =>
   Object.fromEntries(((body?.fidelities as string[] | undefined) ?? []).map(slug => [slug, files]))
 
-const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '', format: '', fidelities: [] }) as FileEntryData
+// Listed, and the session's own work exactly when the branch changed it, as the session answers a file in a repository.
+const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '', published_kind: '', format: '', fidelities: [], is_listed: true, is_session_work: is_changed, hidden_by_formats: [] }) as FileEntryData
 
 // The Files app's server, answering the session's files in the order the link names them, and nothing else; each file
 // the branch changed unless named unchanged, so This session lists it.
@@ -34,8 +36,22 @@ class FakeFilesServer implements CddApi {
   }
 }
 
+// The Files app's server for a project in a plain folder: the session works in no git repository, so no file is
+// changed, and its own work is each file a fidelity declares or holds that is there; cart.py is declared but not
+// generated yet, the session's sketch is every fidelity's, and a note under the root belongs to no fidelity.
+class PlainFolderServer implements CddApi {
+  async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+    if (path.endsWith('/show')) return { practices: {}, is_repository: false } as Result
+    const work = (named: string) => ({ ...entry(named), is_session_work: true })
+    const missing = { ...entry(CART), exists: false }
+    if (path.endsWith('/fidelity-files')) return byFidelity(body, { markdown: [work(STORY_MAP)], python: [work(ORDER), missing] }) as Result
+    if (path.endsWith('/root-files')) return [{ ...work(STORY_MAP), fidelities: ['stories-story-map'] }, { ...work(SKETCH), fidelities: ['stories-story-map'] }, entry('notes/plain.txt')] as Result
+    return null
+  }
+}
+
 // The page with its files listed and order.py open, as the person finds it.
-async function pageWithOrderOpen(server = new FakeFilesServer()): Promise<FilesPage> {
+async function pageWithOrderOpen(server: CddApi = new FakeFilesServer()): Promise<FilesPage> {
   const page = new FilesPage(server, new FilesLink(`?files=checkout-flow&fidelity=stories-story-map&file=${ORDER}`))
   page.start()()
   await new Promise(resolve => setTimeout(resolve, 0))
@@ -172,13 +188,34 @@ describe('List This Session Or All Session Files', () => {
 
       it('should count the one changed file on its button', async () => {
         const page = await onlyOrderChanged()
-        expect(page.fileBar.changedCount).toBe(1)
+        expect(page.fileBar.sessionWorkCount).toBe(1)
+      })
+    })
+  })
+
+  // Reported 2026-11-18 (Nov 18 demo): in a plain folder This session listed nothing, as no branch changes any file.
+  describe('with a project that is no git repository', () => {
+    const plainFolder = async () => {
+      const page = await pageWithOrderOpen(new PlainFolderServer())
+      await new Promise(resolve => setTimeout(resolve, 0))
+      return page
+    }
+
+    describe('that lists This session, its default', () => {
+      it('should list the files its fidelities declare that are there, a file of none left out', async () => {
+        const page = await plainFolder()
+        expect(page.fileBar.entries.map(each => each.path)).toEqual([STORY_MAP, ORDER, SKETCH])
+      })
+
+      it('should count them on its button', async () => {
+        const page = await plainFolder()
+        expect(page.fileBar.sessionWorkCount).toBe(3)
       })
     })
   })
 
   it('should keep a published design canvas in This session, which opens at its link', () => {
-    const canvas = { path: 'design-canvas/version-1/project/canvas.json', exists: true, is_changed: false, link: 'https://claude.ai/artifact/canvas' } as FileEntryData
+    const canvas = { path: 'design-canvas/version-1/project/canvas.json', exists: true, is_changed: false, link: 'https://claude.ai/artifact/canvas', published_kind: 'design canvas' } as FileEntryData
     const page = new FilesPage(new FakeFilesServer(), new FilesLink('?files=checkout-flow&fidelity=ux-front-end-code'))
     page.store.change(() => ({ entries: [canvas, entry(CART)] }))
     expect(page.fileBar.entries).toEqual([canvas])
@@ -212,6 +249,100 @@ describe('folder tree of the files', () => {
     page.fileBar.toggleFolder('src/checkout')
     page.fileBar.show('folders')
     expect(page.state.fileBar.closedFolders).toEqual([])
+  })
+})
+
+// Filter Files By Format In Files App and Open Whiteboard In Files App, requested 2026-11-16, as
+// story_tests/review-generated-work-in-file-viewer/filter-files-in-files-app/filter_files_in_files_app_story.test.md and
+// .../open-files-in-files-app/open_files_in_files_app_story.test.md write them: the session answers each file's link; only
+// the page decides where it sits in the tree and what pressing it opens.
+const linked = (path: string, link: string, published_kind: string): FileEntryData => ({ ...entry(path), link, published_kind })
+const unpublished = (path: string, published_kind: string): FileEntryData => ({ ...entry(path), published_kind })
+
+describe('a design canvas in the file bar', () => {
+  const CANVAS = 'work/design-canvas/version-2/project/canvas.json'
+
+  describe('with version-2 published at its link', () => {
+    const canvas = linked(CANVAS, 'https://claude.ai/artifact/checkout-canvas', 'design canvas')
+
+    it('should sit in its design-canvas folder, beside versions.json', () => {
+      const tree = treeOf([canvas, entry('work/design-canvas/versions.json')])
+      expect(named(tree.folders[0])).toEqual([CANVAS, 'work/design-canvas/versions.json'])
+    })
+
+    it('should be named by its version', () => {
+      expect(publishedOf(canvas)?.name).toBe('version-2')
+    })
+
+    it('should open the design canvas at its link', () => {
+      expect(publishedOf(canvas)?.link).toBe('https://claude.ai/artifact/checkout-canvas')
+    })
+  })
+
+  describe('with version-2 not published yet', () => {
+    it('should still be a design canvas, opening nothing rather than its canvas.json', () => {
+      expect([publishedOf(unpublished(CANVAS, 'design canvas'))?.kind, publishedOf(unpublished(CANVAS, 'design canvas'))?.link]).toEqual(['design canvas', ''])
+    })
+  })
+
+  it('should leave any other file to open as a file', () => {
+    expect(publishedOf(entry('work/design-canvas/versions.json'))).toBeNull()
+  })
+})
+
+describe('a whiteboard file in the file bar', () => {
+  const WHITEBOARD = '.context/story-map.whiteboard'
+
+  describe('with its board in Claude', () => {
+    const whiteboard = linked(WHITEBOARD, 'https://claude.ai/artifact/story-board', 'whiteboard')
+
+    it('should be named story-map, marked as a whiteboard', () => {
+      expect([publishedOf(whiteboard)?.name, publishedOf(whiteboard)?.kind]).toEqual(['story-map', 'whiteboard'])
+    })
+
+    it('should open its board', () => {
+      expect(publishedOf(whiteboard)?.link).toBe('https://claude.ai/artifact/story-board')
+    })
+
+    it('should sit in the folder the file is in', () => {
+      expect(treeOf([whiteboard]).folders.map(folder => folder.path)).toEqual(['.context'])
+    })
+  })
+
+  describe('with no board yet', () => {
+    it('should open nothing rather than the file', () => {
+      expect([publishedOf(unpublished(WHITEBOARD, 'whiteboard'))?.kind, publishedOf(unpublished(WHITEBOARD, 'whiteboard'))?.link]).toEqual(['whiteboard', ''])
+    })
+  })
+
+  // Found on 2026-11-22 (e2e tier): the story map fidelity declares thin-slice.whiteboard, which was not on disk, and
+  // the bar showed it as a file to open, where every other file not on disk is marked missing.
+  describe('that is not on disk', () => {
+    it('should be marked missing, as any file not on disk is', () => {
+      expect(entryClassesOf({ ...unpublished(WHITEBOARD, 'whiteboard'), exists: false }, false).split(' ')).toContain('is-missing')
+    })
+  })
+
+  describe('that is on disk', () => {
+    it('should be marked as a whiteboard, not missing', () => {
+      expect(entryClassesOf(unpublished(WHITEBOARD, 'whiteboard'), false)).toBe('file-entry is-whiteboard')
+    })
+  })
+})
+
+describe('a page whose first file is a whiteboard', () => {
+  it('should open the first file that is not published in Claude, not the whiteboard', async () => {
+    const server: CddApi = {
+      async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+        if (path.endsWith('/show')) return { practices: {} } as Result
+        if (path.endsWith('/fidelity-files')) return byFidelity(body, { whiteboard: [{ ...entry('.context/story-map.whiteboard', true), published_kind: 'whiteboard' }], markdown: [entry(STORY_MAP, true)] }) as Result
+        return null
+      },
+    }
+    const page = new FilesPage(server, new FilesLink('?files=checkout-flow&fidelity=stories-story-map'))
+    page.start()()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(page.state.openPath).toBe(STORY_MAP)
   })
 })
 

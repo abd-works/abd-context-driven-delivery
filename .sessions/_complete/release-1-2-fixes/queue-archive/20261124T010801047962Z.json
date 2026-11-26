@@ -1,0 +1,41 @@
+{
+  "chat": "fd34eb9a-88d6-42c4-b249-8c48b8272606",
+  "taken_off": "2026-11-24T01:08:01.047962+00:00",
+  "prompts": [
+    {
+      "id": "a1a0345763e8",
+      "text": "[interruption] actuially jsut prceed",
+      "steps": [
+        {
+          "text": "[interruption] ewsume the bots",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] oriced'",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] proiceed'",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] @dev/ what and why are folders and files here",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] where are the run reports eg defect refactirng etxt",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] we need to consoliudate for isnbtance we did te practice nby fidelity by format testsd after ; we need a final report that capture s\n\neach wave\ndefects , themes, by module; gap in testing framewok\n\nfor refactioring which oif the metrics we have now would have caught this error on te graph - what was the metrci berfor e and after the refctor\n\n\ncleanm all of these randome files intpo a cohewtive narrasvitxs",
+          "state": "pending"
+        },
+        {
+          "text": "[interruption] be .sessions/release-1-2-fixes/release-1-2-fixes-report.md. where open it",
+          "state": "pending"
+        }
+      ],
+      "is_done": false
+    }
+  ]
+}

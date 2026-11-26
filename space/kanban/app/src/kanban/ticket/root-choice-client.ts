@@ -13,6 +13,10 @@ const parentOf = (path: string): string => path.split('/').slice(0, -1).join('/'
 export class RootChoiceClient {
   constructor(private readonly page: BoardPage) {}
 
+  // The title of the item being started, from the press that starts it until its ticket is read: a second press in
+  // that time would ask Python to start an item that is no longer in the Backlog.
+  private starting: string | null = null
+
   private get choice(): RootChoice | null {
     return this.page.store.state.rootChoice
   }
@@ -76,8 +80,11 @@ export class RootChoiceClient {
   // its own worktree with its chat started there, as Activate does: starting an item is beginning its work.
   private async start(path: string): Promise<void> {
     const item = this.choice?.startingItem
-    if (!item) return
-    const started = await this.page.item(item).start(undefined, path)
+    if (!item || this.starting === item.title) return
+    this.starting = item.title
+    const started = await this.page.item(item).start(undefined, path).finally(() => {
+      this.starting = null
+    })
     if (!started) return
     const ticket = this.page.ticket(started)
     this.page.store.change({ rootChoice: { ticket, startingItem: null, browsing: null } })

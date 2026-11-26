@@ -1,17 +1,11 @@
-import type { InventoryData, PracticeInventoryData } from '@cdd/harness/graph/graph';
+import type { InventoryData } from '@cdd/harness/graph/graph';
 
+// The inventory the graph answers, with nothing in each part it left out.
 export function normalizeInventoryBundle(raw: unknown): InventoryData {
-  if (raw && typeof raw === 'object' && 'practices' in raw) {
-    const bundle = raw as InventoryData;
-    return {
-      practices: bundle.practices ?? {},
-      overlays: bundle.overlays ?? [],
-      available_overlays: bundle.available_overlays ?? [],
-    };
-  }
+  const bundle = (raw ?? {}) as Partial<InventoryData>;
   return {
-    practices: (raw ?? {}) as Record<string, PracticeInventoryData>,
-    overlays: [],
-    available_overlays: [],
+    practices: bundle.practices ?? {},
+    overlays: bundle.overlays ?? [],
+    available_overlays: bundle.available_overlays ?? [],
   };
 }

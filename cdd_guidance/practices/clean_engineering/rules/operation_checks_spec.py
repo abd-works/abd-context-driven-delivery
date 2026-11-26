@@ -11,8 +11,8 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect, have_len
 from mamba import before, context, description, it
 
+from cdd_guidance.practices.clean_engineering.rules import BY_SLUG
 from cdd_guidance.practices.clean_engineering.rules.rule_examples import (
-    ce_rule_by_slug,
     practice_from_source,
     rule_pair,
 )
@@ -23,7 +23,7 @@ def _fixture(source: str, lang: str = "python"):
 
 
 def _hits(slug: str, fixture) -> list[str]:
-    return fixture.hits(ce_rule_by_slug(slug))
+    return fixture.hits(BY_SLUG[slug])
 
 
 def _long_body(lines: int, indent: str = "    ") -> str:

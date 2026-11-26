@@ -6,6 +6,16 @@ import sys
 from pathlib import Path
 
 
+class UnknownIde(ValueError):
+    """An install named an IDE CDD does not install into. Nothing is written: a guessed layout would put another IDE's
+    files where the person's IDE never reads them."""
+
+    def __init__(self, ide: str, known: list[str]) -> None:
+        super().__init__(f"{ide!r} is no IDE CDD installs into; name one of {', '.join(known)}")
+        self.ide = ide
+        self.known = known
+
+
 class IdeLayout:
     """How one IDE lays out the folder CDD installs into: the folder's name in a project, where its slash commands and
     rules go, and the shape of a rule file. Every per-IDE choice an install makes reads it here, so supporting another
@@ -21,7 +31,11 @@ class IdeLayout:
     _GUIDANCE_FOLDERS = {"skills": "skill", "rules": "rule", "agents": "agent"}
 
     def __init__(self, ide: str) -> None:
-        self.ide = ide
+        """The layout of the IDE named ide, matched whatever its case; a name that is none of them is refused."""
+        named = {name.lower(): name for name in self._FOLDERS}
+        if str(ide).strip().lower() not in named:
+            raise UnknownIde(ide, list(self._FOLDERS))
+        self.ide = named[str(ide).strip().lower()]
 
     @classmethod
     def every(cls) -> list[IdeLayout]:
@@ -37,7 +51,7 @@ class IdeLayout:
     @property
     def folder_name(self) -> str:
         """The folder in a project the IDE reads, such as ``.cursor``."""
-        return self._FOLDERS.get(self.ide, self._FOLDERS[self.DEFAULT_IDE])
+        return self._FOLDERS[self.ide]
 
     @property
     def is_claude_code(self) -> bool:

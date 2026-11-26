@@ -1,0 +1,7 @@
+# TDD overlay on clean_engineering: the code its tests drive. Extend only.
+operation:
+  rules:
+    - operation-has-a-proving-test
+class:
+  rules:
+    - declared-exception-raised-by-a-test

@@ -1,0 +1,41 @@
+{
+  "name": "simple-queue",
+  "guidance": {
+    "stages": [],
+    "version": 75
+  },
+  "practices": {
+    "stories": {
+      "enabled": true,
+      "formats": {
+        "story_map": [
+          "drawio",
+          "whiteboard",
+          "markdown"
+        ]
+      }
+    },
+    "ddd": {
+      "enabled": false,
+      "formats": {
+        "model": []
+      }
+    },
+    "ux": {
+      "enabled": false
+    },
+    "clean_engineering": {
+      "enabled": true,
+      "formats": {
+        "code": [
+          "python"
+        ]
+      }
+    },
+    "bdd": {
+      "enabled": false
+    }
+  },
+  "branch": "simple-queue",
+  "worktree": "C:\\dev\\abd-cdd-simple-queue"
+}

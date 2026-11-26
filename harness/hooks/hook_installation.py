@@ -1,76 +1,55 @@
-"""*HookInstallation*, the hook channel of an install: it writes the IDE's ``hooks.json`` and ``hook-handlers.json``,
-then starts and reports the checkout's hook daemon. Importing this module registers it with the Installer's server channels (``SERVER_CHANNELS``); importing the
-``harness.hooks`` package imports it."""
+"""*HookInstallation*, the hook channel of an install: it writes the IDE's ``hooks.json`` and ``hook-handlers.json``.
+The channel holds no server: the hook command starts the checkout's hook daemon on the first event, and replaces one
+that loaded older hook code. Importing this module registers it with the Installer's registered channels
+(``SERVER_CHANNELS``); importing the ``harness.hooks`` package imports it."""
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from harness.agent_tools.agent_tools import AgentTool
 from harness.hooks.hook_daemon import HookDaemon
-from harness.hooks.hook_server import HookServer
-from harness.hooks.hooks import HookHandlersFile, Hooks, HooksManifest, events_served
-from harness.installation.destination import ServerInstallation
-from harness.installation.ide_layout import IdeLayout
+from harness.hooks.hooks import Hook, HookHandlersFile, Hooks, HooksManifest, events_served
+from harness.installation.destination import RegisteredChannel
 from harness.installation.installer import SERVER_CHANNELS
 from harness.process.process import PythonInterpreter
+
+if TYPE_CHECKING:
+    from harness.installation.install_record import InstallRecord
+    from harness.installation.install_target import InstallTarget
+    from harness.installation.repository_toolsets import RepositoryToolsets
 
 # How long the IDE waits for the hook command before it carries on without the hooks' answer.
 _HOOK_COMMAND_TIMEOUT_SECONDS = 30
 
 
-class HookServerNotRunning(Exception):
-    """The install finished but the checkout's hook daemon does not answer, so hooks would not run."""
-
-    def __init__(self, repo: Path) -> None:
-        super().__init__(f"install failed: the hook server of {repo} is not running")
-        self.repo = repo
-
-
-
-
-class HookInstallation(ServerInstallation):
+class HookInstallation(RegisteredChannel):
     """Write the IDE's ``hooks.json``, which runs the hook command for each event a hook operation serves, and
-    ``hook-handlers.json``, which lists those operations for the hook server; then stand up, start, and report the hook
-    server of the checkout. An IDE whose layout runs no hooks gets none."""
+    ``hook-handlers.json``, which lists those operations for the hook server. The hook command starts that server on the
+    first event, so the channel holds no server. An IDE whose layout runs no hooks gets none."""
 
-    channel = "hook"
+    destination = Hook
 
-    def __init__(self, layout: IdeLayout, path: Path | str, repo: Path | str | None = None) -> None:
-        super().__init__(layout, path, repo=repo)
+    def __init__(self, target: InstallTarget, record: InstallRecord, repository: RepositoryToolsets | None = None) -> None:
+        super().__init__(target, record, repository)
         # The Python the hook command runs on: the one running this install.
         self.interpreter = PythonInterpreter()
         self.handlers_file = HookHandlersFile(self.path / HookHandlersFile.NAME)
         self.manifest = HooksManifest(self.path / HooksManifest.NAME)
-        self.daemon = HookDaemon(self.repo or self.path)
         self._handlers: list[dict[str, str]] = []
-        self.server: HookServer | None = None
-        self.diagnosis: dict[str, Any] | None = None
 
     @property
     def dispatch_command(self) -> str:
         return f"{self.interpreter.console} -u {HookDaemon.COMMAND_SCRIPT}"
 
     def accepts(self, tool: AgentTool) -> bool:
-        return tool.install_to_hook and self.layout.runs_hooks
+        return super().accepts(tool) and self.layout.runs_hooks
 
     @property
     def published(self) -> list[str]:
         return self.registered_operations
 
-    def ensure_running(self) -> dict[str, str]:
-        """Start the checkout's hook daemon when none answers; an IDE that runs no hooks gets none."""
-        if not self.layout.runs_hooks:
-            return {"hook": "not installed"}
-        self.daemon.ensure()
-        if self.daemon.live_address() is None:
-            raise HookServerNotRunning(self.daemon.repo)
-        return {"hook": "running"}
-
     def status(self) -> list[str]:
-        address = self.daemon.live_address()
         return [
-            f"hook server: {f'running (pid {address.pid})' if address is not None else 'not running'}",
             f"hooks registered (events): {', '.join(self.registered_events) or 'none'}",
             f"hook handlers (operations): {', '.join(self.registered_operations) or 'none'}",
         ]
@@ -86,11 +65,12 @@ class HookInstallation(ServerInstallation):
         return self.handlers_file.operation_names
 
     def write(self, tool: AgentTool) -> None:
-        if not tool.install_to_hook or not tool.hook_event:
+        event = Hook.name_given(tool.callable)
+        if not tool.is_published_to(Hook) or not event:
             return
         if not Hooks.from_toolset_class(type(tool.toolset)).deploy:
             return
-        record = {"event": tool.hook_event, "operation": tool.name, "ref": tool.registration_name}
+        record = {"event": event, "operation": tool.name, "ref": str(tool.toolset.reference)}
         if record in self._handlers:
             return
         self._handlers.append(record)
@@ -101,7 +81,7 @@ class HookInstallation(ServerInstallation):
         if not self._handlers:
             return
         self.handlers_file.write(self._handlers)
-        self.track_write(self.handlers_file.path)
+        self.wrote(self.handlers_file.path)
 
     def write_hooks_manifest(self) -> None:
         """Point each event a handler serves at the hook command, keeping every other hook the file holds. A file that
@@ -112,7 +92,7 @@ class HookInstallation(ServerInstallation):
         self._strip_dispatch_command(hooks)
         self._attach_dispatch_command(hooks)
         self.manifest.write(hooks)
-        self.track_write(self.manifest.path)
+        self.wrote(self.manifest.path)
 
     def _strip_dispatch_command(self, hooks: dict[str, list[dict[str, Any]]]) -> None:
         for event_name in list(hooks):
@@ -139,15 +119,6 @@ class HookInstallation(ServerInstallation):
             bucket = hooks.setdefault(event, [])
             if not any(item.get("command") == hook_def["command"] for item in bucket):
                 bucket.append(dict(hook_def))
-
-    def standup(self) -> HookServer:
-        self.server = HookServer.from_handlers(self.handlers_file.path, repo=self.repo or self.path)
-        return self.server
-
-    def diagnose(self) -> dict[str, Any]:
-        server = self.server if self.server is not None else self.standup()
-        self.diagnosis = server.diagnose()
-        return self.diagnosis
 
 
 SERVER_CHANNELS.register(HookInstallation)

@@ -16,13 +16,15 @@ for _cat in ("tools", "cdd_guidance/practices", "cdd_guidance/actions"):
         sys.path.insert(0, _p)
 
 import cdd_guidance.practices  # noqa: F401
-from harness.agent_tools.agent_tools import AgentToolSet
+from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
+from harness.guidance.practice_formats import Rendered
+from harness.installation.data_class import data_of
 
 _OOAD_TOOLSET = "cdd_guidance.practices.clean_engineering.clean_engineering:CleanEngineering"
 
 
 def _load_clean_engineering(*, fidelity: str = "modules", format: str = "markdown"):
-    toolset_cls = type(AgentToolSet.instantiate(_OOAD_TOOLSET))
+    toolset_cls = type(ToolsetReference.parsed(_OOAD_TOOLSET).made())
     return toolset_cls(fidelity=fidelity, format=format)
 
 
@@ -63,12 +65,6 @@ class Cart:
 _SAMPLE_TYPESCRIPT = """\
 class Cart {
     placeOrder(): Order {}
-}
-"""
-
-_SAMPLE_JAVA = """\
-class Cart {
-    public Order placeOrder() {}
 }
 """
 
@@ -138,16 +134,16 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should return a dict"):
-            expect(isinstance(self.result, dict)).to(be_true)
+            expect(isinstance(self.result, Rendered)).to(be_true)
 
         with it("should include a content key"):
-            expect(self.result).to(have_key("content"))
+            expect(data_of(self.result)).to(have_key("content"))
 
         with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
+            expect(self.result.content).to(contain("Cart"))
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("python"))
+            expect(self.result.format).to(equal("python"))
 
     with context("transform from python to markdown"):
         with before.each:
@@ -157,10 +153,10 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
+            expect(self.result.content).to(contain("Cart"))
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("markdown"))
+            expect(self.result.format).to(equal("markdown"))
 
     with context("transform from markdown to typescript"):
         with before.each:
@@ -170,10 +166,10 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
+            expect(self.result.content).to(contain("Cart"))
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("typescript"))
+            expect(self.result.format).to(equal("typescript"))
 
     with context("transform from typescript to markdown"):
         with before.each:
@@ -183,36 +179,10 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
+            expect(self.result.content).to(contain("Cart"))
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("markdown"))
-
-    with context("transform from markdown to java"):
-        with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
-            self.result = _invoke_transform(
-                self.CleanEngineering, "markdown", "java", _SAMPLE_MARKDOWN
-            )
-
-        with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
-
-        with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("java"))
-
-    with context("transform from java to markdown"):
-        with before.each:
-            self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
-            self.result = _invoke_transform(
-                self.CleanEngineering, "java", "markdown", _SAMPLE_JAVA
-            )
-
-        with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
-
-        with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("markdown"))
+            expect(self.result.format).to(equal("markdown"))
 
     with context("transform from markdown to json"):
         with before.each:
@@ -222,10 +192,10 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
+            expect(self.result.content).to(contain("Cart"))
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("json"))
+            expect(self.result.format).to(equal("json"))
 
     with context("transform from json to markdown"):
         with before.each:
@@ -235,10 +205,10 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
+            expect(self.result.content).to(contain("Cart"))
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("markdown"))
+            expect(self.result.format).to(equal("markdown"))
 
     with context("transform from markdown to javascript"):
         with before.each:
@@ -248,10 +218,10 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
+            expect(self.result.content).to(contain("Cart"))
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("javascript"))
+            expect(self.result.format).to(equal("javascript"))
 
     with context("transform from javascript to markdown"):
         with before.each:
@@ -261,10 +231,10 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
+            expect(self.result.content).to(contain("Cart"))
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("markdown"))
+            expect(self.result.format).to(equal("markdown"))
 
     with context("transform from markdown to drawio"):
         with before.each:
@@ -274,13 +244,13 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should preserve the class name Cart in the output"):
-            expect(self.result["content"]).to(contain("Cart"))
+            expect(self.result.content).to(contain("Cart"))
 
         with it("should render UML class diagram for typed classes"):
-            expect(self.result["content"]).to(contain('id="CleanEngineering-model"'))
+            expect(self.result.content).to(contain('id="CleanEngineering-model"'))
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("drawio"))
+            expect(self.result.format).to(equal("drawio"))
 
     with context("transform modules markdown to drawio modules view"):
         with before.each:
@@ -290,45 +260,45 @@ with description("OoadAnalysis transform tool"):
             )
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("drawio"))
+            expect(self.result.format).to(equal("drawio"))
 
         with it("should render Modules Context diagram"):
-            expect(self.result["content"]).to(contain('id="modules-context"'))
+            expect(self.result.content).to(contain('id="modules-context"'))
 
         with it("should render seam-term bullets"):
-            expect(self.result["content"]).to(contain("\u2022 Trait"))
-            expect(self.result["content"]).to(contain("\u2022 ISource"))
+            expect(self.result.content).to(contain("\u2022 Trait"))
+            expect(self.result.content).to(contain("\u2022 ISource"))
 
         with it("should not include stack/tech callouts"):
-            expect("stack / tech" in self.result["content"]).to(equal(False))
+            expect("stack / tech" in self.result.content).to(equal(False))
 
         with it("should draw character -> checks dependency"):
-            expect(self.result["content"]).to(contain('source="character"'))
-            expect(self.result["content"]).to(contain('target="checks"'))
+            expect(self.result.content).to(contain('source="character"'))
+            expect(self.result.content).to(contain('target="checks"'))
 
     with context("transform modules drawio back to markdown"):
         with before.each:
             self.CleanEngineering = _load_clean_engineering(fidelity="modules", format="markdown")
             drawio = _invoke_transform(
                 self.CleanEngineering, "markdown", "drawio", _SAMPLE_MODULES_MARKDOWN
-            )["content"]
+            ).content
             self.result = _invoke_transform(
                 self.CleanEngineering, "drawio", "markdown", drawio
             )
 
         with it("should include format in the result"):
-            expect(self.result["format"]).to(equal("markdown"))
+            expect(self.result.format).to(equal("markdown"))
 
         with it("should recover module headings"):
-            expect(self.result["content"]).to(contain("# checks"))
-            expect(self.result["content"]).to(contain("# character"))
+            expect(self.result.content).to(contain("# checks"))
+            expect(self.result.content).to(contain("# character"))
 
         with it("should recover seam terms"):
-            expect(self.result["content"]).to(contain("Trait"))
-            expect(self.result["content"]).to(contain("ISource"))
+            expect(self.result.content).to(contain("Trait"))
+            expect(self.result.content).to(contain("ISource"))
 
         with it("should recover one-way dependencies"):
-            expect(self.result["content"]).to(contain("checks"))
+            expect(self.result.content).to(contain("checks"))
 
     with context("transform raises ValueError for unrecognised new formats"):
         with before.each:

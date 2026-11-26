@@ -1042,6 +1042,7 @@ html[data-abd-theme="executive"] .catalog-garden-name--foundational a:hover {
 .skill-kanban-nav .kb-col-scope-shape--increment { width: 24px; height: 16px; }
 .skill-kanban-nav .kb-col-scope-shape--sprint { width: 16px; height: 22px; }
 .skill-kanban-nav .kb-col-scope-shape--story { width: 11px; height: 28px; }
+.skill-kanban-nav .kb-col-scope-shape--release { width: 36px; height: 28px; }
 .skill-kanban-nav .kb-col-scope-shape--square { width: 20px; height: 20px; }
 .skill-kanban-nav .kb-col-head-title {
   flex: 1;
@@ -3648,6 +3649,7 @@ html.foundry-scroll-pending {
 .kb-col-scope-shape--increment { width: 24px; height: 16px; }
 .kb-col-scope-shape--sprint { width: 16px; height: 22px; }
 .kb-col-scope-shape--story { width: 11px; height: 28px; }
+.kb-col-scope-shape--release { width: 36px; height: 28px; }
 .kb-col-scope-shape--square { width: 20px; height: 20px; }
 
 .kb-col-head-title {
@@ -3931,7 +3933,7 @@ html.foundry-scroll-pending {
 
 .approach-stage-row {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
   width: 100%;
   align-items: stretch;
@@ -5415,7 +5417,7 @@ a.approach-stage__label {
 
 .approach-grid--tickets,
 .approach-grid--stages {
-  grid-template-columns: 200px repeat(3, minmax(0, 1fr));
+  grid-template-columns: 200px repeat(4, minmax(0, 1fr));
 }
 
 .approach-grid__label,
@@ -5485,6 +5487,7 @@ a.approach-grid__label:hover {
 .approach-grid__shape--sprint,
 .approach-grid__shape--spec { width: 14px; }
 .approach-grid__shape--story { width: 8px; }
+.approach-grid__shape--release { width: 22px; }
 
 .approach-grid__cell {
   display: flex;

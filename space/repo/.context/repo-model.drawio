@@ -1,0 +1,370 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="CleanEngineering Model" id="CleanEngineering-model">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4200" pageHeight="3848" math="0" shadow="0">
+      <root>
+        <UserObject label="" id="0" cddSourceFormat="markdown" cddSourceDocument="# space/repo&#10;&#10;A *Repo* is one checkout of the local clone: the main clone or a linked worktree beside it. A *Branch* is a named branch on it and answers where it is checked out; its *Worktrees* are the repository's checkouts, each a *Repo*.&#10;&#10;- **Purpose:** Give every caller one object graph for the clone, its branches and worktrees, and its commits, so version control is never reimplemented with raw git output.&#10;- **Seam (terms):** Repo, ServedCheckouts, Branch, Worktrees, Commit, NewRepository, MadeRepository, WorktreeNotRemovedError, WorktreeFolderTakenError, MergeRefusedError, WorktreeClearing, ClearedWorktrees, ClearedFolder, FolderDeletion&#10;- **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/git, harness/hooks, harness/mcp, space/work_state&#10;&#10;## Repo&#10;&#10;One checkout of a git repository: its branches and its commits, what its git holds asked of its *Checkout*. The checkouts beside it are its `worktrees`.&#10;&#10;+ Repo(root: str | Path = '.')&#10;------&#10;+ root: Path&#10;+ &lt;&lt; composition &gt;&gt; checkout: Checkout&#10;+ default_branch: Branch&#10;+ &lt;&lt; composition &gt;&gt; git: Git&#10;+ &lt;&lt; composition &gt;&gt; worktrees: Worktrees&#10;+ &lt;&lt; composition &gt;&gt; publishing: Publishing&#10;+ &lt;&lt; composition &gt;&gt; refs: Refs&#10;+ &lt;&lt; composition &gt;&gt; working_tree: WorkingTree&#10;+ &lt;&lt; composition &gt;&gt; origin: Origin&#10;+ &lt;&lt; composition &gt;&gt; merges: Merges&#10;+ is_clone: bool&#10;+ is_linked_worktree: bool&#10;+ is_main_clone: bool&#10;+ checkout_folder: Path&#10;+ branches: list[Branch]&#10;&#09;-&gt; GitFacts.branch_names&#10;+ current_branch: Branch&#10;&#09;-&gt; GitFacts.head_branch&#10;+ is_on_branch: bool&#10;+ current_commit: str&#10;+ has_origin: bool&#10;+ default_start_point: str&#10;+ &lt;&lt; association &gt;&gt; main_clone: Repo&#10;----&#10;+ of_project(project: Path): Repo&#10;&#09;-&gt; Checkout.holding&#10;&#09;-&gt; ServedCheckouts.at&#10;+ path_from_top(path: Path | str): str&#10;+ branch_named(name: str): Branch&#10;+ catch_up_with_origin(fetched: bool = False): None&#10;&#09;// a checkout that cannot reach origin stays as it is, and the log says why&#10;+ close(commit_message: str): Branch&#10;&#09;// a linked worktree: its branch saved, its folder removed&#10;&#09;-&gt; Branch.save&#10;&#09;-&gt; Worktrees.remove&#10;+ push_commit(message: str, untracked: bool = True, sync_remote: bool = True): Commit&#10;&#09;-&gt; Publishing.push_commit&#10;+ push_work(): Commit&#10;&#09;-&gt; Publishing.push_work&#10;+ merge_to_main(): Commit&#10;+ push_to_main(): Commit&#10;+ make_repository(): str&#10;&#09;-&gt; NewRepository.make_from_folder&#10;+ clear_worktrees(): ClearedWorktrees&#10;&#09;// the MCP tool repo.clear_worktrees and the command /clear-worktrees&#10;&#09;-&gt; WorktreeClearing.clear&#10;+ push(hint: str = ''): str&#10;---&lt;&lt;creates&gt;&gt;--&gt; Branch&#10;---&lt;&lt;creates&gt;&gt;--&gt; Commit&#10;---&lt;&lt;creates&gt;&gt;--&gt; Worktrees&#10;---&lt;&lt;creates&gt;&gt;--&gt; WorktreeClearing&#10;---&lt;&lt;runs&gt;&gt;--&gt; Git&#10;---&lt;&lt;raises&gt;&gt;--&gt; RepoConnectError&#10;---&lt;&lt;annotated with&gt;&gt;--&gt; AgentToolSetAnnotation&#10;---&lt;&lt;annotated with&gt;&gt;--&gt; LanguageAdapter&#10;---&lt;&lt;annotated with&gt;&gt;--&gt; ToolSubject&#10;---&lt;&lt;annotated with&gt;&gt;--&gt; Mcp&#10;---&lt;&lt;annotated with&gt;&gt;--&gt; LongCall&#10;---&lt;&lt;annotated with&gt;&gt;--&gt; Command&#10;&#10;## ServedCheckouts&#10;&#10;The repository of every checkout this process works in, each made once and held while it runs, so every tool call and every session of one checkout work on the same Repo.&#10;&#10;+ ServedCheckouts()&#10;------&#10;----&#10;+ at(root: Path): Repo&#10;+ serve(repo: Repo): Repo&#10;---&lt;&lt;creates&gt;&gt;--&gt; Repo&#10;&#10;## Commit&#10;&#10;One git commit: its sha, subject, full message, and the trailers the message carries, which is what an MCP tool that makes a commit answers with.&#10;&#10;+ Commit(sha: str, message: str)&#10;------&#10;+ sha: str&#10;+ subject: str&#10;+ message: str&#10;+ trailers: dict[str, str]&#10;----&#10;&#10;## Branch&#10;&#10;Named branch on a *Repo*: where it is checked out, and checking it out, saving it, merging it, and deleting it.&#10;&#10;+ Branch(repo: Repo, name: str)&#10;------&#10;+ repo: Repo&#10;+ name: str&#10;+ exists: bool&#10;+ is_checked_out: bool&#10;&#09;// any checkout of the repository has it&#10;+ is_checked_out_here: bool&#10;&#09;// the checkout it was found from has it&#10;+ is_default: bool&#10;+ &lt;&lt; association &gt;&gt; checkout: Repo | None&#10;&#09;-&gt; Worktrees.of&#10;+ &lt;&lt; association &gt;&gt; linked_worktree: Repo | None&#10;&#09;// the checkout that has it when that is a linked worktree, not the main clone&#10;+ start_point: str&#10;----&#10;+ changed_files(): list[str]&#10;&#09;// read through Git.listed, so a file whose name git would quote is listed by the name it has on disk&#10;+ check_out(): Branch&#10;+ open_in_worktree(): Repo&#10;&#09;-&gt; Worktrees.open&#10;+ save(commit_message: str, push: bool = True): None&#10;&#09;// the one &quot;commit everything in the checkout that has it, and push it when origin lacks some of it&quot;&#10;+ push(): None&#10;&#09;// push its commits from the checkout that has it when origin lacks some of them, committing nothing&#10;+ land_on_default(): None&#10;+ merge_into_default(): Repo&#10;+ delete(unmerged: bool = False): None&#10;---&lt;&lt;asks whether a ref exists through&gt;&gt;--&gt; Repo&#10;---&lt;&lt;finds its checkout through&gt;&gt;--&gt; Worktrees&#10;&#10;## Worktrees&#10;&#10;The checkouts of one repository, as `git worktree` lists them: the main clone and each linked worktree, each the *Repo* this process holds for its folder. Which branch each has out is read from the listing, so no git starts for each checkout.&#10;&#10;+ Worktrees(repo: Repo, checkouts: ServedCheckouts)&#10;------&#10;+ by_branch: dict[Branch, Repo]&#10;----&#10;+ repository_at(folder: Path | str): Repo&#10;+ at(folder: Path | str): Repo | None&#10;+ of(branch: Branch): Repo | None&#10;+ open(branch: Branch): Repo&#10;&#09;-&gt; Repo.catch_up_with_origin&#10;+ primary_root(): Path&#10;&#09;-&gt; Checkout.main_folder&#10;+ sibling_prefix: str&#10;&#09;// what the name of every folder a branch gets beside the main clone starts with&#10;+ sibling_folder(branch: Branch): Path&#10;+ add(path: str | Path, branch: Branch): Repo&#10;&#09;// a folder already at path that is not the branch's checkout raises WorktreeFolderTakenError, unless it is the empty folder a removed worktree left&#10;+ remove(worktree: Repo): None&#10;&#09;// stops the checkout's hook daemon first; a folder still there afterwards raises WorktreeNotRemovedError&#10;---&lt;&lt;lists&gt;&gt;--&gt; Repo&#10;---&lt;&lt;reads the listing through&gt;&gt;--&gt; GitFacts&#10;---&lt;&lt;stops&gt;&gt;--&gt; HookDaemon&#10;---&lt;&lt;deletes folders through&gt;&gt;--&gt; FolderDeletion&#10;---&lt;&lt;raises&gt;&gt;--&gt; WorktreeNotRemovedError&#10;---&lt;&lt;raises&gt;&gt;--&gt; WorktreeFolderTakenError&#10;&#10;## WorktreeClearing&#10;&#10;The clearing of one repository's checkouts once their work is done: a worktree whose work is all on main and holds nothing uncommitted is removed, its branch kept; a folder beside the main clone named as its worktrees are that git no longer lists is deleted; git's record of a worktree whose folder is gone is deleted.&#10;&#10;+ WorktreeClearing(worktrees: Worktrees, main_clone: Repo, keeping: Repo)&#10;------&#10;----&#10;+ clear(): ClearedWorktrees&#10;&#09;// keeps the main clone, keeping, every worktree whose branch has commits not on main (even when its session is closed), every worktree holding work not committed, a repository of its own, and a worktree of another repository&#10;&#09;-&gt; Worktrees.remove&#10;&#09;-&gt; FolderDeletion.delete&#10;---&lt;&lt;removes worktrees through&gt;&gt;--&gt; Worktrees&#10;---&lt;&lt;reads closed sessions and runs git in&gt;&gt;--&gt; Repo&#10;---&lt;&lt;creates&gt;&gt;--&gt; ClearedWorktrees&#10;---&lt;&lt;deletes folders through&gt;&gt;--&gt; FolderDeletion&#10;&#10;## ClearedWorktrees&#10;&#10;What clearing a repository's worktrees did: the folders and records it removed and the folders it kept, each with why.&#10;&#10;+ ClearedWorktrees()&#10;------&#10;+ removed: list[ClearedFolder]&#10;+ kept: list[ClearedFolder]&#10;+ report: str&#10;----&#10;+ remove(folder: Path, reason: str): None&#10;+ keep(folder: Path, reason: str): None&#10;---&lt;&lt;holds&gt;&gt;--&gt; ClearedFolder&#10;&#10;## ClearedFolder&#10;&#10;One folder a clearing looked at, and why it was removed or kept.&#10;&#10;------&#10;+ folder: str&#10;+ reason: str&#10;+ line: str&#10;----&#10;&#10;## FolderDeletion&#10;&#10;The deletion of one folder a checkout or git left behind; when Windows refuses, read-only flags are cleared, the folder is taken over by the person's account and granted to it, and a long path is given its long-path prefix.&#10;&#10;+ FolderDeletion(folder: Path)&#10;------&#10;----&#10;+ delete(): bool&#10;&#09;// whether the folder is gone; a folder a running program holds open stays&#10;&#10;## NewRepository&#10;&#10;A folder made a git repository of its own on main, its .gitignore given what CDD writes into a project.&#10;&#10;+ NewRepository(repo: Repo)&#10;------&#10;+ root: Path&#10;----&#10;+ create(): MadeRepository&#10;+ make_from_folder(): MadeRepository&#10;+ ignore_as_cdd_does(): int&#10;+ write_ignores(): int&#10;&#10;## MadeRepository&#10;&#10;What making a folder a repository did; the tool that made it words it.&#10;&#10;------&#10;+ root: Path&#10;+ was_there: bool&#10;+ branch: str&#10;+ ignored_lines: int&#10;+ sentence: str&#10;----&#10;&#10;## WorktreeNotRemovedError : RuntimeError&#10;&#10;A worktree's folder still there after git, a forced delete, and the Windows fallbacks each tried to remove it; it names the folder left behind.&#10;&#10;+ WorktreeNotRemovedError(folder: Path)&#10;------&#10;+ folder: Path&#10;----&#10;&#10;## WorktreeFolderTakenError : RuntimeError&#10;&#10;A branch is to be opened in a worktree whose folder is already there and is not that branch's checkout; it names the branch and the folder.&#10;&#10;+ WorktreeFolderTakenError(branch: str, folder: Path)&#10;------&#10;+ branch: str&#10;+ folder: Path&#10;----&#10;&#10;## MergeRefusedError : RepoConnectError&#10;&#10;Git refused to merge one branch into the branch a checkout has checked out, such as when both changed the same lines. The merge is undone before this is raised, so the checkout is as it was.&#10;&#10;+ MergeRefusedError(branch: str, into: str, refusal: str)&#10;------&#10;+ branch: str&#10;+ into: str&#10;+ refusal: str&#10;----&#10;"><mxCell />
+        </UserObject><mxCell id="1" parent="0" />
+        <mxCell id="space-repo--repo" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Repo&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ root: Path&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; checkout: Checkout&lt;br/&gt;+ default_branch: Branch&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; git: Git&lt;br/&gt;+ worktrees: Worktrees&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; publishing: Publishing&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; refs: Refs&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; working_tree: WorkingTree&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; origin: Origin&lt;br/&gt;+ &amp;lt;&amp;lt; composition &amp;gt;&amp;gt; merges: Merges&lt;br/&gt;+ is_clone: bool&lt;br/&gt;+ is_linked_worktree: bool&lt;br/&gt;+ is_main_clone: bool&lt;br/&gt;+ checkout_folder: Path&lt;br/&gt;+ branches: list[Branch]&lt;br/&gt;+ current_branch: Branch&lt;br/&gt;+ is_on_branch: bool&lt;br/&gt;+ current_commit: str&lt;br/&gt;+ has_origin: bool&lt;br/&gt;+ default_start_point: str&lt;br/&gt;+ main_clone: Repo&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Repo(root: str | Path)&lt;br/&gt;+ of_project(project: Path): Repo&lt;br/&gt;+ path_from_top(path: Path | str): str&lt;br/&gt;+ branch_named(name: str): Branch&lt;br/&gt;+ catch_up_with_origin(fetched: bool): None&lt;br/&gt;+ close(commit_message: str): Branch&lt;br/&gt;+ push_commit(message: str, untracked: bool, sync_remote: bool): Commit&lt;br/&gt;+ push_work(): Commit&lt;br/&gt;+ merge_to_main(): Commit&lt;br/&gt;+ push_to_main(): Commit&lt;br/&gt;+ make_repository(): str&lt;br/&gt;+ clear_worktrees(): ClearedWorktrees&lt;br/&gt;+ push(hint: str): str&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="1760" y="280" width="420" height="590" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--servedcheckouts" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ServedCheckouts&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ServedCheckouts()&lt;br/&gt;+ at(root: Path): Repo&lt;br/&gt;+ serve(repo: Repo): Repo&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="1930" y="60" width="200" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--commit" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Commit&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ sha: str&lt;br/&gt;+ subject: str&lt;br/&gt;+ message: str&lt;br/&gt;+ trailers: dict[str, str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Commit(sha: str, message: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="3800" y="1110" width="200" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--branch" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Branch&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ repo: Repo&lt;br/&gt;+ name: str&lt;br/&gt;+ exists: bool&lt;br/&gt;+ is_checked_out: bool&lt;br/&gt;+ is_checked_out_here: bool&lt;br/&gt;+ is_default: bool&lt;br/&gt;+ checkout: Repo | None&lt;br/&gt;+ linked_worktree: Repo | None&lt;br/&gt;+ start_point: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Branch(repo: Repo, name: str)&lt;br/&gt;+ changed_files(): list[str]&lt;br/&gt;+ check_out(): Branch&lt;br/&gt;+ open_in_worktree(): Repo&lt;br/&gt;+ save(commit_message: str, push: bool): None&lt;br/&gt;+ push(): None&lt;br/&gt;+ land_on_default(): None&lt;br/&gt;+ merge_into_default(): Repo&lt;br/&gt;+ delete(unmerged: bool): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="2220" y="1400" width="280" height="334" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--worktrees" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Worktrees&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ by_branch: dict[Branch, Repo]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Worktrees(repo: Repo, checkouts: ServedCheckouts)&lt;br/&gt;+ repository_at(folder: Path | str): Repo&lt;br/&gt;+ at(folder: Path | str): Repo | None&lt;br/&gt;+ of(branch: Branch): Repo | None&lt;br/&gt;+ open(branch: Branch): Repo&lt;br/&gt;+ primary_root(): Path&lt;br/&gt;+ sibling_folder(branch: Branch): Path&lt;br/&gt;+ add(path: str | Path, branch: Branch): Repo&lt;br/&gt;+ remove(worktree: Repo): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="1880" y="1860" width="300" height="206" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--worktreeclearing" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;WorktreeClearing&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ WorktreeClearing(worktrees: Worktrees, main_clone: Repo, keeping: Repo)&lt;br/&gt;+ clear(): ClearedWorktrees&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="140" y="3044" width="420" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--clearedworktrees" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClearedWorktrees&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ removed: list[ClearedFolder]&lt;br/&gt;+ kept: list[ClearedFolder]&lt;br/&gt;+ report: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ClearedWorktrees()&lt;br/&gt;+ remove(folder: Path, reason: str): None&lt;br/&gt;+ keep(folder: Path, reason: str): None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="60" y="3264" width="260" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--clearedfolder" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClearedFolder&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: str&lt;br/&gt;+ reason: str&lt;br/&gt;+ line: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="250" y="3554" width="200" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--folderdeletion" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FolderDeletion&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ FolderDeletion(folder: Path)&lt;br/&gt;+ delete(): bool&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="440" y="3264" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--newrepository" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;NewRepository&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ root: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ NewRepository(repo: Repo)&lt;br/&gt;+ create(): MadeRepository&lt;br/&gt;+ make_from_folder(): MadeRepository&lt;br/&gt;+ ignore_as_cdd_does(): int&lt;br/&gt;+ write_ignores(): int&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="380" y="2568" width="220" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--maderepository" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MadeRepository&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ root: Path&lt;br/&gt;+ was_there: bool&lt;br/&gt;+ branch: str&lt;br/&gt;+ ignored_lines: int&lt;br/&gt;+ sentence: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="390" y="2858" width="200" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--worktreenotremovederror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;WorktreeNotRemovedError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ WorktreeNotRemovedError(folder: Path)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="1820" y="2180" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--worktreefoldertakenerror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;WorktreeFolderTakenError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ branch: str&lt;br/&gt;+ folder: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ WorktreeFolderTakenError(branch: str, folder: Path)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2398" width="320" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="space-repo--mergerefusederror" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MergeRefusedError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ branch: str&lt;br/&gt;+ into: str&lt;br/&gt;+ refusal: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ MergeRefusedError(branch: str, into: str, refusal: str)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=space/repo;" vertex="1" parent="1">
+          <mxGeometry x="440" y="2398" width="340" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="current_branch «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.463;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3182;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="space-repo--branch" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2010" y="1050" />
+              <mxPoint x="2610" y="1050" />
+              <mxPoint x="2610" y="1350" />
+              <mxPoint x="2290" y="1350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="worktrees «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3519;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="space-repo--worktrees" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1950" y="1100" />
+              <mxPoint x="1870" y="1100" />
+              <mxPoint x="1870" y="1340" />
+              <mxPoint x="1590" y="1340" />
+              <mxPoint x="1590" y="1820" />
+              <mxPoint x="1980" y="1820" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="current_branch «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.463;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3182;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="space-repo--branch" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2010" y="1050" />
+              <mxPoint x="2610" y="1050" />
+              <mxPoint x="2610" y="1350" />
+              <mxPoint x="2290" y="1350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="current_branch «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.463;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3182;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="space-repo--branch" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2010" y="1050" />
+              <mxPoint x="2610" y="1050" />
+              <mxPoint x="2610" y="1350" />
+              <mxPoint x="2290" y="1350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.9444;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="space-repo--commit" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2270" y="990" />
+              <mxPoint x="2330" y="990" />
+              <mxPoint x="2330" y="950" />
+              <mxPoint x="3900" y="950" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="worktrees «creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3519;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="space-repo--worktrees" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1950" y="1100" />
+              <mxPoint x="1870" y="1100" />
+              <mxPoint x="1870" y="1340" />
+              <mxPoint x="1590" y="1340" />
+              <mxPoint x="1590" y="1820" />
+              <mxPoint x="1980" y="1820" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="16" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--servedcheckouts" target="space-repo--repo" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="17" value="repo «asks whether a ref exists through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6818;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.537;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--branch" target="space-repo--repo" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2370" y="1370" />
+              <mxPoint x="2630" y="1370" />
+              <mxPoint x="2630" y="1010" />
+              <mxPoint x="2050" y="1010" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="repo «asks whether a ref exists through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6818;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.537;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--branch" target="space-repo--repo" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2370" y="1370" />
+              <mxPoint x="2630" y="1370" />
+              <mxPoint x="2630" y="1010" />
+              <mxPoint x="2050" y="1010" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="repo «asks whether a ref exists through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6818;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.537;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--branch" target="space-repo--repo" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2370" y="1370" />
+              <mxPoint x="2630" y="1370" />
+              <mxPoint x="2630" y="1010" />
+              <mxPoint x="2050" y="1010" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="repo «asks whether a ref exists through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.6818;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.537;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--branch" target="space-repo--repo" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2370" y="1370" />
+              <mxPoint x="2630" y="1370" />
+              <mxPoint x="2630" y="1010" />
+              <mxPoint x="2050" y="1010" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="19" value="«finds its checkout through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2727;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--branch" target="space-repo--worktrees" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2280" y="1820" />
+              <mxPoint x="2080" y="1820" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="«lists»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--worktrees" target="space-repo--repo" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2030" y="1250" />
+              <mxPoint x="1900" y="1250" />
+              <mxPoint x="1900" y="900" />
+              <mxPoint x="2080" y="900" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="22" value="«raises»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--worktrees" target="space-repo--worktreenotremovederror" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2030" y="2140" />
+              <mxPoint x="1940" y="2140" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="25" value="«raises»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--worktrees" target="space-repo--worktreefoldertakenerror" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2030" y="2100" />
+              <mxPoint x="220" y="2100" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2381;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="space-repo--worktreeclearing" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1900" y="1230" />
+              <mxPoint x="410" y="1230" />
+              <mxPoint x="410" y="2530" />
+              <mxPoint x="240" y="2530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="30" value="«deletes folders through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.6667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--worktrees" target="space-repo--folderdeletion" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2080" y="2150" />
+              <mxPoint x="2090" y="2150" />
+              <mxPoint x="2090" y="3230" />
+              <mxPoint x="580" y="3230" />
+              <mxPoint x="580" y="3220" />
+              <mxPoint x="570" y="3220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="31" value="«removes worktrees through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7619;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--worktreeclearing" target="space-repo--worktrees" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="460" y="3010" />
+              <mxPoint x="1790" y="3010" />
+              <mxPoint x="1790" y="2100" />
+              <mxPoint x="1980" y="2100" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="32" value="«reads closed sessions and runs git in»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--worktreeclearing" target="space-repo--repo" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="350" y="2760" />
+              <mxPoint x="1770" y="2760" />
+              <mxPoint x="1770" y="1270" />
+              <mxPoint x="2040" y="1270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="33" value="«creates»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.3333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--worktreeclearing" target="space-repo--clearedworktrees" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="280" y="3220" />
+              <mxPoint x="190" y="3220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="34" value="«deletes folders through»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.6667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.35;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--worktreeclearing" target="space-repo--folderdeletion" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="3220" />
+              <mxPoint x="510" y="3220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="35" value="«holds»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.8462;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.15;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--clearedworktrees" target="space-repo--clearedfolder" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="36" value="create" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--newrepository" target="space-repo--maderepository" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      <mxCell id="harness-git--git" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/git»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Git&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2980" y="1110" width="420" height="94" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-git--repoconnecterror" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/git»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;RepoConnectError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="3500" y="1110" width="200" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-git--checkout" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/git»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Checkout&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ is_clone: bool&lt;br/&gt;+ is_main: bool&lt;br/&gt;+ is_linked_worktree: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2568" width="240" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-git--gitfacts" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/git»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;GitFacts&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="680" y="2568" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-agent-tools--agenttoolsetannotation" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;AgentToolSetAnnotation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="60" y="1110" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-agent-tools--toolsubject" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/agent_tools»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;ToolSubject&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="400" y="1110" width="200" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--command" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Command&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1640" y="1110" width="200" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-installation--languageadapter" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/installation»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;LanguageAdapter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: str&lt;br/&gt;+ shares_file_views: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1940" y="1110" width="340" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-hooks--hookdaemon" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/hooks»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;HookDaemon&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ repo: Path&lt;br/&gt;+ toolsets: RepositoryToolsets&lt;br/&gt;+ address: HookDaemonAddress&lt;br/&gt;+ address_file: HookDaemonAddressFile&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1420" y="2180" width="300" height="142" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--mcp" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/mcp»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;Mcp&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2380" y="1110" width="200" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="harness-mcp--longcall" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: harness/mcp»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;b&gt;LongCall&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="2680" y="1110" width="200" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="git «runs» «calls succeeds on»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.8148;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="harness-git--git" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2200" y="990" />
+              <mxPoint x="2220" y="990" />
+              <mxPoint x="2220" y="970" />
+              <mxPoint x="2290" y="970" />
+              <mxPoint x="2290" y="990" />
+              <mxPoint x="3190" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="10" value="«annotated with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.0556;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="harness-agent-tools--agenttoolsetannotation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1790" y="990" />
+              <mxPoint x="180" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="11" value="«annotated with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.4074;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="harness-installation--languageadapter" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1980" y="1070" />
+              <mxPoint x="2110" y="1070" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="12" value="«annotated with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.1111;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="harness-agent-tools--toolsubject" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1820" y="1010" />
+              <mxPoint x="500" y="1010" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="13" value="«annotated with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7037;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="harness-mcp--mcp" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2140" y="1070" />
+              <mxPoint x="2480" y="1070" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="14" value="«annotated with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.7593;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="harness-mcp--longcall" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2170" y="1030" />
+              <mxPoint x="2780" y="1030" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="15" value="«annotated with»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2407;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="harness-installation--command" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1890" y="1070" />
+              <mxPoint x="1740" y="1070" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="«stops»" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.2667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--worktrees" target="harness-hooks--hookdaemon" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1960" y="2120" />
+              <mxPoint x="1570" y="2120" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="27" value="checkout" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="space-repo--repo" target="harness-git--checkout" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1920" y="880" />
+              <mxPoint x="330" y="880" />
+              <mxPoint x="330" y="2360" />
+              <mxPoint x="410" y="2360" />
+              <mxPoint x="410" y="2520" />
+              <mxPoint x="180" y="2520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -7,16 +7,17 @@ from __future__ import annotations
 
 from cdd_guidance.practices.sketch_document.sketch_outline import SketchOutline
 from harness.guidance.guidance import SketchLens
-from cdd_guidance.practices.ddd.model.markdown.nodes import (
+from cdd_guidance.practices.ddd.model.sketch.sketch_nodes import (
     BUILD_ORDER,
     SKETCH_CONTEXT,
     SKETCH_INDENT,
-    MarkdownAggregate,
-    MarkdownBoundedContext,
+    SketchBoundedContext,
+    SketchedContext,
     fenced,
     sketch_level,
 )
 from cdd_guidance.practices.ddd.model.nodes import BoundedContextMap
+from harness.guidance.practice_formats import Written
 
 _SECTION = "## domain driven design:"
 # The headings that open the DDD section of a sketch; the DDD practice declares them from here.
@@ -38,10 +39,10 @@ class SketchDddModel(BoundedContextMap):
 
     lens = _LENS
     """The section of a sketch DDD writes, opened by its `ddd:` or `domain driven design:` heading."""
-    bounded_context_type = MarkdownBoundedContext
+    bounded_context_type = SketchBoundedContext
 
 
-    def parse(self, text: str) -> "SketchDddModel":
+    def parse(self, text: str, file: str = "") -> "SketchDddModel":
         """Read the ddd section of a sketch, flattened to indentation, into this map, and return it: each context the
         section opens reads the lines under it, and the event map is wired once every aggregate has its root."""
         self.contexts = []
@@ -53,18 +54,18 @@ class SketchDddModel(BoundedContextMap):
         self.wire_events(section.events)
         return self
 
-    def render(self, canonical: BoundedContextMap | None = None, previous: str | None = None) -> str:
-        del previous
-        model = canonical or self
-        written = [_SECTION, ""]
-        for context in model.contexts:
-            written.extend(context.sketch_lines())
-        entries = [f"- {event.map_entry()}" for aggregate in model.every_aggregate for event in aggregate.events]
+    def render(self, canonical: BoundedContextMap, written: Written = Written()) -> str:
+        """canonical as the ddd section of a sketch; a sketch keeps no previous text."""
+        lines = [_SECTION, ""]
+        for context in canonical.contexts:
+            lines.extend(SketchedContext(context).lines())
+        entries = [f"- {event.map_entry()}" for aggregate in canonical.every_aggregate for event in aggregate.events]
         if entries:
-            written.extend([f"{SKETCH_CONTEXT}{_EVENT_MAP}", ""] + fenced(entries))
-        return "\n".join(written)
+            lines.extend([f"{SKETCH_CONTEXT}{_EVENT_MAP}", ""] + fenced(entries))
+        return "\n".join(lines)
 
-    def open_context(self, stripped: str) -> MarkdownBoundedContext:
+
+    def open_context(self, stripped: str) -> SketchBoundedContext:
         """The context a `Name | owner` heading opens, added to the map."""
         name, _, owner = stripped.rstrip(":").partition("|")
         context = self.bounded_context_type(name.strip(), len(self.contexts) + 1)
@@ -80,7 +81,7 @@ class _SectionReading:
 
     def __init__(self, sketch: SketchDddModel) -> None:
         self._sketch = sketch
-        self.contexts: list[tuple[MarkdownBoundedContext, list[str]]] = []
+        self.contexts: list[tuple[SketchBoundedContext, list[str]]] = []
         self.events: list[str] = []
         # The lines of the context being read; none while a section is being skipped.
         self._lines: list[str] | None = None

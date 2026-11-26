@@ -76,7 +76,7 @@ Do not render UX as markdown from a multi-lens sketch file — that output is no
 
 2. **`build_render_calls`** — pass the approved sketch path and the stage's required format list (e.g. `["drawio", "markdown"]` at discovery). Returns JSON: one `render.render` entry per practice × format. Each entry carries the **full sketch file** as `content` with `source: sketch` so each practice parses only its own `##` section.
 
-3. **`render_approved_sketch`** — run that JSON in a background sub-agent (non-blocking). Each call is `render.render(guidance: {toolset, fidelity}, format, content, source=sketch)`. Then follow `render.place_rendered` on the written files.
+3. **`render_approved_sketch`** — run that JSON in a background sub-agent (non-blocking). Each call is `render.render(guidance: {toolset, fidelity}, format, paths=<the sketch file>, source=sketch)`. Render saves each drawio, whiteboard, or markdown file beside the sketch; follow `render.place_rendered` for the code it answers with.
 
 Do not invent render parameters in the sub-agent — `build_render_calls` owns them.
 
@@ -104,6 +104,8 @@ Each question is one of these:
 - Or the same kind of question after you have read context. Still ask. Link to the recommendation source and location at the file you read.
 
 Do not skip the question because you found an answer. Do not sketch between these questions.
+
+**Keep asking when the person is in a hurry.** A request to hurry, to go faster, or to "just proceed with the sketch" means move through the loop quickly, not stop asking: ask fewer, sharper questions, one or two per theme with your recommendation first, and keep each turn short. The questions are what a sketch is for, because the person's answers are the only thing that separates the sketch from a guess, and a sketch made without them hands every wrong assumption on to generate. Skip the questions only when the person says plainly to stop asking and decide for them; then mark each decision you made alone as `? assumed` in the sketch, so the next review sees which lines nobody agreed.
 
 **Always use the AskQuestion tool** — never list options as plain chat text. One tool call = one question:
 
@@ -165,6 +167,7 @@ Prose that is not part of a practice's tree — open questions, what is settled,
 
 ### Rules
 
+- **`hurry-keeps-the-questions`** — When the person asks to hurry or to proceed, ask fewer, sharper questions instead of none. Stop asking only when they say plainly to stop, and mark what you then decided alone as `? assumed`, because the answers are what make a sketch better than a guess.
 - **`views-already-named`** — When the user names the practices or fidelities, do not ask which views. Proceed to the shell.
 - **`shell-before-questions`** — The first save is the shell. Its level of detail is that fidelity's **Scaffold** section. Its notation is the practice sketch template. Do not read practice Rules to produce the shell.
 - **`themes-after-shell`** — After the shell is saved, give a prioritized theme list and ask which theme to start.
@@ -183,6 +186,7 @@ Prose that is not part of a practice's tree — open questions, what is settled,
 ❌ A `=========` block per theme — themes are a queue, not sections
 ❌ Asking the user to pick a story split, a class, or a property
 ❌ Sketching after one question — wait for three or four
+❌ Dropping the questions after the person says to hurry or to proceed — ask fewer, sharper ones instead
 ❌ A second sketch file for another practice
 ❌ Rendering only one format at discovery (markdown without drawio) or specification (typescript without markdown)
 

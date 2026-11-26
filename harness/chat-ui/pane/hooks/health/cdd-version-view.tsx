@@ -29,7 +29,7 @@ export function UpdateDialogView(elements: ElementTable, version: CddVersionClie
   return (
     <Box key="update-dialog" flexDirection="column" paddingX={1} borderStyle="single" borderColor={version.colour} backgroundColor={BRAND.raised}>
       <Text weight="semibold" color={BRAND.text}>{`Update CDD ${version.label} to ${target} and reinstall?`}</Text>
-      <Text color={BRAND.muted}>Merges the latest release (the newest v* tag, not newer commits on main), stops every app and the hook server, restarts the cdd server, and installs every toolset. Other chats lose cdd for a few seconds.</Text>
+      <Text color={BRAND.muted}>Merges the latest release (the newest v* tag, not newer commits on main), stops every app, restarts the cdd server, and installs every toolset. Other chats lose cdd for a few seconds.</Text>
       <Box flexDirection="row" gap={1}>
         <Button key="update-cancel" label="Cancel" onPress={actions.cancelUpdate} />
         <Button key="update-confirm" label="Update and reinstall" variant="primary" onPress={actions.updateToLatest} />

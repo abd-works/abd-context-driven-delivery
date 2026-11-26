@@ -3,7 +3,7 @@
 - A caller never lays out HTML, waypoints, or mxCell attributes. They ask `Drawio` to create or scan a path.
 - *DrawIOModule* always draws from the `Module` it is. It never copies purpose or seam terms into a second record.
 - *DrawIOClass* always draws from the `OoadClass` it is. Properties, operations, and stereotypes come from that class.
-- The page layout — *Geometry*, *DiagramNode*, *DiagramClass*, *DiagramModule*, the shared *ImportedClass*, *DiagramArrow*, *CardPlacement*, *ArrowRouter*, and *ContainmentForest* — belongs to the class model and is modelled in [ooad-model.md](../../.context/ooad-model.md). This module uses it; the DDD aggregate view uses it too.
+- The page layout — the framework's *Box* (harness/whiteboard), *DiagramNode*, *DiagramClass*, *DiagramModule*, the shared *ImportedClass*, *DiagramArrow*, *CardPlacement*, *ArrowRouter*, and *ContainmentForest* — belongs to the class model and is modelled in [ooad-model.md](../../.context/ooad-model.md). This module uses it; the DDD aggregate view uses it too.
 - **Invariant:** No second `*Model` / `*Entry` family restates `Module`, `OoadClass`, or `Relationship`.
 
 ---
@@ -95,6 +95,8 @@ The `drawio` format. A modules view when the model has modules and no class memb
 	// becomes the canonical model once (translate_from), then writes its own Draw.io modules and classes
 	-> CardPlacement.place
 	-> ArrowRouter.route
++ class_diagram_type: type[ClassDiagramWriter]
+	// what draws the class view; a model that lays its classes out its own way names its own, as DDD's aggregate view does
 + save(): str
 	-> render
 + kept_previous(): str | None
@@ -137,9 +139,28 @@ The toolset a caller types. Create writes a path. Scan judges layout. Repair fix
 	-> scan
 + verify_regression(examples_root: str = ""): str
 
+## ClassDiagramWriter : ClassView
+
+Writes one class-view diagram as Draw.io pages: one page, or one page per module, each drawn by its `page_type`.
+
+----
++ write(): str
++ page_type: type[ClassDiagramPageWriter]
+	// what draws one page; a writer that lays its pages out its own way names its own
+
+## ClassDiagramPageWriter : ClassViewPage
+
+One Draw.io page of a class diagram: its cards placed (keeping those a person placed), then the cells drawn round groups
+of them, then the cards, then the arrows routed around the cards.
+
+----
++ write(graph: Element, positions: dict, previous_edges: dict): None
++ enclose(root_el: Element, cards: dict[str, DrawIOClass]): None
+	// a cell round each group of the placed cards, behind them; none by default
+
 ## DrawioScanner
 
-Layout audit for an existing mxfile. It reads cells; it does not render them. Each subclass names one `RULE` and checks it in `scan_page`: `base-above-derived`, `class-title-no-markdown-bold`, `distinct-anchor-points`, `edges-approach-perpendicular`, `edges-do-not-cross-classes`, `edges-do-not-cross-other-edges`, `edges-do-not-overlap-edges`, `leaf-nodes-not-in-horizontal-row`, `prefer-short-routes`, and `stereotype-above-class-name`.
+Layout audit for an existing mxfile. It reads cells; it does not render them. Each subclass names one `RULE` and checks it in `scan_page`: `base-above-derived`, `class-title-no-markdown-bold`, `distinct-anchor-points`, `edges-approach-perpendicular`, `edges-do-not-cross-classes`, `edges-do-not-cross-other-edges`, `edges-do-not-overlap-edges`, `leaf-nodes-not-in-horizontal-row`, `prefer-short-routes`, and `stereotype-above-class-name`. `prefer-short-routes` holds only the two classes of one module (the `module=` their styles name) to its gap: an arrow between two modules is as long as the modules' places make it.
 
 + DrawioScanner(rule: str | None = None, explicit_paths: list[Path] = ())
 ------
@@ -152,9 +173,9 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 + scan_file(root: Path, file_path: Path): list[Violation]
 	// each diagram page of the file
 	-> scan_page
-+ scan_page(page: DrawioPage): list[Violation]
++ scan_page(page: ClassDiagramPage): list[Violation]
 	// each subclass checks its one rule here
-+ violation(page: DrawioPage, message: str): Violation
++ violation(page: ClassDiagramPage, message: str): Violation
 + every(): dict[str, type[DrawioScanner]]
 	// class operation
 	// every *_scanner.py beside this file, by its RULE
@@ -164,24 +185,19 @@ Layout audit for an existing mxfile. It reads cells; it does not render them. Ea
 + collect_drawio_files(root: Path): list[Path]
 + is_skipped_path(path: Path): bool
 
-## DrawioPage
+## ClassDiagramPage
 
-One page of a draw.io file (`drawio/page/drawio_page.py`, a package the class model and the scanners both read, so the scanners depend on it one way): its cells, the class boxes on it, and the edges between them. It is the one reader of draw.io cells: *DrawIOCleanEngineeringModel* parses a diagram and keeps the positions and routes of the one it replaces through it, and every scanner checks one.
+One page of a class diagram (`drawio/page/drawio_page.py`, a package the class model and the scanners both read, so the scanners depend on it one way), over the framework's draw.io page (*DrawioPage*, harness/drawio, which reads every practice's drawings): the class boxes on it, and the edges between them with their kinds, anchors, and routes, which are the class diagram's own. *DrawIOCleanEngineeringModel* parses a diagram and keeps the positions (`page.positions()`) and routes of the one it replaces through it, and every scanner checks one.
 
-+ DrawioPage(file_path: Path | None, name: str, root: Element)
++ ClassDiagramPage(page: DrawioPage, file_path: Path | None = None)
 ------
++ page: DrawioPage
 + cells: list[Element]
 + vertices: list[Element]
 + edges: list[Element]
-+ boxes: dict[str, tuple]
++ boxes: dict[str, Box]
 + class_names: dict[str, str]
 ----
-+ pages_in(mxfile: Element, file_path: Path | None = None): list[DrawioPage]
-	// class operation: each diagram page that holds a graph model
-+ whole(text: str): DrawioPage | None
-	// class operation: every cell of a document as one page
-+ cell(cell_id: str): Element | None
-+ positions(): dict[str, tuple[float, float]]
 + edges_by_ends(): dict[tuple[str, str], Element]
 + kind_of(edge: Element): str
 	// inheritance, composition, aggregation, dependency, or association

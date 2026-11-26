@@ -4,6 +4,7 @@ These examples start no server and no browser; ``context_setup_heavy_spec.py`` d
 import socket
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from expects import be_a, be_false, contain, equal, expect, have_len, raise_error
 from mamba import after, before, context, description, it
@@ -11,10 +12,10 @@ from mamba import after, before, context, description, it
 from harness.agent_tools.agent_tools import AgentInstructions
 from harness.agent_tools.tool_call import ToolCall
 from harness.guidance_actions import ActionWorksInNoSession
-from space.session.throwaway_project import ThrowawayProject
+from space.session.spec_support.throwaway_project import ThrowawayProject
 from cdd_guidance.context_setup.context_index import ContextIndex
 from cdd_guidance.context_setup.context_setup import ContextSetup
-from cdd_guidance.context_setup.live_app_capture import LiveAppCapture
+from cdd_guidance.context_setup.live_app_capture import CaptureFailed, LiveAppCapture
 
 
 def _closed_port_url() -> str:
@@ -114,3 +115,10 @@ with description("a LiveAppCapture"):
             app, other = Path(tempfile.mkdtemp()), Path(tempfile.mkdtemp())
             capture = LiveAppCapture(repo_path=str(app), capture_repo=str(other))
             expect(capture.scout_root().resolve().as_posix()).to(contain(other.resolve().as_posix()))
+
+    with context("that smoke tests a desktop app on a computer whose process list cannot be read"):
+        with it("should refuse, naming the command it listed processes with"):
+            app = Path(tempfile.mkdtemp())
+            capture = LiveAppCapture(repo_path=str(app), surface="desktop")
+            with patch("cdd_guidance.context_setup.live_app_capture.subprocess.check_output", side_effect=OSError("no process list here")):
+                expect(capture.smoke_test).to(raise_error(CaptureFailed, contain("Could not list running processes", "no process list here")))

@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
-import type { AppData } from '@cdd/harness/diagnostics/app'
+import type { AppData } from '@cdd/harness/apps/app'
 
 import { BoardStore } from '../shared/board-store'
 import { EditorAppClient } from './editor-app-client'
 import { PageFailures } from './page-failures'
 
 const PROJECT = 'C:/dev/checkout-flow'
+// The project the board shows, whose .sessions folder holds each ticket's session.json.
+const BOARD_PROJECT = 'C:/dev/shop'
 const SERVER = { folder: 'space/kanban/app', command: ['node', '--import', 'tsx', 'packages/session-board/serve.ts'] }
 // The Story UI editor as BoardFidelity.editor sends it for the Stories story-map row.
 const STORY_UI: AppData = { label: 'Story UI', status: 'running', port: 8778, url: 'http://127.0.0.1:8778/story-map', server: SERVER }
+const FILES: AppData = { label: 'Files', status: 'running', port: 9783, url: 'http://127.0.0.1:9783/', server: SERVER }
 const GRAPH: AppData = { label: 'Graph', status: 'running', port: 5173, url: 'http://127.0.0.1:5173/', server: SERVER }
 
 // What Python's app.open answers for an app, as the generated client posts it.
@@ -29,7 +32,7 @@ async function opened(app: AppData, status: AppData['status'], open: (client: Ed
   const windows: string[] = []
   const store = new BoardStore()
   const { api, posted } = answering(app, status)
-  await open(new EditorAppClient(new PageFailures(store, fetch, ''), api, url => windows.push(url)))
+  await open(new EditorAppClient(new PageFailures(store, fetch, ''), api, () => BOARD_PROJECT, url => windows.push(url)))
   return { posted, windows, toasts: store.state.toasts.map(toast => toast.text) }
 }
 
@@ -77,6 +80,50 @@ describe('Filter Knowledge Graph To Ticket Scope', () => {
     it("should open nothing and say to open it from the chat bar's status row", async () => {
       const { windows, toasts } = await opened(GRAPH, 'not running', fromWidget)
       expect([windows, toasts]).toEqual([[], ["The Graph app is not running: open it from the chat bar's status row, which starts it for that chat."]])
+    })
+  })
+})
+
+// The board shows no file itself: every link to a ticket's files opens the Files app (proposal 24).
+describe('Open Files App On Ticket Files', () => {
+  const TICKET = { name: 'checkout-flow', session: { session_file: '.sessions/checkout-flow/session.json' }, workingChat: { id: 'chat-7' } }
+  const query = (windows: string[]) => Object.fromEntries(new URL(windows[0]!).searchParams)
+
+  describe("with a fidelity's files asked for", () => {
+    it("should open the Files app on those fidelities of the ticket, in the board's project, for its chat", async () => {
+      const { posted, windows } = await opened(FILES, 'running', client => client.openFilesOn(TICKET, { fidelities: ['stories-story-map', 'ddd-bounded-context'] }))
+      expect([posted, query(windows)]).toEqual([
+        ['/app/Files/open'],
+        { project: BOARD_PROJECT, chat: 'chat-7', files: 'checkout-flow', fidelity: 'stories-story-map,ddd-bounded-context', session: '.sessions/checkout-flow/session.json' },
+      ])
+    })
+  })
+
+  describe("with a violation's place asked for", () => {
+    it('should open its file at its line', async () => {
+      const { windows } = await opened(FILES, 'running', client => client.openFilesOn(TICKET, { fidelities: ['stories-story-map'], file: 'src/order.py', line: 42 }))
+      expect([query(windows).file, query(windows).line]).toEqual(['src/order.py', '42'])
+    })
+  })
+
+  describe('with the folder the session works in asked for', () => {
+    it('should name that folder, not the session folder', async () => {
+      const { windows } = await opened(FILES, 'running', client => client.openFilesOn(TICKET, { folder: 'workpath' }))
+      expect([query(windows)['workpath-folder'], query(windows)['session-folder']]).toEqual(['checkout-flow', undefined])
+    })
+  })
+
+  describe('with the session folder and its handoff asked for', () => {
+    it('should name the session folder and the handoff', async () => {
+      const { windows } = await opened(FILES, 'running', client => client.openFilesOn(TICKET, { folder: 'session', file: '.sessions/checkout-flow/handoff.md' }))
+      expect([query(windows)['session-folder'], query(windows).file, query(windows).line]).toEqual(['checkout-flow', '.sessions/checkout-flow/handoff.md', undefined])
+    })
+  })
+
+  describe('with the Files app not running', () => {
+    it("should open nothing and say to open it from the chat bar's status row", async () => {
+      const { windows, toasts } = await opened(FILES, 'not running', client => client.openFilesOn(TICKET, { folder: 'session' }))
+      expect([windows, toasts]).toEqual([[], ["The Files app is not running: open it from the chat bar's status row, which starts it for that chat."]])
     })
   })
 })

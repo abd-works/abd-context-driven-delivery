@@ -22,7 +22,7 @@ from harness.installation.installer import Installer
 from harness.mcp._examples.parameter_types.parameter_types import ParameterTypes
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_daemon import McpDaemon
-from harness.mcp.mcp_server import McpHost, McpInstallation
+from harness.mcp.mcp_server import ChatProtocol, McpHost, McpInstallation
 from harness.mcp.spec_support import UserHome
 from harness.graph.graph import Graph
 from harness.guidance.fixtures.agentic_ops.agentic_ops import SampleMcpOps
@@ -30,12 +30,14 @@ from harness.mcp._examples.illegitimate_name.illegitimate_name import (
     IllegitimateName,
 )
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.repository_toolsets import RepositoryToolsets
+from harness.installation.install_target import InstallTarget
 from space.repo.repo import Commit
 from space.session import Sessions
 from space.work_state import WorkState
 
 
-def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":
+def _moved(stage: "str", done: "bool" = False) -> "ImportedOnlyForTypeChecking":  # noqa: F821
     """An operation whose return type names a class its module imports only for type checking, as a circular import
     needs, in a module whose annotations are text (`from __future__ import annotations`)."""
 
@@ -331,9 +333,9 @@ with description("an MCP host tool result") as self:
             self.repo = Path(tempfile.mkdtemp())
             self.work = self.repo / "work"
             self.work.mkdir()
-            Sessions(self.repo).switch("alpha", self.work)
+            Sessions(self.repo).switch("alpha", self.work, create=True)
             self.host = McpHost.from_refs((), repo=str(self.repo), project=str(self.repo))
-            self.blocks = self.host._content_blocks(Sessions(self.repo).current())
+            self.blocks = ChatProtocol(self.host).content_blocks(Sessions(self.repo).current())
             self.payload = json.loads(self.blocks[0].text)
 
         with after.each:
@@ -349,7 +351,7 @@ with description("an MCP host tool result") as self:
         with before.each:
             self.host = McpHost.from_refs((), repo=str(_REPO_ROOT), project=str(_REPO_ROOT))
             commit = Commit("abc123", "push: checkpoint\nReviewed-By: human")
-            self.payload = json.loads(self.host._content_blocks(commit)[0].text)
+            self.payload = json.loads(ChatProtocol(self.host).content_blocks(commit)[0].text)
 
         with it("should expose the commit sha as JSON"):
             expect(self.payload["sha"]).to(equal("abc123"))
@@ -383,13 +385,14 @@ with description("an MCP host") as self:
                 project=str(_REPO_ROOT),
             )
 
-        # Tickets open and close their own branches and worktrees; the repo toolset only commits and pushes.
-        with it("should expose its commit, push, and merge tools alone"):
+        # Tickets open and close their own branches and worktrees; the repo toolset commits, pushes and merges, and clears
+        # away the worktrees whose work is done.
+        with it("should expose its commit, push, merge and clear tools alone"):
             tools = [name for name in self.host.diagnose()["tools"] if name.startswith("repo.")]
-            expect(tools).to(equal(["repo.merge_to_main", "repo.push_commit", "repo.push_to_main", "repo.push_work"]))
+            expect(tools).to(equal(["repo.clear_worktrees", "repo.make_repository", "repo.merge_to_main", "repo.push_commit", "repo.push_to_main", "repo.push_work"]))
 
         with it("should resolve Cursor underscore aliases to enrolled names"):
-            expect(self.host.checkout_server.resolve_call_name("repo_push_commit")).to(
+            expect(self.host.checkout_toolsets.resolve_call_name("repo_push_commit")).to(
                 equal("repo.push_commit")
             )
 
@@ -410,13 +413,13 @@ with description("an MCP host") as self:
             expect(tools).to(contain("sessions.switch"))
 
         with it("should open the named session in that project through sessions.switch"):
-            self.host.dispatch("sessions.switch", {"name": "mcp-host-spec-session"}, project=self.project)
+            self.host.dispatch("sessions.switch", {"name": "mcp-host-spec-session", "create": True}, project=self.project)
             expect(WorkState(self.project).session).to(equal("mcp-host-spec-session"))
 
     with context("that has stood up with a published tool whose MCP name is illegitimate"):
         with before.each:
             self.host = McpHost.from_refs(
-                (IllegitimateName().registration_name,),
+                (str(IllegitimateName().reference),),
                 repo=str(_REPO_ROOT),
                 project=str(_REPO_ROOT),
             )
@@ -511,6 +514,26 @@ with description("an MCP host over every toolset of the checkout") as self:
             expect(self.restarted["exceptions"]).to(equal([]))
 
 
+# A restart imports the checkout again but the host stays, so a call the host builds must open its session from the code
+# the tools now run. Built from the code the host was first imported with, the call hands the tool a session whose
+# practices are of classes the tool no longer knows, and generate fails on the first fidelity it works at.
+with description("an MCP host that has been restarted, on a project with a session open") as self:
+    with before.each:
+        self.project = Path(tempfile.mkdtemp(prefix="mcp-host-restarted-"))
+        (self.project / ".git").mkdir()
+        sessions = Sessions(self.project)
+        sessions.opened.open(sessions.create("alpha", self.project), "")
+        self.host = McpHost.from_refs(("cdd_guidance.actions.generate.generate:Generate",), repo=str(_REPO_ROOT), project=str(self.project))
+        self.host.dispatch("cdd.restart", {})
+
+    with after.each:
+        shutil.rmtree(self.project, ignore_errors=True)
+
+    with it("should still generate the fidelity a call names"):
+        reply = self.host.dispatch("generate.generate", {"guidance": "stories-story-map"}, self.project)
+        expect(reply).to(contain("story-map.md"))
+
+
 with description("an MCP host tool ping") as self:
     with before.each:
         self.host = McpHost.from_refs(
@@ -527,7 +550,7 @@ with description("an MCP host tool ping") as self:
         expect(self.host.dispatch("hosting-demo.read_count", {})).to(equal(0))
 
     with it("should leave ping out of the tool schema"):
-        schema = self.host.checkout_server.tools["hosting-demo.increment"].input_schema
+        schema = self.host.checkout_toolsets.tools["hosting-demo.increment"].input_schema
         expect("ping" in schema["properties"]).to(equal(False))
 
     with it("should still run a tool when ping is absent"):
@@ -535,7 +558,7 @@ with description("an MCP host tool ping") as self:
 
 
 def _user_level_installation(ide: str) -> McpInstallation:
-    installation = McpInstallation.create(IdeLayout(ide), _REPO_ROOT / ".cursor", repo=_REPO_ROOT)
+    installation = McpInstallation.into(InstallTarget(IdeLayout(ide), _REPO_ROOT / ".cursor"), RepositoryToolsets(_REPO_ROOT))
     installation.is_temporary = False
     for tool in SampleMcpOps().tools.values():
         installation.write(tool)
@@ -613,7 +636,8 @@ with description("an MCP install that deploys to the IDE's user-level config") a
         with context("that is installed again from another checkout"):
             with before.each:
                 self.written = self.config.read_text(encoding="utf-8")
-                again = McpInstallation.create(IdeLayout("Claude"), self.root / "other" / ".claude", repo=self.root / "other")
+                (self.root / "other").mkdir(exist_ok=True)
+                again = McpInstallation.into(InstallTarget(IdeLayout("Claude"), self.root / "other" / ".claude"), RepositoryToolsets(self.root / "other"))
                 again.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     again.write(tool)
@@ -622,12 +646,14 @@ with description("an MCP install that deploys to the IDE's user-level config") a
             with it("should leave ~/.claude.json as it was, so open chats keep their connection"):
                 expect(self.config.read_text(encoding="utf-8")).to(equal(self.written))
 
-        with context("with a cdd server in the project's .mcp.json"):
+        # A main checkout, whose .git is a folder, is served on the stable lane, which the cdd plugin names for every chat.
+        with context("with a cdd server in the project's .mcp.json, installed from a main checkout"):
             with before.each:
                 self.project = self.root / "project"
-                (self.project / ".claude").mkdir(parents=True)
+                (self.project / ".git").mkdir(parents=True)
+                (self.project / ".claude").mkdir()
                 self.project_config = self.project / ".mcp.json"
-                self.installation = McpInstallation.create(IdeLayout("Claude"), self.project / ".claude", repo=_REPO_ROOT)
+                self.installation = McpInstallation.into(InstallTarget(IdeLayout("Claude"), self.project / ".claude"), RepositoryToolsets(self.project))
                 self.installation.is_temporary = False
                 for tool in SampleMcpOps().tools.values():
                     self.installation.write(tool)
@@ -644,6 +670,28 @@ with description("an MCP install that deploys to the IDE's user-level config") a
                 self.installation.cdd_entry.write()
                 saved = json.loads(self.project_config.read_text(encoding="utf-8"))
                 expect(saved).to(equal({"mcpServers": {"other": {"command": "other"}}}))
+
+        # A ticket's worktree, whose .git is a file, is served on the dev lane: its chats reach the dev lane's server
+        # through the project's .mcp.json, which outranks the plugin.
+        with context("with a cdd server in the project's .mcp.json, installed from a ticket's worktree"):
+            with before.each:
+                self.project = self.root / "worktree"
+                (self.project / ".claude").mkdir(parents=True)
+                (self.project / ".git").write_text("gitdir: elsewhere\n", encoding="utf-8")
+                self.project_config = self.project / ".mcp.json"
+                self.installation = McpInstallation.into(InstallTarget(IdeLayout("Claude"), self.project / ".claude"), RepositoryToolsets(self.project))
+                self.installation.is_temporary = False
+                for tool in SampleMcpOps().tools.values():
+                    self.installation.write(tool)
+                self.project_config.write_text(json.dumps({"mcpServers": {"cdd": {}, "other": {"command": "other"}}}), encoding="utf-8")
+                self.installation.cdd_entry.write()
+                self.saved = json.loads(self.project_config.read_text(encoding="utf-8"))["mcpServers"]
+
+            with it("should point the project's cdd server at the dev lane's server"):
+                expect(self.saved["cdd"]["url"]).to(equal(self.installation.served.daemon.url))
+
+            with it("should keep the project's other servers"):
+                expect(self.saved["other"]).to(equal({"command": "other"}))
 
         with it("should allow the cdd tools in ~/.claude/settings.json"):
             settings = json.loads((self.root / ".claude" / "settings.json").read_text(encoding="utf-8"))
@@ -679,7 +727,7 @@ with description("an MCP install that deploys to the IDE's user-level config") a
     with context("into a temp install tree"):
         with before.each:
             self.tree = Path(tempfile.mkdtemp())
-            self.installation = McpInstallation.create(IdeLayout("Cursor"), self.tree, repo=_REPO_ROOT)
+            self.installation = McpInstallation.into(InstallTarget(IdeLayout("Cursor"), self.tree), RepositoryToolsets(_REPO_ROOT))
             for tool in SampleMcpOps().tools.values():
                 self.installation.write(tool)
             self.installation.cdd_entry.write()
