@@ -1363,6 +1363,10 @@ The file viewer is the Files app (`harness/files_app/`): a page of its own, open
 
 Requested (2026-11-15): the file viewer becomes where the graph is worked too. A toggle at its top switches between its files and the graph; the graph view does what the Graph app does, but on the files the Files app lists, opening every file a person selects and folding them to the nodes selected. The person: "the actual file viewer is going to have a toggle that can switch from folder files and graph ... we basically ingest all of the stories and functionality that the Graph application can do except for you're now selecting file(s), eg more than one file opens; expand and collapse in file viewer based on the nodes in the graph; graph filtered like file filter is". Once these stories work, the Graph app's own epics (Explore Graph In Graph App, Filter Graph In Graph App, Review Violations In Graph App) retire into them.
 
+### (S) Person --> [Send Queued Prompts To Another Chat](../story_tests/queue-prompts-for-later/share-queue-among-robots/share_queue_among_robots_story.test.md#story-send-queued-prompts-to-another-chat)
+
+Built (2026-11-26, commit 019bbd4a4), not seen: the person selects cards in the queue band, done or not, and sends them to another chat picked from the list of chats (`prompt-queue.send_to_chat`); the other chat files each under its robot or on its own main queue, and the sent cards leave this queue, a copy kept in the queue archive. Hardened (2026-11-26, exploratory-testing defects rivet-1, 4, 5): the cards leave this queue before the message is sent and come back if the send fails, a card of several lines reads as one card, and a robot's theme goes with it whatever its spelling.
+
 ## (E) Open Files In Files App
 
 ### (S) Person --> [Open Stage Files From Chat Bar](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-stage-files-from-chat-bar)
@@ -1896,6 +1900,10 @@ Requested (2026-11-06): new in the Story UI app; replaces what the design canvas
 ### (S) Person --> [Pick An Outline Scenario's Example](../story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md#story-pick-an-outline-scenarios-example)
 
 Built in the design canvas explorer (checked 2026-11-10): `explorer.dc.html` lists an outline scenario's examples from the fixtures bundle and picking one calls `go(..., ex.name)` (`outlineRows`). Intended: the Story UI explorer does the same. Was: Intended (`claude_design.md` outline-rows): an outline scenario lists its examples from the fixtures bundle and picking one loads it on the screen; the explorer does not list them yet.
+
+### (S) Person --> [Open A Step's Domain Term As Its Class Card](../story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md#story-open-a-steps-domain-term-as-its-class-card)
+
+Built (2026-11-26, commit 9a3cd7d28): a domain term in a story explorer step opens its class card below the list, read from the class model or domain model the term links to (`class_cards.py`, `explorer.dc.html`). Hardened (2026-11-26, exploratory-testing defect widget-7, commit 865e408ef): the card shows the class's name and lines as plain words, without the model's markdown marks.
 
 ## (E) Play Stories In The Explorer
 

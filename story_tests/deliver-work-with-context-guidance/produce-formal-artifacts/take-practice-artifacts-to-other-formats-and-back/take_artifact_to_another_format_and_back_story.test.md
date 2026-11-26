@@ -205,6 +205,35 @@ Observed (`cdd_guidance/practices/clean_engineering/model/class_model_languages_
 | TypeScript code | python, typescript, javascript |
 | JavaScript code | python, typescript, javascript |
 
+#### Scenario: Read a domain model's plain class headings as classes, not its context headings
+
+Observed (`cdd_guidance/practices/clean_engineering/model/markdown/domain_model_layout_spec.py`). Source: `cdd_guidance/practices/ddd/templates/model.md` declares `artifact: [ce-domain-model]` and extends the Clean Engineering class-model template; exploratory testing defect widget-5.
+
+*Given* a domain model holds `## Ordering` and `## Billing` context headings, and under them class headings written plain with their stereotypes, such as `#### Cart <<Aggregate Root>>`
+*When* Claude Code renders it to drawio at the Clean Engineering model fidelity
+*Then* the drawing holds a card for each class heading, Cart among them, with that class's members
+  *And* no card is named after a context heading
+  *And* the drawing holds an arrow for each relationship the classes write
+
+#### Scenario: Bring a domain model back from its drawing as the person wrote it
+
+Observed (`domain_model_layout_spec.py`). Exploratory testing defect widget-1: the round trip had moved every class's language under "Kept from this file".
+
+*Given* the domain model holds front matter, each class's language, its **Invariants**, `//` notes and `->` interactions
+*When* Claude Code renders it to drawio, then the drawing back to markdown over the domain model
+*Then* the domain model reads as the person wrote it
+  *And* no class gains a constructor line the file left out
+
+#### Scenario: Keep a repository written inside its root's card as a class of its own
+
+Observed (`domain_model_layout_spec.py`). Source: `templates/class-model.md` shows the `**CartRepository** «Repository»` block; exploratory testing defect widget-8.
+
+*Given* the Cart card holds Cart's members, then the line `**CartRepository** «Repository»` and the repository's own members below it
+*When* Claude Code renders the model to drawio and to python
+*Then* the drawing and the python each hold CartRepository as its own class, with its own members
+  *And* Cart holds none of CartRepository's operations
+  *And* the markdown that comes back writes CartRepository as a block inside the Cart card again
+
 ## Story: Take Module Cards To Another Format And Back
 
 #### Scenario: Write module cards back from their drawing as the person wrote them

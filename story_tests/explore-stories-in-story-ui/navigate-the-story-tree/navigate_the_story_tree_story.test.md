@@ -125,3 +125,29 @@ Observed (`bookshop_explorer_spec.py`). Defect widget-6.
 *Given* a scenario outline in the story tree has three examples  
 *When* the Person picks the second example  
 *Then* the design canvas screen loads the second example's values
+
+## Story: Open A Step's Domain Term As Its Class Card
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| `cdd_guidance/practices/ux/model/claude_design/class_cards.py` | `ClassCard.from_section` reads the card from the class model section the term links to (commit 9a3cd7d28) |
+| `cdd_guidance/practices/ux/model/claude_design/class_cards_spec.py` | exploratory-testing defect widget-7 |
+
+#### Scenario: A step's domain term opens its class card
+
+Observed (`cdd_guidance/practices/ux/model/claude_design/story_explorer_heavy_spec.py`, commit 9a3cd7d28).
+
+*Given* Add Book To Cart's step names the domain term ++Cart++, linked to the Cart heading of the bookshop's class model  
+*When* the Person opens the term ++Cart++ in the step  
+*Then* Cart's class card shows below the story tree, with Cart's properties and operations
+
+#### Scenario: A class card shows the model's words without their markdown marks
+
+Observed (`class_cards_spec.py`). Defect widget-7: the card showed `**Cart** «Aggregate Root»` and `*Cart*`.
+
+*Given* the bookshop's class model writes the Cart heading as `**Cart** «Aggregate Root»` and its lines with `*Cart*` and `**Lines.**`  
+*When* the Person opens the term ++Cart++ in a step  
+*Then* the card's title reads Cart «Aggregate Root»  
+  *And* its lines read Cart and Lines. as plain words
