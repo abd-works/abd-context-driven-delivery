@@ -22,6 +22,8 @@ from harness.process.server_daemon import RunningServer
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _TOOLSET_REFS_ENV = "MCP_TOOLSET_REFS"
+# The folder every chat's mailbox lives in, as harness/chat reads it; unnamed, it is the person's own.
+CHATS_FOLDER_ENV = "CDD_CHATS_FOLDER"
 # How long a spec chat waits on one call: a ticket's first call builds its worktree.
 _CALL_SECONDS = 180
 # How long closing a held connection waits for it to end.
@@ -62,7 +64,7 @@ class SpecServer:
         self.home = CddHome(home or tempfile.mkdtemp(prefix="cdd-home-"))
         self.daemon = McpDaemon(self.home, McpAddress(port or self._free_port()))
         self._toolsets = toolsets
-        self._prior = {key: os.environ.get(key) for key in (CDD_HOME_ENV, SERVER_PORT_ENV, SERVER_OWNER_ENV, _TOOLSET_REFS_ENV)}
+        self._prior = {key: os.environ.get(key) for key in (CDD_HOME_ENV, SERVER_PORT_ENV, SERVER_OWNER_ENV, _TOOLSET_REFS_ENV, CHATS_FOLDER_ENV)}
         self._connections: list[HeldConnection] = []
 
     @property
@@ -71,8 +73,10 @@ class SpecServer:
 
     def install(self) -> None:
         """Install the throwaway ``~/.cdd`` serving this checkout, with no server started yet. The server it starts
-        belongs to this process and ends when it does."""
+        belongs to this process and ends when it does. Its chats live in the folder the spec named, else in a folder
+        under its own home, never in the person's."""
         os.environ[CDD_HOME_ENV] = str(self.home.folder)
+        os.environ[CHATS_FOLDER_ENV] = self._prior[CHATS_FOLDER_ENV] or str(self.home.folder / "chats")
         os.environ[SERVER_PORT_ENV] = str(self.daemon.port)
         os.environ[SERVER_OWNER_ENV] = str(os.getpid())
         os.environ[_TOOLSET_REFS_ENV] = ",".join(self._toolsets)
@@ -241,15 +245,15 @@ class ThrowawayMachine:
 def main(arguments: list[str]) -> None:
     """For specs in another language, which reach the server through ``~/.cdd/connect.py`` like an IDE does.
 
-    ``install`` sets up a throwaway ``~/.cdd`` serving this checkout and prints its folder and port as JSON; the spec
-    then names both in ``CDD_HOME`` and ``CDD_SERVER_PORT``, and its first call starts the server. ``stop FOLDER PORT``
+    ``install`` sets up a throwaway ``~/.cdd`` serving this checkout and prints its folder, port and chats folder as
+    JSON; the spec then names them in ``CDD_HOME``, ``CDD_SERVER_PORT`` and ``CDD_CHATS_FOLDER``, and its first call starts the server. ``stop FOLDER PORT``
     stops that server and removes the folder."""
     import json
 
     if arguments[:1] == ["install"]:
         server = SpecServer()
         server.install()
-        print(json.dumps({"home": str(server.home.folder), "port": server.daemon.port}))
+        print(json.dumps({"home": str(server.home.folder), "port": server.daemon.port, "chats": os.environ[CHATS_FOLDER_ENV]}))
     elif arguments[:1] == ["stop"] and len(arguments) == 3:
         SpecServer(home=arguments[1], port=int(arguments[2])).stop()
     else:
