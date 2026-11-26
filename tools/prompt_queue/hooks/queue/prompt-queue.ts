@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { AgentSpawnInput, AgentSpawnResult, EngineInterface, McpToolResult, PromptSubmitAttachment } from 'claude-code'
 
 import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
+import { EMPTY_TASK_NOTICE, isTaskAwaited, noticeAfterChange } from './awaited-task'
 import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
 
@@ -202,7 +203,7 @@ async function changeQueue($: EngineInterface, operation: string, args: Record<s
   try {
     const answered = await callQueue<QueueJson>($, operation, args)
     await update($, queue, () => answered)
-    await update($, notice, () => '')
+    await update($, notice, noticeAfterChange)
     return true
   } catch (thrown) {
     await showFailure($, `The queue did not change: ${reasonOf(thrown)}`, `Calling prompt-queue.${operation} on the cdd server, tried as ${SERVERS.join(' then ')}`)
@@ -860,9 +861,6 @@ export async function sendNow($: EngineInterface, prompt: QueuedPrompt): Promise
 }
 
 /** The steps toggle on a card: its steps show under it, or fold away again. */
-/** What + says when the prompt box is empty, since a card's new task is the prompt box's draft. */
-const EMPTY_TASK_NOTICE = 'Type the task in the prompt box and send it, or press + again, to add it to this card.'
-
 /** The card whose + was pressed on an empty prompt box: the next message sent becomes its task. */
 const stepAwaitedBy = atom({ plugin: 'prompt-queue', key: 'stepAwaitedBy' } as const, '')
 
@@ -879,13 +877,18 @@ export async function addStep($: EngineInterface, prompt: QueuedPrompt): Promise
   await $.prompt.fill({ text: '', mode: 'replace' })
 }
 
-/** A message sent while + waits on a card becomes that card's task instead of a prompt; answers whether it did. */
+/** A message sent while + waits on a card becomes that card's task instead of a prompt; answers whether it did. + waits
+ * only while its hint shows and the queue is on: a wait that has ended lets the message go to the chat. */
 export async function takeAwaitedStep($: EngineInterface, text: string): Promise<boolean> {
   const awaited = await read($, stepAwaitedBy)
   if (awaited === '' || text.trim() === '') {
     return false
   }
   await update($, stepAwaitedBy, () => '')
+  if (!isTaskAwaited(awaited, await read($, notice), await isQueueOn($))) {
+    await update($, notice, said => (said === EMPTY_TASK_NOTICE ? '' : said))
+    return false
+  }
   const prompt = (await read($, queue)).prompts.find(held => held.id === awaited)
   if (prompt === undefined) {
     await update($, notice, said => (said === EMPTY_TASK_NOTICE ? '' : said))

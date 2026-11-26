@@ -1198,6 +1198,35 @@ test('the message that became a task clears the hint, and the message after it g
   expect([seeded.stored.notice?.value, after.drop, seeded.prompts[0]!.steps!.length]).toEqual(['', undefined, 1])
 })
 
+// Rivet-2, 2026-11-26: a queue change wiped the hint while + still waited, so a later answer to the agent became a task.
+test('after + on an empty prompt box, the hint stays shown while the queue changes, since + still waits', async ($, on) => {
+  const seeded = await plusPressedEmpty($, on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-clear' })
+  await ui.unmount()
+
+  expect(seeded.stored.notice?.value).toBe('Type the task in the prompt box and send it, or press + again, to add it to this card.')
+})
+
+test('after + on an empty prompt box, a message sent once the hint is gone goes to the chat', async ($, on) => {
+  const seeded = await plusPressedEmpty($, on)
+  seeded.stored.notice = { value: '', version: seeded.stored.notice!.version + 1 }
+
+  const submitted = await $.prompt.submit({ text: 'yes, go ahead with option 2', wait: false, origin: { kind: 'composer' } })
+
+  expect([submitted.drop, seeded.prompts[0]!.steps ?? []]).toEqual([undefined, []])
+})
+
+test('after + on an empty prompt box, a message sent once the queue is switched off goes to the chat', async ($, on) => {
+  const seeded = await plusPressedEmpty($, on)
+  seeded.switchOff()
+
+  const submitted = await $.prompt.submit({ text: 'yes, go ahead with option 2', wait: false, origin: { kind: 'composer' } })
+
+  expect(submitted.drop).toBeUndefined()
+})
+
 test('+ shows on a done card with no tasks too, and its new task opens the card again so it runs', async ($, on) => {
   const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true }])
   on('prompt.read', () => ({ value: { text: 'Render the map', cursor: 14 } }))

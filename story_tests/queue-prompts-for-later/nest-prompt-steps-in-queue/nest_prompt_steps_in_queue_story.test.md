@@ -177,6 +177,24 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 *And* the prompt box is empty
 *And* the steps of ++Run the unit tier++ show under its card
 
+#### Scenario: Keep the hint shown while + waits for a task on an empty prompt box
+
+*Given* the person added a step to ++Write the scenarios++ (a) with the prompt box empty, so the band says to type the task in the prompt box and send it
+*When* the queue changes before the person sends anything, as when the agent's task list is copied onto its card
+*Then* the band still says to type the task in the prompt box and send it
+*When* the person sends ++Render the map++
+*Then* ++Write the scenarios++ has the last step ++Render the map++, not started, and the message does not reach the chat
+
+#### Scenario: Send the message to the chat once + no longer waits
+
+*Given* the person added a step to ++Write the scenarios++ (a) with the prompt box empty
+*But* the band no longer says to type the task, or the person switched the queue off
+*When* the person sends "yes, go ahead with option 2"
+*Then* the message goes to the chat
+*And* ++Write the scenarios++ gains no step
+
+Evidence: plugin tests "after + on an empty prompt box, the hint stays shown while the queue changes, since + still waits", "a message sent once the hint is gone goes to the chat" and "a message sent once the queue is switched off goes to the chat" (`register.test.tsx`, not run on a machine with no `claude` CLI), and `tools/prompt_queue/awaited-task.spec.ts` (vitest).
+
 #### Scenario: Take a step off its prompt
 
 *Given* the steps of ++Write the scenarios++ (a) show under its card: ++Read the epic++, ++Write the stories++, ++Validate them++
