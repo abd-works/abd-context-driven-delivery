@@ -1,5 +1,7 @@
 {
   "name": "ui-fixes-as-i-use-it",
   "title": "ui-fixes-as-i-use-it",
-  "scope": "feature"
+  "scope": "feature",
+  "branch": "ui-fixes-as-i-use-it",
+  "worktree": "C:\\dev\\abd-cdd-ui-fixes-as-i-use-it"
 }
