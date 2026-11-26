@@ -171,6 +171,21 @@ def _seed_measured_project(root: Path) -> None:
     _write(root, ".context/config.json", json.dumps({"code_measures": {}}))
 
 
+# Seed: in story-review's folder, what its file menu acts on: a note to delete, a note no fidelity declares, which only All
+# files lists, and a folder of scenarios to add to Stories.
+REVIEW_NOTE = "review/.context/notes.md"
+UNDECLARED_NOTE = "review/notes.txt"
+REVIEW_SCENARIOS = "review/checkout"
+REVIEW_SCENARIO_FILE = "review/checkout/checkout_story.test.md"
+
+
+def _seed_files_to_act_on(root: Path) -> None:
+    """The seeded project, with story-review's note, its undeclared note and its folder of scenarios."""
+    _seed_project(root)
+    for path, text in ((REVIEW_NOTE, "# notes\n"), (UNDECLARED_NOTE, "a note\n"), (REVIEW_SCENARIO_FILE, "# Checkout\n")):
+        _write(root, path, text)
+
+
 # Seed: plain-work, a session in a project that is a plain folder, no git repository, with Discovery and Stories alone
 # on and its story map in markdown, as the Nov 18 demo's session had them: its story map and its sketch written under
 # .context, and a note of no fidelity beside it.
@@ -234,6 +249,12 @@ class FilesStack:
         """The Files app opened on the seeded project once its config holds a code measures section, so its code is
         held to Clean Engineering's shipped limits and a node's metrics group shows."""
         return cls(seed=_seed_measured_project)
+
+    @classmethod
+    def with_files_to_act_on(cls) -> "FilesStack":
+        """The Files app opened on the seeded project once story-review's folder holds what its file menu acts on: a
+        note to delete, a note no fidelity declares and a folder of scenarios."""
+        return cls(seed=_seed_files_to_act_on)
 
     @classmethod
     def in_a_plain_folder(cls) -> "FilesStack":
