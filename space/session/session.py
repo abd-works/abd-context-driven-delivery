@@ -134,7 +134,7 @@ class SessionFileTools:
     @mcp
     @agent_tool
     def delete_file(self, path: str) -> str:
-        """Delete path, a file, or a folder with every file in it, named from the project or absolute, as the Files app's file menu asks once the person confirmed; answer the path deleted, from the project. Only what lies under the session's roots is deleted: a path outside them is refused (PathOutsideRootsError), as is a root itself (RootDeleteRefused), a path not there (NamedPathNotFoundError), the session's own session.json or a folder holding it (SessionRecordWriteRefused), and a path inside a .git folder (VersionControlPathRefused). Nothing is kept to undo it."""
+        """Delete path, a file, or a folder with every file in it, named from the project or absolute, as the Files app's file menu asks once the person confirmed; answer the path deleted, from the project. Only what lies under the session's roots is deleted: a path outside them is refused (PathOutsideRootsError), as is a root itself or a folder holding one (RootDeleteRefused), a path not there (NamedPathNotFoundError), the session's own session.json or a folder holding it (SessionRecordWriteRefused), a path inside a .git folder or a folder holding one (VersionControlPathRefused), and a read-only file or a folder holding one (ReadOnlyDeleteRefused). Every path the delete would remove is checked before anything is deleted; a link is deleted alone, never the folder it points to; and a folder's delete the file system stops part of the way says so (FolderPartlyDeleted). Nothing is kept to undo it."""
         return self.session_files.delete(path)
 
     @long_call
