@@ -46,3 +46,33 @@ Requested 2026-11-16, the person: "Make sure design canvas is a filter option fo
 *Given* the session's root holds a published design canvas the UX mockup does not name, such as one under a finished session's folder
 *When* the Files app lists every file under the session's root
 *Then* the canvas's `canvas.json` is listed with the link it is published at, so it opens as the design canvas there too
+
+## Story: List Every File In Session Folders
+
+Requested (the person, 2026-11-26): an "All files" scope button, placed before the file bar's ▤ and Δ scope buttons, that shows every file and folder in the session's folders, "everything that is there, not only the files the fidelities name or the changed ones".
+
+#### Scenario: List every file in the session's folders
+
+*Given* the session works in *board*, and Stories writes under *board/.context* and *story_tests/checkout*
+*And* *board/notes.txt* is a file no fidelity declares
+*When* the Person lists all files, pressing *All files*, the first of the scope buttons
+*Then* the file bar lists every file under *board* and under *story_tests/checkout*, *notes.txt* among them (`session.all_files`)
+*And* the stages, practices and formats selected leave none of them out
+
+#### Scenario: List each file once when roots overlap
+
+*Given* *board/.context* is a root inside *board*, the folder the session works in
+*When* the Person lists all files
+*Then* each file under *board/.context* is listed once
+
+#### Scenario: Leave out what git ignores
+
+*Given* *board/node_modules* is ignored by git
+*When* the Person lists all files
+*Then* no file under *board/node_modules* is listed
+
+#### Scenario: Go back to the selected files
+
+*Given* the Person listed all files
+*When* the Person presses ▤ All session files
+*Then* the file bar lists again only the files the stages, practices and formats selected

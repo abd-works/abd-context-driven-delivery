@@ -1393,6 +1393,26 @@ Built (2026-11-15): a right-click on a file or folder shows a menu whose one cho
 
 Built (2026-11-14): the file bar collapses to its buttons and expands again, and shows its files as a list or in their folders, the open file's folders open (`file-bar.ts` *FileBar*, `files-page-view.tsx` `FileBarView`). Requested (the person, 2026-11-14): "expand collapse file bar with buttons to swap a folder view and file list".
 
+## (E) [Act On Files From File Menu](../story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md)
+
+A right-click on a file or folder in the file bar acts on it through the session: delete it, validate it, show the rules it breaks, or make it a root of a practice. Requested (the person, 2026-11-26): "a right-click menu on the file viewer's folder/file tree, on files and folders": Delete, Validate, Display violations, and Add to practice with a submenu of the session's practices. Every rule (what may be deleted, what a root is) is the session's; the page calls one tool per choice.
+
+### (S) Person --> [Delete File Or Folder From File Menu](../story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md#story-delete-file-or-folder-from-file-menu)
+
+Requested (2026-11-26): Delete deletes the file or folder after a confirmation that says it cannot be undone (`session.delete_file`, `SessionFiles.delete`). Refused: a path outside the session's roots, a root itself, the session's session.json or a folder holding it, and anything inside a .git folder.
+
+### (S) Person --> [Validate File Or Folder From File Menu](../story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md#story-validate-file-or-folder-from-file-menu)
+
+Requested (2026-11-26): Validate runs the graph rules of each fidelity the session shows that declares the file, or any file in the folder (`session.check_changed_artifact`, *ChangedArtifact*), saving a report as Validate does.
+
+### (S) Person --> [Display Violations Of File Or Folder](../story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md#story-display-violations-of-file-or-folder)
+
+Requested (2026-11-26): Display violations shows the rules the latest reports find broken in the file or folder, each violation at its line (`ticket.violations_of`, `Report.within`); a press on one opens its file at that line.
+
+### (S) Person --> [Add File Or Folder To Practice](../story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md#story-add-file-or-folder-to-practice)
+
+Requested (2026-11-26): Add to practice ▸ lists the session's practices; choosing one adds the folder, or a file's own folder, as a root of each of that practice's fidelities, kept in session.json (`practice-session-output.add_root`, through `FidelitySessionOutput.add_root`).
+
 ## (E) Filter Files In Files App
 
 What the file list shows follows the session's guidance selection and the chat bar's dots, so the same filter holds wherever the session is worked.
@@ -1404,6 +1424,10 @@ Built (2026-11-15): a line between the file bar and the open file drags the bar 
 ### (S) Person --> [List Only The Files The Branch Changed](../story_tests/review-generated-work-in-file-viewer/review-files-in-files-app/review_files_in_files_app_story.test.md#story-list-only-the-files-the-branch-changed)
 
 Built (2026-11-15): the file bar's Changed button, with its count, lists only the files the session's branch changed, a published design canvas kept (`file-bar.ts` `toggleChangedOnly`, `entries`). Requested (the person, 2026-11-15): "Yes, add it", to a changed-only filter for a session on the whole repository, where UX's mockup pattern lists about 150 files.
+
+### (S) Person --> [List Every File In Session Folders](../story_tests/review-generated-work-in-file-viewer/filter-files-in-files-app/filter_files_in_files_app_story.test.md#story-list-every-file-in-session-folders)
+
+Requested (2026-11-26): an All files button before the file bar's ▤ and Δ scope buttons lists every file in the session's folders, its workpath and each root its practices write under, whatever the stages, practices and formats selected, not only the files the fidelities name or the branch changed (`session.all_files`, `SessionFiles.in_roots`).
 
 ### (S) Person --> Follow Chat Bar Selection In Files App
 
