@@ -224,6 +224,16 @@ with describe(PromptQueue):
         self.queue.set_steps(goal, [{"text": "Read the epic", "state": "done"}, {"text": "  ", "state": "pending"}])
         expect(self.queue.prompts[0].listed_steps).to(equal([{"text": "Read the epic", "state": "done"}]))
 
+    with it("keeps only the person's words of a step sent from a board viewer, leaving out the viewer's state"):
+        goal = self.queue.prompts[0].id
+        self.queue.set_steps(goal, [{"text": f"{VIEWER_STATE} make the header blue", "state": "pending"}])
+        expect(self.queue.prompts[0].listed_steps).to(equal([{"text": "make the header blue", "state": "pending"}]))
+
+    with it("leaves out a step that holds only a board viewer's state"):
+        goal = self.queue.prompts[0].id
+        self.queue.set_steps(goal, [{"text": "Read the epic", "state": "done"}, {"text": VIEWER_STATE, "state": "pending"}])
+        expect(self.queue.prompts[0].listed_steps).to(equal([{"text": "Read the epic", "state": "done"}]))
+
     with it("refuses a step whose state is not pending, in_progress or done, naming the state and the three it takes"):
         goal = self.queue.prompts[0].id
         expect(lambda: self.queue.set_steps(goal, [{"text": "Read the epic", "state": "completed"}])).to(raise_error(StepStateUnknown, contain("'completed'", "pending, in_progress, done")))

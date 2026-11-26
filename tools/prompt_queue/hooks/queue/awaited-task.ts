@@ -13,3 +13,13 @@ export function noticeAfterChange(shown: string): string {
 export function isTaskAwaited(awaited: string, shown: string, isOn: boolean): boolean {
   return awaited !== '' && shown === EMPTY_TASK_NOTICE && isOn
 }
+
+// The state the Claude app puts before a message the person sends while a board viewer is open: the viewer's live state,
+// written by the viewer's page, never by the person (persons_words in tools/prompt_queue/prompt_queue.py).
+const VIEWER_STATE = /\s*<artifact-view-context\b[^>]*>[\s\S]*?(?:<\/artifact-view-context>\s*|$)/g
+
+/** text as the person wrote it: any board viewer's state taken out and outer spaces trimmed, so a task says what the
+ * person asked for instead of where their viewer stood. */
+export function personsWords(text: string): string {
+  return text.replace(VIEWER_STATE, ' ').trim()
+}

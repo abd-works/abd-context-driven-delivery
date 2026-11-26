@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { AgentSpawnInput, AgentSpawnResult, EngineInterface, McpToolResult, PromptSubmitAttachment } from 'claude-code'
 
 import type { PromptStep, QueueFailure, QueueJson, QueuedPrompt, SubAgentTask } from '../../types'
-import { EMPTY_TASK_NOTICE, isTaskAwaited, noticeAfterChange } from './awaited-task'
+import { EMPTY_TASK_NOTICE, isTaskAwaited, noticeAfterChange, personsWords } from './awaited-task'
 import { finishedPlan, nextPlan, type PlanCall } from './plan-steps'
 import { PromptQueue, listedItems, parseJsonArray, slashCommandOf } from './queue-order'
 
@@ -658,10 +658,16 @@ export async function keepQueuedAttachments($: EngineInterface, text: string, at
   if (!queued) {
     return
   }
+  await attachAll($, queued.id, attachments)
+}
+
+/** Each item pasted in a message the mod drops kept as a file beside the queued prompt whose id is prompt: the engine
+ * sends the items with the submission it drops, and a plugin cannot send them with a prompt later. */
+async function attachAll($: EngineInterface, prompt: string, attachments: readonly PromptSubmitAttachment[]): Promise<void> {
   for (const attachment of attachments) {
     const data = attachment.id ? await mediaOf($, attachment.id) : undefined
     if (data) {
-      await changeQueue($, 'attach', { prompt: queued.id, filename: attachment.filename ?? '', media_type: data.mediaType, data: data.base64 })
+      await changeQueue($, 'attach', { prompt, filename: attachment.filename ?? '', media_type: data.mediaType, data: data.base64 })
     }
   }
 }
@@ -674,7 +680,7 @@ async function mediaOf($: EngineInterface, id: string): Promise<{ mediaType: str
   while (offset !== undefined) {
     const slice = await $.prompt.media({ id, offset })
     if (slice.base64 === undefined) {
-      await showFailure($, `An attachment was not queued: ${slice.unreadable ?? slice.deny}`, 'Queuing a draft with Alt+Enter, reading its pasted item')
+      await showFailure($, `An attachment was not queued: ${slice.unreadable ?? slice.deny}`, 'Keeping an item pasted in a message beside its card, reading the item')
       return undefined
     }
     slices.push(slice.base64)
@@ -877,24 +883,25 @@ export async function addStep($: EngineInterface, prompt: QueuedPrompt): Promise
   await $.prompt.fill({ text: '', mode: 'replace' })
 }
 
-/** A message sent while + waits on a card becomes that card's task instead of a prompt; answers whether it did. + waits
- * only while its hint shows and the queue is on: a wait that has ended lets the message go to the chat. */
-export async function takeAwaitedStep($: EngineInterface, text: string): Promise<boolean> {
+/** A message sent while + waits on a card becomes that card's task instead of a prompt, with the items pasted in it kept
+ * beside the card; answers whether it did. + waits only while its hint shows and the queue is on: a wait that has ended
+ * lets the message go to the chat. The task is the person's words, never a board viewer's state, and a message that is
+ * only a viewer's state leaves + waiting. */
+export async function takeAwaitedStep($: EngineInterface, text: string, attachments: readonly PromptSubmitAttachment[]): Promise<boolean> {
   const awaited = await read($, stepAwaitedBy)
-  if (awaited === '' || text.trim() === '') {
+  const words = personsWords(text)
+  if (awaited === '' || words === '') {
     return false
   }
-  await update($, stepAwaitedBy, () => '')
-  if (!isTaskAwaited(awaited, await read($, notice), await isQueueOn($))) {
-    await update($, notice, said => (said === EMPTY_TASK_NOTICE ? '' : said))
-    return false
-  }
+  const isAwaited = isTaskAwaited(awaited, await read($, notice), await isQueueOn($))
   const prompt = (await read($, queue)).prompts.find(held => held.id === awaited)
-  if (prompt === undefined) {
-    await update($, notice, said => (said === EMPTY_TASK_NOTICE ? '' : said))
+  await update($, stepAwaitedBy, () => '')
+  await update($, notice, said => (said === EMPTY_TASK_NOTICE ? '' : said))
+  if (!isAwaited || prompt === undefined) {
     return false
   }
-  await appendStep($, prompt, text)
+  await appendStep($, prompt, words)
+  await attachAll($, prompt.id, attachments)
   return true
 }
 

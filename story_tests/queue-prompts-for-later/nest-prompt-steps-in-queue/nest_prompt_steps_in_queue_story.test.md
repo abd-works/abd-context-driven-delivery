@@ -96,6 +96,14 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 *When* the agent sets the steps of a to ++Read the epic++ done and a step of only spaces, pending
 *Then* the queue answers ++Write the scenarios++ with only ++Read the epic++ done
 
+#### Scenario: Keep only the person's words of a step
+
+*Given* the chat's prompt queue holds ++Write the scenarios++ (a)
+*When* the cdd server is asked to give ++Write the scenarios++ the steps ++Read the epic++, done, and a step whose text is a board viewer's state followed by "make the header blue", pending, and another that is only a board viewer's state
+*Then* ++Write the scenarios++ has the steps ++Read the epic++, done, then "make the header blue", pending
+
+Evidence: `prompt_queue_spec.py` "keeps only the person's words of a step sent from a board viewer" and "leaves out a step that holds only a board viewer's state".
+
 #### Scenario: Refuse a state a step does not have
 
 *Given* ++Write the scenarios++ (a) has the step ++Read the epic++ done
@@ -194,6 +202,17 @@ Agreed with the person on 2026-11-17 and built the same day: the server's specs 
 *And* ++Write the scenarios++ gains no step
 
 Evidence: plugin tests "after + on an empty prompt box, the hint stays shown while the queue changes, since + still waits", "a message sent once the hint is gone goes to the chat" and "a message sent once the queue is switched off goes to the chat" (`register.test.tsx`, not run on a machine with no `claude` CLI), and `tools/prompt_queue/awaited-task.spec.ts` (vitest).
+
+#### Scenario: Add only the person's words and pasted items of a task sent while + waits
+
+*Given* the person added a step to ++Write the scenarios++ (a) with the prompt box empty, and a board viewer is open, so the Claude app puts the viewer's state before each message
+*When* the person pastes an image, types "make the header blue" and sends it
+*Then* ++Write the scenarios++ has the last step "make the header blue", not started, with none of the viewer's state
+*And* the image is kept beside ++Write the scenarios++, listed among its files
+*When* the person instead sends a message that holds only the viewer's state
+*Then* it adds no step, goes to the chat, and + still waits
+
+Evidence: plugin tests "the task sent from a board viewer is only the person's words" and "a message that is only a board viewer's state is no task, and + still waits" (`register.test.tsx`, not run on a machine with no `claude` CLI); `awaited-task.spec.ts` (vitest) for `personsWords`. Missing evidence for the image: `$.prompt.media` cannot be stubbed in Claude Code's plugin tests, so the image is kept by the same code (`attachAll`) as a draft queued with Alt+Enter, which has no plugin test either.
 
 #### Scenario: Take a step off its prompt
 

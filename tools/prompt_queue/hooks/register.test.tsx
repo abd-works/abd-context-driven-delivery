@@ -1218,6 +1218,23 @@ test('after + on an empty prompt box, a message sent once the hint is gone goes 
   expect([submitted.drop, seeded.prompts[0]!.steps ?? []]).toEqual([undefined, []])
 })
 
+// Rivet-3, 2026-11-26: the task kept the board viewer's state as its text, and the image pasted with it was lost.
+test("after + on an empty prompt box, the task sent from a board viewer is only the person's words", async ($, on) => {
+  const seeded = await plusPressedEmpty($, on)
+
+  await $.prompt.submit({ text: `${VIEWER_STATE} make the header blue`, wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: 'make the header blue', state: 'pending' }])
+})
+
+test("after + on an empty prompt box, a message that is only a board viewer's state is no task, and + still waits", async ($, on) => {
+  const seeded = await plusPressedEmpty($, on)
+
+  const submitted = await $.prompt.submit({ text: VIEWER_STATE, wait: false, origin: { kind: 'composer' } })
+
+  expect([submitted.drop, seeded.prompts[0]!.steps ?? [], seeded.stored.stepAwaitedBy?.value]).toEqual([undefined, [], 'a'])
+})
+
 test('after + on an empty prompt box, a message sent once the queue is switched off goes to the chat', async ($, on) => {
   const seeded = await plusPressedEmpty($, on)
   seeded.switchOff()

@@ -66,7 +66,7 @@ export const register: Register = on => {
       return { drop: 'Queued for later' }
     }
     // + pressed on an empty prompt box waits for the task: the message sent next becomes it, not a prompt.
-    if (e.origin?.kind !== 'plugin' && !e.command && (await takeAwaitedStep($, e.text))) {
+    if (e.origin?.kind !== 'plugin' && !e.command && (await takeAwaitedStep($, e.text, e.attachments ?? []))) {
       return { drop: 'Added as a task' }
     }
     const sent = e.command || e.origin?.kind === 'plugin' ? undefined : await queueSentPrompt($, e.text)

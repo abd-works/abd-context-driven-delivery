@@ -31,3 +31,21 @@ The step text is the whole viewer block plus the words (server stores it unchang
 Unit: a plugin test of + then send with a viewer block and an attachment; a server unit example that `set_steps`/`add_interruption` apply `persons_words` (add_interruption already does; set_steps does not).
 
 ## Also seen by
+
+## Triage
+
+- **Status:** confirmed: server half reproduced as a spec example on a throwaway queue (`set_steps` kept the viewer block verbatim); band half by reading `takeAwaitedStep` and `register.tsx` (`e.attachments` never read, the message dropped).
+- **Severity:** wrong result.
+- **Triaged by:** Cue
+
+## Fix
+
+- **Server:** `PromptSteps.plan` (behind `set_steps`) keeps only `persons_words` of each step, so a viewer's state is taken out and a step left with no words is left out, as `add_interruption` already did.
+- **Band:** `takeAwaitedStep` takes the message's `personsWords` (new in `hooks/queue/awaited-task.ts`, the TypeScript twin of `persons_words`) as the task; a message that is only a viewer's state is no task, goes to the chat and leaves + waiting. It now takes `e.attachments` from `register.tsx` and keeps each pasted item beside the card through `attachAll`, the loop `keepQueuedAttachments` used for Alt+Enter, moved out so both paths share it.
+- **Tests:**
+  - `tools/prompt_queue/prompt_queue_spec.py` (unit): "keeps only the person's words of a step sent from a board viewer" and "leaves out a step that holds only a board viewer's state"; seen failing first, now pass (125 examples). The queue's story tests (23 examples) pass.
+  - `tools/prompt_queue/awaited-task.spec.ts` (vitest): two `personsWords` examples, pass (8 in the file). Written with the function, so not seen failing on their own.
+  - `tools/prompt_queue/hooks/register.test.tsx` (plugin): "the task sent from a board viewer is only the person's words" and "a message that is only a board viewer's state is no task, and + still waits". **Not run:** no `claude` CLI on this machine; type-checked against the claude-code stubs with no new error in the test file.
+  - **The image is not tested:** `$.prompt.media` is not an event `claude-code/testing` lets a test answer (the stubs list no `prompt.media` operation), so no plugin test can hand the mod a pasted item's bytes. The Alt+Enter path that shares `attachAll` has no plugin test for the same reason.
+- **Scenarios:** "Add only the person's words and pasted items of a task sent while + waits" (Edit Prompt Steps) and "Keep only the person's words of a step" (Set Steps Of Queued Prompt) in `nest_prompt_steps_in_queue_story.test.md`.
+- **Commit:** (filled below)

@@ -234,12 +234,14 @@ class PromptSteps:
             step["state"] = "pending"
 
     def plan(self, steps: list[PromptStep]) -> None:
-        """Replace the steps with steps, in order: a step whose text is only spaces is left out, and a state that is
-        none of a step's states is refused."""
+        """Replace the steps with steps, in order, each only the person's words: a board viewer's state the Claude app
+        put in a step's text is taken out, a step left with no words is left out, and a state that is none of a step's
+        states is refused."""
         unknown = next((step["state"] for step in steps if step["state"] not in STEP_STATES), None)
         if unknown is not None:
             raise StepStateUnknown(unknown)
-        self._steps = [{"text": step["text"].strip(), "state": step["state"]} for step in steps if step["text"].strip()]
+        worded = [{"text": persons_words(step["text"]), "state": step["state"]} for step in steps]
+        self._steps = [step for step in worded if step["text"]]
 
     def add(self, text: str) -> None:
         """Add text as the last step, not started."""
