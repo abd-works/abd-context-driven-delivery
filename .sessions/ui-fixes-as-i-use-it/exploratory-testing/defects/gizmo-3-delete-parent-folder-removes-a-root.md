@@ -41,4 +41,4 @@ Reproduced with roots.py: after adding `board/deep/nested/root` to Clean Enginee
 
 Row "board/deep, a folder holding the root ..." in the Refuse outline of `story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md`. Test: `space/session/files/session_files_spec.py` (unit), `session.delete_file` that names a folder holding a root a person added: refused naming the root it holds, and the folder kept; seen failing. Fix: `SessionFiles._deletable` refuses a path that is a root or holds one that is there (*RootDeleteRefused*, "src/drafts holds src/drafts/deep, one of the session's roots ..."). The intent (a parent of a root may not go) follows the module's rule that a root is not deleted; if the person wants a parent to go with its root dropped, that is a new scenario.
 
-Commit: COMMIT
+Commit: d64447e5d (test, fix, scenario); listing halves of gizmo-4 and gizmo-5 in the same commit

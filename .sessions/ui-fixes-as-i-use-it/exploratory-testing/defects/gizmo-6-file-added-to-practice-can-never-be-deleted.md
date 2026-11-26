@@ -38,4 +38,4 @@ Reproduced with roots.py: deleting a file added to Clean Engineering was refused
 
 Row "board/notes.md, a file a person added to a practice" in the Refuse outline of `story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md`. Test: `space/session/files/session_files_spec.py` (unit), `session.delete_file` that names a file a person added to a practice: refused saying it is a file a practice reads as a root (seen failing). Fix: *RootDeleteRefused* says, for a file root, "... is one of the session's roots, a file a practice reads as a root, which is not deleted while it is one"; a folder root keeps "delete the files and folders in it"; a folder holding a root says which root.
 
-Commit: COMMIT
+Commit: d64447e5d (test, fix, scenario); listing halves of gizmo-4 and gizmo-5 in the same commit

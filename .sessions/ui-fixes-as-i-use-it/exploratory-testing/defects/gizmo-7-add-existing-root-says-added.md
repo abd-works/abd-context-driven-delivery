@@ -34,4 +34,4 @@ Reproduced with roots.py: `add_root('board/.context')` on Stories, whose own roo
 
 Scenario "Refuse a root the practice already has" in `story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md`. Test: `space/session/practices/practice_session_output_spec.py` (unit), adds a second time: refused saying it is already a root of Stories (seen failing). Fix: `PracticeSessionOutput.add_root` refuses a path that is already a root of every fidelity of the practice (OutputRootRefused, "... is already a root of Stories"), so the page's existing failure toast says "... was not added to Stories: ... is already a root of Stories"; nothing is written. No page change was needed.
 
-Commit: COMMIT
+Commit: d64447e5d (scenario) and 4fd201721 (the refusal and its test)
