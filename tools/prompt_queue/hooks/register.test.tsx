@@ -2039,6 +2039,20 @@ test("a robot's queue is closed until the robot is pressed, the robot listed wit
   await ui.unmount()
 })
 
+// The see-through press lies over the whole row, so a press on the robot's name or count opens its queue too: its blank
+// label reaches past the robot's picture, a gap, the name, a gap and the count.
+test("a robot's whole row takes the press, its robot, its name and its count", async ($, on) => {
+  groupedQueue(on)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const press = await ui.find({ type: 'Button', key: 'collapse-agent-1' })
+  const count = await ui.find({ type: 'Text', key: 'agent-progress-1' })
+  const nameAndCount = `Sparky ${count?.text ?? ''}`.length
+
+  expect(String(press?.props.label).length).toBeGreaterThan(nameAndCount + 1)
+  await ui.unmount()
+})
+
 test("a closed robot shows how many of its items are done beside it, such as 1/2", async ($, on) => {
   const seeded = groupedQueue(on, [{ description: 'Write the story map', prompts: ['Write the scenarios', 'Run the unit tier'], name: 'Sparky' }])
   seeded.stored.expandedAgents = { value: [], version: 1 }
