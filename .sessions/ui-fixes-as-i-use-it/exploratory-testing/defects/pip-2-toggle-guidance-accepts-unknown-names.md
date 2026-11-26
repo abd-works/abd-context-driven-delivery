@@ -36,4 +36,4 @@ Unit (`space/session/session_spec.py`): toggle with an unknown name of each part
 - **Scenario:** Refuse a format press no chip stands for (`story_tests/move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/generate_fidelity_outputs_in_chat_bar_story.test.md`, story Choose Format).
 - **Test (unit):** `space/session/session_spec.py`, a session's guidance selection › that has Discovery and Stories selected › that has a name pressed that no chip, practice or stage has (four examples: format drawio refused naming the chips, practice Stories refused, stage Discovery refused, version left as it was). Seen failing (no exception raised; version raised), then passing.
 - **Fix:** `space/session/practices/guidance_selection.py`: new `UnknownSelectionName` (part, name, the names offered); `GuidanceSelection._toggled` reads what the part offers inside the held change and refuses a name it does not offer before anything is written, so the version is not raised. The chat bar shows the refusal through `shownAsFailure` as it does any failed press.
-- **Commit:** see below.
+- **Commit:** d83f3cc3e.
