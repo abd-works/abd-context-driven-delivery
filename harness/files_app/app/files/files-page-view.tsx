@@ -163,22 +163,109 @@ const menuOn = (page: FilesPage, path: string) => (event: React.MouseEvent) => {
   page.menu.open(path, event.clientX, event.clientY)
 }
 
-// The menu a right-click shows, where the person clicked: show the file or folder in the system's file browser, named
-// for this system. A press anywhere else closes it.
+// The menu a right-click shows, where the person clicked: add the file to the chat's context, show it in the system's
+// file browser, named for this system, delete it once confirmed, validate it, display the rules broken in it, or add it to
+// a practice as a root. A press anywhere else closes it.
 function FileMenuView({ page }: { page: FilesPage }) {
   const { menu } = useFilesState(page)
   if (!menu) return null
   return (
     <div className="file-menu-backdrop" onClick={() => page.menu.close()} onContextMenu={event => { event.preventDefault(); page.menu.close() }}>
       <div className="file-menu" role="menu" style={{ left: menu.x, top: menu.y }} onClick={event => event.stopPropagation()}>
-        <button role="menuitem" title={`${menu.path}: goes with your next prompt in the chat that opened this page`} onClick={() => void page.menu.addToContext()}>
-          Add to context
-        </button>
-        <button role="menuitem" title={menu.path} onClick={() => void page.menu.reveal()}>
-          {revealLabelOf(navigator.platform)}
-        </button>
+        {menu.isConfirmingDelete ? <DeleteConfirmationView page={page} /> : <FileMenuChoicesView page={page} path={menu.path} />}
       </div>
     </div>
+  )
+}
+
+function FileMenuChoicesView({ page, path }: { page: FilesPage; path: string }) {
+  return (
+    <>
+      <button role="menuitem" title={`${path}: goes with your next prompt in the chat that opened this page`} onClick={() => void page.menu.addToContext()}>
+        Add to context
+      </button>
+      <button role="menuitem" title={path} onClick={() => void page.menu.reveal()}>
+        {revealLabelOf(navigator.platform)}
+      </button>
+      <button role="menuitem" title={`${path}: run the graph rules of each fidelity the session shows that declares it`} onClick={() => void page.menu.validate()}>
+        Validate
+      </button>
+      <button role="menuitem" title={`${path}: the rules the latest reports find broken in it`} onClick={() => void page.menu.showViolations()}>
+        Display violations
+      </button>
+      <PracticeSubmenuView page={page} path={path} />
+      <button role="menuitem" className="file-menu-delete" title={`${path}: asks first, since it cannot be undone`} onClick={() => page.menu.askToDelete()}>
+        Delete…
+      </button>
+    </>
+  )
+}
+
+// Add to practice ▸: the session's practices, opening beside the menu while the pointer is on it.
+function PracticeSubmenuView({ page, path }: { page: FilesPage; path: string }) {
+  const { practices } = useFilesState(page)
+  if (!practices.length) return null
+  return (
+    <div className="file-submenu-holder" role="none">
+      <button role="menuitem" aria-haspopup="menu" title={`${path}: a root of every fidelity of the practice chosen`}>
+        Add to practice <span className="file-submenu-mark">▸</span>
+      </button>
+      <div className="file-menu file-submenu" role="menu" aria-label="Add to practice">
+        {practices.map(practice => (
+          <button key={practice.name} role="menuitem" style={{ borderLeftColor: practice.colour }} onClick={() => void page.menu.addToPractice(practice)}>
+            {practice.short_name}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Delete asks first, saying it cannot be undone.
+function DeleteConfirmationView({ page }: { page: FilesPage }) {
+  return (
+    <div className="file-menu-confirm" role="alertdialog" aria-label="Confirm delete">
+      <p>{page.menu.confirmation}</p>
+      <button className="file-menu-delete" onClick={() => void page.menu.confirmDelete()}>
+        Delete
+      </button>
+      <button onClick={() => page.menu.close()}>Cancel</button>
+    </div>
+  )
+}
+
+// The rules the latest reports find broken in the file or folder the file menu displayed the violations of: each
+// violation opens its file at its line.
+function ViolationsPanelView({ page }: { page: FilesPage }) {
+  const { violations } = useFilesState(page)
+  if (!violations) return null
+  return (
+    <section className="violations-panel" aria-label={`Violations of ${violations.path}`}>
+      <header>
+        <span>Violations of {violations.path}</span>
+        <button type="button" title="Close" onClick={() => page.closeViolations()}>
+          ✕
+        </button>
+      </header>
+      {page.violationsNote ? <p className="files-note">{page.violationsNote}</p> : null}
+      {violations.report.rules.map(rule => (
+        <div key={`${rule.fidelity.slug}-${rule.rule.slug}`} className="violations-rule">
+          <h4>
+            {rule.rule.slug} <span className="files-note">{rule.fidelity.slug}</span>
+          </h4>
+          <ul>
+            {rule.violations.map(violation => (
+              <li key={`${violation.location}:${violation.line}:${violation.message}`}>
+                <button type="button" onClick={() => void page.openViolation(violation)}>
+                  {violation.location}
+                  {violation.line ? `:${violation.line}` : ''} — {violation.message}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
   )
 }
 
@@ -460,6 +547,9 @@ function ScopeTogglesView({ page }: { page: FilesPage }) {
   const { scope } = useFilesState(page)
   return (
     <div className="scope-toggles" role="group" aria-label="Files listed">
+      <button type="button" className={`scope-toggle ${scope === 'everything' ? 'is-shown' : ''}`} aria-pressed={scope === 'everything'} aria-label="All files" title="All files: every file and folder in the session's folders, whatever the stages, practices and formats selected" onClick={() => page.showScope('everything')}>
+        All files
+      </button>
       <button type="button" className={`scope-toggle ${scope === 'all' ? 'is-shown' : ''}`} aria-pressed={scope === 'all'} aria-label="All session files" title="All session files: every file of the stages, practices and formats selected, older work included" onClick={() => page.showScope('all')}>
         ▤
       </button>
@@ -580,6 +670,7 @@ export function FilesPageView({ page }: { page: FilesPage }) {
       <FilesHeadView page={page} />
       {problem ? <div className="files-problem" role="alert">{problem}</div> : null}
       <FailureBandView page={page} />
+      <ViolationsPanelView page={page} />
       <FormatAlignmentView page={page} />
       <div className={`files-body ${fileBar.isOpen ? '' : 'is-bar-collapsed'}`} style={fileBar.isOpen ? { gridTemplateColumns: `${fileBar.width}px auto 1fr` } : undefined}>
         <nav className="files-side">

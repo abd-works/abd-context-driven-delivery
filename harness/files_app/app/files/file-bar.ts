@@ -74,10 +74,25 @@ function compacted(folder: FileFolder): FileFolder {
   }
 }
 
-// The tree of the folders the files are in. Its top holds no name: the folders under it are the tree's first rows.
-export function treeOf(entries: FileEntryData[]): FileFolder {
+// The root a person added to a practice that place is in, the deepest when roots nest; none outside every root.
+const rootHolding = (place: string, roots: string[]): string | undefined =>
+  roots.filter(root => place === root || place.startsWith(`${root}/`)).sort((one, other) => other.length - one.length)[0]
+
+// The folder of the tree a file is listed in: under a root a person added to a practice, that root's folder at the top of
+// the tree, under its own name, so a file deep in the project shows at the top once added; else its own folder.
+function listingFolderOf(top: FileFolder, place: string, roots: string[]): FileFolder {
+  const root = rootHolding(place, roots)
+  if (!root) return folderAt(top, place)
+  let held = top.folders.find(folder => folder.path === root)
+  if (!held) top.folders.push((held = emptyFolder(root)))
+  return folderAt(held, place.slice(root.length + 1))
+}
+
+// The tree of the folders the files are in. Its top holds no name: the folders under it are the tree's first rows. A
+// file or folder a person added to a practice as a root (roots) sits at the top, under its own name.
+export function treeOf(entries: FileEntryData[], roots: string[] = []): FileFolder {
   const top = emptyFolder('')
-  for (const entry of entries) folderAt(top, placeOf(entry)).files.push(entry)
+  for (const entry of entries) (roots.includes(entry.path) ? top : listingFolderOf(top, placeOf(entry), roots)).files.push(entry)
   return { ...top, folders: top.folders.map(compacted).sort((one, other) => byName(one.name, other.name)), files: [...top.files].sort((one, other) => byName(nameOf(one.path), nameOf(other.path))) }
 }
 
@@ -94,10 +109,17 @@ export class FileBar {
   constructor(private readonly store: FilesStore) {}
 
   // The files the bar lists: in This session, the session's own work and a design canvas, which opens at its link; in
-  // All session files, every one.
+  // All session files, every one the selection lists.
+  // In All files, every file in the session's folders, whatever the selection lists.
   get entries(): FileEntryData[] {
-    const { entries, scope } = this.store.state
+    const { entries, scope, everyFile } = this.store.state
+    if (scope === 'everything') return everyFile ?? []
     return scope === 'session' ? entries.filter(entry => entry.is_session_work || entry.link) : entries
+  }
+
+  // The files and folders a person added to the session's practices as roots, as the session answers them.
+  get addedRoots(): string[] {
+    return [...new Set(this.store.state.practices.flatMap(practice => practice.added_roots))].sort()
   }
 
   // How many of the files the page lists are the session's own work, as the session says, for the This session button.
@@ -107,7 +129,7 @@ export class FileBar {
 
   // The folder tree of the files the bar lists.
   get tree(): FileFolder {
-    return treeOf(this.entries)
+    return treeOf(this.entries, this.addedRoots)
   }
 
   isOpen(folder: FileFolder): boolean {

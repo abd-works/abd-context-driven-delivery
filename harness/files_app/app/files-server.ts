@@ -28,8 +28,9 @@ const FAILED = 500
 // The one chat route the page needs: telling the chat that opened it a failure, and sending it a failure's fix. The stages, practices and formats
 // selected are the session's guidance selection, reached through its routes. Opening or removing chats stays with the board.
 const CHAT_ROUTES = ['/chat/:chat/send']
-// The ticket route the page lists its files through: every fidelity's files in one call.
-const TICKET_ROUTES = ['/ticket/:ticket/fidelity-files', '/ticket/:ticket/root-files']
+// The ticket routes the page lists its files through, every fidelity's files in one call, and reads the violations the
+// file menu displays through.
+const TICKET_ROUTES = ['/ticket/:ticket/fidelity-files', '/ticket/:ticket/root-files', '/ticket/:ticket/violations-of']
 
 // The Files app reads a session's files, a fidelity's files, and the comments on them, follows the cdd server's progress
 // while its graph view reads the graph, turns the session's practices on or off, tells the chat that opened it, and

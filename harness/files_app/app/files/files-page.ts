@@ -2,6 +2,7 @@ import type { CddApi } from '@cdd/cdd-shared'
 import { ChatClientGenerated } from '@cdd/harness/chat/chat'
 import { TicketClientGenerated } from '@cdd/space/kanban/ticket'
 import { SessionClientGenerated, type FileEntryData, type SessionFileData } from '@cdd/space/session/session'
+import type { ViolationData } from '@cdd/space/kanban/ticket'
 import type { SourceCallout } from '@source-view/source-callouts'
 
 import { ChatContext } from './chat-context'
@@ -15,7 +16,7 @@ import { FilesGraph } from './files-graph'
 import { FilesFoldKeys } from './files-fold-keys'
 import { FilesNotices } from './files-notices'
 import { isDrawio, isWhiteboard } from './files-paths'
-import { FilesStore, type FidelityFiles, type SelectedNode } from './files-state'
+import { FilesStore, type FidelityFiles, type FilesScope, type SelectedNode } from './files-state'
 import { formatGlyphOf } from './format-chips'
 import { GuidanceSelector } from './guidance-selector'
 import { LinkedFile, followsALink } from './linked-file'
@@ -35,6 +36,8 @@ const eachOnce = (entries: FileEntryData[]): FileEntryData[] => entries.filter((
 export class FilesPage {
   readonly store = new FilesStore()
   readonly session: SessionClientGenerated
+  // The ticket whose session the page shows, which lists its files and the violations its reports find.
+  readonly ticket: TicketClientGenerated
   readonly comments: FileCommentsActions
   // The comments on the file a link opened beside the open file, kept on that file's lines.
   readonly linkedComments: FileCommentsActions
@@ -58,12 +61,13 @@ export class FilesPage {
     readonly link: FilesLink,
   ) {
     this.session = SessionClientGenerated.named(api, link.sessionFile)
+    this.ticket = TicketClientGenerated.named(api, link.ticket)
     this.notices = new FilesNotices(this.store, api, link.chat)
     this.foldKeys = new FilesFoldKeys(this.session, this.notices)
     this.callouts = new FileCallouts(this.store, this.session)
     this.frames = new PageFrames(api)
     this.chatContext = new ChatContext(this.session, link.chat, this.notices)
-    this.menu = new FileMenu(this.store, this.chatContext, new FileBrowser(api, this.notices))
+    this.menu = new FileMenu(this, new FileBrowser(api, this.notices))
     this.comments = new FileCommentsActions(this, () => this.state.file?.path ?? '')
     this.linkedComments = new FileCommentsActions(this, () => this.state.linked?.file?.path ?? '')
     this.linkedFile = new LinkedFile(this.store, this.callouts, this.notices)
@@ -150,7 +154,7 @@ export class FilesPage {
   private async readPlace(): Promise<void> {
     try {
       const session = await this.session.show()
-      if (session) this.store.change(() => ({ place: [session.repoName, session.branch, session.root].filter(Boolean).join(' · ') }))
+      if (session) this.store.change(() => ({ place: [session.repoName, session.branch, session.root].filter(Boolean).join(' · '), practices: Object.values(session.practices ?? {}) }))
     } catch (failure) {
       this.notices.fail(`The Files app did not read where the session works: ${reasonOf(failure)}`, 'Opening the Files app, calling session.show', { kind: 'session_roots' })
     }
@@ -190,7 +194,7 @@ export class FilesPage {
   // the changed ones of.
   private async readRootFiles(): Promise<void> {
     try {
-      const rootFiles = (await TicketClientGenerated.named(this.api, this.link.ticket).rootFiles(this.link.fidelities)) ?? []
+      const rootFiles = (await this.ticket.rootFiles(this.link.fidelities)) ?? []
       this.store.change(state => ({ rootFiles, entries: this.shownFrom({ ...state, rootFiles }) }))
     } catch (failure) {
       this.notices.fail(`The Files app did not list the files under the session's root: ${reasonOf(failure)}`, 'Opening the Files app, calling ticket.root_files', { kind: 'session_roots' })
@@ -202,7 +206,7 @@ export class FilesPage {
     if (this.link.isFolder) return [{ slug: '', entries: (await (this.link.folder === 'workpath' ? this.session.workpathFiles() : this.session.folderFiles())) ?? [] }]
     if (!slugs.length) return []
     // One call for every fidelity, which shares one look at what the branch changed.
-    const bySlug = (await TicketClientGenerated.named(this.api, this.link.ticket).fidelityFiles(slugs, this.link.fidelities)) ?? {}
+    const bySlug = (await this.ticket.fidelityFiles(slugs, this.link.fidelities)) ?? {}
     return slugs.map(slug => ({ slug, entries: Object.values(bySlug[slug] ?? {}).flat() }))
   }
 
@@ -223,9 +227,51 @@ export class FilesPage {
   // This session lists the files the branch changed; All session files lists every file of the fidelities listed, older
   // work included. The stages, practices and formats selected filter both. Each press reads the files again, so one
   // renamed, added or deleted on disk since the page opened is listed as it is now.
-  showScope(scope: 'session' | 'all'): void {
+  // All files lists every file in the session's folders, read again on each press, whatever is selected.
+  showScope(scope: FilesScope): void {
     this.store.change(() => ({ scope }))
+    if (scope === 'everything') return void this.readEveryFile()
     if (this.link.namesFiles && !this.link.isFolder && !this.state.isListing) void this.listAgain()
+  }
+
+  // Every file in the session's folders, as the session lists them for All files.
+  private async readEveryFile(): Promise<void> {
+    try {
+      this.store.change(() => ({ everyFile: null }))
+      const everyFile = (await this.session.allFiles()) ?? []
+      this.store.change(() => ({ everyFile }))
+    } catch (failure) {
+      this.notices.fail(`The Files app did not list every file in the session's folders: ${reasonOf(failure)}`, 'Pressing All files, calling session.all_files', { kind: 'session_roots' })
+    }
+  }
+
+  // A file or folder deleted from the file menu: the list read again without it, and the open file closed when it was
+  // the one deleted or lay in the folder deleted.
+  async forget(path: string): Promise<void> {
+    const open = this.state.openPath
+    if (open === path || open.startsWith(`${path}/`)) {
+      this.stopRefreshing()
+      this.store.change(() => ({ openPath: '', file: null }))
+    }
+    await (this.state.scope === 'everything' ? this.readEveryFile() : this.listAgain())
+  }
+
+  // What the violations displayed say when no rule is broken in the file or folder; empty otherwise.
+  get violationsNote(): string {
+    const shown = this.state.violations
+    return shown && !shown.report.rules.length ? `No rule is broken in ${shown.path}` : ''
+  }
+
+  closeViolations(): void {
+    this.store.change(() => ({ violations: null }))
+  }
+
+  // A violation the person pressed: its file opens at its lines, as a node selected in the graph view opens.
+  async openViolation(violation: ViolationData): Promise<void> {
+    const line = violation.line ?? 1
+    const selected = [{ nodeId: violation.node_id, lines: { path: violation.location, start_line: line, end_line: violation.end_line ?? line, content: '', anchor: '' } }]
+    this.store.change(({ graph }) => ({ graph: { ...graph, selected } }))
+    await this.showNodes(selected)
   }
 
   // The files of the fidelities the page asks for and every file under the session's root, read again and shown.

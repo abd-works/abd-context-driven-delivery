@@ -124,6 +124,19 @@ button:disabled { cursor: default; opacity: 0.5; }
 .file-menu { position: fixed; display: grid; padding: var(--space-2xs); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgb(0 0 0 / 0.35); }
 .file-menu button { text-align: left; border-color: transparent; background: transparent; white-space: nowrap; }
 .file-menu button:hover { border-color: var(--select); color: var(--select); }
+.file-menu .file-menu-delete { color: var(--danger, #e05252); }
+.file-submenu-holder { position: relative; display: grid; }
+.file-submenu-mark { float: right; margin-left: var(--space-xs); }
+.file-submenu { display: none; position: absolute; left: 100%; top: 0; }
+.file-submenu button { border-left: 3px solid transparent; }
+.file-submenu-holder:hover > .file-submenu, .file-submenu-holder:focus-within > .file-submenu { display: grid; }
+.file-menu-confirm { display: grid; gap: var(--space-2xs); max-width: 320px; }
+.file-menu-confirm p { margin: 0; white-space: normal; }
+.violations-panel { margin: var(--space-2xs) var(--space-xs); padding: var(--space-2xs) var(--space-xs); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); max-height: 30vh; overflow: auto; }
+.violations-panel header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.violations-rule h4 { margin: var(--space-2xs) 0; }
+.violations-rule ul { list-style: none; margin: 0; padding: 0; }
+.violations-rule button { text-align: left; border-color: transparent; background: transparent; }
 .file-entry-row { display: flex; align-items: center; gap: var(--space-2xs); }
 .drawio-tab-link { color: var(--muted); text-decoration: none; padding: 0 var(--space-2xs); }
 .drawio-tab-link:hover { color: var(--select); }

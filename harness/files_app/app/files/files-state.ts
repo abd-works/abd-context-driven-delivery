@@ -1,5 +1,7 @@
 import type { FilterChoicesData, NodeSourceData } from '@cdd/harness/graph/graph'
 import { NO_CHOICES, NO_FILTER, type FilterSelection } from '@graph-app/filter/filter-selection'
+import type { ReportData } from '@cdd/space/kanban/ticket'
+import type { PracticeSessionOutputData } from '@cdd/space/session/practices/practice-session-output'
 import type { ExplorerEntryData, FileEntryData, GuidanceSelectionData, RangeData, SessionFileData } from '@cdd/space/session/session'
 
 import type { ShownFailure } from './failure-fixes'
@@ -37,6 +39,9 @@ export type FilesGraphState = {
 
 export const NO_GRAPH: FilesGraphState = { trees: null, readFor: '', filter: NO_FILTER, choices: NO_CHOICES, branches: {}, openNodes: [], selected: [], members: [], log: [], isReading: false, problem: '' }
 
+// Which files the page lists: every file in the session's folders, every file the selection lists, or the session's own work.
+export type FilesScope = 'everything' | 'all' | 'session'
+
 // What the page draws: the session's practices with their toggles, the files its link names, the one open, and what went wrong. The open file is the session's
 // answer itself (text, comments, folds, violations, changes), never a copy kept beside it.
 export type FilesState = {
@@ -44,9 +49,17 @@ export type FilesState = {
   guidance: GuidanceSelectionData | null
   // Where the files are, as the header shows it: the repository, the branch, and the session's root.
   place: string
-  // What the page lists of the files its stages, practices and formats select: This session, those the session's
-  // branch changed against main; or All session files, every one under the session's root, older work included.
-  scope: 'session' | 'all'
+  // What the page lists: All files, every file in the session's folders whatever is selected; or of the files its
+  // stages, practices and formats select: This session, those the session's branch changed against main; or All session
+  // files, every one under the session's root, older work included.
+  scope: FilesScope
+  // Every file in the session's folders, as the session answers them for All files; none until read.
+  everyFile: FileEntryData[] | null
+  // The session's practices as it answers them, each with the roots a person added to it, which the file menu adds to.
+  practices: PracticeSessionOutputData[]
+  // The rules the reports find broken in the file or folder the file menu displayed the violations of; none while none
+  // is displayed.
+  violations: { path: string; report: ReportData } | null
   // Every file under the session's root, each with its format and the fidelities it belongs to; none until read.
   rootFiles: FileEntryData[] | null
   // What the open file is read with: its own rules, read on its own, and the rules across the whole working copy. Both
@@ -74,7 +87,8 @@ export type FilesState = {
   failures: ShownFailure[]
   toasts: string[]
   // The file or folder a person right-clicked and where, whose menu shows there; none while no menu shows.
-  menu: { path: string; x: number; y: number } | null
+  // While it asks to confirm a delete, isConfirmingDelete.
+  menu: { path: string; x: number; y: number; isConfirmingDelete?: boolean } | null
   // The folders a person closed: every other folder is open, so a folder a filter change brings is open too. Its width
   // is what the person dragged it to, in pixels.
   fileBar: { isOpen: boolean; view: 'list' | 'folders' | 'graph'; closedFolders: string[]; width: number }
@@ -88,6 +102,9 @@ export const NO_FILES: FilesState = {
   guidance: null,
   place: '',
   scope: 'session',
+  everyFile: null,
+  practices: [],
+  violations: null,
   rootFiles: null,
   reads: { rules: false, crossFile: false },
   byFidelity: [],
