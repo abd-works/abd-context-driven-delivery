@@ -1,4 +1,6 @@
-"""session.write_file from a chat working in a ticket's worktree, on a real git main checkout and a real worktree of it:
+"""session.all_files and session.write_file on a real git checkout. session.all_files: the twin of
+``session_files_spec.py``'s stubbed examples, where a plain folder is walked; here git lists the folder the session works
+in, so what .gitignore leaves out is left out. session.write_file from a chat working in a ticket's worktree, on a real git main checkout and a real worktree of it:
 the twin of ``session_files_spec.py``'s stubbed ``session.write_file`` examples, where the session's folder and its
 checkout are given. Here git lists the worktree, so the session's checkout is found as a chat meets it. Heavy: each
 example starts git on a throwaway repository of its own."""
@@ -104,3 +106,43 @@ with description("session.write_file") as self:
         with it("should refuse rather than write into another session"):
             write = lambda: self.tool.invoke({"session": "no-such-ticket", "path": DEBUG_REPORT, "text": DEBUG_TEXT}, project=self.worktree)
             expect(write).to(raise_error(SessionNotFoundError))
+
+
+# Seed: a session working in board, whose node_modules git ignores, and a folder outside board a person adds to two
+# practices from the Files app's file menu.
+WORK_FOLDER = "board"
+NOTES = "board/notes.txt"
+IGNORED_PACKAGE = "board/node_modules/left-pad/index.js"
+ADDED_ROOT = "story_tests/checkout"
+ADDED_SCENARIOS = "story_tests/checkout/checkout_story.test.md"
+
+
+with description("session.all_files") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.top = _REPOSITORIES.copy()
+        self.main = self.top / "main"
+        for path, text in {".gitignore": "node_modules/" + chr(10), NOTES: "notes" + chr(10), IGNORED_PACKAGE: "module.exports = 1" + chr(10), ADDED_SCENARIOS: "# checkout" + chr(10)}.items():
+            (self.main / path).parent.mkdir(parents=True, exist_ok=True)
+            (self.main / path).write_text(text, encoding="utf-8")
+        _git(self.main, "add", "-A")
+        _git(self.main, "commit", "-m", "board and its packages")
+        self.session = Sessions(self.main).named("main")
+        self.session.workpath = self.main / WORK_FOLDER
+        self.listed = lambda: [entry.path for entry in self.session.all_files()]
+
+    with after.each:
+        self.home.close()
+        shutil.rmtree(self.top, ignore_errors=True)
+
+    with context("of a session working in a folder of a git checkout whose node_modules git ignores"):
+        with it("should list the files git tracks there, leaving out every file under node_modules"):
+            expect(self.listed()).to(equal([NOTES]))
+
+    with context("with a folder outside it added to two practices"):
+        with before.each:
+            self.session.practice("stories").add_root(ADDED_ROOT)
+            self.session.practice("ddd").add_root(ADDED_ROOT)
+
+        with it("should list each file in that folder once"):
+            expect([path for path in self.listed() if path == ADDED_SCENARIOS]).to(equal([ADDED_SCENARIOS]))
