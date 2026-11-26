@@ -212,7 +212,15 @@ class CodeClass(OoadClass):
         return lines + self._class_declaration(self.declared_bases(known_names))
 
     def _doc(self, intent: str) -> List[str]:
+        """A one-line doc comment for a one-line intent; a block, a line for each line of it, for a longer one."""
+        if len(intent.strip().splitlines()) > 1:
+            return self._doc_block(intent)
         return [f"/** {intent} */"] if intent else []
+
+    def _doc_block(self, intent: str) -> List[str]:
+        """The doc comment as a block: each line of intent after a star, a bare star between its paragraphs."""
+        notes = [f" * {note.strip()}" if note.strip() else " *" for note in intent.strip().splitlines()]
+        return ["/**", *notes, " */"] if notes else []
 
     def _doc_intent(self) -> str:
         """What the class's doc comment says. A language with no decorators marks the stereotypes there."""

@@ -108,6 +108,8 @@ class ClassCard:
             stripped = line.strip()
             if stripped.startswith(NOTE) and seen_signature:
                 notes.append(stripped[2:].strip())
+            if not stripped and not seen_signature:
+                intent_lines.append("")
             if not stripped or stripped.startswith(NOTE):
                 continue
             if _SIGNATURE.match(stripped):
@@ -115,7 +117,7 @@ class ClassCard:
                 constructor_line = stripped
             elif not seen_signature:
                 intent_lines.append(stripped)
-        return "\n".join(intent_lines), constructor_line, notes
+        return _paragraphs(intent_lines), constructor_line, notes
 
     def _constructors(self, constructor_line: str, notes: List[str]) -> List[Operation]:
         constructors = self._read_operations(constructor_line) if constructor_line else []
@@ -186,6 +188,12 @@ class ClassCard:
             lines.append(_public_line(operation.save()))
             lines.extend(_notes_under(operation.callees, operation.invariant_lines()))
         return lines
+
+
+def _paragraphs(lines: List[str]) -> str:
+    """lines as one text, each run of blank lines between them kept as one paragraph break, none at either end."""
+    text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines))
+    return text.strip("\n")
 
 
 def property_line(prop: Property) -> str:

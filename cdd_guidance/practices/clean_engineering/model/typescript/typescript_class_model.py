@@ -55,8 +55,8 @@ class TypeScriptClass(CodeClass):
     operation_type = TypeScriptOperation
 
     def _doc(self, intent: str) -> List[str]:
-        notes = [f" * {note.strip()}" for note in intent.splitlines() if note.strip()]
-        return ["/**", *notes, " */"] if notes else []
+        """TypeScript writes every doc comment as a block."""
+        return self._doc_block(intent)
 
     def _doc_intent(self) -> str:
         return DocComment.from_class(self, marked=False).text()

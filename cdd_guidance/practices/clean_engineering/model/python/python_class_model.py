@@ -187,7 +187,9 @@ class PythonClass(CodeClass):
         lines = ["", ""] + [f"@{snake_case_decorator(item)}" for item in self.stereotypes] + [heading]
         doc = self._doc_intent()
         if doc:
-            lines.extend([f'    """{doc}"""', ""])
+            first, *rest = doc.splitlines()
+            set_in = "".join(f"\n    {line}" if line.strip() else "\n" for line in rest)
+            lines.extend([f'    """{first}{set_in}"""', ""])
         return lines
 
     def _doc_intent(self) -> str:
