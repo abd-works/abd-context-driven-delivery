@@ -2,7 +2,7 @@
 model."""
 
 from pathlib import Path
-from expects import be_above, be_true, contain, equal, expect, raise_error
+from expects import be_above, be_false, be_true, contain, equal, expect, raise_error
 from mamba import before, context, description, it
 
 from harness.whiteboard.whiteboard import Arrow, Label, Section, Shape, UnreadableBoard, Whiteboard
@@ -14,7 +14,7 @@ from harness.whiteboard import Box
 from cdd_guidance.practices.clean_engineering.model.field_types import Relationship
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
-from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import BoardArrowRouter, WhiteboardCleanEngineeringModel
+from cdd_guidance.practices.clean_engineering.model.whiteboard.whiteboard_class_model import BoardArrowRouter, ClassBoard, WhiteboardCleanEngineeringModel
 
 
 def _class_with(name: str, sequential_order: int, properties: list) -> OoadClass:
@@ -256,6 +256,84 @@ with description("arrows routed for a board from one side of a card a person pla
 
     with it("should leave the card at a point of its own for each arrow"):
         expect(len({arrow.exit_point for arrow in self.arrows})).to(equal(3))
+
+
+class _LinkedPagesBoard(ClassBoard):
+    """A class view that puts every module on a page of its own and draws each link between pages card to card, as
+    the aggregate view does."""
+
+    links_across_pages = True
+    draws_one_page = False
+
+
+class _LinkedPagesModel(WhiteboardCleanEngineeringModel):
+    class_board_type = _LinkedPagesBoard
+
+
+def three_pages_in_a_row() -> CleanEngineeringModel:
+    """Billing, catalog and shipping, each a page of a few classes side by side, billing's invoice holding shipping's
+    parcel, so the straight way from one to the other runs through catalog's page."""
+    model = CleanEngineeringModel("shop")
+    for module_number, name in enumerate(("billing", "catalog", "shipping"), start=1):
+        module = Module(name, module_number)
+        module.classes.extend(_class_with(f"{name.title()}{index}", index, [Property(name="id", type_hint="str")]) for index in range(1, 4))
+        model.modules.append(module)
+    parcel = Property(name="parcel", type_hint="Shipping2")
+    model.modules[0].classes[1].properties.append(parcel)
+    parcel.arrow.take_kind("association")
+    return model
+
+
+def drawn_route(arrow: Arrow, start: Box, end: Box) -> list:
+    """The corners of the line a board draws for an arrow: from the middle of the side it leaves by, along each leg its
+    bends give (the first half placed from the middle of the card it leaves, the rest from the middle of the one it
+    reaches), into the middle of the side it reaches; straight when it has no bends, and straight from middle to middle
+    when it names no sides either."""
+    if not (arrow.from_side and arrow.to_side):
+        return [start.center, end.center]
+    middle = {"top": lambda box: (box.center[0], box.y), "bottom": lambda box: (box.center[0], box.y + box.h),
+              "left": lambda box: (box.x, box.center[1]), "right": lambda box: (box.x + box.w, box.center[1])}
+    points = [middle[arrow.from_side](start)]
+    finish = middle[arrow.to_side](end)
+    upright = (arrow.bends or ["v"])[0] == "v"
+    legs = (arrow.bends or ["v"])[1:]
+    for index, at in enumerate(legs):
+        box = start if index < (len(legs) + 1) // 2 else end
+        here = points[-1]
+        points.append((here[0], box.center[1] + at) if upright else (box.center[0] + at, here[1]))
+        upright = not upright
+    if legs:
+        here = points[-1]
+        points.append((here[0], finish[1]) if upright else (finish[0], here[1]))
+    points.append(finish)
+    return points
+
+
+def runs_through(points: list, box: Box) -> bool:
+    """Whether a line through points passes inside box."""
+    return any(
+        min(a[0], b[0]) < box.x + box.w and max(a[0], b[0]) > box.x and min(a[1], b[1]) < box.y + box.h and max(a[1], b[1]) > box.y
+        for a, b in zip(points, points[1:])
+    )
+
+
+with description("a class view whose links between pages are drawn card to card on a Claude whiteboard") as self:
+    with before.all:
+        self.board = Whiteboard.from_text(_LinkedPagesModel().render(three_pages_in_a_row()))
+        self.pages = {element.text: element.box for element in self.board.elements if isinstance(element, Section)}
+        self.cards = {card.id: card.box for card in cards_of(self.board).values()}
+        self.across = next(element for element in self.board.elements if isinstance(element, Arrow) and "across" in element.id)
+
+    with it("should lay the three pages side by side"):
+        expect(self.pages["billing"].x < self.pages["catalog"].x < self.pages["shipping"].x).to(be_true)
+
+    # A link between pages that cut through the pages between them would tangle with the arrows inside those pages.
+    with it("should route the link between two pages around every page it does not join"):
+        route = drawn_route(self.across, self.cards[self.across.from_id], self.cards[self.across.to_id])
+        expect(runs_through(route, self.pages["catalog"])).to(be_false)
+
+    with it("should give the link the sides it leaves and reaches its cards by"):
+        expect(bool(self.across.from_side and self.across.to_side)).to(be_true)
 
 
 with description("a modules view drawn on a Claude whiteboard") as self:

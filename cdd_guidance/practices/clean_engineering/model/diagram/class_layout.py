@@ -402,9 +402,9 @@ class _GapAxis:
 class _RouteGrid:
     """The page as grid cells: which are inside a card's clearance, and which already carry an arrow."""
 
-    def __init__(self, obstacles: Iterable[Box], width: float, height: float) -> None:
-        self.columns = int(width) // GRID_STEP
-        self.lines = int(height) // GRID_STEP
+    def __init__(self, obstacles: Iterable[Box], bounds: Tuple[int, int, int, int]) -> None:
+        # The first and last cells an arrow may use, as left, top, right, bottom.
+        self.bounds = bounds
         # Cells inside a card or its clearance, and the cells of the cards themselves, which no arrow ever enters.
         self.blocked: Set[Point] = set()
         self.inside_cards: Set[Point] = set()
@@ -454,9 +454,6 @@ class _RouteGrid:
                 for spread in range(-ARROW_SPACING_STEPS, ARROW_SPACING_STEPS + 1):
                     table.add((cell[0], cell[1] + spread) if lengthwise else (cell[0] + spread, cell[1]))
 
-    def contains(self, cell: Point) -> bool:
-        return 0 <= cell[0] < self.columns and 0 <= cell[1] < self.lines
-
 
 class _SearchedArrow(NamedTuple):
     """The arrow a search finds a way for: whose ports it may use, the cells it runs between, and how it leaves and
@@ -496,7 +493,7 @@ class _ArrowSearch:
         self._grid = grid
         self._arrow = arrow
         self._attempt = attempt
-        self._window = attempt.window if attempt.window is not None else (0, 0, grid.columns - 1, grid.lines - 1)
+        self._window = attempt.window if attempt.window is not None else grid.bounds
         self._came_from: Dict[Tuple[Point, Heading], Tuple[Point, Heading]] = {}
         self._held_vertical, self._held_horizontal = self._cells_held_against()
         # A card a person placed right against the port leaves no cell to come straight in from, so the arrow may
@@ -723,7 +720,8 @@ class ArrowRouter:
         left, top = min(x for x, _ in cells), min(y for _, y in cells)
         right, bottom = max(x for x, _ in cells), max(y for _, y in cells)
         spare = SEARCH_WINDOW_STEPS + (right - left + bottom - top) // 2
-        return (max(0, left - spare), max(0, top - spare), min(grid.columns - 1, right + spare), min(grid.lines - 1, bottom + spare))
+        first_column, first_line, last_column, last_line = grid.bounds
+        return (max(first_column, left - spare), max(first_line, top - spare), min(last_column, right + spare), min(last_line, bottom + spare))
 
     def _families(self) -> List[_InheritanceFan]:
         """One fan for each base, holding the arrows from all its subclasses."""
@@ -810,9 +808,7 @@ class ArrowRouter:
 
     def _grid_without(self, lifted: Optional[DiagramArrow]) -> _RouteGrid:
         boxes = [card.geometry for card in self._cards.values()]
-        width = max(box.x + box.w for box in boxes) + ROUTING_MARGIN
-        height = max(box.y + box.h for box in boxes) + ROUTING_MARGIN
-        grid = _RouteGrid(boxes, width, height)
+        grid = _RouteGrid(boxes, self._grid_bounds(boxes))
         for path in self._kept_paths:
             grid.claim([(x // GRID_STEP, y // GRID_STEP) for x, y in path])
         for arrow in self._arrows:
@@ -821,6 +817,13 @@ class ArrowRouter:
             if arrow is not lifted:
                 grid.claim(arrow.cells)
         return grid
+
+    def _grid_bounds(self, boxes: List[Box]) -> Tuple[int, int, int, int]:
+        """The first and last cells an arrow may use, as left, top, right, bottom: from the page's corner to
+        ROUTING_MARGIN past its last card, since a page starts at its corner."""
+        right = int(max(box.x + box.w for box in boxes) + ROUTING_MARGIN) // GRID_STEP
+        bottom = int(max(box.y + box.h for box in boxes) + ROUTING_MARGIN) // GRID_STEP
+        return (0, 0, right - 1, bottom - 1)
 
     def _assign_ports(self) -> None:
         """Give every arrow its own point on the side it uses, ordered by where the far end sits, so arrows on one side do not cross.

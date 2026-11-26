@@ -20,12 +20,13 @@ from typing import Dict, List, Optional, Tuple
 from harness.whiteboard import MAX_SIDE, Arrow, BoardElement, Box, ElementId, KeepsDocumentOnBoard, Label, Section, UnreadableBoard, Whiteboard, WhiteboardNode
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import CleanEngineeringModel, Module, OoadClass, UnreadableSource
-from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import GRID_STEP, PAGE_MARGIN, ArrowRouter, DiagramArrow, Point
+from cdd_guidance.practices.clean_engineering.model.diagram.class_layout import GRID_STEP, PAGE_MARGIN, ROUTING_MARGIN, ArrowRouter, DiagramArrow, Point
 from cdd_guidance.practices.clean_engineering.model.diagram.class_view import DEPENDENCY_LABEL, ClassView, ClassViewPage
 from cdd_guidance.practices.clean_engineering.model.diagram.diagram_node import (
     DiagramClass,
     DiagramCleanEngineeringModel,
     DiagramModule,
+    DiagramNode,
     ImportedClass,
     ModulesView,
 )
@@ -76,6 +77,8 @@ BOARD_PORT_SPACING = 2 * GRID_STEP
 """How far apart a board spreads the ends of the arrows that share one side of a card, around the side's middle."""
 BOARD_PORT_ROOM = 12
 """How far in from each corner of a side a board keeps the ends it spreads along it."""
+ENDS_LEFT_OPEN = 8 * GRID_STEP
+"""How much of each end of an arrow already drawn is left open for the next, past the stub a router leaves a port by."""
 KINDS = ("inheritance", "composition", "aggregation", "association", "dependency")
 
 
@@ -342,6 +345,16 @@ class BoardArrowRouter(ArrowRouter):
         axis = 0 if across else 1
         return int(source.center[axis]) if source.center[axis] == target.center[axis] else None
 
+    def _grid_bounds(self, boxes: List[Box]) -> Tuple[int, int, int, int]:
+        """ROUTING_MARGIN round every card on all four sides: a board runs on past its first card, so an arrow may go
+        round the outside of everything drawn."""
+        return (
+            int(min(box.x for box in boxes) - ROUTING_MARGIN) // GRID_STEP,
+            int(min(box.y for box in boxes) - ROUTING_MARGIN) // GRID_STEP,
+            int(max(box.x + box.w for box in boxes) + ROUTING_MARGIN) // GRID_STEP,
+            int(max(box.y + box.h for box in boxes) + ROUTING_MARGIN) // GRID_STEP,
+        )
+
 
 class _WhiteboardModuleLayout(ModuleLayout):
     """The modules layout, with room between modules stacked in a column for the title a section writes above its box."""
@@ -416,8 +429,9 @@ class ClassBoard(ClassView):
         for group, corner in zip(groups, corners):
             group.draw_pages_on(board, corner)
         if self.links_across_pages:
-            for arrow in self._arrows_across_pages():
-                board.add(_arrow_element(arrow, (arrow.source, arrow.target), _element("class", arrow.source), _element("class", arrow.target), parts=("across",)))
+            pages = [page for group in groups for page in group.pages]
+            for line in _LinksAcrossPages(pages).board_arrows(self._arrows_across_pages()):
+                board.add(line)
         return board
 
     def _arrows_across_pages(self) -> List[DiagramArrow]:
@@ -438,6 +452,10 @@ class _PageGroup:
         self._pages = [_ClassBoardPage(view, module) for module in modules]
         row_width = MAX_SIDE - 2 * GROUP_INSET if name else PAGE_ROW_WIDTH
         self._corners = flowed([page.size() for page in self._pages], row_width, PAGE_GAP)
+
+    @property
+    def pages(self) -> List["_ClassBoardPage"]:
+        return list(self._pages)
 
     @property
     def _inset(self) -> Tuple[float, float]:
@@ -465,18 +483,35 @@ class _PageGroup:
             page.draw_on(board, Box(corner.x + inset_x + left, corner.y + inset_y + top, 0, 0))
 
 
-class _ClassBoardPage(ClassViewPage):
+class _ClassBoardPage(ClassViewPage, DiagramNode):
     """One page of a class view on a board: its cards where the shared placement puts them and its arrows routed by
-    the shared router, the whole page in a section when it is one module's page."""
+    the shared router, the whole page in a section when it is one module's page. Once drawn, its box is where it
+    stands on the board, which a link between two other pages goes round."""
 
     def __init__(self, view: ClassBoard, module: Optional[Module] = None) -> None:
         # The board draws the links to other pages itself when it links across pages, so each page shows only its own
         # classes.
-        super().__init__(view, module, shows_imports=not view.links_across_pages)
+        ClassViewPage.__init__(self, view, module, shows_imports=not view.links_across_pages)
         self._view = view
         self._name = module.name.strip() if module is not None else ""
         self._title = view.page_title(module) if module is not None else ""
         self._laid = self.laid_out({})
+        self._drawn_paths: List[List[Point]] = []
+        DiagramNode.__init__(self, self.size()[0])
+        self.cell_id = str(_element("page", self._name))
+
+    def height(self) -> int:
+        return int(self.size()[1])
+
+    @property
+    def cards_drawn(self) -> Dict[str, WhiteboardClass]:
+        """The page's cards, by cell id, where it drew them on the board."""
+        return dict(self._laid[0])
+
+    @property
+    def drawn_paths(self) -> List[List[Point]]:
+        """The corners of each arrow inside the page, where it drew them on the board."""
+        return [list(path) for path in self._drawn_paths]
 
     @property
     def _inset(self) -> float:
@@ -499,7 +534,11 @@ class _ClassBoardPage(ClassViewPage):
             return Box(corner.x, corner.y, 0, 0)
         # The routes are written from the cards' middles, so they are worked out before the page moves.
         lines = [self._board_arrow(arrow, cards, self._name) for arrow in routed]
+        before = next(iter(cards.values())).geometry
         filled = self._moved_to(cards, corner, self._inset)
+        after = next(iter(cards.values())).geometry
+        self._drawn_paths = [[(x + after.x - before.x, y + after.y - before.y) for x, y in arrow.path] for arrow in routed if arrow.routed]
+        self.geometry = filled
         if self._name:
             board.add(Section(_element("page", self._name), box=filled, text=self._title))
         for cell_id, card in cards.items():
@@ -531,6 +570,52 @@ class _ClassBoardPage(ClassViewPage):
             from_side=arrow.exit_side, to_side=arrow.entry_side,
             bends=None if arrow.straight else arrow.bends_from_middles(cards[arrow.source].geometry, cards[arrow.target].geometry),
         )
+
+
+class _LinksAcrossPages:
+    """The links between classes on different pages of a board, each routed by the shared router round every page it
+    does not join, in the lanes between and around the pages, and clear of the arrows inside the two pages it joins,
+    so it never tangles with what a page draws. A board ends every arrow on one side of a card at its middle, so the
+    ends of the arrows already drawn are left open, for a later arrow to that side to start from too."""
+
+    def __init__(self, pages: List[_ClassBoardPage]) -> None:
+        self._pages = pages
+        self._routes: List[List[Point]] = [_off_its_ends(path) for page in pages for path in page.drawn_paths]
+
+    def board_arrows(self, arrows: List[DiagramArrow]) -> List[BoardElement]:
+        return [self._board_arrow(arrow) for arrow in arrows]
+
+    def _board_arrow(self, arrow: DiagramArrow) -> BoardElement:
+        joined = [page for page in self._pages if {arrow.source, arrow.target} & set(page.cards_drawn)]
+        cards: Dict[str, DiagramNode] = {cell_id: card for page in joined for cell_id, card in page.cards_drawn.items()}
+        walls = [page for page in self._pages if page not in joined]
+        BoardArrowRouter([*cards.values(), *walls], [arrow], kept_paths=self._routes).route()
+        if arrow.routed:
+            self._routes.append(_off_its_ends(arrow.path))
+        return _arrow_element(
+            arrow, (arrow.source, arrow.target), _element("class", arrow.source), _element("class", arrow.target), parts=("across",),
+            from_side=arrow.exit_side, to_side=arrow.entry_side,
+            bends=arrow.bends_from_middles(cards[arrow.source].geometry, cards[arrow.target].geometry),
+        )
+
+
+def _off_its_ends(path: List[Point]) -> List[Point]:
+    """The corners of path with ENDS_LEFT_OPEN cut off each end, where it leaves and reaches its cards; none when it
+    is no longer than that."""
+    return list(reversed(_cut_from_start(list(reversed(_cut_from_start(path))))))
+
+
+def _cut_from_start(path: List[Point]) -> List[Point]:
+    """The corners of path with ENDS_LEFT_OPEN cut off its start."""
+    left = ENDS_LEFT_OPEN
+    for index, (start, end) in enumerate(zip(path, path[1:])):
+        length = abs(end[0] - start[0]) + abs(end[1] - start[1])
+        if length > left:
+            step = left / length
+            cut = (round(start[0] + (end[0] - start[0]) * step), round(start[1] + (end[1] - start[1]) * step))
+            return [cut, *path[index + 1:]]
+        left -= length
+    return []
 
 
 def _arrow_element(arrow: DiagramArrow, names: Tuple[str, ...], from_id: ElementId, to_id: ElementId, parts: Tuple[str, ...] = (), **route: object) -> BoardElement:
