@@ -4,7 +4,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from expects import be_false, equal, expect, raise_error
+from expects import be_false, be_true, equal, expect
 from mamba import after, before, context, description, it
 
 from space.session import Sessions
@@ -59,9 +59,13 @@ with description("a session's folder that is removed") as self:
     with context("that still holds a file Windows refuses to remove"):
         with before.each:
             session_folder.shutil.rmtree = _held_file(REAL_RMTREE)
+            self.session.folder.remove()
 
-        with it("should refuse, naming the file still there"):
-            expect(lambda: self.session.folder.remove()).to(raise_error(PermissionError))
+        with it("should no longer be held by its sessions all the same"):
+            expect("pet-visits" in [session.name for session in Sessions(self.project).all()]).to(be_false)
+
+        with it("should leave the file in a folder set aside, which is no session"):
+            expect((self.folder.with_name(f"_removing-{self.folder.name}") / "session.json").is_file()).to(be_true)
 
     with context("that an earlier removal left a folder set aside under its name"):
         with before.each:
@@ -75,3 +79,15 @@ with description("a session's folder that is removed") as self:
 
         with it("should remove what the earlier removal left behind"):
             expect(self.left_behind.exists()).to(be_false)
+
+    with context("that holds a file whose path, once the folder is set aside, is longer than Windows allows"):
+        with before.each:
+            # A path of 255 characters: within the 260 Windows allows, and past it once _removing- is added.
+            deep = self.folder / "e2e-test-results" / ("s" * 60)
+            deep.mkdir(parents=True)
+            name_length = 255 - len(str(deep)) - 1
+            (deep / ("n" * (name_length - 4) + ".png")).write_bytes(b"")
+            self.session.folder.remove()
+
+        with it("should remove the folder and the file all the same"):
+            expect([self.folder.exists(), self.folder.with_name(f"_removing-{self.folder.name}").exists()]).to(equal([False, False]))
