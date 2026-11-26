@@ -32,7 +32,7 @@ from space.repo.mock_repo import MockGit
 from tools.prompt_queue.prompt_queue import PromptQueue
 from space.repo.repo import Repo
 from space.session import Session, Sessions
-from space.session.practices.guidance_selection import UnknownSelectionPart
+from space.session.practices.guidance_selection import UnknownSelectionName, UnknownSelectionPart
 from harness.agent_tools.chat_pointer import ChatPointer
 from space.session.session_log import LogLine, LoopNotFoundError
 from space.session.open_sessions import SessionNameRequiredError
@@ -1633,6 +1633,25 @@ with description("a session's guidance selection") as self:
         with context("that has a part pressed there is none of"):
             with it("should refuse it, naming the parts"):
                 expect(lambda: self.session.toggle_guidance("colour", "red")).to(raise_error(UnknownSelectionPart))
+
+        # Reported 2026-11-26 (pip-2): a name no chip, practice or stage has changed nothing, yet raised the version and
+        # answered as if the press landed.
+        with context("that has a name pressed that no chip, practice or stage has"):
+            with it("should refuse a format no chip stands for, naming the chips"):
+                expect(lambda: self.session.toggle_guidance("format", "drawio")).to(raise_error(UnknownSelectionName, contain("diagram, markdown")))
+
+            with it("should refuse a practice by any name but its key"):
+                expect(lambda: self.session.toggle_guidance("practice", "Stories")).to(raise_error(UnknownSelectionName))
+
+            with it("should refuse a stage by its title"):
+                expect(lambda: self.session.toggle_guidance("stage", "Discovery")).to(raise_error(UnknownSelectionName))
+
+            with it("should leave the version as it was"):
+                try:
+                    self.session.toggle_guidance("format", "astrology")
+                except UnknownSelectionName:
+                    pass
+                expect(Sessions(self.repo).current().guidance_selection().version).to(equal(1))
 
         # The one place a command and its format= are written.
         with context("that writes the command an action runs on the fidelities selected"):

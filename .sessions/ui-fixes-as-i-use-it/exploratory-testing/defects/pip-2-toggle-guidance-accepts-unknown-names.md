@@ -25,3 +25,15 @@ Every call answers the selection with the version raised by one (v29 -> v32) and
 ## Tier that should catch it
 
 Unit (`space/session/session_spec.py`): toggle with an unknown name of each part. The spec covers only the unknown part.
+
+## Triage
+
+- **Status:** confirmed. **Severity:** misleading message. **Triaged by:** Latch.
+- Reproduced in a unit example on a throwaway session: `toggle_guidance("format", "drawio")`, `("practice", "Stories")` and `("stage", "Discovery")` changed nothing, wrote session.json and raised the version. A capitalised title is refused rather than accepted: every caller (chat bar `chat-bar-view.tsx`, Files app `files-page-view.tsx`) sends the stage's name, the practice's key and the group's label, and `ticket.choose_formats` refuses by name too.
+
+## Fix
+
+- **Scenario:** Refuse a format press no chip stands for (`story_tests/move-work-forward-from-chat-bar/generate-fidelity-outputs-in-chat-bar/generate_fidelity_outputs_in_chat_bar_story.test.md`, story Choose Format).
+- **Test (unit):** `space/session/session_spec.py`, a session's guidance selection › that has Discovery and Stories selected › that has a name pressed that no chip, practice or stage has (four examples: format drawio refused naming the chips, practice Stories refused, stage Discovery refused, version left as it was). Seen failing (no exception raised; version raised), then passing.
+- **Fix:** `space/session/practices/guidance_selection.py`: new `UnknownSelectionName` (part, name, the names offered); `GuidanceSelection._toggled` reads what the part offers inside the held change and refuses a name it does not offer before anything is written, so the version is not raised. The chat bar shows the refusal through `shownAsFailure` as it does any failed press.
+- **Commit:** see below.

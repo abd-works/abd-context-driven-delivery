@@ -90,3 +90,12 @@ Evidence still missing: the chat bar's TypeScript story tests were removed in co
 *When* the Person presses the markdown chip on the chat bar while another chat presses the diagram chip on the same session  
 *Then* checkout-flow's format chips show diagram chosen and markdown not  
   *And* the guidance selection's version is raised once for each press
+
+#### Scenario: Refuse a format press no chip stands for
+
+*Given* checkout-flow's session works on Stories in Discovery, whose chips are diagram and markdown  
+*When* Claude Code presses the format drawio on checkout-flow's guidance selection  
+*Then* the press is refused, naming drawio and the chips diagram and markdown  
+  *But* checkout-flow's guidance selection and its version are not changed
+
+Intended (pip-2, 2026-11-26): as `ticket.choose_formats` refuses a label no chip has; a stage pressed by its title (Discovery) or a practice by any name but its key (Stories) is refused the same way.

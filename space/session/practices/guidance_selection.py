@@ -43,6 +43,17 @@ class UnknownSelectionPart(ValueError):
         self.part = part
 
 
+class UnknownSelectionName(LookupError):
+    """A press named a stage, practice, or format group the selection does not offer, such as the format drawio (a
+    chip stands for its group, diagram) or the stage Discovery (a stage is pressed by its name, discovery)."""
+
+    def __init__(self, part: str, name: str, offered: list[str]) -> None:
+        super().__init__(f"the guidance selection offers no {part} {name!r}: it offers {', '.join(offered) or 'none'}")
+        self.part = part
+        self.name = name
+        self.offered = offered
+
+
 class StageSelection:
     """One stage of the approach, selected or not: its fidelities show and its work is acted on while it is."""
 
@@ -275,15 +286,24 @@ class GuidanceSelection:
         """Select the stage, practice, or format group called name beside those selected, or no longer; before anyone
         chose stages, a stage toggles beside the one the session's ticket stands in. The selection it toggles is read
         while session.json is held, so a press another chat or page makes at the same moment is kept beside this one."""
-        if part == "stage":
-            self._select_while_held(lambda: (_toggled([stage.name for stage in self.stages if stage.is_selected], name), None, None), f"guidance stage {name} toggled")
-        elif part == "practice":
-            self._select_while_held(lambda: (None, _toggled([practice.key for practice in self.practices if practice.is_selected], name), None), f"guidance practice {name} toggled")
-        elif part == "format":
-            self._select_while_held(lambda: (None, None, _toggled([group.label for group in self.formats if group.is_selected], name)), f"guidance format {name} toggled")
-        else:
+        if part not in ("stage", "practice", "format"):
             raise UnknownSelectionPart(part)
+        self._select_while_held(lambda: self._toggled(part, name), f"guidance {part} {name} toggled")
         return self
+
+    def _toggled(self, part: SelectionPart, name: str) -> tuple[list[str] | None, list[str] | None, list[str] | None]:
+        """The stages, practices, and format groups selected once name, of part, is toggled, None for the parts it leaves
+        as they are. A name the part does not offer is refused (*UnknownSelectionName*), so nothing is written."""
+        offered = {
+            "stage": lambda: [(stage.name, stage.is_selected) for stage in self.stages],
+            "practice": lambda: [(practice.key, practice.is_selected) for practice in self.practices],
+            "format": lambda: [(group.label, group.is_selected) for group in self.formats],
+        }[part]()
+        if name not in [each for each, _ in offered]:
+            raise UnknownSelectionName(part, name, [each for each, _ in offered])
+        selected = [each for each, is_selected in offered if is_selected]
+        toggled = [each for each in selected if each != name] if name in selected else [*selected, name]
+        return (toggled if part == "stage" else None, toggled if part == "practice" else None, toggled if part == "format" else None)
 
     def select(self, stages: list[str] | None, practices: list[str] | None, formats: list[str] | None) -> None:
         """Select exactly these stages, practices, and format groups, each list in place of what was selected and a list
@@ -367,7 +387,3 @@ class GuidanceSelection:
     def _outputs(self) -> list[PracticeSessionOutput]:
         return list(self._session.own_practices.values())
 
-
-def _toggled(names: list[str], name: str) -> list[str]:
-    """The names with name taken out while it is in them, else put in."""
-    return [each for each in names if each != name] if name in names else [*names, name]
