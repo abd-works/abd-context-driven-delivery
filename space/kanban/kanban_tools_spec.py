@@ -1388,6 +1388,23 @@ with description("the board tools") as self:
             with it("should stay as small as a ticket with no text"):
                 expect(len(json.dumps(self.overview)) < 40_000).to(be_true)
 
+        # A move answers with the ticket it moved; sent with a plan's idea file, that answer went past MCP's size limit,
+        # so the agent that moved the ticket could not read what came of it. ticket.show still sends the text.
+        with context("with a ticket whose idea file is long, moved"):
+            with before.all:
+                def moved_with_long_text(project: ProjectTools) -> list[dict]:
+                    pet_visits(project)
+                    (project.sessions / "pet-visits" / "pet-visits.md").write_text("# Pet visits\n\n" + "A plan line.\n" * 5_000, encoding="utf-8")
+                    return [project.call("ticket.move_to", ticket="pet-visits", stage="Specification"), project.call("ticket.move_next", ticket="pet-visits")]
+
+                self.moved_to, self.moved_next = ProjectTools.answer_of(moved_with_long_text)
+
+            with it("should leave the text out of move_to's answer"):
+                expect(self.moved_to["text"]).to(equal(""))
+
+            with it("should leave the text out of move_next's answer"):
+                expect(self.moved_next["text"]).to(equal(""))
+
         # (S) Person --> Show Backlog Items In Session List: the session list offers the Backlog's items to start, a
         # parent's children under it, from the overview it reads every turn, so each item goes by its title alone.
         with context("that holds backlog items, one a parent of two"):

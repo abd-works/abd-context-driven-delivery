@@ -213,8 +213,13 @@ class TicketCheckoutTools:
         opened = self.moves.reopened()
         opened.checkout.open()
         opened.forget_reads()
-        return opened
+        return opened.in_answer()
 
+
+
+def in_answer(moved: Ticket | BacklogItem) -> Ticket | BacklogItem:
+    """What a move answers with: a ticket as `Ticket.in_answer` sends it, a backlog item as it is."""
+    return moved.in_answer() if isinstance(moved, Ticket) else moved
 
 @hosted_only
 class TicketMoveTools:
@@ -228,21 +233,21 @@ class TicketMoveTools:
     @noSessionLog
     def move_next(self) -> Ticket:
         """Move ticket on: from In progress to its stage's Done, from Done to the next column, whatever its work. Out of Hardening, the last stage, it closes, but main, the default session, stays in Hardening's Done. A ticket with children moves only with them, so it is refused."""
-        return self.moves.move_next()
+        return self.moves.move_next().in_answer()
 
     @mcp
     @agent_tool
     @noSessionLog
     def move_previous(self) -> Ticket | BacklogItem:
         """Move ticket back: from Done to its stage's In progress, from In progress to the previous column's Done. Out of Complete it reopens in Hardening, the last stage; out of Discovery it goes to the Backlog with its work, but main stays in Discovery. A ticket with children moves only with them, so it is refused."""
-        return self.moves.move_previous()
+        return in_answer(self.moves.move_previous())
 
     @mcp
     @agent_tool
     @noSessionLog
     def move_to(self, stage: str, done: bool = False) -> Ticket | BacklogItem:
         """Move ticket straight into stage's In progress, or its Done when done is true, whatever its work; dragging a card does this. Out of Complete it reopens first. Into the Backlog, from any column, it becomes a backlog item that keeps its whole folder. A ticket with children moves only with them, so it is refused."""
-        return self.moves.move_to(stage, done)
+        return in_answer(self.moves.move_to(stage, done))
 
     @mcp
     @agent_tool
@@ -251,7 +256,7 @@ class TicketMoveTools:
         """Move ticket just above other, as dragging it there does. Where other is in another column, or in its stage's other list, ticket goes there first: into other's stage, In progress or Done as other is, and beside a closed ticket it closes with its work left as it is. The column keeps that order, in .sessions/_board.json. Committed on main and pushed. A ticket with children moves only with them, so a move to another column is refused."""
         beside = self.moves.move_beside(other)
         Card.move_before(beside, other)
-        return beside
+        return beside.in_answer()
 
 
 @hosted_only
@@ -339,7 +344,7 @@ class TicketEnding:
         closed = self.board.placement.ticket_of(self.session.folder.move_to_closed())
         checkout.return_to_default_branch()
         self.board.sessions.saves.now(f"sessions: close {self.name}")
-        return closed
+        return closed.in_answer()
 
     @mcp
     @agent_tool
@@ -351,7 +356,7 @@ class TicketEnding:
         self._end_session()
         archived = self.board.placement.ticket_of(self.session.folder.move_to_archive())
         self.board.sessions.saves.now(f"sessions: archive {self.name}")
-        return archived
+        return archived.in_answer()
 
     @mcp
     @agent_tool
@@ -729,8 +734,15 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
         return self.work.violations
 
     def in_overview(self) -> OverviewTicket:
-        """This ticket as the board's overview sends it: whole, but with its children by name."""
+        """This ticket as the board's overview sends it: whole, but for its text, and with its children by name."""
         return OverviewTicket(self._session, self._board)
+
+    def in_answer(self) -> OverviewTicket:
+        """This ticket as a move, a close, an archive, or an activate answers with it: as the overview sends it, since a
+        plan kept in the idea file runs to tens of thousands of characters and took the answer past MCP's size limit, so
+        the agent that moved the ticket could not read what came of it. The board reads the board again after each of
+        them, and `ticket.show` sends the text."""
+        return self.in_overview()
 
 
 class OverviewTicket(Ticket):
