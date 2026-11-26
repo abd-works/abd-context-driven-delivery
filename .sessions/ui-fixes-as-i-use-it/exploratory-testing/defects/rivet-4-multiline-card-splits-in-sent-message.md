@@ -42,3 +42,17 @@ The receiver reads cards 1, 1, 2, and the first `done: yes` belongs to no clear 
 Unit (`prompt_queue_spec.py`): its send examples use one-line texts only.
 
 ## Also seen by
+
+## Triage
+
+- **Status:** confirmed: the report's card, sent in a throwaway chats folder (the spec below), gave lines "1. first thing", "2. second thing" and "   done: yes" at the card's own level.
+- **Severity:** wrong result (a receiving agent may file one card as several, one read as done).
+- **Triaged by:** Cue
+
+## Fix
+
+- **Choice:** keep each text whole and mark its later lines. In the message, a card's text keeps its first line after the card's number, and each later line is indented under the card and starts `> `; a step's later lines the same, under the step. The note to the receiving chat now says a line starting > goes on from the line above it and is never a card of its own.
+- **Code:** `tools/prompt_queue/prompt_queue.py`: `QueuedPrompt.handed_over` uses the new module function `_carried_on` and the constants `_CARD_FIELD` and `_CARRIED_ON`; `_SENT_CARDS_NOTE` gains the sentence.
+- **Tests:** `tools/prompt_queue/prompt_queue_spec.py` (unit), context "whose card's text and step hold several lines": three examples, seen failing first, now pass (121 examples).
+- **Scenario:** "Send a card whose text holds several lines as one card" in Send Queued Prompts To Another Chat (`share_queue_among_robots_story.test.md`).
+- **Commit:** (filled below)

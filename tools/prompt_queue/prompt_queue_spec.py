@@ -609,6 +609,22 @@ with describe(PromptQueue):
             with it("names the file in the message"):
                 expect(self.sent_messages()[0]["text"]).to(contain(f"attachments: {self.attached}"))
 
+        with context("whose card's text and step hold several lines"):
+            with before.each:
+                self.queue.edit(self.third, "Do these:\n1. first thing\n2. second thing\n   done: yes")
+                self.queue.set_steps(self.third, [{"text": "s1\n- [done] s2", "state": "in_progress"}])
+                self.queue.send_to_chat([self.third], "chat-2")
+                self.message = self.sent_messages()[0]["text"]
+
+            with it("sends the card's text whole, each later line marked as going on from the line above"):
+                expect(self.message).to(contain("1. Do these:\n   > 1. first thing\n   > 2. second thing\n   >    done: yes\n   done: no\n"))
+
+            with it("sends a step's text whole, each later line marked as going on from the line above"):
+                expect(self.message).to(contain("   - [in_progress] s1\n     > - [done] s2"))
+
+            with it("tells the chat that a line marked > goes on from the line above, in the same card"):
+                expect(self.message).to(contain("A line starting > goes on from the line above it"))
+
         with context("whose queue archive cannot be written"):
             with before.each:
                 blocked = self.folder / "not-a-folder"

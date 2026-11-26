@@ -258,3 +258,13 @@ Built 2026-11-26 on `ui-fixes-as-i-use-it` (`prompt-queue.send_to_chat`); scenar
 *And* this queue still holds all three cards, with no copy of ++Write the scenarios++ in the queue archive
 
 Evidence: `prompt_queue_spec.py` "whose queue archive cannot be written" and "that the other chat stops being connected as the cards are sent".
+
+#### Scenario: Send a card whose text holds several lines as one card
+
+*Given* the chat's prompt queue holds a card whose text is a pasted list of several lines, one of them reading "done: yes", with the step s1, being worked, whose text also holds a second line
+*When* the lead sends the card to Fixes
+*Then* the message holds the card once: its text's first line after its number, and each later line marked > as going on from the line above
+*And* the card reads done: no, and its step's later line is marked > under the step
+*And* the message tells Fixes that a line starting > goes on from the line above it, never a card of its own
+
+Evidence: `prompt_queue_spec.py` "whose card's text and step hold several lines".

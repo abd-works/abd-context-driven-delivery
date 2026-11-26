@@ -62,8 +62,23 @@ _SENT_CARDS_NOTE = (
     "each in the state shown, and mark it done with prompt-queue.done when it says done: yes. A card that names a robot "
     "goes to that robot with prompt-queue.assign, and the robot keeps its theme with prompt-queue.set_theme; when this "
     "chat works with no robots, it stays on the main chat's queue. A card that names no robot stays on the main chat's "
-    "queue, given to no robot. Then call prompt-queue.show and check each card stands once, where you meant.\n\n{cards}"
+    "queue, given to no robot. A line starting > goes on from the line above it: it belongs to that card's text, or that "
+    "step's, never to a card of its own. Then call prompt-queue.show and check each card stands once, where you "
+    "meant.\n\n{cards}"
 )
+# How far a card's own fields (its robot, whether it is done, its steps, its files) stand in from its number in a
+# message that sends it to another chat.
+_CARD_FIELD = "   "
+# What marks a line of a card's or a step's text that goes on from the line above it, in a message that sends cards.
+_CARRIED_ON = "> "
+
+
+def _carried_on(text: str, indent: str) -> str:
+    """text as one item of a message that sends cards: its first line as written, and each later line indented by
+    indent and marked as going on from the line above, so a pasted list or a line such as "done: yes" in it never reads
+    as a card or a field of its own."""
+    first, *rest = text.split("\n")
+    return "\n".join([first, *(f"{indent}{_CARRIED_ON}{line}" for line in rest)])
 
 
 # Where a step stands: not started, the one being worked, or finished.
@@ -371,13 +386,13 @@ class QueuedPrompt:
         """How it reads as card number place in a message that sends it to another chat: its text, then its robot with
         the robot's theme, whether it is done, its steps each in its state, and the files queued with it, which stay
         where they are for the other chat to read."""
-        lines = [f"{place}. {self._text}"]
+        lines = [_carried_on(f"{place}. {self._text}", _CARD_FIELD)]
         if self._robot:
-            lines.append(f"   robot: {self._robot} - {theme}" if theme else f"   robot: {self._robot}")
-        lines.append(f"   done: {'yes' if self.is_done else 'no'}")
-        lines.extend(f"   - [{step['state']}] {step['text']}" for step in self.steps.listed)
+            lines.append(f"{_CARD_FIELD}robot: {self._robot} - {theme}" if theme else f"{_CARD_FIELD}robot: {self._robot}")
+        lines.append(f"{_CARD_FIELD}done: {'yes' if self.is_done else 'no'}")
+        lines.extend(_carried_on(f"{_CARD_FIELD}- [{step['state']}] {step['text']}", f"{_CARD_FIELD}  ") for step in self.steps.listed)
         if self.attachments:
-            lines.append(f"   attachments: {', '.join(self.attachments)}")
+            lines.append(f"{_CARD_FIELD}attachments: {', '.join(self.attachments)}")
         return "\n".join(lines)
 
     @property
