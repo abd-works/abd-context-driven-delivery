@@ -68,6 +68,16 @@ Observed (`story_tests_on_map_spec.py`). Defect r3-sparky-08.
 *Then* the When of Pack Order invokes `pack` of Order
   *And* the examples `paid_order` and `unpaid_order` are in the graph
 
+#### Scenario: Give a markdown step its story test's code when the story test words it otherwise and writes one line more
+
+Observed (`cdd_guidance/practices/stories/model/scenario_layouts_spec.py`). Defect widget-3.
+
+*Given* ++pay_story.test.md++ writes Pay by card as *Given* a cart, *When* the Shopper pays by card, *Then* the order is paid
+  *And* ++pay_story.test.py++ writes its Given as a full cart and chains one line more onto its Then
+*When* the Knowledge Graph reads the project for Stories
+*Then* the Given a cart has the body of the story test's Given
+  *And* the When and Then have the bodies of the story test's steps that say the same
+
 #### Scenario: Record a Background only on the story whose scenarios file writes it
 
 Observed (`cdd_guidance/practices/stories/model/graph_reading_spec.py`). Source: commit 4d47fdf8e, "A Background its story's scenarios share is recorded in the graph, so graph rules see its steps"; defect r3-sparky-03.

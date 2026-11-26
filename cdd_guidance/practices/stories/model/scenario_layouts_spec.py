@@ -19,6 +19,7 @@ from cdd_guidance.practices.stories.model.fixtures.scenario_layouts import (
     MAP,
     MAP_LISTING_SCENARIOS,
     MARKDOWN_BESIDE_PYTHON,
+    MARKDOWN_BESIDE_PYTHON_IN_OTHER_WORDS,
     MARKDOWN_BESIDE_TYPESCRIPT,
     ONE_STORY_PER_FILE,
     ONLY_IN_CODE,
@@ -109,6 +110,7 @@ with description("two stories written in every layout a project keeps its scenar
             "TypeScript alone": _Layout(TYPESCRIPT_ONLY),
             "markdown beside Python": _Layout(MARKDOWN_BESIDE_PYTHON),
             "markdown beside TypeScript": _Layout(MARKDOWN_BESIDE_TYPESCRIPT),
+            "markdown beside Python in other words": _Layout(MARKDOWN_BESIDE_PYTHON_IN_OTHER_WORDS),
         }
 
     with after.all:
@@ -147,6 +149,9 @@ with description("two stories written in every layout a project keeps its scenar
 
     with it("should give a markdown step the body TypeScript gives the same step"):
         expect(self.layouts["markdown beside TypeScript"].step_has_a_body("when the Shopper pays by card")).to(be_true)
+
+    with it("should give a markdown step the body of the code step of its kind at its place, when code words it otherwise and chains one line more"):
+        expect(self.layouts["markdown beside Python in other words"].step_has_a_body("given a cart")).to(be_true)
 
     with it("should give a validate of the sub-epic's markdown file every scenario it writes, beside Python"):
         expect(self.layouts["markdown beside Python"].checked(SUB_EPIC_FILE)).to(contain("Pay by card", "Cancel an open order"))

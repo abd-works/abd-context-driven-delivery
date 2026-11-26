@@ -102,3 +102,20 @@ ONLY_IN_CODE = ("Pay For Order", "Pay with a voucher", ["given a cart", "when th
 # Each layout where markdown, one file per story or a sub-epic's file, and a story test in code both write Pay For Order.
 ONE_STORY_PER_FILE_BESIDE_PYTHON = {**ONE_STORY_PER_FILE, PYTHON_STORY_TEST: PYTHON_PAY + PYTHON_VOUCHER}
 SUB_EPIC_FILE_BESIDE_TYPESCRIPT = {**SUB_EPIC_FILE_HOLDING_BOTH, TYPESCRIPT_STORY_TEST: TYPESCRIPT_PAY + TYPESCRIPT_VOUCHER + "});\n"}
+
+# Markdown beside a story test that writes Pay by card's Given in other words and chains one line more onto its Then:
+# the steps no longer pair by what they say, nor by order, as the two write a different count of lines.
+PYTHON_PAY_IN_OTHER_WORDS = '''from story_test import and_, given, scenario, story, then, when
+
+with story("Pay For Order"):
+    with scenario("Pay by card"):
+        with given("a full cart"):
+            cart = Cart()
+        with when("the Shopper pays by card"):
+            cart.pay_by_card()
+        with then("the order is paid"):
+            assert cart.paid
+        with and_("the Shopper is sent a receipt"):
+            assert cart.receipt_sent
+'''
+MARKDOWN_BESIDE_PYTHON_IN_OTHER_WORDS = {**SUB_EPIC_FILE_HOLDING_BOTH, PYTHON_STORY_TEST: PYTHON_PAY_IN_OTHER_WORDS}

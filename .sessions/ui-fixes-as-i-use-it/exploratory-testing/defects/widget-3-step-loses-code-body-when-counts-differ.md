@@ -26,3 +26,17 @@ Second scenario (3 md lines, 4 code lines): When and Then pair by words; the Giv
 Unit: a `_paired_steps` / story_tests_on_map example where code has an extra `.and` and one step differs by a link; expect the unmatched steps paired by keyword and order (or a violation naming the step).
 
 ## Also seen by
+
+## Triage
+
+- **Status:** confirmed
+- **Severity:** wrong result (a markdown step silently loses its story test's body and realization)
+- **Triaged by:** Prism
+- **Why:** `_paired_steps` paired steps by their words, and fell back to order only when both sides wrote as many lines; a step whose words differ (a term link adds a word) and one `.and` more in code left the step with no code. Reproduced with a sub-epic markdown file beside a Python story test whose Given is worded otherwise and whose Then chains one line more.
+
+## Fix
+
+- **Test (unit):** `cdd_guidance/practices/stories/model/scenario_layouts_spec.py` "should give a markdown step the body of the code step of its kind at its place, when code words it otherwise and chains one line more", over the new layout `MARKDOWN_BESIDE_PYTHON_IN_OTHER_WORDS` in `fixtures/scenario_layouts.py`. Seen failing first.
+- **Scenario:** "Give a markdown step its story test's code when the story test words it otherwise and writes one line more" in `story_tests/map-work-into-knowledge-graph/build-practice-trees-from-source/read-story-and-spec-trees-from-source/read_story_and_spec_trees_from_source_story.test.md`.
+- **Fix:** `story_map.py` `_paired_steps`: after pairing by words (and the unchanged order fallback when both write as many lines), each step left unpaired takes the first unpaired code step of its kind (given, when or then), in order.
+- **Commit:** see git log for this file

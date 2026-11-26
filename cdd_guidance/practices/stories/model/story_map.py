@@ -762,17 +762,24 @@ def _step_lines(steps: List["Step"]) -> List["Step"]:
 
 def _paired_steps(own: List["Step"], again: List["Step"]) -> List[tuple]:
     """Each of own beside the step of again that says the same; when some say what none of the other says, each in
-    order with the one at its place, if both write as many."""
+    order with the one at its place, if both write as many, else each beside the first step of again of its kind
+    (given, when or then) that no step says, so a line more on one side leaves no step without its code."""
     unpaired = list(again)
-    paired = []
+    paired = {}
     for step in own:
         same = next((code for code in unpaired if _words_of(code.text) == _words_of(step.text)), None)
         if same is not None:
             unpaired.remove(same)
-            paired.append((step, same))
+            paired[id(step)] = (step, same)
     if len(paired) < len(own) and len(own) == len(again):
         return list(zip(own, again))
-    return paired
+    for step in own:
+        if id(step) not in paired:
+            same_kind = next((code for code in unpaired if code.phase == step.phase), None)
+            if same_kind is not None:
+                unpaired.remove(same_kind)
+                paired[id(step)] = (step, same_kind)
+    return [paired[id(step)] for step in own if id(step) in paired]
 
 
 def _steps_key(steps: List["Step"]) -> tuple:
