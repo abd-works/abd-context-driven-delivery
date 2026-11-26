@@ -57,6 +57,20 @@
           "formats": [
             "python"
           ]
+        },
+        "modules": {
+          "formats": [
+            "markdown",
+            "drawio",
+            "whiteboard"
+          ]
+        },
+        "model": {
+          "formats": [
+            "python",
+            "drawio",
+            "whiteboard"
+          ]
         }
       }
     },
@@ -72,7 +86,7 @@
     }
   },
   "guidance": {
-    "version": 13,
+    "version": 29,
     "stages": [
       "discovery",
       "specification",
