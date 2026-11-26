@@ -7,7 +7,10 @@ from pathlib import Path
 from expects import be_a, be_below, equal, expect, raise_error
 from mamba import before, context, description, it
 
-from harness.guidance.practice_formats import Written
+from harness.guidance.practice_formats import Rendered, Written
+from harness.markdown.format import Format
+# Imported with the spec, not in its first example, which would otherwise pay the render action's import time.
+from cdd_guidance.actions.render.rendered_file import RenderedFile
 from harness.whiteboard.whiteboard import UnreadableBoard, Whiteboard
 from cdd_guidance.practices.stories.model.fixtures.round_trip_story_map import outline, round_trip_story_map
 from cdd_guidance.practices.stories.model.diagram_story_map import DiagramIncrement
@@ -72,13 +75,19 @@ _LINKED_MAP = """# (E) Onboard A Customer
 
 def _checkout(files: dict) -> Path:
     """A git checkout on branch main whose origin is github.com/org/shop, holding files."""
-    import subprocess
     import tempfile
 
     root = Path(tempfile.mkdtemp())
     for relative, text in files.items():
         (root / relative).parent.mkdir(parents=True, exist_ok=True)
         (root / relative).write_text(text, encoding="utf-8")
+    return _checkout_of(root)
+
+
+def _checkout_of(root: Path) -> Path:
+    """root made a git checkout on branch main whose origin is github.com/org/shop."""
+    import subprocess
+
     subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=True)
     subprocess.run(["git", "-C", str(root), "remote", "add", "origin", "https://github.com/org/shop.git"], check=True)
     return root
@@ -106,6 +115,32 @@ with description("a story map drawn on a Claude whiteboard in a folder of a git 
     with it("should read a linked card back as its story's name"):
         stories = WhiteboardStoryMap().parse(self.text).epics[0].epics[0].stories
         expect([story.name for story in stories]).to(equal(["Select Sim", "Activate Sim"]))
+
+    with context("whose stories a UX map on its graph shows on screens"):
+        with before.all:
+            import tempfile
+
+            from cdd_guidance.practices.stories.model.fixtures.shown_story_map import shown_folder, shown_story_map
+
+            root = shown_folder(Path(tempfile.mkdtemp()) / "shop")
+            _checkout_of(root)
+            self.shown = WhiteboardStoryMap().render(shown_story_map(root), Written(folder=root))
+            elements = Whiteboard.from_text(self.shown).elements
+            self.screens = [element for element in elements if element.role == "screen"]
+            self.select_card = next(element for element in elements if element.role == "story" and "Select Sim" in element.text)
+
+        # A card's name links to its story's file already, so each screen that shows the story is a card of its own.
+        with it("should draw a card under a story for each screen with a prototype in the checkout, linked where the origin shows it"):
+            expect([screen.text for screen in self.screens]).to(equal([
+                "[Select Sim Screen](https://github.com/org/shop/blob/main/ux/design-canvas/version-1/project/screens/select-sim.dc.html)"]))
+
+        with it("should place the screen's card under its story's card"):
+            screen, card = self.screens[0].box, self.select_card.box
+            expect((screen.x == card.x, screen.y >= card.y + card.h)).to(equal((True, True)))
+
+        with it("should read the board back without the screen cards"):
+            stories = WhiteboardStoryMap().parse(self.shown).epics[0].epics[0].stories
+            expect([story.name for story in stories]).to(equal(["Select Sim", "Activate Sim"]))
 
 
 with description("a story map's thin slice drawn on a Claude whiteboard") as self:
@@ -137,9 +172,6 @@ with description("a story map's thin slice drawn on a Claude whiteboard") as sel
 def _saved_as(name: str, text: str) -> Whiteboard:
     """text saved by a render as the whiteboard file called name, read back."""
     import tempfile
-    from cdd_guidance.actions.render.rendered_file import RenderedFile
-    from harness.guidance.practice_formats import Rendered
-    from harness.markdown.format import Format
 
     file = Path(tempfile.mkdtemp(prefix="board-title-")) / name
     RenderedFile(file, Format("whiteboard")).save(Rendered(Format("whiteboard"), text))

@@ -371,10 +371,7 @@ class _StoryDemoControlLinks(_LinksAcrossPractices):
 
     def _screen_of(self, control: Node) -> Node:
         """The screen whose region holds control."""
-        above = self._graph.edges.direct_parent(control)
-        while above is not None and above.type != "Screen":
-            above = self._graph.edges.direct_parent(above)
-        return above if above is not None else control
+        return self._graph.edges.nearest_of_type(control, "Screen") or control
 
     def _property_at(self, path: str) -> Node | None:
         """The property a bound field's path ends on: the Clean Engineering property called by the path's last part on

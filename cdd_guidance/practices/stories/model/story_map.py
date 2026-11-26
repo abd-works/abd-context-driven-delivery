@@ -44,6 +44,9 @@ if TYPE_CHECKING:
 
     from space.session.practices.practice_session_output import FidelitySessionOutput
 
+# The edge a UX map records from a story to the screen or control it is shown on, and the type of a screen's node.
+_SHOWN_ON = "shownOn"
+_SCREEN = "Screen"
 # A step goes by its text, cut to this many characters, so a long step still reads as one name.
 _STEP_NAME_LENGTH = 80
 # A step's graph id ends in a 24-bit checksum of its name: short enough to read in an id, long enough that two steps
@@ -967,15 +970,28 @@ class Story(CodeHeld):
         self.notes = ""
         self._backgrounds = ModelChildren(self, "background")
         self._scenarios = ModelChildren(self, "scenarios")
+        # The screens the story it was copied from was shown on, since a copy into another format is on no graph.
+        self._screens: List["Node"] = []
 
     def _copy_fields(self, original: "Story", copy_part: CopyPart) -> None:
         self.sequential_order, self.story_type = original.sequential_order, original.story_type
+        self._screens = original.screens
         self.actors, self.domain_terms, self.evidence = list(original.actors), list(original.domain_terms), list(original.evidence)
         self.description_text = original.description_text
         self.front_matter, self.notes = original.front_matter, original.notes
         self.backgrounds = [copy_part(background, type(self).background_class) for background in original.backgrounds]
         self.scenarios = [copy_part(scenario, type(self).scenario_class) for scenario in original.scenarios]
         self.take_code_from(original)
+
+    @property
+    def screens(self) -> List["Node"]:
+        """The UX screens the story is shown on: the screen each ``shownOn`` edge of its graph leads to, or holds the
+        control it leads to, once each; on a copy, which no graph holds, those of the story it was copied from."""
+        if self.practice is None:
+            return list(self._screens)
+        edges = self.graph.edges
+        found = (edges.nearest_of_type(edge.child, _SCREEN) for edge in edges.from_parent(_SHOWN_ON, self))
+        return list(dict.fromkeys(screen for screen in found if screen is not None))
 
     @property
     def backgrounds(self) -> List["Background"]:

@@ -127,10 +127,7 @@ class ShownPlaces:
         return ShownPlace(screen, shown_on, self._interactions_of(shown_on), through) if screen is not None else None
 
     def _screen_of(self, control: "Node") -> Optional["Node"]:
-        above = self._edges.direct_parent(control)
-        while above is not None and above.type != "Screen":
-            above = self._edges.direct_parent(above)
-        return above
+        return self._edges.nearest_of_type(control, "Screen")
 
     def _interactions_of(self, control: "Node") -> List["Node"]:
         held = self._graph.practices.part_of(control.practice).nodes("Interaction") if control.practice is not None else []

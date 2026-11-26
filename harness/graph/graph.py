@@ -1270,6 +1270,14 @@ class GraphEdges:
         ``parent``."""
         return self._graph.practices.part_of(child.practice).edge_index.direct_parent(child)
 
+    def nearest_of_type(self, node: Node, node_type: str) -> Node | None:
+        """node when it is of node_type, else the nearest node of node_type its direct edges hang it under, as a
+        control's screen; none when no node above it is of that type."""
+        found: Node | None = node
+        while found is not None and found.type != node_type:
+            found = self.direct_parent(found)
+        return found
+
 
 @language_adapter(language="typescript")
 @agent_toolset

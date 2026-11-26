@@ -2,7 +2,8 @@
 as a ``.whiteboard`` file and reads one back.
 
 A whiteboard reads at a zoom like a Miro board's, so its cards and columns are the Miro sizes. Each element's id names
-the node it draws (``epic.<key>``, ``subepic.<depth>.<key>``, ``story.<kind>.<key>``, ``actor.<key>``), where the key is
+the node it draws (``epic.<key>``, ``subepic.<depth>.<key>``, ``story.<kind>.<key>``, ``actor.<key>``, and ``screen.<key>``
+for a screen a story is shown on, drawn under its card), where the key is
 a hash of the node's path, so the same node keeps its id from one render to the next. A board is read back by where
 its elements sit, as a drawio map is (``DiagramStoryMap.place_cells``), because people move and restack elements on
 a shared board.
@@ -11,7 +12,7 @@ a shared board.
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from harness.whiteboard import BoardElement, Box, ElementId, KeepsDocumentOnBoard, Section, Shape, Whiteboard, WhiteboardNode
 
@@ -67,6 +68,11 @@ class WhiteboardStory(LaidOutStory, _BoardStoryNode):
     file_link = ""
     """Where the board opens the story's own file, its scenarios or else its acceptance test: the web address its
     checkout's origin shows it at, since a board opens no other link; empty when the story has no file or none is known."""
+    screen_links: Tuple[Tuple[str, str], ...] = ()
+    """Each screen the story is shown on whose prototype is known, by name, with the web address of that prototype."""
+    screen_height = 40
+    screen_gap = 8
+    """A screen the story is shown on is a small card under its card; reading the board back passes over it."""
 
     def board_box(self) -> Box:
         return Box(self.x, self.y, self.card_width, self.size)
@@ -79,13 +85,25 @@ class WhiteboardStory(LaidOutStory, _BoardStoryNode):
         name = f"[{self.name}]({self.file_link})" if self.file_link else self.name
         return f"*{actor}*\n{name}" if actor else name
 
-    def take_file_link(self, links: StoryMapLinks, citation: GitCitation) -> None:
-        """Link the story's name to its own file, where citation's checkout shows it, when links find one."""
+    def take_links(self, links: StoryMapLinks, citation: GitCitation) -> None:
+        """Link the story's name to its own file, where citation's checkout shows it, when links find one, and keep
+        each screen it is shown on whose prototype links find, linked there too."""
         path = links.story_path(self)
         self.file_link = citation.blob_url(path) if path is not None else ""
+        self.screen_links = tuple((name, citation.blob_url(screen)) for name, screen in links.screen_files(self))
 
     def board_elements(self) -> List[BoardElement]:
-        return [self.board_shape(self.element_id("story", self.story_type.value), kind="rounded", color="yellow", size="small", text=self.card_text)]
+        card = self.board_shape(self.element_id("story", self.story_type.value), kind="rounded", color="yellow", size="small", text=self.card_text)
+        return [card, *self._screen_cards()]
+
+    def _screen_cards(self) -> List[BoardElement]:
+        """One small card under the story's card for each screen it is shown on, its name linked to the prototype."""
+        cards: List[BoardElement] = []
+        for order, (name, link) in enumerate(self.screen_links):
+            top = self.y + self.size + self.screen_gap + order * (self.screen_height + self.screen_gap)
+            cards.append(Shape(ElementId.of("screen", *self.path_names, f"screen:{name}", length=self.KEY_LENGTH), box=Box(self.x, top, self.card_width, self.screen_height),
+                               kind="rect", color="white", size="small", text=f"[{name}]({link})"))
+        return cards
 
     def lane_card(self, lane: ElementId, left: float, top: float) -> BoardElement:
         """This story's card in a thin-slice lane: keyed by the lane too, since the board holds the lanes beside the map."""
@@ -138,7 +156,7 @@ class WhiteboardStoryMap(KeepsDocumentOnBoard, DiagramStoryMap):
         if citation is not None:
             links = StoryMapLinks(drawn, str(written.folder))
             for story in drawn.descendants.stories():
-                story.take_file_link(links, citation)
+                story.take_links(links, citation)
         return drawn.board().drawn_over(str(written.previous))
 
     def board(self) -> Whiteboard:

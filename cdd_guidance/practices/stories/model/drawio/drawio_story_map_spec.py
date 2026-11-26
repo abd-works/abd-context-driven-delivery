@@ -481,6 +481,18 @@ def _links_by_label(text: str) -> dict:
     }
 
 
+def _boxes_by_label(text: str) -> dict:
+    """Each labelled vertex's box, x, y, width and height, by its label."""
+    tree = ET.fromstring(text)
+    boxes = {}
+    for cell in tree.iter("mxCell"):
+        geometry = cell.find("mxGeometry")
+        label = cell.attrib.get("value") or next((holder.attrib["label"] for holder in tree.iter("UserObject") if cell in list(holder)), "")
+        if geometry is not None and label:
+            boxes[label] = tuple(float(geometry.attrib.get(side, 0)) for side in ("x", "y", "width", "height"))
+    return boxes
+
+
 def _code_links_by_label(text: str) -> dict:
     """Each linked cell's file and line as the draw.io editor of VS Code and Cursor reads them."""
     tree = ET.fromstring(text)
@@ -552,6 +564,35 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
 
         with it("should link a story with both to its scenario file"):
             expect(self.links["Activate Sim"][0]).to(equal("onboard/get-sim/activate_sim_story.test.md"))
+
+    with context("whose stories a UX map on its graph shows on screens"):
+        with before.each:
+            import tempfile
+
+            from cdd_guidance.practices.stories.model.fixtures.shown_story_map import shown_folder, shown_story_map
+
+            self.root = shown_folder(Path(tempfile.mkdtemp()) / "shop")
+            self.text = DrawIOStoryMap().render(shown_story_map(self.root), Written(folder=self.root))
+            self.links = _links_by_label(self.text)
+            self.boxes = _boxes_by_label(self.text)
+
+        # A story cell holds one link already, so each screen that shows the story is a cell of its own.
+        with it("should draw a cell under a story for a screen that shows it, linked to the screen's prototype"):
+            expect(self.links["Select Sim Screen"][0]).to(equal("ux/design-canvas/version-1/project/screens/select-sim.dc.html"))
+
+        with it("should place the screen's cell under its story"):
+            story, screen = self.boxes["Select Sim"], self.boxes["Select Sim Screen"]
+            expect((screen[0] == story[0], screen[1] >= story[1] + story[3])).to(equal((True, True)))
+
+        with it("should draw no cell for a screen whose prototype is no file"):
+            expect("Pick Plan" in self.boxes).to(be_false)
+
+        with it("should draw no cell for a screen whose prototype is outside the folder"):
+            expect("Far Screen" in self.boxes).to(be_false)
+
+        with it("should read the map back without the screen cells"):
+            stories = DrawIOStoryMap().parse(self.text).epics[0].epics[0].stories
+            expect([story.name for story in stories]).to(equal(["Select Sim", "Activate Sim"]))
 
     with context("whose story map is kept in the folder's .context under a prefixed name"):
         with it("should link an epic cell to that story map's entry"):

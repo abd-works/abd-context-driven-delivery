@@ -1,7 +1,7 @@
 """Links a story map and its story files carry.
 
 A story map node links to its entry in ``story-map.md`` and to the story's own
-markdown file. A link is written only when its target file exists; otherwise the text stays plain.
+markdown file; a story to the prototype of each screen it is shown on. A link is written only when its target file exists; otherwise the text stays plain.
 """
 
 from __future__ import annotations
@@ -9,13 +9,15 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from harness.annotations.name import Name
+from harness.design_canvas.versions import ported_project
 
 from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, STORY_TEST_SUFFIXES, StoryMapFiles
 
 if TYPE_CHECKING:
+    from harness.graph.graph import Node
     from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap, StoryNode
 
 _LINK = re.compile(r"\[([^\]\n]+)\]\(([^)\s]*)\)")
@@ -98,13 +100,36 @@ class StoryMapLinks:
     def story_file(self, story: "Story") -> str:
         """Relative path to the story's own scenario file, else to its acceptance test; ``""`` when it has neither."""
         path = self.story_path(story)
-        return self._relative(path) if path is not None else ""
+        return self.relative(path) if path is not None else ""
 
     def story_path(self, story: "Story") -> Optional[Path]:
         """The story's own scenario file, else its acceptance test; none when it has neither."""
         slug = self._slug(story.name)
         path = self._story_files.get(slug) or self._story_tests.get(slug)
         return path if path is not None and path.is_file() else None
+
+    def screen_files(self, story: "Story") -> List[Tuple[str, Path]]:
+        """Each screen the story is shown on whose prototype is a file in the folder the graph reads, with that file:
+        the prototype's path in the project of the design canvas its UX map is ported to (``ported_project``). A
+        screen whose prototype is no file there, or a file outside that folder, is left out."""
+        found: List[Tuple[str, Path]] = []
+        for screen in story.screens:
+            path = self._prototype_file(screen)
+            if path is not None:
+                found.append((screen.name, path))
+        return found
+
+    def _prototype_file(self, screen: "Node") -> Optional[Path]:
+        """The file screen's prototype is kept in; none when its UX map leads to no canvas, or the file is not there or
+        not inside the folder the graph reads."""
+        prototype = str(getattr(screen, "prototype", "") or screen.get_fact("prototype") or "")
+        source = screen.source
+        if not prototype or source is None or not source.root or not source.file:
+            return None
+        top = Path(source.root).resolve()
+        project = ported_project(top / source.file, top)
+        path = (project / prototype).resolve() if project is not None else None
+        return path if path is not None and path.is_file() and top in path.parents else None
 
     def _by_story(self, paths: List[Path], suffixes: tuple) -> Dict[str, Path]:
         """Each of paths by the slug of the story its name, without suffixes, names; the first of each story's."""
@@ -153,7 +178,7 @@ class StoryMapLinks:
     def _slug(self, name: str) -> str:
         return Name(unlink(name)).title_slug
 
-    def _relative(self, target: Path) -> str:
+    def relative(self, target: Path) -> str:
         """target as a path from the folder the links are written in; as it is when it sits on another drive."""
         try:
             return Path(os.path.relpath(target, self._base)).as_posix()
@@ -175,7 +200,7 @@ class StoryMapLinks:
 
     def _entries_under(self, epic: "Epic", anchors: "_Anchors") -> List[tuple]:
         """The epic's entry, then each of its stories', then each of its sub-epics' and theirs, anchored in order."""
-        target = self._relative(self._map_file)
+        target = self.relative(self._map_file)
         entries: List[tuple] = [(epic, f"{target}#{anchors.next(f'(E) {epic.name}')}")]
         for story in epic.stories:
             actor = f"{unlink(story.actors[0]).strip()} " if story.actors else ""

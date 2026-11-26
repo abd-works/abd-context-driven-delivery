@@ -39,6 +39,25 @@ KEEP_ONE = "keep_one"
 # The name of the canvas of the whole repository, the UX practice's mockup; a canvas scoped to an increment, a feature,
 # an epic or a module puts the scope's name in front, as other formats name their scoped files (``{scope}-ux-mockup``).
 CANVAS_NAME = "ux-mockup"
+# The folder of a version that holds the canvas's files exactly as it is published, and the canvas's own map in it.
+PROJECT_FOLDER = "project"
+CANVAS_FILE = "canvas.json"
+
+
+def ported_project(map_file: Path, top: Path) -> Optional[Path]:
+    """The project folder of the canvas version a UX map's screens are ported to: the folder of map_file when it is the
+    canvas's own ``canvas.json``, else the project of the latest version of the design canvas kept in map_file's folder
+    or a folder above it, up to top, the folder the graph reads from; none when there is none."""
+    if map_file.name == CANVAS_FILE:
+        return map_file.parent
+    folder = map_file.parent
+    while True:
+        latest = CanvasVersions.in_practice_root(folder).latest
+        if latest is not None:
+            return latest.folder / PROJECT_FOLDER
+        if folder == top or folder.parent == folder or top not in folder.parents:
+            return None
+        folder = folder.parent
 
 
 def canvas_name(scope: str = "") -> str:
@@ -121,7 +140,7 @@ class CanvasVersion:
 
     def file_hashes(self) -> dict[str, str]:
         """Each file of the version's project folder, by its path there, with its content's hash."""
-        project = self.folder / "project"
+        project = self.folder / PROJECT_FOLDER
         files = sorted(path for path in project.rglob("*") if path.is_file()) if project.is_dir() else []
         return {path.relative_to(project).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
 

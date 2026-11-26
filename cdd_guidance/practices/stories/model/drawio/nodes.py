@@ -27,6 +27,7 @@ from cdd_guidance.practices.stories.model.diagram_story_map import (
 )
 from cdd_guidance.practices.stories.model.markdown.links import StoryMapLinks
 from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap, StoryType
+from harness.annotations.name import Name
 from harness.drawio import DrawioCell, DrawioFile, DrawioPage, KeepsDocumentInDrawing, UnreadableDrawio
 from harness.guidance.practice_formats import Written
 from harness.whiteboard import Box
@@ -76,6 +77,13 @@ class DrawIOStory(LaidOutStory):
         f"fillColor={DiagramStory.fill};strokeColor={DiagramStory.stroke};"
         "fontColor=#000000;fontSize=8;"
     )
+    # A screen the story is shown on is a small cell under it; reading the map back passes over its role.
+    screen_style = (
+        "screen;whiteSpace=wrap;html=1;overflow=hidden;"
+        "fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=6;"
+    )
+    screen_height = 16
+    screen_gap = 4
 
     @property
     def cell_slug(self) -> str:
@@ -104,6 +112,21 @@ class DrawIOStory(LaidOutStory):
             cell_id, self.name, self.x, self.y, self.size, self.size,
             self.style.format(role=self.story_type.value),
         ).linked(self))
+        return drawn + self._screen_cells(cell_id)
+
+    def _screen_cells(self, cell_id: str) -> List["DrawIOStoryMap.Vertex"]:
+        """One small cell under the story for each screen it is shown on whose prototype is a file, linked to that
+        file, since the story's own cell links to its scenarios; none while its map is placed in no folder."""
+        links = self.story_map.links
+        if links is None:
+            return []
+        drawn: List[DrawIOStoryMap.Vertex] = []
+        for order, (name, path) in enumerate(links.screen_files(self)):
+            top = self.y + self.size + self.screen_gap + order * (self.screen_height + self.screen_gap)
+            vertex = DrawIOStoryMap.Vertex.make(f"{cell_id}/screen/{Name(name).title_slug}", name, self.x, top, self.size, self.screen_height, self.screen_style)
+            vertex.link = links.relative(path)
+            vertex.code_link = links.code_link(vertex.link)
+            drawn.append(vertex)
         return drawn
 
 

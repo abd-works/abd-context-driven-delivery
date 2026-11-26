@@ -11,7 +11,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
-from harness.design_canvas.versions import CanvasVersions
+from harness.design_canvas.versions import ported_project
 
 # What draws a picture: an image, or a background image.
 _PICTURE = re.compile(r"<img\b|background(?:-image)?\s*:[^;\"']*url\(", re.IGNORECASE)
@@ -23,9 +23,6 @@ _DATA_PROPS = re.compile(r"data-props='([^']*)'")
 _LOADED = re.compile(r"<script\b[^>]*?\bsrc=[\"']([^\"']+)[\"']|<link\b[^>]*?\bhref=[\"']([^\"']+)[\"']", re.IGNORECASE)
 _OFF_CANVAS = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|/|#)", re.IGNORECASE)
 _DC_IMPORT = re.compile(r"<dc-import\b[^>]*?\bname=\"([^\"]*)\"", re.IGNORECASE)
-# Where a story canvas keeps its versions, beside the UX map it ports.
-_CANVAS_FILE = "canvas.json"
-_PROJECT = "project"
 
 
 class ScreenArtboard:
@@ -142,16 +139,8 @@ class PortedCanvas:
 
     @classmethod
     def of_map_file(cls, map_file: Path, top: Path) -> Optional["PortedCanvas"]:
-        if map_file.name == _CANVAS_FILE:
-            return cls(map_file.parent)
-        folder = map_file.parent
-        while True:
-            latest = CanvasVersions.in_practice_root(folder).latest
-            if latest is not None:
-                return cls(latest.folder / _PROJECT)
-            if folder == top or folder.parent == folder or top not in folder.parents:
-                return None
-            folder = folder.parent
+        project = ported_project(map_file, top)
+        return cls(project) if project is not None else None
 
     def artboard(self, prototype: str) -> Optional[ScreenArtboard]:
         """The artboard at prototype, a path in the project folder; none when the canvas holds none there."""
