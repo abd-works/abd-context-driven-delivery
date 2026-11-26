@@ -86,12 +86,8 @@
     }
   },
   "guidance": {
-    "version": 36,
-    "stages": [
-      "discovery",
-      "specification",
-      "implementation"
-    ]
+    "version": 39,
+    "stages": []
   },
   "overlays": [
     "cdd_claude_mod",
