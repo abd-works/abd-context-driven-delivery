@@ -174,7 +174,11 @@ class CanvasVersions:
         return sorted(int(match.group(1)) for match in found if match)
 
     def _numbered(self, number: int) -> CanvasVersion:
-        return CanvasVersion(self.root / f"version-{number}", self.published, self.name, self.keeps_one)
+        return self.version_named(f"version-{number}")
+
+    def version_named(self, folder: str) -> CanvasVersion:
+        """The version kept in the folder called folder under the root, such as ``version-7`` or a release's name."""
+        return CanvasVersion(self.root / folder, self.published, self.name, self.keeps_one)
 
     @property
     def latest(self) -> Optional[CanvasVersion]:

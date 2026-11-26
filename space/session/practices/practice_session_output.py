@@ -690,14 +690,16 @@ def latest_version(file: Path) -> Path:
 def publication_of(file: Path) -> Publication:
     """Where a file is published, which a page opens instead of the file: a ``.whiteboard`` file on the board in Claude
     the file keeps in its own ``board`` field, and a design canvas version's ``canvas.json``
-    (``<design-canvas>/version-N/project/canvas.json``) at the link its versions record (``versions.json``); nowhere for
-    any other file. A whiteboard or a canvas not yet published is still named as one, with no link."""
+    (``<design-canvas>/version-N/project/canvas.json``) at the link its versions record (``versions.json``), under the
+    title it is published with (``ux-mockup``, or ``ux-mockup.version-N`` while versions are kept); nowhere for any
+    other file. A whiteboard or a canvas not yet published is still named as one, with no link."""
     if file.suffix == Whiteboard.SUFFIX:
         return Publication(Whiteboard.board_of(file), WHITEBOARD_KIND)
     if file.name != "canvas.json" or file.parent.name != "project":
         return Publication()
     version = file.parent.parent
-    return Publication(CanvasVersions(version.parent).published.of(version.name) or "", DESIGN_CANVAS_KIND)
+    versions = CanvasVersions(version.parent)
+    return Publication(versions.published.of(version.name) or "", DESIGN_CANVAS_KIND, versions.version_named(version.name).title)
 
 
 class FidelityFormats:

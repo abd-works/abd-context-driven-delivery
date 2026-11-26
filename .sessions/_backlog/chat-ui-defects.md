@@ -25,3 +25,9 @@ Reported 2026-11-26 from pml-web built features. Pressing Open on a published wh
 Cause: Claude Code runs a plugin's `$.prompt.submit` only once the chat is idle (its `wait` is false: "a plugin's prompt runs once idle"); only a peer's message or a notification reaches a running turn, so a board send cannot open the artifact mid-turn. It always worked so; it seemed instant only when the chat was idle. The toast said "sent" at press time, and every press was submitted again.
 
 Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: while the chat works, the toast says the board message waits for the chat to finish its turn; a send whose text already waits is not submitted again (`waitingSubmits` in `board-chat/chat-turns.ts`, cleared when a turn starts), and its toast says it already waits. The Files app's toast says the chat opens it when its turn ends. No mod test; not yet seen in the live bar.
+
+## The Files app names a design canvas by its version folder, not the title it is published under
+
+Reported 2026-11-26 from pml-web built features. pml-web's canvas at `ux/design-canvas/version-7/project/canvas.json` showed as "version-7 ↗ design canvas", while it is published as "ux-mockup" (kept as one, `keep_one` in versions.json).
+
+Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: `publication_of` gives the canvas's title (`CanvasVersion.title`: `ux-mockup` kept as one, `ux-mockup.version-N` while versions are kept) as the Publication's name, `FileEntry.published_name` sends it, and the file bar shows it, the version folder only when none is sent. Tested in `space/session/practices/publication_spec.py` and `file-bar.spec.ts`. Left: a scoped canvas is titled from the unscoped name (`ux-mockup`, not `{scope}-ux-mockup`), since the path does not say its scope, as `publication_of` already read it. Not yet seen in the live Files app.

@@ -21,7 +21,7 @@ const byFidelity = (body: Record<string, unknown> | undefined, files: Record<str
   Object.fromEntries(((body?.fidelities as string[] | undefined) ?? []).map(slug => [slug, files]))
 
 // Listed, and the session's own work exactly when the branch changed it, as the session answers a file in a repository.
-const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '', published_kind: '', format: '', fidelities: [], is_listed: true, is_session_work: is_changed, hidden_by_formats: [] }) as FileEntryData
+const entry = (path: string, is_changed = false): FileEntryData => ({ path, exists: true, is_changed, link: '', published_kind: '', published_name: '', format: '', fidelities: [], is_listed: true, is_session_work: is_changed, hidden_by_formats: [] }) as FileEntryData
 
 // The Files app's server, answering the session's files in the order the link names them, and nothing else; each file
 // the branch changed unless named unchanged, so This session lists it.
@@ -270,8 +270,16 @@ describe('a design canvas in the file bar', () => {
       expect(named(tree.folders[0])).toEqual([CANVAS, 'work/design-canvas/versions.json'])
     })
 
-    it('should be named by its version', () => {
-      expect(publishedOf(canvas)?.name).toBe('version-2')
+    it('should be named by the title it is published under, as the session sends it', () => {
+      expect(publishedOf({ ...canvas, published_name: 'ux-mockup.version-2' })?.name).toBe('ux-mockup.version-2')
+    })
+
+    it('should be named ux-mockup, with no version, when the canvas is kept as one', () => {
+      expect(publishedOf({ ...canvas, published_name: 'ux-mockup' })?.name).toBe('ux-mockup')
+    })
+
+    it('should be named by its version when the session sends no title', () => {
+      expect(publishedOf({ ...canvas, published_name: '' })?.name).toBe('version-2')
     })
 
     it('should open the design canvas at its link', () => {

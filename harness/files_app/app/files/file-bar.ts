@@ -33,8 +33,10 @@ export function publishedOf(entry: FileEntryData): PublishedFile | null {
   if (entry.published_kind === 'whiteboard') return { kind: 'whiteboard', name: nameOf(entry.path).slice(0, -WHITEBOARD_SUFFIX.length), folder: folderOf(entry.path), link: entry.link }
   if (entry.published_kind !== 'design canvas') return null
   const canvas = CANVAS_VERSION.exec(entry.path)
-  if (canvas) return { kind: 'design canvas', name: canvas[2] ?? '', folder: canvas[1] ? `${canvas[1]}/design-canvas` : 'design-canvas', link: entry.link }
-  return { kind: 'design canvas', name: nameOf(entry.path), folder: folderOf(entry.path), link: entry.link }
+  // A canvas is named by the title it is published under, which the session sends (ux-mockup, or ux-mockup.version-7
+  // while versions are kept), so the bar and the artifact in Claude agree; its version folder only when none is sent.
+  if (canvas) return { kind: 'design canvas', name: entry.published_name || (canvas[2] ?? ''), folder: canvas[1] ? `${canvas[1]}/design-canvas` : 'design-canvas', link: entry.link }
+  return { kind: 'design canvas', name: entry.published_name || nameOf(entry.path), folder: folderOf(entry.path), link: entry.link }
 }
 
 // The classes of a file's entry in the file bar: a whiteboard marked as one, open, not on disk, and changed on the

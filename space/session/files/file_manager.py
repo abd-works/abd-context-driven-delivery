@@ -158,11 +158,13 @@ class Folder:
 
 
 class Publication(NamedTuple):
-    """Where a file is published in Claude, which a page opens instead of the file: the link, and what is published
-    there, a ``whiteboard`` board or a ``design canvas``; no link and no kind for a file not published."""
+    """Where a file is published in Claude, which a page opens instead of the file: the link, what is published there,
+    a ``whiteboard`` board or a ``design canvas``, and the title it is published under, such as ``ux-mockup``; no link and
+    no kind for a file not published, and no title where the page names it from its path."""
 
     link: str = ""
     kind: str = ""
+    name: str = ""
 
 
 # What a file published in Claude is published as.
@@ -215,6 +217,13 @@ class FileEntry:
         """What it is published as in Claude, a ``whiteboard`` or a ``design canvas``, so a page names it so without
         working it out from the path; none for a file that is not published."""
         return self._published.kind
+
+    @property
+    @data_field
+    def published_name(self) -> str:
+        """The title it is published under in Claude, such as ``ux-mockup`` for a design canvas, so a page names it as
+        the published artifact is named; none where the page names it from its path, as a whiteboard by its file."""
+        return self._published.name
 
     @property
     @data_field
