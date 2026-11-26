@@ -29,3 +29,17 @@ Two sends queue two messages, each delivered once, each followed on `chat.messag
 ## Tier that should catch it
 
 Unit (`harness/chat/chat_spec.py`), with the spec clock frozen (`Chat.clock`) and two queues before either writes; or heavy with real threads. `chat_spec.py` covers a quick burst from one thread (the "Windows' clock repeats" comment), not two senders.
+
+## Triage
+
+- **Status:** confirmed. 8 threads x 5 sends to one chat (throwaway `CDD_CHATS_FOLDER`) lost 306 of 800 messages over 20 trials.
+- **Severity:** wrong result (a message silently lost).
+- **Triaged by:** Relay.
+- **Why:** `ChatMailbox.queue` chose the file name from the folder and the clock, then wrote it, with nothing held between; two senders chose one name and the second `os.replace` wrote over the first.
+
+## Fix
+
+- **Scenario:** "Commands sent to one chat at the same moment each reach it" (Story: Send Command To Chat) in `story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/connect_chat_bar_board_and_story_ui_story.test.md`.
+- **Test:** `harness/chat/chat_heavy_spec.py`, "that is sent commands from many senders at once" (heavy: real threads on disk). Seen failing first: 17 of 40 left.
+- **Fix:** `harness/chat/chat.py` `ChatMailbox.queue` holds the chat's `sending.lock` (*LockFile*, the operating system's lock, so it excludes other threads and other processes: the board, the Files app and a chat's own server all send) from choosing the name to writing the file. 0 of 800 lost after.
+- **Commit:** see below.

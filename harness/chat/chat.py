@@ -17,6 +17,7 @@ from harness.agent_tools.agent_tools import agent_tool, noSessionLog, tool_subje
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.mcp_annotations import mcp
+from harness.process.lock_file import LockFile
 from harness.agent_tools.chat_pointer import ChatPointer
 from harness.agent_tools.tool_call import ToolCall
 
@@ -38,6 +39,10 @@ SHOWN = "shown"
 DONE = "done"
 FAILED = "failed"
 MESSAGE_STATES = (WAITING, TAKEN, SHOWN, DONE, FAILED)
+# The lock file in a chat's folder a sender holds from choosing its message's name to writing it, and how long a send
+# waits for another sender to let go: the board, the Files app and a chat's own tools send from several processes.
+SENDING_LOCK = "sending.lock"
+SENDING_WAIT_SECONDS = 10
 # The board shows a chat's latest messages; older ones are not worth keeping.
 KEPT_MESSAGES = 20
 # The Claude app opens a new chat on a folder from this link, with its prompt filled in for the person to send.
@@ -416,8 +421,10 @@ class ChatMailbox:
             raise ChatNotConnectedError(self._chat.id)
         waiting = self._folder / WAITING
         waiting.mkdir(parents=True, exist_ok=True)
-        path = waiting / self._next_file_name()
-        JsonFile(path).write({"kind": kind, "text": text, "sent_at": self._chat.clock()})
+        # Two senders at once would choose one name from the clock, and the second would write over the first.
+        with LockFile(self._folder / SENDING_LOCK, SENDING_WAIT_SECONDS).held():
+            path = waiting / self._next_file_name()
+            JsonFile(path).write({"kind": kind, "text": text, "sent_at": self._chat.clock()})
         return self._message(path, WAITING)
 
     def message(self, message: str) -> ChatMessage | None:
@@ -486,7 +493,7 @@ class ChatMailbox:
                 self._move(path, DONE)
 
     # Windows' clock repeats within a quick burst of sends, so the name moves past every one already sent; it still
-    # sorts in the order sent.
+    # sorts in the order sent. Only a sender holding the chat's sending lock chooses one.
     def _next_file_name(self) -> str:
         latest = max((int(path.stem) for state in MESSAGE_STATES for path in self._sent_in(state)), default=0)
         return f"{max(int(self._chat.clock() * NANOSECONDS_PER_SECOND), latest + 1)}.json"

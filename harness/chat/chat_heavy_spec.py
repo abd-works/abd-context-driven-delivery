@@ -20,6 +20,9 @@ CHAT = "ad6c04ab-chat"
 CLOCK = [1000.0]
 CONCURRENT_CHECK_INS = 200
 MANY_COMMANDS = 40
+# Senders at once, and the commands each sends: the board, the Files app and a chat's own tools all send to one chat.
+SENDERS = 8
+SENT_BY_EACH = 5
 
 
 def _check_in_repeatedly(name: str, failures: list[Exception]) -> None:
@@ -95,3 +98,30 @@ with description("a chat") as self:
 
                 with it("should hand each command to only one of them"):
                     expect(len(self.taken)).to(equal(MANY_COMMANDS + 1))
+
+        # (S) Person --> Send Command To Chat: the Files app sends a refresh and a board's Open at the same moment, and
+        # each send must reach the chat.
+        with context("that is sent commands from many senders at once"):
+            with before.each:
+                self.failures = []
+                together = Barrier(SENDERS)
+
+                def send(sender: int) -> None:
+                    together.wait(timeout=5)
+                    try:
+                        for number in range(SENT_BY_EACH):
+                            Chat.load(CHAT).send("submit", f"sender {sender} message {number}")
+                    except Exception as failure:
+                        self.failures.append(failure)
+
+                senders = [Thread(target=send, args=(sender,)) for sender in range(SENDERS)]
+                for thread in senders:
+                    thread.start()
+                for thread in senders:
+                    thread.join()
+
+            with it("should take every send"):
+                expect(self.failures).to(be_empty)
+
+            with it("should keep every command waiting, none written over another"):
+                expect(len(list((self.chats / CHAT / "waiting").glob("*.json")))).to(equal(SENDERS * SENT_BY_EACH))

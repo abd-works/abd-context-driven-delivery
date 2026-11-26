@@ -125,3 +125,21 @@ section: body
   *But* ++Increment 1: Start Ticket Work++ has none  
 *When* the Person switches the story map to Story UI's Increment View  
 *Then* ++Increment 1: Start Ticket Work++ offers Create ticket
+
+## Story: Send Command To Chat
+
+Acceptance tests: `harness/chat/chat_spec.py` for one sender, `harness/chat/chat_heavy_spec.py` for senders at once.
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| exploratory testing, 2026-11-26 (pip-5) | a refresh and a board's Open sent at the same moment left one message; the other was lost though both sends answered |
+
+#### Scenario: Commands sent to one chat at the same moment each reach it
+
+*Given* a connected chat  
+*When* the Files app sends it a refresh and a board's Open at the same moment, from two senders  
+*Then* both commands wait for the chat, each in its own message  
+  *And* the chat takes each one once at its next check-in
+

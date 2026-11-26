@@ -9,7 +9,7 @@ The MCP tools are `chats.list` and `chats.open` on the roster, `chat.send(kind, 
 
 - **Purpose:** Let the board drive any connected chat — send it a command and follow that command until the chat has shown and finished it — without the chats and the board sharing a process.
 - **Seam (terms):** Chats (`Chats.load(call)`: `list`, `open`, `new_chat`), NewChat (`link`, `open`, `opened_from`), ChatOpener (`open(link)`, `from_environment`), RecordedChatOpener, Chat, ChatMailbox (`chat.mailbox`: `queue`, `message`), ChatCommand, ChatMessage, ChatNotConnectedError, `chats.list`, `chats.open`, `chat.send`, `chat.messages`, `chat.remove`, `chat.resend`, `chat.check_in`, `chat.confirm`, `chat.finish`
-- **Dependencies (one-way):** `harness/agent_tools` (the toolset annotations, and *ChatPointer*, which finds a chat's transcript by its id; the chat finds it once and keeps its path in `chat.json`, so reading its title again does not search the Claude projects folder), `harness/installation`, `harness/mcp`.
+- **Dependencies (one-way):** `harness/agent_tools` (the toolset annotations, and *ChatPointer*, which finds a chat's transcript by its id; the chat finds it once and keeps its path in `chat.json`, so reading its title again does not search the Claude projects folder), `harness/installation`, `harness/mcp`, `harness/process` (*LockFile*: a sender holds the chat's `sending.lock` from choosing its message's name to writing it, so two senders at once, in one process or several, never write one file).
 
 It imports nothing outside the framework, so it sits in harness above harness/mcp.
 
