@@ -49,7 +49,7 @@ with description("a markdown story map loaded from a workspace") as self:
                         "## Story: Place Order",
                         "",
                         "### Scenario: Happy path",
-                        "*Given* a cart",
+                        "*Given* a ++[cart](domain-model.md#cart)++",
                         "*When* the customer checks out",
                         "*Then* the order is placed",
                         "",
@@ -63,6 +63,11 @@ with description("a markdown story map loaded from a workspace") as self:
             loaded = MarkdownStoryMap().read_folder(self.root, self.root)
             named = {story.name: story for story in _stories(loaded)}
             expect(named["Place Order"].scenarios[0].name).to(equal("Happy path"))
+
+        with it("should keep on each step the line it was read from, links and all, through the story's copy of it"):
+            loaded = MarkdownStoryMap().read_folder(self.root, self.root)
+            named = {story.name: story for story in _stories(loaded)}
+            expect(named["Place Order"].scenarios[0].steps[0].line_as_read()).to(equal("*Given* a ++[cart](domain-model.md#cart)++\n"))
 
         with it("should read scenario files once for every story"):
             calls = []

@@ -108,6 +108,13 @@ class MarkdownStep(Step):
         self.values = [value.strip("`").strip() for value in _ITALIC_VALUE.findall(self.text) if value]
         self.actor = actor.group(1).strip() if actor else ""
 
+    def _copy_fields(self, original: Step, copy_part) -> None:
+        """Take original as every step copy does, and the line it was read from, which a markdown step's copy still
+        writes, and whose links the story explorer opens as class cards."""
+        super()._copy_fields(original, copy_part)
+        if isinstance(original, MarkdownStep):
+            self.markdown_line = original.markdown_line
+
     def line_as_read(self) -> Optional[str]:
         """The line this step was read from, while its keyword and text are unchanged; otherwise None."""
         if self.markdown_line is None or self.markdown_line[:2] != (self.keyword, self.text):
