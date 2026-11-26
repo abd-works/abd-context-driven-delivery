@@ -1,0 +1,1539 @@
+{
+ "v": 1,
+ "title": "",
+ "order": [
+  "boundedcontext.0e85749a6f40",
+  "boundedcontext.300d29fd5f32",
+  "boundedcontext.35cf82f9d2a9",
+  "page.403f3648e367",
+  "page.e3845f49c791",
+  "page.cd81347a5d6c",
+  "page.b44cdd7590b7",
+  "page.add50e724db1",
+  "page.5f9b5f0c2dc1",
+  "page.3d895704484f",
+  "page.a3a441c788fb",
+  "page.9398d1ab0b98",
+  "page.64c2e44db43a",
+  "page.f482b2b8c5a7",
+  "page.44f10d254d47",
+  "title",
+  "class.4c43b03f2059",
+  "class.46b3fd71ab92",
+  "class.d15c35f19080",
+  "class.fb8fa087fc31",
+  "class.2353aa9b68e1",
+  "class.28543a821e76",
+  "class.469a2736bbe4",
+  "composition.9b66221552c3",
+  "composition.489be1a6851c",
+  "composition.d14d0f68d0e6",
+  "composition.8d57896b42dc",
+  "composition.4a3a8334d4e0",
+  "dependency.c9ca1d56fec9",
+  "class.4b571ed0164a",
+  "class.d9fb8c535cd7",
+  "class.00f01bc01916",
+  "class.38f1a1ed2775",
+  "class.8e7788f74fc6",
+  "class.87e65a0bbab7",
+  "composition.aa5ac5cb09ed",
+  "composition.4ee8f6aa52f6",
+  "composition.734278025f16",
+  "composition.71d71e8690fd",
+  "composition.dc9e78bfbf31",
+  "composition.0b2119ad7aa2",
+  "class.d94b520dc20e",
+  "class.086060d2cb0c",
+  "composition.572d9b0d9de9",
+  "class.648d84d358ee",
+  "class.3df970ced4fa",
+  "class.0b1e44d44c48",
+  "association.77ea1bfd4d34",
+  "class.5f14531ab7bf",
+  "class.c0a4f8e3e1dc",
+  "class.6bfd796d8203",
+  "class.3df32075b62a",
+  "class.6e65d603b5d2",
+  "class.2cc1dec07a82",
+  "composition.c4035e3a9857",
+  "composition.823ef29970dc",
+  "association.18a01ddc660e",
+  "class.e80d53f929f9",
+  "class.35ecbd0152cb",
+  "class.cd133b80dabf",
+  "composition.8cda2d47b795",
+  "composition.ecb7849ebd1a",
+  "class.ca0cb3df3358",
+  "class.53b097a937e4",
+  "composition.9f6639169499",
+  "class.6731c18bb366",
+  "class.5c23346d3600",
+  "class.b794cf43f2a6",
+  "class.84bd2c7a5395",
+  "class.9fad183dacaa",
+  "class.d77194e2cb22",
+  "class.cd79e2e933cf",
+  "class.70869e624f7e",
+  "class.a6e16f8eada9",
+  "composition.a4bf2302b99c",
+  "composition.9a4c5c5e775a",
+  "composition.2657d9c8def2",
+  "composition.d27eb8591da5",
+  "composition.f01ea5648dad",
+  "composition.d5ff2b2dde05",
+  "class.b9a546f440f5",
+  "association.across.da6713316438",
+  "association.across.5569e6b6ed7f",
+  "association.across.7c926de86c3d",
+  "association.across.ebe0842acfce",
+  "association.across.c7c7cbe1016f",
+  "dependency.across.82a34511d820",
+  "dependency.across.916d5bd5290f",
+  "dependency.across.03c7d3f1b937",
+  "dependency.across.092002211799",
+  "dependency.across.45bf756a010e",
+  "dependency.across.3384970bc303",
+  "association.across.4e125c7a7ae2",
+  "association.across.10183402324c",
+  "association.across.9f55ea71e127",
+  "composition.across.eb96d219ac4f",
+  "dependency.across.65c0eac856be",
+  "dependency.across.6ae14726aadb",
+  "dependency.across.48c33b2208fb",
+  "association.across.455e8cc1bce0",
+  "composition.across.8ec6cf2a90aa",
+  "association.across.fe14bd82e1c1",
+  "dependency.across.2d898afa96c2",
+  "association.across.d61622a24dce",
+  "association.across.2dcbaa173584",
+  "dependency.across.b57153750d85",
+  "association.across.21967824421a",
+  "association.across.82ef4d96f223"
+ ],
+ "elements": {
+  "boundedcontext.0e85749a6f40": {
+   "type": "container",
+   "text": "Customer",
+   "x": 0.0,
+   "y": 60.0,
+   "w": 4044.0,
+   "h": 1836.0
+  },
+  "boundedcontext.300d29fd5f32": {
+   "type": "container",
+   "text": "Inventory",
+   "x": 4244.0,
+   "y": 60.0,
+   "w": 4580.0,
+   "h": 1224.0
+  },
+  "boundedcontext.35cf82f9d2a9": {
+   "type": "container",
+   "text": "Revenue",
+   "x": 0.0,
+   "y": 2096.0,
+   "w": 7568.0,
+   "h": 3241.0
+  },
+  "page.403f3648e367": {
+   "type": "container",
+   "text": "Credentials",
+   "x": 24.0,
+   "y": 112.0,
+   "w": 1388.0,
+   "h": 1760.0
+  },
+  "page.e3845f49c791": {
+   "type": "container",
+   "text": "Customer Profile",
+   "x": 1612.0,
+   "y": 112.0,
+   "w": 2408.0,
+   "h": 1292.0
+  },
+  "page.cd81347a5d6c": {
+   "type": "container",
+   "text": "Plans",
+   "x": 4268.0,
+   "y": 112.0,
+   "w": 348.0,
+   "h": 788.0
+  },
+  "page.b44cdd7590b7": {
+   "type": "container",
+   "text": "Numbers",
+   "x": 4816.0,
+   "y": 112.0,
+   "w": 1428.0,
+   "h": 1148.0
+  },
+  "page.add50e724db1": {
+   "type": "container",
+   "text": "Porting",
+   "x": 6444.0,
+   "y": 112.0,
+   "w": 1328.0,
+   "h": 1122.0
+  },
+  "page.5f9b5f0c2dc1": {
+   "type": "container",
+   "text": "SIM",
+   "x": 7972.0,
+   "y": 112.0,
+   "w": 828.0,
+   "h": 282.0
+  },
+  "page.3d895704484f": {
+   "type": "container",
+   "text": "Cart",
+   "x": 24.0,
+   "y": 2148.0,
+   "w": 1788.0,
+   "h": 2641.0
+  },
+  "page.a3a441c788fb": {
+   "type": "container",
+   "text": "Subscription",
+   "x": 2012.0,
+   "y": 2148.0,
+   "w": 1088.0,
+   "h": 1309.0
+  },
+  "page.9398d1ab0b98": {
+   "type": "container",
+   "text": "Voucher",
+   "x": 3300.0,
+   "y": 2148.0,
+   "w": 848.0,
+   "h": 869.0
+  },
+  "page.64c2e44db43a": {
+   "type": "container",
+   "text": "Product Order",
+   "x": 4348.0,
+   "y": 2148.0,
+   "w": 1088.0,
+   "h": 597.0
+  },
+  "page.f482b2b8c5a7": {
+   "type": "container",
+   "text": "Billing",
+   "x": 5636.0,
+   "y": 2148.0,
+   "w": 1908.0,
+   "h": 1821.0
+  },
+  "page.44f10d254d47": {
+   "type": "container",
+   "text": "Device Wallet",
+   "x": 24.0,
+   "y": 4989.0,
+   "w": 468.0,
+   "h": 324.0
+  },
+  "title": {
+   "type": "text",
+   "x": 60,
+   "y": -20,
+   "text": "Bounded Context Map - Classes",
+   "size": "large"
+  },
+  "class.4c43b03f2059": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Aggregate Root» «Entity»*\n**Credentials**\n+ email: string\n+ password: string\n+ confirmPassword: string\n+ requirements: CredentialRequirements\n+ registrationRequirements: RegistrationPasswordRequirements\n+ newPasswordRequirements: NewPasswordRequirements\n+ token: CredentialsToken | null\n+ validation: CredentialsValidation\n+ passwordReset: PasswordReset\n+ resendMessage: string | null\n+ isUpdatable: boolean\n+ isPersistable: boolean\n+ isAuthenticatable: boolean\n+ isLoggedIn: boolean\n+ newPasswordRequired: boolean\n– – –\n+ register(): Credentials\n+ authenticateCredentials(): Credentials\n+ requestTemporaryPassword(): Credentials\n+ resendTemporaryPassword(): Credentials\n+ setNewPassword(): Credentials\n+ signOut(): void\n+ issueSessionToken(): void\n+ passwordRequirements(purpose: PasswordPurpose): PasswordRequirements\n+ missingRequirements(purpose: PasswordPurpose): CredentialRequirement[]\n+ requireRepository(): CredentialsRepository\n\n*«Repository»*\n**CredentialsRepository**\n+ accounts: Collection<Credentials>\n– – –\n+ new(): Credentials\n+ create(credentials: Credentials): Credentials\n+ load(credentials: Credentials): Credentials | null\n+ update(credentials: Credentials): Credentials\n+ prepareTemporaryPassword(credentials: Credentials): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 428.0,
+   "y": 136.0,
+   "w": 580,
+   "h": 843
+  },
+  "class.46b3fd71ab92": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Entity»*\n**CredentialsValidation**\n+ validationCode: string\n+ verified: boolean\n+ validationCodeSentAt: Date | null\n+ expectedValidationCode: string | null\n+ validationCodeMessages: ValidationCodeMessage[]\n+ validationCodeWasSent: boolean\n+ canActivate: boolean\n+ canResend: boolean\n+ resendWaitSeconds: number\n– – –\n+ emailValidationCode(): void\n+ verify(validationCode: ValidationCode): CredentialsValidation\n+ resendValidationCode(): void\n+ copyFrom(stored: CredentialsValidation): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 408.0,
+   "y": 1126.0,
+   "w": 500,
+   "h": 381
+  },
+  "class.d15c35f19080": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Value Object»*\n**ValidationCodeMessage**\n+ sentAt: Date\n+ email: string\n+ code: string\n+ executed: boolean\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 288.0,
+   "y": 1656.0,
+   "w": 220,
+   "h": 192
+  },
+  "class.fb8fa087fc31": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Value Object»*\n**ValidationCode**\n+ code: string\n+ sentAt: Date\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 608.0,
+   "y": 1656.0,
+   "w": 220,
+   "h": 150
+  },
+  "class.2353aa9b68e1": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Entity»*\n**PasswordReset**\n+ sent: TemporaryPassword[]\n+ newPasswordRequired: boolean\n+ canResend: boolean\n+ resendWaitSeconds: number\n– – –\n+ send(): TemporaryPassword\n+ matches(password: string): boolean\n+ requireNewPassword(): void\n+ clear(): void\n+ copyFrom(stored: PasswordReset): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1068.0,
+   "y": 1126.0,
+   "w": 320,
+   "h": 297
+  },
+  "class.28543a821e76": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Value Object»*\n**TemporaryPassword**\n+ email: string\n+ password: string\n+ sentAt: Date\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1118.0,
+   "y": 1656.0,
+   "w": 220,
+   "h": 171
+  },
+  "class.469a2736bbe4": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Entity»*\n**CredentialsToken**\n+ email: string\n+ jwt: string | null\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 48.0,
+   "y": 1126.0,
+   "w": 220,
+   "h": 150
+  },
+  "composition.9b66221552c3": {
+   "type": "arrow",
+   "from": "class.4c43b03f2059",
+   "to": "class.469a2736bbe4",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "token",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    508
+   ]
+  },
+  "composition.489be1a6851c": {
+   "type": "arrow",
+   "from": "class.4c43b03f2059",
+   "to": "class.46b3fd71ab92",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "validation",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    528
+   ]
+  },
+  "composition.d14d0f68d0e6": {
+   "type": "arrow",
+   "from": "class.4c43b03f2059",
+   "to": "class.2353aa9b68e1",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "passwordReset",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    528
+   ]
+  },
+  "composition.8d57896b42dc": {
+   "type": "arrow",
+   "from": "class.46b3fd71ab92",
+   "to": "class.d15c35f19080",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "validationCodeMessages",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    300
+   ]
+  },
+  "composition.4a3a8334d4e0": {
+   "type": "arrow",
+   "from": "class.2353aa9b68e1",
+   "to": "class.28543a821e76",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "sent",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "dependency.c9ca1d56fec9": {
+   "type": "arrow",
+   "from": "class.46b3fd71ab92",
+   "to": "class.fb8fa087fc31",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "verify",
+   "dash": true,
+   "bends": [
+    "v",
+    300
+   ]
+  },
+  "class.4b571ed0164a": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Aggregate Root» «Entity»*\n**CustomerProfile**\n+ id: string\n+ credentials: Credentials\n+ identity: Identity\n+ address: Address\n+ billing: CustomerProfileBilling | null\n+ done: boolean\n+ kyc: Kyc\n+ identityVerified: boolean\n+ kycRequired: boolean\n+ identityTicketRequired: boolean\n+ supportTickets: SupportTicket[]\n– – –\n+ enterProfileDetails(identity: Identity, address: Address): void\n+ saveUpdates(preferredName: string, otherPhoneNumber: string, address: Address): void\n+ sendSupportRequest(subject: string, message: string): void\n+ confirmIdentity(identity: Identity, address: Address, kyc: Kyc): void\n+ deferIdentityVerification(): void\n+ completeCart(done: boolean | null): void\n\n*«Repository»*\n**CustomerProfileRepository**\n+ customerProfiles: Collection<CustomerProfile>\n– – –\n+ create(credentials: Credentials): CustomerProfile\n+ load(credentials: Credentials): CustomerProfile | null\n+ loadById(customerProfileId: string, credentials?: Credentials): CustomerProfile | null\n+ update(customerProfile: CustomerProfile): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2806.0,
+   "y": 136.0,
+   "w": 700,
+   "h": 654
+  },
+  "class.d9fb8c535cd7": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Value Object»*\n**Identity**\n+ email: string\n+ name: string\n+ lastName: string\n+ fullName: string\n+ dateOfBirth: string\n+ expiryDate: string\n+ idNationality: string\n+ idNumber: string\n+ idType: string\n+ idTypesOffered: string[]\n+ preferredName: string\n+ otherPhoneNumber: string\n+ preferredNameIsSingleWord: boolean\n– – –\n+ digitsOf(phoneNumber: string): string\n+ withContactDetails(preferredName: string, otherPhoneNumber: string): Identity\n+ missingRequirements(): IdentityRequirement[]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1636.0,
+   "y": 936.0,
+   "w": 620,
+   "h": 444
+  },
+  "class.00f01bc01916": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Value Object»*\n**Address**\n+ street: string\n+ complement: string\n+ city: string\n+ parish: string\n+ postalCode: string\n+ country: string\n– – –\n+ missingRequirements(): AddressRequirement[]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2396.0,
+   "y": 936.0,
+   "w": 380,
+   "h": 255
+  },
+  "class.38f1a1ed2775": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Value Object»*\n**Kyc**\n+ personaInquiryId: string | null\n+ verified: boolean\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2896.0,
+   "y": 936.0,
+   "w": 280,
+   "h": 150
+  },
+  "class.8e7788f74fc6": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Value Object»*\n**PersonaInquiry**\n+ inquiryId: string | null\n+ verified: boolean\n+ identity: Identity\n+ address: Address\n– – –\n+ fromCompletion(completion: PersonaCompletion): PersonaInquiry\n+ failed(): PersonaInquiry",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2126.0,
+   "y": 136.0,
+   "w": 500,
+   "h": 234
+  },
+  "class.87e65a0bbab7": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Entity»*\n**SupportTicket**\n+ subject: string\n+ message: string\n+ sentAt: Date\n+ requirements: { subject: \"Please select an option.\", message: \"Please enter a message.\" }\n– – –\n+ missingRequirements(): SupportTicketRequirement[]\n+ toJSON(): SupportTicketJson",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3276.0,
+   "y": 936.0,
+   "w": 720,
+   "h": 234
+  },
+  "composition.aa5ac5cb09ed": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.d9fb8c535cd7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "identity",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    353,
+    -500,
+    -1052
+   ]
+  },
+  "composition.4ee8f6aa52f6": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.00f01bc01916",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "address",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    413
+   ]
+  },
+  "composition.734278025f16": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.38f1a1ed2775",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "kyc",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    433
+   ]
+  },
+  "composition.71d71e8690fd": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.87e65a0bbab7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "supportTickets",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    433
+   ]
+  },
+  "composition.dc9e78bfbf31": {
+   "type": "arrow",
+   "from": "class.8e7788f74fc6",
+   "to": "class.d9fb8c535cd7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "identity",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    1153,
+    -770,
+    -262
+   ]
+  },
+  "composition.0b2119ad7aa2": {
+   "type": "arrow",
+   "from": "class.8e7788f74fc6",
+   "to": "class.00f01bc01916",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "address",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    643
+   ]
+  },
+  "class.d94b520dc20e": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Inventory · Plans`\n*«Aggregate Root» «Entity»*\n**Plan**\n+ id: string\n+ name: string\n+ tagline: string\n+ price: number\n+ tag: string | null\n+ isSellable: boolean\n+ features: PlanFeature[]\n+ oneYear: boolean\n+ roaming: boolean\n– – –\n\n*«Repository»*\n**PlanRepository**\n+ plans: Collection<Plan>\n– – –\n+ list(): Plan[]\n+ load(id: string): Plan | null",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4312.0,
+   "y": 136.0,
+   "w": 260,
+   "h": 444
+  },
+  "class.086060d2cb0c": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Inventory · Plans`\n*«Value Object»*\n**PlanFeature**\n+ region: inBermuda | whenYouTravel\n+ lines: string[]\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4292.0,
+   "y": 726.0,
+   "w": 300,
+   "h": 150
+  },
+  "composition.572d9b0d9de9": {
+   "type": "arrow",
+   "from": "class.d94b520dc20e",
+   "to": "class.086060d2cb0c",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "features",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "class.648d84d358ee": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Inventory · Numbers`\n*«Aggregate Root» «Entity»*\n**NumberInventory**\n+ msisdn: string\n+ imsi: string\n+ status: available | held | reserved\n+ interimPort: boolean\n+ isAvailable: boolean\n+ isHeld: boolean\n+ isReserved: boolean\n– – –\n+ hold(): void\n+ reserve(reserveDetails: NumberReserveOptions): void\n+ display(msisdn: string): string\n+ reserved(msisdn: string): NumberInventory\n+ releaseHold(): void\n+ makeAvailable(): void\n\n*«Repository»*\n**NumberInventoryRepository**\n+ inventory: Collection<NumberInventory>\n– – –\n+ load(msisdn: string): NumberInventory | undefined\n+ list(): NumberInventory[]\n+ update(entry: NumberInventory): void\n+ nextAvailable(count: number): NumberInventory[]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5130.0,
+   "y": 666.0,
+   "w": 440,
+   "h": 570
+  },
+  "class.3df970ced4fa": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Inventory · Numbers`\n*«Entity»*\n**NumberInventorySearch**\n+ listedInventory: NumberInventory[]\n+ heldInventory: NumberInventory[]\n+ selected: string | null\n+ searchHint: string | null\n+ failureMessage: string | null\n+ emptyMessage: string | null\n+ msisdns: string[]\n– – –\n+ search(searchCriteria: NumberInventorySearchOptions, heldNumbers: NumberInventory[], reservedNumber: NumberInventory | null): void\n+ select(msisdn: string): void\n+ reserve(msisdn: string, heldNumbers: NumberInventory[]): NumberInventory\n+ releaseHeld(heldNumbers: NumberInventory[]): void\n+ applyListed(fields: NumberInventoryFields): void\n+ fromFields(body: NumberInventoryFields): NumberInventorySearch",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4840.0,
+   "y": 136.0,
+   "w": 1020,
+   "h": 381
+  },
+  "class.0b1e44d44c48": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Inventory · Numbers`\n*«Value Object»*\n**TermNumberSearch**\n+ input: string\n+ converted: string\n– – –\n+ clean(rawText: string): string\n+ hintLabel(): string | null\n+ toDialable(): string",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5940.0,
+   "y": 136.0,
+   "w": 280,
+   "h": 213
+  },
+  "association.77ea1bfd4d34": {
+   "type": "arrow",
+   "from": "class.3df970ced4fa",
+   "to": "class.648d84d358ee",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "listedInventory, heldInventory"
+  },
+  "class.5f14531ab7bf": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Inventory · Porting`\n*«Aggregate Root» «Entity»*\n**Portability**\n+ donorOperator: string\n+ portNumber: string\n+ accountNumber: string\n+ userType: string\n+ accountType: string\n+ device: string\n+ informationConfirmed: boolean\n+ permissionGranted: boolean\n+ interimNumber: NumberInventory | null\n+ verified: boolean\n+ verificationSkipped: boolean\n+ donorNumberConfirmed: boolean\n+ enteredCode: string\n+ verificationMessage: string | null\n+ refusedCode: string | null\n+ resendNotice: string | null\n+ codeSentTo: string | null\n+ canResend: boolean\n+ resendWaitSeconds: number\n+ smsWasSent: boolean\n+ smsSendCount: number\n+ portNumberShown: string\n+ enteredCodeMessage: string | null\n+ canEnterCode: boolean\n+ canVerifyCode: boolean\n+ canResendCode: boolean\n+ fieldMessages: PortabilityFieldMessages\n– – –\n+ validate(): string | null\n+ submit(heldNumbers: NumberInventory[]): NumberInventory | null\n+ beginPort(heldNumbers: NumberInventory[]): void\n+ sendVerification(): PortabilityStatus\n+ confirmDonorNumber(): void\n+ deferVerification(): void\n+ enterCode(code: string): void\n+ canVerify(code: string): boolean\n+ verify(code: string): void\n+ resendVerificationSms(): void\n+ persistUpdate(): void\n\n*«Repository»*\n**PortabilityRepository**\n+ portabilities: Collection<Portability>\n– – –\n+ create(subscriptionId: string, donorOperator: string, portNumber: string, accountNumber: string, userType: string, accountType: string, device: string): Portability\n+ load(subscriptionId: string): Portability | null\n+ update(portability: Portability): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6468.0,
+   "y": 136.0,
+   "w": 1280,
+   "h": 1074
+  },
+  "class.c0a4f8e3e1dc": {
+   "type": "shape",
+   "color": "#f8cecc",
+   "text": "`Inventory · SIM`\n*«Repository»*\n**IccidInventoryRepository**\n+ << aggregation >> availableIccids: Collection<string>\n– – –\n+ validate(iccid: string): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7996.0,
+   "y": 136.0,
+   "w": 440,
+   "h": 150
+  },
+  "class.6bfd796d8203": {
+   "type": "shape",
+   "color": "#f8cecc",
+   "text": "`Inventory · SIM`\n*«Value Object»*\n**Sim**\n+ simType: eSIM | pSIM | null\n+ iccid: string | null\n+ ready: boolean\n+ awaitsParadiseSimCard: boolean\n+ iccidEntered: boolean\n+ iccidFormatValid: boolean\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 8496.0,
+   "y": 136.0,
+   "w": 280,
+   "h": 234
+  },
+  "class.3df32075b62a": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Revenue · Cart`\n*«Aggregate Root» «Entity»*\n**Cart**\n+ id: string\n+ customerProfile: CustomerProfile | null\n+ lines: Line[]\n+ cartStep: CartStep\n+ canReopenNumberStep: boolean\n+ appliedVoucher: AppliedVoucher | null\n+ billingAccount: BillingAccount | null\n+ fullPrice: number\n+ discountPerLine: number\n+ payingLineCount: number\n+ familyDiscountPerLine: number\n+ familyDiscount: number\n+ familyDiscountPerLineIfAdded: number\n+ nextFamilyDiscountLineCount: number\n+ monthlyCharge: number\n+ monthlySaving: number\n+ canAddLine: boolean\n+ voucherKind: plan | cart | trial | unlock | later | null\n+ voucherDiscount: number\n+ voucherLines: number\n+ firstBill: number\n+ discountsLabel: string\n+ upFrontCharge: string\n+ voucherDescription: string\n+ voucherNote: string\n+ voucherNotUsedYet: boolean\n+ trialHeld: boolean\n+ voucherCredit: number | null\n+ chargesUpFront: boolean\n+ orderSuccess: boolean | null\n+ payUpFront: boolean | null\n+ submitOrder: boolean\n+ defaultPayment: boolean\n+ returnToReview: boolean\n+ stayingOnPlanSelection: boolean\n+ orderResult: allSet | almostThere\n+ orderResultHeadline: string\n+ orderNeedsParadiseSim: boolean\n+ orderPaymentFailed: boolean\n– – –\n+ startCart(customerProfile: CustomerProfile, cartRepository: CartRepository): void — the visitor's cart belongs to the verified customer and is stored as theirs\n+ carryChosenPlan(plan: Plan): void\n+ addLine(plan: Plan): Line\n+ removeLine(line: Line): void\n+ applyVoucher(voucher: AppliedVoucher): void\n+ removeVoucher(): void\n+ saveAndExit(): void\n+ orderSummary(): { position, nickname, planName, planPrice, discountedPrice, msisdn, temporaryNumber, portNumber, portPending, simType, setUp }[] and idNumber, identity verified or in manual review, and the customer's full name\n+ whatsNext(): { group: checkingId | installEsims | putSimIn | pickUpSim | portingNumber, lines: Line[] }[]\n+ voucherEmptiesCart(voucher: AppliedVoucher): boolean\n+ endTrialVoucher(): void\n+ temporaryNumberFor(line: Line): string\n+ numbersInUse(except: Line | null): string[]\n+ lineHoldingNumber(msisdn: string, except: Line | null): Line | null\n+ portNumberProblem(msisdn: string, line: Line | null): string | null\n+ recordPlaced(outcome, today: Date): void\n\n*«Repository»*\n**CartRepository**\n+ carts: Collection<Cart>\n– – –\n+ create(customerProfile: CustomerProfile | null): Cart\n+ load(customerProfile: CustomerProfile): Cart | null\n+ update(cart: Cart): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 48.0,
+   "y": 2172.0,
+   "w": 1740,
+   "h": 1431
+  },
+  "class.6e65d603b5d2": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Revenue · Cart`\n*«Entity»*\n**Line**\n+ id: string\n+ position: number\n+ nickname: string\n+ bringsOwnNumber: boolean | null\n+ plan: Plan | null\n+ number: NumberInventory | null\n+ heldNumbers: NumberInventory[]\n+ portability: Portability | null\n+ sim: Sim | null\n+ canKeepCurrentNumber: boolean\n+ setUp: boolean\n+ planPrice: number\n+ familyDiscount: number\n+ monthlyPrice: number\n+ voucherDiscount: number\n– – –\n+ nameLine(nickname: string, bringsOwnNumber: boolean): void\n+ choosePlan(plan: Plan): void\n+ keepCurrentPlan(): void\n+ recordHeldNumbers(numbers: NumberInventory[]): void\n+ reserveSelectedNumber(number: NumberInventory): void\n+ keepCurrentNumber(): void\n+ recordPort(portability: Portability): void\n+ selectSim(sim: Sim): void\n+ attachIccid(sim: Sim): void\n+ activateSim(sim: Sim): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 678.0,
+   "y": 4132.0,
+   "w": 480,
+   "h": 633
+  },
+  "class.2cc1dec07a82": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Revenue · Cart`\n*«Value Object»*\n**CartStep**\n+ name: VerifyAccount | SelectPlan | PickNumber | VerifyPortedNumber | SelectSim | ProfileKyc | Checkout | Done\n+ line: Line | null\n+ path: string\n+ reopensNumberStep: boolean\n– – –\n+ at(path: string): CartStep\n+ is(step: CartStep): boolean",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 488.0,
+   "y": 3752.0,
+   "w": 860,
+   "h": 234
+  },
+  "composition.c4035e3a9857": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.6e65d603b5d2",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "lines",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    814,
+    -460,
+    -356
+   ]
+  },
+  "composition.823ef29970dc": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.2cc1dec07a82",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "cartStep",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    824
+   ]
+  },
+  "association.18a01ddc660e": {
+   "type": "arrow",
+   "from": "class.2cc1dec07a82",
+   "to": "class.6e65d603b5d2",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "line",
+   "bends": [
+    "v",
+    223
+   ]
+  },
+  "class.e80d53f929f9": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Revenue · Subscription`\n*«Aggregate Root» «Entity»*\n**Subscription**\n+ id: string\n+ customerProfile: CustomerProfile\n+ number: string\n+ sim: Sim | null\n+ waitingForPsim: boolean\n+ usage: SubscriptionUsage | null\n+ plan: Plan | null\n+ hasActiveLine: boolean\n+ planOrderedOn: string | null\n– – –\n+ firstBillDueOn(today: Date): Date\n+ nextDowngradeDate(today: Date): string | null\n+ canChangePlanTo(plan: Plan, today: Date): boolean\n+ changePlan(plan: Plan, agreedToServiceAgreement: boolean, today: Date): void\n+ requestLinePortability(agreedToTerms: boolean): void\n+ copyFieldsFrom(source: Subscription): void\n+ restore(subscription: Subscription, row: SubscriptionJson): Subscription\n+ toJSON(): SubscriptionJson\n\n*«Repository»*\n**SubscriptionRepository**\n+ subscriptions: Collection<Subscription>\n– – –\n+ create(customerProfile: CustomerProfile, id: string, plan: Plan, number: string, sim: Sim | null, planOrderedOn: Date): Subscription\n+ load(customerProfile: CustomerProfile): Subscription[]\n+ update(subscription: Subscription): void\n+ prepareUpdate(): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2036.0,
+   "y": 2172.0,
+   "w": 1040,
+   "h": 654
+  },
+  "class.35ecbd0152cb": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Revenue · Subscription`\n*«Value Object»*\n**SubscriptionUsage**\n+ local: DataAllowance\n+ roaming: DataAllowance | null\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2426.0,
+   "y": 2972.0,
+   "w": 260,
+   "h": 150
+  },
+  "class.cd133b80dabf": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Revenue · Subscription`\n*«Value Object»*\n**DataAllowance**\n+ used: number\n+ quota: number | unlimited | unknown\n+ hasLimit: boolean\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2396.0,
+   "y": 3262.0,
+   "w": 320,
+   "h": 171
+  },
+  "composition.8cda2d47b795": {
+   "type": "arrow",
+   "from": "class.e80d53f929f9",
+   "to": "class.35ecbd0152cb",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "usage",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "composition.ecb7849ebd1a": {
+   "type": "arrow",
+   "from": "class.35ecbd0152cb",
+   "to": "class.cd133b80dabf",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "local, roaming",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "class.ca0cb3df3358": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Revenue · Voucher`\n*«Aggregate Root» «Entity»*\n**AppliedVoucher**\n+ code: string\n+ plans: VoucherPlan[]\n+ amountOff: number | null\n+ trial: boolean\n+ redemption: VoucherRedemption | null\n+ quotedPrice: number\n+ percentOff: number\n+ redeemFailed: boolean\n+ orderAmount: string\n– – –\n+ redeem(plans: VoucherPlan[]): void\n+ credit(): { amount, glCode, remarks } | null\n\n*«Repository»*\n**AppliedVoucherRepository**\n– – –\n+ create(code: string, plans: VoucherPlan[], amountOff: number | null, trial: boolean): AppliedVoucher\n+ forCode(code: string, planOf: (planId: string)): AppliedVoucher\n+ load(code: string): AppliedVoucher | null\n+ update(voucher: AppliedVoucher): AppliedVoucher",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3324.0,
+   "y": 2172.0,
+   "w": 800,
+   "h": 507
+  },
+  "class.53b097a937e4": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Revenue · Voucher`\n*«Value Object»*\n**VoucherRedemption**\n+ success: boolean\n+ discountAmount: number\n+ totalAmount: number\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3614.0,
+   "y": 2822.0,
+   "w": 220,
+   "h": 171
+  },
+  "composition.9f6639169499": {
+   "type": "arrow",
+   "from": "class.ca0cb3df3358",
+   "to": "class.53b097a937e4",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "redemption",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "class.6731c18bb366": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Revenue · Product Order`\n*«Aggregate Root» «Entity»*\n**ProductOrder**\n+ id: string\n+ cart: Cart\n+ customerProfile: CustomerProfile\n+ placed: boolean\n+ orderSuccess: boolean\n+ submitOrder: boolean\n+ payUpFront: boolean | null\n+ profileDone: boolean | null\n+ defaultPayment: boolean\n+ ticketSubjects: OrderTicketSubject[]\n– – –\n+ place(billingAccount: BillingAccount | null): void\n\n*«Repository»*\n**ProductOrderRepository**\n– – –\n+ create(cart: Cart): ProductOrder\n+ load(cart: Cart): ProductOrder | null\n+ update(order: ProductOrder): ProductOrder\n+ acceptsOrder(): boolean\n+ createTicket(customerProfile: CustomerProfile, subject: OrderTicketSubject): OrderTicket\n+ loadTickets(customerProfile: CustomerProfile): OrderTicket[]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4372.0,
+   "y": 2172.0,
+   "w": 700,
+   "h": 549
+  },
+  "class.5c23346d3600": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Revenue · Product Order`\n*«Entity»*\n**OrderTicket**\n+ id: string\n+ customerProfile: CustomerProfile\n+ subject: OrderTicketSubject\n+ requesterName: string\n+ requesterEmail: string\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5132.0,
+   "y": 2172.0,
+   "w": 280,
+   "h": 213
+  },
+  "class.b794cf43f2a6": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Aggregate Root» «Entity»*\n**BillingAccount**\n+ id: string\n+ customerProfile: CustomerProfile\n+ status: opened | active\n+ active: boolean\n+ creditAdjustments: CreditAdjustment[]\n+ balance: number\n+ invoices: Invoice[]\n+ payments: Payment[]\n+ cardAuthorization: Payment | null\n+ receivedPayments: Payment[]\n+ paymentMethods: PaymentMethod[]\n+ defaultPaymentMethod: PaymentMethod | null\n+ hasBalanceDue: boolean\n– – –\n+ canRemoveSavedCard(paymentMethod: PaymentMethod): boolean\n+ applyCredit(credit: CreditAdjustment | null): BillingAccount\n+ activate(): void\n+ enterCardAuthorization(maxAttempts: number): Payment\n+ checkCardAuthorization(): Payment\n+ takePayment(amount: number, today: Date): Payment\n+ payNow(): void\n+ enterNewPaymentMethod(paymentMethod: PaymentMethod): void\n+ chooseDefaultCard(paymentMethod: PaymentMethod): void\n+ removeSavedCard(paymentMethod: PaymentMethod): void\n+ openInvoice(invoiceId: string): Invoice\n\n*«Repository»*\n**BillingAccountRepository**\n– – –\n+ create(customerProfile: CustomerProfile): BillingAccount\n+ load(customerProfile: CustomerProfile): BillingAccount | null\n+ update(billing: BillingAccount): BillingAccount\n+ activationFailure(): Error | null\n+ chargeAccepted(): boolean\n+ invoiceAvailable(): boolean",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6340.0,
+   "y": 2172.0,
+   "w": 500,
+   "h": 822
+  },
+  "class.84bd2c7a5395": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Entity»*\n**Payment**\n+ maxAttempts: number\n+ authorization: CardAuthorization | null\n+ lastStatus: PaymentStatus | null\n+ paymentAttempts: number\n+ cardAdditionExhausted: boolean\n+ received: boolean\n+ receivedOn: string | null\n+ amount: number | null\n+ transactionId: string | null\n+ orderIdentifier: string\n+ salesChannel: SalesChannel\n+ authorizesCard: boolean\n– – –\n+ received(amount: number, receivedOn: string): Payment\n+ declined(amount: number): Payment\n+ enter(): void\n+ checkStatus(): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7080.0,
+   "y": 3142.0,
+   "w": 440,
+   "h": 444
+  },
+  "class.9fad183dacaa": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Value Object»*\n**CardAuthorization**\n+ transactionIdentifier: string\n+ totalAmount: number\n+ orderIdentifier: string\n+ salesChannel: SalesChannel\n+ hostedPage: string\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6310.0,
+   "y": 3732.0,
+   "w": 260,
+   "h": 213
+  },
+  "class.d77194e2cb22": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Value Object»*\n**PaymentStatus**\n+ status: PaymentResult\n+ reason: string\n+ completed: boolean\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 7200.0,
+   "y": 3732.0,
+   "w": 200,
+   "h": 171
+  },
+  "class.cd79e2e933cf": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Entity»*\n**PaymentMethod**\n+ id: string\n+ cardNumber: string\n+ agreedToTerms: boolean\n+ brand: string\n+ lastFourDigits: string\n+ status: string\n+ transactionId: string\n+ requirements: { terms: the $1 authorization terms }\n– – –\n+ entered(cardNumber: string, agreedToTerms: boolean): PaymentMethod\n+ missingRequirements(): PaymentMethodRequirement[]\n+ requireTerms(): void\n+ save(id: string, transactionId: string): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5660.0,
+   "y": 3142.0,
+   "w": 540,
+   "h": 360
+  },
+  "class.70869e624f7e": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Value Object»*\n**Invoice**\n+ invoiceId: string\n+ dueDate: string\n+ dueAmount: number\n+ status: PAID | PARTIALLY_PAID | UNPAID\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6300.0,
+   "y": 3142.0,
+   "w": 340,
+   "h": 192
+  },
+  "class.a6e16f8eada9": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Value Object»*\n**CreditAdjustment**\n+ amount: number\n+ glCode: string\n+ remarks: string\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6740.0,
+   "y": 3142.0,
+   "w": 200,
+   "h": 171
+  },
+  "composition.a4bf2302b99c": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.a6e16f8eada9",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "creditAdjustments",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    519
+   ]
+  },
+  "composition.9a4c5c5e775a": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.70869e624f7e",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "invoices",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    519
+   ]
+  },
+  "composition.2657d9c8def2": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.84bd2c7a5395",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "payments, cardAuthorization, receivedPayments",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    499
+   ]
+  },
+  "composition.d27eb8591da5": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.cd79e2e933cf",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "paymentMethods, defaultPaymentMethod",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    499
+   ]
+  },
+  "composition.f01ea5648dad": {
+   "type": "arrow",
+   "from": "class.84bd2c7a5395",
+   "to": "class.9fad183dacaa",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "authorization",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    308
+   ]
+  },
+  "composition.d5ff2b2dde05": {
+   "type": "arrow",
+   "from": "class.84bd2c7a5395",
+   "to": "class.d77194e2cb22",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "lastStatus",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    328
+   ]
+  },
+  "class.b9a546f440f5": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Revenue · Device Wallet`\n*«Aggregate Root» «Entity»*\n**DeviceWalletMerchantCredential**\n+ keyIdentifier: string\n+ certificate: string\n– – –\n\n*«Repository»*\n**DeviceWalletMerchantCredentialRepository**\n+ credential: DeviceWalletMerchantCredential | null\n– – –\n+ load(): DeviceWalletMerchantCredential | null",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 48.0,
+   "y": 5013.0,
+   "w": 420,
+   "h": 276
+  },
+  "association.across.da6713316438": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.4c43b03f2059",
+   "fromSide": "bottom",
+   "toSide": "bottom",
+   "label": "credentials «Customer/Supplier»",
+   "bends": [
+    "v",
+    387,
+    -1186,
+    407,
+    312,
+    452
+   ]
+  },
+  "association.across.5569e6b6ed7f": {
+   "type": "arrow",
+   "from": "class.5f14531ab7bf",
+   "to": "class.648d84d358ee",
+   "fromSide": "left",
+   "toSide": "right",
+   "label": "interimNumber «submit» «Customer/Supplier»",
+   "bends": [
+    "h",
+    -1498
+   ]
+  },
+  "association.across.7c926de86c3d": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile «Customer/Supplier»",
+   "bends": [
+    "v",
+    -988,
+    2282,
+    367
+   ]
+  },
+  "association.across.ebe0842acfce": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.ca0cb3df3358",
+   "fromSide": "bottom",
+   "toSide": "bottom",
+   "label": "appliedVoucher «applyVoucher» «Customer/Supplier»",
+   "bends": [
+    "v",
+    742,
+    2662,
+    284
+   ]
+  },
+  "association.across.c7c7cbe1016f": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.b794cf43f2a6",
+   "fromSide": "bottom",
+   "toSide": "bottom",
+   "label": "billingAccount «Customer/Supplier»",
+   "bends": [
+    "v",
+    762,
+    5352,
+    447
+   ]
+  },
+  "dependency.across.82a34511d820": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.d94b520dc20e",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«addLine» «Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -788,
+    3322,
+    262
+   ]
+  },
+  "dependency.across.916d5bd5290f": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.3df970ced4fa",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«removeLine»",
+   "dash": true,
+   "bends": [
+    "v",
+    -768,
+    1062,
+    -1458,
+    -250,
+    224
+   ]
+  },
+  "dependency.across.03c7d3f1b937": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.648d84d358ee",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«removeLine» «Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -748,
+    1042,
+    499
+   ]
+  },
+  "dependency.across.092002211799": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.e80d53f929f9",
+   "fromSide": "right",
+   "toSide": "left",
+   "label": "«recordPlaced» «Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "h",
+    1072
+   ]
+  },
+  "dependency.across.45bf756a010e": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.5f14531ab7bf",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -748,
+    32,
+    -988,
+    2262,
+    757,
+    -2028,
+    617
+   ]
+  },
+  "dependency.across.3384970bc303": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.c0a4f8e3e1dc",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -768,
+    -18,
+    1709
+   ]
+  },
+  "association.across.4e125c7a7ae2": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.d94b520dc20e",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "plan",
+   "bends": [
+    "v",
+    -438,
+    3522,
+    -1678,
+    3392,
+    542,
+    -182,
+    282
+   ]
+  },
+  "association.across.10183402324c": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.648d84d358ee",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "number, heldNumbers «reserveSelectedNumber»",
+   "bends": [
+    "v",
+    -388,
+    4432,
+    -1678,
+    110,
+    319
+   ]
+  },
+  "association.across.9f55ea71e127": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.5f14531ab7bf",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "portability",
+   "bends": [
+    "v",
+    -368,
+    6652,
+    577
+   ]
+  },
+  "composition.across.eb96d219ac4f": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.6bfd796d8203",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "sim",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    -348
+   ]
+  },
+  "dependency.across.65c0eac856be": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.3df970ced4fa",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«reserveSelectedNumber»",
+   "dash": true,
+   "bends": [
+    "v",
+    -348,
+    32,
+    -438,
+    3502,
+    -1658,
+    130,
+    934,
+    280,
+    224
+   ]
+  },
+  "dependency.across.6ae14726aadb": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.c0a4f8e3e1dc",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«attachIccid»",
+   "dash": true,
+   "bends": [
+    "v",
+    -368,
+    12,
+    -388,
+    4412,
+    -1638,
+    4682,
+    1079,
+    -1116,
+    1059,
+    -46,
+    109
+   ]
+  },
+  "dependency.across.48c33b2208fb": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.e80d53f929f9",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«activateSim»",
+   "dash": true,
+   "bends": [
+    "v",
+    -368,
+    -18,
+    -418,
+    -196,
+    361
+   ]
+  },
+  "association.across.455e8cc1bce0": {
+   "type": "arrow",
+   "from": "class.e80d53f929f9",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile «Customer/Supplier»",
+   "bends": [
+    "v",
+    -1279,
+    304,
+    367
+   ]
+  },
+  "composition.across.8ec6cf2a90aa": {
+   "type": "arrow",
+   "from": "class.e80d53f929f9",
+   "to": "class.6bfd796d8203",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "sim",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    -399,
+    1664,
+    -1189,
+    2774,
+    1067,
+    -26,
+    157
+   ]
+  },
+  "association.across.fe14bd82e1c1": {
+   "type": "arrow",
+   "from": "class.e80d53f929f9",
+   "to": "class.d94b520dc20e",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "plan «Customer/Supplier»",
+   "bends": [
+    "v",
+    -379,
+    714,
+    -1069,
+    -202,
+    302
+   ]
+  },
+  "dependency.across.2d898afa96c2": {
+   "type": "arrow",
+   "from": "class.ca0cb3df3358",
+   "to": "class.d94b520dc20e",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -996,
+    476,
+    -1746,
+    -12,
+    262
+   ]
+  },
+  "association.across.d61622a24dce": {
+   "type": "arrow",
+   "from": "class.6731c18bb366",
+   "to": "class.3df32075b62a",
+   "fromSide": "bottom",
+   "toSide": "bottom",
+   "label": "cart «place» «Customer/Supplier»",
+   "bends": [
+    "v",
+    1184,
+    -1122,
+    1164,
+    -2912,
+    742,
+    62,
+    782
+   ]
+  },
+  "association.across.2dcbaa173584": {
+   "type": "arrow",
+   "from": "class.6731c18bb366",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile «place» «Customer/Supplier»",
+   "bends": [
+    "v",
+    -1516,
+    -702,
+    397
+   ]
+  },
+  "dependency.across.b57153750d85": {
+   "type": "arrow",
+   "from": "class.6731c18bb366",
+   "to": "class.b794cf43f2a6",
+   "fromSide": "bottom",
+   "toSide": "bottom",
+   "label": "«place» «Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    344,
+    738,
+    564,
+    -280,
+    467
+   ]
+  },
+  "association.across.21967824421a": {
+   "type": "arrow",
+   "from": "class.5c23346d3600",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile",
+   "bends": [
+    "v",
+    -968,
+    -1032,
+    -1078,
+    44,
+    377
+   ]
+  },
+  "association.across.82ef4d96f223": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile «Customer/Supplier»",
+   "bends": [
+    "v",
+    -1293,
+    -970,
+    -1243,
+    -3370,
+    397,
+    24,
+    367
+   ]
+  }
+ }
+}

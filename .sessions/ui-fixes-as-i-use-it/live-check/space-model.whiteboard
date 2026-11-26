@@ -1,0 +1,29 @@
+{
+ "v": 1,
+ "title": "",
+ "order": [
+  "title",
+  "class.9073084cbb73"
+ ],
+ "elements": {
+  "title": {
+   "type": "text",
+   "x": 60,
+   "y": -20,
+   "text": "Model - Classes",
+   "size": "large"
+  },
+  "class.9073084cbb73": {
+   "type": "shape",
+   "color": "white",
+   "text": "`space/work_state`\n**WorkState**\n+ root: Path\n+ chat: str\n+ sessions_folder: Path\n+ path: Path\n+ key: str\n+ branch_name: str\n+ worktree_folder: Path | None\n+ session: str\n– – –\n+ WorkState(repo_root: Path | str, chat: str, home: Path | str | None)\n+ load(): dict[str, str]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 0.0,
+   "y": 60.0,
+   "w": 560,
+   "h": 297
+  }
+ }
+}
