@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from harness.annotations.name import Name
 from harness.design_canvas.versions import ported_project
 
-from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, STORY_TEST_SUFFIXES, StoryMapFiles
+from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, STORY_TEST_SUFFIXES, StoryMapFiles, story_line
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -95,18 +95,50 @@ class StoryMapLinks:
         files = StoryMapFiles(root)
         self._story_files = self._by_story(files.story_files_below(), STORY_FILE_SUFFIXES)
         self._story_tests = self._by_story(files.story_tests_below(), STORY_TEST_SUFFIXES)
+        self._holders = [*files.story_files_below(), *files.story_tests_below(), *files.shared_stories_below()]
+        self._texts: Dict[Path, str] = {}
         self._entries = self._entries_of(story_map)
 
     def story_file(self, story: "Story") -> str:
-        """Relative path to the story's own scenario file, else to its acceptance test; ``""`` when it has neither."""
+        """Relative path to the story's own scenario file, else to its acceptance test, else to the file that holds it
+        among others, at its heading when that file is markdown; ``""`` when it has none."""
         path = self.story_path(story)
-        return self.relative(path) if path is not None else ""
+        if path is None:
+            return ""
+        anchor = self._heading_anchor(path, story.name) if self._holds_among_others(path, story) else ""
+        return self.relative(path) + (f"#{anchor}" if anchor else "")
 
     def story_path(self, story: "Story") -> Optional[Path]:
-        """The story's own scenario file, else its acceptance test; none when it has neither."""
+        """The story's own scenario file, else its acceptance test, else the first story file that names it among
+        others (a sub-epic's markdown, a story test or a shared story file in code); none when no file writes it."""
         slug = self._slug(story.name)
         path = self._story_files.get(slug) or self._story_tests.get(slug)
+        if path is None:
+            path = next((holder for holder in self._holders if story_line(self._text_of(holder), story.name)), None)
         return path if path is not None and path.is_file() else None
+
+    def _holds_among_others(self, path: Path, story: "Story") -> bool:
+        slug = self._slug(story.name)
+        return path not in (self._story_files.get(slug), self._story_tests.get(slug))
+
+    def _text_of(self, path: Path) -> str:
+        if path not in self._texts:
+            self._texts[path] = path.read_text(encoding="utf-8")
+        return self._texts[path]
+
+    def _heading_anchor(self, path: Path, name: str) -> str:
+        """The anchor of the markdown heading in path that names the story called name; empty when path is no markdown
+        or names it in no heading."""
+        if path.suffix.lower() != ".md":
+            return ""
+        line = story_line(self._text_of(path), name)
+        anchors = _Anchors()
+        for number, text in enumerate(self._text_of(path).splitlines(), 1):
+            heading = re.match(r"#+ (.+)$", text)
+            anchor = anchors.next(heading.group(1)) if heading else ""
+            if number == line:
+                return anchor
+        return ""
 
     def screen_files(self, story: "Story") -> List[Tuple[str, Path]]:
         """Each screen the story is shown on whose prototype is a file in the folder the graph reads, with that file:

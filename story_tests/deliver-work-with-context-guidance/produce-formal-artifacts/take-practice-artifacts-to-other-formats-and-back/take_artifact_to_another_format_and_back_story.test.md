@@ -73,6 +73,16 @@ Observed for the Stories markdown adapter when it is handed the file it replaces
   *And* it holds no sources or scope lines the person did not write
   *And* a story added in the drawing is written under its sub-epic, beside the sentences the person wrote
 
+#### Scenario: Link each story of a drawn story map to the file that writes its scenarios, in every layout
+
+Observed for the Stories links (`cdd_guidance/practices/stories/model/markdown/story_map_links_spec.py`). Defect widget-4.
+
+*Given* ++story_tests/check-out/pay/pay_story.test.md++ holds the stories Pay For Order and Cancel Order under `## Story:` headings
+  *And* no file is named after either story
+*When* Claude Code renders ++.context/story-map.md++ to drawio
+*Then* Cancel Order's card links to ++story_tests/check-out/pay/pay_story.test.md++ at `#story-cancel-order`
+  *And* a story a story test or a shared story file in code holds among others links to that file
+
 #### Scenario: Keep the prose a drawing cannot show through a trip to draw.io and back
 
 Observed for every practice and fidelity that draws its documents, as one shared behaviour (`cdd_guidance/practices/format_trip_spec.py` for the story map, the bounded-context map and the domain model; `format_trip_heavy_spec.py` for Clean Engineering's module cards and class model), and for the mechanism itself (`harness/drawio/drawio_spec.py`, `harness/whiteboard/whiteboard_spec.py`, `harness/guidance/format_adapter_spec.py`, "a drawing rendered from a document"). Source: the person's answer of 2026-11-23 to closing choice 10 of the exploratory testing session, "prose a drawing cannot hold is kept in the drawing's hidden metadata, so a trip through a drawing loses nothing". A draw.io file keeps the document on its page's root cell, which draw.io shows as the diagram's data and draws nowhere; a whiteboard keeps it in its board meta.

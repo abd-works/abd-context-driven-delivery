@@ -5,6 +5,7 @@ markdown format, its links, and a story test's reader all find the same files.""
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path, PurePosixPath
 from typing import Iterator, List, Optional
 
@@ -17,6 +18,18 @@ def source_at(file: str, start: int = 0, end: int | None = None) -> Source:
     """Where a story node sits: its file and its first and last line, 0 while the line is not known; one line when no
     last line is given."""
     return Source(file, start, start if end is None else end)
+
+
+def story_line(text: str, name: str) -> int:
+    """The line of a story file's text, counted from 1, that names the story called name: its ``Story:`` heading or
+    comment, or the call that writes it in code (``story("…")``, ``shareStory('…')``, ``@shared_stories.scenario("…",
+    …)``); 0 when no line does."""
+    call = re.compile(r"(?:\w*[sS]tory|\.scenario)\(\s*[\"']" + re.escape(name) + r"[\"']")
+    for number, line in enumerate(text.splitlines(), 1):
+        heading = _STORY_HEADING.match(line)
+        if (heading and heading.group(1) == name) or call.search(line):
+            return number
+    return 0
 
 
 def path_from(base: Path, path: Path) -> str:
@@ -38,6 +51,10 @@ _MARKDOWN = ".md"
 STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
 # How a story's acceptance test ends, in each language a story is tested in.
 STORY_TEST_SUFFIXES = ("_story.test.py", "_story.test.ts")
+# How a shared story file ends, the scenarios of a sub-epic's stories that every tier replays, in each language.
+SHARED_STORY_SUFFIXES = (".story.shared.py", ".story.shared.ts", ".story.shared.js")
+# A line that heads a story in a story file: a markdown heading, or a comment line in code (`* Story: …`, `# Story: …`).
+_STORY_HEADING = re.compile(r"^\s*(?:#+|\*+|//+)\s*Story:\s*(.+?)\s*$")
 # The markdown a map's increments are written in, in the order a folder is searched for them.
 THIN_SLICING_FILES = ("thin-slicing.md", "thin-slice.md", "thin-slices.md", "increments.md")
 # The name a map's first thin slice is written under, in a folder that holds none yet.
@@ -151,6 +168,11 @@ class StoryMapFiles:
         """Each story's acceptance test in this folder and the folders below it, and in the `story_tests` beside a
         project's `.context`."""
         return sorted(path for walked in self.story_folders() for path in self._files_in(walked, STORY_TEST_SUFFIXES))
+
+    def shared_stories_below(self) -> List[Path]:
+        """Each shared story file in this folder and the folders below it, and in the `story_tests` beside a project's
+        `.context`."""
+        return sorted(path for walked in self.story_folders() for path in self._files_in(walked, SHARED_STORY_SUFFIXES))
 
     def _markdown_in(self, top: Path) -> Iterator[Path]:
         """Every markdown file in top and the folders below it, entering each folder's `.context`, where documents are
