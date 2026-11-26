@@ -165,9 +165,12 @@ class ProjectStoryFiles:
         return preferred_maps(maps + [found for found in self._maps_beside(tests + scenario_files) if found not in maps])
 
     def _take_map(self, merged: StoryMap, read: StoryMap) -> None:
+        """The epics of read onto merged, with the stories its scenarios files specify that it does not hold, each kept
+        under no epic as a read of the whole folder keeps them."""
         merged.sources.take(read.sources)
         for epic in list(read.epics):
             merged.epics.append(epic)
+        merged.unplaced_stories.extend(story for story in read.unplaced_stories if story.name not in {held.name for held in merged.unplaced_stories})
 
     def _read_story_test(self, path: Path) -> StorySource:
         file = path_from(self.project, path)

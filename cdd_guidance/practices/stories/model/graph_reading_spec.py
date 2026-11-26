@@ -79,6 +79,15 @@ with description("a story map read into the graph with a scenarios file beside i
                 f"Story 'Wrap Order' has scenarios in {_SCENARIOS_FILE} and is not on the story map; add it to the map or name the story the scenarios belong to.",
             ]))
 
+        # Hardening regression run (graph_incremental_heavy_spec): a refresh of a scenarios file read the map's epics
+        # again and left out the stories the map does not hold, so their scenarios and steps were gone until a full load.
+        with context("that is refreshed with the scenarios file"):
+            with before.all:
+                self.fixture.practice.reading.graph.refresh([_SCENARIOS_FILE])
+
+            with it("should still keep each of those stories, after the stories of the map"):
+                expect([node.name for node in self.read.nodes("Story")]).to(equal(["Place Order", "Cancel Order", "Gift Order", "Wrap Order"]))
+
 
 _ADD_BOOK = "story_tests/fill-cart/add-books/add_book_to_cart_story.test.md"
 
