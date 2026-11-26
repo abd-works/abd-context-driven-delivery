@@ -1,0 +1,14 @@
+== pml-web domain model (DDD): 39 cards, 50 classes drawn of 50 the document has
+   missing: none
+   rule under a name: 0
+   cards with the – – – split: 39
+   folded classes not after a blank line: 0
+   cards with an invariant line: 30
+   cards with an Invariants heading: 0
+== pml-web object model (Clean Engineering): 118 cards, 98 classes drawn of 0 the document has
+   missing: none
+   rule under a name: 0
+   cards with the – – – split: 98
+   folded classes not after a blank line: 0
+   cards with an invariant line: 64
+   cards with an Invariants heading: 0

@@ -1,0 +1,1551 @@
+{
+ "v": 1,
+ "title": "",
+ "order": [
+  "boundedcontext.0e85749a6f40",
+  "boundedcontext.300d29fd5f32",
+  "boundedcontext.35cf82f9d2a9",
+  "page.403f3648e367",
+  "page.e3845f49c791",
+  "page.cd81347a5d6c",
+  "page.b44cdd7590b7",
+  "page.add50e724db1",
+  "page.5f9b5f0c2dc1",
+  "page.3d895704484f",
+  "page.a3a441c788fb",
+  "page.9398d1ab0b98",
+  "page.64c2e44db43a",
+  "page.f482b2b8c5a7",
+  "page.44f10d254d47",
+  "title",
+  "class.4c43b03f2059",
+  "class.46b3fd71ab92",
+  "class.d15c35f19080",
+  "class.fb8fa087fc31",
+  "class.2353aa9b68e1",
+  "class.28543a821e76",
+  "class.469a2736bbe4",
+  "composition.9b66221552c3",
+  "composition.489be1a6851c",
+  "composition.d14d0f68d0e6",
+  "composition.8d57896b42dc",
+  "composition.4a3a8334d4e0",
+  "dependency.c9ca1d56fec9",
+  "class.4b571ed0164a",
+  "class.d9fb8c535cd7",
+  "class.00f01bc01916",
+  "class.38f1a1ed2775",
+  "class.8e7788f74fc6",
+  "class.87e65a0bbab7",
+  "composition.aa5ac5cb09ed",
+  "composition.4ee8f6aa52f6",
+  "composition.734278025f16",
+  "composition.71d71e8690fd",
+  "composition.dc9e78bfbf31",
+  "composition.0b2119ad7aa2",
+  "class.d94b520dc20e",
+  "class.086060d2cb0c",
+  "composition.572d9b0d9de9",
+  "class.648d84d358ee",
+  "class.3df970ced4fa",
+  "class.0b1e44d44c48",
+  "association.77ea1bfd4d34",
+  "class.5f14531ab7bf",
+  "class.c0a4f8e3e1dc",
+  "class.6bfd796d8203",
+  "class.3df32075b62a",
+  "class.6e65d603b5d2",
+  "class.2cc1dec07a82",
+  "composition.c4035e3a9857",
+  "composition.823ef29970dc",
+  "association.18a01ddc660e",
+  "class.e80d53f929f9",
+  "class.35ecbd0152cb",
+  "class.cd133b80dabf",
+  "composition.8cda2d47b795",
+  "composition.ecb7849ebd1a",
+  "class.ca0cb3df3358",
+  "class.53b097a937e4",
+  "composition.9f6639169499",
+  "class.6731c18bb366",
+  "class.5c23346d3600",
+  "class.b794cf43f2a6",
+  "class.84bd2c7a5395",
+  "class.9fad183dacaa",
+  "class.d77194e2cb22",
+  "class.cd79e2e933cf",
+  "class.70869e624f7e",
+  "class.a6e16f8eada9",
+  "composition.a4bf2302b99c",
+  "composition.9a4c5c5e775a",
+  "composition.2657d9c8def2",
+  "composition.d27eb8591da5",
+  "composition.f01ea5648dad",
+  "composition.d5ff2b2dde05",
+  "class.b9a546f440f5",
+  "association.across.da6713316438",
+  "association.across.5569e6b6ed7f",
+  "association.across.7c926de86c3d",
+  "association.across.ebe0842acfce",
+  "association.across.c7c7cbe1016f",
+  "dependency.across.82a34511d820",
+  "dependency.across.916d5bd5290f",
+  "dependency.across.03c7d3f1b937",
+  "dependency.across.092002211799",
+  "dependency.across.45bf756a010e",
+  "dependency.across.3384970bc303",
+  "association.across.4e125c7a7ae2",
+  "association.across.10183402324c",
+  "association.across.9f55ea71e127",
+  "composition.across.eb96d219ac4f",
+  "dependency.across.65c0eac856be",
+  "dependency.across.6ae14726aadb",
+  "dependency.across.48c33b2208fb",
+  "association.across.455e8cc1bce0",
+  "composition.across.8ec6cf2a90aa",
+  "association.across.fe14bd82e1c1",
+  "dependency.across.2d898afa96c2",
+  "association.across.d61622a24dce",
+  "association.across.2dcbaa173584",
+  "dependency.across.b57153750d85",
+  "association.across.21967824421a",
+  "association.across.82ef4d96f223"
+ ],
+ "elements": {
+  "boundedcontext.0e85749a6f40": {
+   "type": "container",
+   "text": "Customer",
+   "x": 0.0,
+   "y": 60.0,
+   "w": 7004.0,
+   "h": 2206.0
+  },
+  "boundedcontext.300d29fd5f32": {
+   "type": "container",
+   "text": "Inventory",
+   "x": 0.0,
+   "y": 2466.0,
+   "w": 6680.0,
+   "h": 1576.0
+  },
+  "boundedcontext.35cf82f9d2a9": {
+   "type": "container",
+   "text": "Revenue",
+   "x": 0.0,
+   "y": 4242.0,
+   "w": 6252.0,
+   "h": 7434.0
+  },
+  "page.403f3648e367": {
+   "type": "container",
+   "text": "Credentials",
+   "x": 24.0,
+   "y": 112.0,
+   "w": 2128.0,
+   "h": 2130.0
+  },
+  "page.e3845f49c791": {
+   "type": "container",
+   "text": "Customer Profile",
+   "x": 2352.0,
+   "y": 112.0,
+   "w": 4628.0,
+   "h": 1799.0
+  },
+  "page.cd81347a5d6c": {
+   "type": "container",
+   "text": "Plans",
+   "x": 24.0,
+   "y": 2518.0,
+   "w": 1288.0,
+   "h": 1060.0
+  },
+  "page.b44cdd7590b7": {
+   "type": "container",
+   "text": "Numbers",
+   "x": 1512.0,
+   "y": 2518.0,
+   "w": 2128.0,
+   "h": 1498.0
+  },
+  "page.add50e724db1": {
+   "type": "container",
+   "text": "Porting",
+   "x": 3840.0,
+   "y": 2518.0,
+   "w": 1548.0,
+   "h": 1500.0
+  },
+  "page.5f9b5f0c2dc1": {
+   "type": "container",
+   "text": "SIM",
+   "x": 5588.0,
+   "y": 2518.0,
+   "w": 1068.0,
+   "h": 345.0
+  },
+  "page.3d895704484f": {
+   "type": "container",
+   "text": "Cart",
+   "x": 24.0,
+   "y": 4294.0,
+   "w": 2488.0,
+   "h": 4567.0
+  },
+  "page.a3a441c788fb": {
+   "type": "container",
+   "text": "Subscription",
+   "x": 2712.0,
+   "y": 4294.0,
+   "w": 1708.0,
+   "h": 1821.0
+  },
+  "page.9398d1ab0b98": {
+   "type": "container",
+   "text": "Voucher",
+   "x": 4620.0,
+   "y": 4294.0,
+   "w": 1608.0,
+   "h": 1119.0
+  },
+  "page.64c2e44db43a": {
+   "type": "container",
+   "text": "Product Order",
+   "x": 24.0,
+   "y": 9061.0,
+   "w": 2688.0,
+   "h": 828.0
+  },
+  "page.f482b2b8c5a7": {
+   "type": "container",
+   "text": "Billing",
+   "x": 2912.0,
+   "y": 9061.0,
+   "w": 2448.0,
+   "h": 2591.0
+  },
+  "page.44f10d254d47": {
+   "type": "container",
+   "text": "Device Wallet",
+   "x": 5560.0,
+   "y": 9061.0,
+   "w": 468.0,
+   "h": 345.0
+  },
+  "title": {
+   "type": "text",
+   "x": 60,
+   "y": -20,
+   "text": "Bounded Context Map - Classes",
+   "size": "large"
+  },
+  "class.4c43b03f2059": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Aggregate Root» «Entity»*\n**Credentials**\n+ email: string\n  // identity\n+ password: string\n+ confirmPassword: string\n+ requirements: CredentialRequirements\n+ registrationRequirements: RegistrationPasswordRequirements\n+ newPasswordRequirements: NewPasswordRequirements\n  // Access Selfcare\n+ token: CredentialsToken | null\n+ validation: CredentialsValidation\n+ passwordReset: PasswordReset\n  // Access Selfcare\n+ resendMessage: string | null\n+ isUpdatable: boolean\n+ isPersistable: boolean\n+ isAuthenticatable: boolean\n+ isLoggedIn: boolean\n+ newPasswordRequired: boolean\n  // Access Selfcare; true while a sign-in with a temporary password waits for a new password\n– – –\n+ register(): Credentials\n+ authenticateCredentials(): Credentials\n  // Access Selfcare: a temporary password asks for a new password instead of issuing a token\n+ requestTemporaryPassword(): Credentials\n+ resendTemporaryPassword(): Credentials\n  // refused during the resend wait; then \"A new password was sent! Please check your email.\"\n+ setNewPassword(): Credentials\n  // Access Selfcare; uses password and confirmPassword already entered\n+ signOut(): void\n+ issueSessionToken(): void\n+ passwordRequirements(purpose: PasswordPurpose): PasswordRequirements\n  // registration or new-password rules\n+ missingRequirements(purpose: PasswordPurpose): CredentialRequirement[]\n  // registration by default\n+ requireRepository(): CredentialsRepository\n– – –\n// A token is issued only to a verified account with no new password pending.\n// A temporary password signs in once: setting the new password clears it.\n// A new password meets the same requirements as registering (letters, number, symbol, length, confirmed).\n// `signOut` always leaves the account without a token.\n\n*«Repository»*\n**CredentialsRepository**\n+ accounts: Collection<Credentials>\n– – –\n+ new(): Credentials\n+ create(credentials: Credentials): Credentials\n+ load(credentials: Credentials): Credentials | null\n+ update(credentials: Credentials): Credentials\n+ prepareTemporaryPassword(credentials: Credentials): void\n  // Access Selfcare",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 678.0,
+   "y": 136.0,
+   "w": 820,
+   "h": 1158
+  },
+  "class.46b3fd71ab92": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Entity»*\n**CredentialsValidation**\n+ validationCode: string\n+ verified: boolean\n+ validationCodeSentAt: Date | null\n+ expectedValidationCode: string | null\n+ validationCodeMessages: ValidationCodeMessage[]\n+ validationCodeWasSent: boolean\n+ canActivate: boolean\n+ canResend: boolean\n+ resendWaitSeconds: number\n  // 30 after a resend: \"Resend in 30s\"\n– – –\n+ emailValidationCode(): void\n+ verify(validationCode: ValidationCode): CredentialsValidation\n  // the application then runs CustomerProfileRepository.create(credentials) and Cart.startCart(customerProfile, cartRepository)\n+ resendValidationCode(): void\n  // refused during the resend wait\n+ copyFrom(stored: CredentialsValidation): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 408.0,
+   "y": 1436.0,
+   "w": 1000,
+   "h": 444
+  },
+  "class.d15c35f19080": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Value Object»*\n**ValidationCodeMessage**\n+ sentAt: Date\n+ email: string\n+ code: string\n+ executed: boolean\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 658.0,
+   "y": 2026.0,
+   "w": 220,
+   "h": 192
+  },
+  "class.fb8fa087fc31": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Value Object»*\n**ValidationCode**\n+ code: string\n+ sentAt: Date\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 978.0,
+   "y": 2026.0,
+   "w": 220,
+   "h": 150
+  },
+  "class.2353aa9b68e1": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Entity»*\n**PasswordReset**\n+ sent: TemporaryPassword[]\n  // the temporary passwords emailed, latest last\n+ newPasswordRequired: boolean\n+ canResend: boolean\n+ resendWaitSeconds: number\n  // 30 after a resend: \"Resend in 30s\"\n– – –\n+ send(): TemporaryPassword\n  // issues a temporary password and emails it to the account's email\n+ matches(password: string): boolean\n  // true for the latest unexpired temporary password\n+ requireNewPassword(): void\n+ clear(): void\n+ copyFrom(stored: PasswordReset): void\n– – –\n// Only the latest temporary password matches.\n// After `clear`, nothing matches and no new password is required.",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1568.0,
+   "y": 1436.0,
+   "w": 560,
+   "h": 444
+  },
+  "class.28543a821e76": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Value Object»*\n**TemporaryPassword**\n+ email: string\n+ password: string\n+ sentAt: Date\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1738.0,
+   "y": 2026.0,
+   "w": 220,
+   "h": 171
+  },
+  "class.469a2736bbe4": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Customer · Credentials`\n*«Entity»*\n**CredentialsToken**\n+ email: string\n+ jwt: string | null\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 48.0,
+   "y": 1436.0,
+   "w": 220,
+   "h": 150
+  },
+  "composition.9b66221552c3": {
+   "type": "arrow",
+   "from": "class.4c43b03f2059",
+   "to": "class.469a2736bbe4",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "token",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    661
+   ]
+  },
+  "composition.489be1a6851c": {
+   "type": "arrow",
+   "from": "class.4c43b03f2059",
+   "to": "class.46b3fd71ab92",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "validation",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    681
+   ]
+  },
+  "composition.d14d0f68d0e6": {
+   "type": "arrow",
+   "from": "class.4c43b03f2059",
+   "to": "class.2353aa9b68e1",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "passwordReset",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    681
+   ]
+  },
+  "composition.8d57896b42dc": {
+   "type": "arrow",
+   "from": "class.46b3fd71ab92",
+   "to": "class.d15c35f19080",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "validationCodeMessages",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    328
+   ]
+  },
+  "composition.4a3a8334d4e0": {
+   "type": "arrow",
+   "from": "class.2353aa9b68e1",
+   "to": "class.28543a821e76",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "sent",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "dependency.c9ca1d56fec9": {
+   "type": "arrow",
+   "from": "class.46b3fd71ab92",
+   "to": "class.fb8fa087fc31",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "verify",
+   "dash": true,
+   "bends": [
+    "v",
+    328
+   ]
+  },
+  "class.4b571ed0164a": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Aggregate Root» «Entity»*\n**CustomerProfile**\n+ id: string\n  // identity\n+ credentials: Credentials\n  // held by email — Credentials\n+ identity: Identity\n+ address: Address\n+ billing: CustomerProfileBilling | null\n+ done: boolean\n  // onboarding is complete; a completed customer's home is the dashboard\n+ kyc: Kyc\n  // what Verify ID left: the Persona inquiry and whether it verified the identity; set by Confirm ID\n+ identityVerified: boolean\n  // derived from kyc.verified\n+ kycRequired: boolean\n  // Verify ID is asked for while the identity has no ID number\n+ identityTicketRequired: boolean\n+ supportTickets: SupportTicket[]\n  // Use My Account; the support tickets this customer sent, latest last\n– – –\n+ enterProfileDetails(identity: Identity, address: Address): void\n+ saveUpdates(preferredName: string, otherPhoneNumber: string, address: Address): void\n  // Access Selfcare; refuses when an update breaks a rule, naming the unmet rule\n+ sendSupportRequest(subject: string, message: string): void\n  // Use My Account; a failed store leaves supportTickets as it was\n+ confirmIdentity(identity: Identity, address: Address, kyc: Kyc): void\n  // Get Verified Profile; refused with the unmet rule, or \"Customer already exists.\"; while kyc.verified the ID fields Persona read stay as read\n+ deferIdentityVerification(): void\n  // the identity stays unverified and an identity ticket is raised\n+ completeCart(done: boolean | null): void\n– – –\n// `saveUpdates` never changes given name, last name, date of birth, or email.\n// `saveUpdates` refuses an address with a missing street, parish, or postal code, and a preferred name that is not one word; nothing is stored when it refuses.\n// `sendSupportRequest` refuses a missing subject or message, and a ticket the profile store cannot keep; no ticket is recorded when it refuses.\n// `confirmIdentity` refuses a missing given name, last name, date of birth, ID nationality, ID type, ID number, expiry date, street, parish, or postal code, and an ID number another customer holds; nothing is stored when it refuses.\n// While `kyc.verified`, `confirmIdentity` keeps the names, date of birth, ID nationality, ID type, ID number, and expiry date Persona read: they are locked; only the alternate contact number, the preferred name, and the address change.\n\n*«Repository»*\n**CustomerProfileRepository**\n+ customerProfiles: Collection<CustomerProfile>\n– – –\n+ create(credentials: Credentials): CustomerProfile\n+ load(credentials: Credentials): CustomerProfile | null\n+ loadById(customerProfileId: string, credentials?: Credentials): CustomerProfile | null\n+ update(customerProfile: CustomerProfile): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4126.0,
+   "y": 136.0,
+   "w": 1800,
+   "h": 1011
+  },
+  "class.d9fb8c535cd7": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Value Object»*\n**Identity**\n+ email: string\n  // read-only in self-care\n+ name: string\n+ lastName: string\n+ fullName: string\n+ dateOfBirth: string\n+ expiryDate: string\n  // the ID document Persona read, as the customer confirmed it\n+ idNationality: string\n+ idNumber: string\n+ idType: string\n+ idTypesOffered: string[]\n  // by idNationality: Bermuda — Driver's License, Passport, Voter ID; UK — Driver's License, Passport; Canada — adds Identification Card, Permanent Residence Card; US — adds Identification Card, Municipal ID, Permanent Residence Card; none until a nationality is chosen (\"Choose a nationality first\")\n+ preferredName: string\n+ otherPhoneNumber: string\n  // the alternate contact number\n+ preferredNameIsSingleWord: boolean\n  // Access Selfcare\n– – –\n+ digitsOf(phoneNumber: string): string\n+ withContactDetails(preferredName: string, otherPhoneNumber: string): Identity\n  // Access Selfcare; the same identity with only these two changed\n+ missingRequirements(): IdentityRequirement[]\n  // Get Verified Profile; given name, last name, date of birth, ID nationality, ID type (one of idTypesOffered), ID number, and expiry date are required",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2376.0,
+   "y": 1296.0,
+   "w": 2300,
+   "h": 591
+  },
+  "class.00f01bc01916": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Value Object»*\n**Address**\n+ street: string\n+ complement: string\n+ city: string\n+ parish: string\n+ postalCode: string\n+ country: string\n– – –\n+ missingRequirements(): AddressRequirement[]\n  // Access Selfcare, Get Verified Profile; street, parish, and postal code are required",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4816.0,
+   "y": 1296.0,
+   "w": 700,
+   "h": 276
+  },
+  "class.38f1a1ed2775": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Value Object»*\n**Kyc**\n+ personaInquiryId: string | null\n  // the Persona inquiry Verify ID ran\n+ verified: boolean\n  // Persona verified the ID and the customer did not edit it\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5636.0,
+   "y": 1296.0,
+   "w": 500,
+   "h": 192
+  },
+  "class.8e7788f74fc6": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Value Object»*\n**PersonaInquiry**\n+ inquiryId: string | null\n+ verified: boolean\n+ identity: Identity\n+ address: Address\n– – –\n+ fromCompletion(completion: PersonaCompletion): PersonaInquiry\n  // Persona's onComplete fields mapped to the identity and address\n+ failed(): PersonaInquiry\n  // Persona's onError: nothing read",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3406.0,
+   "y": 136.0,
+   "w": 540,
+   "h": 276
+  },
+  "class.87e65a0bbab7": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Customer · Customer Profile`\n*«Entity»*\n**SupportTicket**\n+ subject: string\n  // Found an issue, Had a great idea, Other\n+ message: string\n  // up to 512 characters\n+ sentAt: Date\n+ requirements: { subject: \"Please select an option.\", message: \"Please enter a message.\" }\n– – –\n+ missingRequirements(): SupportTicketRequirement[]\n+ toJSON(): SupportTicketJson",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6236.0,
+   "y": 1296.0,
+   "w": 720,
+   "h": 276
+  },
+  "composition.aa5ac5cb09ed": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.d9fb8c535cd7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "identity",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    624,
+    -1480,
+    -366
+   ]
+  },
+  "composition.4ee8f6aa52f6": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.00f01bc01916",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "address",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    604
+   ]
+  },
+  "composition.734278025f16": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.38f1a1ed2775",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "kyc",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    584
+   ]
+  },
+  "composition.71d71e8690fd": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.87e65a0bbab7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "supportTickets",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    564
+   ]
+  },
+  "composition.dc9e78bfbf31": {
+   "type": "arrow",
+   "from": "class.8e7788f74fc6",
+   "to": "class.d9fb8c535cd7",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "identity",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    932
+   ]
+  },
+  "composition.0b2119ad7aa2": {
+   "type": "arrow",
+   "from": "class.8e7788f74fc6",
+   "to": "class.00f01bc01916",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "address",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    162,
+    420,
+    -168,
+    790,
+    -248
+   ]
+  },
+  "class.d94b520dc20e": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Inventory · Plans`\n*«Aggregate Root» «Entity»*\n**Plan**\n+ id: string\n  // identity\n+ name: string\n  // Atlas, Ace, Data Freedom, Essentials; Promo, which only PROMO30 unlocks\n+ tagline: string\n  // Seamless Global Connectivity, More of What Matters, Go Unlimited in Bermuda, Kids & Seniors Plan; Promo: Free for 30 days\n+ price: number\n+ tag: string | null\n  // the label its catalog card shows\n+ isSellable: boolean\n  // the catalog offers it; the Promo plan is not sellable\n+ features: PlanFeature[]\n  // View Services lists them under My plan\n+ oneYear: boolean\n  // Change My Service; a one-year promotional plan, on which a port request asks for a paid plan first\n+ roaming: boolean\n  // ordering it opens a roaming ticket\n– – –\n\n*«Repository»*\n**PlanRepository**\n+ plans: Collection<Plan>\n  // the catalog\n– – –\n+ list(): Plan[]\n  // the sellable plans\n+ load(id: string): Plan | null\n  // any plan in the collection; an unsellable plan (Promo) is never listed, but loads when its voucher unlocks it",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 178.0,
+   "y": 2542.0,
+   "w": 980,
+   "h": 675
+  },
+  "class.086060d2cb0c": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Inventory · Plans`\n*«Value Object»*\n**PlanFeature**\n+ region: inBermuda | whenYouTravel\n  // the card's two groups, IN BERMUDA and WHEN YOU TRAVEL\n+ lines: string[]\n  // the lines its catalog card shows: \"Unlimited Data / All high-speed data\", \"70+ Countries included / Talk, text and data / 30GB high-speed data, then slower\"\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 48.0,
+   "y": 3362.0,
+   "w": 1240,
+   "h": 192
+  },
+  "composition.572d9b0d9de9": {
+   "type": "arrow",
+   "from": "class.d94b520dc20e",
+   "to": "class.086060d2cb0c",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "features",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "class.648d84d358ee": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Inventory · Numbers`\n*«Aggregate Root» «Entity»*\n**NumberInventory**\n+ msisdn: string\n  // identity\n+ imsi: string\n+ status: available | held | reserved\n+ interimPort: boolean\n  // reserved as the interim number for a port-in\n+ isAvailable: boolean\n+ isHeld: boolean\n+ isReserved: boolean\n– – –\n+ hold(): void\n  // refuses when the number is not available\n+ reserve(reserveDetails: NumberReserveOptions): void\n  // refuses when the number is not held; an interim-port reserve holds an available number first\n+ display(msisdn: string): string\n  // the number as the screens show it\n+ reserved(msisdn: string): NumberInventory\n  // a reserved number the pool does not list (an active line's number)\n+ releaseHold(): void\n+ makeAvailable(): void\n– – –\n// A number keeps only its own status: it does not know who holds or reserved it. Whoever holds or reserves a number keeps the number — the Line keeps its `number` and its `heldNumbers`.\n// Only an available number can be held, and only a held number can be reserved, so a number another line holds or reserved is never offered or reserved again.\n\n*«Repository»*\n**NumberInventoryRepository**\n+ inventory: Collection<NumberInventory>\n– – –\n+ load(msisdn: string): NumberInventory | undefined\n+ list(): NumberInventory[]\n+ update(entry: NumberInventory): void\n+ nextAvailable(count: number): NumberInventory[]\n  // the pool's next available numbers after the ones it offered last, wrapping round",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1656.0,
+   "y": 3212.0,
+   "w": 1420,
+   "h": 780
+  },
+  "class.3df970ced4fa": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Inventory · Numbers`\n*«Entity»*\n**NumberInventorySearch**\n+ listedInventory: NumberInventory[]\n  // the numbers the latest search or listing shows\n+ heldInventory: NumberInventory[]\n  // the listed numbers this search holds; the line keeps them\n+ selected: string | null\n+ searchHint: string | null\n+ failureMessage: string | null\n+ emptyMessage: string | null\n+ msisdns: string[]\n– – –\n+ search(searchCriteria: NumberInventorySearchOptions, heldNumbers: NumberInventory[], reservedNumber: NumberInventory | null): void\n  // releases the numbers the line held, then holds the available matches; the line's reserved number leads the default listing\n+ select(msisdn: string): void\n+ reserve(msisdn: string, heldNumbers: NumberInventory[]): NumberInventory\n  // refuses when the line does not hold the number\n+ releaseHeld(heldNumbers: NumberInventory[]): void\n  // the line's held numbers go back to the pool; a number since reserved stays reserved\n+ applyListed(fields: NumberInventoryFields): void\n+ fromFields(body: NumberInventoryFields): NumberInventorySearch\n– – –\n// The search does not depend on the Cart: the line hands in what it holds (`heldNumbers`) and its `reservedNumber`, and keeps `heldInventory`. It releases only the numbers it is handed, and reserves only one of them.",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1536.0,
+   "y": 2542.0,
+   "w": 1660,
+   "h": 528
+  },
+  "class.0b1e44d44c48": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Inventory · Numbers`\n*«Value Object»*\n**TermNumberSearch**\n+ input: string\n+ converted: string\n  // letters turned into dial-pad digits\n– – –\n+ clean(rawText: string): string\n+ hintLabel(): string | null\n+ toDialable(): string",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3276.0,
+   "y": 2542.0,
+   "w": 340,
+   "h": 234
+  },
+  "association.77ea1bfd4d34": {
+   "type": "arrow",
+   "from": "class.3df970ced4fa",
+   "to": "class.648d84d358ee",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "listedInventory, heldInventory"
+  },
+  "class.5f14531ab7bf": {
+   "type": "shape",
+   "color": "#e1d5e7",
+   "text": "`Inventory · Porting`\n*«Aggregate Root» «Entity»*\n**Portability**\n+ donorOperator: string\n+ portNumber: string\n+ accountNumber: string\n+ userType: string\n+ accountType: string\n+ device: string\n+ informationConfirmed: boolean\n  // \"I confirm that this information is accurate.\"\n+ permissionGranted: boolean\n  // \"I grant permission to Paradise Mobile to bring the phone number in this form to the Paradise Mobile network.\"\n+ interimNumber: NumberInventory | null\n  // held by MSISDN — the number reserved while the port completes\n+ verified: boolean\n+ verificationSkipped: boolean\n  // No, verify it later: no code is sent, the team contacts the customer\n+ donorNumberConfirmed: boolean\n  // Yes, text me the code\n+ enteredCode: string\n+ verificationMessage: string | null\n+ refusedCode: string | null\n+ resendNotice: string | null\n+ codeSentTo: string | null\n+ canResend: boolean\n+ resendWaitSeconds: number\n+ smsWasSent: boolean\n+ smsSendCount: number\n+ portNumberShown: string\n+ enteredCodeMessage: string | null\n+ canEnterCode: boolean\n+ canVerifyCode: boolean\n+ canResendCode: boolean\n+ fieldMessages: PortabilityFieldMessages\n– – –\n+ validate(): string | null\n  // the first unmet field message: provider, a full Bermuda number, user type (Account), account type, both confirmations\n+ submit(heldNumbers: NumberInventory[]): NumberInventory | null\n  // reserves an interim number — an available one, or one the line's listing holds — and stores the port-in\n+ beginPort(heldNumbers: NumberInventory[]): void\n  // Continue on the port form; then \"Is this phone with you?\" asks before any code is sent\n+ sendVerification(): PortabilityStatus\n+ confirmDonorNumber(): void\n  // Yes, text me the code\n+ deferVerification(): void\n  // No, verify it later: sets verificationSkipped; no code is sent\n+ enterCode(code: string): void\n+ canVerify(code: string): boolean\n+ verify(code: string): void\n  // a matching six-digit code verifies the port; a wrong one is refused with its message\n+ resendVerificationSms(): void\n  // after the resend wait\n+ persistUpdate(): void\n– – –\n// A port-in is not submitted until `validate` passes.\n// A port-in does not know the line it ports onto: the Line holds its `portability` and records it (`recordPort`). Its interim number is reserved with no holder; the Line takes it as its `number`.\n// Self-care's port request runs `validate()`, then `Subscription.requestLinePortability`, and is filed under the subscription's id; it sends no SMS check.\n\n*«Repository»*\n**PortabilityRepository**\n+ portabilities: Collection<Portability>\n– – –\n+ create(subscriptionId: string, donorOperator: string, portNumber: string, accountNumber: string, userType: string, accountType: string, device: string): Portability\n  // stored under the line's id, which the line's Subscription keeps; self-care's port request under the subscription's id\n+ load(subscriptionId: string): Portability | null\n  // the latest port-in stored under that line or subscription id\n+ update(portability: Portability): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3864.0,
+   "y": 2542.0,
+   "w": 1500,
+   "h": 1452
+  },
+  "class.c0a4f8e3e1dc": {
+   "type": "shape",
+   "color": "#f8cecc",
+   "text": "`Inventory · SIM`\n*«Repository»*\n**IccidInventoryRepository**\n+ << aggregation >> availableIccids: Collection<string>\n  // the physical SIM stock\n– – –\n+ validate(iccid: string): void\n  // refuses when the ICCID is not in stock (\"Invalid ICCID.\")",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5612.0,
+   "y": 2542.0,
+   "w": 500,
+   "h": 192
+  },
+  "class.6bfd796d8203": {
+   "type": "shape",
+   "color": "#f8cecc",
+   "text": "`Inventory · SIM`\n*«Value Object»*\n**Sim**\n+ simType: eSIM | pSIM | null\n+ iccid: string | null\n+ ready: boolean\n  // an eSIM, or a Paradise SIM card whose ICCID is known\n+ awaitsParadiseSimCard: boolean\n  // a Paradise SIM card with no ICCID yet\n+ iccidEntered: boolean\n  // more than the Paradise ICCID prefix\n+ iccidFormatValid: boolean\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 6172.0,
+   "y": 2542.0,
+   "w": 460,
+   "h": 297
+  },
+  "class.3df32075b62a": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Revenue · Cart`\n*«Aggregate Root» «Entity»*\n**Cart**\n+ id: string\n  // identity; the cart exists before the account does\n+ customerProfile: CustomerProfile | null\n  // held by id — Customer Profile; none while lines are chosen before the account exists\n+ lines: Line[]\n  // Line 1, Line 2, …; each on its own plan\n+ cartStep: CartStep\n  // the step the cart has reached; Checkout until the customer's billing account is active, then Done\n+ canReopenNumberStep: boolean\n  // the step reopens the number step (CartStep.reopensNumberStep)\n+ appliedVoucher: AppliedVoucher | null\n  // held by code — Voucher; one at a time, across all the lines\n+ billingAccount: BillingAccount | null\n  // held by customer id — Billing; read fresh at each load of the cart with BillingAccountRepository.load(customerProfile); its `active` moves the cart from Checkout to Done\n+ fullPrice: number\n  // the lines' plan prices before any discount: \"$449\" struck through\n+ discountPerLine: number\n  // dollars off each paying line every month once the family discount applies; $5 unless the cart is given another amount (the prototype's `lineDiscount`)\n+ payingLineCount: number\n  // every line but the Promo line\n+ familyDiscountPerLine: number\n  // `discountPerLine` once 3 lines or more pay; 0 below that\n+ familyDiscount: number\n  // each paying line's share, every month: \"Family discount · $5 × 3 lines −$15/mo\"\n+ familyDiscountPerLineIfAdded: number\n  // what each line would save with one more paying line: \"$5 off this line too\"\n  // what the family discount saves every month with that many lines: \"$20 with a 4th line\"\n+ nextFamilyDiscountLineCount: number\n  // the next line count, up to 5, that saves more than now: \"Add a 3rd line\"; 0 when none does\n+ monthlyCharge: number\n  // the lines' monthly prices after the family discount, e.g. $404/mo\n+ monthlySaving: number\n  // the full price less the monthly charge: \"you save $180 a year\" is 12 × this\n+ canAddLine: boolean\n  // fewer than `MAX_LINES` (5) lines; more go through support\n+ voucherKind: plan | cart | trial | unlock | later | null\n  // the voucher's kind; a trial voucher with no Promo line yet only unlocks the Promo plan\n+ voucherDiscount: number\n  // what the voucher takes off the first bill: its amount off each eligible line (at most the line's monthly price), or its percent of the monthly charge, to the cent\n+ voucherLines: number\n  // how many lines the voucher takes something off\n+ firstBill: number\n  // the monthly charge less the voucher, never below 0: \"You pay now $374\"\n+ discountsLabel: string\n  // what You pay now says comes off: \"Discounts −$45\" together, \"Family discount −$15/mo\" alone, \"TRAVEL25 −$25\" for a voucher alone\n+ upFrontCharge: string\n  // the first bill as pml-my writes it ('374.00', or '0' when nothing)\n+ voucherDescription: string\n  // what the voucher gives; for a trial voucher with no Promo line, that it unlocks the plan\n+ voucherNote: string\n  // the line under the applied code: what it gives, or, while it takes nothing off, what to add (\"Add one to use it.\")\n+ voucherNotUsedYet: boolean\n  // the voucher waits (shown grey): it takes nothing off only because no line meets its plan condition yet\n+ trialHeld: boolean\n  // the Promo voucher is applied and its Promo line is in the cart\n+ voucherCredit: number | null\n+ chargesUpFront: boolean\n+ orderSuccess: boolean | null\n+ payUpFront: boolean | null\n  // the placed order's outcome\n+ submitOrder: boolean\n+ defaultPayment: boolean\n+ returnToReview: boolean\n+ stayingOnPlanSelection: boolean\n  // the cart returns to review, or stays on plan selection\n+ orderResult: allSet | almostThere\n+ orderResultHeadline: string\n  // \"You're all set!\" or \"Almost there!\"\n+ orderNeedsParadiseSim: boolean\n  // a verified customer's Paradise SIM card has no ICCID yet, on any line\n+ orderPaymentFailed: boolean\n  // no default card was kept, or the up-front charge did not go through\n– – –\n+ startCart(customerProfile: CustomerProfile, cartRepository: CartRepository): void — the visitor's cart belongs to the verified customer and is stored as theirs\n  // the cart is attached to the customer once the account is activated\n+ carryChosenPlan(plan: Plan): void\n  // a plan carried in from a marketing link\n+ addLine(plan: Plan): Line\n  // Add Line To Cart: the new line is Line n on that plan\n  // TO DO: adding a line creates a new Subscription that takes its details from the plan, in an onboarding (in progress) status; the status it moves to when the order is placed is not named yet\n+ removeLine(line: Line): void\n  // Remove Line From Cart; the remaining lines are numbered again\n+ applyVoucher(voucher: AppliedVoucher): void\n  // after AppliedVoucher.redeem, against the plans of every line\n+ removeVoucher(): void\n+ saveAndExit(): void\n  // Save And Exit Order: \"Your progress is saved.\"; the cart is resumed by CartRepository.load(customerProfile)\n+ orderSummary(): { position, nickname, planName, planPrice, discountedPrice, msisdn, temporaryNumber, portNumber, portPending, simType, setUp }[] and idNumber, identity verified or in manual review, and the customer's full name\n  // what the cart, the order review, and Done show, one entry per line\n+ whatsNext(): { group: checkingId | installEsims | putSimIn | pickUpSim | portingNumber, lines: Line[] }[]\n  // while the ID is not verified the whole order waits: checkingId is all there is\n+ voucherEmptiesCart(voucher: AppliedVoucher): boolean\n  // PROMO30 asks first before it empties a cart that holds other plans\n+ endTrialVoucher(): void\n+ temporaryNumberFor(line: Line): string\n  // the first number from 555-0199 down that no other line uses\n+ numbersInUse(except: Line | null): string[]\n+ lineHoldingNumber(msisdn: string, except: Line | null): Line | null\n+ portNumberProblem(msisdn: string, line: Line | null): string | null\n  // \"This number is already on Line N.\"\n  // the order result grouped by line: \"Install your eSIMs — Mom and Alice\", \"Pick up your SIM — Me\", \"Porting your number — Mom\"\n+ recordPlaced(outcome, today: Date): void\n  // copies the placed order's outcome; on a successful order each line becomes a Subscription, ordered today\n– – –\n// A refused step names its operation (reserveNumber, port, choosePlan, selectSim, attachIccid, activateSim) and, when it was for one line, that line.\n// The step's own aggregate runs first, then the Cart records it on the Line, in one request on the Cart's route.\n// The cart's next step is always the first one it has not met, in order: a verified account, then for each line in turn a plan, a verified port-in (when porting), a number, and a SIM, then the identity check, then checkout. Going back to review from a changed plan returns to Checkout.\n// The family discount applies from the third paying line: `discountPerLine` ($5) off each paying line every month. The Promo line pays nothing and takes no discount.\n// A cart holds at most 5 lines; a 6th is refused (`addLine`).\n// A Promo line exists only with its trial voucher (PROMO30), on its own: applying PROMO30 empties the cart first, and removing or replacing the voucher, or moving the line to a paid plan, ends the trial.\n// The cart holds one voucher at a time; its discount comes off the first bill only, on top of the family discount.\n// Removing a line releases every number it held or reserved.\n// A placed cart is not changed again, except that Done's Activate SIM Card still activates a line's Paradise SIM card.\n// Each line becomes exactly one Subscription, once, when the order is placed successfully; a failed order creates none.\n\n*«Repository»*\n**CartRepository**\n+ carts: Collection<Cart>\n  // one Cart per customer during onboarding\n– – –\n+ create(customerProfile: CustomerProfile | null): Cart\n  // an empty cart; null while a visitor chooses lines before the account exists\n+ load(customerProfile: CustomerProfile): Cart | null\n  // the cart and its lines, each holding its plan id, its numbers' MSISDNs, and the voucher code; the application loads each of those from its own repository\n+ update(cart: Cart): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 178.0,
+   "y": 4318.0,
+   "w": 2180,
+   "h": 2712
+  },
+  "class.6e65d603b5d2": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Revenue · Cart`\n*«Entity»*\n**Line**\n+ id: string\n  // identity; the porting store keeps the line's port-in under it, and the line's Subscription keeps it\n+ position: number\n  // \"LINE 1 OF 3\"; the remaining lines are numbered again when one is removed\n+ nickname: string\n  // Who is this line for? e.g. Me, Mom, Alice\n+ bringsOwnNumber: boolean | null\n  // Bring your mobile number, or Get a new number; required (\"Choose an option to continue.\")\n+ plan: Plan | null\n  // held by id — Plans; the plan the line is on\n+ number: NumberInventory | null\n  // held by MSISDN — Numbers; the reserved, kept, or interim port number\n+ heldNumbers: NumberInventory[]\n  // held by MSISDN — Numbers; the page of numbers this line holds while the customer browses\n+ portability: Portability | null\n  // held by line id — Porting; the port-in onto this line\n+ sim: Sim | null\n  // the SIM the line will run on: modality and, for a Paradise SIM card, its ICCID\n+ canKeepCurrentNumber: boolean\n+ setUp: boolean\n  // a number or port-in, and a SIM; no name needed\n+ planPrice: number\n+ familyDiscount: number\n  // this line's share; the Promo line takes none\n+ monthlyPrice: number\n  // the plan less its share, never below 0\n+ voucherDiscount: number\n  // what the cart's voucher takes off this line's first bill\n  // \"Please provide a name.\", or \"Another line is already called Mom. Use a different name.\"\n  // Change name: only the name changes, on the same rules\n  // a nickname, a number or port-in, and a SIM: the checklist shows \"Me · Atlas (done)\"\n– – –\n+ nameLine(nickname: string, bringsOwnNumber: boolean): void\n  // \"Who is this line for?\", with the number choice on the same screen\n+ choosePlan(plan: Plan): void\n  // Change Line Plan; everything set up for the line stays\n+ keepCurrentPlan(): void\n+ recordHeldNumbers(numbers: NumberInventory[]): void\n  // after the number step's NumberInventorySearch.search; the line keeps the numbers the listing holds\n+ reserveSelectedNumber(number: NumberInventory): void\n  // refuses a number that is not reserved or was not in heldNumbers\n+ keepCurrentNumber(): void\n  // releases heldNumbers\n+ recordPort(portability: Portability): void\n  // after Portability.beginPort(heldNumbers); the line takes its interim number and releases heldNumbers\n+ selectSim(sim: Sim): void\n  // an eSIM, or \"I need a Paradise SIM card.\" (a pSIM with no ICCID, to pick up)\n+ attachIccid(sim: Sim): void\n+ activateSim(sim: Sim): void\n  // Done's Activate SIM Card, while the line waits for its Paradise SIM card; its Subscription takes the SIM and stops waiting\n– – –\n// The line takes only a reserved number that was in its `heldNumbers`. It releases its listing when it takes a number, keeps its current number, or ports in, and releases its previous number when it takes another. A number another line holds is never in this line's listing, because a search lists only available numbers.",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 48.0,
+   "y": 7658.0,
+   "w": 2440,
+   "h": 1179
+  },
+  "class.2cc1dec07a82": {
+   "type": "shape",
+   "color": "#d0ece7",
+   "text": "`Revenue · Cart`\n*«Value Object»*\n**CartStep**\n+ name: VerifyAccount | SelectPlan | PickNumber | VerifyPortedNumber | SelectSim | ProfileKyc | Checkout | Done\n  // the progress bar groups them: Account (VerifyAccount), Lines (SelectPlan to SelectSim), Your ID (ProfileKyc), Payment (Checkout)\n+ line: Line | null\n  // the line a SelectPlan, PickNumber, VerifyPortedNumber, or SelectSim step sets up: \"LINE 1 OF 3 · ME · ATLAS\"\n+ path: string\n  // set by the node\n+ reopensNumberStep: boolean\n  // Select Sim's Back and Change reopen the number step\n– – –\n+ at(path: string): CartStep\n  // this step shown at path\n+ is(step: CartStep): boolean",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 748.0,
+   "y": 7178.0,
+   "w": 1040,
+   "h": 339
+  },
+  "composition.c4035e3a9857": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.6e65d603b5d2",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "lines",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    1454,
+    -550,
+    -630
+   ]
+  },
+  "composition.823ef29970dc": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.2cc1dec07a82",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "cartStep",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    1464
+   ]
+  },
+  "association.18a01ddc660e": {
+   "type": "arrow",
+   "from": "class.2cc1dec07a82",
+   "to": "class.6e65d603b5d2",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "line",
+   "bends": [
+    "v",
+    270
+   ]
+  },
+  "class.e80d53f929f9": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Revenue · Subscription`\n*«Aggregate Root» «Entity»*\n**Subscription**\n+ id: string\n  // identity; the id of the Line it was created from, so the port-in filed under that id stays the line's\n+ customerProfile: CustomerProfile\n  // held by id — Customer Profile; one subscription per line\n+ number: string\n  // the MSISDN the line was given when the order was placed; a value, with no inventory lookup\n+ sim: Sim | null\n  // the SIM the line runs on: modality and, for a Paradise SIM card, its ICCID\n+ waitingForPsim: boolean\n  // the order was placed for a Paradise SIM card without an ICCID\n+ usage: SubscriptionUsage | null\n  // Use My Account; null until the network reports usage\n+ plan: Plan | null\n  // held by id — Plans; My plan shows its name and features\n+ hasActiveLine: boolean\n  // Use My Account; the subscription holds a plan\n+ planOrderedOn: string | null\n  // Change My Service; the Bermuda day the active plan was ordered, at sign-up (SubscriptionRepository.create when the order is placed) or by changePlan\n– – –\n+ firstBillDueOn(today: Date): Date\n+ nextDowngradeDate(today: Date): string | null\n  // Change My Service; within 31 days of the plan order, the day a downgrade opens\n+ canChangePlanTo(plan: Plan, today: Date): boolean\n  // Change My Service; not the current plan, and not a lower-priced plan while locked\n+ changePlan(plan: Plan, agreedToServiceAgreement: boolean, today: Date): void\n  // refuses without the Service Agreement or when canChangePlanTo is false\n+ requestLinePortability(agreedToTerms: boolean): void\n  // Change My Service; refuses on a promotional plan or without the porting terms; the port request itself is a Portability the application validates first and files under this subscription's id only after this passes\n+ copyFieldsFrom(source: Subscription): void\n+ restore(subscription: Subscription, row: SubscriptionJson): Subscription\n+ toJSON(): SubscriptionJson\n– – –\n// `changePlan` is for an active line (`hasActiveLine`).\n// For 31 Bermuda days after `planOrderedOn`, a lower-priced or same-priced plan is refused; only a higher-priced plan is allowed.\n// A port request on a one-year promotional plan (`Plan.oneYear`) is refused until the line is on a paid plan; nothing is stored when a request is refused or the store fails.\n// A customer with no stored subscription, or one without a plan, has no active lines; the dashboard shows the no-active-lines message.\n\n*«Repository»*\n**SubscriptionRepository**\n+ subscriptions: Collection<Subscription>\n  // one per line in service\n– – –\n+ create(customerProfile: CustomerProfile, id: string, plan: Plan, number: string, sim: Sim | null, planOrderedOn: Date): Subscription\n  // a line in service, made from a Line when the order is placed\n+ load(customerProfile: CustomerProfile): Subscription[]\n  // the customer's lines in service; none before an order is placed\n+ update(subscription: Subscription): void\n+ prepareUpdate(): void",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2736.0,
+   "y": 4318.0,
+   "w": 1660,
+   "h": 1095
+  },
+  "class.35ecbd0152cb": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Revenue · Subscription`\n*«Value Object»*\n**SubscriptionUsage**\n+ local: DataAllowance\n+ roaming: DataAllowance | null\n  // present only on a plan with roaming\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3396.0,
+   "y": 5558.0,
+   "w": 340,
+   "h": 171
+  },
+  "class.cd133b80dabf": {
+   "type": "shape",
+   "color": "#e6e6e6",
+   "text": "`Revenue · Subscription`\n*«Value Object»*\n**DataAllowance**\n+ used: number\n  // GB of High Speed Data used\n+ quota: number | unlimited | unknown\n+ hasLimit: boolean\n  // the quota is a number, so the dashboard draws a progress bar\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3306.0,
+   "y": 5878.0,
+   "w": 520,
+   "h": 213
+  },
+  "composition.8cda2d47b795": {
+   "type": "arrow",
+   "from": "class.e80d53f929f9",
+   "to": "class.35ecbd0152cb",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "usage",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "composition.ecb7849ebd1a": {
+   "type": "arrow",
+   "from": "class.35ecbd0152cb",
+   "to": "class.cd133b80dabf",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "local, roaming",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "class.ca0cb3df3358": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Revenue · Voucher`\n*«Aggregate Root» «Entity»*\n**AppliedVoucher**\n+ code: string\n  // identity: ALL10, CART10, TRAVEL25, PROMO30\n+ plans: VoucherPlan[]\n  // the plans it is limited to; empty for any plan (TRAVEL25: Atlas and Ace; PROMO30: Promo)\n+ amountOff: number | null\n  // per qualifying line: ALL10 $10, TRAVEL25 $25\n+ trial: boolean\n  // a promotional trial; the line pays nothing up front (PROMO30, free for 30 days)\n+ redemption: VoucherRedemption | null\n+ quotedPrice: number\n  // the lines' price the redemption quoted\n+ percentOff: number\n  // CART10: 10% of the first bill after the family discount\n+ redeemFailed: boolean\n  // \"Invalid code. Please try again.\"\n+ orderAmount: string\n– – –\n+ redeem(plans: VoucherPlan[]): void\n  // against the plans of every line in the cart; only lines on its plans qualify, and a voucher none of them qualifies for does nothing\n+ credit(): { amount, glCode, remarks } | null\n  // what the billing account is credited; null when the redemption failed or gives nothing off\n– – –\n// The discount comes off the first bill only: ALL10 takes `amountOff` from every line, TRAVEL25 from each line on one of its plans, CART10 takes `percentOff` of the first bill after the family discount.\n\n*«Repository»*\n**AppliedVoucherRepository**\n– – –\n+ create(code: string, plans: VoucherPlan[], amountOff: number | null, trial: boolean): AppliedVoucher\n+ forCode(code: string, planOf: (planId: string)): AppliedVoucher\n  // the voucher a customer entered: the stored one, or a new one on the catalog's terms\n+ load(code: string): AppliedVoucher | null\n+ update(voucher: AppliedVoucher): AppliedVoucher",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4644.0,
+   "y": 4318.0,
+   "w": 1560,
+   "h": 759
+  },
+  "class.53b097a937e4": {
+   "type": "shape",
+   "color": "#d6e4f5",
+   "text": "`Revenue · Voucher`\n*«Value Object»*\n**VoucherRedemption**\n+ success: boolean\n+ discountAmount: number\n+ totalAmount: number\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5314.0,
+   "y": 5218.0,
+   "w": 220,
+   "h": 171
+  },
+  "composition.9f6639169499": {
+   "type": "arrow",
+   "from": "class.ca0cb3df3358",
+   "to": "class.53b097a937e4",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "redemption",
+   "heads": [
+    "circle",
+    "arrow"
+   ]
+  },
+  "class.6731c18bb366": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Revenue · Product Order`\n*«Aggregate Root» «Entity»*\n**ProductOrder**\n+ id: string\n  // identity\n+ cart: Cart\n  // the Cart that created the order\n+ customerProfile: CustomerProfile\n  // the cart's profile\n+ placed: boolean\n+ orderSuccess: boolean\n+ submitOrder: boolean\n+ payUpFront: boolean | null\n+ profileDone: boolean | null\n+ defaultPayment: boolean\n+ ticketSubjects: OrderTicketSubject[]\n  // the follow-ups this order needs, across all its lines\n– – –\n+ place(billingAccount: BillingAccount | null): void\n  // Pay And Subscribe; refuses when the profile is already done\n– – –\n// A completed customer (`customerProfile.done`) never places a second order.\n// Ticket subjects follow the cart's lines and its profile: identity and SIM delivery (combined when both), trial, unverified port, failed up-front payment, roaming.\n\n*«Repository»*\n**ProductOrderRepository**\n– – –\n+ create(cart: Cart): ProductOrder\n  // a new order for that cart, not stored until it is placed\n+ load(cart: Cart): ProductOrder | null\n+ update(order: ProductOrder): ProductOrder\n  // keeps a placed order; an order not placed takes no id\n+ acceptsOrder(): boolean\n+ createTicket(customerProfile: CustomerProfile, subject: OrderTicketSubject): OrderTicket\n  // also the card-addition ticket the payment status check opens\n+ loadTickets(customerProfile: CustomerProfile): OrderTicket[]",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 48.0,
+   "y": 9085.0,
+   "w": 1280,
+   "h": 780
+  },
+  "class.5c23346d3600": {
+   "type": "shape",
+   "color": "#d5e8d4",
+   "text": "`Revenue · Product Order`\n*«Entity»*\n**OrderTicket**\n+ id: string\n+ customerProfile: CustomerProfile\n+ subject: OrderTicketSubject\n  // ID Verification Required, SIM Delivery Required, both, Promotional trial, Portability Required, Card addition failed, Payment failed, Roaming plan - New Subscription\n+ requesterName: string\n+ requesterEmail: string\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 1388.0,
+   "y": 9085.0,
+   "w": 1300,
+   "h": 234
+  },
+  "class.b794cf43f2a6": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Aggregate Root» «Entity»*\n**BillingAccount**\n+ id: string\n  // identity\n+ customerProfile: CustomerProfile\n  // held by id — Customer Profile; the customer the account bills\n+ status: opened | active\n  // opened when the payment step starts; active once the card verified and the account was set up\n+ active: boolean\n  // onboarding's Checkout is done, the order can be charged, the voucher credit applies, and self-care can read the account\n+ creditAdjustments: CreditAdjustment[]\n+ balance: number\n  // Use My Account; what the account owes, negative when in credit\n+ invoices: Invoice[]\n  // Pay My Bill; latest first\n+ payments: Payment[]\n  // the account's payments, latest last: the $1 card authorizations and the payments it took\n+ cardAuthorization: Payment | null\n  // the latest $1 card authorization\n+ receivedPayments: Payment[]\n  // the payments with status received; what Past payments lists\n+ paymentMethods: PaymentMethod[]\n  // Pay My Bill; the saved cards\n+ defaultPaymentMethod: PaymentMethod | null\n  // Pay My Bill; the saved card Pay now charges\n+ hasBalanceDue: boolean\n  // Pay My Bill; something is owed, so Pay now is offered\n– – –\n+ canRemoveSavedCard(paymentMethod: PaymentMethod): boolean\n  // Pay My Bill; any saved card but the default\n+ applyCredit(credit: CreditAdjustment | null): BillingAccount\n+ activate(): void\n  // after the card verified; refuses an active account as already existing\n+ enterCardAuthorization(maxAttempts: number): Payment\n  // the $1 check: the account's card authorization asks for the card page\n+ checkCardAuthorization(): Payment\n  // reads whether the card verified; a decline under the attempt limit refuses after a fresh card page\n+ takePayment(amount: number, today: Date): Payment\n  // the order up front, or the balance from Pay now\n+ payNow(): void\n  // Pay My Bill; takes a payment of the balance from the default card and records it\n+ enterNewPaymentMethod(paymentMethod: PaymentMethod): void\n  // Pay My Bill; the first saved becomes the default\n+ chooseDefaultCard(paymentMethod: PaymentMethod): void\n+ removeSavedCard(paymentMethod: PaymentMethod): void\n  // Pay My Bill; never the default card\n+ openInvoice(invoiceId: string): Invoice\n  // Pay My Bill\n– – –\n// `payNow` refuses when nothing is owed, when there is no default card, and when the payment is declined; a declined payment leaves the balance and the payments as they were.\n// `takePayment` alone records nothing: the order up front is not one of the account's payments.\n// An account is active only after `activate`; the payment step's account stays opened until the card verified, and an opened account is not charged for the order, takes no voucher credit, and keeps onboarding at Checkout.\n// `enterNewPaymentMethod` refuses a payment method without the authorization terms and one whose authorization did not complete; nothing is saved when it refuses.\n// Exactly one saved card is the default while any card is saved; the first card saved becomes it, and the default card cannot be removed.\n\n*«Repository»*\n**BillingAccountRepository**\n– – –\n+ create(customerProfile: CustomerProfile): BillingAccount\n  // opens the account at the payment step; refuses a second one\n+ load(customerProfile: CustomerProfile): BillingAccount | null\n+ update(billing: BillingAccount): BillingAccount\n+ activationFailure(): Error | null\n+ chargeAccepted(): boolean\n+ invoiceAvailable(): boolean",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3286.0,
+   "y": 9085.0,
+   "w": 1700,
+   "h": 1410
+  },
+  "class.84bd2c7a5395": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Entity»*\n**Payment**\n+ maxAttempts: number\n  // how many declines get a fresh card page\n+ authorization: CardAuthorization | null\n+ lastStatus: PaymentStatus | null\n+ paymentAttempts: number\n+ cardAdditionExhausted: boolean\n  // the attempts ran out; the order side opens a card-addition ticket\n+ received: boolean\n+ receivedOn: string | null\n+ amount: number | null\n+ transactionId: string | null\n+ orderIdentifier: string\n+ salesChannel: SalesChannel\n+ authorizesCard: boolean\n  // a $1 card authorization rather than money the account took\n– – –\n+ received(amount: number, receivedOn: string): Payment\n+ declined(amount: number): Payment\n+ enter(): void\n  // asks the card processor for an authorization; refuses when none comes back\n+ checkStatus(): void\n  // refuses when the card is unverified under the attempt limit, after a fresh authorization\n– – –\n// A status is checked only for an authorization this payment entered.\n// Past `maxAttempts`, a declined card stops asking again and is marked `cardAdditionExhausted`.\n// A payment a billing account takes is received or declined when it is taken; only a received one is recorded on the account.",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4356.0,
+   "y": 10635.0,
+   "w": 980,
+   "h": 633
+  },
+  "class.9fad183dacaa": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Value Object»*\n**CardAuthorization**\n+ transactionIdentifier: string\n+ totalAmount: number\n+ orderIdentifier: string\n+ salesChannel: SalesChannel\n+ hostedPage: string\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3856.0,
+   "y": 11415.0,
+   "w": 260,
+   "h": 213
+  },
+  "class.d77194e2cb22": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Value Object»*\n**PaymentStatus**\n+ status: PaymentResult\n+ reason: string\n+ completed: boolean\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4746.0,
+   "y": 11415.0,
+   "w": 200,
+   "h": 171
+  },
+  "class.cd79e2e933cf": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Entity»*\n**PaymentMethod**\n+ id: string\n  // identity once saved\n+ cardNumber: string\n  // what the customer typed; a saved card no longer has it\n+ agreedToTerms: boolean\n+ brand: string\n  // Visa for a number starting 4, Mastercard for one starting 5\n+ lastFourDigits: string\n+ status: string\n+ transactionId: string\n  // the $1 authorization that verified it\n+ requirements: { terms: the $1 authorization terms }\n– – –\n+ entered(cardNumber: string, agreedToTerms: boolean): PaymentMethod\n+ missingRequirements(): PaymentMethodRequirement[]\n+ requireTerms(): void\n+ save(id: string, transactionId: string): void\n  // keeps the brand and last four, drops the number",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 2936.0,
+   "y": 10635.0,
+   "w": 540,
+   "h": 465
+  },
+  "class.70869e624f7e": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Value Object»*\n**Invoice**\n+ invoiceId: string\n+ dueDate: string\n+ dueAmount: number\n+ status: PAID | PARTIALLY_PAID | UNPAID\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 3576.0,
+   "y": 10635.0,
+   "w": 340,
+   "h": 192
+  },
+  "class.a6e16f8eada9": {
+   "type": "shape",
+   "color": "#fff2cc",
+   "text": "`Revenue · Billing`\n*«Value Object»*\n**CreditAdjustment**\n+ amount: number\n+ glCode: string\n+ remarks: string\n– – –",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 4016.0,
+   "y": 10635.0,
+   "w": 200,
+   "h": 171
+  },
+  "composition.a4bf2302b99c": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.a6e16f8eada9",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "creditAdjustments",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    805
+   ]
+  },
+  "composition.9a4c5c5e775a": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.70869e624f7e",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "invoices",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    785
+   ]
+  },
+  "composition.2657d9c8def2": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.84bd2c7a5395",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "payments, cardAuthorization, receivedPayments",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    805
+   ]
+  },
+  "composition.d27eb8591da5": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.cd79e2e933cf",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "paymentMethods, defaultPaymentMethod",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    765
+   ]
+  },
+  "composition.f01ea5648dad": {
+   "type": "arrow",
+   "from": "class.84bd2c7a5395",
+   "to": "class.9fad183dacaa",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "authorization",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    404
+   ]
+  },
+  "composition.d5ff2b2dde05": {
+   "type": "arrow",
+   "from": "class.84bd2c7a5395",
+   "to": "class.d77194e2cb22",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "lastStatus",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    424
+   ]
+  },
+  "class.b9a546f440f5": {
+   "type": "shape",
+   "color": "#ffe6cc",
+   "text": "`Revenue · Device Wallet`\n*«Aggregate Root» «Entity»*\n**DeviceWalletMerchantCredential**\n+ keyIdentifier: string\n+ certificate: string\n– – –\n\n*«Repository»*\n**DeviceWalletMerchantCredentialRepository**\n+ credential: DeviceWalletMerchantCredential | null\n  // the one stored credential\n– – –\n+ load(): DeviceWalletMerchantCredential | null",
+   "kind": "rect",
+   "size": "small",
+   "textAlign": "left",
+   "x": 5584.0,
+   "y": 9085.0,
+   "w": 420,
+   "h": 297
+  },
+  "association.across.da6713316438": {
+   "type": "arrow",
+   "from": "class.4b571ed0164a",
+   "to": "class.4c43b03f2059",
+   "fromSide": "bottom",
+   "toSide": "bottom",
+   "label": "credentials «Customer/Supplier»",
+   "bends": [
+    "v",
+    558,
+    -1346,
+    598,
+    432,
+    615
+   ]
+  },
+  "association.across.5569e6b6ed7f": {
+   "type": "arrow",
+   "from": "class.5f14531ab7bf",
+   "to": "class.648d84d358ee",
+   "fromSide": "left",
+   "toSide": "right",
+   "label": "interimNumber «submit» «Customer/Supplier»",
+   "bends": [
+    "h",
+    -1504
+   ]
+  },
+  "association.across.7c926de86c3d": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile «Customer/Supplier»",
+   "bends": [
+    "v",
+    -2074,
+    212,
+    -3404,
+    -246,
+    538
+   ]
+  },
+  "association.across.ebe0842acfce": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.ca0cb3df3358",
+   "fromSide": "bottom",
+   "toSide": "bottom",
+   "label": "appliedVoucher «applyVoucher» «Customer/Supplier»",
+   "bends": [
+    "v",
+    1386,
+    4152,
+    -264,
+    -144,
+    412
+   ]
+  },
+  "association.across.c7c7cbe1016f": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.b794cf43f2a6",
+   "fromSide": "bottom",
+   "toSide": "top",
+   "label": "billingAccount «Customer/Supplier»",
+   "bends": [
+    "v",
+    1466
+   ]
+  },
+  "dependency.across.82a34511d820": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.d94b520dc20e",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«addLine» «Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -1434,
+    42,
+    370
+   ]
+  },
+  "dependency.across.916d5bd5290f": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.3df970ced4fa",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«removeLine»",
+   "dash": true,
+   "bends": [
+    "v",
+    -1414,
+    352,
+    304
+   ]
+  },
+  "dependency.across.03c7d3f1b937": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.648d84d358ee",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«removeLine» «Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -1394
+   ]
+  },
+  "dependency.across.092002211799": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.e80d53f929f9",
+   "fromSide": "right",
+   "toSide": "left",
+   "label": "«recordPlaced» «Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "h",
+    1422
+   ]
+  },
+  "dependency.across.45bf756a010e": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.5f14531ab7bf",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -1414,
+    -18,
+    772
+   ]
+  },
+  "dependency.across.3384970bc303": {
+   "type": "arrow",
+   "from": "class.3df32075b62a",
+   "to": "class.c0a4f8e3e1dc",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -1414,
+    -38,
+    1422
+   ]
+  },
+  "association.across.4e125c7a7ae2": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.d94b520dc20e",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "plan",
+   "bends": [
+    "v",
+    -708,
+    -1128,
+    -4668,
+    -658,
+    370
+   ]
+  },
+  "association.across.10183402324c": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.648d84d358ee",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "number, heldNumbers «reserveSelectedNumber»",
+   "bends": [
+    "v",
+    -668,
+    1112,
+    -3958,
+    24,
+    428
+   ]
+  },
+  "association.across.9f55ea71e127": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.5f14531ab7bf",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "portability",
+   "bends": [
+    "v",
+    -648,
+    3342,
+    -2808,
+    -24,
+    762
+   ]
+  },
+  "composition.across.eb96d219ac4f": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.6bfd796d8203",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "sim",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    -628
+   ]
+  },
+  "dependency.across.65c0eac856be": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.3df970ced4fa",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«reserveSelectedNumber»",
+   "dash": true,
+   "bends": [
+    "v",
+    -628,
+    32,
+    -708,
+    1112,
+    -3938,
+    314,
+    1214,
+    764,
+    304
+   ]
+  },
+  "dependency.across.6ae14726aadb": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.c0a4f8e3e1dc",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«attachIccid»",
+   "dash": true,
+   "bends": [
+    "v",
+    -648,
+    12,
+    -668,
+    1092,
+    -1188,
+    4132,
+    2802,
+    388,
+    222,
+    18,
+    132
+   ]
+  },
+  "dependency.across.48c33b2208fb": {
+   "type": "arrow",
+   "from": "class.6e65d603b5d2",
+   "to": "class.e80d53f929f9",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«activateSim»",
+   "dash": true,
+   "bends": [
+    "v",
+    -648,
+    -18,
+    -688,
+    2302,
+    1254,
+    284,
+    584
+   ]
+  },
+  "association.across.455e8cc1bce0": {
+   "type": "arrow",
+   "from": "class.e80d53f929f9",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile «Customer/Supplier»",
+   "bends": [
+    "v",
+    -826,
+    244,
+    -2956,
+    1214,
+    558,
+    -36,
+    538
+   ]
+  },
+  "composition.across.8ec6cf2a90aa": {
+   "type": "arrow",
+   "from": "class.e80d53f929f9",
+   "to": "class.6bfd796d8203",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "sim",
+   "heads": [
+    "circle",
+    "arrow"
+   ],
+   "bends": [
+    "v",
+    -626,
+    2834,
+    -1946,
+    -22,
+    180
+   ]
+  },
+  "association.across.fe14bd82e1c1": {
+   "type": "arrow",
+   "from": "class.e80d53f929f9",
+   "to": "class.d94b520dc20e",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "plan «Customer/Supplier»",
+   "bends": [
+    "v",
+    -606,
+    -1926,
+    -826,
+    642,
+    390
+   ]
+  },
+  "dependency.across.2d898afa96c2": {
+   "type": "arrow",
+   "from": "class.ca0cb3df3358",
+   "to": "class.d94b520dc20e",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "«Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    -638,
+    -4094,
+    410
+   ]
+  },
+  "association.across.d61622a24dce": {
+   "type": "arrow",
+   "from": "class.6731c18bb366",
+   "to": "class.3df32075b62a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "cart «place» «Customer/Supplier»",
+   "bends": [
+    "v",
+    -615,
+    -678,
+    -2415,
+    -8,
+    1396
+   ]
+  },
+  "association.across.2dcbaa173584": {
+   "type": "arrow",
+   "from": "class.6731c18bb366",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile «place» «Customer/Supplier»",
+   "bends": [
+    "v",
+    -465,
+    4342,
+    -4015,
+    3882,
+    -5395,
+    4752,
+    958,
+    514,
+    578,
+    14,
+    538
+   ]
+  },
+  "dependency.across.b57153750d85": {
+   "type": "arrow",
+   "from": "class.6731c18bb366",
+   "to": "class.b794cf43f2a6",
+   "fromSide": "bottom",
+   "toSide": "bottom",
+   "label": "«place» «Customer/Supplier»",
+   "dash": true,
+   "bends": [
+    "v",
+    1045,
+    3442,
+    740
+   ]
+  },
+  "association.across.21967824421a": {
+   "type": "arrow",
+   "from": "class.5c23346d3600",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile",
+   "bends": [
+    "v",
+    -312,
+    2992,
+    -3722,
+    2512,
+    -5102,
+    3422,
+    978,
+    534,
+    618,
+    34,
+    538
+   ]
+  },
+  "association.across.82ef4d96f223": {
+   "type": "arrow",
+   "from": "class.b794cf43f2a6",
+   "to": "class.4b571ed0164a",
+   "fromSide": "top",
+   "toSide": "bottom",
+   "label": "customerProfile «Customer/Supplier»",
+   "bends": [
+    "v",
+    -780,
+    874,
+    -4290,
+    394,
+    -5670,
+    1344,
+    998,
+    554,
+    558,
+    54,
+    538
+   ]
+  }
+ }
+}
