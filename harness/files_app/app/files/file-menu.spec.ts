@@ -4,12 +4,15 @@
 // paths may be deleted, what a root is, and which files are in the session's folders, is proved by the Python specs
 // (space/session/files/session_files_spec.py, space/session/practices/practice_session_output_spec.py,
 // space/session/validation/changed_artifact_spec.py, space/kanban/kanban_tools_spec.py).
+import { render } from '@testing-library/react'
+import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import type { CddApi } from '@cdd/cdd-shared'
 
 import { FilesLink } from './files-link'
 import { FilesPage } from './files-page'
+import { FilesPageView } from './files-page-view'
 
 // Seed: the session's practices as session.show answers them, Stories having a file a person added as a root.
 const practiceOf = (name: string, short_name: string, added_roots: string[] = []) => ({ name, session_file: '.sessions/release-2/session.json', short_name, colour: '#c0392b', added_roots })
@@ -229,6 +232,29 @@ describe('List Every File In Session Folders', () => {
   it('should show a root a person added at the top of the folder tree, under its own name', async () => {
     const page = await everything()
     expect(page.fileBar.tree.files.map(entry => entry.path)).toEqual(['c/vb/hr/e/story-1.md'])
+  })
+
+  // Found by the e2e twin (act-on-files-from-file-menu.story.ui_e2e_spec.py): a session whose formats chosen leave out
+  // every file it declares listed nothing in All files, saying none of the files is in the formats chosen.
+  describe('with the selection listing no file', () => {
+    class NothingSelectedServer extends FakeFilesServer {
+      override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+        if (path.endsWith('/fidelity-files')) return {} as Result
+        if (path.endsWith('/root-files')) return [] as Result
+        return super.post<Result>(path, body)
+      }
+    }
+
+    it("should draw every file in the session's folders", async () => {
+      const page = new FilesPage(new NothingSelectedServer(), new FilesLink(LINK))
+      const view = render(createElement(FilesPageView, { page }))
+      await settled()
+      page.showScope('everything')
+      await settled()
+      const drawn = [...view.container.querySelectorAll('button.file-entry')].map(entry => entry.getAttribute('title'))
+      view.unmount()
+      expect(drawn.sort()).toEqual(ALL_FILES.map(file => file.path).sort())
+    })
   })
 
   describe('that the Person leaves for All session files', () => {

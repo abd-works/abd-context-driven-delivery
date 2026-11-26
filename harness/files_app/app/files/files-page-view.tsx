@@ -117,7 +117,8 @@ function FileListView({ page }: { page: FilesPage }) {
   const state = useFilesState(page)
   if (state.isListing) return <p className="files-note">Reading the files…</p>
   if (state.filtering) return <p className="files-note files-filtering" role="status">Filtering by {state.filtering}…</p>
-  if (!state.entries.length) return <p className="files-note">{page.emptyReason}</p>
+  // All files lists the session's folders whatever the selection lists, so a selection of no file hides none of them.
+  if (state.scope !== 'everything' && !state.entries.length) return <p className="files-note">{page.emptyReason}</p>
   if (state.fileBar.view === 'graph') return <FilesGraphView page={page} />
   if (!page.fileBar.entries.length) return <p className="files-note">The branch changed none of these files.</p>
   if (state.fileBar.view === 'folders') return <FileFoldersView page={page} />
