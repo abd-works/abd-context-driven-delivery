@@ -26,7 +26,7 @@ from harness.git.git import Git, RepoConnectError
 from space.repo.built_once import BuiltOnce
 from space.repo.folder_deletion import FolderDeletion
 from space.repo.latest_release import LatestRelease
-from space.repo.repo import Repo
+from space.repo.repo import NothingToCommitError, Repo
 from space.repo.origin import MergeRefusedError
 
 
@@ -510,6 +510,16 @@ with description("the repo push toolset"):
             commit = Repo.of_project(self.repo_root).push_commit("push: checkpoint")
             expect(commit.sha).not_to(equal(""))
             expect(commit.subject).to(equal("push: checkpoint"))
+
+        with it("should name the checkout it committed in"):
+            (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")
+            commit = Repo.of_project(self.repo_root).push_commit("push: checkpoint", sync_remote=False)
+            expect(Path(commit.checkout)).to(equal(self.repo_root.resolve()))
+
+        with it("should refuse when the checkout has no changes"):
+            expect(
+                lambda: Repo.of_project(self.repo_root).push_commit("push: checkpoint", sync_remote=False)
+            ).to(raise_error(NothingToCommitError))
 
         with it("should return the new commit as JSON through the MCP host"):
             (self.repo_root / "note.txt").write_text("checkpoint\n", encoding="utf-8")
