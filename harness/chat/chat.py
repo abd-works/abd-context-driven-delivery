@@ -43,6 +43,9 @@ MESSAGE_STATES = (WAITING, TAKEN, SHOWN, DONE, FAILED)
 # waits for another sender to let go: the board, the Files app and a chat's own tools send from several processes.
 SENDING_LOCK = "sending.lock"
 SENDING_WAIT_SECONDS = 10
+# How long the chat may still be showing a command it took: its mod holds a taken command up to three seconds while a
+# turn runs before it confirms it, and checks in once a second. A taken command is resent only after this.
+SHOWING_SECONDS = 10
 # The board shows a chat's latest messages; older ones are not worth keeping.
 KEPT_MESSAGES = 20
 # The Claude app opens a new chat on a folder from this link, with its prompt filled in for the person to send.
@@ -58,13 +61,14 @@ T = TypeVar("T")
 
 
 class SentCommand(TypedDict, total=False):
-    """A command as its file holds it: its kind and text, when it was sent, why the chat could not show it, and whether
-    the chat has been busy with it since it showed it."""
+    """A command as its file holds it: its kind and text, when it was sent, when the chat took it, why the chat could
+    not show it, and whether the chat has been busy with it since it showed it."""
 
     kind: str
     text: str
     sent_at: float
     reason: str
+    taken_at: float
     is_worked_on: bool
 
 
@@ -135,6 +139,17 @@ class ChatNotConnectedError(LookupError):
 
     def __init__(self, chat: str) -> None:
         super().__init__(f"chat {chat!r} is not connected: is the cdd-board mod loaded in it?")
+
+
+class ChatMessageMayBeShowing(RuntimeError):
+    """Raised when a message the chat took moments ago is resent: the chat may still be showing it, and would show it
+    twice."""
+
+    def __init__(self, chat: str, message: str) -> None:
+        super().__init__(
+            f"message {message} of chat {chat!r} was taken by the chat less than {SHOWING_SECONDS} seconds ago and may still be "
+            "showing: resend it once it has failed, or once the chat has had time to show it"
+        )
 
 
 class ChatsFolder:
@@ -439,9 +454,10 @@ class ChatMailbox:
         return [self._message(path, state) for path, state in newest]
 
     def confirm(self, message: str, is_shown: bool, reason: str) -> None:
-        """A message the chat took was shown, or was refused for reason."""
-        taken = self._folder / TAKEN / f"{message}.json"
-        if not taken.is_file():
+        """A message the chat took was shown, or was refused for reason. One resent since waits again, and the chat's
+        confirm still counts, so the chat is not given it a second time."""
+        taken = next((path for state in (TAKEN, WAITING) if (path := self._folder / state / f"{message}.json").is_file()), None)
+        if taken is None:
             return
         if not is_shown:
             record = JsonFile(taken)
@@ -455,12 +471,16 @@ class ChatMailbox:
             self._move(shown, DONE)
 
     def resend(self, message: str) -> None:
-        """A message the chat took but did not show waits again, for the chat to take at its next check-in."""
+        """A message the chat took but did not show waits again, for the chat to take at its next check-in. One taken
+        moments ago may still be showing, so it is refused (*ChatMessageMayBeShowing*) until SHOWING_SECONDS pass."""
         for state in (TAKEN, FAILED):
             unshown = self._folder / state / f"{message}.json"
             if unshown.is_file():
                 record = JsonFile(unshown)
-                record.write({key: value for key, value in record.read().items() if key != "reason"})
+                sent = record.read()
+                if state == TAKEN and self._chat.clock() - sent.get("taken_at", 0.0) < SHOWING_SECONDS:
+                    raise ChatMessageMayBeShowing(self._chat.id, message)
+                record.write({key: value for key, value in sent.items() if key not in ("reason", "taken_at")})
                 self._move(unshown, WAITING)
 
     def remove(self, message: str) -> None:
@@ -476,6 +496,7 @@ class ChatMailbox:
             command = JsonFile(path).read()
             if command["kind"] == "fill" and is_busy:
                 continue
+            JsonFile(path).write({**command, "taken_at": self._chat.clock()})
             self._move(path, TAKEN)
             taken.append(ChatCommand(path.stem, command["kind"], command["text"]))
         self._forget_old_messages()

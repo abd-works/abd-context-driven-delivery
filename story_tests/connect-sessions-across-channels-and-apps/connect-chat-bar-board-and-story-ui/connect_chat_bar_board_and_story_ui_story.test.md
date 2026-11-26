@@ -128,13 +128,14 @@ section: body
 
 ## Story: Send Command To Chat
 
-Acceptance tests: `harness/chat/chat_spec.py` for one sender, `harness/chat/chat_heavy_spec.py` for senders at once.
+Acceptance tests: `harness/chat/chat_spec.py` for one sender and for resends, `harness/chat/chat_heavy_spec.py` for senders at once.
 
 ### Evidence
 
 | Source | Note |
 |--------|------|
 | exploratory testing, 2026-11-26 (pip-5) | a refresh and a board's Open sent at the same moment left one message; the other was lost though both sends answered |
+| exploratory testing, 2026-11-26 (pip-7) | a message resent while the chat was still showing it was shown twice, and listed as waiting |
 
 #### Scenario: Commands sent to one chat at the same moment each reach it
 
@@ -142,4 +143,19 @@ Acceptance tests: `harness/chat/chat_spec.py` for one sender, `harness/chat/chat
 *When* the Files app sends it a refresh and a board's Open at the same moment, from two senders  
 *Then* both commands wait for the chat, each in its own message  
   *And* the chat takes each one once at its next check-in
+
+#### Scenario: A message the chat may still be showing is not resent
+
+*Given* the chat took a message moments ago and has not yet said whether it showed it  
+*When* the Person resends the message  
+*Then* the resend is refused, naming the message  
+  *And* the message stays taken until the chat says it showed it
+
+#### Scenario: A message taken long ago and resent is shown once
+
+*Given* the chat took a message and never said whether it showed it, as a chat bar that reloads forgets  
+*When* the Person resends the message  
+  *And* the chat then says it showed it after all  
+*Then* the message is listed as shown  
+  *And* the chat is not given it again at its next check-in
 

@@ -3,7 +3,7 @@
 *Chat* is a Claude Code chat reached from outside it, so the session board can see which chats are connected and send one a command; *ChatCommand* is a command a chat takes at its check-in, and *ChatMessage* is a command as the board lists it.
 
 - **Purpose:** Let the board drive any connected chat — send it a command and follow that command until the chat has shown and finished it — without the chats and the board sharing a process.
-- **Seam (terms):** Chats, Chat, ChatCommand, ChatMessage, ChatNotConnectedError; the MCP operations `chats.list`, `chats.open`, `chat.send`, `chat.messages`, `chat.remove`, `chat.resend`, `chat.check_in`, `chat.confirm`, `chat.finish`
+- **Seam (terms):** Chats, Chat, ChatCommand, ChatMessage, ChatNotConnectedError, ChatMessageMayBeShowing; the MCP operations `chats.list`, `chats.open`, `chat.send`, `chat.messages`, `chat.remove`, `chat.resend`, `chat.check_in`, `chat.confirm`, `chat.finish`
 - **Dependencies (one-way):** harness/agent_tools, harness/installation, harness/mcp
 
 ## Chats
@@ -45,6 +45,7 @@ Reach a Claude Code chat from outside it and send it a command. A chat is a fold
 ---<<creates>>--> ChatCommand
 ---<<creates>>--> ChatMessage
 ---<<raises>>--> ChatNotConnectedError
+---<<raises>>--> ChatMessageMayBeShowing
 ---<<annotated with>>--> LanguageAdapter
 
 ## ChatCommand
@@ -74,5 +75,13 @@ A message sent to a chat, as the board lists it: when it was sent, where it stan
 Raised when a command is sent to a chat whose mod has not checked in lately.
 
 + ChatNotConnectedError(chat: str)
+------
+----
+
+## ChatMessageMayBeShowing : RuntimeError
+
+Raised when a message the chat took moments ago is resent: the chat may still be showing it, and would show it twice.
+
++ ChatMessageMayBeShowing(chat: str, message: str)
 ------
 ----

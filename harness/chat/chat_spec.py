@@ -16,7 +16,7 @@ from mamba import after, before, context, description, it
 
 from harness.agent_tools.chat_pointer import ChatPointer
 from harness.agent_tools.tool_call import ToolCall, ToolRequest
-from harness.chat.chat import KEPT_MESSAGES, Chat, ChatNotConnectedError, Chats, RecordedChatOpener
+from harness.chat.chat import KEPT_MESSAGES, SHOWING_SECONDS, Chat, ChatMessageMayBeShowing, ChatNotConnectedError, Chats, RecordedChatOpener
 from harness.installation.data_class import data_of
 
 CHAT = "ad6c04ab-chat"
@@ -205,6 +205,38 @@ with description("a chat") as self:
 
                 with it("should show the command as taken, not yet shown"):
                     expect(_states()).to(equal(["taken"]))
+
+                # The mod holds a taken command for a moment before it confirms it, and a resend in that moment would
+                # have the chat show it twice.
+                with context("that a person resends while the chat may still be showing it"):
+                    with it("should refuse, naming the message"):
+                        expect(lambda: Chat.load(CHAT).resend(self.taken.message)).to(raise_error(ChatMessageMayBeShowing, contain(self.taken.message)))
+
+                    with it("should keep the command taken, for the chat's confirm"):
+                        try:
+                            Chat.load(CHAT).resend(self.taken.message)
+                        except ChatMessageMayBeShowing:
+                            pass
+                        expect(_states()).to(equal(["taken"]))
+
+                # A mod that reloads forgets what it took, so a command taken long ago and never confirmed can be resent.
+                with context("that a person resends once the chat has had time to show it"):
+                    with before.each:
+                        CLOCK[0] += SHOWING_SECONDS + 1
+                        Chat.load(CHAT).resend(self.taken.message)
+
+                    with it("should show the command waiting again"):
+                        expect(_states()).to(equal(["waiting"]))
+
+                    with context("that the chat confirms it showed after all"):
+                        with before.each:
+                            Chat.load(CHAT).confirm(self.taken.message, is_shown=True)
+
+                        with it("should show the command as shown"):
+                            expect(_states()).to(equal(["shown"]))
+
+                        with it("should give the chat nothing at its next check-in"):
+                            expect(Chat.load(CHAT).check_in(is_busy=False)).to(be_empty)
 
                 with context("that the chat has shown"):
                     with before.each:
