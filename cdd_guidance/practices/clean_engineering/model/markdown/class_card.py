@@ -65,6 +65,9 @@ def _operation_in(line: str) -> Optional[Operation]:
 
 # The bold line a card lists the invariants no single member governs under, one `- ` bullet each.
 INVARIANTS_LIST = "**Invariants**"
+# The line that opens a repository written inside its root's card, below the root's own lines, with the repository's
+# members after it: `**CartRepository** «Repository»`.
+REPOSITORY_IN_ROOT = re.compile(r"^\*\*([A-Za-z_]\w*)\*\*[ \t]*(?:«|<<)[ \t]*Repository[ \t]*(?:»|>>)[ \t]*$", re.MULTILINE)
 
 
 class ClassCard:

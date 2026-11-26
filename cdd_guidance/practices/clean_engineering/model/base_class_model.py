@@ -203,9 +203,10 @@ class OoadClass(OoadNode):
         self.dependencies = [item.clone() for item in getattr(source, "dependencies", [])]
 
     def take_words_from(self, earlier: "OoadClass") -> None:
-        """Keep the intent and the member words it has, and take earlier's where it has none, member by member; a
-        constructor is one member whatever its format calls it."""
+        """Keep the intent, the invariants no single member governs, and the member words it has, and take earlier's
+        where it has none, member by member; a constructor is one member whatever its format calls it."""
         self.intent = self.intent or earlier.intent
+        self.invariants = self.invariants or list(earlier.invariants)
         for members, earlier_members in ((self.operations, earlier.operations), (self.properties, earlier.properties)):
             had = {earlier.member_key(member): member for member in earlier_members}
             for member in members:

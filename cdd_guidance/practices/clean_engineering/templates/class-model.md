@@ -45,6 +45,14 @@ The {{ClassName}} {{the states it moves through: what it is created from, its st
 
 - {{must / never / always — a rule no single member governs; one a single member governs is a `//` line under it}}
 
+**{{ClassName}}Repository** «Repository»
+
+------
++ {{roots}}: Collection<{{ClassName}}>
+----
++ {{create | load | update}}({{parameters}}): {{ClassName}}
+	// only on a root a repository keeps: the block is a class of its own, drawn as its own card and written as its own class in code
+
 ---
 
 ## Event map

@@ -42,7 +42,7 @@ from cdd_guidance.practices.clean_engineering.model.base_class_model import (
     Module,
     OoadClass,
 )
-from cdd_guidance.practices.clean_engineering.model.markdown.class_card import ClassCard
+from cdd_guidance.practices.clean_engineering.model.markdown.class_card import REPOSITORY_IN_ROOT, ClassCard
 from cdd_guidance.practices.clean_engineering.model.module_context_files import ModuleMeta, listed_terms
 from cdd_guidance.practices.source_code import split_top_level
 from harness.guidance.practice_formats import Written
@@ -52,7 +52,10 @@ if TYPE_CHECKING:
 
 
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
-_CARD_HEADING = re.compile(r"^(#{2,6})\s+\*\*([^*]+)\*\*(.*?)\s*$")
+# A class card's heading: the class's name in bold (`### **Cart** <<Aggregate Root>>`), as Clean Engineering's template
+# writes it, or plain and followed by its stereotypes (`#### Cart <<Aggregate Root>>`), as the DDD model template that
+# extends it writes it.
+_CARD_HEADING = re.compile(r"^(#{2,6})\s+(?:\*\*[^*]+\*\*|[A-Za-z_]\w*\s*<<)")
 _FENCE = re.compile(r"^\s*(```|~~~)")
 # An HTML comment written after a heading's words, as a template marks the fidelities that write the heading
 # (`## {ClassName}   <!-- Md -->`): no part of what the heading names.
@@ -70,12 +73,14 @@ class ClassHeading:
     `**Cart** <<Entity>> — *Access Selfcare*`.
 
     The name comes first, then the class's stereotypes as `<<Mark>>`s, then its base classes after ` : `. A card may
-    end with a note, which is kept as written so a card the model did not change reads the same."""
+    end with a note, which is kept as written so a card the model did not change reads the same. A card names its class
+    in bold unless it was read from a heading that named it plainly."""
 
     name: str
     stereotypes: List[str] = field(default_factory=list)
     bases: List[str] = field(default_factory=list)
     note: str = ""
+    bold: bool = True
 
     @classmethod
     def read(cls, raw: str) -> "ClassHeading":
@@ -83,7 +88,7 @@ class ClassHeading:
         bold = re.match(r"^\*\*([^*]+)\*\*", text)
         if bold is None:
             name, _, bases = without_marks(text.replace("**", "")).partition(" : ")
-            return cls(name.strip(), marks_in(text)).with_bases(bases)
+            return cls(name.strip(), marks_in(text), bold=False).with_bases(bases)
         rest = without_marks(text[bold.end():])
         bases, note = (rest[1:], "") if rest.startswith(":") else ("", rest)
         if " — " in bases:
@@ -100,7 +105,8 @@ class ClassHeading:
 
     def card_text(self) -> str:
         note = f" {self.note}" if self.note else ""
-        return f"**{self.name}**{self._tail()}{note}"
+        name = f"**{self.name}**" if self.bold else self.name
+        return f"{name}{self._tail()}{note}"
 
     def _tail(self) -> str:
         marks = "".join(f" <<{item}>>" for item in self.stereotypes)
@@ -112,35 +118,50 @@ class MarkdownOoadClass(OoadClass):
 
     def __init__(self, name: str, sequential_order: int, intent: str = "") -> None:
         super().__init__(name, sequential_order, intent)
-        # The card this class was read from, the note on its heading, and the class as it read then.
+        # The card this class was read from, its heading, and the class as it read then.
         self._card: Optional[str] = None
-        self._card_note = ""
+        self._card_heading = ClassHeading(name)
         self._card_model = ""
+        # Whether its card writes a constructor line: a card read without one, as a DDD model's, writes none.
+        self._writes_constructor = True
+        # Whether its card is a `**Name** «Repository»` block inside its root's card rather than under its own heading.
+        self._in_root = False
 
     def render(self, known_names: Optional[List[str]] = None) -> str:
         lines: List[str] = [f"## {self.heading(known_names or []).text()}", ""]
         if self.intent:
             lines.extend([self.intent, ""])
         if self.properties or self.operations or self.dependencies:
-            lines.extend(ClassCard([]).lines_of(self))
+            lines.extend(ClassCard([], writes_constructor=self._writes_constructor).lines_of(self))
         lines.append("")
         return "\n".join(lines)
 
     def heading(self, known_names: List[str]) -> ClassHeading:
         """The class's heading: its stereotypes, then the bases its declaration names."""
-        return ClassHeading(self.name, list(self.stereotypes), self.declared_bases(known_names), self._card_note)
+        written = self._card_heading
+        return ClassHeading(self.name, list(self.stereotypes), self.declared_bases(known_names), written.note, written.bold)
 
     def keep_card(self, card: str, heading: ClassHeading) -> None:
-        """Remember the card this class was read from, so an unchanged class writes it back as is."""
+        """Remember the card this class was read from, so an unchanged class writes it back as is, and a changed one
+        writes its heading as the card did, with a constructor line only when the card wrote one."""
         self._card = card
-        self._card_note = heading.note
+        self._card_heading = heading
+        self._writes_constructor = any(self.member_key(operation) == "constructor" for operation in self.operations)
         self._card_model = self.render()
 
+    def keep_in_root(self, block: str) -> None:
+        """Remember the `**Name** «Repository»` block inside its root's card that this class was read from."""
+        self._in_root = True
+        self.keep_card(block, ClassHeading(self.name, list(self.stereotypes)))
+
     def render_card(self, level: int) -> str:
-        """The card as it was read while the class is unchanged; otherwise the card written from the model."""
+        """The card as it was read while the class is unchanged; otherwise the card written from the model: a block
+        inside its root's card when it was read as one, else under its heading."""
         if self._card is not None and self.render() == self._card_model:
             return self._card
         body = self.render().split("\n", 1)[1]
+        if self._in_root:
+            return f"**{self.name}** «Repository»\n{body}\n"
         return f"{'#' * level} {self.heading([]).card_text()}\n{body}\n"
 
     @classmethod
@@ -188,11 +209,27 @@ class MarkdownModule(Module):
         self._card_parts.append(line)
 
     def add_card(self, card: str) -> None:
-        """Read a bold class card the card document wrote in this module, and keep it where it stood."""
-        class_heading = ClassHeading.read(card.split("\n", 1)[0].lstrip("#"))
-        body = card.split("\n", 1)[1] if "\n" in card else ""
+        """Read a class card the card document wrote in this module, and keep it where it stood; a repository written
+        inside it as a `**Name** «Repository»` block is a class of its own, kept where it stood in the card."""
+        starts = [found.start() for found in REPOSITORY_IN_ROOT.finditer(card)]
+        own = card[: starts[0]] if starts else card
+        class_heading = ClassHeading.read(own.split("\n", 1)[0].lstrip("#"))
+        body = own.split("\n", 1)[1] if "\n" in own else ""
         loaded = MarkdownOoadClass.read_card(class_heading, body, len(self.classes) + 1)
-        loaded.keep_card(card, class_heading)
+        loaded.keep_card(own, class_heading)
+        self._add_class(loaded)
+        for start, end in zip(starts, [*starts[1:], len(card)]):
+            self._add_repository(card[start:end])
+
+    def _add_repository(self, block: str) -> None:
+        """A repository written as a `**Name** «Repository»` block inside its root's card, as a class of its own."""
+        opening, _, body = block.partition("\n")
+        name = REPOSITORY_IN_ROOT.match(opening).group(1)
+        repository = MarkdownOoadClass.read_card(ClassHeading(name, ["Repository"]), body, len(self.classes) + 1)
+        repository.keep_in_root(block)
+        self._add_class(repository)
+
+    def _add_class(self, loaded: MarkdownOoadClass) -> None:
         self.classes.append(loaded)
         self._card_parts.append(loaded)
 
@@ -355,9 +392,10 @@ class MarkdownModule(Module):
 
 
 class CardDocument:
-    """A model document of bold class cards under modules and resource groups, each one level deeper (`#` title, `##`
+    """A model document of class cards under modules and resource groups, each one level deeper (`#` title, `##`
     module, `###` group, `####` card), as it was read: its lines in place, with each module where it stood, so the
-    model writes it back as it was. A module is a heading at the module level with a card under it."""
+    model writes it back as it was. A card's heading names its class in bold, or plainly with its stereotypes as the
+    DDD model template writes it; a module is a heading at the module level with a card under it."""
 
     def __init__(self, model: "MarkdownCleanEngineeringModel", card_level: int) -> None:
         self._model = model
