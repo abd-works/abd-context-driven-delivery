@@ -54,6 +54,10 @@
     }
   },
   "guidance": {
-    "version": 2
+    "version": 3,
+    "stages": [
+      "specification",
+      "implementation"
+    ]
   }
 }
