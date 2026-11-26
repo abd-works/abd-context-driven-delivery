@@ -26,4 +26,4 @@
 - **Fix:** `harness/mcp/spec_support.py`: `SpecServer.install` names `CDD_CHATS_FOLDER` (`CHATS_FOLDER_ENV`): the spec's own when it named one, else `<home>/chats`, removed with the home on `stop`, which restores the variable as it restores the others; `python -m harness.mcp.spec_support install` prints the chats folder too.
 - **No scenario:** this is test isolation, not product behaviour; the TDD supplement's tier rules already state it.
 - **Cleanup:** deleted `C:\Users\jeffa\.claude\cdd-chats\lens-chat` and `...\review-chat` after checking each held only `chat.json` (names "Lens" / "Review", folders under `%TEMP%\cdd-run-3fb45146\cdd-files-e2e-*\project`, the e2e specs' throwaway projects) and 20 `taken/*.json` each (the specs' fix commands, failures and fills about the spec's `review/` project and `.context/thin-slice.md`). Real chats use UUID ids; no other folder there was touched.
-- **Commit:** see below.
+- **Commit:** b8654fe6d.
