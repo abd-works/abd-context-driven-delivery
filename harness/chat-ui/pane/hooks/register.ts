@@ -10,7 +10,7 @@ import { changedArtifactOf, checkChangedArtifact } from './chat-bar/changed-arti
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
 import { currentActionPicker } from './chat-bar/action-picker-client'
 import { currentFormatChips } from './chat-bar/format-choices-client'
-import { followGuidance } from './chat-bar/guidance-client'
+import { clearPressedGuidance, currentPressedGuidance, followGuidance } from './chat-bar/guidance-client'
 import { currentOverlayChips, loadOverlayChoices } from './chat-bar/overlay-choices-client'
 import { currentFidelityHelp, forgetHelp, HELP_PANE } from './chat-bar/fidelity-help-client'
 import { FidelityHelpView } from './chat-bar/fidelity-help-view'
@@ -93,6 +93,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'board', description: 'Open the CDD session board, starting it when it is not running' })
     await clearBusy($)
+    await clearPressedGuidance($)
     await chatStarted($)
     const chat = await $.session.id()
     // The cdd server can still be connecting at session start, or restarting for a repin; a check-in that keeps failing
@@ -196,14 +197,15 @@ export const register: Register = on => {
     const version = await currentCddVersion($)
     const repo = await currentRepo($)
     const chatBar = await currentChatBar($)
+    const busy = await currentBusy($)
     return ChatBarView($, elements, {
       chatBar,
       failure: await currentFailure($),
-      formats: currentFormatChips(chatBar),
+      formats: currentFormatChips(chatBar, await currentPressedGuidance($), busy.wheel),
       overlays: await currentOverlayChips($, chatBar),
       view: await currentChatBarView($),
       picker: await currentActionPicker($),
-      busy: await currentBusy($),
+      busy,
       health: { band: ServerHealthBandView(elements, band, CARD_SCOPE), panel: ServerHealthPanelView(elements, band), icons: ServerHealthIconsView(elements, band) },
       version: { label: version.label, badge: VersionBadgeView(elements, version, versionActions), dialog: UpdateDialogView(elements, version, versionActions) },
       push: { buttons: PushButtonsView(elements, repo, pushActions), dialog: PushDialogView(elements, repo, pushActions) },

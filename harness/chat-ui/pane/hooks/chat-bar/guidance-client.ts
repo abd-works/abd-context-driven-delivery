@@ -6,6 +6,7 @@ import type { GuidanceSelectionData } from '@cdd/space/session/session'
 import { shownAsFailure } from '../error-display/failure-client'
 import { callTool } from '../shared/cdd-tool'
 import { clearChosenAction } from './action-picker-client'
+import { whileBusy } from './busy-client'
 
 // The session's guidance selection as the bar last drew it: the stages, practices, and format groups selected, the
 // fidelities they cover, the command each action runs on them, and the version every change raises. The session holds it
@@ -49,16 +50,33 @@ export async function followGuidance($: EngineInterface, sessionFileOf: () => Pr
 // The part of the selection a press toggles, as Session.toggle_guidance names it.
 export type SelectionPart = 'stage' | 'practice' | 'format'
 
+// Atom pressedGuidance, declared in pane/types/index.d.ts and kept in this file: the press running now, as part:name.
+const pressedGuidance = atom({ plugin: 'cdd-board', key: 'pressedGuidance' } as const, '')
+
+// The press running now, as part:name, such as format:markdown; empty while none runs.
+export async function currentPressedGuidance($: EngineInterface): Promise<string> {
+  return read($, pressedGuidance)
+}
+
 // A press on a stage button, a practice's dot, or a format chip: one toggle, whose answer the bar draws. The session works
-// out the selection the press leaves.
+// out the selection the press leaves, which can take a while with many files to filter, so the bar shows the busy wheel
+// and what it filters by until the answer lands, and a second press while one runs starts nothing.
 export async function toggleGuidance($: EngineInterface, session: string, part: SelectionPart, name: string): Promise<void> {
-  if (!session) return
+  if (!session || (await read($, pressedGuidance))) return
+  await update($, pressedGuidance, () => `${part}:${name}`)
   await clearChosenAction($)
   try {
-    await accept($, await callTool<GuidanceSelectionData>($, 'session.toggle_guidance', { session, part, name }))
+    await whileBusy($, `filtering by ${name}`, async () => accept($, await callTool<GuidanceSelectionData>($, 'session.toggle_guidance', { session, part, name })))
   } catch (failure) {
     await shownAsFailure($, `The ${name} ${part} was not changed`, `Pressing ${name} on the chat bar, calling session.toggle_guidance`)(failure)
+  } finally {
+    await update($, pressedGuidance, () => '')
   }
+}
+
+// A reload cuts off the press that would clear it, so a fresh start clears it.
+export async function clearPressedGuidance($: EngineInterface): Promise<void> {
+  await update($, pressedGuidance, () => '')
 }
 
 // An answer older than the version drawn is one a press has already moved past.

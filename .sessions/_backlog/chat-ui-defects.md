@@ -31,3 +31,15 @@ Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: while the chat works, the toast says
 Reported 2026-11-26 from pml-web built features. pml-web's canvas at `ux/design-canvas/version-7/project/canvas.json` showed as "version-7 ↗ design canvas", while it is published as "ux-mockup" (kept as one, `keep_one` in versions.json).
 
 Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: `publication_of` gives the canvas's title (`CanvasVersion.title`: `ux-mockup` kept as one, `ux-mockup.version-N` while versions are kept) as the Publication's name, `FileEntry.published_name` sends it, and the file bar shows it, the version folder only when none is sent. Tested in `space/session/practices/publication_spec.py` and `file-bar.spec.ts`. Left: a scoped canvas is titled from the unscoped name (`ux-mockup`, not `{scope}-ux-mockup`), since the path does not say its scope, as `publication_of` already read it. Not yet seen in the live Files app.
+
+## A story map link opened in the draw.io viewer shows "not found"
+
+Reported 2026-11-26. A story's link in `.context/story-map.drawio`, opened in the draw.io viewer, went to `127.0.0.1:8791/story_tests/...` and showed "not found": the links are written beside the diagram, and the browser read them against the viewer, which serves only diagrams.
+
+Fixed 2026-11-26 on `ui-fixes-as-i-use-it` (6ab5a3cda, bc97a2c27): the viewer sends each link to a file through the Files server's `/api/drawio/link`, which opens the file in the Files app at the heading its anchor names, and writes the links back as they were on save; a link to a file that is not there is told to the chat, whose chat bar offers Fix. Tested in `tools/drawio_viewer/drawio_viewer_spec.py` and `drawio-link.spec.ts`. Not yet seen live: the Files app and viewer running now are the stable lane's.
+
+## A format chip's filter shows nothing while it runs
+
+Reported 2026-11-26 from pml-web. A press on a format chip, in "all" mode above all, took a while to filter and nothing said it was working, so a second press was easy.
+
+Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: on the chat bar the pressed chip shows the busy wheel and the bar says "filtering by markdown…" until the answer lands, and a press while one runs starts nothing (`pressedGuidance` in `guidance-client.ts`; `format-chip-busy.test.ts`, not run: the mod harness does not run from a shell). The Files app says "Filtering by …" in place of the list until it is read again, and ignores a press while one filters (`files-page.spec.ts`). The slowness itself, the graph rebuilt on each change, is a separate item.

@@ -123,6 +123,9 @@ declare module 'claude-code' {
       actionPicker: ActionPickerJson
       fidelityHelp: FidelityHelpJson
       guidance: object | null
+      // The stage, practice or format group a press is changing now, as part:name, so a second press waits for it and
+      // its chip shows the busy wheel; empty while no press is running.
+      pressedGuidance: string
       overlayChoices: OverlayChoicesJson
       busy: BusyJson
       chatTurns: ChatTurnsJson

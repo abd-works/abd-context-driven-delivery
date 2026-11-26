@@ -55,6 +55,9 @@ export type FilesState = {
   byFidelity: FidelityFiles[]
   entries: FileEntryData[]
   isListing: boolean
+  // What a change of the selection is filtering the files by while the session answers and the list is read again,
+  // such as markdown; empty while nothing is being filtered.
+  filtering: string
   openPath: string
   file: SessionFileData | null
   // The heading the open file is shown at: the one a link named when the file it opened beside became the open file.
@@ -90,6 +93,7 @@ export const NO_FILES: FilesState = {
   byFidelity: [],
   entries: [],
   isListing: true,
+  filtering: '',
   openPath: '',
   file: null,
   openAnchor: '',

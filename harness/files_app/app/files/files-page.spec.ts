@@ -226,6 +226,31 @@ describe('Select Guidance In Files App', () => {
         stop()
         expect(paths(page)).toEqual(['.context/stories-story-map.drawio', '.context/ddd-bounded-context.drawio'])
       })
+
+      it('should say it is filtering by diagram while the session answers', async () => {
+        const { page, stop } = await following(discovery())
+        const toggling = page.guidance.toggle('format', 'diagram')
+        const filtering = page.state.filtering
+        await toggling
+        stop()
+        expect(filtering).toBe('diagram')
+      })
+
+      it('should stop saying it is filtering once the list is read again', async () => {
+        const { page, stop } = await following(discovery())
+        await page.guidance.toggle('format', 'diagram')
+        await settled()
+        stop()
+        expect(page.state.filtering).toBe('')
+      })
+
+      it('should start no second toggle for a press while one is filtering', async () => {
+        const server = discovery()
+        const { page, stop } = await following(server)
+        await Promise.all([page.guidance.toggle('format', 'diagram'), page.guidance.toggle('format', 'diagram')])
+        stop()
+        expect(server.posted('/toggle-guidance')).toHaveLength(1)
+      })
     })
 
     describe('that has every stage turned off', () => {

@@ -197,6 +197,7 @@ function SessionButtonsView($: EngineInterface, elements: ElementTable, { chatBa
 // One chip per format group the fidelities offer, just before the action button, as on a board ticket's action bar:
 // orange while chosen in the session, green when every fidelity has a file in it already, grey otherwise; a press turns
 // it on or off in the session. The blank either side of the glyph is part of the button, so the whole chip takes the press.
+// While a press filters by a chip's group, that chip shows the busy wheel in place of its glyph.
 function FormatChipsView($: EngineInterface, elements: ElementTable, { chatBar, formats }: ChatBarDraw) {
   const { Box } = elements
   if (!formats.choices.length) return null
@@ -207,7 +208,7 @@ function FormatChipsView($: EngineInterface, elements: ElementTable, { chatBar, 
         const colour = isOn ? BRAND.onAccent : BRAND.muted
         return (
           <Box key={`format-${choice.label}`} backgroundColor={isOn ? BRAND.accent : undefined}>
-            {GlyphButtonView(elements, `format-chip-${choice.label}`, ` ${formatGlyphOf(choice.label)} `, colour, () => toggleGuidance($, chatBar.sessionFile, 'format', choice.label))}
+            {GlyphButtonView(elements, `format-chip-${choice.label}`, ` ${formats.filtering === choice.label ? formats.wheel : formatGlyphOf(choice.label)} `, colour, () => toggleGuidance($, chatBar.sessionFile, 'format', choice.label))}
             {TipView(elements, choice.label, `offered by ${choice.offered}`, BRAND.muted)}
           </Box>
         )

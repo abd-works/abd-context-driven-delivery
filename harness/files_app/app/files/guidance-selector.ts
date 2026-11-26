@@ -38,13 +38,19 @@ export class GuidanceSelector {
     }
   }
 
-  // A press on a stage, a practice's toggle, or a format chip: the session works out the selection it leaves.
+  // A press on a stage, a practice's toggle, or a format chip: the session works out the selection it leaves, which can
+  // take a while with many files to filter, so the page says what it is filtering by until the list is read again, and a
+  // press while one is filtering starts nothing.
   async toggle(part: SelectionPart, name: string): Promise<void> {
+    if (this.page.store.state.filtering) return
+    this.page.store.change(() => ({ filtering: name }))
     try {
       const answer = await this.page.session.toggleGuidance(part, name)
       if (answer) await this.accept(answer)
     } catch (failure) {
       this.page.notices.fail(`The ${name} ${part} was not changed: ${reasonOf(failure)}`, 'A press in the Files app')
+    } finally {
+      this.page.store.change(() => ({ filtering: '' }))
     }
   }
 

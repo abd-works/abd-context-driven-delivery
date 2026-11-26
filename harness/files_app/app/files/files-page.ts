@@ -208,9 +208,16 @@ export class FilesPage {
 
   // A selection changed, here or anywhere: the session says again which files the page lists for it, so the list is
   // read again, the fidelities it asks for and every file under the session's root.
+  // A change made elsewhere, such as a chat bar chip, says the page is filtering until the list is read again.
   async showSelected(): Promise<void> {
     if (this.state.isListing) return
-    await this.listAgain()
+    if (this.state.filtering) return this.listAgain()
+    this.store.change(() => ({ filtering: 'the new selection' }))
+    try {
+      await this.listAgain()
+    } finally {
+      this.store.change(() => ({ filtering: '' }))
+    }
   }
 
   // This session lists the files the branch changed; All session files lists every file of the fidelities listed, older
