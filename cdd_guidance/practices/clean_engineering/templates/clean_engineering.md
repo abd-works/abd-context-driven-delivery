@@ -113,15 +113,12 @@ I{ClassName}({param}: {Type})
 
 ## {ClassName}                                                    <!-- Md -->
 
-*{ClassName}* is {the job a caller hires it for — then what it holds and does.
-This paragraph IS the class definition. Identity and purpose. Not a decorator or merge.} <!-- L -->
+The *{ClassName}* is {what it is for, told from the class: the job a caller hires it for}. The {ClassName} {how it works at a high level, and which classes it works with: who does what to whom}. <!-- L -->
 
-### {term_this_class_owns}                                         <!-- L — one per domain term the class holds: itself, a property, an instance, a state -->
+The {ClassName} {the states it moves through: what it is created from, its starting status, and each way it ends}. <!-- L -->
 
-- {bullet: why a caller uses it (the outcome), then the mechanic if needed, then how it relates to *another class*} <!-- L -->
-- {as many bullets as the term warrants}                          <!-- L -->
-- **Invariant:** {rule that must always hold — only when one exists} <!-- L -->
-- Sources: `{source file the term is defined in}`                  <!-- L — only when a source defines it -->
+- **{Responsibility}.** The {ClassName} {does this; behaviour serving the same responsibility stays in this bullet; it asks the *{OtherClass}* to do its part, and stops there}. <!-- L — one bullet per responsibility, never per member -->
+- **{Responsibility}.** The {ClassName} has a *{PartClass}*, calculated from {what}; {where a value it calculates goes once it is done}. <!-- L -->
 
 + {ClassName}({param}: {Type})
 	// {must / never / always / before / after that stays true of the object}

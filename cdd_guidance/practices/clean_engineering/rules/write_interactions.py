@@ -24,7 +24,7 @@ class WriteInteractions(ProductionCodeRule):
             (line, f"Line {line}: use `-> collaborator.operation` sketch notation, not bold **Interaction:** bullets.")
             for line in node.get_fact("bold_interaction_lines", [])
         ] + [
-            (line, f"Line {line}: use `//` under the operation for invariants, not bold **Invariant:** bullets.")
+            (line, f"Line {line}: write the invariant as a `//` line under the member it governs, not as a bold **Invariant:** bullet.")
             for line in node.get_fact("bold_invariant_lines", [])
         ]
         return [Finding(node, message) for message in [message for _line, message in sorted(hits, key=lambda hit: hit[0])][:_MAX_HITS]]

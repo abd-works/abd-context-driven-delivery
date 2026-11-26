@@ -237,6 +237,8 @@ Thrown by `AccountCredentials.resendValidationCode` when the 60-second wait has 
 
 ## AccountCredentialRequirement
 
+One requirement (field + rule).
+
 + AccountCredentialRequirement(...)
 ------
 + field: string
@@ -596,6 +598,7 @@ Paradise Cart is the customer's selection. `CartRepository` talks to `PortalGate
 ## OnboardingStep <<type>>
 
 Cart-module constants. Not open strings.
+
 OnboardingStep.SelectPlan
 OnboardingStep.PickNumber
 OnboardingStep.VerifyPortedNumber

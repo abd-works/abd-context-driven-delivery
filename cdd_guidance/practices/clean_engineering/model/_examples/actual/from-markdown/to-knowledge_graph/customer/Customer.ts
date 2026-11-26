@@ -347,6 +347,9 @@ class ValidationCodeResendWaitException {
   }
 }
 
+/**
+ * One requirement (field + rule).
+ */
 class AccountCredentialRequirement {
   field: string;
   requirement: string;

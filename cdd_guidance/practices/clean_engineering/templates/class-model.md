@@ -20,18 +20,18 @@ format: md
 
 ### **{{ClassName}}** <<{{Stereotypes}}>>
 
-*{{ClassName}}* is {{the job a caller hires it for — then what it holds and does}}.
+The *{{ClassName}}* is {{what it is for, told from the class: the job a caller hires it for}}. The {{ClassName}} {{how it works at a high level, and which classes it works with: who does what to whom}}.
 
-#### {{term this class owns — itself, a property, an instance, a state}}
+The {{ClassName}} {{the states it moves through: what it is created from, its starting status, and each way it ends}}.
 
-- {{why a caller uses it, then the mechanic, then how it relates to *another class*}}
-- **Invariant:** {{rule that must always hold — only when one exists}}
-- Sources: `{{source file the term is defined in}}`
+- **{{Responsibility}}.** The {{ClassName}} {{does this, in plain English; behaviour that serves the same responsibility stays in this one bullet}}. {{Where it needs another class: the {{ClassName}} asks the *{{OtherClass}}* to {{do its part}}, and stops there.}}
+- **{{Responsibility}}.** The {{ClassName}} has a *{{PartClass}}*, calculated from {{what}}; {{where a value it calculates goes once it is done with it}}.
 
 + {{ClassName}}({{constructor parameters}})
+	// {{what creates it}}
 ------
 + {{propertyName}}: {{Type}}
-	// {{why this property exists}}
+	// {{an invariant this property keeps, or why it exists}}
 + << {{composition | aggregation | association}} >> {{collaborator}}: {{Type}}
 ----
 + {{operationName}}({{parameters}}): {{ReturnType}}
@@ -43,11 +43,7 @@ format: md
 
 **Invariants**
 
-- {{must / never / always — one rule a caller can break by using the object wrong}}
-
-**Interactions**
-
-- {{which collaborator owns the next act — through a named public operation only}}
+- {{must / never / always — a rule no single member governs; one a single member governs is a `//` line under it}}
 
 ---
 

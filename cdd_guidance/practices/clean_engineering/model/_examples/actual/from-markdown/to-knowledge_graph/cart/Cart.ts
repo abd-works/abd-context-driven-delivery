@@ -166,6 +166,7 @@ class Cart {
 
 /**
  * Cart-module constants. Not open strings.
+ *
  * OnboardingStep.SelectPlan
  * OnboardingStep.PickNumber
  * OnboardingStep.VerifyPortedNumber

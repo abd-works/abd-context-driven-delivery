@@ -1016,6 +1016,20 @@ with description("Clean Engineering graph rules (inline fault and clean fixtures
         with it("should accept arrow notation in a markdown class"):
             expect(self.arrow.hits(BY_SLUG["write-interactions"])).to(equal([]))
 
+        with context("whose language, at the top of its class card, carries a bold Invariant bullet"):
+            with before.all:
+                card = (
+                    "# Order\n\nThe Order is what the customer placed.\n\n"
+                    "- **Lines.** The Order keeps the lines the Cart handed it.\n"
+                    "- **Invariant:** an order holds at least one line\n\n"
+                    "+ Order()\n------\n+ lines: Line[]\n----\n"
+                )
+                self.language = _markdown_class(card)
+
+            with it("should ask for the invariant as a // line under the member it governs"):
+                expect(self.language.hits(BY_SLUG["write-interactions"])).to(equal(
+                    ["Line 6: write the invariant as a `//` line under the member it governs, not as a bold **Invariant:** bullet."]))
+
     with context("one-way-deps"):
         with before.all:
             self.pair = files_rule_pair(

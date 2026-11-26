@@ -40,7 +40,13 @@ class I{ClassName}(ABC):
         ...
 
 class {ClassName}:  # or class {ClassName}(I{ClassName}):
-    """*{ClassName}* unique role."""
+    """The *{ClassName}* is {what it is for}. The {ClassName} {how it works, and who does what to whom}.
+
+    The {ClassName} {the states it moves through: created from, starting status, each way it ends}.
+
+    - **{Responsibility}.** The {ClassName} {does this; it asks the *{OtherClass}* to do its part}.
+    - **{Responsibility}.** The {ClassName} has a *{PartClass}*, calculated from {what}.
+    """
     # {must / never / always / before / after that stays true of the object}
 
     @property
