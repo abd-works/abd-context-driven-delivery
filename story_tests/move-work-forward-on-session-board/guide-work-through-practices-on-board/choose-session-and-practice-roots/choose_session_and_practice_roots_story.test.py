@@ -90,9 +90,9 @@ with story("Choose Session And Practice Roots"):
         with given("refund-order's acceptance tests are rooted at story_tests/manage-orders/refund-order"):
             self.refund = RefundOrderSession()
             self.refund.output("stories", "acceptance_tests").choose_root(REFUND_STORIES)
-        with when("the agent chooses the file domain/orders/refund/refund.py as the acceptance tests' root"):
-            # Agent -> FidelitySessionOutput.choose_root('domain/orders/refund/refund.py')
-            self.choose_file = lambda: self.refund.output("stories", "acceptance_tests").choose_root(REFUND_AGGREGATE)
+        with when("the agent chooses the file domain/orders/refund/refund.py as the folder Stories writes under"):
+            # Agent -> PracticeSessionOutput.choose_root('domain/orders/refund/refund.py')
+            self.choose_file = lambda: self.refund.session.practice("stories").choose_root(REFUND_AGGREGATE)
         with then("the choice is refused, saying domain/orders/refund/refund.py is a file"):
             expect(self.choose_file).to(raise_error(OutputRootRefused, contain(f"{REFUND_AGGREGATE} is a file")))
         with when("the agent chooses an empty path as Stories' root"):

@@ -264,10 +264,10 @@ section: body
 
 #### Scenario: Refuse a file or an empty path as a root
 
-> Exploratory testing, widget-12: a file and an empty path were kept as roots, and generate then told the agent to write there.
+> Exploratory testing, widget-12: a file and an empty path were kept as roots, and generate then told the agent to write there. Changed (the person, 2026-11-26): a fidelity's root may be a file, as Add to practice in the Files app adds one; the folder a practice writes its documents under must still be a folder.
 
 *Given* refund-order's acceptance tests are rooted at story_tests/manage-orders/refund-order
-*When* the agent chooses the file domain/orders/refund/refund.py as the acceptance tests' root
+*When* the agent chooses the file domain/orders/refund/refund.py as the folder Stories writes under
 *Then* the choice is refused, saying domain/orders/refund/refund.py is a file
 *When* the agent chooses an empty path as Stories' root
 *Then* the choice is refused, saying an empty path names no folder

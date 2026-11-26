@@ -1460,7 +1460,7 @@ with description("the board tools") as self:
                 "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.delete_file", "session.read_file", "session.write_file", "session.check_changed_artifact", "session.file", "session.graph_trees", "session.graph_branch", "session.graph_fix_prompt", "session.graph_filter_choices", "session.graph_node_ranges", "session.graph_members", "session.add_to_chat_context", "session.show",
                 "session.guidance_selection", "session.toggle_guidance", "session.guidance_selection_after", "session.record_test_tier",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
-                "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_root", "fidelity-session-output.add_root", "fidelity-session-output.propose_roots", "fidelity-session-output.choose_format",
+                "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.add_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_root", "fidelity-session-output.add_root", "fidelity-session-output.propose_roots", "fidelity-session-output.choose_format",
                 "backlog-item.create", "backlog-item.start", "backlog-item.start_under", "backlog-item.edit_text", "backlog-item.move_before",
                 "backlog-item.move_after", "backlog-item.nest_under", "backlog-item.leave_parent", "backlog-item.delete",
             }))

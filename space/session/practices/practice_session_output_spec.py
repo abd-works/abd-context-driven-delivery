@@ -1,6 +1,7 @@
 """BDD spec for the roots a person or an agent chooses for a practice and a fidelity in a session: what is refused as a
-root. Exploratory testing, widget-12: a file and an empty path were kept as roots, and generate then told the agent to
-write there."""
+root. Exploratory testing, widget-12: an empty path was kept as a root, and generate then told the agent to write there.
+The person's answer (2026-11-26): a practice holds many roots, files as well as folders, each added to every fidelity of
+the practice; only the folder a practice writes its documents under (its own root, choose_root) must be a folder."""
 
 import sys
 from pathlib import Path
@@ -29,7 +30,7 @@ with description("a practice's root in a session") as self:
             self.stories.choose_root(REFUND_STORIES)
             expect(self.stories.root).to(equal(REFUND_STORIES))
 
-    with context("that a person chooses as a file of the project"):
+    with context("that a person chooses as a file of the project, as the folder the practice writes under"):
         with it("should be refused, naming the file"):
             expect(lambda: self.stories.choose_root(REFUND_AGGREGATE)).to(raise_error(OutputRootRefused, contain(f"{REFUND_AGGREGATE} is a file")))
 
@@ -69,6 +70,47 @@ with description("a practice's root in a session") as self:
             expect(self.stories.is_root_chosen).to(equal(False))
 
 
+    # The Files app's file menu: Add to practice puts a file or a folder on the whole practice.
+    with context("that a person adds a folder to, beside the roots its fidelities have"):
+        with before.each:
+            self.stories.add_root(REFUND_DOMAIN)
+
+        with it("should be a root of every fidelity of the practice"):
+            fidelities = self.stories.fidelity_outputs
+            expect([REFUND_DOMAIN in output.root_paths for output in fidelities]).to(equal([True] * len(fidelities)))
+
+        with it("should keep each fidelity's roots before it"):
+            expect(self.refund.roots("stories", "story_map")[0]).not_to(equal(REFUND_DOMAIN))
+
+        with it("should list it among the roots a person added to the practice"):
+            expect(self.stories.added_roots).to(equal([REFUND_DOMAIN]))
+
+    with context("that a person adds a file to"):
+        with before.each:
+            self.stories.add_root(REFUND_AGGREGATE)
+
+        with it("should keep the file itself as a root of every fidelity of the practice"):
+            fidelities = self.stories.fidelity_outputs
+            expect([REFUND_AGGREGATE in output.root_paths for output in fidelities]).to(equal([True] * len(fidelities)))
+
+        with it("should list it among the roots a person added to the practice"):
+            expect(self.stories.added_roots).to(equal([REFUND_AGGREGATE]))
+
+        with it("should be a root the session reads its files under"):
+            expect(self.refund.session.session_files.in_root(self.refund.repo / REFUND_AGGREGATE)).to(equal(True))
+
+    with context("that a person adds from outside the project"):
+        with it("should be refused, naming the path"):
+            expect(lambda: self.stories.add_root("../outside-root")).to(raise_error(OutputRootRefused, contain("../outside-root is outside the project")))
+
+        with it("should add no root"):
+            try:
+                self.stories.add_root("../outside-root")
+            except OutputRootRefused:
+                pass
+            expect(self.stories.added_roots).to(equal([]))
+
+
 with description("a fidelity's root in a session") as self:
     with before.each:
         self.refund = RefundOrderSession()
@@ -83,8 +125,9 @@ with description("a fidelity's root in a session") as self:
             expect(self.refund.roots("stories", "acceptance_tests")).to(equal([REFUND_STORIES]))
 
     with context("that a person chooses as a file of the project"):
-        with it("should be refused, naming the file"):
-            expect(lambda: self.tests.choose_root(REFUND_AGGREGATE)).to(raise_error(OutputRootRefused, contain(f"{REFUND_AGGREGATE} is a file")))
+        with it("should be kept as the fidelity's root"):
+            self.tests.choose_root(REFUND_AGGREGATE)
+            expect(self.refund.roots("stories", "acceptance_tests")).to(equal([REFUND_AGGREGATE]))
 
     with context("that a person chooses with an empty path"):
         with it("should be refused, saying the path is empty"):
@@ -118,18 +161,10 @@ with description("a fidelity's root in a session") as self:
             expect(lambda: self.tests.add_root("../outside-root")).to(raise_error(OutputRootRefused, contain("../outside-root is outside the project")))
 
     with context("that has one root, with a file added beside it"):
-        with before.each:
+        with it("should keep both"):
             self.tests.choose_root(REFUND_STORIES)
-
-        with it("should refuse the file by name"):
-            expect(lambda: self.tests.add_root(REFUND_AGGREGATE)).to(raise_error(OutputRootRefused, contain(f"{REFUND_AGGREGATE} is a file")))
-
-        with it("should keep the root it had and no other"):
-            try:
-                self.tests.add_root(REFUND_AGGREGATE)
-            except OutputRootRefused:
-                pass
-            expect(self.refund.roots("stories", "acceptance_tests")).to(equal([REFUND_STORIES]))
+            self.tests.add_root(REFUND_AGGREGATE)
+            expect(self.refund.roots("stories", "acceptance_tests")).to(equal([REFUND_STORIES, REFUND_AGGREGATE]))
 
     with context("that has one root, with a folder added beside it"):
         with it("should keep both"):

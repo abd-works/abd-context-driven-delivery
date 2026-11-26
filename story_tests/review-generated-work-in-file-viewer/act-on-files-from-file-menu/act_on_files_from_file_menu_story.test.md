@@ -7,13 +7,13 @@ section: body
 
 # Epic: Act On Files From File Menu
 
-Map: [story-map.md](../../../.context/story-map.md#e-act-on-files-from-file-menu). Acceptance tests: `space/session/files/session_files_spec.py` (delete, every file in the session's folders), `space/session/validation/changed_artifact_spec.py` (validate a folder), `space/kanban/report_within_spec.py` (violations of a path), `space/session/practices/practice_add_root_spec.py` (add to a practice) for what the session answers; `harness/files_app/app/files/file-menu.spec.ts` for what only the page shows.
+Map: [story-map.md](../../../.context/story-map.md#e-act-on-files-from-file-menu). Acceptance tests: `space/session/files/session_files_spec.py` (delete, every file in the session's folders), `space/session/validation/changed_artifact_spec.py` (validate a folder), `space/kanban/report_within_spec.py` (violations of a path), `space/session/practices/practice_session_output_spec.py` (add to a practice) for what the session answers; `harness/files_app/app/files/file-menu.spec.ts` for what only the page shows.
 
 Requested (the person, 2026-11-26): "a right-click menu on the file viewer's folder/file tree, on files and folders": Delete, Validate, Display violations, and Add to practice ▸ with the session's practices. The menu already offers Add to chat context and Open in the file browser ([Open File In File Browser](../review-files-in-files-app/review_files_in_files_app_story.test.md#story-open-file-in-file-browser)).
 
 ### Domain terms
 
-- root: a folder a practice's fidelity writes under, kept in session.json relative to the folder the session works in (`FidelitySessionOutput.roots`). A root is always a folder: a file adds the folder it is in.
+- root: a file or a folder a practice's fidelity reads and writes under, kept in session.json relative to the folder the session works in (`FidelitySessionOutput.roots`). A practice holds many; only the folder it writes its documents under (`PracticeSessionOutput.choose_root`) must be a folder. The person (2026-11-26): "practice roots can take multiple folders and files; all folders and files get added to the whole of the practice at the point where added."
 - the session's roots: the folder the session works in, and every root its practices write under (`SessionFiles.in_root`).
 
 ## Story: Delete File Or Folder From File Menu
@@ -109,11 +109,18 @@ Requested (the person, 2026-11-26): "a right-click menu on the file viewer's fol
 *Then* *story_tests/checkout* is a root of each Stories fidelity beside the roots it had (`practice-session-output.add_root`), kept in session.json
 *And* the page says *story_tests/checkout added to Stories*
 
-#### Scenario: Add a file's folder to a practice
+#### Scenario: Add a file to a practice
 
-*Given* *src/cart/cart.py* is a file
-*When* the Person adds it to Clean Engineering
-*Then* its folder *src/cart* is a root of each Clean Engineering fidelity
+*Given* *c/vb/hr/e/story-1.md* is a file deep in the project
+*When* the Person adds *story-1.md* to Stories
+*Then* the file itself is a root of each Stories fidelity (`practice-session-output.add_root`)
+*And* the file bar shows *story-1.md* at its top, under its own name (`PracticeSessionOutput.added_roots`)
+
+#### Scenario: Show an added folder at the top of the file bar
+
+*Given* the Person added *src/orders/refund* to Clean Engineering
+*When* the file bar shows its files in their folders
+*Then* *refund* is a folder at the top of the tree, holding the files under *src/orders/refund*
 
 #### Scenario: Refuse a path outside the project
 

@@ -1411,7 +1411,7 @@ Requested (2026-11-26): Display violations shows the rules the latest reports fi
 
 ### (S) Person --> [Add File Or Folder To Practice](../story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md#story-add-file-or-folder-to-practice)
 
-Requested (2026-11-26): Add to practice ▸ lists the session's practices; choosing one adds the folder, or a file's own folder, as a root of each of that practice's fidelities, kept in session.json (`practice-session-output.add_root`, through `FidelitySessionOutput.add_root`).
+Requested (2026-11-26): Add to practice ▸ lists the session's practices; choosing one adds the file or folder as a root of every fidelity of that practice, kept in session.json (`practice-session-output.add_root`, through `FidelitySessionOutput.add_root`), and the file bar shows it at its top under its own name (`added_roots`). The person: "practice roots can take multiple folders and files; all folders and files get added to the whole of the practice at the point where added."
 
 ## (E) Filter Files In Files App
 
