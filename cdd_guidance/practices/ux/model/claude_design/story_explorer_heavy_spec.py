@@ -6,8 +6,9 @@ import re
 import subprocess
 
 from expects import equal, expect
-from mamba import before, context, description, it
+from mamba import after, before, context, description, it
 
+from cdd_guidance.practices.ux.model.claude_design.fixtures.linked_terms_project import CART_CARD, LINE_CARD, LinkedTermsProject
 from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap
 from cdd_guidance.practices.ux.model.claude_design.story_canvas import ClaudeDesignStoryMap, StoryCanvasSetup
 from cdd_guidance.practices.ux.model.nodes import Screen
@@ -147,6 +148,31 @@ def _outline_steps(*calls: list, rows: bool = True) -> dict:
     return json.loads(answer.stdout)
 
 
+# Runs the explorer's Component in Node in a window that keeps its listeners, with click(cls, card) making a click whose
+# target sits inside an element of class cls, then runs ACT and prints what it answers.
+_CLICK = """
+const code = require('fs').readFileSync(0, 'utf8');
+const listeners = {};
+const win = { location: { hash: '' }, localStorage: { getItem() { return null; } }, innerHeight: 900,
+  addEventListener(name, listener) { listeners[name] = listener; }, removeEventListener(name) { delete listeners[name]; } };
+class DCLogic { constructor() { this.props = {}; this.state = null; } setState(next) { this.state = Object.assign({}, this.state || {}, next); } }
+const Component = new Function('DCLogic', 'window', 'document', code + '; return Component;')(DCLogic, win, {});
+const explorer = new Component();
+const click = (cls, card) => ({ stopPropagation() {}, target: { closest: (selector) => selector.split(',').some((one) => one.trim() === '.' + cls)
+  ? { classList: { contains: (name) => name === cls }, getAttribute: () => card } : null } });
+const plain = { stopPropagation() {}, target: { closest: () => null } };
+const steps = () => explorer.renderVals().rows.filter((row) => String(row.cls).indexOf('sm-k4') >= 0);
+console.log(JSON.stringify((() => { ACT })()));
+"""
+
+
+def _clicked(explorer: str, act: str):
+    """What act answers, run on the explorer page's logic in Node."""
+    code = re.search(r'<script type="text/x-dc"[^>]*>([\s\S]*?)</script>', explorer).group(1)
+    answer = subprocess.run(["node", "-e", _CLICK.replace("ACT", act)], input=code, capture_output=True, text=True, check=True)
+    return json.loads(answer.stdout)
+
+
 with description("a story explorer that a screen moves") as self:
     with it("should move to the step a screen names, after the screen's action"):
         expect(_shown_step("Add Line To Cart", "Add one more line", "Then")).to(equal("Then the cart holds Atlas and Ace"))
@@ -235,3 +261,81 @@ with description("a story explorer that a screen moves") as self:
         with it("should show the outline's placeholders"):
             shown = _outline_steps(["Create Credentials", "Enter Invalid credentials"], rows=False)
             expect(shown["step"]).to(equal("Given the Customer has entered {example}\nWhen the Customer registers the credentials\nThen the {message} message is shown"))
+
+
+with description("a story explorer whose steps link domain terms to their classes") as self:
+    with before.all:
+        self.project = LinkedTermsProject()
+        self.explorer = self.project.explorer()
+
+    with after.all:
+        self.project.remove()
+
+    with it("should draw each linked term in a step as a part naming its class card"):
+        parts = _clicked(self.explorer, "return steps()[1].parts.filter((part) => part.isTerm).map((part) => [part.text, part.card]);")
+        expect([tuple(part) for part in parts]).to(equal([("cart", CART_CARD), ("line", LINE_CARD), ("cart", CART_CARD)]))
+
+    with it("should draw an epic, story or scenario name as plain words, with no term"):
+        counts = _clicked(self.explorer, "return explorer.renderVals().rows.filter((row) => String(row.cls).indexOf('sm-k4') < 0).map((row) => row.parts.filter((part) => part.isTerm).length);")
+        expect(set(counts)).to(equal({0}))
+
+    with context("that a reader clicks a term in a step"):
+        with before.all:
+            self.shown = _clicked(self.explorer, (
+                "const before = explorer.renderVals().stepIndex; steps()[1].pick(click('sm-term', '" + CART_CARD + "')); const shown = explorer.renderVals();"
+                "return { open: shown.cardOpen, title: shown.cardTitle, style: shown.cardStyle, before: before, after: shown.stepIndex };"))
+
+        with it("should show that term's class card"):
+            expect((self.shown["open"], self.shown["title"])).to(equal((True, "Cart «Aggregate Root» «Entity»")))
+
+        with it("should leave the step on show as it was, not select the step clicked"):
+            expect(self.shown["after"]).to(equal(self.shown["before"]))
+
+        with it("should open the card 240px tall"):
+            expect(self.shown["style"]).to(equal("height: 240px"))
+
+        with it("should close the card with its close mark"):
+            closed = _clicked(self.explorer, "steps()[1].pick(click('sm-term', '" + CART_CARD + "')); explorer.renderVals().closeCard(); return explorer.renderVals().cardOpen;")
+            expect(closed).to(equal(False))
+
+    with context("whose class card's divider is dragged"):
+        with it("should make the card taller by as much as the divider is dragged up"):
+            style = _clicked(self.explorer, "explorer.renderVals().startCardResize({ clientY: 500, preventDefault() {} }); listeners.pointermove({ clientY: 400 }); return explorer.renderVals().cardStyle;")
+            expect(style).to(equal("height: 340px"))
+
+        with it("should keep the card no taller than the window less 160px"):
+            style = _clicked(self.explorer, "explorer.renderVals().startCardResize({ clientY: 500, preventDefault() {} }); listeners.pointermove({ clientY: 0 }); return explorer.renderVals().cardStyle;")
+            expect(style).to(equal("height: 740px"))
+
+        with it("should keep the card no shorter than 80px"):
+            style = _clicked(self.explorer, "explorer.renderVals().startCardResize({ clientY: 500, preventDefault() {} }); listeners.pointermove({ clientY: 900 }); return explorer.renderVals().cardStyle;")
+            expect(style).to(equal("height: 80px"))
+
+        with it("should stop resizing once the pointer is let go"):
+            shown = _clicked(self.explorer, "explorer.renderVals().startCardResize({ clientY: 500, preventDefault() {} }); listeners.pointerup(); return [Boolean(listeners.pointermove), explorer.renderVals().cardStyle];")
+            expect(shown).to(equal([False, "height: 240px"]))
+
+    with context("whose step group has a realization"):
+        with it("should show a closed realization toggle under the group"):
+            shown = _clicked(self.explorer, "const step = steps()[0]; return [step.hasRealization, step.realizationToggle, step.realizationOpen];")
+            expect(shown).to(equal([True, "▸ realization", False]))
+
+        with it("should open the realization on a click of the toggle"):
+            shown = _clicked(self.explorer, "steps()[0].pick(click('sm-real-toggle')); const step = steps()[0]; return [step.realizationOpen, step.realizationToggle];")
+            expect(shown).to(equal([True, "▾ realization"]))
+
+        with it("should not select the step on a click of the toggle"):
+            shown = _clicked(self.explorer, "steps()[1].pick(plain); steps()[0].pick(click('sm-real-toggle')); return explorer.renderVals().stepIndex;")
+            expect(shown).to(equal(1))
+
+        with it("should close the realization on a second click"):
+            shown = _clicked(self.explorer, "steps()[0].pick(click('sm-real-toggle')); steps()[0].pick(click('sm-real-toggle')); return steps()[0].realizationOpen;")
+            expect(shown).to(equal(False))
+
+        with it("should not select the step on a click inside the open realization"):
+            shown = _clicked(self.explorer, "steps()[1].pick(plain); steps()[0].pick(click('sm-real-toggle')); steps()[0].pick(click('sm-real')); return [explorer.renderVals().stepIndex, steps()[0].realizationOpen];")
+            expect(shown).to(equal([1, True]))
+
+    with context("whose step group has no realization"):
+        with it("should show no realization toggle"):
+            expect(_clicked(self.explorer, "return steps()[1].hasRealization;")).to(equal(False))
