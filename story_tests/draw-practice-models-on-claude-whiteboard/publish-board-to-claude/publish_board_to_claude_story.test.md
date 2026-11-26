@@ -59,6 +59,20 @@ Requested 2026-11-16, "Whiteboard entries open the board": a published board's a
 *When* the agent calls record board with it
 *Then* the call is refused, saying only a `.whiteboard` file is published to a board, and nothing is kept
 
+#### Scenario: Only a board's address in Claude is recorded
+
+*Given* `.context/story-map.whiteboard` keeps no board address
+*When* the agent calls record board with it and text that is not the address the Artifact tool answered (`https://claude.ai/artifact/<id>` or `https://claude.ai/code/artifact/<id>`), such as another site, a script link, an address followed by more lines, or nothing
+*Then* the call is refused, naming the text, since the Files app sends the address to the chat as the person's own message
+*And* the file keeps no address
+
+#### Scenario: A whiteboard file outside the project is not recorded
+
+*Given* a whiteboard file in the folder above the project
+*When* the agent calls record board with `../` and its name
+*Then* the call is refused, as validate and the session's file tools refuse a path outside the session's roots
+*And* the file keeps no address
+
 #### Scenario: Rendering to a whiteboard says how to publish it
 
 *When* the agent renders a fidelity's file to the whiteboard format

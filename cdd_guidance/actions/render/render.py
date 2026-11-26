@@ -14,6 +14,7 @@ from harness.guidance.declared_outputs import DeclaredOutputs, RenderPlacement
 from harness.guidance.guidance import FidelityGuidance
 from harness.guidance.practice_formats import Rendered, RenderRequest
 from harness.guidance.action_catalogue import CONVERTS, TAKES_FORMATS, on_stage
+import re
 from pathlib import Path
 
 from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agent_toolset, instructions, noSessionLog, tools
@@ -38,6 +39,28 @@ class BoardNotKept(LookupError):
         super().__init__(f"No whiteboard file or design canvas version under {searched} keeps the board {board} as the board it was published to")
         self.board = board
         self.searched = searched
+
+
+class BoardAddressRefused(ValueError):
+    """record_board was given an address that is no board in Claude. The Files app's Open sends a whiteboard's board
+    address to the chat as the person's own message, so only a Claude artifact's address, on one line, is kept."""
+
+    # The two addresses Claude gives an artifact: claude.ai/artifact/{id}, and claude.ai/code/artifact/{id} in Claude Code.
+    BOARD = re.compile(r"https://claude\.ai/(?:code/)?artifact/[A-Za-z0-9_-]+")
+
+    def __init__(self, url: str) -> None:
+        super().__init__(
+            f"{url!r} is not the address of a board in Claude: record https://claude.ai/artifact/<id> or "
+            "https://claude.ai/code/artifact/<id>, the address the Artifact tool answered, alone on one line"
+        )
+        self.url = url
+
+    @classmethod
+    def check(cls, url: str) -> str:
+        """url, when it is a board's address in Claude; refused otherwise."""
+        if cls.BOARD.fullmatch(url) is None:
+            raise cls(url)
+        return url
 
 
 class FormatNotDeclared(ValueError):
@@ -274,9 +297,9 @@ class Render(GuidanceAction):
     @agent_tool
     @noSessionLog
     def record_board(self, path: str, url: str) -> str:
-        """Keep url, the address of the Claude Whiteboard board the .whiteboard file at path was published to, in the file itself, as its board field, so the next render updates that board and the Files app opens it. Call it as the last step of publishing a whiteboard render to a new board. path: the whiteboard file, named from the project's root or absolute. Returns the address kept."""
-        file = self.files.path_named(path)
+        """Keep url, the address of the Claude Whiteboard board the .whiteboard file at path was published to, in the file itself, as its board field, so the next render updates that board and the Files app opens it. Call it as the last step of publishing a whiteboard render to a new board. path: the whiteboard file, named from the project's root or absolute; a file outside the session's roots is refused. url: the address the Artifact tool answered, https://claude.ai/artifact/<id> or https://claude.ai/code/artifact/<id>, alone; any other text is refused. Returns the address kept."""
+        file = self.files.paths_to_read(path)[0]
         if file.suffix != Whiteboard.SUFFIX:
             raise ValueError(f"{path} is not a {Whiteboard.SUFFIX} file: only a {Whiteboard.SUFFIX} file is published to a board.")
-        file.write_text(Whiteboard.published_to(file.read_text(encoding="utf-8"), url), encoding="utf-8")
+        file.write_text(Whiteboard.published_to(file.read_text(encoding="utf-8"), BoardAddressRefused.check(url)), encoding="utf-8")
         return url

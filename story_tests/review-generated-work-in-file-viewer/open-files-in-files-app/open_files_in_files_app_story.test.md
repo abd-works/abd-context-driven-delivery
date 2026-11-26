@@ -45,6 +45,13 @@ Requested 2026-11-18 (Nov 18 demo fixes): "Whiteboard entry opens as an external
 *When* the file bar lists it
 *Then* it is listed as a whiteboard not on a board in Claude yet, and pressing it still draws it on a canvas, rather than showing the file's text
 
+#### Scenario: A board address that is no Claude address is never sent to the chat
+
+*Given* `.context/story-map.whiteboard` keeps, as its board's address, text that is no address in Claude, such as another site, a script link, or an address followed by more lines, as a hand edit or a pulled branch can leave it
+*When* the Person presses the whiteboard in the Files app opened from a chat
+*Then* the chat is sent nothing, since the ask to open a board reaches it as the Person's own message
+*And* the whiteboard is listed as not on a board in Claude yet
+
 #### Scenario: Open the board from every session file
 
 *Given* the board's address is kept for `.context/story-map.whiteboard`

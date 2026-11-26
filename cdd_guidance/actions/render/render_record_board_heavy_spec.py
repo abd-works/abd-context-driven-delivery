@@ -73,3 +73,21 @@ with description("Render publishing a whiteboard file to its board in Claude") a
 
         with it("should keep no address"):
             expect((self.folder / "story-map.drawio").read_text(encoding="utf-8")).to(equal("<mxfile/>"))
+
+    # A whiteboard file outside the project is not the session's to publish, as validate and the file tools refuse one.
+    with context("that lies outside the project"):
+        with before.all:
+            _open_board_file(self)
+            self.outside = self.project.root.parent / f"{self.project.root.name}-outside.whiteboard"
+            self.outside.write_text(Whiteboard("Outside").save(), encoding="utf-8")
+            self.failed, self.answer = asyncio.run(_record_board(self.server, self.project.root, f"../{self.outside.name}", _BOARD))
+
+        with after.all:
+            self.outside.unlink(missing_ok=True)
+
+        with it("should refuse to record a board for it"):
+            expect(self.failed).to(equal(True))
+
+        with it("should keep no address in it"):
+            expect(Whiteboard.board_of(self.outside)).to(equal(""))
+

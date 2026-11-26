@@ -27,16 +27,22 @@ const WHITEBOARD_SUFFIX = '.whiteboard'
 // links kept in `<design-canvas>/versions.json` (harness/design_canvas/versions.py).
 const CANVAS_VERSION = /^(?:(.*)\/)?design-canvas\/([^/]+)\/project\/canvas\.json$/
 
+// An address in Claude, alone on one line, such as https://claude.ai/artifact/<id>: the only link a published file keeps.
+// Its link is sent to the chat as the person's own message and opened in a browser, so text a hand edit or a pulled
+// branch put in the file, another site, a script link or further lines, is no link: the file reads as not published.
+const CLAUDE_ADDRESS = /^https:\/\/claude\.ai\/[^\s]+$/
+const claudeLinkOf = (entry: FileEntryData): string => (CLAUDE_ADDRESS.test(entry.link ?? '') ? entry.link : '')
+
 // The session answers what a file is published as (`published_kind`, space/session's FileEntry); the page names it so and
 // places it in the tree.
 export function publishedOf(entry: FileEntryData): PublishedFile | null {
-  if (entry.published_kind === 'whiteboard') return { kind: 'whiteboard', name: nameOf(entry.path).slice(0, -WHITEBOARD_SUFFIX.length), folder: folderOf(entry.path), link: entry.link }
+  if (entry.published_kind === 'whiteboard') return { kind: 'whiteboard', name: nameOf(entry.path).slice(0, -WHITEBOARD_SUFFIX.length), folder: folderOf(entry.path), link: claudeLinkOf(entry) }
   if (entry.published_kind !== 'design canvas') return null
   const canvas = CANVAS_VERSION.exec(entry.path)
   // A canvas is named by the title it is published under, which the session sends (ux-mockup, or ux-mockup.version-7
   // while versions are kept), so the bar and the artifact in Claude agree; its version folder only when none is sent.
-  if (canvas) return { kind: 'design canvas', name: entry.published_name || (canvas[2] ?? ''), folder: canvas[1] ? `${canvas[1]}/design-canvas` : 'design-canvas', link: entry.link }
-  return { kind: 'design canvas', name: entry.published_name || nameOf(entry.path), folder: folderOf(entry.path), link: entry.link }
+  if (canvas) return { kind: 'design canvas', name: entry.published_name || (canvas[2] ?? ''), folder: canvas[1] ? `${canvas[1]}/design-canvas` : 'design-canvas', link: claudeLinkOf(entry) }
+  return { kind: 'design canvas', name: entry.published_name || nameOf(entry.path), folder: folderOf(entry.path), link: claudeLinkOf(entry) }
 }
 
 // The classes of a file's entry in the file bar: a whiteboard marked as one, open, not on disk, and changed on the

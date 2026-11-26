@@ -26,3 +26,17 @@ Every url is kept and answered back; `root_files` then gives `link: 'javascript:
 ## Tier that should catch it
 
 Unit: `cdd_guidance/actions/render` spec for record_board refusals (url shape, path outside the project); `files-page.spec.ts` for an Open whose link is not a Claude address. Specs only record a good claude.ai link.
+
+## Triage
+
+- **Status:** confirmed. `Render().record_board` kept `https://evil.example/x`, `javascript:alert(1)`, a two-line text and `""` in the file's `board` field; through a session's cdd server it wrote `../<name>.whiteboard` outside the project; `publishedOf` in the Files app took any link and `openPublished` sent it to the chat as a `submit`.
+- **Severity:** wrong result (and a way for a file's text to speak as the person in the chat).
+- **Triaged by:** Relay.
+- **What a board link may be (from the render action's guidance):** `publish_board` has the agent create the board with Claude's Artifact tool and record "the board's address"; `answer_board_comment` calls it "the claude.ai artifact link"; the Artifact tool's addresses are `claude.ai/artifact/{id}` and `claude.ai/code/artifact/{uuid}`. So `record_board` keeps exactly `https://claude.ai/artifact/<id>` or `https://claude.ai/code/artifact/<id>`, alone. The Files app also opens design canvases, whose links come from `versions.json`, so the page keeps any `https://claude.ai/...` address on one line and nothing else.
+
+## Fix
+
+- **Scenarios:** "Only a board's address in Claude is recorded" and "A whiteboard file outside the project is not recorded" in `story_tests/draw-practice-models-on-claude-whiteboard/publish-board-to-claude/publish_board_to_claude_story.test.md`; "A board address that is no Claude address is never sent to the chat" in `story_tests/review-generated-work-in-file-viewer/open-files-in-files-app/open_files_in_files_app_story.test.md`.
+- **Tests:** `cdd_guidance/actions/render/render_spec.py` (unit): a `claude.ai/code/artifact/` address is kept; another site, a script link, an address followed by more lines and an empty address are refused (*BoardAddressRefused*, naming the text) and no address is kept. `cdd_guidance/actions/render/render_record_board_heavy_spec.py` (heavy, real cdd server and session): a whiteboard file outside the project is refused and keeps no address. `harness/files_app/app/files/files-page.spec.ts` (unit): a board link that is another site, a script link, or an address followed by more lines is sent to no chat. Each seen failing first.
+- **Fix:** `cdd_guidance/actions/render/render.py`: `record_board` reads its path through the action's files (`files.paths_to_read`, which refuses one outside the session's roots, as render's own paths are) and keeps the url only through `BoardAddressRefused.check`. `harness/files_app/app/files/file-bar.ts`: `publishedOf` keeps a published file's link only when it is a `https://claude.ai/` address on one line, so `openPublished`, the press, and the view's `href` and browser fallback never use anything else; such a file reads as not published yet.
+- **Commit:** see below.
