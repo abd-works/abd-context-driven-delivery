@@ -34,6 +34,12 @@ const CHAT = 'chat-1'
 // (prompt_queue_spec.py), so the mod is tested on what it does with the answer.
 const TALK = ['why is there no flush button?', 'yes']
 
+// The chats chats.list answers: this chat among them, which the picker leaves out, since the cards are already here.
+const CHATS = [
+  { id: CHAT, name: 'This chat', is_busy: false, folder: 'C:/work' },
+  { id: 'chat-2', name: 'Release fixes', is_busy: true, folder: 'C:/work' },
+]
+
 type Step = { text: string; state: 'pending' | 'in_progress' | 'done' }
 type Prompt = { id: string; text: string; steps?: Step[]; attachments?: string[]; is_done?: boolean; robot?: string }
 
@@ -53,6 +59,8 @@ function promptQueueTools(prompts: Prompt[]) {
   const flushes: string[] = []
   // Whether the person switched the queue on for the chat; most tests work a queue that is on.
   const switched = { isOn: true }
+  // The cards each send_to_chat sent, with the chat it sent them to, as the cdd server hands them to that chat's mailbox.
+  const sends: { prompts: string[]; to_chat: string }[] = []
   const answer = () => ({ chat: CHAT, prompts: prompts.map(answered), is_on: switched.isOn })
   const stepsOf = (args: Record<string, unknown>) => prompts[at(args.prompt)]!.steps ?? []
   const at = (id: unknown) => prompts.findIndex(prompt => prompt.id === id)
@@ -99,6 +107,13 @@ function promptQueueTools(prompts: Prompt[]) {
       prompts[at(args.prompt)]!.is_done = true
       return answer()
     },
+    send_to_chat: args => {
+      const sent = args.prompts as string[]
+      sends.push({ prompts: sent, to_chat: String(args.to_chat) })
+      prompts.splice(0, prompts.length, ...prompts.filter(prompt => !sent.includes(prompt.id)))
+      return answer()
+    },
+    'chats.list': () => CHATS,
     add_interruption: args => {
       const goal = prompts[at(args.prompt)]!
       goal.steps = [...(goal.steps ?? []), { text: `[interruption] ${String(args.text).trim()}`, state: 'pending' }]
@@ -158,7 +173,7 @@ function promptQueueTools(prompts: Prompt[]) {
       return answer()
     },
   }
-  return { prompts, flushes, switched, call: (tool: string, args: Record<string, unknown>) => operations[tool.replace('prompt-queue.', '')]!(args) }
+  return { prompts, flushes, sends, switched, call: (tool: string, args: Record<string, unknown>) => operations[tool.replace('prompt-queue.', '')]!(args) }
 }
 
 /** The mod's stored values, kept in memory as the engine keeps them: each write raises the value's version; the queue
@@ -208,7 +223,7 @@ function seedQueue(on: TestOn, isExpanded: boolean, queuedByKey = '', queued = Q
     stored.queue = { value: { chat: CHAT, prompts: server.prompts.map(answered), is_on: false }, version: stored.queue!.version + 1 }
   }
 
-  return { get prompts() { return server.prompts }, get isOn() { return server.switched.isOn }, flushes: server.flushes, stored, calls, refuse: (tool: string) => refused.add(tool), switchOff }
+  return { get prompts() { return server.prompts }, get isOn() { return server.switched.isOn }, flushes: server.flushes, sends: server.sends, stored, calls, refuse: (tool: string) => refused.add(tool), switchOff }
 }
 
 for (const surface of ['desktop', 'terminal'] as const) {
@@ -2311,4 +2326,83 @@ test('the note on a message that is new work says to give its card steps as it i
   await $.prompt.submit({ text: 'add a release checklist', wait: false, origin: { kind: 'composer' } })
 
   expect(carried.join()).toContain('and, when its work has clear parts, give it its steps with prompt-queue.set_steps')
+})
+
+test('a card shows no mark until it is selected', async ($, on) => {
+  seedQueue(on, true)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect([await ui.find({ type: 'Text', key: 'selected-a' }), await ui.find({ type: 'Button', key: 'queue-send-to-chat' })]).toEqual([undefined, undefined])
+  await ui.unmount()
+})
+
+test('selecting a card marks it and shows send to chat', async ($, on) => {
+  seedQueue(on, true)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'select-a' })
+
+  expect([(await ui.find({ type: 'Text', key: 'selected-a' })) !== undefined, (await ui.find({ type: 'Button', key: 'queue-send-to-chat' })) !== undefined]).toEqual([true, true])
+  await ui.unmount()
+})
+
+test('selecting a selected card again leaves it unselected', async ($, on) => {
+  seedQueue(on, true)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'select-a' })
+  await ui.press({ key: 'select-a' })
+
+  expect(await ui.find({ type: 'Text', key: 'selected-a' })).toBeUndefined()
+  await ui.unmount()
+})
+
+test('send to chat lists the other chats to pick from, not this one', async ($, on) => {
+  seedQueue(on, true)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'select-a' })
+  await ui.press({ key: 'queue-send-to-chat' })
+
+  expect([(await ui.find({ type: 'Button', key: 'send-to-chat-chat-2' })) !== undefined, await ui.find({ type: 'Button', key: `send-to-chat-${CHAT}` })]).toEqual([true, undefined])
+  await ui.unmount()
+})
+
+test('picking a chat sends the selected cards, done or not, to it through the cdd server', async ($, on) => {
+  const seeded = seedQueue(on, true, '', [{ id: 'a', text: 'Write the scenarios', is_done: true }, { id: 'b', text: 'Run the unit tier' }, { id: 'c', text: 'Report the defect' }])
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'select-c' })
+  await ui.press({ key: 'select-a' })
+  await ui.press({ key: 'queue-send-to-chat' })
+  await ui.press({ key: 'send-to-chat-chat-2' })
+
+  expect(seeded.sends).toEqual([{ prompts: ['a', 'c'], to_chat: 'chat-2' }])
+  await ui.unmount()
+})
+
+test('the sent cards leave this queue, and the selection and the chat list close', async ($, on) => {
+  const seeded = seedQueue(on, true)
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'select-a' })
+  await ui.press({ key: 'queue-send-to-chat' })
+  await ui.press({ key: 'send-to-chat-chat-2' })
+
+  expect([seeded.prompts.map(prompt => prompt.id), await ui.find({ type: 'Button', key: 'queue-send-to-chat' }), await ui.find({ type: 'Button', key: 'send-to-chat-chat-2' })]).toEqual([['b'], undefined, undefined])
+  await ui.unmount()
+})
+
+test('a send the cdd server refuses keeps the cards and the selection', async ($, on) => {
+  const seeded = seedQueue(on, true)
+  seeded.refuse('prompt-queue.send_to_chat')
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'select-a' })
+  await ui.press({ key: 'queue-send-to-chat' })
+  await ui.press({ key: 'send-to-chat-chat-2' })
+
+  expect([seeded.prompts.length, (await ui.find({ type: 'Text', key: 'selected-a' })) !== undefined]).toEqual([2, true])
+  await ui.unmount()
 })

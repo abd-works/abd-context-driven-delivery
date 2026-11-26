@@ -85,6 +85,10 @@ const isPlanSeen = atom({ plugin: 'prompt-queue', key: 'isPlanSeen' } as const, 
 const openSteps = atom({ plugin: 'prompt-queue', key: 'openSteps' } as const, [] as string[])
 /** The cards whose finished steps are shown rather than folded into one line. */
 const shownDoneSteps = atom({ plugin: 'prompt-queue', key: 'shownDoneSteps' } as const, [] as string[])
+/** The cards the person selected to send to another chat, done or not. */
+const selected = atom({ plugin: 'prompt-queue', key: 'selected' } as const, [] as string[])
+/** The chats the person may send the selected cards to, while the list to pick from is open; null while it is closed. */
+const chatChoices = atom({ plugin: 'prompt-queue', key: 'chatChoices' } as const, null as ChatChoice[] | null)
 /** The places of the robots whose queues are collapsed to the robot alone, so the other queues take the room. */
 const expandedAgents = atom({ plugin: 'prompt-queue', key: 'expandedAgents' } as const, [] as number[])
 
@@ -102,7 +106,20 @@ export type QueueState = {
   /** Each robot's theme, one sentence, by its name as the queue spells it: shown beside a robot whose cards are closed. */
   themes: Record<string, string>
   notice: string
+  /** The cards selected to send to another chat. */
+  selected: string[]
+  /** The other chats to send the selected cards to, while the list to pick from is open; null while it is closed. */
+  chatChoices: ChatChoice[] | null
 }
+
+/** The ids of the selected cards still on the queue, in queue order: a card taken off some other way is no longer
+ * counted as selected. */
+function selectedOn(prompts: QueuedPrompt[], chosen: string[]): string[] {
+  return prompts.filter(prompt => chosen.includes(prompt.id)).map(prompt => prompt.id)
+}
+
+/** A chat the selected cards may be sent to, as chats.list answers it: its id, and the name the app shows for it. */
+export type ChatChoice = { id: string; name: string }
 
 export async function currentQueue($: EngineInterface): Promise<QueueState> {
   return {
@@ -118,6 +135,8 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     tasks: robotsOf((await read($, queue)).prompts, await read($, tasks)),
     themes: (await read($, queue)).themes ?? {},
     notice: await read($, notice),
+    selected: selectedOn((await read($, queue)).prompts, await read($, selected)),
+    chatChoices: await read($, chatChoices),
   }
 }
 
@@ -397,6 +416,45 @@ export async function flushQueue($: EngineInterface): Promise<void> {
   if (await changeQueue($, 'flush')) {
     await forgetRobotsNoCardNames($)
   }
+}
+
+/** A card's select box: the card is selected to send to another chat, or no longer is. */
+export async function toggleSelected($: EngineInterface, id: string): Promise<void> {
+  await update($, selected, chosen => (chosen.includes(id) ? chosen.filter(card => card !== id) : [...chosen, id]))
+}
+
+/** Send to chat: the chats connected now, this one left out since the cards are already here, open as a list to pick
+ * from; a second press closes the list. */
+export async function toggleChatChoices($: EngineInterface): Promise<void> {
+  if ((await read($, chatChoices)) !== null) {
+    await update($, chatChoices, () => null)
+    return
+  }
+  try {
+    const own = await $.session.id()
+    const answered = await callCddServer($, 'chats.list', {})
+    const listed = answered.content[0]?.text ?? '[]'
+    if (answered.isError) {
+      throw new QueueCallFailed(listed)
+    }
+    const chats = (JSON.parse(listed) as ChatChoice[]).filter(chat => chat.id !== own)
+    await update($, chatChoices, () => chats.map(chat => ({ id: chat.id, name: chat.name || chat.id })))
+  } catch (thrown) {
+    await showFailure($, `No chats to send to: ${reasonOf(thrown)}`, 'Listing the chats with chats.list on the cdd server')
+  }
+}
+
+/** A chat picked from the list: the cdd server sends it the selected cards, done or not, with word to file each on its
+ * own queue under the card's robot, and takes them off this queue, as prompt-queue.send_to_chat does. The selection and
+ * the list close once it is sent; a refused send keeps both, so the person can pick again. */
+export async function sendSelectedToChat($: EngineInterface, chat: string): Promise<void> {
+  const prompts = selectedOn((await read($, queue)).prompts, await read($, selected))
+  if (!(await changeQueue($, 'send_to_chat', { prompts, to_chat: chat }))) {
+    return
+  }
+  await update($, selected, () => [])
+  await update($, chatChoices, () => null)
+  await forgetRobotsNoCardNames($)
 }
 
 export async function toggleExpanded($: EngineInterface): Promise<void> {

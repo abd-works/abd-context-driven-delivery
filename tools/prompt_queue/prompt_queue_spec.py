@@ -1,6 +1,7 @@
 import json
 
 import os
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -10,7 +11,8 @@ from expects import contain, expect, equal, match, raise_error
 
 from harness.chat.chat import CHATS_FOLDER
 from harness.installation.json_file import JsonFile, JsonFileBusy
-from tools.prompt_queue.prompt_queue import ChatIdNotAnId, ChatNotKnown, PromptNotQueued, PromptQueue, QueueFileUnreadable, StepNotPlanned, StepStateUnknown
+from harness.chat.chat import ChatNotConnectedError
+from tools.prompt_queue.prompt_queue import ChatIdNotAnId, ChatNotKnown, NoPromptsToSend, PromptNotQueued, PromptsSentToOwnChat, PromptQueue, QueueFileUnreadable, StepNotPlanned, StepStateUnknown
 
 
 
@@ -541,3 +543,86 @@ with describe(PromptQueue):
 
                 with it("is off"):
                     expect(self.queue.is_on).to(equal(False))
+
+    with context("that the person sends cards to another chat"):
+        with before.each:
+            self.prior_chats = os.environ.get("CDD_CHATS_FOLDER")
+            os.environ["CDD_CHATS_FOLDER"] = str(self.folder / "chats")
+            self.other_chat = CHATS_FOLDER.path / "chat-2"
+            self.other_chat.mkdir(parents=True)
+            (self.other_chat / "chat.json").write_text(json.dumps({"name": "Fixes", "seen": time.time()}), encoding="utf-8")
+            self.queue.add("Report the defect")
+            self.first, self.second, self.third = (prompt.id for prompt in self.queue.prompts)
+            self.queue.assign(self.first, "Bolt")
+            self.queue.set_theme("Bolt", "Whiteboard class diagram arrows")
+            self.queue.set_steps(self.first, [{"text": "Read the epic", "state": "done"}, {"text": "Write the stories", "state": "pending"}])
+            self.queue.done(self.first)
+
+        with after.each:
+            if self.prior_chats is None:
+                os.environ.pop("CDD_CHATS_FOLDER", None)
+            else:
+                os.environ["CDD_CHATS_FOLDER"] = self.prior_chats
+
+        def sent_messages(self) -> list[dict]:
+            return [json.loads(sent.read_text(encoding="utf-8")) for sent in sorted((self.other_chat / "waiting").glob("*.json"))]
+
+        with context("that are selected, one done and one not"):
+            with before.each:
+                self.left = self.queue.send_to_chat([self.first, self.third], "chat-2")
+                self.message = self.sent_messages()[0]["text"]
+
+            with it("sends them to the chosen chat as one message it submits"):
+                expect([sent["kind"] for sent in self.sent_messages()]).to(equal(["submit"]))
+
+            with it("tells the chat to file each card on its own prompt queue with the queue's tools, doing none of its work now"):
+                expect(self.message).to(contain("prompt-queue.add", "prompt-queue.set_steps", "prompt-queue.assign", "do none of their work now"))
+
+            with it("tells the chat that a card naming no robot stays on the main chat's own queue"):
+                expect(self.message).to(contain("stays on the main chat's queue"))
+
+            with it("carries each card's text, in queue order"):
+                expect(self.message.index("1. Write the scenarios") < self.message.index("2. Report the defect")).to(equal(True))
+
+            with it("names a card's robot and the robot's theme"):
+                expect(self.message).to(contain("robot: Bolt - Whiteboard class diagram arrows"))
+
+            with it("carries each card's steps with their states, and whether it is done"):
+                expect(self.message).to(contain("done: yes", "- [done] Read the epic", "- [pending] Write the stories"))
+
+            with it("takes the sent cards off this queue, done or not"):
+                expect([prompt.text for prompt in self.left.prompts]).to(equal(["Run the unit tier"]))
+
+            with it("keeps a copy of the sent cards in the queue archive"):
+                archived = [json.loads(saved.read_text(encoding="utf-8")) for saved in (self.folder / "queue-archive").glob("*.json")]
+                expect([[prompt["text"] for prompt in copy["prompts"]] for copy in archived]).to(equal([["Write the scenarios", "Report the defect"]]))
+
+        with context("whose first card has a file attached"):
+            with before.each:
+                self.queue.attach(self.first, "screenshot.png", "image/png", "iVBORw0KGgo=")
+                self.attached = self.queue.prompt(self.first).attachments[0]
+                self.queue.send_to_chat([self.first], "chat-2")
+
+            with it("keeps the file, since the other chat is told where it is"):
+                expect(Path(self.attached).is_file()).to(equal(True))
+
+            with it("names the file in the message"):
+                expect(self.sent_messages()[0]["text"]).to(contain(f"attachments: {self.attached}"))
+
+        with it("refuses a card the queue does not hold, sending nothing and taking nothing off"):
+            expect(lambda: self.queue.send_to_chat([self.first, "gone"], "chat-2")).to(raise_error(PromptNotQueued))
+            expect([len(self.sent_messages()), len(self.queue.prompts)]).to(equal([0, 3]))
+
+        with it("refuses a send with no card selected"):
+            expect(lambda: self.queue.send_to_chat([], "chat-2")).to(raise_error(NoPromptsToSend))
+
+        with it("refuses to send the cards to the chat whose queue they are on"):
+            expect(lambda: self.queue.send_to_chat([self.first], "chat-1")).to(raise_error(PromptsSentToOwnChat))
+
+        with it("refuses a chat that is not connected, keeping every card"):
+            (self.other_chat / "chat.json").write_text(json.dumps({"name": "Fixes", "seen": 0}), encoding="utf-8")
+            expect(lambda: self.queue.send_to_chat([self.first], "chat-2")).to(raise_error(ChatNotConnectedError))
+            expect(len(self.queue.prompts)).to(equal(3))
+
+        with it("refuses a chat id that climbs out of the chats folder"):
+            expect(lambda: self.queue.send_to_chat([self.first], "..\\escape-chat")).to(raise_error(ChatIdNotAnId))

@@ -118,6 +118,10 @@ export const SUB_AGENTS_SVG = (colour: string) =>
 export const FLUSH_SVG = (colour: string) =>
   svgOf(colour, '<path d="M8 2v7M5 6.5 8 9.5l3-3M2.5 10v3.5h11V10"/>')
 
+/** Send to chat: an arrow leaving a card for another chat. */
+export const SEND_TO_CHAT_SVG = (colour: string) =>
+  svgOf(colour, '<path d="M2.5 3.5h7v9h-7zM9.5 8h5M12 5.5 14.5 8 12 10.5"/>')
+
 export const CLEAR_SVG = (colour: string) =>
   svgOf(colour, '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9M7 7v4M9 7v4"/>')
 

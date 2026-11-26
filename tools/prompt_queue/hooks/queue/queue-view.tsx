@@ -29,6 +29,9 @@ import {
   splitGoal,
   hasInterruptionsToDo,
   toggleDoneSteps,
+  toggleSelected,
+  toggleChatChoices,
+  sendSelectedToChat,
   type QueueState,
 } from './prompt-queue'
 import type { PromptStep, QueuedPrompt, SubAgentTask } from '../../types'
@@ -44,6 +47,7 @@ import {
   PAUSE_SVG,
   PLAY_SVG,
   POWER_SVG,
+  SEND_TO_CHAT_SVG,
   stackSvgOf,
   SUB_AGENTS_SVG,
   type Icon,
@@ -74,8 +78,8 @@ const CARD_PRESS_AREA = NO_BREAK_SPACE.repeat(200)
 /** The invisible button's label over a task box: blank and as wide as the box. */
 const TASK_PRESS_AREA = NO_BREAK_SPACE.repeat(TASK_BUTTON_COLUMNS)
 
-/** The columns the card's ↵ ✎ ↑ ↓ ✕ bar takes: it floats over the card's right end, this far left of its right edge. */
-const CARD_BAR_COLUMNS = 23
+/** The columns the card's ☐ ↵ ✎ ↑ ↓ ✕ bar takes: it floats over the card's right end, this far left of its right edge. */
+const CARD_BAR_COLUMNS = 27
 
 /** The columns split adds to the card's bar, on a card whose goal holds an interruption still to do. */
 const SPLIT_BUTTON_COLUMNS = 4
@@ -109,6 +113,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
       paddingX={1} width={state.isExpanded ? '100%' : undefined}>
       {state.isExpanded && (state.isSubAgentMode && state.tasks.length > 0 ? AgentColumnsView($, e, state) : QueueListView($, e, state))}
       {state.notice !== '' && <Text color="warning">{state.notice}</Text>}
+      {state.isExpanded && state.chatChoices !== null && ChatChoicesView($, e, state)}
       <Box flexDirection="row" gap={1}>
         {IconButtonView(elements, powerIcon(state), () => toggleQueueOn($))}
         {IconButtonView(elements, stackIcon(state), () => toggleExpanded($))}
@@ -119,6 +124,7 @@ export function QueueView($: EngineInterface, e: AbovePromptEvent, state: QueueS
         </Box>
         {state.isExpanded && IconButtonView(elements, playIcon(state), () => togglePlaying($))}
         {state.isExpanded && IconButtonView(elements, subAgentsIcon(state), () => toggleSubAgentMode($))}
+        {state.isExpanded && state.selected.length > 0 && IconButtonView(elements, sendToChatIcon(state), () => toggleChatChoices($))}
         {state.isExpanded && IconButtonView(elements, FLUSH_ICON, () => flushQueue($))}
         {state.isExpanded && IconButtonView(elements, CLEAR_ICON, () => clearQueue($))}
       </Box>
@@ -150,6 +156,24 @@ function subAgentsIcon(state: QueueState): Icon {
     ? 'Sub-agent mode on: a finished turn sends each grouped task to its own sub-agent'
     : 'Sub-agent mode off: a finished turn sends the next prompt'
   return { key: 'queue-sub-agents', svg: SUB_AGENTS_SVG, glyph: '⑂', tip, isOn: state.isSubAgentMode }
+}
+
+function sendToChatIcon(state: QueueState): Icon {
+  const count = state.selected.length
+  return { key: 'queue-send-to-chat', svg: SEND_TO_CHAT_SVG, glyph: `⇢${count}`, tip: `Send the ${count} selected cards to another chat, which files each under its robot; they leave this queue`, isOn: state.chatChoices !== null }
+}
+
+/** The chats the selected cards may go to, one button each by the name the app shows for it; picking one sends them. */
+function ChatChoicesView($: EngineInterface, e: AbovePromptEvent, state: QueueState) {
+  const { Box, Button, Text } = $.ui.resolve(e)
+  const chats = state.chatChoices ?? []
+
+  return (
+    <Box key="chat-choices" flexDirection="row" flexWrap="wrap" gap={1} alignItems="center">
+      <Text color={LOOK.muted}>{chats.length > 0 ? `Send ${state.selected.length} cards to:` : 'No other chat is connected to send the cards to'}</Text>
+      {chats.map(chat => <Button key={`send-to-chat-${chat.id}`} label={chat.name} onPress={() => sendSelectedToChat($, chat.id)} />)}
+    </Box>
+  )
 }
 
 const ADD_ICON: Icon = { key: 'queue-add', svg: ADD_SVG, glyph: '+', tip: 'Run /queue on the draft: place it into the plan (Alt+Enter queues it as it is)' }
@@ -231,6 +255,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           ? TaskButtonView($, e, `steps-${prompt.id}`, progress, 'Tasks', 'shows or hides them', () => toggleSteps($, prompt.id))
           : TaskButtonView($, e, `steps-${prompt.id}`, '+', 'Add task', 'from the draft in the prompt box', () => addStep($, prompt))}
       </Box>
+      {state.selected.includes(prompt.id) && <Text key={`selected-${prompt.id}`} color={LOOK.accent}>☑</Text>}
       {(prompt.attachments ?? []).length > 0 && <Text key={`attached-${prompt.id}`} color={LOOK.muted}>{`📎${prompt.attachments!.length}`}</Text>}
       <Box position="relative" flexGrow={1} flexShrink={1} minWidth={0} flexDirection="row" alignItems="center" paddingX={1}
         backgroundColor={LOOK.card} borderStyle="round" borderColor={isWorking ? LOOK.accent : LOOK.card}>
@@ -248,7 +273,7 @@ function CardView($: EngineInterface, e: AbovePromptEvent, state: QueueState, pr
           <Box position="absolute" top={0} bottom={0} left={-(CARD_BAR_COLUMNS + (hasInterruptionsToDo(prompt) ? SPLIT_BUTTON_COLUMNS : 0))} flexDirection="row" alignItems="center">
             <Box flexDirection="row" alignItems="center" gap={1}
               display="none" hover={{ display: 'flex' }} backgroundColor={LOOK.popover} borderStyle="round" borderColor={LOOK.popover} paddingX="xs">
-              {CardButtonsView($, e, prompt, index)}
+              {CardButtonsView($, e, prompt, index, state.selected.includes(prompt.id))}
             </Box>
           </Box>
         </Box>
@@ -285,12 +310,13 @@ function PressAreaView($: EngineInterface, e: AbovePromptEvent, key: string, are
   )
 }
 
-/** A card's own buttons: send now, edit, move up and down, and remove. */
-function CardButtonsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, index: number) {
+/** A card's own buttons: select to send to another chat, send now, edit, move up and down, and remove. */
+function CardButtonsView($: EngineInterface, e: AbovePromptEvent, prompt: QueuedPrompt, index: number, isSelected: boolean) {
   const elements = $.ui.resolve(e)
   const { Button } = elements
 
   return [
+    TipView(elements, `select-${prompt.id}`, isSelected ? 'Unselect' : 'Select', 'to send to another chat, done or not', <Button key={`select-${prompt.id}`} label={isSelected ? '☑' : '☐'} onPress={() => toggleSelected($, prompt.id)} />),
     TipView(elements, `send-now-${prompt.id}`, 'Send now', 'sends it to the chat at once', <Button key={`send-now-${prompt.id}`} label="↵" onPress={() => sendNow($, prompt)} />),
     TipView(elements, `edit-${prompt.id}`, 'Edit', 'puts it in the prompt box to change', <Button key={`edit-${prompt.id}`} label="✎" onPress={() => editPrompt($, prompt)} />),
     TipView(elements, `up-${prompt.id}`, 'Move up', '', <Button key={`up-${prompt.id}`} label="↑" onPress={() => movePrompt($, index, index - 1)} />),

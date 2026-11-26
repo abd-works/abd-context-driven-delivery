@@ -16,7 +16,7 @@ from harness.agent_tools import agent_toolset
 from harness.agent_tools.agent_tools import agent_tool, tool_subject
 from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import noCatalog
-from harness.chat.chat import CHATS_FOLDER
+from harness.chat.chat import CHATS_FOLDER, Chat
 from harness.installation.data_class import data_field, identity, language_adapter
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
 from harness.mcp.mcp_annotations import mcp
@@ -53,6 +53,16 @@ _HANDOFF_QUEUED_NOTE = (
     "**Handoff queued.** The {count} steps of {handoff}'s Approach for Next Agent are on this chat's prompt queue, in "
     "order: work through them first to last, calling prompt-queue.done with each prompt's id as you finish it; "
     "prompt-queue.show lists them.\n\n"
+)
+
+# What a chat is told as the cards another chat's queue sends it arrive: file each on its own queue, under its robot.
+_SENT_CARDS_NOTE = (
+    "**Cards sent from the prompt queue of chat {chat}.** File each card below on this chat's prompt queue, in order, "
+    "and do none of their work now: queue its text with prompt-queue.add, give it its steps with prompt-queue.set_steps, "
+    "each in the state shown, and mark it done with prompt-queue.done when it says done: yes. A card that names a robot "
+    "goes to that robot with prompt-queue.assign, and the robot keeps its theme with prompt-queue.set_theme; when this "
+    "chat works with no robots, it stays on the main chat's queue. A card that names no robot stays on the main chat's "
+    "queue, given to no robot. Then call prompt-queue.show and check each card stands once, where you meant.\n\n{cards}"
 )
 
 
@@ -357,6 +367,19 @@ class QueuedPrompt:
         self._deleted_attachments = [*self._deleted_attachments, *deleted]
         self._attachments = [file for file in self.attachments if file not in deleted] or None
 
+    def handed_over(self, place: int, theme: str) -> str:
+        """How it reads as card number place in a message that sends it to another chat: its text, then its robot with
+        the robot's theme, whether it is done, its steps each in its state, and the files queued with it, which stay
+        where they are for the other chat to read."""
+        lines = [f"{place}. {self._text}"]
+        if self._robot:
+            lines.append(f"   robot: {self._robot} - {theme}" if theme else f"   robot: {self._robot}")
+        lines.append(f"   done: {'yes' if self.is_done else 'no'}")
+        lines.extend(f"   - [{step['state']}] {step['text']}" for step in self.steps.listed)
+        if self.attachments:
+            lines.append(f"   attachments: {', '.join(self.attachments)}")
+        return "\n".join(lines)
+
     @property
     def record(self) -> dict:
         """What the queue's file keeps of it: id and text, and steps, attachments, is_done and robot only when it has
@@ -391,6 +414,22 @@ class ChatNotKnown(LookupError):
 
     def __init__(self, chat: str, chats_folder: Path) -> None:
         super().__init__(f"no chat {chat!r} is known: the chats folder {chats_folder} keeps no folder for it; check the chat id, or name no chat to use the calling chat's own queue")
+        self.chat = chat
+
+
+class NoPromptsToSend(ValueError):
+    """A call asked to send a chat's cards to another chat and named none."""
+
+    def __init__(self, chat: str) -> None:
+        super().__init__(f"no card was named to send from the queue of chat {chat}: select the cards to send")
+        self.chat = chat
+
+
+class PromptsSentToOwnChat(ValueError):
+    """A call asked to send a chat's cards to that chat itself, where they already are."""
+
+    def __init__(self, chat: str) -> None:
+        super().__init__(f"the cards are already on the queue of chat {chat}: pick another chat to send them to")
         self.chat = chat
 
 
@@ -453,9 +492,7 @@ class PromptQueue:
         """The queue of the chat whose id is chat, kept in that chat's own folder, its archive in the folder archive
         when one is given. A chat id is never a path: an empty one, or one holding a folder separator, a drive or two
         dots, is refused, so no queue is written outside the chats folder."""
-        if not chat.strip() or any(mark in chat for mark in _PATH_MARKS):
-            raise ChatIdNotAnId(chat)
-        return cls(chat, CHATS_FOLDER.path / chat / QUEUE_FILE, archive)
+        return cls(chat, _chat_folder(chat) / QUEUE_FILE, archive)
 
     @property
     def is_kept(self) -> bool:
@@ -588,6 +625,19 @@ class PromptQueue:
 
     @mcp
     @agent_tool
+    def send_to_chat(self, prompts: list[str], to_chat: str) -> PromptQueue:
+        """Send the queued prompts whose ids are prompts, done or not, to the chat whose id is to_chat, one picked from chats.list, as one message it submits: each card's text, robot and the robot's theme, whether it is done, its steps and their states, and its files, with word to file each card on its own prompt queue with prompt-queue.add, set_steps and assign, under the card's robot, or on the main chat's queue when it names none. The sent cards then leave this queue, a copy of them kept in the chat's queue archive; their files stay where they are, for the other chat to read. A card the queue does not hold, no card at all, this chat itself, or a chat not connected is refused, and nothing is sent or taken off. Answers the queue as it then stands."""
+        with self._file.held():
+            held = self.prompts
+            sent = self._to_send(held, prompts, to_chat)
+            themes = self.themes
+            cards = "\n".join(card.handed_over(place, themes.get(card.robot, "")) for place, card in enumerate(sent, start=1))
+            Chat(_chat_folder(to_chat)).send("submit", _SENT_CARDS_NOTE.format(chat=self._chat, cards=cards))
+            self._archive(sent)
+            return self._keep([item for item in held if item not in sent])
+
+    @mcp
+    @agent_tool
     def done(self, prompt: str) -> PromptQueue:
         """Mark the prompt whose id is prompt done once its work is done: it stays in its place, drawn dim, so the person sees it finish, and the next prompt not done is the next to do. An agent working through the queue does each prompt in order, first to last, and calls this as it finishes each one."""
         return self._changing(prompt, QueuedPrompt.mark_done)
@@ -702,6 +752,16 @@ class PromptQueue:
             change(self._found(held, prompt))
             return self._keep(held)
 
+    def _to_send(self, held: list[QueuedPrompt], prompts: list[str], to_chat: str) -> list[QueuedPrompt]:
+        """The prompts of held whose ids are prompts, in queue order, to send to to_chat: refused when none is named,
+        one is not held, or to_chat is this queue's own chat."""
+        if not prompts:
+            raise NoPromptsToSend(self._chat)
+        if to_chat.strip() == self._chat:
+            raise PromptsSentToOwnChat(self._chat)
+        named = {self._found(held, prompt).id for prompt in prompts}
+        return [item for item in held if item.id in named]
+
     def _robot_as_spelled(self, robot: str) -> str:
         """robot as the queue first spelled it: the robot of the first card whose name is robot's, with no regard to case
         or outer spaces; robot without its outer spaces when no card has it. Its caller holds the queue's file."""
@@ -785,6 +845,14 @@ class PromptQueue:
         read prompts were made from, so no other caller's change comes between that read and this write."""
         self._file.write({**self._file.read(), "prompts": [prompt.record for prompt in prompts]})
         return self
+
+
+def _chat_folder(chat: str) -> Path:
+    """The folder the chats folder keeps for the chat whose id is chat. A chat id is never a path: an empty one, or one
+    holding a folder separator, a drive or two dots, is refused, so nothing is read or written outside the chats folder."""
+    if not chat.strip() or any(mark in chat for mark in _PATH_MARKS):
+        raise ChatIdNotAnId(chat)
+    return CHATS_FOLDER.path / chat
 
 
 def _queue_latest_handoff(session: Session, chat: str) -> str:
