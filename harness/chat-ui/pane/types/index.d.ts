@@ -130,6 +130,9 @@ declare module 'claude-code' {
       chatName: string
       // The check-ins with cdd failed in a row, which the bar shows once they reach ten.
       failedCheckIns: number
+      // The board messages submitted to the chat that wait for its turn to end, by text: a second send of the same text
+      // while one waits is not submitted again.
+      waitingSubmits: string[]
     }
     'prompt-queue': {
       failure: QueueFailureJson

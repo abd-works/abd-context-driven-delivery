@@ -8,7 +8,7 @@ import { reasonOf } from '../shared/reason'
 import { chatTool, post } from '../board-chat/board'
 import { CddToolFailed, replyOf } from '../shared/cdd-tool'
 import { currentChatName } from '../board-chat/chat-name'
-import { awaitTurn, chatWorked, finish, forgetTurn, isChatBusy, turnsSoFar } from '../board-chat/chat-turns'
+import { awaitTurn, chatWorked, finish, forgetTurn, isChatBusy, isSubmitWaiting, submitRan, submitWaits, turnsSoFar } from '../board-chat/chat-turns'
 import { after } from '../shared/clock'
 import { refreshChatBar } from './chat-bar-client'
 import { openFileInViewer } from './fidelity-files-client'
@@ -27,9 +27,15 @@ async function ranCommand($: EngineInterface, chat: string, command: ChatCommand
   return Promise.race([running, after($, REFUSED_WITHIN_MILLISECONDS, '')])
 }
 
-// Any other text arrives as the person's own message, the same as typing it.
-function submitted($: EngineInterface, text: string): Promise<string> {
-  const submitting = $.prompt.submit({ text, asUser: true }).then(answer => (answer.drop === undefined ? '' : `the chat dropped it: ${answer.drop || 'no reason given'}`), reasonOf)
+// Any other text arrives as the person's own message, the same as typing it. The engine runs it only once the chat is
+// idle, so while it waits a second send of the same text, such as a second press on Open in the Files app, is not
+// submitted again: it would reach the chat as a copy in the same message.
+async function submitted($: EngineInterface, text: string): Promise<string> {
+  if (await isSubmitWaiting($, text)) return ''
+  await submitWaits($, text)
+  const submitting = $.prompt.submit({ text, asUser: true })
+    .then(answer => (answer.drop === undefined ? '' : `the chat dropped it: ${answer.drop || 'no reason given'}`), reasonOf)
+    .finally(() => submitRan($, text))
   return Promise.race([submitting, after($, REFUSED_WITHIN_MILLISECONDS, '')])
 }
 
@@ -62,13 +68,22 @@ async function run($: EngineInterface, chat: string, command: ChatCommandData): 
   if (command.kind === 'refresh') return refreshed($, chat, command)
   if (command.kind === 'failure') return failed($, chat, command)
   const hasTurn = command.kind === 'command' || command.kind === 'submit'
-  $.ui.toast(`Board message arrived: ${command.text}`)
+  // The engine runs a command or a submit only once the chat is idle, so while a turn runs it waits for that turn's end.
+  const waits = hasTurn && (await isChatBusy($))
+  const isCopy = command.kind === 'submit' && (await isSubmitWaiting($, command.text))
   if (hasTurn) await awaitTurn($, command.message)
   const reason = await shown($, chat, command)
   if (reason) await showFailure($, `Board message failed: ${reason}`, `A ${command.kind} the board sent to this chat: ${command.text}`)
-  else $.ui.toast(`Board sent: ${command.text}`)
+  else $.ui.toast(sentNotice(command.text, waits, isCopy))
   if (reason) await forgetTurn($, command.message)
   await post($, { chat, operation: 'confirm', body: { message: command.message, is_shown: !reason, reason } })
+}
+
+// What the toast says of a board message the chat took: sent, waiting for the chat's turn to end, or already waiting.
+function sentNotice(text: string, waits: boolean, isCopy: boolean): string {
+  if (isCopy) return `Board message already waits for this chat to finish its turn: ${text}`
+  if (waits) return `Board message waits for this chat to finish its turn: ${text}`
+  return `Board sent: ${text}`
 }
 
 // A refresh reads the board and the format chips again, with no toast: a page such as the Files app turned a practice

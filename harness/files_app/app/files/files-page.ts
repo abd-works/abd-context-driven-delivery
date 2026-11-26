@@ -382,7 +382,8 @@ export class FilesPage {
     if (!published?.link || !this.link.chat) return false
     const ask = `Open the ${published.kind} ${published.name} (${entry.path}) in the artifact panel: ${published.link}`
     const asked = await this.attempt(`The ${published.kind} ${published.name} did not open`, () => ChatClientGenerated.named(this.api, this.link.chat).send('submit', ask))
-    if (asked) this.notices.toast(`Opening ${published.name} in Claude's artifact panel`)
+    // The chat opens it once it is free: Claude Code runs a page's message only after the chat's running turn ends.
+    if (asked) this.notices.toast(`Asked the chat to open ${published.name} in Claude's artifact panel: a chat that is working opens it when its turn ends`)
     return asked
   }
 
