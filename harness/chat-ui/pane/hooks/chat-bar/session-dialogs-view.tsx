@@ -53,7 +53,7 @@ function leaveHeadingOf(session: string, branch: string): string {
 
 // A list box's round border, a row above and below its lines.
 const LIST_BORDER_ROWS = 2
-// The cells of the field that names a new session with its ▸ folder button, and of the repo list's fields, as drawn.
+// The cells of the field that names a new session with its ◂ folder button, and of the repo list's fields, as drawn.
 const NEW_SESSION_ROW_CELLS = 30
 const REPO_FIELD_CELLS = 26
 
@@ -105,14 +105,15 @@ function sessionListCellsOf(chatBar: ChatBarDraw['chatBar']): number {
 // Each ticket is a whole button, its stage icon in its label: a see-through Button laid over the name took no press in
 // the desktop app, which left the list open and deaf. Every label is padded to the longest, so each button spans the
 // list and a press anywhere on its line opens it. A ticket opens in its own worktree and chat, so only a git repository
-// offers them. Beside the new session's name, a folder button picks the folder of the repository it will work on.
+// offers them. Before the new session's name, a folder button picks the folder of the repository it will work on, its
+// arrow on the left and pointing the way the Backlog's does, so the two lines read alike.
 function TicketChoicesView($: EngineInterface, elements: Pick<ElementTable, 'Box' | 'Button' | 'Input' | 'Text'>, { chatBar, view }: ChatBarDraw) {
   const { Box, Button, Input } = elements
   return [
     ...sessionLabels(chatBar.openTickets).map(({ name, label }) => <Button key={`session-${name}`} plain label={label} onPress={() => activateTicket($, name)} />),
     <Box key="new-session-row" flexDirection="row" gap={1}>
+      <Button key="new-session-folder" plain label="◂ folder" onPress={() => chooseSessionFolder($, chatBar)} />
       <Input key="new-session" placeholder="New session name" value="" onSubmit={value => (value.trim() ? createSession($, value.trim()) : undefined)} />
-      <Button key="new-session-folder" plain label="▸ folder" onPress={() => chooseSessionFolder($, chatBar)} />
     </Box>,
     NewSessionFolderView($, elements, chatBar.folder, view.newSessionFolder),
   ]
@@ -148,11 +149,15 @@ function backlogBoxesOf(chatBar: ChatBarDraw['chatBar'], view: ChatBarDraw['view
   const items = backlogBoxOf(BACKLOG_BOX, 'BACKLOG', chatBar.backlogItems.map(item => ({ title: item.title, children: item.children.length })), maxRows)
   const parent = chatBar.backlogItems.find(item => item.title === view.openBacklogParent && item.children.length)
   if (!parent) return [items]
-  return [backlogBoxOf('session-backlog-children-box', parent.title, parent.children.map(child => ({ title: child.title, children: 0 })), maxRows), items]
+  return [backlogBoxOf('session-backlog-children-box', shownTitleOf(parent.title), parent.children.map(child => ({ title: child.title, children: 0 })), maxRows), items]
 }
 
 const BACKLOG_BOX = 'session-backlog-box'
-const backlogStartLabelOf = (title: string): string => `${stageIconOf('Backlog')} ${title}`
+// The most cells a Backlog title takes in a box: a longer one is cut short and ends in an ellipsis, so a box stays
+// inside the chat however long an item's title is. The whole title still starts the item.
+const BACKLOG_TITLE_CELLS = 31
+const shownTitleOf = (title: string): string => (title.length > BACKLOG_TITLE_CELLS ? `${title.slice(0, BACKLOG_TITLE_CELLS - 1)}…` : title)
+const backlogStartLabelOf = (title: string): string => `${stageIconOf('Backlog')} ${shownTitleOf(title)}`
 const backlogOpenLabelOf = (line: BacklogLine, isOpen: boolean): string => `${isOpen ? '-' : '+'} ${line.children}`
 const backlogLineCellsOf = (line: BacklogLine): number => backlogStartLabelOf(line.title).length + (line.children ? backlogOpenLabelOf(line, false).length + 1 : 0)
 

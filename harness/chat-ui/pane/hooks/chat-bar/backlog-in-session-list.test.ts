@@ -202,6 +202,16 @@ test('a Backlog taller than the chat has room for runs into a further column', a
   await ui.unmount()
 })
 
+test('an item whose title is longer than the box has room for shows it cut short, ending in an ellipsis', async ($, on) => {
+  const title = 'Chat bar shows the robots queue as clearly as a drawn card view'
+  const { called } = mainChat(on, [{ title, children: [] }])
+
+  const ui = await backlog($, called)
+
+  expect(await labelOf(ui, startKey(title))).toBe('☰ Chat bar shows the robots queu…')
+  await ui.unmount()
+})
+
 test('a parent shows closed, counting its child items, which are hidden', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
 
