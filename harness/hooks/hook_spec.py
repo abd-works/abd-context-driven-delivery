@@ -43,9 +43,14 @@ from cdd_guidance.practices.bdd.bdd import Bdd
 from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngineering
 
 
+# The project a dispatch runs in: a folder of its own, holding no session, so a spec reads none of the sessions, saved
+# graphs or work state of the checkout it runs in, which a ticket's worktree fills as it is worked on.
+_PROJECT = Path(tempfile.mkdtemp(prefix="cdd-hook-spec-"))
+
+
 def _dispatch(payload: dict, toolsets: list | None = None) -> dict:
-    catalog = HandlerCatalog([ToolsetReference.of(toolset) if isinstance(toolset, type) else toolset for toolset in toolsets or []], _REPO_ROOT)
-    return HookServer(_REPO_ROOT, catalog).dispatch(HookPayload(payload)).as_dict()
+    catalog = HandlerCatalog([ToolsetReference.of(toolset) if isinstance(toolset, type) else toolset for toolset in toolsets or []], _PROJECT)
+    return HookServer(_PROJECT, catalog).dispatch(HookPayload(payload)).as_dict()
 
 
 def _dispatch_work_session_inject(tmp: tempfile.TemporaryDirectory):
