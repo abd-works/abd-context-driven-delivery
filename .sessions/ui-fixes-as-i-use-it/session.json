@@ -8,6 +8,7 @@
   "stage_mark": "in-progress",
   "practices": {
     "stories": {
+      "enabled": false,
       "fidelities": {
         "acceptance_tests": {
           "formats": [
@@ -17,6 +18,7 @@
       }
     },
     "ddd": {
+      "enabled": false,
       "fidelities": {
         "tactics": {
           "formats": [
@@ -26,6 +28,7 @@
       }
     },
     "ux": {
+      "enabled": false,
       "fidelities": {
         "front_end_code": {
           "formats": [
@@ -35,6 +38,7 @@
       }
     },
     "clean_engineering": {
+      "enabled": false,
       "fidelities": {
         "code": {
           "formats": [
@@ -44,6 +48,7 @@
       }
     },
     "bdd": {
+      "enabled": false,
       "fidelities": {
         "development": {
           "formats": [
@@ -54,7 +59,7 @@
     }
   },
   "guidance": {
-    "version": 3,
+    "version": 8,
     "stages": [
       "specification",
       "implementation"
