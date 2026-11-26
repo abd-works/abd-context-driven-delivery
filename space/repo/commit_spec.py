@@ -13,10 +13,11 @@ from space.repo.repo import Commit  # noqa: E402
 
 
 with description("a commit returned by an MCP tool"):
-    with it("should reach the caller as its sha, subject, message, and trailer data"):
-        commit = Commit("abc123", "Fix it\nTicket: pet-visits")
+    with it("should reach the caller as its sha, the checkout it went to, subject, message, and trailer data"):
+        commit = Commit("abc123", "Fix it\nTicket: pet-visits", "C:/dev/pet-visits")
         expect(data_of(commit)).to(equal({
             "sha": "abc123",
+            "checkout": "C:/dev/pet-visits",
             "subject": "Fix it",
             "message": "Fix it\nTicket: pet-visits",
             "trailers": {"Ticket": "pet-visits"},
