@@ -123,6 +123,12 @@ class SessionFileTools:
         """Save text as the whole of path, a file in this repository or under a folder this session's practices write to, named as read_file names it; the file as saved, with its new version. version is the one read_file, or the last write_file of the file, answered; none for a file not there yet. A file changed on disk since that read is refused and left as it is: read it again and write from what it holds. A path inside a .git folder is refused."""
         return self.session_files.write(path, text, version)
 
+    @mcp
+    @agent_tool
+    def delete_file(self, path: str) -> str:
+        """Delete path, a file, or a folder with every file in it, named from the project or absolute, as the Files app's file menu asks once the person confirmed; answer the path deleted, from the project. Only what lies under the session's roots is deleted: a path outside them is refused (PathOutsideRootsError), as is a root itself (RootDeleteRefused), a path not there (NamedPathNotFoundError), the session's own session.json or a folder holding it (SessionRecordWriteRefused), and a path inside a .git folder (VersionControlPathRefused). Nothing is kept to undo it."""
+        return self.session_files.delete(path)
+
     @long_call
     @mcp
     @agent_tool

@@ -10,6 +10,7 @@ import hashlib
 import os
 import time
 import re
+import shutil
 from pathlib import Path
 from typing import Annotated, NamedTuple, Protocol
 
@@ -19,6 +20,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.installation.data_class import SourceFile, data_field, language_adapter
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
+from space.session.session_record import SESSION_FILE
 
 
 # Installed packages and caches hold no one's work. Hidden folders hold tools and caches too, but a module's .context
@@ -427,6 +429,27 @@ class FileManager:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
         return FileText(self._relative(target), text, version_of(data))
+
+    def delete(self, path: str) -> str:
+        """Delete path, a file or a folder with every file in it, inside one of the session's roots, named from its
+        workpath; answer it named so. The session's own session.json, and a folder holding it, are refused, since only
+        the session's tools change its record, and so is a path inside a .git folder."""
+        target = self._inside(path)
+        if self._record is not None and self._holds_record(target):
+            raise SessionRecordWriteRefused(path)
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
+        return self._relative(target)
+
+    def _holds_record(self, target: Path) -> bool:
+        """Whether target is the session's session.json, or a folder that holds it."""
+        record = self._record
+        assert record is not None
+        if not target.is_dir():
+            return record.is_its_file(target)
+        return any(record.is_its_file(found) for found in target.rglob(SESSION_FILE))
 
     def find(self, pattern: str) -> list[Path]:
         """The files pattern names, written from the workpath, in the glob form Path.glob reads: `**/` is any number of

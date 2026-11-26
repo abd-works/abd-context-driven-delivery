@@ -11,7 +11,7 @@ from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from space.session import Session, Sessions
 from space.session.session import SessionNotFoundError
 from space.session.files.file_manager import FileChangedSinceReadError, PathOutsideRootsError, SessionRecordWriteRefused, VersionControlPathRefused
-from space.session.files.session_files import NamedPathNotFoundError
+from space.session.files.session_files import NamedPathNotFoundError, RootDeleteRefused
 from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
 # Seed: the report the debug skill writes in a session's folder, named as it names it.
@@ -323,3 +323,72 @@ with description("session.write_file, on a file that read_file read") as self:
             missing = read.invoke({"session": "checkout-flow", "path": "src/checkout.py"}, project=self.project.root)
             self.write("src/checkout.py", missing.version)
             expect((self.project.root / "src" / "checkout.py").is_file()).to(equal(True))
+
+
+# The person's answer (2026-11-26): the Files app's file menu deletes a file or a folder, after a confirmation the page
+# asks; what may be deleted is the session's rule: only what lies under its roots, never a root itself, never its own
+# session.json or a folder holding it, and nothing inside a .git folder.
+with description("session.delete_file") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        self.folder = self.project.root / ".sessions" / "checkout-flow"
+        self.folder.mkdir(parents=True)
+        (self.folder / "session.json").write_text(json.dumps({"name": "checkout-flow"}), encoding="utf-8")
+        self.cart = self.project.root / "src" / "cart.py"
+        self.cart.parent.mkdir(parents=True)
+        self.cart.write_text(CART_TEXT, encoding="utf-8")
+        self.drafts = self.project.root / "src" / "drafts"
+        self.drafts.mkdir()
+        (self.drafts / "one.md").write_text("one", encoding="utf-8")
+        (self.drafts / "two.md").write_text("two", encoding="utf-8")
+        tool = ToolsetReference.of(Session).made().tools["delete_file"]
+        self.delete = lambda path: tool.invoke({"session": "checkout-flow", "path": path}, project=self.project.root)
+
+    with after.each:
+        OPEN_PROJECTS.close_all()
+
+    with context("that names a file under the session's roots"):
+        with it("should delete the file"):
+            self.delete("src/cart.py")
+            expect(self.cart.exists()).to(equal(False))
+
+        with it("should answer the path deleted, from the project"):
+            expect(self.delete("src/cart.py")).to(equal("src/cart.py"))
+
+    with context("that names a folder"):
+        with it("should delete the folder and every file in it"):
+            self.delete("src/drafts")
+            expect(self.drafts.exists()).to(equal(False))
+
+    with context("that names a file that is not there"):
+        with it("should refuse it, naming the path"):
+            expect(lambda: self.delete("src/missing.py")).to(raise_error(NamedPathNotFoundError, contain("src/missing.py")))
+
+    with context("that names the folder the session works in"):
+        with it("should refuse to delete a root"):
+            expect(lambda: self.delete(str(self.project.root))).to(raise_error(RootDeleteRefused))
+
+    with context("that names the session's own session.json"):
+        with it("should refuse it and keep the record"):
+            expect(lambda: self.delete(".sessions/checkout-flow/session.json")).to(raise_error(SessionRecordWriteRefused))
+            expect((self.folder / "session.json").is_file()).to(equal(True))
+
+    with context("that names the folder holding the session's session.json"):
+        with it("should refuse it and keep the folder"):
+            expect(lambda: self.delete(".sessions/checkout-flow")).to(raise_error(SessionRecordWriteRefused))
+            expect((self.folder / "session.json").is_file()).to(equal(True))
+
+    with context("that names a file inside a .git folder"):
+        with it("should refuse it"):
+            (self.project.root / ".git").mkdir(exist_ok=True)
+            (self.project.root / ".git" / "config").write_text("[core]" + chr(10), encoding="utf-8")
+            expect(lambda: self.delete(".git/config")).to(raise_error(VersionControlPathRefused))
+
+    with context("that names a file outside the session's roots"):
+        with it("should refuse it, keeping the file"):
+            outside = tempfile.TemporaryDirectory()
+            kept = Path(outside.name) / "kept.md"
+            kept.write_text("kept", encoding="utf-8")
+            expect(lambda: self.delete(str(kept))).to(raise_error((PathOutsideRootsError, NamedPathNotFoundError)))
+            expect(kept.is_file()).to(equal(True))
+            outside.cleanup()

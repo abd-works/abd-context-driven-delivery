@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import os
-
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
 
 from harness.git.git import Git
-from space.session.files.file_manager import FileEntry, FileManager, FileText
+from space.session.files.file_manager import FileEntry, FileManager, FileText, PathOutsideRootsError
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -35,6 +34,16 @@ class EmptyPathNamedError(ValueError):
     def __init__(self, named: str) -> None:
         self.named = named
         super().__init__(f"an empty path names no file or folder (named {named!r}); name paths from the project's root, or absolute")
+
+
+class RootDeleteRefused(PermissionError):
+    """A delete aimed at one of the session's roots itself, the folder it works in or a folder a practice writes under:
+    deleting it would take every file the session works on, and leave its practices writing into nothing. It names the
+    path refused."""
+
+    def __init__(self, path: str) -> None:
+        super().__init__(f"{path} is one of the session's roots, which is not deleted: delete the files and folders in it")
+        self.path = path
 
 
 class SessionFiles:
@@ -140,6 +149,19 @@ class SessionFiles:
         (*SessionRecordWriteRefused*), which only its record writes, and a path inside a .git folder."""
         return self._from_project.write(path, text, version)
 
+    def delete(self, named: str | Path) -> str:
+        """Delete the file or folder named, a folder with every file in it, and answer its path from the project. What
+        may be deleted lies under the session's roots: a path outside them is refused (*PathOutsideRootsError*), as is a
+        root itself (*RootDeleteRefused*), a path not there (*NamedPathNotFoundError*), and, by the file manager, the
+        session's own session.json or a folder holding it, and anything inside a .git folder."""
+        path = self.existing(named).resolve()
+        if not self.in_root(path):
+            raise PathOutsideRootsError(str(named))
+        if path in self._roots:
+            raise RootDeleteRefused(str(named))
+        self._from_project.delete(str(path))
+        return self._session.repo.path_from_top(path)
+
     def existing(self, named: str | Path) -> Path:
         """The path named, read as the session reads every path its agent writes (``SessionPaths.path_named``), once
         something is there; refused otherwise. An empty name is refused (*EmptyPathNamedError*), never read as the
@@ -162,8 +184,12 @@ class SessionFiles:
 
     def in_root(self, path: Path) -> bool:
         """Whether path lies under one of the session's roots: the folders its file manager reads, its root among them."""
-        roots = (self._session.work_root, *self.file_manager.roots)
-        return any(path == root or root in path.parents for root in (Path(root).resolve() for root in roots))
+        return any(path == root or root in path.parents for root in self._roots)
+
+    @property
+    def _roots(self) -> tuple[Path, ...]:
+        """The session's roots, resolved: the folder it works in and each folder its file manager reads."""
+        return tuple(Path(root).resolve() for root in (self._session.work_root, *self.file_manager.roots))
 
 
 # The folders a root outside a repository never lists files from: version control, dependencies, builds, caches.
