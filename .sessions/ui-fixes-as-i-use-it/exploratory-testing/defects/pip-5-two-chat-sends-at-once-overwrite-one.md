@@ -42,4 +42,4 @@ Unit (`harness/chat/chat_spec.py`), with the spec clock frozen (`Chat.clock`) an
 - **Scenario:** "Commands sent to one chat at the same moment each reach it" (Story: Send Command To Chat) in `story_tests/connect-sessions-across-channels-and-apps/connect-chat-bar-board-and-story-ui/connect_chat_bar_board_and_story_ui_story.test.md`.
 - **Test:** `harness/chat/chat_heavy_spec.py`, "that is sent commands from many senders at once" (heavy: real threads on disk). Seen failing first: 17 of 40 left.
 - **Fix:** `harness/chat/chat.py` `ChatMailbox.queue` holds the chat's `sending.lock` (*LockFile*, the operating system's lock, so it excludes other threads and other processes: the board, the Files app and a chat's own server all send) from choosing the name to writing the file. 0 of 800 lost after.
-- **Commit:** see below.
+- **Commit:** 195acb87f.
