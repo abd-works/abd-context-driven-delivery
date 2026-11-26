@@ -32,7 +32,7 @@ from space.kanban.session_board_examples import (
     PULLED_OUT_TITLE,
 )
 from space.kanban.card_name import TicketNameTakenError
-from space.kanban.story_test import SharedStories, children_in, column_in, expect_placed, expect_refused, refusal_of, ticket_in
+from space.kanban.story_test import SharedStories, children_in, column_in, expect_placed, expect_refused, held_ticket_in, refusal_of, ticket_in
 from space.kanban.ticket_tree import ParentLoopError, ParentMovesWithChildrenError
 
 shared_stories = SharedStories("Organize Ticket Hierarchy")
@@ -360,6 +360,66 @@ def _(s):
     def _(world):
         expect_refused(world.refusal, ParentMovesWithChildrenError, "checkout-flow has child tickets; a parent moves only with its children")
         expect_placed(card_of(world, CHECKOUT_FLOW.name), "Discovery", is_done=False)
+
+
+def backlog_titles(world) -> list[str]:
+    """The titles of the items the Backlog shows, in its order."""
+    return [item["title"] for item in column_in(board_of(world), "Backlog")["items"]]
+
+
+@shared_stories.scenario("Place Parent At Leftmost Child Stage", "Move a parent to the Backlog with its children")
+def _(s):
+    @s.given('the ticket checkout-flow has the child ticket confirm-order in Discovery')
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+        world.project.seed_session(CONFIRM_ORDER_CHILD)
+
+    @s.when('the Person moves checkout-flow to the Backlog')
+    def _(world):
+        # CardPlacement.ticket("checkout-flow")
+        #   <- checkout-flow
+        # checkout-flow.move_to("Backlog")
+        #   -> confirm-order.to_backlog()
+        #   -> self.to_backlog()
+        #   <- the backlog item Checkout flow
+        world.Ticket.load(CHECKOUT_FLOW.name).move_to(stage="Backlog")
+
+    @s.then('the Backlog shows the backlog items Checkout flow and Confirm order')
+    def _(world):
+        expect(sorted(backlog_titles(world))).to(equal(sorted([CHECKOUT_FLOW.title, CONFIRM_ORDER_CHILD.title])))
+
+    @s.and_('neither checkout-flow nor confirm-order shows in a stage')
+    def _(world):
+        board = board_of(world)
+        expect([held_ticket_in(board, CHECKOUT_FLOW.name), held_ticket_in(board, CONFIRM_ORDER_CHILD.name)]).to(equal([None, None]))
+
+
+@shared_stories.scenario("Place Parent At Leftmost Child Stage", "Start a parent kept in the Backlog with its children")
+def _(s):
+    @s.given('the ticket checkout-flow was moved to the Backlog with its child ticket confirm-order')
+    def _(world):
+        world.project.seed_session(CHECKOUT_FLOW)
+        world.project.seed_session(CONFIRM_ORDER_CHILD)
+        world.Ticket.load(CHECKOUT_FLOW.name).move_to(stage="Backlog")
+
+    @s.when('the Person starts Checkout flow')
+    def _(world):
+        # Backlog.item("Checkout flow")
+        #   <- Checkout flow
+        # Checkout flow.start()
+        #   -> the items kept with the tickets whose parent is checkout-flow
+        #   -> Confirm order.start()
+        #   <- checkout-flow in Discovery
+        world.BacklogItem.load(CHECKOUT_FLOW.title).start()
+
+    @s.then('checkout-flow is back in Discovery with the child ticket confirm-order')
+    def _(world):
+        card = card_of(world, CHECKOUT_FLOW.name)
+        expect((card["column"]["name"], children_in(card))).to(equal(("Discovery", [CONFIRM_ORDER_CHILD.name])))
+
+    @s.and_('the Backlog shows neither Checkout flow nor Confirm order')
+    def _(world):
+        expect(backlog_titles(world)).to(equal([]))
 
 
 @shared_stories.scenario("Add Child Ticket", "Refuse a child whose title makes the name of a ticket already there")

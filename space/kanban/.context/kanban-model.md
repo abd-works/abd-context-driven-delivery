@@ -31,7 +31,7 @@
 - **Invariant:** a ticket never moves to another column by itself. A person moves it, by dragging it or moving it on and back, whatever its session's work, and the move is written to its session log with the stage it enters.
 - Its *text* says what its work is about: the idea file `<name>.md` its session folder keeps, the backlog item's file when it was started from one. Its *tags* are words a person tagged its session with, kept in its `session.json`.
 - A *parent* ticket holds the *child* tickets whose session names it as their parent. A child is stacked inside its parent's card and shows in no column of its own until a person pulls it out; a *pulled-out* child is a card of its own, titled under its parent's title, and keeps its parent, which keeps a row for it. Giving a child another parent, or none, makes it no longer pulled out.
-- **Invariant:** a parent is in the column of its child furthest back on the board, and moves only with its children: a person moving it is refused.
+- **Invariant:** a parent is in the column of its child furthest back on the board, and moves only with its children: a person moving it to a stage is refused, and a move to the Backlog takes its children there with it, each a backlog item of its own that still names it as its parent, so starting its item starts theirs.
 - A person keeps a card where they put it in its column: the order is kept in `.sessions/_board.json`, and a card not placed yet follows those that were.
 
 ### session
@@ -553,7 +553,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 
 ## TicketMoves
 
-The moves a person makes with one ticket, made once with the ticket in `ticket.py`. A parent moves only with its children, so each move asks `TicketTree.refuse_moving_a_parent` first; each move is a mark in its *StageMarks*.
+The moves a person makes with one ticket, made once with the ticket in `ticket.py`. A parent moves only with its children, so each move to a stage asks `TicketTree.refuse_moving_a_parent` first, and a move to the Backlog sends its children there before it (`Ticket.to_backlog`); each move is a mark in its *StageMarks*.
 
 + TicketMoves(ticket: Ticket)
 ------

@@ -179,6 +179,8 @@ class BacklogItem(BacklogOrderTools, Card):
             ticket.session.folder.keep_file(self._path)
         for child in children:
             child.start("story", path).reassign_parent(ticket)
+        for kept_child in self._kept_children_of(ticket):
+            kept_child.start()
         self._place.remove_emptied_folder()
         self._board.placement.reread()
         return ticket
@@ -262,6 +264,13 @@ class BacklogItem(BacklogOrderTools, Card):
     def _moved(self, saved_as: str) -> None:
         self._board.placement.reread()
         self._board.sessions.saves.later(saved_as)
+
+    def _kept_children_of(self, ticket: Ticket) -> list[BacklogItem]:
+        """The Backlog's items kept with the work of a ticket that names ticket as its parent: the children that went
+        to the Backlog with it, which come back with it."""
+        held = self._board.sessions.held
+        kept = [item for item in self._board.backlog_items if item._place.holds_ticket]
+        return [item for item in kept if held.load(item._place.ticket_folder).hierarchy.parent == ticket.name]
 
     def _ticket_brought_back(self, kept_folder: Path) -> Ticket:
         return self._board.placement.ticket_of(self._board.sessions.held.load(kept_folder).folder.reopen())

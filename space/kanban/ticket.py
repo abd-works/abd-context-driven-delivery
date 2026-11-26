@@ -246,7 +246,7 @@ class TicketMoveTools:
     @agent_tool
     @noSessionLog
     def move_to(self, stage: str, done: bool = False) -> Ticket | BacklogItem:
-        """Move ticket straight into stage's In progress, or its Done when done is true, whatever its work; dragging a card does this. Out of Complete it reopens first. Into the Backlog, from any column, it becomes a backlog item that keeps its whole folder. A ticket with children moves only with them, so it is refused."""
+        """Move ticket straight into stage's In progress, or its Done when done is true, whatever its work; dragging a card does this. Out of Complete it reopens first. Into the Backlog, from any column, it becomes a backlog item that keeps its whole folder, and its children go with it, each an item of its own. Into a stage, a ticket with children moves only with them, so it is refused."""
         return in_answer(self.moves.move_to(stage, done))
 
     @mcp
@@ -371,8 +371,11 @@ class TicketEnding:
 
     def to_backlog(self) -> BacklogItem:
         """Into the Backlog from any column: its session closes and its whole folder becomes a backlog item, so starting
-        the item brings the ticket back with its work."""
+        the item brings the ticket back with its work. Its children go first, each an item of its own that still names
+        it as its parent, so starting its item starts theirs."""
         self._refuse_main("go to the Backlog")
+        for child in self.children:
+            child.to_backlog()
         self._end_session()
         kept_in_backlog = self.board.placement.ticket_of(self.session.folder.move_to_backlog())
         return self.board.placement.backlog_item_of(kept_in_backlog)
@@ -839,9 +842,9 @@ class TicketMoves:
         """Straight into stage's In progress, or its Done when done; out of Complete it reopens first; into the Backlog
         it becomes a backlog item that keeps its whole folder."""
         ticket = self._ticket
-        ticket.tree.refuse_moving_a_parent()
         if stage == BACKLOG_COLUMN:
             return ticket.to_backlog()
+        ticket.tree.refuse_moving_a_parent()
         target = ticket.board.stage(stage)
         return self.reopened().marks.place(target, StageMark.DONE if done else StageMark.IN_PROGRESS)
 

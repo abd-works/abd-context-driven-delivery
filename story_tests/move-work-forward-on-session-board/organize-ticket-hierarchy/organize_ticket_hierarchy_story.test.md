@@ -373,6 +373,42 @@ checkout-flow.move_next()
 
 *Then* checkout-flow stays in the Discovery [column](../../../space/kanban/.context/kanban-model.md#column)
 
+#### Scenario: Move a parent to the Backlog with its children
+
+The person, 2026-11-26: "why can't I move Customize Board Workflow back into the Backlog, it keeps erroring out"; a parent moves only with its children, so into the Backlog its children go with it.
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow has the child ticket confirm-order in Discovery
+*When* the Person moves checkout-flow to the Backlog
+
+```realization
+CardPlacement.ticket("checkout-flow")
+  <- checkout-flow
+checkout-flow.move_to("Backlog")
+  -> confirm-order.to_backlog()
+  -> self.to_backlog()
+  <- the backlog item Checkout flow
+```
+
+*Then* the Backlog shows the [backlog items](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Checkout flow and Confirm order
+*And* neither checkout-flow nor confirm-order shows in a stage
+
+#### Scenario: Start a parent kept in the Backlog with its children
+
+*Given* the [ticket](../../../space/kanban/.context/kanban-model.md#ticket--card) checkout-flow was moved to the Backlog with its child ticket confirm-order
+*When* the Person starts Checkout flow
+
+```realization
+Backlog.item("Checkout flow")
+  <- Checkout flow
+Checkout flow.start()
+  -> the items kept with the tickets whose parent is checkout-flow
+  -> Confirm order.start()
+  <- checkout-flow in Discovery
+```
+
+*Then* checkout-flow is back in Discovery with the child ticket confirm-order
+*And* the Backlog shows neither Checkout flow nor Confirm order
+
 ## Story: Nest Child Branch And Session
 
 ### Evidence
