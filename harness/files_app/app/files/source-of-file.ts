@@ -41,7 +41,7 @@ const listOf = <Item>(list: unknown): Item[] => (Array.isArray(list) ? (list as 
 // in place, in this file or another; none until the graph view read them.
 export function sourceOf(file: SessionFileData, members: NodeSourceData[] = []): NodeSourceData {
   const lines = file.text.split('\n').length
-  return { node_id: file.path, name: fileNameOf(file.path), type: FILE_NODE, owner: '', file: file.path, text: file.text, start_line: 1, end_line: lines, members }
+  return { node_id: file.path, name: fileNameOf(file.path), type: FILE_NODE, owner: '', file: file.path, files: [file.path], text: file.text, start_line: 1, end_line: lines, members }
 }
 
 // A callout as session.file answers it since links to whole files and missing targets carry one; a cdd server lane

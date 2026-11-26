@@ -11,7 +11,7 @@ import { calloutsOf, isStoryTest } from './source-of-file'
 
 const STEP_STORY = 'story_tests/manage-tickets/remove-tickets/delete-ticket.story.shared.py'
 const node = (node_id: string, name: string, owner: string, file: string, start_line: number, text: string): NodeSourceData =>
-  ({ node_id, name, type: 'Operation', owner, file, start_line, end_line: start_line + text.split(String.fromCharCode(10)).length - 1, text, members: [] }) as NodeSourceData
+  ({ node_id, name, type: 'Operation', owner, file, files: [file], start_line, end_line: start_line + text.split(String.fromCharCode(10)).length - 1, text, members: [] }) as NodeSourceData
 const DELETE = node('delete', 'delete', 'Ticket', 'space/kanban/ticket.py', 8, '    def delete(self, board: Board) -> None:' + String.fromCharCode(10) + '        board.reread()')
 const TICKET_ON_BOARD = node('ticket_on_board', 'ticket_on_board', '', 'space/kanban/ticket_story_examples.py', 1, 'def ticket_on_board(world) -> str:' + String.fromCharCode(10) + '    return "checkout"')
 const call = (line: number, title: string, target: NodeSourceData) => ({ kind: 'call', line, title, target })
