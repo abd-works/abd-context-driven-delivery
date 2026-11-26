@@ -53,4 +53,4 @@ Unit (`prompt_queue_spec.py`): its send_to_chat examples set the theme with the 
 - **Code:** `tools/prompt_queue/prompt_queue.py`: `PromptQueue._robot_as_spelled`, `PromptQueue._sent_cards_message`.
 - **Tests:** `tools/prompt_queue/prompt_queue_spec.py` (unit): "gives a card the spelling of a robot the queue holds only a theme for, matching the name with no regard to case" and "names the theme of a card's robot that the queue spells otherwise, matching the name with no regard to case"; both seen failing first, now pass (123 examples).
 - **Scenarios:** "Give a card to a robot the queue holds only a theme for by the theme's spelling" (Assign Queued Prompt To Robot) and "Send a card with its robot's theme however the queue spells the robot" (Send Queued Prompts To Another Chat), in `share_queue_among_robots_story.test.md`.
-- **Commit:** (filled below)
+- **Commit:** 415297355
