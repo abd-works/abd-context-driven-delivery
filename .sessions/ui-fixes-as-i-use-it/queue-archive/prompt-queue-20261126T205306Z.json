@@ -1,0 +1,474 @@
+{
+  "is_on": true,
+  "prompts": [
+    {
+      "id": "1a89989913e3",
+      "text": "Whiteboard class diagram arrow fixes",
+      "steps": [
+        {
+          "text": "Read context, renderer and shared ArrowRouter; name TDD flows",
+          "state": "done"
+        },
+        {
+          "text": "Drop a dependency arrow where a solid relationship links the same pair (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Straight arrow between adjacent cards with a clear gap (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Spread arrow ends along a shared card edge (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Route cross-page arrows in a lane outside the pages (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Run the renderer and router specs (and draw.io if shared), fix failures",
+          "state": "done"
+        },
+        {
+          "text": "Live check: render one of this repo's *-model.md files to a whiteboard in the session folder (no publish, no pml-web), judge the three fixes",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Bolt"
+    },
+    {
+      "id": "fd9db8278537",
+      "text": "Diagram links to mockup screens and class files",
+      "steps": [
+        {
+          "text": "Read StoryMapLinks, draw.io and whiteboard story maps and class diagrams, where a class's source is kept, the board's link rules; name TDD flows",
+          "state": "done"
+        },
+        {
+          "text": "Story -> scenario file, else acceptance test (*_story.test.py/.ts): draw.io (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Whiteboard links: how a board card links (https only) and the story card's link (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Story -> mockup screen that shows it (shownOn), draw.io and whiteboard (spec first)",
+          "state": "pending"
+        },
+        {
+          "text": "Class card -> its model markdown heading, else its code file and line, draw.io and whiteboard, CE and DDD (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Run the specs of every changed file; fix failures",
+          "state": "done"
+        },
+        {
+          "text": "Live check: render this repo's story map and one class model into the session folder, unpublished; links resolve to real files",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Bolt"
+    },
+    {
+      "id": "28798ce2f1da",
+      "text": "Files app right-click menu and All files scope",
+      "steps": [
+        {
+          "text": "Add the right-click menu and All files stories to the story map",
+          "state": "done"
+        },
+        {
+          "text": "Write their scenarios in story_tests/review-generated-work-in-file-viewer",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: delete a file or folder (session.delete_file)",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: validate a file or folder (session.check_changed_artifact over folders)",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: violations of a file or folder (ticket.violations_of)",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: add a file or folder to a practice: a practice root holds many folders AND files, each added to the whole practice, shown at the top of the file tree (practice-session-output.add_root; let roots accept a file)",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: every file in the session's folders (session.all_files)",
+          "state": "done"
+        },
+        {
+          "text": "Write the TypeScript adapters again",
+          "state": "done"
+        },
+        {
+          "text": "Files app test-first: menu entries, delete confirmation, practice submenu",
+          "state": "done"
+        },
+        {
+          "text": "Files app test-first: All files scope button, added roots at the top of the tree",
+          "state": "done"
+        },
+        {
+          "text": "Fix the ten NodeSourceData.files type errors",
+          "state": "done"
+        },
+        {
+          "text": "Heavy/e2e twins in a background sub-task",
+          "state": "done"
+        },
+        {
+          "text": "Commit, push, report",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Gizmo"
+    },
+    {
+      "id": "432134f1e66e",
+      "text": "Given and When realizations: finish, test against pml-web's explorer, go live",
+      "steps": [
+        {
+          "text": "Guidance, template and rules: Given and When realizations as code-like statements",
+          "state": "done"
+        },
+        {
+          "text": "Graph reads Given realizations; new rule repositories-called-only-by-the-flow",
+          "state": "done"
+        },
+        {
+          "text": "Merge into ui-fixes-as-i-use-it (59da37725); separate ticket and branch removed",
+          "state": "done"
+        },
+        {
+          "text": "Fix test-area/check_realizations.py (take the graph from the RuleFixture)",
+          "state": "done"
+        },
+        {
+          "text": "Fix: a cloned markdown step lost its read line, so real renders carried no class-card terms (m) (8302866bb)",
+          "state": "done"
+        },
+        {
+          "text": "Expected explorer fixture cut from pml-web's version-7 Choose Lines tree, read only, with m and z added",
+          "state": "done"
+        },
+        {
+          "text": "Spec: explorer rendered from test-area/pml-web equals the fixture, realizations (z) included (3ad27a6c0)",
+          "state": "done"
+        },
+        {
+          "text": "DDD model rule: a domain operation never calls a repository (debbd9ded, 172b29bbd)",
+          "state": "done"
+        },
+        {
+          "text": "Unit tier: all pass but 4 examples 105-128 ms over budget, different files each run under load; relevant heavy specs pass",
+          "state": "done"
+        },
+        {
+          "text": "Repin the dev lane: left for the user's word (pml-web demo runs on the dev lane)",
+          "state": "pending"
+        }
+      ],
+      "is_done": true,
+      "robot": "Cog"
+    },
+    {
+      "id": "c0a832f14680",
+      "text": "Queue band: a robot's row takes a click across its whole width",
+      "steps": [
+        {
+          "text": "The see-through Button covers the whole robot row (robot, name, count)",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push; defect logged",
+          "state": "done"
+        },
+        {
+          "text": "Review the change: label width counts robot columns, name and count; key collapse-agent-N unchanged",
+          "state": "done"
+        },
+        {
+          "text": "Add a register.test.tsx test that the whole row takes the press (a3b503bad)",
+          "state": "done"
+        },
+        {
+          "text": "Run the mod's tests: no claude CLI on this machine, not run",
+          "state": "done"
+        },
+        {
+          "text": "Commit own files by path and push",
+          "state": "done"
+        },
+        {
+          "text": "Live check moved to the after-the-demo repin card",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "a18df7baaad3",
+      "text": "[decision required] Approve the cached knowledge graph plan (harness/graph/.context/cdr/0005) and build it? Recommendation: yes, in its build order, differential spec first; note the 3 s one-file target depends on running only the rules a change can reach (step 6).",
+      "steps": [
+        {
+          "text": "Differential spec: graph_incremental_heavy_spec.py (482bb82bc); today's refresh equals a full build for 4 of 17 edits",
+          "state": "done"
+        },
+        {
+          "text": "Approve the build (the person's decision)",
+          "state": "pending"
+        },
+        {
+          "text": "Fix refresh faults hit on every refresh: stories only in scenario files lost; BDD spec subject flips; model-document nodes keep stale written_in",
+          "state": "pending"
+        },
+        {
+          "text": "Fix cross-file relinking: module facts on add/delete/rename, renamed class heading, renamed Python operation, renamed bounded context, renamed TS file, fact order",
+          "state": "pending"
+        },
+        {
+          "text": "Then the plan's manifest, loud fallback, change check, whole graph with filters, rule cut, timings",
+          "state": "pending"
+        }
+      ],
+      "robot": "Sparky"
+    },
+    {
+      "id": "2b0c1745cb4c",
+      "text": "Add a backlog ticket that holds all of this queue's work as context for its session",
+      "steps": [
+        {
+          "text": "Read the queue and the branch's git log",
+          "state": "done"
+        },
+        {
+          "text": "Write the backlog text: one line per card, two decisions, standing rules, repin waits, handoff and defect log",
+          "state": "done"
+        },
+        {
+          "text": "backlog-item.create; report its path and commit",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Widget"
+    },
+    {
+      "id": "0e4471021857",
+      "text": "Queue band: after pressing + to add a task, the next message sent becomes that card's task instead of a chat message",
+      "steps": [
+        {
+          "text": "Find how + with an empty prompt box arms 'type the task, then press +' (addStep in tools/prompt_queue/hooks)",
+          "state": "done"
+        },
+        {
+          "text": "Test first: with + armed on a card, the next message sent is added to that card as a task and does not reach the chat",
+          "state": "done"
+        },
+        {
+          "text": "Make the prompt.submit hook take the armed card's message as its task, then disarm (takeAwaitedStep, set_steps as + uses)",
+          "state": "done"
+        },
+        {
+          "text": "Mod tests not run (no claude CLI); committed by path a37bd1d13, pushed; logged in chat-ui-defects.md",
+          "state": "done"
+        },
+        {
+          "text": "Live check moved to the after-the-demo repin card",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "19b39b42b977",
+      "text": "Queue band: every robot has a one-sentence theme, shown beside it while it is closed; a click on the robot or its title opens its cards, a second click closes them",
+      "steps": [
+        {
+          "text": "Python spec first: a robot's theme is kept on the queue, matched by the robot's first spelling, cleared by an empty theme",
+          "state": "done"
+        },
+        {
+          "text": "PromptQueue.themes and the set_theme(robot, theme) tool in prompt_queue.py",
+          "state": "done"
+        },
+        {
+          "text": "Regenerate adapters with python scripts/install.py --ide Claude (no pin)",
+          "state": "done"
+        },
+        {
+          "text": "register.test.tsx first: a closed robot shows its theme, the whole row (theme included) takes the press, an open robot hides it",
+          "state": "done"
+        },
+        {
+          "text": "Mod: QueueJson.themes, AgentRobotView shows the theme while closed",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_spec 100/100, queue story tests 23/23; mod tests not run (no claude CLI)",
+          "state": "done"
+        },
+        {
+          "text": "Committed by path 57eaf5bca, pushed, logged in chat-ui-defects.md",
+          "state": "done"
+        },
+        {
+          "text": "Live after the next repin: set_theme reaches the running server only then",
+          "state": "pending"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    },
+    {
+      "id": "280eb6e82d43",
+      "text": "[decision required] After the pml-web demo: repin the dev lane from ui-fixes-as-i-use-it and check the fixes live (format chips, board sends, robot rows, + then send, explorer class card, draw.io links)? Recommendation: yes, once you say the demo is over.",
+      "steps": [
+        {
+          "text": "Wait for the person to say the pml-web demo is over",
+          "state": "pending"
+        },
+        {
+          "text": "Reinstall and repin the dev lane from the ui-fixes-as-i-use-it worktree (brings in the new rules); /reload-plugins",
+          "state": "pending"
+        },
+        {
+          "text": "Give each robot its one-sentence theme with prompt-queue.set_theme",
+          "state": "pending"
+        },
+        {
+          "text": "Check live: format chips, board sends, robot rows and themes, + then send, send selected cards to another chat, explorer class card and realizations, draw.io links, Files app menu",
+          "state": "pending"
+        }
+      ],
+      "robot": "Pixel"
+    },
+    {
+      "id": "af184a95a350",
+      "text": "[decision required] Story map links to the mockup screens that show each story: read the graph's shownOn edges and draw one small linked cell per screen under the story (draw.io and whiteboard), skipped when the map is read back? Recommendation: yes, as Bolt suggests; a screen file outside the repository gets no link.",
+      "steps": [
+        {
+          "text": "Read how story map links, draw.io and whiteboard renders, and shownOn edges work",
+          "state": "done"
+        },
+        {
+          "text": "Write failing specs: screen cell under a shown story (draw.io, whiteboard), none without a file, read-back skips them",
+          "state": "done"
+        },
+        {
+          "text": "Implement screen links in StoryMapLinks and the screen cells in both renders",
+          "state": "done"
+        },
+        {
+          "text": "Make reading the map back skip screen cells",
+          "state": "done"
+        },
+        {
+          "text": "Run the change's specs green and the unit tier in the background",
+          "state": "done"
+        },
+        {
+          "text": "Live check: render test-area/pml-web story map with its UX map into the session folder",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Zap"
+    },
+    {
+      "id": "66661e36dec2",
+      "text": "Whiteboard class cards: no rule under the name, dashes between properties and operations, folded classes kept and spaced, invariants under the member they govern",
+      "steps": [
+        {
+          "text": "Render read-only copies of pml-web's domain model and object model to whiteboards in the session folder; check 1-3 hold and find which folded classes drop out",
+          "state": "done"
+        },
+        {
+          "text": "Every folded class reaches the card: holds on both renders (50/50, 98/98) with b1322f992's _reconcile_folded and its spec; no change needed",
+          "state": "done"
+        },
+        {
+          "text": "Spec first: each member's invariant lines sit directly under it on the card",
+          "state": "done"
+        },
+        {
+          "text": "Spec first: a class's invariants that govern no single member go under a few dashes at the card's bottom, never an Invariants heading; read back unchanged (d9bd77f69)",
+          "state": "done"
+        },
+        {
+          "text": "Run the unit tier; fix failures (2956 pass)",
+          "state": "done"
+        },
+        {
+          "text": "Live check again; list pml-web's invariants that govern one member and those that don't",
+          "state": "done"
+        },
+        {
+          "text": "Commit by path, push, report with guardrail answers",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Bolt"
+    },
+    {
+      "id": "bdbf37e58574",
+      "text": "Queue band: flush selected cards (whatever their done state) and send them to another chat, picked from the list of chats, with instructions to file them under the right robot or the main chat",
+      "steps": [
+        {
+          "text": "Read the queue, its mod, and chat.send / chats.list",
+          "state": "done"
+        },
+        {
+          "text": "Spec first: send_to_chat in Python (which cards, message, archive here)",
+          "state": "done"
+        },
+        {
+          "text": "Build PromptQueue.send_to_chat and the prompt-queue.send_to_chat tool",
+          "state": "done"
+        },
+        {
+          "text": "register.test.tsx first: select cards, pick chat, send",
+          "state": "done"
+        },
+        {
+          "text": "Mod: selection, chat picker, send button",
+          "state": "done"
+        },
+        {
+          "text": "prompt_queue_spec + chat_spec 156/156, queue story tests 23/23; mod tests not run (no claude CLI)",
+          "state": "done"
+        },
+        {
+          "text": "Adapters regenerated (no pin), defect logged, committed 019bbd4a4 by path, pushed",
+          "state": "done"
+        },
+        {
+          "text": "Live after the next repin: send_to_chat reaches the running server only then",
+          "state": "pending"
+        }
+      ],
+      "is_done": true,
+      "robot": "Robot 9"
+    }
+  ],
+  "handoffs": [
+    "handoff-20261126T183908.md"
+  ]
+}

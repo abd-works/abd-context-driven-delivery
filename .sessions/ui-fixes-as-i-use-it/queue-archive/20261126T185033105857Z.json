@@ -1,0 +1,78 @@
+{
+  "chat": "82179ef0-da0c-4b49-a11d-f0d46aafce7e",
+  "taken_off": "2026-11-26T18:50:33.105857+00:00",
+  "prompts": [
+    {
+      "id": "8aa0fef227db",
+      "text": "Story explorer: class card, divider and realization toggle",
+      "steps": [
+        {
+          "text": "Read explorer template, story_canvas, canvas_explorer, links.py and pml-web stopgap; name TDD flows",
+          "state": "done"
+        },
+        {
+          "text": "Specs first: terms, cards, row div, card below list, close, divider, realization toggle",
+          "state": "done"
+        },
+        {
+          "text": "story_canvas: carry step terms and class cards (once by key) in explorer data",
+          "state": "done"
+        },
+        {
+          "text": "Template: row as div role=button, term click opens card, card below list, divider drag",
+          "state": "done"
+        },
+        {
+          "text": "Realization toggle per row from call_graph",
+          "state": "done"
+        },
+        {
+          "text": "Put the JS behaviours (term click, close, drag clamp, toggle) into story_explorer_heavy_spec and run it in the background",
+          "state": "done"
+        },
+        {
+          "text": "Live check: read pml-web scenario/model files only, render to a scratch folder (never write pml-web, never publish)",
+          "state": "done"
+        },
+        {
+          "text": "Commit own files, push, report",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "b56779ab42c9",
+      "text": "Plan a cached knowledge graph that a filter change never rebuilds (plan only, for approval before building)",
+      "steps": [
+        {
+          "text": "Read harness/graph, session graph, and an existing CDR for format",
+          "state": "done"
+        },
+        {
+          "text": "Trace where a format toggle and Files listing lead to a graph build",
+          "state": "done"
+        },
+        {
+          "text": "Measure toggle and one-file-change times today",
+          "state": "done"
+        },
+        {
+          "text": "Design the cache: keys, change detection, cross-file re-linking, fallback",
+          "state": "done"
+        },
+        {
+          "text": "Write the test plan with tiers and the build steps",
+          "state": "done"
+        },
+        {
+          "text": "Write the CDR, commit it by path, and push (b4b14fe11)",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Pixel"
+    }
+  ]
+}

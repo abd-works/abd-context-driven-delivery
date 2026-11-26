@@ -1,0 +1,10 @@
+{
+  "chat": "82179ef0-da0c-4b49-a11d-f0d46aafce7e",
+  "taken_off": "2026-11-26T18:41:05.692430+00:00",
+  "prompts": [
+    {
+      "id": "f76fd203b68b",
+      "text": "Read the Choose Lines part of pml-web's explorer tree with `CanvasExplorer`, and save it as the expected fixture beside the spec."
+    }
+  ]
+}

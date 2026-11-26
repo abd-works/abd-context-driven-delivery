@@ -1,0 +1,33 @@
+{
+  "chat": "82179ef0-da0c-4b49-a11d-f0d46aafce7e",
+  "taken_off": "2026-11-26T20:53:56.642630+00:00",
+  "prompts": [
+    {
+      "id": "a18df7baaad3",
+      "text": "[decision required] Approve the cached knowledge graph plan (harness/graph/.context/cdr/0005) and build it? Recommendation: yes, in its build order, differential spec first; note the 3 s one-file target depends on running only the rules a change can reach (step 6).",
+      "steps": [
+        {
+          "text": "Differential spec: graph_incremental_heavy_spec.py (482bb82bc); today's refresh equals a full build for 4 of 17 edits",
+          "state": "done"
+        },
+        {
+          "text": "Approve the build (the person's decision)",
+          "state": "pending"
+        },
+        {
+          "text": "Fix refresh faults hit on every refresh: stories only in scenario files lost; BDD spec subject flips; model-document nodes keep stale written_in",
+          "state": "pending"
+        },
+        {
+          "text": "Fix cross-file relinking: module facts on add/delete/rename, renamed class heading, renamed Python operation, renamed bounded context, renamed TS file, fact order",
+          "state": "pending"
+        },
+        {
+          "text": "Then the plan's manifest, loud fallback, change check, whole graph with filters, rule cut, timings",
+          "state": "pending"
+        }
+      ],
+      "robot": "Sparky"
+    }
+  ]
+}

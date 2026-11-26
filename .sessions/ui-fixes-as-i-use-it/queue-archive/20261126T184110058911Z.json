@@ -1,0 +1,10 @@
+{
+  "chat": "82179ef0-da0c-4b49-a11d-f0d46aafce7e",
+  "taken_off": "2026-11-26T18:41:10.058911+00:00",
+  "prompts": [
+    {
+      "id": "1835f6d987ea",
+      "text": "Repin the dev lane from this worktree: `python scripts/install.py --ide Claude --pin-runtime`, after messaging sessions on the dev lane."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "chat": "82179ef0-da0c-4b49-a11d-f0d46aafce7e",
+  "taken_off": "2026-11-26T18:41:07.030089+00:00",
+  "prompts": [
+    {
+      "id": "e872b1101f8e",
+      "text": "Render the explorer tree from `test-area/pml-web` with the story canvas code (the way `story_canvas_spec.py` builds its tree), and compare it with the expected fixture in a Mamba spec."
+    }
+  ]
+}

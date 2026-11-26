@@ -1,0 +1,26 @@
+{
+  "chat": "82179ef0-da0c-4b49-a11d-f0d46aafce7e",
+  "taken_off": "2026-11-26T18:44:45.147142+00:00",
+  "prompts": [
+    {
+      "id": "bc17e01e8bf0",
+      "text": "[decision required] Merge main into ui-fixes-as-i-use-it, so Bolt's re-render of pml-web's src-model board picks up pml-web's class-card text change (b1322f992) along with the arrow fixes? Recommendation: yes, merge once Bolt's arrow commits are pushed, then re-render the board once with both.",
+      "steps": [
+        {
+          "text": "main's b1322f992 is already in the branch, through the realizations merge 59da37725",
+          "state": "done"
+        },
+        {
+          "text": "Re-render of pml-web's src-model board cancelled: the person said not to touch pml-web's boards",
+          "state": "done"
+        },
+        {
+          "text": "Decided: no further merge, and nothing on the dev lane is changed while the person demos pml-web from it",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Rivet"
+    }
+  ]
+}

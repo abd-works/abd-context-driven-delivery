@@ -1,0 +1,324 @@
+{
+  "is_on": true,
+  "prompts": [
+    {
+      "id": "8aa0fef227db",
+      "text": "Story explorer: class card, divider and realization toggle",
+      "steps": [
+        {
+          "text": "Read explorer template, story_canvas, canvas_explorer, links.py and pml-web stopgap; name TDD flows",
+          "state": "done"
+        },
+        {
+          "text": "Specs first: terms, cards, row div, card below list, close, divider, realization toggle",
+          "state": "done"
+        },
+        {
+          "text": "story_canvas: carry step terms and class cards (once by key) in explorer data",
+          "state": "done"
+        },
+        {
+          "text": "Template: row as div role=button, term click opens card, card below list, divider drag",
+          "state": "done"
+        },
+        {
+          "text": "Realization toggle per row from call_graph",
+          "state": "done"
+        },
+        {
+          "text": "Put the JS behaviours (term click, close, drag clamp, toggle) into story_explorer_heavy_spec and run it in the background",
+          "state": "done"
+        },
+        {
+          "text": "Live check: read pml-web scenario/model files only, render to a scratch folder (never write pml-web, never publish)",
+          "state": "done"
+        },
+        {
+          "text": "Commit own files, push, report",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Sparky"
+    },
+    {
+      "id": "1a89989913e3",
+      "text": "Whiteboard class diagram arrow fixes",
+      "steps": [
+        {
+          "text": "Read context, renderer and shared ArrowRouter; name TDD flows",
+          "state": "done"
+        },
+        {
+          "text": "Drop a dependency arrow where a solid relationship links the same pair (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Straight arrow between adjacent cards with a clear gap (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Spread arrow ends along a shared card edge (spec first)",
+          "state": "done"
+        },
+        {
+          "text": "Route cross-page arrows in a lane outside the pages (spec first)",
+          "state": "pending"
+        },
+        {
+          "text": "Run the renderer and router specs (and draw.io if shared), fix failures",
+          "state": "pending"
+        },
+        {
+          "text": "Live check: render one of this repo's *-model.md files to a whiteboard in the session folder (no publish, no pml-web), judge the three fixes",
+          "state": "pending"
+        }
+      ],
+      "robot": "Bolt"
+    },
+    {
+      "id": "fd9db8278537",
+      "text": "Diagram links to mockup screens and class files",
+      "robot": "Bolt"
+    },
+    {
+      "id": "28798ce2f1da",
+      "text": "Files app right-click menu and All files scope",
+      "steps": [
+        {
+          "text": "Add the right-click menu and All files stories to the story map",
+          "state": "done"
+        },
+        {
+          "text": "Write their scenarios in story_tests/review-generated-work-in-file-viewer",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: delete a file or folder (session.delete_file)",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: validate a file or folder (session.check_changed_artifact over folders)",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: violations of a file or folder (ticket.violations_of)",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: add a file or folder to a practice: a practice root holds many folders AND files, each added to the whole practice, shown at the top of the file tree (practice-session-output.add_root; let roots accept a file)",
+          "state": "done"
+        },
+        {
+          "text": "Python test-first: every file in the session's folders (session.all_files)",
+          "state": "done"
+        },
+        {
+          "text": "Write the TypeScript adapters again",
+          "state": "done"
+        },
+        {
+          "text": "Files app test-first: menu entries, delete confirmation, practice submenu",
+          "state": "done"
+        },
+        {
+          "text": "Files app test-first: All files scope button, added roots at the top of the tree",
+          "state": "done"
+        },
+        {
+          "text": "Fix the ten NodeSourceData.files type errors",
+          "state": "done"
+        },
+        {
+          "text": "Heavy/e2e twins in a background sub-task",
+          "state": "in_progress"
+        },
+        {
+          "text": "Commit, push, report",
+          "state": "pending"
+        }
+      ],
+      "robot": "Gizmo"
+    },
+    {
+      "id": "432134f1e66e",
+      "text": "Given and When realizations: finish, test against pml-web's explorer, go live",
+      "steps": [
+        {
+          "text": "Guidance, template and rules: Given and When realizations as code-like statements",
+          "state": "done"
+        },
+        {
+          "text": "Graph reads Given realizations; new rule repositories-called-only-by-the-flow",
+          "state": "done"
+        },
+        {
+          "text": "Merge into ui-fixes-as-i-use-it (59da37725); separate ticket and branch removed",
+          "state": "done"
+        },
+        {
+          "text": "Fix test-area/check_realizations.py (take the graph from the RuleFixture)",
+          "state": "done"
+        },
+        {
+          "text": "Fix: a cloned markdown step lost its read line, so real renders carried no class-card terms (m) (8302866bb)",
+          "state": "done"
+        },
+        {
+          "text": "Expected explorer fixture cut from pml-web's version-7 Choose Lines tree, read only, with m and z added",
+          "state": "done"
+        },
+        {
+          "text": "Spec: explorer rendered from test-area/pml-web equals the fixture, realizations (z) included",
+          "state": "done"
+        },
+        {
+          "text": "DDD model rule: a domain operation never calls a repository",
+          "state": "pending"
+        },
+        {
+          "text": "Unit tier, then heavy tier in the background; commit and push",
+          "state": "pending"
+        },
+        {
+          "text": "Repin the dev lane: left for the user's word (pml-web demo runs on the dev lane)",
+          "state": "pending"
+        }
+      ],
+      "robot": "Cog"
+    },
+    {
+      "id": "b56779ab42c9",
+      "text": "Plan a cached knowledge graph that a filter change never rebuilds (plan only, for approval before building)",
+      "steps": [
+        {
+          "text": "Read harness/graph, session graph, and an existing CDR for format",
+          "state": "done"
+        },
+        {
+          "text": "Trace where a format toggle and Files listing lead to a graph build",
+          "state": "done"
+        },
+        {
+          "text": "Measure toggle and one-file-change times today",
+          "state": "done"
+        },
+        {
+          "text": "Design the cache: keys, change detection, cross-file re-linking, fallback",
+          "state": "done"
+        },
+        {
+          "text": "Write the test plan with tiers and the build steps",
+          "state": "done"
+        },
+        {
+          "text": "Write the CDR, commit it by path, and push (b4b14fe11)",
+          "state": "done"
+        }
+      ],
+      "is_done": true,
+      "robot": "Pixel"
+    },
+    {
+      "id": "c0a832f14680",
+      "text": "Queue band: a robot's row takes a click across its whole width",
+      "steps": [
+        {
+          "text": "The see-through Button covers the whole robot row (robot, name, count)",
+          "state": "done"
+        },
+        {
+          "text": "Commit and push; defect logged",
+          "state": "done"
+        },
+        {
+          "text": "Review the change: label width counts robot columns, name and count; key collapse-agent-N unchanged",
+          "state": "done"
+        },
+        {
+          "text": "Add a register.test.tsx test that the whole row takes the press (a3b503bad)",
+          "state": "done"
+        },
+        {
+          "text": "Run the mod's tests: no claude CLI on this machine, not run",
+          "state": "done"
+        },
+        {
+          "text": "Commit own files by path and push",
+          "state": "done"
+        },
+        {
+          "text": "Seen live after the next repin (not now: pml-web demo on the dev lane)",
+          "state": "pending"
+        }
+      ],
+      "robot": "Rivet"
+    },
+    {
+      "id": "a18df7baaad3",
+      "text": "[decision required] Approve the cached knowledge graph plan (harness/graph/.context/cdr/0005) and build it? Recommendation: yes, in its build order, differential spec first; note the 3 s one-file target depends on running only the rules a change can reach (step 6).",
+      "steps": [
+        {
+          "text": "Read CDR 0005 and the graph's refresh, load_working_copy and graph_worker_heavy_spec",
+          "state": "in_progress"
+        },
+        {
+          "text": "Move _practice_state comparison into harness/graph/spec_support.py, shared",
+          "state": "pending"
+        },
+        {
+          "text": "Write graph_incremental_heavy_spec.py: every edit kind on a throwaway copy of _examples/input and a repo slice",
+          "state": "pending"
+        },
+        {
+          "text": "Run it; record each place refresh differs from a full build",
+          "state": "pending"
+        },
+        {
+          "text": "Commit the spec and support by path, push",
+          "state": "pending"
+        },
+        {
+          "text": "Report findings and the four guardrail answers",
+          "state": "pending"
+        }
+      ],
+      "robot": "Widget"
+    },
+    {
+      "id": "2b0c1745cb4c",
+      "text": "Add a backlog ticket that holds all of this queue's work as context for its session",
+      "robot": "Widget"
+    },
+    {
+      "id": "0e4471021857",
+      "text": "Queue band: after pressing + to add a task, the next message sent becomes that card's task instead of a chat message",
+      "steps": [
+        {
+          "text": "Find how + with an empty prompt box arms 'type the task, then press +' (addStep in tools/prompt_queue/hooks)",
+          "state": "done"
+        },
+        {
+          "text": "Test first: with + armed on a card, the next message sent is added to that card as a task and does not reach the chat",
+          "state": "done"
+        },
+        {
+          "text": "Make the prompt.submit hook take the armed card's message as its task, then disarm (takeAwaitedStep, set_steps as + uses)",
+          "state": "done"
+        },
+        {
+          "text": "Mod tests not run (no claude CLI); committed by path a37bd1d13, pushed; logged in chat-ui-defects.md",
+          "state": "done"
+        },
+        {
+          "text": "Seen live after the next repin (not now: pml-web demo on the dev lane)",
+          "state": "pending"
+        }
+      ],
+      "robot": "Rivet"
+    }
+  ],
+  "handoffs": [
+    "handoff-20261126T183908.md"
+  ]
+}

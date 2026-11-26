@@ -1,0 +1,29 @@
+{
+  "chat": "82179ef0-da0c-4b49-a11d-f0d46aafce7e",
+  "taken_off": "2026-11-26T20:54:34.885879+00:00",
+  "prompts": [
+    {
+      "id": "280eb6e82d43",
+      "text": "[decision required] After the pml-web demo: repin the dev lane from ui-fixes-as-i-use-it and check the fixes live (format chips, board sends, robot rows, + then send, explorer class card, draw.io links)? Recommendation: yes, once you say the demo is over.",
+      "steps": [
+        {
+          "text": "Wait for the person to say the pml-web demo is over",
+          "state": "pending"
+        },
+        {
+          "text": "Reinstall and repin the dev lane from the ui-fixes-as-i-use-it worktree (brings in the new rules); /reload-plugins",
+          "state": "pending"
+        },
+        {
+          "text": "Give each robot its one-sentence theme with prompt-queue.set_theme",
+          "state": "pending"
+        },
+        {
+          "text": "Check live: format chips, board sends, robot rows and themes, + then send, send selected cards to another chat, explorer class card and realizations, draw.io links, Files app menu",
+          "state": "pending"
+        }
+      ],
+      "robot": "Pixel"
+    }
+  ]
+}
