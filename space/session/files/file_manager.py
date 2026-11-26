@@ -10,7 +10,6 @@ import hashlib
 import os
 import time
 import re
-import shutil
 from pathlib import Path
 from typing import Annotated, NamedTuple, Protocol
 
@@ -20,7 +19,6 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.installation.data_class import SourceFile, data_field, language_adapter
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
-from space.session.session_record import SESSION_FILE
 
 
 # Installed packages and caches hold no one's work. Hidden folders hold tools and caches too, but a module's .context
@@ -63,12 +61,27 @@ class OwnRecord(Protocol):
 VERSION_CONTROL_FOLDER = ".git"
 
 
+def inside_version_control(parts: tuple[str, ...]) -> bool:
+    """Whether a path of these parts lies in a .git folder or is one, in any case, as Windows reads ``.GIT`` as the same
+    folder."""
+    return any(part.casefold() == VERSION_CONTROL_FOLDER for part in parts)
+
+
+def is_link(path: Path | os.DirEntry[str]) -> bool:
+    """Whether path is a link to another file or folder: a symbolic link, or a junction, the link to a folder Windows
+    makes without the privilege a symbolic link needs. A link is followed by a read, but a delete removes the link only."""
+    return path.is_symlink() or path.is_junction()
+
+
 class VersionControlPathRefused(PermissionError):
     """A read or write aimed inside a repository's .git folder, which holds git's own record: a hook written there runs
-    on the person's next commit, and its config holds where the repository pushes. It names the path refused."""
+    on the person's next commit, and its config holds where the repository pushes; or a delete of a folder that holds
+    one, such as a nested repository's, which would leave it half deleted, as git keeps its objects read-only. It names
+    the path refused, and the .git folder it holds."""
 
-    def __init__(self, path: str) -> None:
-        super().__init__(f"{path} is inside a .git folder, which holds git's own record (its config, objects and hooks): it is neither read nor written as a file")
+    def __init__(self, path: str, held: str = "") -> None:
+        where = f"holds {held}, a .git folder" if held else "is inside a .git folder"
+        super().__init__(f"{path} {where}, which holds git's own record (its config, objects and hooks): it is neither read, written nor deleted as a file")
         self.path = path
 
 
@@ -430,26 +443,14 @@ class FileManager:
         target.write_bytes(data)
         return FileText(self._relative(target), text, version_of(data))
 
-    def delete(self, path: str) -> str:
-        """Delete path, a file or a folder with every file in it, inside one of the session's roots, named from its
-        workpath; answer it named so. The session's own session.json, and a folder holding it, are refused, since only
-        the session's tools change its record, and so is a path inside a .git folder."""
-        target = self._inside(path)
-        if self._record is not None and self._holds_record(target):
-            raise SessionRecordWriteRefused(path)
-        if target.is_dir():
-            shutil.rmtree(target)
-        else:
-            target.unlink()
-        return self._relative(target)
-
-    def _holds_record(self, target: Path) -> bool:
-        """Whether target is the session's session.json, or a folder that holds it."""
-        record = self._record
-        assert record is not None
-        if not target.is_dir():
-            return record.is_its_file(target)
-        return any(record.is_its_file(found) for found in target.rglob(SESSION_FILE))
+    def unfollowed(self, path: str) -> Path:
+        """The path named from the workpath, with the folders above it read through any link but not its own last part,
+        so a link names itself, not the folder it points to, as a delete must; refused as a read refuses a path outside
+        every root or inside a .git folder."""
+        named = self._workpath / path
+        if named.name in ("", ".", ".."):
+            return self._inside(path)
+        return self._within_roots(path, named.parent.resolve() / named.name)
 
     def find(self, pattern: str) -> list[Path]:
         """The files pattern names, written from the workpath, in the glob form Path.glob reads: `**/` is any number of
@@ -471,11 +472,14 @@ class FileManager:
     def _inside(self, path: str) -> Path:
         """The path resolved from the workpath; a page names paths, so one outside every root is refused, and so is one
         inside a .git folder under its root, in any case, as Windows reads ``.GIT`` as the same folder."""
-        target = (self._workpath / path).resolve()
+        return self._within_roots(path, (self._workpath / path).resolve())
+
+    def _within_roots(self, path: str, target: Path) -> Path:
+        """target, the absolute path path names, once it lies under one of the roots and not inside a .git folder there."""
         root = next((root for root in self._roots if target == root or root in target.parents), None)
         if root is None:
             raise PathOutsideRootsError(path)
-        if any(part.casefold() == VERSION_CONTROL_FOLDER for part in target.relative_to(root).parts):
+        if inside_version_control(target.relative_to(root).parts):
             raise VersionControlPathRefused(path)
         return target
 

@@ -6,6 +6,7 @@ checkout are given. Here git lists the worktree, so the session's checkout is fo
 example starts git on a throwaway repository of its own."""
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -113,6 +114,20 @@ with description("session.write_file") as self:
 WORK_FOLDER = "board"
 NOTES = "board/notes.txt"
 IGNORED_PACKAGE = "board/node_modules/left-pad/index.js"
+# Seed: a folder of drafts under the session's folder, and one outside every root, each reached through a link too.
+DRAFTS = "board/drafts"
+DRAFT = "board/drafts/a.md"
+OUTSIDE_NOTE = "outside/keep.md"
+
+
+def _link(link: Path, target: Path) -> None:
+    """A link to the folder target, as a person or a tool makes one: a junction on Windows, where making a symbolic link
+    needs a privilege a person seldom has, and a symbolic link elsewhere."""
+    if os.name == "nt":
+        import _winapi
+        _winapi.CreateJunction(str(target), str(link))
+    else:
+        link.symlink_to(target, target_is_directory=True)
 ADDED_ROOT = "story_tests/checkout"
 ADDED_SCENARIOS = "story_tests/checkout/checkout_story.test.md"
 
@@ -146,3 +161,64 @@ with description("session.all_files") as self:
 
         with it("should list each file in that folder once"):
             expect([path for path in self.listed() if path == ADDED_SCENARIOS]).to(equal([ADDED_SCENARIOS]))
+
+
+    # Defect gizmo-2: git lists the files under an untracked link as files of its own, so All files listed a file twice
+    # and listed a file outside every root that the file menu then refused to delete.
+    with context("with a link under its folder to a folder in it, and one to a folder outside every root"):
+        with before.each:
+            for path in (DRAFT, OUTSIDE_NOTE):
+                (self.main / path).parent.mkdir(parents=True, exist_ok=True)
+                (self.main / path).write_text("x" + chr(10), encoding="utf-8")
+            _link(self.main / "board" / "link-in", self.main / DRAFTS)
+            _link(self.main / "board" / "link-out", self.main / "outside")
+
+        with it("should list each file once, under its own path"):
+            expect([path for path in self.listed() if path.endswith("a.md")]).to(equal([DRAFT]))
+
+        with it("should list nothing reached through the link to the folder outside"):
+            expect([path for path in self.listed() if path.endswith("keep.md")]).to(equal([]))
+
+    # Defect gizmo-4: a .git folder kept as a root made git's listing fail, and All files with it.
+    with context("with git's own .git folder kept as a root of a practice, as an older version let a person add it"):
+        with it("should still list the files of its other roots"):
+            self.session.practice("stories").fidelity_outputs[0].keep_roots([self.main / ".git"])
+            expect(self.listed()).to(contain(NOTES))
+
+
+# Defect gizmo-1: a delete of a link followed it and deleted the folder it points to, with every file in it.
+with description("session.delete_file of a link") as self:
+    with before.each:
+        self.home = ExampleHome()
+        self.top = _REPOSITORIES.copy()
+        self.main = self.top / "main"
+        for path in (DRAFT, OUTSIDE_NOTE):
+            (self.main / path).parent.mkdir(parents=True, exist_ok=True)
+            (self.main / path).write_text("x" + chr(10), encoding="utf-8")
+        self.session = Sessions(self.main).named("main")
+        self.session.workpath = self.main / WORK_FOLDER
+
+    with after.each:
+        self.home.close()
+        shutil.rmtree(self.top, ignore_errors=True)
+
+    with context("that is a link under the session's folder to a folder in it"):
+        with before.each:
+            self.link = self.main / "board" / "link-in"
+            _link(self.link, self.main / DRAFTS)
+            self.answer = self.session.delete_file("board/link-in")
+
+        with it("should answer the link's own path"):
+            expect(self.answer).to(equal("board/link-in"))
+
+        with it("should remove the link"):
+            expect(os.path.lexists(self.link)).to(be_false)
+
+        with it("should keep the folder it points to and every file in it"):
+            expect((self.main / DRAFT).is_file()).to(equal(True))
+
+    with context("that is held in a folder deleted, pointing outside every root"):
+        with it("should keep every file in the folder it points to"):
+            _link(self.main / DRAFTS / "link-out", self.main / "outside")
+            self.session.delete_file(DRAFTS)
+            expect([(self.main / DRAFTS).exists(), (self.main / OUTSIDE_NOTE).is_file()]).to(equal([False, True]))

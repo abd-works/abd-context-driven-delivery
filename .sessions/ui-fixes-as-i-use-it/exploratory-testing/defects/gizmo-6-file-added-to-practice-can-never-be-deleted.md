@@ -25,3 +25,17 @@ Either the file is deleted (and dropped from the practice's roots), or the refus
 ## Tier that should catch it
 
 Unit (`file-menu.spec.ts` / `session_files_spec.py`): the refusal is tested with a folder root only.
+
+## Triage
+
+- **Status:** confirmed (the message); question for the person (a way to take a root back)
+- **Severity:** misleading message
+- **Triaged by:** Hinge
+
+Reproduced with roots.py: deleting a file added to Clean Engineering was refused with "delete the files and folders in it". No scenario gives the person a way to take a root out of a practice; the menu has none. Recommendation for the person: a "Remove from practice" choice (a `remove_root` on the practice, dropping it from each fidelity's roots), after which a delete is allowed; I did not add it, as it is new behaviour with no scenario.
+
+## Fix
+
+Row "board/notes.md, a file a person added to a practice" in the Refuse outline of `story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md`. Test: `space/session/files/session_files_spec.py` (unit), `session.delete_file` that names a file a person added to a practice: refused saying it is a file a practice reads as a root (seen failing). Fix: *RootDeleteRefused* says, for a file root, "... is one of the session's roots, a file a practice reads as a root, which is not deleted while it is one"; a folder root keeps "delete the files and folders in it"; a folder holding a root says which root.
+
+Commit: COMMIT

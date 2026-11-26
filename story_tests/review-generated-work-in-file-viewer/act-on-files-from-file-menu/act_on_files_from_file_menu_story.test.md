@@ -39,6 +39,19 @@ Requested (the person, 2026-11-26): "a right-click menu on the file viewer's fol
 *When* the Person deletes *board/drafts* from its menu and confirms
 *Then* the folder and both files are gone
 
+#### Scenario: Delete a link, keeping what it points to
+
+*Given* *board/link-in* is a link (a junction on Windows) to the folder *board/drafts*, which holds two files
+*When* the Person deletes *board/link-in* from its menu and confirms
+*Then* the link is gone, and the session answers *board/link-in*
+*And* *board/drafts* and both its files stay
+
+#### Scenario: Keep what a link in a deleted folder points to
+
+*Given* the folder *board/drafts* holds a link to the folder *outside*, outside every root
+*When* the Person deletes *board/drafts* and confirms
+*Then* *board/drafts* is gone, and every file in *outside* stays
+
 #### Scenario Outline: Refuse what may not be deleted
 
 *Given* the session works in *board*
@@ -50,9 +63,13 @@ Requested (the person, 2026-11-26): "a right-click menu on the file viewer's fol
 |---|---|
 | notes.md, outside the session's roots | PathOutsideRootsError |
 | board, a root itself | RootDeleteRefused |
+| board/deep, a folder holding the root board/deep/nested/root a person added | RootDeleteRefused, naming the root it holds |
+| board/notes.md, a file a person added to a practice | RootDeleteRefused, saying it is a file a practice reads as a root |
 | .sessions/checkout-flow/session.json | SessionRecordWriteRefused |
 | .sessions/checkout-flow, the folder holding session.json | SessionRecordWriteRefused |
 | board/.git/config | VersionControlPathRefused |
+| board/vendor, a folder holding a nested repository's .git | VersionControlPathRefused, naming the .git folder it holds |
+| board/ro, a folder holding a read-only file | ReadOnlyDeleteRefused, naming the read-only file |
 | board/missing.md, not there | NamedPathNotFoundError |
 
 ## Story: Validate File Or Folder From File Menu
@@ -126,3 +143,21 @@ Requested (the person, 2026-11-26): "a right-click menu on the file viewer's fol
 
 *When* a path outside the project is added to a practice
 *Then* the session refuses it with OutputRootRefused, and session.json is unchanged
+
+#### Scenario: Refuse git's own folder
+
+*When* *.git*, or a path inside it, is added to a practice
+*Then* the session refuses it with OutputRootRefused, saying it holds git's own record, and session.json is unchanged
+
+#### Scenario: Refuse a root the practice already has
+
+*Given* *board/.context* is a root of every Stories fidelity
+*When* the Person adds *board/.context* to Stories
+*Then* the session refuses it with OutputRootRefused, saying *board/.context is already a root of Stories*
+*And* the page says *board/.context was not added to Stories*, with that reason, and session.json is unchanged
+
+#### Scenario: Name the project's top folder added as a root
+
+*Given* the session works in *board*
+*When* the Person adds the project's top folder to Stories
+*Then* the practice's added roots name it *.* (`PracticeSessionOutput.added_roots`), never an empty name

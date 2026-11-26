@@ -28,3 +28,17 @@ And the file menu cannot act on what it lists: `delete_file("board/link-out/keep
 ## Tier that should catch it
 
 Heavy (`session_files_heavy_spec.py` runs real git; no example holds a link under the root).
+
+## Triage
+
+- **Status:** confirmed
+- **Severity:** wrong result
+- **Triaged by:** Hinge
+
+Reproduced with roots.py: All files listed `board/link-in/a.md`, `b.md` and `board/link-out/keep.md`. git ls-files --others walks into an untracked junction.
+
+## Fix
+
+Scenario "List no file through a link" in `story_tests/review-generated-work-in-file-viewer/filter-files-in-files-app/filter_files_in_files_app_story.test.md`. Test: `space/session/files/session_files_heavy_spec.py` (heavy), `session.all_files` with a link to a folder in it and one outside every root: each file once under its own path, nothing through the link outside; seen failing on HEAD. Fix: `SessionFiles._files_at` leaves out every file whose folder below the root is a link (`is_link`, a symbolic link or a junction, checked once per folder).
+
+Commit: COMMIT

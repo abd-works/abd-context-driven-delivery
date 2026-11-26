@@ -71,6 +71,25 @@ Requested (the person, 2026-11-26): an "All files" scope button, placed before t
 *When* the Person lists all files
 *Then* no file under *board/node_modules* is listed
 
+#### Scenario: List no file through a link
+
+*Given* *board/link-in* is a link to *board/drafts*, and *board/link-out* a link to *outside*, outside every root
+*When* the Person lists all files
+*Then* each file in *board/drafts* is listed once, under *board/drafts*
+*And* no file in *outside* is listed
+
+#### Scenario: Leave out what a change to session.json leaves beside it
+
+*Given* a *session.json* under the session's roots has its lock file beside it
+*When* the Person lists all files
+*Then* the lock file is not listed
+
+#### Scenario: Keep listing when git's own folder is a root
+
+*Given* an older session.json keeps *.git* as a root of a practice
+*When* the Person lists all files
+*Then* the files of the session's other roots are listed, and nothing from *.git*
+
 #### Scenario: Go back to the selected files
 
 *Given* the Person listed all files

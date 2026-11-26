@@ -39,6 +39,8 @@ List and read the files under a session's roots, the folders its practices work 
 + write(path: str, text: str, version: str = ''): FileText
 	// a file on disk that is no longer the version its read answered raises FileChangedSinceReadError and is left as it is
 + find(pattern: str): list[Path]
++ unfollowed(path: str): Path
+	// the path with its folders read through any link but not its last part, so a link names itself, as a delete needs; refused as read refuses
 ---<<creates>>--> Folder
 ---<<creates>>--> FileText
 ---<<raises>>--> PathOutsideRootsError
@@ -73,9 +75,9 @@ The text of one file, with its path from the workpath; no text for a file that i
 
 ## VersionControlPathRefused : PermissionError
 
-A read or write aimed inside a repository's .git folder, which holds git's own record: a hook written there runs on the person's next commit.
+A read or write aimed inside a repository's .git folder, which holds git's own record: a hook written there runs on the person's next commit; or a delete of a folder holding one, such as a nested repository's.
 
-+ VersionControlPathRefused(path: str)
++ VersionControlPathRefused(path: str, held: str = '')
 ------
 + path: str
 ----
@@ -89,6 +91,38 @@ A write of a file that is no longer the version its caller read: changed, made o
 + path: str
 + version: str
 + on_disk: str
+----
+
+## FileDeletion
+
+The delete of one file, folder or link a person chose in the Files app's file menu (`session.delete_file`, through SessionFiles): a link is removed and what it points to kept; a folder goes with every file in it only once every path it holds was checked, never through a link, so a refused delete deletes nothing.
+
++ FileDeletion(path: str, target: Path, record: OwnRecord)
+------
+----
++ run()
+	// refuses a folder holding a .git folder, the session's session.json or a folder holding it, and a read-only file or a folder holding one
+---<<raises>>--> VersionControlPathRefused
+---<<raises>>--> SessionRecordWriteRefused
+---<<raises>>--> ReadOnlyDeleteRefused
+---<<raises>>--> FolderPartlyDeleted
+
+## ReadOnlyDeleteRefused : PermissionError
+
+A delete of a read-only file, or of a folder holding one, which Windows would stop half-way on. Nothing is deleted.
+
++ ReadOnlyDeleteRefused(path: str, read_only: str)
+------
++ path: str
+----
+
+## FolderPartlyDeleted : OSError
+
+A folder's delete the file system stopped part of the way after every check passed, such as on a file another program holds open: it says part is gone.
+
++ FolderPartlyDeleted(path: str, reason: OSError)
+------
++ path: str
 ----
 
 ## PathOutsideRootsError : ValueError

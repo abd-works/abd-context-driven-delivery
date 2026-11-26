@@ -1,6 +1,8 @@
 """SessionFiles - the files a session's calls name, read from its project and refused when they are not there."""
 
 import json
+import os
+import stat
 import tempfile
 from pathlib import Path
 
@@ -11,6 +13,7 @@ from harness.agent_tools.agent_tools import AgentToolSet, ToolsetReference
 from space.session import Session, Sessions
 from space.session.session import SessionNotFoundError
 from space.session.files.file_manager import FileChangedSinceReadError, PathOutsideRootsError, SessionRecordWriteRefused, VersionControlPathRefused
+from space.session.files.file_deletion import ReadOnlyDeleteRefused
 from space.session.files.session_files import NamedPathNotFoundError, RootDeleteRefused
 from space.session.spec_support.throwaway_project import OPEN_PROJECTS, ThrowawayProject
 
@@ -384,6 +387,65 @@ with description("session.delete_file") as self:
             (self.project.root / ".git" / "config").write_text("[core]" + chr(10), encoding="utf-8")
             expect(lambda: self.delete(".git/config")).to(raise_error(VersionControlPathRefused))
 
+    # Defect gizmo-3: a delete of a folder holding a root took the root, which a delete of the root itself refuses.
+    with context("that names a folder holding a root a person added to a practice"):
+        with before.each:
+            Sessions(self.project.root).named("checkout-flow").practice("clean_engineering").add_root("src/drafts/deep")
+            (self.drafts / "deep").mkdir()
+
+        with it("should refuse it, naming the root it holds"):
+            expect(lambda: self.delete("src/drafts")).to(raise_error(RootDeleteRefused, contain("src/drafts holds src/drafts/deep")))
+
+        with it("should keep the folder and every file in it"):
+            try:
+                self.delete("src/drafts")
+            except RootDeleteRefused:
+                pass
+            expect((self.drafts / "one.md").is_file()).to(equal(True))
+
+    # Defect gizmo-6: the refusal of a file root told the person to delete the files and folders in it.
+    with context("that names a file a person added to a practice"):
+        with it("should refuse it, saying it is a file the practice reads as a root"):
+            Sessions(self.project.root).named("checkout-flow").practice("clean_engineering").add_root("src/cart.py")
+            expect(lambda: self.delete("src/cart.py")).to(raise_error(RootDeleteRefused, contain("src/cart.py is one of the session's roots, a file")))
+
+    # Defect gizmo-8: a folder holding a nested repository's .git was deleted into a corrupt half.
+    with context("that names a folder holding a nested repository's .git folder"):
+        with before.each:
+            self.vendor = self.project.root / "src" / "vendor"
+            (self.vendor / ".git").mkdir(parents=True)
+            (self.vendor / ".git" / "HEAD").write_text("ref: refs/heads/main" + chr(10), encoding="utf-8")
+            (self.vendor / "v.md").write_text("v", encoding="utf-8")
+
+        with it("should refuse it, naming the .git folder it holds"):
+            expect(lambda: self.delete("src/vendor")).to(raise_error(VersionControlPathRefused, contain("src/vendor holds .git")))
+
+        with it("should delete nothing in it"):
+            try:
+                self.delete("src/vendor")
+            except VersionControlPathRefused:
+                pass
+            expect([(self.vendor / "v.md").is_file(), (self.vendor / ".git" / "HEAD").is_file()]).to(equal([True, True]))
+
+    # Defect gizmo-8: a folder delete stopped half-way on a read-only file and said nothing was deleted.
+    with context("that names a folder holding a read-only file"):
+        with before.each:
+            self.kept = self.drafts / "two.md"
+            os.chmod(self.kept, stat.S_IREAD)
+
+        with after.each:
+            os.chmod(self.kept, stat.S_IWRITE | stat.S_IREAD)
+
+        with it("should refuse it, naming the read-only file"):
+            expect(lambda: self.delete("src/drafts")).to(raise_error(ReadOnlyDeleteRefused, contain("src/drafts", "two.md", "read-only")))
+
+        with it("should delete nothing in it"):
+            try:
+                self.delete("src/drafts")
+            except ReadOnlyDeleteRefused:
+                pass
+            expect((self.drafts / "one.md").is_file()).to(equal(True))
+
     with context("that names a file outside the session's roots"):
         with it("should refuse it, keeping the file"):
             outside = tempfile.TemporaryDirectory()
@@ -422,6 +484,15 @@ with description("session.all_files") as self:
         with it("should list that file as well"):
             self.session.practice("stories").add_root("README.md")
             expect(self.listed()).to(contain("README.md"))
+
+    # Defect gizmo-5: All files listed the lock file a change to session.json leaves beside it.
+    with context("with a session.json under its folder that a change held"):
+        with it("should leave out the lock file the change left beside it"):
+            record = self.project.root / "board" / ".sessions" / "old" / "session.json"
+            record.parent.mkdir(parents=True)
+            record.write_text("{}", encoding="utf-8")
+            (record.parent / "session.json.lock").write_text("", encoding="utf-8")
+            expect(self.listed()).not_to(contain("board/.sessions/old/session.json.lock"))
 
     with context("with a folder inside it added to a practice"):
         with it("should list each file in it once"):

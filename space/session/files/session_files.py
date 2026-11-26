@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import os
 import time
+from functools import cache
+from itertools import takewhile
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
 
 from harness.git.git import Git
-from space.session.files.file_manager import FileEntry, FileManager, FileText, PathOutsideRootsError
+from space.session.files.file_deletion import FileDeletion
+from space.session.files.file_manager import FileEntry, FileManager, FileText, PathOutsideRootsError, inside_version_control, is_link
 
 if TYPE_CHECKING:
     from space.session.session import Session
@@ -37,12 +40,19 @@ class EmptyPathNamedError(ValueError):
 
 
 class RootDeleteRefused(PermissionError):
-    """A delete aimed at one of the session's roots itself, the folder it works in or a folder a practice writes under:
-    deleting it would take every file the session works on, and leave its practices writing into nothing. It names the
-    path refused."""
+    """A delete aimed at one of the session's roots, the folder it works in, a folder a practice writes under, or a file
+    or folder a person added to a practice, or at a folder holding one: deleting it would take every file the session
+    works on there, and leave its practices reading and writing into nothing. It names the path refused, and the root it
+    holds when it is not the root itself."""
 
-    def __init__(self, path: str) -> None:
-        super().__init__(f"{path} is one of the session's roots, which is not deleted: delete the files and folders in it")
+    def __init__(self, path: str, root: str, is_folder: bool) -> None:
+        if root:
+            reason = f"{path} holds {root}, one of the session's roots, which is not deleted: delete the files and folders beside it"
+        elif is_folder:
+            reason = f"{path} is one of the session's roots, which is not deleted: delete the files and folders in it"
+        else:
+            reason = f"{path} is one of the session's roots, a file a practice reads as a root, which is not deleted while it is one"
+        super().__init__(reason)
         self.path = path
 
 
@@ -147,13 +157,20 @@ class SessionFiles:
         return [files[path] for path in sorted(files)]
 
     def _files_at(self, root: Path) -> list[Path]:
-        """The file root is, or every file under the folder it is, as ``under_root`` lists a folder's files."""
+        """The file root is, or every file under the folder it is, as ``under_root`` lists a folder's files: each once,
+        under its own path, so a file reached through a link under root is left out, listed under its own path when that
+        is in a root and not at all when it lies outside every root; what a change to a session.json leaves beside it is
+        no one's work and is left out; and a root inside a .git folder lists nothing, as git lists nothing there."""
+        if inside_version_control(root.parts):
+            return []
         if root.is_file():
             return [root]
         if not root.is_dir():
             return []
         listed = self._tracked_under(root) if self._session.repo.is_clone else self._walked_under(root)
-        return [path for path in listed if path.is_file()]
+        record = self._session.record
+        linked = cache(is_link)
+        return [path for path in listed if path.is_file() and not record.is_left_beside(path) and not any(map(linked, _folders_between(root, path)))]
 
     def _tracked_under(self, root: Path) -> list[Path]:
         listed = Git(root).listed("ls-files", "--cached", "--others", "--exclude-standard")
@@ -180,13 +197,25 @@ class SessionFiles:
         may be deleted lies under the session's roots: a path outside them is refused (*PathOutsideRootsError*), as is a
         root itself (*RootDeleteRefused*), a path not there (*NamedPathNotFoundError*), and, by the file manager, the
         session's own session.json or a folder holding it, and anything inside a .git folder."""
-        path = self.existing(named).resolve()
-        if not self.in_root(path):
+        target = self._deletable(named)
+        FileDeletion(str(named), target, self._session.record).run()
+        return self._session.repo.path_from_top(target)
+
+    def _deletable(self, named: str | Path) -> Path:
+        """The path named, a link itself and not what it points to, once it lies under the session's roots and neither is
+        nor holds one of them: every path a delete removes is checked before anything is deleted."""
+        if not str(named).strip():
+            raise EmptyPathNamedError(str(named))
+        target = self._from_project.unfollowed(str(self._session.checkout.root / named))
+        if not os.path.lexists(target):
+            raise NamedPathNotFoundError(str(named), self._session.checkout.root)
+        if not self.in_root(target):
             raise PathOutsideRootsError(str(named))
-        if path in self._roots:
-            raise RootDeleteRefused(str(named))
-        self._from_project.delete(str(path))
-        return self._session.repo.path_from_top(path)
+        root = next((root for root in self._roots if root == target or (target in root.parents and root.exists())), None)
+        if root is not None:
+            held = "" if root == target else self._session.repo.path_from_top(root)
+            raise RootDeleteRefused(str(named), held, target.is_dir() and not is_link(target))
+        return target
 
     def existing(self, named: str | Path) -> Path:
         """The path named, read as the session reads every path its agent writes (``SessionPaths.path_named``), once
@@ -216,6 +245,12 @@ class SessionFiles:
     def _roots(self) -> tuple[Path, ...]:
         """The session's roots, resolved: the folder it works in and each folder its file manager reads."""
         return tuple(Path(root).resolve() for root in (self._session.work_root, *self.file_manager.roots))
+
+
+def _folders_between(root: Path, path: Path) -> Iterable[Path]:
+    """The folders path lies in below root, root left out: a link among them would lead the listing to a file twice, or
+    to a file outside root."""
+    return takewhile(lambda folder: folder != root, path.parents)
 
 
 # The folders a root outside a repository never lists files from: version control, dependencies, builds, caches.

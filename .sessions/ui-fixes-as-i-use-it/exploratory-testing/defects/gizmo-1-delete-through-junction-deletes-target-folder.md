@@ -34,3 +34,17 @@ Heavy (a real junction or symlink on disk): `session_files_spec.py` stubs the fo
 ## Also seen in the Files app (real stack, ports 18750/18751, `scripts/ui4.py`)
 
 All files, Folders, open `board/drafts/a.md`, right-click folder `board/link-in`, Delete..., confirm. The page asks "Delete board/link-in? This cannot be undone." and toasts "Deleted board/link-in", but `board/drafts` is what went. The open file `board/drafts/a.md` stays open showing its old text (`x`), since the page closes only an open file under the path it asked to delete (`FilesPage.forget('board/link-in')`), not under the path the session answers (`board/drafts`): a stale view of a deleted file.
+
+## Triage
+
+- **Status:** confirmed
+- **Severity:** wrong result, data loss
+- **Triaged by:** Hinge
+
+Reproduced with Gizmo's seed and delete.py on a throwaway project: `delete_file('board/link-in')` answered `board/drafts` and deleted it with a.md and b.md. `SessionFiles.delete` resolved the named path, following the junction, before the root checks and the delete.
+
+## Fix
+
+Scenarios "Delete a link, keeping what it points to" and "Keep what a link in a deleted folder points to" in `story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md`. Test: `space/session/files/session_files_heavy_spec.py` (heavy), `session.delete_file of a link` (a junction on Windows, a symbolic link elsewhere): answers the link's own path, removes the link, keeps the folder it points to; seen failing on HEAD (3 of 3; the folder-holding-a-link example passed on HEAD too, as shutil.rmtree does not follow a nested junction, and stays as a guard). Fix: `SessionFiles._deletable` names the path through `FileManager.unfollowed` (folders above read through links, the last part not), and the new `FileDeletion` (`space/session/files/file_deletion.py`) removes a link with `unlink`, never what it points to, and walks a folder without following links. A file named through a link (`board/link-in/a.md`) is the same file as `board/drafts/a.md` and is deleted, answered as `board/drafts/a.md`; All files no longer lists the link's path (gizmo-2), so the page never offers it.
+
+Commit: COMMIT
