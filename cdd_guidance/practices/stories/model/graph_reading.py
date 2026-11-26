@@ -158,9 +158,11 @@ class StoriesReading(PracticeReading):
         if clean is not None:
             StoryLinks(self.story_tree, clean).link()
         domain = self.domain_model
-        if domain is not None:
-            TermLinks(self.story_tree, domain).link()
         models = [model for model in (domain, clean) if model is not None]
+        # A domain term links to its heading in whichever model defines it: DDD's domain model or a Clean Engineering
+        # class model, so a step names the class either way.
+        for model in models:
+            TermLinks(self.story_tree, model).link()
         if models:
             RealizationLinks(self.story_tree, models).link()
         ModelledAreas(self.story_tree).record()

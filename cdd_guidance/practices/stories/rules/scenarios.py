@@ -165,9 +165,10 @@ _DOMAIN_CLASS_TYPES = ("EntityRoot", "Entity", "ValueObject")
 
 
 class DomainTermsLinkToModel(StepRule):
-    """Which underlined terms are domain terms comes from the DDD model loaded beside the stories: a term that names one
-    of its classes, as the class (LineItem) or as words (line item). Without a DDD model there is no heading to link
-    to, so the rule passes."""
+    """Which underlined terms are domain terms comes from the models loaded beside the stories: the DDD domain model's
+    classes, and the classes a Clean Engineering model document (``*-model.md``) declares. A term that names one of
+    them, as the class (LineItem) or as words (line item), is a domain term. Without either model there is no heading
+    to link to, so the rule passes."""
 
     slug = "domain-terms-link-to-model"
     node_types = ("Step", "Given", "When", "Then")
@@ -189,11 +190,22 @@ class DomainTermsLinkToModel(StepRule):
         return [Finding(node, f"Step {text!r} names the domain terms {unlinked} without linking them to their headings in the domain model.")]
 
     def _class_keys(self, context: RuleCheckContext) -> set[str]:
-        """Each class of the DDD model as the key a term is matched by: its name lower case, with no spaces."""
-        ddd = context.practice.reading.domain_model
-        if ddd is None:
-            return set()
-        return {self._key(node.name) for kind in _DOMAIN_CLASS_TYPES for node in ddd.in_graph.nodes(kind)}
+        """Each class of the DDD model, and each class a Clean Engineering model document declares, as the key a term
+        is matched by: its name lower case, with no spaces. Classes read from code are left out: a model document is
+        what a term links to."""
+        reading = context.practice.reading
+        keys: set[str] = set()
+        ddd = reading.domain_model
+        if ddd is not None:
+            keys |= {self._key(node.name) for kind in _DOMAIN_CLASS_TYPES for node in ddd.in_graph.nodes(kind)}
+        clean = reading.object_model
+        if clean is not None:
+            keys |= {
+                self._key(node.name)
+                for node in clean.in_graph.nodes("OoadClass")
+                if node.source is not None and (node.source.file or "").endswith("-model.md")
+            }
+        return keys
 
     def _key(self, name: str) -> str:
         """The name lower case, with no spaces, hyphens, or underscores, and no plural s: line items and LineItem
