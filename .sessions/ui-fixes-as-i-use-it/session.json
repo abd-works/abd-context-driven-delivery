@@ -51,7 +51,7 @@
       }
     },
     "clean_engineering": {
-      "enabled": false,
+      "enabled": true,
       "fidelities": {
         "code": {
           "formats": [
@@ -72,7 +72,7 @@
     }
   },
   "guidance": {
-    "version": 11,
+    "version": 12,
     "stages": [
       "discovery",
       "specification",
