@@ -79,6 +79,10 @@ export type ChatBarViewJson = {
   // in a further box beside it; empty for none. Both close each time the session list opens.
   isBacklogOpen: boolean
   openBacklogParent: string
+  // The place of the first item the BACKLOG box shows, and of the first child item the opened parent's box shows, when
+  // the chat has too few rows for all of them; each starts at 0 when its box opens.
+  backlogFirst: number
+  backlogChildFirst: number
 }
 
 // One repository in the repos folder, as repos.siblings answers it.

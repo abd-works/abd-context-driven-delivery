@@ -25,8 +25,10 @@ const chatBarView = atom(
     newSessionFolder: '',
     isBacklogOpen: false,
     openBacklogParent: '',
+    backlogFirst: 0,
+    backlogChildFirst: 0,
   } as ChatBarViewJson,
-  { shape: 'chat-bar-view-13' },
+  { shape: 'chat-bar-view-14' },
 )
 
 // A press turns choice on or off; the chosen stay in the order the Ticket offers them, so a choice sent reads the same
@@ -41,12 +43,12 @@ export function currentChatBarView($: EngineInterface) {
 
 // The session list opens with the Backlog closed, so it is no taller than the sessions it lists.
 export async function toggleSessionList($: EngineInterface): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, isSessionListOpen: !view.isSessionListOpen, isRepoListOpen: false, isCardOpen: false, isBacklogOpen: false, openBacklogParent: '' }))
+  await update($, chatBarView, view => ({ ...view, isSessionListOpen: !view.isSessionListOpen, isRepoListOpen: false, isCardOpen: false, isBacklogOpen: false, openBacklogParent: '', backlogFirst: 0, backlogChildFirst: 0 }))
 }
 
 // The Backlog row of the session list opens the BACKLOG box beside the list, or closes it with any parent opened in it.
 export async function toggleBacklog($: EngineInterface): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, isBacklogOpen: !view.isBacklogOpen, openBacklogParent: '' }))
+  await update($, chatBarView, view => ({ ...view, isBacklogOpen: !view.isBacklogOpen, openBacklogParent: '', backlogFirst: 0, backlogChildFirst: 0 }))
 }
 
 // The repo list opens alone, so the bar below it stays in view.
@@ -71,7 +73,17 @@ export async function chooseNewSessionFolder($: EngineInterface, newSessionFolde
 // A press on a parent's + N in the BACKLOG box opens its child items in a further box, in place of another parent's;
 // a press on its - N closes it.
 export async function toggleBacklogParent($: EngineInterface, title: string): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, openBacklogParent: view.openBacklogParent === title ? '' : title }))
+  await update($, chatBarView, view => ({ ...view, openBacklogParent: view.openBacklogParent === title ? '' : title, backlogChildFirst: 0 }))
+}
+
+// A press on ▲ or ▼ in the BACKLOG box shows the page of items that starts at first.
+export async function showBacklogFrom($: EngineInterface, first: number): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, backlogFirst: first }))
+}
+
+// The same in the box of the opened parent's child items.
+export async function showBacklogChildrenFrom($: EngineInterface, first: number): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, backlogChildFirst: first }))
 }
 
 export async function closeSessionList($: EngineInterface): Promise<void> {

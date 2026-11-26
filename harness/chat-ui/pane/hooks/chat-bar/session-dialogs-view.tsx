@@ -5,7 +5,7 @@ import type { ChatBarDraw } from './chat-bar-view'
 import { LIST_FRAME, repoListShiftOf, sessionListShiftOf } from './bar-columns'
 import { MAIN_SESSION } from './chat-bar-client'
 import { activateTicket, chooseSessionFolder, closeSession, createSession, openRepo, startBacklogItem } from './session-client'
-import { cancelClose, chooseNewSessionFolder, losesWork, toggleBacklog, toggleBacklogParent, toggleLeaving } from './session-dialogs-client'
+import { cancelClose, chooseNewSessionFolder, losesWork, showBacklogChildrenFrom, showBacklogFrom, toggleBacklog, toggleBacklogParent, toggleLeaving } from './session-dialogs-client'
 import { stageIconOf } from './stage-client'
 
 type ElementTable = ReturnType<EngineInterface['ui']['resolve']>
@@ -68,7 +68,7 @@ function sessionLabels(tickets: { name: string; stage: string }[]): { name: stri
 // the Backlog, closed, saying how many items it holds. Main is listed first as the session this chat works on; opening a
 // ticket finds its chat or starts one in its worktree. A ticket's own chat works only on that ticket, so it has no list.
 // The list and the boxes the Backlog opens share one row, its right edge under the line's end: the Backlog's items and a
-// parent's child items stand beside the list rather than above it, so the chat's height holds them.
+// parent's child items stand beside the list rather than above it, a page at a time, so the chat's height holds them.
 export function SessionListView($: EngineInterface, { Box, Button, Input, Text }: ElementTable, { chatBar, view, version, maxRows }: ChatBarDraw) {
   if (!view.isSessionListOpen || !chatBar.isMain) return null
   const boxes = backlogBoxesOf(chatBar, view, maxRows)
@@ -129,27 +129,32 @@ const HEADING_ROWS = 1
 type BacklogLine = { title: string; children: number }
 
 // A box the Backlog opens beside the session list: the BACKLOG box, or the box of one parent's child items, headed by
-// the parent's title. Its lines run down a column as far as the chat has rows above the line, then on in the next, so a
-// long Backlog grows sideways and never past the chat's height.
-type BacklogBox = { key: string; heading: string; columns: BacklogLine[][]; cells: number; rows: number }
+// the parent's title. It shows as many lines as the chat has rows above the line; with more, its heading says which
+// of how many it shows, and its ▲ and ▼ show the page before and the page after, so a long Backlog never grows past the
+// chat's height or its left edge. first is the place of the first line shown, and page how many it shows.
+type BacklogBox = { key: string; heading: string; lines: BacklogLine[]; total: number; first: number; page: number; cells: number; rows: number }
 
-function backlogBoxOf(key: string, heading: string, lines: BacklogLine[], maxRows: number): BacklogBox {
-  const perColumn = Math.max(1, maxRows - LINE_ROWS - LIST_BORDER_ROWS - HEADING_ROWS)
-  const columns: BacklogLine[][] = []
-  for (let first = 0; first < lines.length; first += perColumn) columns.push(lines.slice(first, first + perColumn))
-  const columnCells = columns.map(column => Math.max(...column.map(backlogLineCellsOf)))
-  const cells = Math.max(heading.length, columnCells.reduce((sum, width) => sum + width, 0) + (columns.length - 1) * BOX_GAP)
-  return { key, heading, columns, cells, rows: HEADING_ROWS + Math.min(perColumn, lines.length) + LIST_BORDER_ROWS }
+const PAGE_UP = '▲'
+const PAGE_DOWN = '▼'
+const pagedOf = (first: number, shown: number, total: number): string => `${first + 1}–${first + shown} of ${total}`
+const isPaged = (box: BacklogBox): boolean => box.total > box.page
+
+function backlogBoxOf(key: string, heading: string, lines: BacklogLine[], maxRows: number, asked: number): BacklogBox {
+  const page = Math.max(1, maxRows - LINE_ROWS - LIST_BORDER_ROWS - HEADING_ROWS)
+  const first = Math.max(0, Math.min(asked, lines.length - page))
+  const pagingCells = lines.length > page ? PAGE_UP.length + PAGE_DOWN.length + pagedOf(lines.length - 1, 1, lines.length).length + 3 * BOX_GAP : 0
+  const cells = Math.max(heading.length + pagingCells, ...lines.map(backlogLineCellsOf))
+  return { key, heading, lines: lines.slice(first, first + page), total: lines.length, first, page, cells, rows: HEADING_ROWS + Math.min(page, lines.length) + LIST_BORDER_ROWS }
 }
 
 // The boxes open beside the session list, left of it in the order drawn: the opened parent's child items, then the
 // BACKLOG box; none while the Backlog is closed.
 function backlogBoxesOf(chatBar: ChatBarDraw['chatBar'], view: ChatBarDraw['view'], maxRows: number): BacklogBox[] {
   if (!view.isBacklogOpen || !chatBar.backlogItems.length) return []
-  const items = backlogBoxOf(BACKLOG_BOX, 'BACKLOG', chatBar.backlogItems.map(item => ({ title: item.title, children: item.children.length })), maxRows)
+  const items = backlogBoxOf(BACKLOG_BOX, 'BACKLOG', chatBar.backlogItems.map(item => ({ title: item.title, children: item.children.length })), maxRows, view.backlogFirst)
   const parent = chatBar.backlogItems.find(item => item.title === view.openBacklogParent && item.children.length)
   if (!parent) return [items]
-  return [backlogBoxOf('session-backlog-children-box', shownTitleOf(parent.title), parent.children.map(child => ({ title: child.title, children: 0 })), maxRows), items]
+  return [backlogBoxOf('session-backlog-children-box', shownTitleOf(parent.title), parent.children.map(child => ({ title: child.title, children: 0 })), maxRows, view.backlogChildFirst), items]
 }
 
 const BACKLOG_BOX = 'session-backlog-box'
@@ -171,22 +176,26 @@ function BacklogToggleView($: EngineInterface, { Button }: Pick<ElementTable, 'B
   return <Button key="session-backlog-toggle" plain label={backlogToggleLabelOf(chatBar, view.isBacklogOpen)} onPress={() => toggleBacklog($)} />
 }
 
-// A box beside the session list: its heading, then its lines in columns. Each item is a whole button that starts it as
-// the board moves an item out of the Backlog; a parent's + N opens its child items in a further box, its - N closes it.
+// A box beside the session list: its heading, then its lines. Each item is a whole button that starts it as the board
+// moves an item out of the Backlog; a parent's + N opens its child items in a further box, its - N closes it. A box with
+// more lines than it shows has ▲ and ▼ beside its heading, each a page's step, and says which lines it shows.
 function BacklogBoxView($: EngineInterface, { Box, Button, Text }: Pick<ElementTable, 'Box' | 'Button' | 'Text'>, box: BacklogBox, openParent: string) {
-  const columnKey = box.key === BACKLOG_BOX ? 'session-backlog-column' : 'session-backlog-children-column'
   return (
     <Box key={box.key} flexDirection="column" paddingX={1} borderStyle="round" borderColor={BRAND.border} backgroundColor={BRAND.raised}>
-      <Text key={`${box.key}-heading`} color={BRAND.muted}>{box.heading}</Text>
-      <Box key={`${box.key}-columns`} flexDirection="row" gap={BOX_GAP}>
-        {box.columns.map((column, place) => (
-          <Box key={`${columnKey}-${place}`} flexDirection="column">
-            {column.map(line => BacklogLineView($, { Box, Button }, line, line.title === openParent))}
-          </Box>
-        ))}
+      <Box key={`${box.key}-heading-row`} flexDirection="row" gap={BOX_GAP}>
+        <Text key={`${box.key}-heading`} color={BRAND.muted}>{box.heading}</Text>
+        {isPaged(box) ? <Button key={`${box.key}-up`} plain label={PAGE_UP} onPress={() => showBoxFrom($, box, Math.max(0, box.first - box.page))} /> : null}
+        {isPaged(box) ? <Button key={`${box.key}-down`} plain label={PAGE_DOWN} onPress={() => showBoxFrom($, box, Math.min(box.total - box.page, box.first + box.page))} /> : null}
+        {isPaged(box) ? <Text key={`${box.key}-paged`} color={BRAND.muted}>{pagedOf(box.first, box.lines.length, box.total)}</Text> : null}
       </Box>
+      {box.lines.map(line => BacklogLineView($, { Box, Button }, line, line.title === openParent))}
     </Box>
   )
+}
+
+// Shows the page of box that starts at first: the BACKLOG box's items, or the opened parent's child items.
+function showBoxFrom($: EngineInterface, box: BacklogBox, first: number) {
+  return box.key === BACKLOG_BOX ? showBacklogFrom($, first) : showBacklogChildrenFrom($, first)
 }
 
 function BacklogLineView($: EngineInterface, { Box, Button }: Pick<ElementTable, 'Box' | 'Button'>, line: BacklogLine, isOpen: boolean) {

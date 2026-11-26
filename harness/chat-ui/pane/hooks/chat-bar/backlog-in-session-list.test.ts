@@ -1,7 +1,7 @@
 // (S) Person --> Show Backlog Items In Session List
 // (S) Person --> Start Backlog Item From Session List
 // The main chat's session list holds the Backlog closed, saying how many items it holds; opened, a BACKLOG box beside the
-// list shows them, in further columns where the chat has too few rows, and a parent's + N opens its child items in a
+// list shows them, a page at a time where the chat has too few rows, and a parent's + N opens its child items in a
 // further box beside that. Starting an item, parent or child, goes down the board's own way out of the Backlog:
 // backlog-item.start on the folder chosen beside the new session's name, then ticket.activate, as Open Session does.
 // Scenarios: story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md
@@ -192,13 +192,55 @@ test('the Backlog is closed again each time the session list opens', async ($, o
   await ui.unmount()
 })
 
-test('a Backlog taller than the chat has room for runs into a further column', async ($, on) => {
-  const items = Array.from({ length: 12 }, (_, place) => ({ title: `Idea ${place + 1}`, children: [] }))
-  const { called } = mainChat(on, items, {}, '', 11)
+// Seed: twelve items in a chat whose band has 11 rows, which leaves the BACKLOG box room for seven.
+const TWELVE_IDEAS = Array.from({ length: 12 }, (_, place) => ({ title: `Idea ${place + 1}`, children: [] }))
+const SHORT_BAND_ROWS = 11
+const PAGE_UP = 'session-backlog-box-up'
+const PAGE_DOWN = 'session-backlog-box-down'
+const isSaid = async (ui: Mounted, text: string) => Boolean(await ui.find({ type: 'Text', text }))
+
+test('a Backlog taller than the chat has room for shows its first items, and says which of how many', async ($, on) => {
+  const { called } = mainChat(on, TWELVE_IDEAS, {}, '', SHORT_BAND_ROWS)
 
   const ui = await backlog($, called)
 
-  expect([Boolean(await ui.find({ type: 'Box', key: 'session-backlog-column-1' })), Boolean(await ui.find({ type: 'Box', key: 'session-backlog-column-2' })), await isShown(ui, startKey('Idea 12'))]).toEqual([true, false, true])
+  expect([await isShown(ui, startKey('Idea 7')), await isShown(ui, startKey('Idea 8')), await isSaid(ui, '1–7 of 12')]).toEqual([true, false, true])
+  await ui.unmount()
+})
+
+test('paging a tall Backlog down shows the items after them, as far as its last', async ($, on) => {
+  const { called } = mainChat(on, TWELVE_IDEAS, {}, '', SHORT_BAND_ROWS)
+
+  const ui = await pressedAndDrawn($, await backlog($, called), PAGE_DOWN)
+
+  expect([await isShown(ui, startKey('Idea 5')), await isShown(ui, startKey('Idea 12')), await isSaid(ui, '6–12 of 12')]).toEqual([false, true, true])
+  await ui.unmount()
+})
+
+test('paging a tall Backlog up again shows its first items', async ($, on) => {
+  const { called } = mainChat(on, TWELVE_IDEAS, {}, '', SHORT_BAND_ROWS)
+
+  const ui = await pressedAndDrawn($, await backlog($, called), PAGE_DOWN, PAGE_UP)
+
+  expect([await isShown(ui, startKey('Idea 1')), await isShown(ui, startKey('Idea 8'))]).toEqual([true, false])
+  await ui.unmount()
+})
+
+test('a tall Backlog opens on its first items each time it opens', async ($, on) => {
+  const { called } = mainChat(on, TWELVE_IDEAS, {}, '', SHORT_BAND_ROWS)
+
+  const ui = await pressedAndDrawn($, await backlog($, called), PAGE_DOWN, TOGGLE, TOGGLE)
+
+  expect(await isShown(ui, startKey('Idea 1'))).toBe(true)
+  await ui.unmount()
+})
+
+test('a Backlog the chat has room for shows every item, with nothing to page', async ($, on) => {
+  const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
+
+  const ui = await backlog($, called)
+
+  expect([await isShown(ui, PAGE_UP), await isShown(ui, PAGE_DOWN)]).toEqual([false, false])
   await ui.unmount()
 })
 
