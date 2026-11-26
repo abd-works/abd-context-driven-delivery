@@ -75,14 +75,11 @@ export type ChatBarViewJson = {
   // The folder of the repository a new session will work on, chosen with the folder picker beside the new session's
   // name; empty for the whole repository.
   newSessionFolder: string
-  // Whether the Backlog is opened beside the session list, and the title of the parent whose child items are opened
-  // in a further box beside it; empty for none. Both close each time the session list opens.
+  // Whether the Backlog is opened beside the session list; it closes each time the session list opens.
   isBacklogOpen: boolean
-  openBacklogParent: string
-  // The place of the first item the BACKLOG box shows, and of the first child item the opened parent's box shows, when
-  // the chat has too few rows for all of them; each starts at 0 when its box opens.
+  // The place of the first item the BACKLOG box shows when the chat has too few rows for all of them; it starts at 0
+  // each time the box opens.
   backlogFirst: number
-  backlogChildFirst: number
 }
 
 // One repository in the repos folder, as repos.siblings answers it.

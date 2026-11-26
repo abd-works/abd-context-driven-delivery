@@ -112,6 +112,7 @@ section: body
 | Source | Note |
 |--------|------|
 | The person, 2026-11-25 | "Add a section to the session choices for backlog items ... A parent and child can be opened to reveal the child items" |
+| The person, 2026-11-26 | on the build: "is there a possibility to use scrolling when list is too long?", then "kill the extra nested child functionality, too cluttered" |
 | `harness/chat-ui/pane/hooks/chat-bar/session-dialogs-view.tsx` `SessionListView` | observed 2026-11-25: the session list holds main, the open tickets, and the field that names a new session with its folder button |
 | `space/kanban/backlog_item.py` `BacklogItem.children`, `Backlog.items` | a parent keeps its children in its folder; the Backlog lists its items in the order the board keeps |
 
@@ -133,9 +134,9 @@ The person, 2026-11-25, on the first build: "it needs to be collapsed on open, i
 *Given* the session list shows the Backlog closed, holding Payment retry and Checkout flow, in that order
   *And* Checkout flow keeps the child items Address form and Card form
 *When* the Person opens the Backlog
-*Then* a BACKLOG box opens beside the session list, listing Payment retry, then Checkout flow with + 2 beside it
+*Then* a BACKLOG box opens beside the session list, listing Payment retry, then Checkout flow
   *And* the session list stays as it was, its rows no taller
-  *And* Address form and Card form are not shown
+  *And* Address form and Card form are not shown, and nothing beside Checkout flow opens them
 
 #### Scenario: Close the Backlog again each time the session list opens
 
@@ -143,23 +144,22 @@ The person, 2026-11-25, on the first build: "it needs to be collapsed on open, i
 *When* the Person closes the session list and opens it again
 *Then* the Backlog is closed
 
-#### Scenario: Run a Backlog taller than the chat into a further column
+#### Scenario: Page through a Backlog taller than the chat
 
 *Given* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds 12 items
   *But* the chat bar has room for 7 rows of items above its line
 *When* the Person opens the Backlog
-*Then* the BACKLOG box shows the first 7 items in one column and the other 5 in a second column beside it, so none is cut off above the chat
+*Then* the BACKLOG box shows the first 7 items, and its heading says 1–7 of 12
+*When* the Person pages down
+*Then* the BACKLOG box shows items 6 to 12, and its heading says 6–12 of 12
+*When* the Person pages up
+*Then* the BACKLOG box shows the first 7 items again
 
-#### Scenario: Open a parent's child items in a further list
+#### Scenario: Cut a long title short
 
-The person, 2026-11-25: "parent tickets open further sublists to click on their children".
-
-*Given* the BACKLOG box shows Checkout flow with + 2, its child items Address form and Card form hidden
-*When* the Person opens Checkout flow
-*Then* a Checkout flow box opens beside the BACKLOG box, listing Address form and Card form
-  *And* Checkout flow shows - 2
-*When* the Person closes Checkout flow
-*Then* the Checkout flow box is gone
+*Given* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Chat bar shows the robots queue as clearly as a drawn card view
+*When* the Person opens the Backlog
+*Then* the BACKLOG box shows it as Chat bar shows the robots queu…, so the box stays inside the chat
 
 #### Scenario: Show no Backlog section while the Backlog is empty
 
@@ -180,7 +180,7 @@ The person, 2026-11-25: "parent tickets open further sublists to click on their 
 
 | Source | Note |
 |--------|------|
-| The person, 2026-11-25 | "If a backlog ticket is started, that is identical to moving a ticket out of the backlog ... the parent or the child can be started" |
+| The person, 2026-11-25 | "If a backlog ticket is started, that is identical to moving a ticket out of the backlog ... the parent or the child can be started"; 2026-11-26: a child item is no longer listed, so it starts with its parent or from the board |
 | `space/kanban/app/src/kanban/ticket/root-choice-client.ts` `start` | the board's way out of the Backlog: `backlog-item.start` on the folder chosen, then activation: `ticket.activate`, and a chat started in the ticket's worktree |
 | `space/kanban/backlog_item.py` `BacklogItem.start` | a parent's children start with it as story tickets that are its children; an item kept with a ticket's work brings that ticket back |
 | `harness/chat-ui/pane/hooks/chat-bar/session-client.ts` `createSession`, `activateTicket` | the session list's new session opens on the folder chosen beside its name, and opens as a ticket picked from the list does |
@@ -208,13 +208,6 @@ The person, 2026-11-25: "parent tickets open further sublists to click on their 
 *When* the Person starts Checkout flow
 *Then* the ticket checkout-flow is in Discovery, with the child tickets address-form and card-form
   *And* checkout-flow opens in its own worktree
-
-#### Scenario: Start one child item on its own
-
-*Given* the Checkout flow box is open beside the BACKLOG box, listing its child items Address form and Card form
-*When* the Person starts Card form
-*Then* the ticket card-form is in Discovery and opens in its own worktree
-  *And* the Backlog still holds Checkout flow, now with + 1 for Address form
 
 #### Scenario: Show why a Backlog item did not start
 

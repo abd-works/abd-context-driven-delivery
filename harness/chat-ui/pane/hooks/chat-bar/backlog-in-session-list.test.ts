@@ -1,8 +1,8 @@
 // (S) Person --> Show Backlog Items In Session List
 // (S) Person --> Start Backlog Item From Session List
 // The main chat's session list holds the Backlog closed, saying how many items it holds; opened, a BACKLOG box beside the
-// list shows them, a page at a time where the chat has too few rows, and a parent's + N opens its child items in a
-// further box beside that. Starting an item, parent or child, goes down the board's own way out of the Backlog:
+// list shows them, a page at a time where the chat has too few rows; a parent is one item, which starts with its child
+// items. Starting an item goes down the board's own way out of the Backlog:
 // backlog-item.start on the folder chosen beside the new session's name, then ticket.activate, as Open Session does.
 // Scenarios: story_tests/move-work-forward-from-chat-bar/steer-sessions/steer_sessions_story.test.md
 import { expect, test } from 'claude-code/testing'
@@ -148,7 +148,6 @@ async function backlog($: Engine, called: Called[]): Promise<Mounted> {
 
 const labelOf = async (ui: Mounted, key: string) => (await ui.find({ type: 'Button', key }))?.props.label
 const startKey = (title: string) => `session-backlog-start-${title}`
-const openKey = (title: string) => `session-backlog-open-${title}`
 const isShown = async (ui: Mounted, key: string) => Boolean(await ui.find({ type: 'Button', key }))
 // What each call named, without the chat's own fields every cdd call carries.
 const namedIn = ({ chat_folder: _folder, conversation_id: _chat, ...named }: Record<string, unknown>) => named
@@ -254,30 +253,12 @@ test('an item whose title is longer than the box has room for shows it cut short
   await ui.unmount()
 })
 
-test('a parent shows closed, counting its child items, which are hidden', async ($, on) => {
+test('a parent shows as one item, with nothing that opens its child items', async ($, on) => {
   const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
 
   const ui = await backlog($, called)
 
-  expect([await labelOf(ui, openKey('Checkout flow')), await isShown(ui, startKey('Address form'))]).toEqual(['+ 2', false])
-  await ui.unmount()
-})
-
-test('opening a parent lists its child items in a further box beside the BACKLOG box', async ($, on) => {
-  const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
-
-  const ui = await pressedAndDrawn($, await backlog($, called), openKey('Checkout flow'))
-
-  expect([await labelOf(ui, openKey('Checkout flow')), Boolean(await ui.find({ type: 'Box', key: 'session-backlog-children-box' })), await isShown(ui, startKey('Address form')), await isShown(ui, startKey('Card form'))]).toEqual(['- 2', true, true, true])
-  await ui.unmount()
-})
-
-test('closing an opened parent takes its box away', async ($, on) => {
-  const { called } = mainChat(on, [PAYMENT_RETRY, CHECKOUT_FLOW])
-
-  const ui = await pressedAndDrawn($, await backlog($, called), openKey('Checkout flow'), openKey('Checkout flow'))
-
-  expect([Boolean(await ui.find({ type: 'Box', key: 'session-backlog-children-box' })), await isShown(ui, startKey('Address form'))]).toEqual([false, false])
+  expect([await isShown(ui, startKey('Checkout flow')), await isShown(ui, 'session-backlog-open-Checkout flow'), await isShown(ui, startKey('Address form'))]).toEqual([true, false, false])
   await ui.unmount()
 })
 
@@ -347,15 +328,6 @@ test('starting a parent starts it, and with it its child items', async ($, on) =
   const ui = await pressedAndDrawn($, await backlog($, called), startKey('Checkout flow'))
 
   expect(startsOf(called)).toEqual([{ backlog_item: 'Checkout flow' }])
-  await ui.unmount()
-})
-
-test('starting a child item starts it alone', async ($, on) => {
-  const { called } = mainChat(on, [CHECKOUT_FLOW])
-
-  const ui = await pressedAndDrawn($, await backlog($, called), openKey('Checkout flow'), startKey('Card form'))
-
-  expect(startsOf(called)).toEqual([{ backlog_item: 'Card form' }])
   await ui.unmount()
 })
 

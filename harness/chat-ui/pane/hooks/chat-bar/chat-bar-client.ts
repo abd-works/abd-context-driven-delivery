@@ -44,7 +44,7 @@ export class ChatBarClient {
     return (this.board?.columns ?? []).flatMap(column => column.tickets.filter(ticket => ticket.name !== MAIN_SESSION).map(ticket => ({ name: ticket.name, stage: column.name })))
   }
 
-  // The Backlog's own items a person can start from the main chat's session list, each with its children by title, in
+  // The Backlog's own items a person can start from the main chat's session list, in
   // the order board.overview sends them; none from an overview sent before it named them.
   get backlogItems(): BacklogItemOverviewData[] {
     return (this.board?.columns ?? []).flatMap(column => column.items ?? [])
