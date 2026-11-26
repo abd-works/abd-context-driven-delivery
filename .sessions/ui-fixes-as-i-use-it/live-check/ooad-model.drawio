@@ -1,0 +1,993 @@
+<mxfile host="CleanEngineering.diagram.drawio">
+  <diagram name="CleanEngineering Model" id="CleanEngineering-model">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="9500" pageHeight="3628" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;UnreadableSource&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#unreadablesource--valueerror" id="practices-clean-engineering-model--unreadablesource">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="990" y="60" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OoadNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ sequential_order: int&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ OoadNode(name: str, sequential_order: int, graph: Graph | None)&lt;br/&gt;+ translate_from(source: OoadNode): None&lt;br/&gt;+ update_self(source: OoadNode): None&lt;br/&gt;+ reconcile_children(source: OoadNode): None&lt;br/&gt;+ declares(member: OoadNode): bool&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#ooadnode--modelnode" id="practices-clean-engineering-model--ooadnode">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4910" y="60" width="380" height="158" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TranslationError&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#translationerror--exception" id="practices-clean-engineering-model--translationerror">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="1250" y="60" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ modules: list[Module]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CleanEngineeringModel(name: str | Graph, sequential_order: int, graph: Graph | None)&lt;br/&gt;+ parse(text: str): CleanEngineeringModel&lt;br/&gt;+ save(): str&lt;br/&gt;+ described_member(owner: str, name: str): Operation | Property | None&lt;br/&gt;+ every_class(): list[OoadClass]&lt;br/&gt;+ clone(): CleanEngineeringModel&lt;br/&gt;+ as_record(): dict&lt;br/&gt;+ load_module(source: Module): Module&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#cleanengineeringmodel--ooadnode" id="practices-clean-engineering-model--cleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4840" y="770" width="500" height="190" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Module&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ description: str&lt;br/&gt;+ seam: str&lt;br/&gt;+ seam_terms: list[str]&lt;br/&gt;+ dependencies: list[str]&lt;br/&gt;+ constraint: str&lt;br/&gt;+ preamble: CodeBody&lt;br/&gt;+ modules: list[Module]&lt;br/&gt;+ classes: list[OoadClass]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Module(name: str, sequential_order: int, graph: Graph | None)&lt;br/&gt;+ external_deps(): list[str]&lt;br/&gt;+ public_terms(): list[str]&lt;br/&gt;+ load_module(source: Module): Module&lt;br/&gt;+ load_class(source: OoadClass): OoadClass&lt;br/&gt;+ load(): None&lt;br/&gt;+ import_targets(file: Path, root: Path): list[str]&lt;br/&gt;+ clone(): Module&lt;br/&gt;+ as_record(): dict&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#module--ooadnode" id="practices-clean-engineering-model--module">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6120" y="770" width="380" height="318" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModuleSourceFacts&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ take_public_sources(sources: list[Module]): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#modulesourcefacts" id="practices-clean-engineering-model--modulesourcefacts">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="1510" y="60" width="300" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OoadClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ intent: str&lt;br/&gt;+ stereotypes: list[str]&lt;br/&gt;+ properties: list[Property]&lt;br/&gt;+ operations: list[Operation]&lt;br/&gt;+ relationships: list[Relationship]&lt;br/&gt;+ collaborators: list[str]&lt;br/&gt;+ line: int | None&lt;br/&gt;+ end_line: int | None&lt;br/&gt;+ bases: list[str]&lt;br/&gt;+ peer_names: list[str]&lt;br/&gt;+ composes_peers: bool&lt;br/&gt;+ module_helpers: list[list]&lt;br/&gt;+ source_facts: ClassSourceFacts&lt;br/&gt;+ bold_interaction_lines: list[int]&lt;br/&gt;+ bold_invariant_lines: list[int]&lt;br/&gt;+ arrows: ClassArrows&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ OoadClass(name: str, sequential_order: int, intent: str)&lt;br/&gt;+ declared_bases(known_names: list[str]): list[str]&lt;br/&gt;+ load_property(source: Property): Property&lt;br/&gt;+ load_operation(source: Operation): Operation&lt;br/&gt;+ clone(): OoadClass&lt;br/&gt;+ as_record(): dict&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#ooadclass--ooadnode" id="practices-clean-engineering-model--ooadclass">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3880" y="770" width="340" height="398" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClassArrows&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ depend_on(target: str, label: str): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#classarrows" id="practices-clean-engineering-model--classarrows">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="2840" y="1310" width="260" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Property&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ type_hint: str&lt;br/&gt;+ description: str&lt;br/&gt;+ access: str&lt;br/&gt;+ stereotype: str&lt;br/&gt;+ cardinality: str&lt;br/&gt;+ origin: str&lt;br/&gt;+ relationship: Relationship | None&lt;br/&gt;+ invariants: list[Invariant]&lt;br/&gt;+ callees: list[str]&lt;br/&gt;+ arrow: FieldArrow&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Property(name: str, sequential_order: int, type_hint: str)&lt;br/&gt;+ take_note(text: str): None&lt;br/&gt;+ notes(): list[str]&lt;br/&gt;+ save(): str&lt;br/&gt;+ clone(): Property&lt;br/&gt;+ as_record(): dict&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#property--invariantholder-ooadnode" id="practices-clean-engineering-model--property">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="1720" y="770" width="360" height="302" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FieldArrow&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ derive(): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#fieldarrow" id="practices-clean-engineering-model--fieldarrow">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="60" y="1310" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Operation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ return_type: str&lt;br/&gt;+ description: str&lt;br/&gt;+ callees: list[str]&lt;br/&gt;+ body: CodeBody&lt;br/&gt;+ invariants: list[Invariant]&lt;br/&gt;+ parameters: list[Parameter]&lt;br/&gt;+ owner: str&lt;br/&gt;+ is_property: bool&lt;br/&gt;+ value_type: str&lt;br/&gt;+ is_static: bool&lt;br/&gt;+ is_classmethod: bool&lt;br/&gt;+ is_constructor_function: bool&lt;br/&gt;+ line: int | None&lt;br/&gt;+ end_line: int | None&lt;br/&gt;+ line_count: int | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Operation(name: str, sequential_order: int, return_type: str)&lt;br/&gt;+ take_parameters(parameters: list): None&lt;br/&gt;+ save(): str&lt;br/&gt;+ clone(): Operation&lt;br/&gt;+ as_record(): dict&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#operation--invariantholder-ooadnode" id="practices-clean-engineering-model--operation">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="2360" y="770" width="380" height="366" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;InvariantHolder&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ invariants: list[Invariant]&lt;br/&gt;+ description: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ add_invariant(text: str): None&lt;br/&gt;+ invariant_lines(): list[str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#invariantholder" id="practices-clean-engineering-model--invariantholder">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="2450" y="60" width="200" height="110" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Invariant&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ text: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Invariant(text: str, sequential_order: int)&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#invariant--ooadnode" id="practices-clean-engineering-model--invariant">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="2920" y="770" width="280" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="practices-clean-engineering-model--measuredbody-protocol" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MeasuredBody (Protocol)&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ swallows(): bool&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="1870" y="60" width="200" height="80" as="geometry" />
+        </mxCell>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SourceText&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ SourceText(text: str)&lt;br/&gt;+ control_flow_depth(): int&lt;br/&gt;+ unnamed_numbers(): list[str]&lt;br/&gt;+ catches_everything(): bool&lt;br/&gt;+ swallows(): bool&lt;br/&gt;+ mixes_io_and_domain(): bool&lt;br/&gt;+ calls_io_and_domain(): bool&lt;br/&gt;+ mutates_without_record(): bool&lt;br/&gt;+ has_prose_comment(hash_only: bool): bool&lt;br/&gt;+ prototype_swap(start_line: int): dict[str, str | int]&lt;br/&gt;+ line_of(index: int): int&lt;br/&gt;+ hits(pattern: Pattern): list[list]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#sourcetext--measuredbody" id="practices-clean-engineering-model--sourcetext">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="2820" y="2130" width="340" height="238" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SpanFailures&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ generic_exception_message(): bool&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#spanfailures" id="practices-clean-engineering-model--spanfailures">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="2130" y="60" width="220" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SpanCollaborators&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ locals_built_of(class_name: str): frozenset[str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#spancollaborators" id="practices-clean-engineering-model--spancollaborators">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3370" y="60" width="300" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BracketStructure&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ BracketStructure(text: str)&lt;br/&gt;+ closing_bracket(open_at: int, opener: str): int | None&lt;br/&gt;+ opening_bracket(close_at: int, opener: str): int&lt;br/&gt;+ top_level_indexes(mark: str): list[int]&lt;br/&gt;+ top_level_index(mark: str): int&lt;br/&gt;+ braced(open_at: int): str | None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#bracketstructure" id="practices-clean-engineering-model--bracketstructure">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4070" y="60" width="340" height="142" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PythonFunctionBody&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ control_flow_depth(): int&lt;br/&gt;+ decorated(name: str): bool&lt;br/&gt;+ parameters(): list[str]&lt;br/&gt;+ callees(): list[str]&lt;br/&gt;+ body(source: str): CodeBody&lt;br/&gt;+ catches_everything(): bool&lt;br/&gt;+ swallows(): bool&lt;br/&gt;+ unnamed_numbers(): list[str]&lt;br/&gt;+ packed_parameters(): dict[str, int]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#pythonfunctionbody--measuredbody" id="practices-clean-engineering-model--pythonfunctionbody">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4470" y="60" width="240" height="190" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;FunctionCollaborators&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ reaches_peer_private(): bool&lt;br/&gt;+ built(): list[tuple[str, int]]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#functioncollaborators" id="practices-clean-engineering-model--functioncollaborators">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="5490" y="60" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Parameter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ type_hint: str&lt;br/&gt;+ operation_name: str&lt;br/&gt;+ property_setter: bool&lt;br/&gt;+ in_typed_language: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Parameter(name: str, sequential_order: int, type_hint: str)&lt;br/&gt;+ save(): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#parameter--ooadnode" id="practices-clean-engineering-model--parameter">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3300" y="770" width="360" height="142" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Relationship&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ target: str&lt;br/&gt;+ kind: str&lt;br/&gt;+ cardinality: str&lt;br/&gt;+ description: str&lt;br/&gt;+ sequential_order: int&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Relationship(target: str, kind: str, cardinality: str, description: str, sequential_order: int)&lt;br/&gt;+ translate_from(source: Relationship): None&lt;br/&gt;+ clone(): Relationship&lt;br/&gt;+ as_record(): dict&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#relationship" id="practices-clean-engineering-model--relationship">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="1060" y="1310" width="560" height="190" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModuleContext&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ folder: Path&lt;br/&gt;+ path: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ModuleContext(folder: Path)&lt;br/&gt;+ exists(): bool&lt;br/&gt;+ read(): str&lt;br/&gt;+ has_modules_heading(): bool&lt;br/&gt;+ names_seam(): bool&lt;br/&gt;+ names_constraint(): bool&lt;br/&gt;+ says_is_a_type_of(): bool&lt;br/&gt;+ writes_child_parent_headings(): bool&lt;br/&gt;+ model_blocks(): list[str]&lt;br/&gt;+ bullets(): ModuleMeta&lt;br/&gt;+ folder_facts(): dict[str, object]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#modulecontext" id="practices-clean-engineering-model--modulecontext">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="5750" y="60" width="240" height="254" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="practices-clean-engineering-model--modulemeta-module-context-files-py" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModuleMeta (module_context_files.py)&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ purpose: str&lt;br/&gt;+ seam_terms: list[str]&lt;br/&gt;+ dependencies: list[str]&lt;br/&gt;+ leftover: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ModuleMeta(text: str)&lt;br/&gt;+ terms(raw: str): list[str]&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="6050" y="60" width="220" height="142" as="geometry" />
+        </mxCell>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PublicSources&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ internal_notes(): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#publicsources" id="practices-clean-engineering-model--publicsources">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6330" y="60" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ScriptImports&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ targets(file: Path, root: Path): list[str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#scriptimports" id="practices-clean-engineering-model--scriptimports">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6590" y="60" width="260" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClassReference&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ files(): list[str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#classreference" id="practices-clean-engineering-model--classreference">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4440" y="770" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ImportedClasses&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ resolve(reference: ClassReference, importer: str): Node | None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#importedclasses" id="practices-clean-engineering-model--importedclasses">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6930" y="60" width="380" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ModuleExposure&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ record(): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#moduleexposure" id="practices-clean-engineering-model--moduleexposure">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="7390" y="60" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PublicRoutes&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ of(node: Node, operations: list[Node]): dict[str, str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#publicroutes" id="practices-clean-engineering-model--publicroutes">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="7650" y="60" width="340" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClassSourceFacts&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ span: SourceText&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ClassSourceFacts(oclass: OoadClass)&lt;br/&gt;+ take_lines(lines: list[str]): None&lt;br/&gt;+ load(): None&lt;br/&gt;+ held_fields(): dict[str, str]&lt;br/&gt;+ constructor_fields(): list[Property]&lt;br/&gt;+ assigned_fields(): list[Property]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#classsourcefacts" id="practices-clean-engineering-model--classsourcefacts">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="1780" y="1310" width="240" height="158" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeClassSourceFacts&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ load(): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codeclasssourcefacts--classsourcefacts" id="practices-clean-engineering-model--codeclasssourcefacts">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3680" y="2130" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OperationShape&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ is_property: bool&lt;br/&gt;+ is_private: bool&lt;br/&gt;+ callees: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#operationshape" id="practices-clean-engineering-model--operationshape">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="8050" y="60" width="200" height="110" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;OperationSourceFacts&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ span: SourceText&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ OperationSourceFacts(operation: Operation)&lt;br/&gt;+ take_body(text: str, language: CodeLanguage): None&lt;br/&gt;+ take_body_fingerprint(body: str): None&lt;br/&gt;+ take_lines(lines: list[str]): None&lt;br/&gt;+ load(): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#operationsourcefacts" id="practices-clean-engineering-model--operationsourcefacts">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="590" y="60" width="320" height="142" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BodyFingerprint&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ of_span(): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#bodyfingerprint" id="practices-clean-engineering-model--bodyfingerprint">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="8310" y="60" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CardBullets&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ interaction_lines: list[int]&lt;br/&gt;+ invariant_lines: list[int]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CardBullets(text: str)&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#cardbullets" id="practices-clean-engineering-model--cardbullets">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="8570" y="60" width="200" height="94" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DocComment&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ stereotypes: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_class(oclass: OoadClass, marked: bool): DocComment&lt;br/&gt;+ describe(oclass: OoadClass): None&lt;br/&gt;+ text(): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#doccomment" id="practices-clean-engineering-model--doccomment">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="1660" y="470" width="340" height="110" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClassHead&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ doc: str&lt;br/&gt;+ stereotypes: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ above(text_before_class: str): ClassHead&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#classhead" id="practices-clean-engineering-model--classhead">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="2060" y="470" width="260" height="94" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MarkdownCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ module_type: type[MarkdownModule]&lt;br/&gt;+ cards: CardDocument | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#markdowncleanengineeringmodel--cleanengineeringmodel" id="practices-clean-engineering-model--markdowncleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="7820" y="1310" width="220" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MarkdownModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ render(): str&lt;br/&gt;+ render_cards(module_level: int, card_level: int): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#markdownmodule--module" id="practices-clean-engineering-model--markdownmodule">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="8160" y="1310" width="340" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MarkdownOoadClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ read_card(heading: ClassHeading, body: str, sequential_order: int): MarkdownOoadClass&lt;br/&gt;+ read_body(body: str): None&lt;br/&gt;+ render(known_names: list[str] | None): str&lt;br/&gt;+ heading(known_names: list[str]): ClassHeading&lt;br/&gt;+ render_card(level: int): str&lt;br/&gt;+ keep_card(card: str, heading: ClassHeading): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#markdownooadclass--ooadclass" id="practices-clean-engineering-model--markdownooadclass">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="5160" y="1310" width="500" height="142" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="practices-clean-engineering-model--classcard-markdown-class-card-py" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClassCard (markdown/class_card.py)&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ operation_in(line): Operation | None&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2380" y="470" width="240" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="practices-clean-engineering-model--sketchfence-markdown-class-card-py" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SketchFence (markdown/class_card.py)&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ read_into(oclass: OoadClass): FenceRead&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="2680" y="470" width="260" height="80" as="geometry" />
+        </mxCell>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CardDocument&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ render(): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#carddocument" id="practices-clean-engineering-model--carddocument">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="5700" y="2130" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ClassHeading&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ stereotypes: list[str]&lt;br/&gt;+ bases: list[str]&lt;br/&gt;+ note: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ClassHeading(name: str, stereotypes: list[str], bases: list[str], note: str)&lt;br/&gt;+ read(raw: str): ClassHeading&lt;br/&gt;+ text(): str&lt;br/&gt;+ card_text(): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#classheading" id="practices-clean-engineering-model--classheading">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4300" y="2130" width="460" height="174" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): JsonCleanEngineeringModel&lt;br/&gt;+ render(canonical: CleanEngineeringModel | None): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#jsoncleanengineeringmodel--cleanengineeringmodel" id="practices-clean-engineering-model--jsoncleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6580" y="1310" width="320" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict, sequential_order: int): JsonModule&lt;br/&gt;+ render(): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#jsonmodule--module" id="practices-clean-engineering-model--jsonmodule">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="8600" y="1310" width="360" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonOoadClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict, sequential_order: int): JsonOoadClass&lt;br/&gt;+ render(): str&lt;br/&gt;+ load_property(source: Property): JsonProperty&lt;br/&gt;+ load_operation(source: Operation): JsonOperation&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#jsonooadclass--ooadclass" id="practices-clean-engineering-model--jsonooadclass">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3200" y="1310" width="380" height="110" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonProperty&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict): JsonProperty&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#jsonproperty--property" id="practices-clean-engineering-model--jsonproperty">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="360" y="1310" width="260" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonOperation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict): JsonOperation&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#jsonoperation--operation" id="practices-clean-engineering-model--jsonoperation">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4340" y="1310" width="260" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JsonRelationship&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_record(record: dict): JsonRelationship&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#jsonrelationship--relationship" id="practices-clean-engineering-model--jsonrelationship">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3280" y="2130" width="280" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;SketchCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): SketchCleanEngineeringModel&lt;br/&gt;+ render(canonical: CleanEngineeringModel, previous: str | None): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#sketchcleanengineeringmodel--cleanengineeringmodel" id="practices-clean-engineering-model--sketchcleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="7000" y="1310" width="400" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeSpelling&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ receiver: str&lt;br/&gt;+ construct: str&lt;br/&gt;+ statement_end: str&lt;br/&gt;+ camel_case: bool&lt;br/&gt;+ base_constructor: str&lt;br/&gt;+ base_receiver: str&lt;br/&gt;+ list_of: str&lt;br/&gt;+ generic_brackets: tuple[str, str]&lt;br/&gt;+ import_statement: str&lt;br/&gt;+ import_pattern: str&lt;br/&gt;+ dotted_modules: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CodeSpelling(receiver: str, construct: str, statement_end: str, camel_case: bool, base_call: tuple)&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codespelling" id="practices-clean-engineering-model--codespelling">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4390" y="3190" width="580" height="238" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeLanguage&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ suffixes: tuple[str, ...]&lt;br/&gt;+ line_comment: str&lt;br/&gt;+ indent: str&lt;br/&gt;+ unfinished: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CodeLanguage(name: str, line_comment: str, indent: str, unfinished: str, spelling: CodeSpelling, type_names: dict[str, str], suffixes: tuple[str, ...])&lt;br/&gt;+ comment(text: str): str&lt;br/&gt;+ is_unfinished(text: str): bool&lt;br/&gt;+ identifier(name: str): str&lt;br/&gt;+ type_name(hint: str): str&lt;br/&gt;+ assignment(name: str): str&lt;br/&gt;+ interaction(callee: str): str&lt;br/&gt;+ scaffold_calls(text: str): list[str] | None&lt;br/&gt;+ base_constructor_arguments(text: str): list[str] | None&lt;br/&gt;+ base_constructor_call(arguments: list[str]): str&lt;br/&gt;+ imports_in(text: str): list[tuple[str, list[str]]]&lt;br/&gt;+ import_line(module: str, names: list[str]): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codelanguage" id="practices-clean-engineering-model--codelanguage">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4250" y="2730" width="860" height="318" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeBody&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ text: str&lt;br/&gt;+ language: CodeLanguage | None&lt;br/&gt;+ is_empty: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CodeBody(text: str, language: CodeLanguage | None)&lt;br/&gt;+ mentions(word: str): bool&lt;br/&gt;+ lines_in(language: CodeLanguage, indent: str, unfinished: str): list[str]&lt;br/&gt;+ in_language_of(other: CodeBody, language: CodeLanguage): CodeBody&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codebody" id="practices-clean-engineering-model--codebody">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3740" y="1310" width="440" height="158" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;WrittenBlock&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;+ key: str | tuple | None&lt;br/&gt;+ lead: list[str]&lt;br/&gt;+ heading: list[str]&lt;br/&gt;+ inside: list[str]&lt;br/&gt;+ inline: str&lt;br/&gt;+ closing: list[str]&lt;br/&gt;+ close: list[str]&lt;br/&gt;+ lead_body: CodeBody&lt;br/&gt;+ closing_body: CodeBody&lt;br/&gt;+ inside_body: CodeBody&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ WrittenBlock(language: CodeLanguage, key: str | tuple | None, heading: list[str])&lt;br/&gt;+ is_in(language: CodeLanguage, key: str | tuple | None): bool&lt;br/&gt;+ inside_for(body: CodeBody): list[str] | None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#writtenblock" id="practices-clean-engineering-model--writtenblock">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="2790" y="60" width="480" height="270" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;InsideLines&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ lines: list[str]&lt;br/&gt;+ start: int&lt;br/&gt;+ end: int&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ InsideLines(lines: list[str], inside: tuple[int, int])&lt;br/&gt;+ split(children: list[tuple[int, int]]): tuple&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#insidelines" id="practices-clean-engineering-model--insidelines">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3740" y="470" width="340" height="126" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CallGraphEntry&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ depth: int&lt;br/&gt;+ kind: str&lt;br/&gt;+ text: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#callgraphentry" id="practices-clean-engineering-model--callgraphentry">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4140" y="470" width="200" height="94" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CallGraph&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ read(text: str): CallGraph&lt;br/&gt;+ add_line(line: str, depth: int): None&lt;br/&gt;+ block(): str&lt;br/&gt;+ callees(): list[str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#callgraph--listcallgraphentry" id="practices-clean-engineering-model--callgraph">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4400" y="470" width="240" height="110" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;+ module_type: type[CodeModule]&lt;br/&gt;+ suffixes: tuple[str, ...]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ file_module(): Module&lt;br/&gt;+ render(canonical: CleanEngineeringModel, previous: str | None): str&lt;br/&gt;+ operation_body(class_name: str, operation_name: str): CodeBody&lt;br/&gt;+ render_class(oclass: CodeClass, known_names: list[str], kept: CodeCleanEngineeringModel): list[str]&lt;br/&gt;+ render_body(operation: Operation, previous: CodeBody): list[str]&lt;br/&gt;+ file_header(preamble: CodeBody): list[str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codecleanengineeringmodel--cleanengineeringmodel" id="practices-clean-engineering-model--codecleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="5840" y="1310" width="580" height="190" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ class_type: type[CodeClass]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codemodule--module" id="practices-clean-engineering-model--codemodule">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4410" y="1840" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;+ method_count: int&lt;br/&gt;+ operation_shapes: list[OperationShape]&lt;br/&gt;+ property_names: list[str]&lt;br/&gt;+ constructs: list[str]&lt;br/&gt;+ prose_comment: bool&lt;br/&gt;+ prototype_swap: dict[str, str | int]&lt;br/&gt;+ total_complexity: int&lt;br/&gt;+ classes_depended_on: int&lt;br/&gt;+ unshared_method_groups: int&lt;br/&gt;+ source_facts: CodeClassSourceFacts&lt;br/&gt;+ property_type: type[CodeProperty]&lt;br/&gt;+ operation_type: type[CodeOperation]&lt;br/&gt;+ is_contract: bool&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(): CodeOperation | None&lt;br/&gt;+ stand_in_lines(): list[str] | None&lt;br/&gt;+ opening(known_names: list[str]): list[str]&lt;br/&gt;+ closing(has_members: bool): list[str]&lt;br/&gt;+ block_close(): list[str]&lt;br/&gt;+ constructor_lines(constructor: Operation | None, body: list[str]): list[str]&lt;br/&gt;+ constructor_parameters(constructor: Operation | None): list[tuple]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codeclass--ooadclass" id="practices-clean-engineering-model--codeclass">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="2220" y="1310" width="460" height="382" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeProperty&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ lines(contract: bool): list[str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codeproperty--property" id="practices-clean-engineering-model--codeproperty">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="720" y="1310" width="220" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeOperation&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ paths_through: int&lt;br/&gt;+ readability_score: int&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ take_brace_body(text: str, callees: list[str]): None&lt;br/&gt;+ load_brace_body_facts(): None&lt;br/&gt;+ measure_body(body: MeasuredBody): None&lt;br/&gt;+ doc_text(): str&lt;br/&gt;+ signature(contract: bool): list[str]&lt;br/&gt;+ is_constructor_of(oclass: OoadClass): bool&lt;br/&gt;+ answers_to(oclass: OoadClass, operation_name: str): bool&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codeoperation--operation" id="practices-clean-engineering-model--codeoperation">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4700" y="1310" width="340" height="190" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;BraceCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#bracecleanengineeringmodel--cfamilyparse-codecleanengineeringmodel" id="practices-clean-engineering-model--bracecleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4940" y="2130" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CFamilyParse&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): CFamilyParse&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#cfamilyparse" id="practices-clean-engineering-model--cfamilyparse">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3770" y="60" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PythonCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ parse(text: str): PythonCleanEngineeringModel&lt;br/&gt;+ file_header(preamble: CodeBody): list[str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#pythoncleanengineeringmodel--codecleanengineeringmodel" id="practices-clean-engineering-model--pythoncleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="5320" y="2130" width="280" height="94" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PythonModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ tree: ast.Module | None&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ keep_tree(tree: ast.Module): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#pythonmodule--codemodule" id="practices-clean-engineering-model--pythonmodule">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6320" y="2130" width="220" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;PythonClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#pythonclass--codeclass-pythonproperty--codeproperty-pythonoperation--codeoperation" id="practices-clean-engineering-model--pythonclass">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4000" y="2130" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;TypeScriptCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#typescriptcleanengineeringmodel--bracecleanengineeringmodel" id="practices-clean-engineering-model--typescriptcleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4240" y="2510" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JavaScriptCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#javascriptcleanengineeringmodel--bracecleanengineeringmodel" id="practices-clean-engineering-model--javascriptcleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4580" y="2510" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;JavaCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ language: CodeLanguage&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#javacleanengineeringmodel--bracecleanengineeringmodel" id="practices-clean-engineering-model--javacleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4940" y="2510" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ geometry: Box&lt;br/&gt;+ cell_id: str&lt;br/&gt;+ parent_id: str&lt;br/&gt;+ group: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ height(): int&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#diagramnode" id="practices-clean-engineering-model--diagramnode">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6740" y="770" width="200" height="126" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ height(): int&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#diagramclass--ooadclass-diagramnode" id="practices-clean-engineering-model--diagramclass">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="9100" y="1310" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ImportedClass&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ from_module: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ key_properties(): list[Property]&lt;br/&gt;+ height(): int&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#importedclass--diagramclass" id="practices-clean-engineering-model--importedclass">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6000" y="2130" width="220" height="94" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramModule&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ nested: bool&lt;br/&gt;+ seam_bullets: int&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ height(): int&lt;br/&gt;+ header_height(): int&lt;br/&gt;+ purpose_line(): str&lt;br/&gt;+ shown_seam_terms(): list[str]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#diagrammodule--module-diagramnode" id="practices-clean-engineering-model--diagrammodule">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4750" y="1840" width="200" height="142" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ContainmentForest&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ by_name: dict[str, Module]&lt;br/&gt;+ children_of: dict[str, list[str]]&lt;br/&gt;+ roots: list[str]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ build(modules: list[Module], synthesize_parents: bool): ContainmentForest&lt;br/&gt;+ module_dep_depth(name: str): int&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#containmentforest" id="practices-clean-engineering-model--containmentforest">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="5200" y="470" width="440" height="126" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramCleanEngineeringModel&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#diagramcleanengineeringmodel--cleanengineeringmodel" id="practices-clean-engineering-model--diagramcleanengineeringmodel">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="7500" y="1310" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="practices-clean-engineering-model--box-harness-whiteboard" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Box (harness/whiteboard)&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ center: tuple[float, float]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Box(x: float, y: float, w: float, h: float)&lt;br/&gt;+ holds(other: Box): bool&lt;br/&gt;+ overlaps(other: Box): bool&lt;br/&gt;+ shifted(rightward: float, downward: float): Box&lt;br/&gt;+ moved_to(left: float, top: float): Box&lt;br/&gt;+ clear_gap_to(other: Box): float&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+          <mxGeometry x="5700" y="470" width="300" height="158" as="geometry" />
+        </mxCell>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;DiagramArrow&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ source: str&lt;br/&gt;+ target: str&lt;br/&gt;+ kind: str&lt;br/&gt;+ label: str&lt;br/&gt;+ exit_side: str&lt;br/&gt;+ entry_side: str&lt;br/&gt;+ exit_point: tuple&lt;br/&gt;+ entry_point: tuple&lt;br/&gt;+ corners: list[tuple]&lt;br/&gt;+ routed: bool&lt;br/&gt;+ path: list[tuple]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ DiagramArrow(source: str, target: str, kind: str, label: str)&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#diagramarrow" id="practices-clean-engineering-model--diagramarrow">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="5540" y="770" width="380" height="238" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CardPlacement&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ CardPlacement(cards: list[DiagramNode], arrows: list[DiagramArrow])&lt;br/&gt;+ place(): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#cardplacement" id="practices-clean-engineering-model--cardplacement">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="4720" y="470" width="400" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ArrowRouter&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ArrowRouter(cards: list[DiagramNode], arrows: list[DiagramArrow], obstacles: list[Box], kept_paths: list[list])&lt;br/&gt;+ route(): list[DiagramArrow]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#arrowrouter" id="practices-clean-engineering-model--arrowrouter">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="3020" y="470" width="640" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeMeasure&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;+ label: str&lt;br/&gt;+ phrase: str&lt;br/&gt;+ of: str&lt;br/&gt;+ existing: str&lt;br/&gt;+ counted: bool&lt;br/&gt;+ not_taken_fact: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ value_on(node: Node): float | int | None&lt;br/&gt;+ said_of(value: float | int): str&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codemeasure" id="practices-clean-engineering-model--codemeasure">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="7080" y="770" width="260" height="190" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;ChosenTools&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ measures_code: bool&lt;br/&gt;+ config: Path&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ChosenTools(chosen: Mapping | None, config: Path | None)&lt;br/&gt;+ of_project(folder: Path): ChosenTools&lt;br/&gt;+ tool_name(measure: CodeMeasure, language: str): str | None&lt;br/&gt;+ limit(measure: CodeMeasure): float | None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#chosentools" id="practices-clean-engineering-model--chosentools">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6580" y="470" width="360" height="142" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MeasuringTool&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ name: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ value(measure: CodeMeasure, measured: MeasuredNode): float | int | None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#measuringtool" id="practices-clean-engineering-model--measuringtool">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="7280" y="470" width="420" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;MeasuredNode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ node: Node&lt;br/&gt;+ reading: GraphReading&lt;br/&gt;+ files: tuple[Path, ...]&lt;br/&gt;+ file: Path&lt;br/&gt;+ lines: tuple[int, int]&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#measurednode" id="practices-clean-engineering-model--measurednode">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="7440" y="770" width="200" height="126" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CheckedCodeMeasures&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ take(): None&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#checkedcodemeasures" id="practices-clean-engineering-model--checkedcodemeasures">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="7000" y="470" width="200" height="80" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;CodeMeasureLimit&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ measure: CodeMeasure&lt;br/&gt;+ advice: str&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ check_production(node: Node, context: RuleCheckContext): list[Finding]&lt;br/&gt;&lt;/p&gt;" link="ooad-model.md#codemeasurelimit--productioncoderule" id="practices-clean-engineering-model--codemeasurelimit">
+          <mxCell style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;module=practices/clean_engineering/model;" vertex="1" parent="1">
+            <mxGeometry x="6080" y="470" width="420" height="94" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <mxCell id="2" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--cleanengineeringmodel" target="practices-clean-engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5100" y="248" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="3" value="preamble" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=preamble;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.75;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--module" target="practices-clean-engineering-model--codebody" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6310" y="1280" />
+              <mxPoint x="4080" y="1280" />
+              <mxPoint x="4080" y="1270" />
+              <mxPoint x="4070" y="1270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="4" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--module" target="practices-clean-engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5100" y="248" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="5" value="source_facts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3235;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--ooadclass" target="practices-clean-engineering-model--classsourcefacts" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3990" y="1190" />
+              <mxPoint x="3690" y="1190" />
+              <mxPoint x="3690" y="170" />
+              <mxPoint x="3320" y="170" />
+              <mxPoint x="3320" y="10" />
+              <mxPoint x="2100" y="10" />
+              <mxPoint x="2100" y="440" />
+              <mxPoint x="2030" y="440" />
+              <mxPoint x="2030" y="740" />
+              <mxPoint x="2110" y="740" />
+              <mxPoint x="2110" y="1270" />
+              <mxPoint x="1900" y="1270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6" value="arrows" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6765;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--ooadclass" target="practices-clean-engineering-model--classarrows" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4110" y="1260" />
+              <mxPoint x="2970" y="1260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--ooadclass" target="practices-clean-engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5100" y="248" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8" value="relationship" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=relationship;exitX=0.6667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--property" target="practices-clean-engineering-model--relationship" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1960" y="1220" />
+              <mxPoint x="1860" y="1220" />
+              <mxPoint x="1860" y="1270" />
+              <mxPoint x="1340" y="1270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="9" value="arrow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--property" target="practices-clean-engineering-model--fieldarrow" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1840" y="1240" />
+              <mxPoint x="160" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="10" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.3333;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--property" target="practices-clean-engineering-model--invariantholder" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2550" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="11" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.6667;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--property" target="practices-clean-engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5100" y="248" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="12" value="body" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=body;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.25;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--operation" target="practices-clean-engineering-model--codebody" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2550" y="1240" />
+              <mxPoint x="3850" y="1240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="13" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.3421;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--operation" target="practices-clean-engineering-model--invariantholder" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2550" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="14" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.6579;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--operation" target="practices-clean-engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5100" y="248" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="15" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--invariant" target="practices-clean-engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5100" y="248" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="16" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--parameter" target="practices-clean-engineering-model--ooadnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5100" y="248" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="span" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=span;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6765;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--classsourcefacts" target="practices-clean-engineering-model--sourcetext" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1900" y="2100" />
+              <mxPoint x="3040" y="2100" />
+              <mxPoint x="3040" y="2090" />
+              <mxPoint x="3050" y="2090" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="18" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.35;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codeclasssourcefacts" target="practices-clean-engineering-model--classsourcefacts" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1900" y="1498" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="19" value="span" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=span;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3235;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--operationsourcefacts" target="practices-clean-engineering-model--sourcetext" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="750" y="1220" />
+              <mxPoint x="30" y="1220" />
+              <mxPoint x="30" y="2100" />
+              <mxPoint x="1880" y="2100" />
+              <mxPoint x="1880" y="2120" />
+              <mxPoint x="2790" y="2120" />
+              <mxPoint x="2790" y="2390" />
+              <mxPoint x="3910" y="2390" />
+              <mxPoint x="3910" y="2010" />
+              <mxPoint x="2930" y="2010" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="20" value="cards" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--markdowncleanengineeringmodel" target="practices-clean-engineering-model--carddocument" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="7930" y="1760" />
+              <mxPoint x="5800" y="1760" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="21" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--markdowncleanengineeringmodel" target="practices-clean-engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5090" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="22" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--markdownmodule" target="practices-clean-engineering-model--module" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6310" y="1118" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="23" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--markdownooadclass" target="practices-clean-engineering-model--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4050" y="1198" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="24" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--jsoncleanengineeringmodel" target="practices-clean-engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5090" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="25" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--jsonmodule" target="practices-clean-engineering-model--module" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6310" y="1118" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="26" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--jsonooadclass" target="practices-clean-engineering-model--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4050" y="1198" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="27" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--jsonproperty" target="practices-clean-engineering-model--property" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1900" y="1102" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--jsonoperation" target="practices-clean-engineering-model--operation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2550" y="1166" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="29" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--jsonrelationship" target="practices-clean-engineering-model--relationship" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1340" y="1530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="30" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--sketchcleanengineeringmodel" target="practices-clean-engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5090" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="31" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=language;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4419;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codebody" target="practices-clean-engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3960" y="2680" />
+              <mxPoint x="4630" y="2680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="32" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=language;exitX=0.6667;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2209;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--writtenblock" target="practices-clean-engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3110" y="360" />
+              <mxPoint x="3300" y="360" />
+              <mxPoint x="3300" y="30" />
+              <mxPoint x="2380" y="30" />
+              <mxPoint x="2380" y="440" />
+              <mxPoint x="2350" y="440" />
+              <mxPoint x="2350" y="740" />
+              <mxPoint x="2330" y="740" />
+              <mxPoint x="2330" y="1260" />
+              <mxPoint x="2810" y="1260" />
+              <mxPoint x="2810" y="1990" />
+              <mxPoint x="4270" y="1990" />
+              <mxPoint x="4270" y="2460" />
+              <mxPoint x="4470" y="2460" />
+              <mxPoint x="4470" y="2640" />
+              <mxPoint x="4440" y="2640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="33" value="lead_body, closing_body, inside_body" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3333;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--writtenblock" target="practices-clean-engineering-model--codebody" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2950" y="440" />
+              <mxPoint x="2990" y="440" />
+              <mxPoint x="2990" y="720" />
+              <mxPoint x="3270" y="720" />
+              <mxPoint x="3270" y="1220" />
+              <mxPoint x="3960" y="1220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="34" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=language;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.8837;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codecleanengineeringmodel" target="practices-clean-engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6130" y="1740" />
+              <mxPoint x="5630" y="1740" />
+              <mxPoint x="5630" y="2700" />
+              <mxPoint x="5020" y="2700" />
+              <mxPoint x="5020" y="2690" />
+              <mxPoint x="5010" y="2690" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="35" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codecleanengineeringmodel" target="practices-clean-engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5090" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="36" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codemodule" target="practices-clean-engineering-model--module" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6310" y="1118" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="37" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=language;exitX=0.6739;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1163;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codeclass" target="practices-clean-engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2530" y="2050" />
+              <mxPoint x="3940" y="2050" />
+              <mxPoint x="3940" y="2700" />
+              <mxPoint x="4340" y="2700" />
+              <mxPoint x="4340" y="2640" />
+              <mxPoint x="4350" y="2640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="38" value="source_facts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.3261;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.65;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codeclass" target="practices-clean-engineering-model--codeclasssourcefacts" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2370" y="2070" />
+              <mxPoint x="3810" y="2070" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="39" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codeclass" target="practices-clean-engineering-model--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4050" y="1198" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="40" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codeproperty" target="practices-clean-engineering-model--property" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1900" y="1102" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="41" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codeoperation" target="practices-clean-engineering-model--operation" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2550" y="1166" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="42" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.35;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--bracecleanengineeringmodel" target="practices-clean-engineering-model--cfamilyparse" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3870" y="170" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="43" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.65;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--bracecleanengineeringmodel" target="practices-clean-engineering-model--codecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6130" y="1530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="44" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=language;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3372;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--cfamilyparse" target="practices-clean-engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3870" y="440" />
+              <mxPoint x="4370" y="440" />
+              <mxPoint x="4370" y="1260" />
+              <mxPoint x="5690" y="1260" />
+              <mxPoint x="5690" y="1720" />
+              <mxPoint x="5430" y="1720" />
+              <mxPoint x="5430" y="2100" />
+              <mxPoint x="4790" y="2100" />
+              <mxPoint x="4790" y="2440" />
+              <mxPoint x="4530" y="2440" />
+              <mxPoint x="4530" y="2660" />
+              <mxPoint x="4540" y="2660" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="45" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--pythoncleanengineeringmodel" target="practices-clean-engineering-model--codecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6130" y="1530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="46" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--pythonmodule" target="practices-clean-engineering-model--codemodule" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4510" y="1950" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="47" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--pythonclass" target="practices-clean-engineering-model--codeclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2450" y="1722" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="48" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=language;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5581;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--typescriptcleanengineeringmodel" target="practices-clean-engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4340" y="2620" />
+              <mxPoint x="4550" y="2620" />
+              <mxPoint x="4550" y="2460" />
+              <mxPoint x="4810" y="2460" />
+              <mxPoint x="4810" y="2630" />
+              <mxPoint x="4730" y="2630" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="49" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--typescriptcleanengineeringmodel" target="practices-clean-engineering-model--bracecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5040" y="2240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="50" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=language;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6628;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--javascriptcleanengineeringmodel" target="practices-clean-engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4680" y="2680" />
+              <mxPoint x="4820" y="2680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="51" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--javascriptcleanengineeringmodel" target="practices-clean-engineering-model--bracecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5040" y="2240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52" value="language" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=language;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.7791;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--javacleanengineeringmodel" target="practices-clean-engineering-model--codelanguage" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5040" y="2680" />
+              <mxPoint x="4920" y="2680" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="53" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--javacleanengineeringmodel" target="practices-clean-engineering-model--bracecleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5040" y="2240" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="54" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.35;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--diagramclass" target="practices-clean-engineering-model--ooadclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4050" y="1198" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="55" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.65;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--diagramclass" target="practices-clean-engineering-model--diagramnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6840" y="926" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="56" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--importedclass" target="practices-clean-engineering-model--diagramclass" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="9200" y="1420" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="57" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.35;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--diagrammodule" target="practices-clean-engineering-model--module" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6310" y="1118" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="58" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.65;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--diagrammodule" target="practices-clean-engineering-model--diagramnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6840" y="926" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="59" value="" style="edgeStyle=none;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=block;endSize=16;endFill=0;exitX=0.5;exitY=0.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=1.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--diagramcleanengineeringmodel" target="practices-clean-engineering-model--cleanengineeringmodel" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5090" y="990" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="60" value="measure" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=measure;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codemeasurelimit" target="practices-clean-engineering-model--codemeasure" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="6290" y="720" />
+              <mxPoint x="6710" y="720" />
+              <mxPoint x="6710" y="940" />
+              <mxPoint x="7050" y="940" />
+              <mxPoint x="7050" y="730" />
+              <mxPoint x="7210" y="730" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="61" value="route" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--arrowrouter" target="practices-clean-engineering-model--diagramarrow" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="3340" y="580" />
+              <mxPoint x="3710" y="580" />
+              <mxPoint x="3710" y="30" />
+              <mxPoint x="5460" y="30" />
+              <mxPoint x="5460" y="440" />
+              <mxPoint x="5670" y="440" />
+              <mxPoint x="5670" y="700" />
+              <mxPoint x="5730" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="62" value="place" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--cardplacement" target="practices-clean-engineering-model--diagramnode" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="4920" y="720" />
+              <mxPoint x="5510" y="720" />
+              <mxPoint x="5510" y="1030" />
+              <mxPoint x="6050" y="1030" />
+              <mxPoint x="6050" y="440" />
+              <mxPoint x="6550" y="440" />
+              <mxPoint x="6550" y="700" />
+              <mxPoint x="6840" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="63" value="read_card" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--markdownooadclass" target="practices-clean-engineering-model--classheading" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="5410" y="2080" />
+              <mxPoint x="4530" y="2080" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="64" value="resolve" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--importedclasses" target="practices-clean-engineering-model--classreference" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="7120" y="420" />
+              <mxPoint x="4670" y="420" />
+              <mxPoint x="4670" y="700" />
+              <mxPoint x="4540" y="700" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="65" value="CodeLanguage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--codelanguage" target="practices-clean-engineering-model--codespelling" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="66" value="value" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;dashed=1;endArrow=open;endSize=12;exitX=0.619;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="practices-clean-engineering-model--measuringtool" target="practices-clean-engineering-model--measurednode" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

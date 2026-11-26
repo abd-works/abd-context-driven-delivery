@@ -1,0 +1,9 @@
+story map, draw.io: 736 links, broken: none
+   e.g. ['story-map.md#e-register-and-install-toolsets', 'story-map.md#e-register-agent-toolsets', 'story-map.md#s-author----register-agent-toolsets'] | to story files: 76
+story map, whiteboard: 76 links, broken: none
+   e.g. [('story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/choose-the-lane-for-a-project/choose_the_lane_for_a_project_story.test.py', ''), ('story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/install-into-the-lane-of-the-checkout/install_into_the_lane_of_the_checkout_story.test.py', ''), ('story_tests/register-and-install-toolsets/serve-cdd-code-in-lanes/serve-a-feature-branch-on-the-dev-lane/serve_a_feature_branch_on_the_dev_lane_story.test.py', '')]
+ooad model: 88 classes
+ooad class model, draw.io: 83 links, broken: none
+   e.g. ['ooad-model.md#unreadablesource--valueerror', 'ooad-model.md#ooadnode--modelnode', 'ooad-model.md#translationerror--exception'] | to story files: 0
+ooad class model, whiteboard: 83 links, broken: none
+   e.g. [('cdd_guidance/practices/clean_engineering/model/.context/ooad-model.md', 'unreadablesource--valueerror'), ('cdd_guidance/practices/clean_engineering/model/.context/ooad-model.md', 'ooadnode--modelnode'), ('cdd_guidance/practices/clean_engineering/model/.context/ooad-model.md', 'translationerror--exception')]
