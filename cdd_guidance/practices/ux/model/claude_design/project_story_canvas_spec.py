@@ -209,7 +209,7 @@ with description("a project's story canvas rendered in one call") as self:
         with it("should print the summary to that console, writing the value as an escape"):
             self.rendered.print_summary(self.console)
             self.console.flush()
-            expect(self.bytes.getvalue()).to(contain(b"Then the cart reads \u2212$5.00"))
+            expect(self.bytes.getvalue()).to(contain(b"Then the cart reads \\u2212$5.00"))
 
         with it("should keep the value as it is in the summary's text"):
             expect(self.rendered.summary()).to(contain("\u2212$5.00"))
