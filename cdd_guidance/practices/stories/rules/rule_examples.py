@@ -88,6 +88,36 @@ def _story_test(given: str, when: str, then: str) -> dict[str, str]:
     return {"story-map.md": _TAKE_ORDERS_MAP, _STORY_TEST_FILE: test}
 
 
+def _steps_scenario(name: str, *steps: str) -> str:
+    """A scenario of the given step lines, each already written with its keyword: ``*Given* a Customer``."""
+    return f"#### Scenario: {name}\n\n" + "\n".join(steps) + "\n"
+
+
+def _realized(when: str, call: str) -> str:
+    """A When line with the realization block that names the first operation it calls."""
+    return f"*When* {when}\n\n```realization\n{call}\n  <- Book[] the catalog shows\n```\n"
+
+
+# A Given whose whole predicate is an example's name, and the same Given saying in domain words what the basket holds.
+_EXAMPLE_NAME_GIVEN = "*Given* the ++[basket](domain-model.md#basket)++ is ++Me on the checklist++"
+_DOMAIN_WORDS_GIVEN = "*Given* the ++[basket](domain-model.md#basket)++ holds ++one book set aside for Me++"
+_ORDER_STEPS = ("*When* the **Customer** places an order for one book", "*Then* the order holds one line")
+# Two scenarios that run the same operation and check mostly the same outcome; repaired, the second shows another case.
+_SEE_CATALOG = _steps_scenario("See the catalog", "*Given* the **Customer** has an ++empty basket++",
+    _realized("the **Customer** opens the shop", "BookRepository.list()"),
+    "*Then* the catalog shows ++Dune++ and ++Emma++, each with its price", "  *And* ++Dune++ is tagged *Best value*")
+_LOAD_CATALOG = _steps_scenario("Load catalog", "*Given* the **Customer** has an ++empty basket++",
+    _realized("the catalog is loaded", "BookRepository.list()"),
+    "*Then* the catalog shows ++Dune++ and ++Emma++", "  *And* ++Dune++ is tagged *Best value*", "  *But* ++Secret++ is not in the catalog")
+_EMPTY_CATALOG = _steps_scenario("See an empty catalog", "*Given* the shop sells no book",
+    _realized("the **Customer** opens the shop", "BookRepository.list()"), "*Then* the catalog says no book is for sale")
+# A scenario of the Customer's story in which only the system looks something up; repaired, the Customer acts.
+_LOOKUP_ONLY = _steps_scenario("No profile before the account is verified", "*Given* the **Customer** has an unverified account",
+    "*When* My Shop looks for the customer profile of the account", "*Then* no profile is found")
+_CUSTOMER_ACTS = _steps_scenario("No profile before the account is verified", "*Given* the **Customer** has an unverified account",
+    "*When* the **Customer** opens the profile page", "*Then* the page says the account is not verified yet")
+
+
 # A rule's failing files and its repaired files, written here where an example folder of story tests would say no more:
 # each side is a small story map, with a scenarios file or a story test where the rule reads one.
 FILE_PAIRS: dict[str, tuple[dict[str, str], dict[str, str]]] = {
@@ -102,6 +132,15 @@ FILE_PAIRS: dict[str, tuple[dict[str, str], dict[str, str]]] = {
         _scenarios("Place Order", *(_scenario(f"Order book {number}") for number in range(1, 9))),
         _scenarios("Place Order", *(_scenario(f"Order book {number}") for number in range(1, 3))),
     ),
+    "step-says-more-than-an-example-name": (
+        _scenarios("Place Order", _steps_scenario("Order from the checklist", _EXAMPLE_NAME_GIVEN, *_ORDER_STEPS)),
+        _scenarios("Place Order", _steps_scenario("Order from the checklist", _DOMAIN_WORDS_GIVEN, *_ORDER_STEPS)),
+    ),
+    "scenarios-differ-in-when-or-outcome": (
+        _scenarios("Place Order", _SEE_CATALOG, _LOAD_CATALOG),
+        _scenarios("Place Order", _SEE_CATALOG, _EMPTY_CATALOG),
+    ),
+    "person-stories-show-the-person-acting": (_scenarios("Place Order", _LOOKUP_ONLY), _scenarios("Place Order", _CUSTOMER_ACTS)),
     # A story at acceptance tests, since its Given has a body, whose When calls nothing; repaired, the When calls the
     # operation it tests.
     "code-steps-invoke-code": (

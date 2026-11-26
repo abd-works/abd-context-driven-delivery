@@ -252,7 +252,7 @@ class Screen(ServesStories):
     """One screen of the map, with the stories, scenarios, and steps it serves."""
 
     _semantic_type_name = "Screen"
-    graph_facts = ("slug", "layout", "description", "story_keys", "scenario_keys", "step_keys", "domain_terms")
+    graph_facts = ("slug", "layout", "description", "story_keys", "scenario_keys", "step_keys", "domain_terms", "prototype")
 
     def __init__(self, name: str, sequential_order: int, graph: Optional[Graph] = None) -> None:
         """A screen called name; its slug, layout, description, and the screen it is the chrome of are set on it once

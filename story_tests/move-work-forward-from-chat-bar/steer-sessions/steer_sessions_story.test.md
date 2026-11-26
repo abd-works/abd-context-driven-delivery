@@ -105,6 +105,126 @@ section: body
 *When* the Person closes checkout-flow  
 *Then* the close dialog offers a handoff, and to commit and push checkout-flow
 
+## Story: Show Backlog Items In Session List
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| The person, 2026-11-25 | "Add a section to the session choices for backlog items ... A parent and child can be opened to reveal the child items" |
+| The person, 2026-11-26 | on the build: "is there a possibility to use scrolling when list is too long?", then "kill the extra nested child functionality, too cluttered" |
+| `harness/chat-ui/pane/hooks/chat-bar/session-dialogs-view.tsx` `SessionListView` | observed 2026-11-25: the session list holds main, the open tickets, and the field that names a new session with its folder button |
+| `space/kanban/backlog_item.py` `BacklogItem.children`, `Backlog.items` | a parent keeps its children in its folder; the Backlog lists its items in the order the board keeps |
+
+### Domain terms
+
+- ++[backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card)++ — an idea in the Backlog, not yet started; a parent keeps its child items with it.
+
+#### Scenario: Show the Backlog closed when the session list opens
+
+The person, 2026-11-25, on the first build: "it needs to be collapsed on open, it's a collapsed section that opens beside the current list, because it's spilling off the max chat height".
+
+*Given* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds the [backlog items](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Payment retry and Checkout flow
+*When* the Person opens the session list in the main chat
+*Then* under the field that names a new session, a closed Backlog row says it holds 2 items
+  *And* no Backlog item is shown
+
+#### Scenario: Open the Backlog beside the session list
+
+*Given* the session list shows the Backlog closed, holding Payment retry and Checkout flow, in that order
+  *And* Checkout flow keeps the child items Address form and Card form
+*When* the Person opens the Backlog
+*Then* a BACKLOG box opens beside the session list, listing Payment retry, then Checkout flow
+  *And* the session list stays as it was, its rows no taller
+  *And* Address form and Card form are not shown, and nothing beside Checkout flow opens them
+
+#### Scenario: Close the Backlog again each time the session list opens
+
+*Given* the Person opened the Backlog beside the session list
+*When* the Person closes the session list and opens it again
+*Then* the Backlog is closed
+
+#### Scenario: Page through a Backlog taller than the chat
+
+*Given* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds 12 items
+  *But* the chat bar has room for 7 rows of items above its line
+*When* the Person opens the Backlog
+*Then* the BACKLOG box shows the first 7 items, and its heading says 1–7 of 12
+*When* the Person pages down
+*Then* the BACKLOG box shows items 6 to 12, and its heading says 6–12 of 12
+*When* the Person pages up
+*Then* the BACKLOG box shows the first 7 items again
+
+#### Scenario: Cut a long title short
+
+*Given* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Chat bar shows the robots queue as clearly as a drawn card view
+*When* the Person opens the Backlog
+*Then* the BACKLOG box shows it as Chat bar shows the robots queu…, so the box stays inside the chat
+
+#### Scenario: Show no Backlog section while the Backlog is empty
+
+*Given* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds no [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card)
+*When* the Person opens the session list in the main chat
+*Then* the list shows main, the open tickets and the new session's field, and no Backlog row
+
+#### Scenario: Offer no Backlog in a ticket's own chat
+
+*Given* the chat works in checkout-flow's own worktree
+  *And* the [Backlog](../../../space/kanban/.context/kanban-model.md#backlog--column) holds Payment retry
+*When* the Person looks for the session list
+*Then* the chat bar offers no session list, so no Backlog item can be started from a ticket's chat
+
+## Story: Start Backlog Item From Session List
+
+### Evidence
+
+| Source | Note |
+|--------|------|
+| The person, 2026-11-25 | "If a backlog ticket is started, that is identical to moving a ticket out of the backlog ... the parent or the child can be started"; 2026-11-26: a child item is no longer listed, so it starts with its parent or from the board |
+| `space/kanban/app/src/kanban/ticket/root-choice-client.ts` `start` | the board's way out of the Backlog: `backlog-item.start` on the folder chosen, then activation: `ticket.activate`, and a chat started in the ticket's worktree |
+| `space/kanban/backlog_item.py` `BacklogItem.start` | a parent's children start with it as story tickets that are its children; an item kept with a ticket's work brings that ticket back |
+| `harness/chat-ui/pane/hooks/chat-bar/session-client.ts` `createSession`, `activateTicket` | the session list's new session opens on the folder chosen beside its name, and opens as a ticket picked from the list does |
+
+#### Scenario: Start a Backlog item as the board moves it out of the Backlog
+
+*Given* the session list shows the [backlog item](../../../space/kanban/.context/kanban-model.md#backlogitem--card) Payment retry
+  *But* no folder is chosen beside the new session's name
+*When* the Person starts Payment retry
+*Then* Payment retry is started on the whole repository, as backlog-item.start answers, and its ticket payment-retry is in Discovery
+  *And* payment-retry opens in its own worktree, with its chat started there, as Open Session does
+  *And* the session list is closed, and Payment retry is no longer in the Backlog
+
+#### Scenario: Start a Backlog item on the folder chosen beside the new session's name
+
+*Given* the session list shows Payment retry
+  *And* the folder app/payments is chosen beside the new session's name
+*When* the Person starts Payment retry
+*Then* payment-retry's session works on app/payments
+  *And* no folder is chosen beside the new session's name any more
+
+#### Scenario: Start a parent with its child items
+
+*Given* the session list shows Checkout flow, which keeps the child items Address form and Card form
+*When* the Person starts Checkout flow
+*Then* the ticket checkout-flow is in Discovery, with the child tickets address-form and card-form
+  *And* checkout-flow opens in its own worktree
+
+#### Scenario: Show why a Backlog item did not start
+
+*Given* the session list shows Payment retry
+  *But* Payment retry was deleted from the Backlog on the board after the list was read
+*When* the Person starts Payment retry
+*Then* the failure line says Payment retry did not start, with backlog-item.start's reason
+  *And* no ticket is opened, and the Backlog no longer holds Payment retry
+
+#### Scenario: Keep a started item's ticket when it does not open
+
+*Given* the session list shows Payment retry
+  *But* ticket.activate refuses to open payment-retry
+*When* the Person starts Payment retry
+*Then* the ticket payment-retry stays in Discovery, started
+  *And* the failure line says payment-retry did not open, with ticket.activate's reason
+
 ## Story: Debug A Failure From Chat Bar
 
 ### Evidence

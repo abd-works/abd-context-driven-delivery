@@ -3,7 +3,7 @@
 What each practice and fidelity has in a session, and the guidance selection a page shows: the session's core makes these and holds them.
 
 - **Purpose:** Keep what each practice and each of its fidelities has in one session, where it writes, which files it declares and holds there, and the guidance selection a page shows and acts on.
-- **Seam (terms):** PracticeSessionOutput, FidelitySessionOutput, WrittenFiles, ProposedRoots, SessionPractices, GuidanceSelection, FileListing, OutputRootRefused, LastFormatLeftOut, PracticeTurnedOff
+- **Seam (terms):** PracticeSessionOutput, FidelitySessionOutput, WrittenFiles, ProposedRoots, SessionPractices, GuidanceSelection, FileListing, OutputRootRefused, LastFormatLeftOut
 - **Dependencies (one-way):** space/session/files, space/session/validation, harness/process, harness/guidance, harness/agent_tools, harness/installation, harness/mcp, harness/markdown, harness/design_canvas, harness/whiteboard
 
 ## PracticeSessionOutput
@@ -68,8 +68,7 @@ Where one fidelity writes in one session: its output paths by format, the files 
 + keep_roots(roots: list[Path]): None
 + choose_format(format: str, is_chosen: bool): FidelitySessionOutput
 + choose_formats(names: list[str], is_chosen: bool): FidelitySessionOutput
-	// refused for a practice turned off, and when leaving names out would leave no format chosen
----<<raises>>--> PracticeTurnedOff
+	// refused when leaving names out would leave no format chosen; a practice switched off takes the choice too
 ---<<raises>>--> LastFormatLeftOut
 ---<<holds>>--> WrittenFiles
 
@@ -102,15 +101,6 @@ Every format chosen for a fidelity was left out, so it would write in no format.
 ------
 + fidelity: FidelityGuidance
 + formats: list[str]
-----
-
-## PracticeTurnedOff : ValueError
-
-A format was chosen, or left out, for a fidelity of a practice turned off for the session.
-
-+ PracticeTurnedOff(practice: PracticeSessionOutput)
-------
-+ practice: PracticeSessionOutput
 ----
 
 ## OutputRootRefused : ValueError

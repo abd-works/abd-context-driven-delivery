@@ -928,6 +928,9 @@ class StoryType(str, Enum):
 
 # The fact a story's graph node carries when a scenarios file specifies it and the story map does not hold it.
 NOT_ON_STORY_MAP = "not_on_story_map"
+# The facts a story's node keeps of the actors it serves and of its kind: user, system or technical.
+ACTORS_FACT = "actors"
+STORY_KIND_FACT = "story_type"
 
 
 @language_adapter(language="typescript")
@@ -1056,6 +1059,9 @@ class Story(CodeHeld):
         node = recording.add(self, f"stories:Story:{file}:{self.name}", lines)
         for fact, held in recording.source_of(file).facts.items():
             node.set_fact(fact, held)
+        # Who the story serves and whether it is a user, system or technical story, which the scenario rules read.
+        node.set_fact(ACTORS_FACT, list(self.actors))
+        node.set_fact(STORY_KIND_FACT, self.kind)
         if parent is None:
             node.set_fact(NOT_ON_STORY_MAP, True)
         else:

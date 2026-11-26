@@ -316,8 +316,8 @@ class _ModulesBoard(ModulesView):
         for name, cell in self._cells.items():
             cell.holds_sections = any(self._cells[child].holds_modules for child in self._forest.children_of.get(name, []))
         layout = _WhiteboardModuleLayout(self._forest, self._cells).lay_out()
-        board = Whiteboard(self._channel.modules_title)
-        board.add(Label(ElementId("title"), x=layout.start_x, y=layout.start_y - TITLE_ROOM - SUBTITLE_ROOM, text=board.title, size="large"))
+        board = Whiteboard()
+        board.add(Label(ElementId("title"), x=layout.start_x, y=layout.start_y - TITLE_ROOM - SUBTITLE_ROOM, text=self._channel.modules_title, size="large"))
         board.add(Label(ElementId("subtitle"), x=layout.start_x, y=layout.start_y - TITLE_ROOM, text=MODULES_SUBTITLE, size="small", wrap=SUBTITLE_WRAP))
         for name in self._forest.in_model_order(self._forest.roots):
             cell = self._cells[name]
@@ -360,7 +360,7 @@ class ClassBoard(ClassView):
         return module.name.strip()
 
     def draw(self) -> Whiteboard:
-        board = Whiteboard("Classes")
+        board = Whiteboard()
         board.add(Label(ElementId("title"), x=PAGE_MARGIN, y=PAGE_MARGIN - TITLE_ROOM, text=f"{self.channel.name or 'Model'} - Classes", size="large"))
         if self.draws_one_page:
             _ClassBoardPage(self).draw_on(board, Box(0.0, PAGE_MARGIN, 0, 0))

@@ -151,8 +151,9 @@ class PracticeSessionOutput:
     @property
     def folder(self) -> Path:
         """The folder this practice writes its code under: the root chosen or configured,
-        else the practice's own default folder under the session's root, such as src for BDD."""
-        relative = self._chosen_or_configured_root or self._guidance.default_workspace_folder
+        else the practice's own default folder under the session's root, such as src for BDD, or the folder holding the
+        project's UX map for UX."""
+        relative = self._chosen_or_configured_root or self._guidance.default_folder
         return self._session.paths.folder_under_root(relative)
 
     @property
@@ -173,12 +174,12 @@ class PracticeSessionOutput:
     @property
     @data_field
     def design_view(self) -> str:
-        """The Claude Design link recorded for the latest version of the design canvas kept under the folder this
-        practice writes under (the UX practice's, ``CanvasVersions.in_practice_root``), which the chat bar's file viewer
+        """The Claude Design link recorded for the latest version of the design canvas kept in this practice's
+        root, the folder it writes under (the UX practice's, ``CanvasVersions.in_practice_root``), which the chat bar's file viewer
         opens; empty while the practice is off or no link is recorded."""
         if not self.enabled:
             return ""
-        latest = CanvasVersions.in_practice_root(self.output_root).latest
+        latest = CanvasVersions.in_practice_root(self.folder).latest
         return (latest.link or "") if latest is not None else ""
 
     @property
@@ -267,15 +268,6 @@ class LastFormatLeftOut(ValueError):
         super().__init__(f"{named} {only} chosen for {fidelity.name}; choose another format before leaving it out")
         self.fidelity = fidelity
         self.formats = formats
-
-
-class PracticeTurnedOff(ValueError):
-    """A format was chosen, or left out, for a fidelity of a practice turned off for the session: every action refuses
-    to work on that practice, so the choice would be kept for work nobody can do."""
-
-    def __init__(self, practice: PracticeSessionOutput) -> None:
-        super().__init__(f"{practice.name} is turned off for session {practice.session.name}; turn {practice.name} on for the session before choosing its formats")
-        self.practice = practice
 
 
 class FidelityNotInPractice(LookupError):
@@ -390,8 +382,8 @@ class FidelitySessionOutput:
     @noSessionLog
     def choose_format(self, format: str, is_chosen: bool) -> FidelitySessionOutput:
         """Choose format for this fidelity in its session, or leave it out when is_chosen is false, saved in its
-        session.json. A format the fidelity does not write is refused, as is any choice for a practice turned off and
-        leaving out the last format chosen."""
+        session.json. A format the fidelity does not write is refused, as is leaving out the last format chosen. A
+        practice switched off for the session takes the choice too, since an action sent to the agent still works on it."""
         named = Format(format).name
         if named not in self.offered_formats:
             raise FormatNotOfferedError(self._fidelity, format)
@@ -399,10 +391,8 @@ class FidelitySessionOutput:
 
     def choose_formats(self, names: list[str], is_chosen: bool) -> FidelitySessionOutput:
         """Choose each of names, formats this fidelity writes, or leave out each one, in one change of session.json.
-        Refused while the practice is turned off for the session (*PracticeTurnedOff*), and when leaving them out would
-        leave the fidelity no format chosen (*LastFormatLeftOut*), so it always writes in at least one."""
-        if not self.is_enabled:
-            raise PracticeTurnedOff(self._practice)
+        Refused when leaving them out would leave the fidelity no format chosen (*LastFormatLeftOut*), so it always writes
+        in at least one."""
         if not names:
             return self
         defaults = self.formats.default_formats

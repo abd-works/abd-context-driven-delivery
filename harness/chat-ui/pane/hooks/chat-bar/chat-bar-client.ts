@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
-import type { BoardOverviewData, BoardPracticeData } from '@cdd/space/kanban/board'
+import type { BacklogItemOverviewData, BoardOverviewData, BoardPracticeData } from '@cdd/space/kanban/board'
 import type { FidelityProgressData } from '@cdd/space/kanban/fidelity-progress'
 import type { TicketData } from '@cdd/space/kanban/ticket'
 
@@ -42,6 +42,12 @@ export class ChatBarClient {
   // Main is a ticket too, but the session list shows it first on its own row, so it is left out here.
   get openTickets(): { name: string; stage: string }[] {
     return (this.board?.columns ?? []).flatMap(column => column.tickets.filter(ticket => ticket.name !== MAIN_SESSION).map(ticket => ({ name: ticket.name, stage: column.name })))
+  }
+
+  // The Backlog's own items a person can start from the main chat's session list, in
+  // the order board.overview sends them; none from an overview sent before it named them.
+  get backlogItems(): BacklogItemOverviewData[] {
+    return (this.board?.columns ?? []).flatMap(column => column.items ?? [])
   }
 
   // Every session has a ticket, main among them, so the bar draws the full panel whenever the board has answered.

@@ -36,7 +36,7 @@ class VersionNotValid(ValueError):
 @agent_toolset
 class CddVersion:
     """Say which CDD version a chat runs and how it stands against the latest release on origin, so the chat bar's
-    version badge can show it green, yellow, or red and offer the update."""
+    version badge can show it green, yellow for a patch or minor update, or red for a major one, and offer the update."""
 
     def __init__(self, git: Git, project_git: Git | None = None, release: CddRelease | None = None) -> None:
         """git runs in the CDD checkout whose version the chat runs; project_git runs in the repository /version and
@@ -130,7 +130,7 @@ class CddVersion:
     @property
     @data_field
     def version(self) -> str:
-        """The version this chat runs, such as v0.1."""
+        """The version this chat runs, such as v0.1, or v0.1.2 for a patch release."""
         return self._running.label
 
     @property
@@ -155,7 +155,7 @@ class CddVersion:
             return f"CDD {running}. The latest release on origin is unknown: {self._fetch_problem or 'no release tag has been fetched'}"
         if standing is VersionStanding.CURRENT:
             return f"CDD {running} is the latest release."
-        size = "major" if standing is VersionStanding.BEHIND_MAJOR else "minor"
+        size = standing.value.removeprefix("behind ")
         return f"CDD {running} is behind the {latest} release, a {size} update. Press to update and reinstall."
 
     @property

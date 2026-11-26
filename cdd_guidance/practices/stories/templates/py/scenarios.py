@@ -86,7 +86,7 @@ with story("{Story Verb–Noun}"):
             with given("the cart holds one book"):
                 pass  # test code goes here
 
-            with when("the customer places the order"):
+            with when("the Actor places the order"):
                 pass  # test code goes here
 
             with then("an order holds the book"):
@@ -99,7 +99,7 @@ with story("{Story Verb–Noun}"):
             with given("the cart holds no book"):
                 pass  # test code goes here
 
-            with when("the customer places the order"):
+            with when("the Actor places the order"):
                 pass  # test code goes here
 
             with then("the order is refused because the cart is empty"):

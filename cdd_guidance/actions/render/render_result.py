@@ -34,8 +34,9 @@ DECIDE_EACH = (
 # What a whiteboard render whose file was never published tells the agent: the render ends with the board in Claude.
 PUBLISH_NEW_BOARD = (
     "This render is not finished until the whiteboard file is on a board in Claude. Create a Whiteboard artifact "
-    "titled after the file with Claude's Artifact tool, write each batch to its store in order with ArtifactData "
-    "batch, then call record_board with this file's path and the board's address, which keeps the address in the file "
+    "with Claude's Artifact tool, titled exactly title, the file's name without its .whiteboard ending (such as "
+    "story-map or ordering-model), so a person can tell boards apart and match each to its file. Write each batch to "
+    "its store in order with ArtifactData batch, then call record_board with this file's path and the board's address, which keeps the address in the file "
     "so the next render updates the same board and the Files app opens it. A robot or sub-agent that cannot reach the "
     "Artifact tool reports that the board is unpublished, naming the file, rather than leave it out."
 )
@@ -181,10 +182,11 @@ class SavedBoard(SavedFile):
     """A whiteboard saved as a file, with the board in Claude kept for it, and the store writes that put the file on
     that board."""
 
-    def __init__(self, rendered: Rendered, path: Path, migrate: list[Migration], board: str | None, batches: list) -> None:
+    def __init__(self, rendered: Rendered, path: Path, migrate: list[Migration], board: str | None, batches: list, title: str) -> None:
         super().__init__(rendered, path, migrate)
         self._board = board
         self._batches = batches
+        self._title = title
 
     @property
     @data_field
@@ -196,6 +198,13 @@ class SavedBoard(SavedFile):
     @data_field
     def batches(self) -> list:
         return self._batches
+
+    @property
+    @data_field
+    def title(self) -> str:
+        """What the board in Claude is titled: the file's name without its .whiteboard ending
+        (``Whiteboard.title_of``), the same title the board's meta holds."""
+        return self._title
 
     @property
     @data_field

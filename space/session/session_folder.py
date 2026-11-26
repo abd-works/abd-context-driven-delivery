@@ -86,9 +86,14 @@ class SessionFolder:
     def _set_aside(self, record_folder: Path) -> Path:
         """Rename record_folder out from among the sessions and answer where it is now. The operating system renames a
         folder whole or not at all, and refuses one a running program holds open, so the refusal comes before any file is
-        deleted; deleting file by file would stop halfway and leave a session with a folder and no record."""
+        deleted; deleting file by file would stop halfway and leave a session with a folder and no record. A folder an
+        earlier removal left set aside under the same name is removed first, since a rename onto it is refused."""
         aside = record_folder.with_name(f"{_BEING_REMOVED}{record_folder.name}")
+        if aside.exists():
+            _remove_files_of(aside)
         try:
+            if aside.exists():
+                aside.rmdir()
             record_folder.rename(aside)
         except PermissionError as held:
             raise SessionFolderHeldError(record_folder) from held

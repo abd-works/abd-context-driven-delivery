@@ -7,7 +7,17 @@ from pathlib import Path
 from mamba import description, context, it, before, after
 from expects import contain, equal, expect, be_none, raise_error
 
-from harness.design_canvas.versions import CanvasVersions, PublishedVersion
+from harness.design_canvas.versions import CanvasVersions, PublishedVersion, UnshownStepValues
+
+
+class _Walk:
+    """A walk of a version's screens, as the publish gate reads it: each step value a screen leaves out."""
+
+    def __init__(self, *misses: str) -> None:
+        self.misses = list(misses)
+
+
+_CLEAN = _Walk()
 
 
 with description("Canvas versions") as self:
@@ -39,16 +49,61 @@ with description("Canvas versions") as self:
             expect(started.number).to(equal(2))
             expect((self.root / "version-1" / "project" / "Main.dc.html").read_text(encoding="utf-8")).to(equal("edited on the canvas"))
 
-        with it("names the published canvas after its version"):
-            expect(self.versions.start_next().title("PML Story Map")).to(equal("PML Story Map — version-2"))
+        with it("titles the published canvas ux-mockup with its version, for the whole repository"):
+            expect(self.versions.start_next().title).to(equal("ux-mockup.version-2"))
+
+        with it("puts the scope's name in front of a scoped canvas's title"):
+            expect(CanvasVersions(self.root, "ordering").start_next().title).to(equal("ordering-ux-mockup.version-2"))
+
+        with it("keeps the scope's name in the title of a version kept as a release"):
+            self.versions = CanvasVersions(self.root, "ordering")
+            (self.root / "versions.json").write_text('{"version-1": "https://claude.ai/artifact/one"}', encoding="utf-8")
+            expect(self.versions.latest.release("first-release").title).to(equal("ordering-ux-mockup.first-release"))
 
     with context("recording published links"):
         with it("remembers each version's link"):
             (self.root / "version-1").mkdir(parents=True)
             first = self.versions.latest
-            first.publish_at("https://claude.ai/artifact/one")
+            first.publish_at("https://claude.ai/artifact/one", _CLEAN)
             second = self.versions.start_next()
             expect((first.link, second.link)).to(equal(("https://claude.ai/artifact/one", None)))
+
+    with context("publishing a version whose screens leave out values their steps name"):
+        with before.each:
+            (self.root / "version-1" / "project").mkdir(parents=True)
+            self.version = self.versions.latest
+            self.walk = _Walk('Apply Voucher › Apply a voucher › "ALL10"', "Sign In › Wrong password › \"Invalid password\"")
+
+        with it("should refuse to record the link, naming each value left out"):
+            expect(lambda: self.version.publish_at("https://claude.ai/artifact/one", self.walk)).to(
+                raise_error(UnshownStepValues, contain('Apply Voucher › Apply a voucher › "ALL10"')))
+
+        with it("should leave the version unpublished"):
+            try:
+                self.version.publish_at("https://claude.ai/artifact/one", self.walk)
+            except UnshownStepValues:
+                pass
+            expect(self.version.link).to(be_none)
+
+        with it("should still refuse while only some of the values left out are accepted"):
+            expect(lambda: self.version.publish_at("https://claude.ai/artifact/one", self.walk, accepted_misses=[self.walk.misses[0]])).to(
+                raise_error(UnshownStepValues, contain("Invalid password")))
+
+        with context("when the person accepts every value left out"):
+            with before.each:
+                self.version.publish_at("https://claude.ai/artifact/one", self.walk, accepted_misses=self.walk.misses)
+
+            with it("should record the link"):
+                expect(self.version.link).to(equal("https://claude.ai/artifact/one"))
+
+            with it("should keep the accepted values beside the link, so the gap stays in view"):
+                expect(self.version.accepted_misses).to(equal(self.walk.misses))
+
+    with context("publishing a version whose screens show every value their steps name"):
+        with it("should keep no accepted values beside the link"):
+            (self.root / "version-1" / "project").mkdir(parents=True)
+            self.versions.latest.publish_at("https://claude.ai/artifact/one", _CLEAN)
+            expect(self.versions.latest.accepted_misses).to(equal([]))
 
     with context("choosing the version a generator writes into"):
         with before.each:
@@ -58,19 +113,61 @@ with description("Canvas versions") as self:
             expect(self.versions.working().number).to(equal(1))
 
         with it("starts the next version once the latest is published"):
-            self.versions.latest.publish_at("https://claude.ai/artifact/one")
+            self.versions.latest.publish_at("https://claude.ai/artifact/one", _CLEAN)
             expect(self.versions.working().number).to(equal(2))
 
         with it("refuses to add to a published version"):
-            self.versions.latest.publish_at("https://claude.ai/artifact/one")
+            self.versions.latest.publish_at("https://claude.ai/artifact/one", _CLEAN)
             expect(lambda: self.versions.unpublished()).to(raise_error(PublishedVersion))
+
+    with context("keeping one canvas that every render updates in place"):
+        with before.each:
+            self.root.mkdir(parents=True)
+            (self.root / "versions.json").write_text('{"keep_one": true}', encoding="utf-8")
+
+        with it("starts version-1 when there is no version yet"):
+            expect(self.versions.working().number).to(equal(1))
+
+        with it("titles the one canvas with its name alone, since there are no versions to tell apart"):
+            expect(self.versions.working().title).to(equal("ux-mockup"))
+
+        with context("once the version is published"):
+            with before.each:
+                (self.root / "version-1" / "project").mkdir(parents=True)
+                self.versions.latest.publish_at("https://claude.ai/artifact/one", _CLEAN)
+
+            with it("keeps writing into the published version"):
+                expect(self.versions.working().number).to(equal(1))
+
+            with it("starts no next version"):
+                self.versions.working()
+                expect((self.root / "version-2").exists()).to(equal(False))
+
+            with it("lets generators add to the published version"):
+                expect(self.versions.unpublished().number).to(equal(1))
+
+            with it("records the same link again when it is published again"):
+                self.versions.working().publish_at("https://claude.ai/artifact/one", _CLEAN)
+                expect(self.versions.published.all()).to(equal({"version-1": "https://claude.ai/artifact/one"}))
+
+            with it("keeps the setting when it is published again"):
+                self.versions.working().publish_at("https://claude.ai/artifact/one", _CLEAN)
+                expect(self.versions.keeps_one).to(equal(True))
+
+            with it("still refuses to publish screens that leave out values their steps name"):
+                expect(lambda: self.versions.working().publish_at("https://claude.ai/artifact/one", _Walk('Pay › Pay by card › "Visa"'))).to(
+                    raise_error(UnshownStepValues, contain('"Visa"')))
+
+    with context("without the setting"):
+        with it("does not keep one canvas"):
+            expect(self.versions.keeps_one).to(equal(False))
 
     with context("keeping a published version as a release"):
         with before.each:
             for number in (1, 2):
                 (self.root / f"version-{number}" / "project").mkdir(parents=True)
                 (self.root / f"version-{number}" / "project" / "Main.dc.html").write_text(f"version {number}", encoding="utf-8")
-                self.versions.latest.publish_at(f"https://claude.ai/artifact/{number}")
+                self.versions.latest.publish_at(f"https://claude.ai/artifact/{number}", _CLEAN)
             self.released = self.versions.latest.release("design-system-setup")
 
         with it("renames the version's folder and its link to the release"):
@@ -98,3 +195,39 @@ with description("the UX practice's canvas") as self:
 
     with it("should keep them out of the session's own folder"):
         expect(str(CanvasVersions.in_practice_root(self.repo / "harness" / ".context" / "ux").root)).not_to(contain(".sessions"))
+
+
+with description("a canvas version published before, rendered again") as self:
+    with before.each:
+        self.folder = tempfile.TemporaryDirectory()
+        self.root = Path(self.folder.name) / "design-canvas"
+        project = self.root / "version-1" / "project"
+        (project / "screens").mkdir(parents=True)
+        (project / "canvas.json").write_text("{}", encoding="utf-8")
+        (project / "screens" / "cart.dc.html").write_text("cart", encoding="utf-8")
+        (project / "screens" / "old.dc.html").write_text("old", encoding="utf-8")
+        self.version = CanvasVersions(self.root).latest
+        self.version.publish_at("https://claude.ai/artifact/one", _CLEAN)
+        self.project = project
+
+    with after.each:
+        self.folder.cleanup()
+
+    with it("should name no file while nothing changed since the publish"):
+        expect(self.version.changed_files()).to(equal([]))
+
+    with it("should name each file changed or added since the publish, then each removed"):
+        (self.project / "screens" / "cart.dc.html").write_text("cart, redrawn", encoding="utf-8")
+        (self.project / "screens" / "new.dc.html").write_text("new", encoding="utf-8")
+        (self.project / "screens" / "old.dc.html").unlink()
+        expect(self.version.changed_files()).to(equal(["screens/cart.dc.html", "screens/new.dc.html", "screens/old.dc.html"]))
+
+
+with description("a canvas version never published") as self:
+    with it("should name every file of its project folder"):
+        folder = tempfile.TemporaryDirectory()
+        project = Path(folder.name) / "design-canvas" / "version-1" / "project"
+        project.mkdir(parents=True)
+        (project / "canvas.json").write_text("{}", encoding="utf-8")
+        expect(CanvasVersions(Path(folder.name) / "design-canvas").latest.changed_files()).to(equal(["canvas.json"]))
+        folder.cleanup()

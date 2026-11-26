@@ -62,3 +62,16 @@ with description("a session's folder that is removed") as self:
 
         with it("should refuse, naming the file still there"):
             expect(lambda: self.session.folder.remove()).to(raise_error(PermissionError))
+
+    with context("that an earlier removal left a folder set aside under its name"):
+        with before.each:
+            self.left_behind = self.folder.with_name(f"_removing-{self.folder.name}")
+            self.left_behind.mkdir()
+            (self.left_behind / "progress-cache.json").write_text("{}", encoding="utf-8")
+            self.session.folder.remove()
+
+        with it("should remove the session's folder all the same"):
+            expect(self.folder.exists()).to(be_false)
+
+        with it("should remove what the earlier removal left behind"):
+            expect(self.left_behind.exists()).to(be_false)

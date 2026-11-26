@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple
 
 from cdd_guidance.practices.ux.model.html.nodes import HtmlUxMap
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
@@ -27,6 +27,8 @@ PAGE_ID_LENGTH = 40
 CANVAS_FILE = f"{PROJECT}/canvas.json"
 """Where a canvas version keeps the file that places its boards."""
 
+ScreenSize = Tuple[int, int]
+"""A screen's own width and height, in pixels."""
 CanvasFiles = Dict[str, str]
 """A canvas version's files, each by its path in the version's folder, such as ``project/canvas.json``."""
 
@@ -48,8 +50,9 @@ class ClaudeDesignScreenMissing(LookupError):
 
 
 class ClaudeDesignUxMap(UxMap):
-    """Screen boards: each prototype screen on its own canvas page, as a plain frame (not a full-window page) sized for
-    a desktop screen, so the editor stays around it. The story explorer keeps the ``screens`` page."""
+    """Screen boards: each prototype screen on its own canvas page, as a plain frame (not a full-window page), so the
+    editor stays around it. A board takes its screen's own size when the screen states one, such as a story screen's
+    phone size; otherwise a desktop size (*width* by *height*). The story explorer keeps the ``screens`` page."""
 
     folder = "screens"
     page = "screens"
@@ -174,21 +177,25 @@ class ClaudeDesignUxMap(UxMap):
             return [{"id": self.shared_page, "name": "Screens"}]
         return [{"id": self.page_of(name), "name": self.title(name)} for name in self.names(files)]
 
-    def _board_of(self, name: str, title: str) -> CanvasBoard:
-        """The board of the screen artboard name, titled title: alone on its own page at a desktop size."""
-        return {"x": 0, "y": 0, "w": self.width, "h": self.height, "page": self.page_of(name), "title": title,
+    def _board_of(self, name: str, title: str, size: Optional[ScreenSize] = None) -> CanvasBoard:
+        """The board of the screen artboard name, titled title: alone on its own page, at size, else a desktop size."""
+        width, height = size or (self.width, self.height)
+        return {"x": 0, "y": 0, "w": width, "h": height, "page": self.page_of(name), "title": title,
                 "is_interactive": True}
 
-    def _shared_board_of(self, name: str, title: str, place: int) -> CanvasBoard:
-        """The board of the screen artboard name at place on the shared page: in rows, with room beside it."""
+    def _shared_board_of(self, name: str, title: str, place: int, size: Optional[ScreenSize] = None) -> CanvasBoard:
+        """The board of the screen artboard name at place on the shared page, at size, else a desktop size: in rows a
+        desktop screen apart, with room beside it."""
         column, row = place % self.shared_columns, place // self.shared_columns
-        return {"x": column * (self.width + self.beside_room), "y": row * (self.height + self.shared_gap), "w": self.width,
-                "h": self.height, "page": self.shared_page, "title": title, "is_interactive": True}
+        width, height = size or (self.width, self.height)
+        return {"x": column * (self.width + self.beside_room), "y": row * (self.height + self.shared_gap), "w": width,
+                "h": height, "page": self.shared_page, "title": title, "is_interactive": True}
 
-    def boards(self, files: Iterable[str] = (), reserved: int = 0) -> Dict[str, CanvasBoard]:
-        """One board per prototype screen: alone on its own page at a desktop size, or in rows on the shared page when
-        the screens share one."""
+    def boards(self, files: Iterable[str] = (), reserved: int = 0, sizes: Optional[Mapping[str, ScreenSize]] = None) -> Dict[str, CanvasBoard]:
+        """One board per prototype screen, at its own size in sizes (by artboard name) or else a desktop size: alone on
+        its own page, or in rows on the shared page when the screens share one."""
         names = self.names(files)
+        sizes = sizes or {}
         if self.shares_a_page(files, reserved):
-            return {name: self._shared_board_of(name, self.title(name), place) for place, name in enumerate(names)}
-        return {name: self._board_of(name, self.title(name)) for name in names}
+            return {name: self._shared_board_of(name, self.title(name), place, sizes.get(name)) for place, name in enumerate(names)}
+        return {name: self._board_of(name, self.title(name), sizes.get(name)) for name in names}

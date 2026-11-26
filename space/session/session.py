@@ -714,9 +714,16 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionTe
     def practices(self) -> dict[str, PracticeSessionOutput]:
         """The practices the session works on, by practice key, each the session's one instance of it: the ones its
         graph holds, kept between calls with the graph, which opening here gives each practice to work in. A practice
-        turned off for the session is in ``own_practices`` and ``practice(name)``, not here."""
+        switched off for the session is in ``own_practices`` and ``practice(name)``, and here only once an action works
+        on it (``take_up``)."""
         outputs = self.session_practices.every
         return {key: outputs[key] for key in self.graph.practices.held}
+
+    def take_up(self, name: str) -> PracticeSessionOutput:
+        """The practice called name, held in the session's graph from now on, switched on or off: an action sent to
+        work on it works on it, since switching a practice off changes only what the board and chat show."""
+        self.session_practices.take_up(name)
+        return self.practice(name)
 
     @property
     @data_field(key="practices")

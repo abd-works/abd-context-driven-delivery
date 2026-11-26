@@ -12,7 +12,7 @@ if str(_REPO_ROOT) not in sys.path:
 from expects import contain, equal, expect, raise_error
 from mamba import after, before, context, description, it
 
-from space.session.practices.practice_session_output import LastFormatLeftOut, OutputRootRefused, PracticeTurnedOff
+from space.session.practices.practice_session_output import LastFormatLeftOut, OutputRootRefused
 from space.session.spec_support.session_roots_examples import REFUND_AGGREGATE, REFUND_DOMAIN, REFUND_STORIES, RETURN_PARCEL_STORIES, RefundOrderSession
 
 
@@ -180,20 +180,13 @@ with description("a fidelity's chosen formats in a session") as self:
                 pass
             expect(self.refund.output("stories", "story_map").chosen_formats).to(equal(["drawio", "whiteboard"]))
 
-    with context("of a practice turned off"):
+    # Reported 2026-11-25: switching a practice off changes only what the board and chat show; an action sent to the
+    # agent still works on it, in the format it names, so the format is chosen for it as for any practice.
+    with context("of a practice switched off"):
         with before.each:
             self.refund.session.practice("ux").enable(False)
             self.ia = self.refund.output("ux", "ia")
 
-        with it("should refuse a format chosen, naming the practice"):
-            expect(lambda: self.ia.choose_format("drawio", True)).to(raise_error(PracticeTurnedOff, contain("ux is turned off for session")))
-
-        with it("should refuse a format left out the same way"):
-            expect(lambda: self.ia.choose_format("markdown", False)).to(raise_error(PracticeTurnedOff, contain("turn ux on")))
-
-        with it("should keep no format chosen for it in the session's record"):
-            try:
-                self.ia.choose_format("drawio", True)
-            except PracticeTurnedOff:
-                pass
-            expect(self.refund.output("ux", "ia").fields.formats).to(equal(None))
+        with it("should keep a format chosen for it in the session's record"):
+            self.ia.choose_format("drawio", True)
+            expect(self.refund.output("ux", "ia").fields.formats).to(contain("drawio"))

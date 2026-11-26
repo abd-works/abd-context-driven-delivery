@@ -370,7 +370,8 @@ class WhiteboardNode:
 
 
 class Whiteboard:
-    """A board: its title and its elements in back-to-front order."""
+    """A board: its title and its elements in back-to-front order. A practice draws a board with no title; the board
+    is titled after the file it is saved as when it is saved (``titled_for``)."""
 
     SUFFIX = ".whiteboard"
     # The field of a ``.whiteboard`` file that keeps the address of the board in Claude the file was published to.
@@ -406,6 +407,27 @@ class Whiteboard:
             raise UnreadableBoard("Not a whiteboard file: it holds no elements")
         rest = {key: value for key, value in saved.items() if key != cls.BOARD}
         return json.dumps({cls.BOARD: board, **rest} if board else rest, indent=1, ensure_ascii=False)
+
+    @classmethod
+    def title_of(cls, file: Path) -> str:
+        """The title of the board saved as file: the file's name without its ``.whiteboard`` ending, such as
+        ``story-map``, ``story-map.version-2`` or ``ordering-model``. A board is titled after its file, never after what
+        a practice draws on it, so a person can tell boards apart and find the file each one is drawn from."""
+        name = Path(file).name
+        return name[: -len(cls.SUFFIX)] if name.endswith(cls.SUFFIX) else Path(file).stem
+
+    @classmethod
+    def titled_for(cls, text: str, file: Path) -> str:
+        """The ``.whiteboard`` file text titled for file (``title_of``), with everything else it holds as it was. This is
+        the one place a board gets its title. Text that is no whiteboard file is refused as an *UnreadableBoard*."""
+        try:
+            saved = json.loads(text)
+        except (TypeError, ValueError) as error:
+            raise UnreadableBoard(f"Not a whiteboard file: {error}") from error
+        if not isinstance(saved, dict) or not isinstance(saved.get("elements"), dict):
+            raise UnreadableBoard("Not a whiteboard file: it holds no elements")
+        saved["title"] = cls.title_of(file)
+        return json.dumps(saved, indent=1, ensure_ascii=False)
 
     def __init__(self, title: str = "", elements: Iterable[BoardElement] = ()) -> None:
         self._title = title

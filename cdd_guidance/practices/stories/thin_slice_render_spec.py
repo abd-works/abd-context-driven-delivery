@@ -138,6 +138,24 @@ with description("a thin slice written in thin-slice.md beside its story map") a
         with it("should draw no heading of the thin slice as an epic"):
             expect([heading for heading in ("Product / context", "Increments") if f'value="{heading}"' in self.drawn]).to(be_empty)
 
+    with context("that is rendered to drawio named first, with its story map named beside it"):
+        with before.each:
+            named = [str(self.context / "thin-slice.md"), str(self.context / "story-map.md")]
+            self.drawn = self.fidelity.render_files("drawio", named, "markdown").content
+
+        with it("should draw each increment as a lane of the stories it delivers, as when the thin slice is named alone"):
+            read = DrawIOStoryMap().copy_of(self.story_map).load_thin_slice(self.drawn)
+            expect(_lanes(read)).to(equal([("Walking skeleton", ["Add Book To Cart", "Submit Order"]), ("Quantities", ["Change Cart Line Quantity"])]))
+
+    with context("that is rendered to a whiteboard named first, with its story map named beside it"):
+        with before.each:
+            named = [str(self.context / "thin-slice.md"), str(self.context / "story-map.md")]
+            self.drawn = self.fidelity.render_files("whiteboard", named, "markdown").content
+
+        with it("should draw each increment as a lane of the stories it delivers"):
+            read = WhiteboardStoryMap().copy_of(self.story_map).load_thin_slice(self.drawn)
+            expect(_lanes(read)).to(equal([("Walking skeleton", ["Add Book To Cart", "Submit Order"]), ("Quantities", ["Change Cart Line Quantity"])]))
+
     with context("that is rendered to whiteboard"):
         with before.each:
             self.board = self.fidelity.render_files("whiteboard", [str(self.context / "thin-slice.md")], "markdown").content

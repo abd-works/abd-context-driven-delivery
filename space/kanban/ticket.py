@@ -248,9 +248,10 @@ class TicketMoveTools:
     @agent_tool
     @noSessionLog
     def move_before(self, other: Ticket) -> Ticket:
-        """Move ticket just above other in their column, as dragging it there does; the column keeps that order, in .sessions/_board.json. Committed on main and pushed."""
-        super().move_before(other)
-        return self
+        """Move ticket just above other, as dragging it there does. Where other is in another column, or in its stage's other list, ticket goes there first: into other's stage, In progress or Done as other is, and beside a closed ticket it closes with its work left as it is. The column keeps that order, in .sessions/_board.json. Committed on main and pushed. A ticket with children moves only with them, so a move to another column is refused."""
+        beside = self.moves.move_beside(other)
+        Card.move_before(beside, other)
+        return beside
 
 
 @hosted_only
@@ -831,6 +832,18 @@ class TicketMoves:
             return ticket.to_backlog()
         target = ticket.board.stage(stage)
         return self.reopened().marks.place(target, StageMark.DONE if done else StageMark.IN_PROGRESS)
+
+    def move_beside(self, other: Ticket) -> Ticket:
+        """Into the column and list other is in, so the ticket can be placed next to it: itself where it is there
+        already; closed, its work left as it is, beside a closed ticket; else in other's stage, In progress or Done as
+        other is."""
+        ticket = self._ticket
+        if other.is_closed:
+            return ticket if ticket.is_closed else ticket.close([])
+        if not ticket.is_closed and ticket.column is other.column and ticket.is_done == other.is_done:
+            return ticket
+        ticket.tree.refuse_moving_a_parent()
+        return self.reopened().marks.place(other.column, StageMark.DONE if other.is_done else StageMark.IN_PROGRESS)
 
 
 class TicketWork:

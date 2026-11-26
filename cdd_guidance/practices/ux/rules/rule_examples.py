@@ -1,4 +1,5 @@
-"""Spec support: UX screen rules on a screen of a UX map, on a graph that also holds the stories it shows."""
+"""Spec support: UX screen rules on a screen of a UX map, on a graph that also holds the stories it shows; the story
+canvas rules on a canvas read from files (canvas_rule_examples.py)."""
 
 from __future__ import annotations
 
@@ -10,6 +11,7 @@ from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap
 from cdd_guidance.practices.ux.model.nodes import Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.rules import BY_SLUG
+from cdd_guidance.practices.ux.rules import canvas_rule_examples as canvas
 
 _STORIES = ("Browse Catalog", "Search Catalog", "Filter Catalog", "Compare Products", "Save Product")
 
@@ -53,9 +55,24 @@ class ScreenPair:
             raise AssertionError(f"{self._slug}: expected the screen {self._repaired} to pass, got {found!r}")
 
 
-# What proves each rule flags its failing screen and passes its repaired one, for the spec every practice shares: each
-# screen by its name and how many stories it shows.
+_SCREEN = canvas.SCREEN_ARTBOARD
+
+# What proves each rule flags its failing example and passes its repaired one, for the spec every practice shares: the
+# screen rules by the screen's name and how many stories it shows, the story canvas rules by the canvas's files.
 EXAMPLE_PAIRS = {
     "screen-story-budget": ScreenPair("screen-story-budget", ("Catalog", 5), ("Catalog", 4)).check,
     "screen-names-use-domain-terms": ScreenPair("screen-names-use-domain-terms", ("Home", 0), ("Catalog", 0)).check,
+    "screen-is-a-prototype": canvas.CanvasPair(BY_SLUG["screen-is-a-prototype"], {_SCREEN: canvas.SCREENSHOT_SCREEN}, {}).check,
+    "screen-follows-scenario": canvas.CanvasPair(BY_SLUG["screen-follows-scenario"], {_SCREEN: canvas.FROZEN_SCREEN}, {}).check,
+    "every-scenario-has-a-state": canvas.CanvasPair(BY_SLUG["every-scenario-has-a-state"], {_SCREEN: canvas.ONE_STATE_SCREEN}, {}).check,
+    "scenario-listed-once": canvas.CanvasPair(
+        BY_SLUG["scenario-listed-once"], {canvas.EXPLORER_PAGE: canvas.explorer_page(*canvas.SCENARIOS, canvas.SCENARIOS[0])}, {}).check,
+    "screen-files-from-production": canvas.CanvasPair(
+        BY_SLUG["screen-files-from-production"],
+        {_SCREEN: canvas.loading_screen("../flow.js"), canvas.SCREEN_SOURCES: canvas.screen_sources({"flow.js": "ux/prototype/flow.js"})},
+        {_SCREEN: canvas.loading_screen("../flow.js"), canvas.SCREEN_SOURCES: canvas.screen_sources({"flow.js": "packages/app/flow.js"})}).check,
+    "positions-hold-no-data": canvas.CanvasPair(
+        BY_SLUG["positions-hold-no-data"],
+        {_SCREEN: canvas.positioned_screen({"Add the first line": [{"demoCode": "123456"}]}), canvas.COMPONENT_ARTBOARD: canvas.SHOP_COMPONENT},
+        {_SCREEN: canvas.positioned_screen({"Add the first line": [{"page": "cart"}]}), canvas.COMPONENT_ARTBOARD: canvas.SHOP_COMPONENT}).check,
 }

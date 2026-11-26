@@ -1,10 +1,11 @@
 """Mamba spec for a Claude Design story map. Render writes the canvas: the map page and the screens page."""
 
 import json
+import shutil
 import tempfile
 from pathlib import Path
 
-from mamba import description, context, it, before
+from mamba import after, description, context, it, before
 from expects import be, contain, equal, expect, have_keys, have_len
 
 from cdd_guidance.practices.ux.model.claude_design.story_canvas import (
@@ -13,6 +14,7 @@ from cdd_guidance.practices.ux.model.claude_design.story_canvas import (
     ClaudeDesignStoryMap,
     StoryCanvasSetup,
 )
+from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen, WrittenMarkup
 from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap
 from cdd_guidance.practices.ux.model.nodes import Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
@@ -48,6 +50,23 @@ def _ux_map(*screens: Screen) -> UxMap:
     for screen in screens:
         ux_map.append_screen(screen)
     return ux_map
+
+
+def _outline_map() -> StoryMap:
+    """Create Credentials with an outline whose steps name its columns, and two rows in its Examples table."""
+    story_map = StoryMap()
+    epic = Epic("Create Account", 1)
+    story = Story("Create Credentials", 1)
+    outline = Scenario("Enter Invalid credentials", 1)
+    outline.steps.append(Step("the Customer has entered {example}", StepType.GIVEN, 1))
+    outline.steps.append(Step("the Customer registers the credentials", StepType.WHEN, 2))
+    outline.steps.append(Step("the {message} message is shown", StepType.THEN, 3))
+    outline.examples["missing email"] = {"message": "++email required++"}
+    outline.examples["password missing letters"] = {"message": "password rule"}
+    story.scenarios.append(outline)
+    epic.stories.append(story)
+    story_map.epics.append(epic)
+    return story_map
 
 
 with description("a Claude Design story map") as self:
@@ -99,6 +118,108 @@ with description("a Claude Design story map") as self:
         with it("hands each screen the selected step, so the screen can play it"):
             expect(self.files["project/screens/explorer.dc.html"]).to(contain('step="{{stepText}}"'))
 
+        with it("hands each screen the position of the selected step group, so a scenario with several actions shows each outcome"):
+            expect(self.files["project/screens/explorer.dc.html"]).to(contain('step-index="{{stepIndex}}"'))
+
+        with it("hands each screen the kind of the selected step group, so it types what the Customer enters on a When"):
+            explorer = self.files["project/screens/explorer.dc.html"]
+            expect((explorer.count('step-kind="{{stepKind}}"'), explorer.count("stepKind: scen.b ? '' : (step.k || '')"))).to(equal((1, 1)))
+
+    with context("rendered from a scenario with two actions, on a screen that names its story but no steps"):
+        with before.each:
+            story_map = _story_map()
+            scenario = story_map.epics[0].epics[0].stories[0].scenarios[0]
+            scenario.steps.append(Step("the catalog lists the plans", StepType.THEN, 3))
+            scenario.steps.append(Step("the Customer picks Atlas", StepType.WHEN, 4))
+            scenario.steps.append(Step("the cart holds Atlas", StepType.THEN, 5))
+            screen = Screen("Plan catalog", 1)
+            screen.prototype = "plan-catalog.dc.html"
+            screen.show_story("Choose Plan")
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map(screen))).render(story_map))
+            self.explorer = files["project/screens/explorer.dc.html"]
+
+        with it("derives one step group per action: what leads to each action, its outcome, and the last outcome"):
+            groups = [
+                "Given the Customer has no account\nWhen the Customer opens My Paradise",
+                "Then the catalog lists the plans\nWhen the Customer picks Atlas",
+                "Then the cart holds Atlas",
+            ]
+            expect(self.explorer).to(contain(json.dumps([{"x": group, "i": [], "k": kind} for group, kind in zip(groups, ("when", "when", "then"))])))
+
+    with context("rendered from a scenario with two actions, on a screen that names the first action and the last outcome"):
+        with before.each:
+            story_map = _story_map()
+            scenario = story_map.epics[0].epics[0].stories[0].scenarios[0]
+            scenario.steps.append(Step("the catalog lists the plans", StepType.THEN, 3))
+            scenario.steps.append(Step("the Customer picks Atlas", StepType.WHEN, 4))
+            scenario.steps.append(Step("the cart holds Atlas", StepType.THEN, 5))
+            screen = _catalog_screen()
+            screen.image = ""
+            screen.show_step("Choose Plan \u203a See the plan catalog \u203a the cart holds Atlas")
+            screen.show_story("Choose Plan")
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map(screen))).render(story_map))
+            self.explorer = files["project/screens/explorer.dc.html"]
+
+        with it("groups the steps at the step the UX map names, not at each action"):
+            groups = [
+                "Given the Customer has no account\nWhen the Customer opens My Paradise",
+                "Then the catalog lists the plans\nWhen the Customer picks Atlas\nThen the cart holds Atlas",
+            ]
+            expect(self.explorer).to(contain(json.dumps([{"x": group, "i": [], "k": "when"} for group in groups])))
+
+    with context("rendered from an epic that holds its stories directly, with no sub-epic"):
+        with before.each:
+            story_map = StoryMap()
+            epic = Epic("Choose Lines", 1)
+            epic.stories.append(Story("Add Line To Cart", 1))
+            story_map.epics.append(epic)
+            explorer = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map())).render(story_map))["project/screens/explorer.dc.html"]
+            self.tree = json.loads(explorer.split("tree() {\nreturn ", 1)[1].split(";\n}", 1)[0])
+
+        with it("lists the stories under the epic itself, with no sub-epic named after it"):
+            expect([(epic["n"], epic["e"], [story["n"] for story in epic["s"]]) for epic in self.tree]).to(equal([("Choose Lines", [], ["Add Line To Cart"])]))
+
+    with context("rendered from epics nested three deep"):
+        with before.each:
+            story_map = StoryMap()
+            epic, sub_epic, inner = Epic("Onboard A Customer", 1), Epic("Choose Lines", 1), Epic("Pick Plans", 1)
+            inner.stories.append(Story("Display Plans", 1))
+            sub_epic.epics.append(inner)
+            sub_epic.stories.append(Story("View Cart", 2))
+            epic.epics.append(sub_epic)
+            story_map.epics.append(epic)
+            explorer = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map())).render(story_map))["project/screens/explorer.dc.html"]
+            self.tree = json.loads(explorer.split("tree() {\nreturn ", 1)[1].split(";\n}", 1)[0])
+
+        with it("nests each epic under the one that holds it, as deep as the story map does"):
+            inner = self.tree[0]["e"][0]["e"][0]
+            expect((self.tree[0]["n"], self.tree[0]["e"][0]["n"], inner["n"], [story["n"] for story in inner["s"]])).to(
+                equal(("Onboard A Customer", "Choose Lines", "Pick Plans", ["Display Plans"])))
+
+        with it("keeps the stories an epic holds beside its sub-epics"):
+            expect([story["n"] for story in self.tree[0]["e"][0]["s"]]).to(equal(["View Cart"]))
+
+    with context("rendered from an outline whose steps name its Examples columns"):
+        with it("writes each row's values by its name, in plain words, so a picked row can fill the steps"):
+            explorer = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map())).render(_outline_map()))["project/screens/explorer.dc.html"]
+            tree = json.loads(explorer.split("tree() {\nreturn ", 1)[1].split(";\n}", 1)[0])
+            expect(tree[0]["s"][0]["c"][0]["r"]).to(equal({
+                "missing email": {"example": "missing email", "message": "email required"},
+                "password missing letters": {"example": "password missing letters", "message": "password rule"},
+            }))
+
+    with context("rendered from steps that mark their terms"):
+        with before.each:
+            story_map = _story_map()
+            scenario = story_map.epics[0].epics[0].stories[0].scenarios[0]
+            scenario.steps.append(Step("the ++[cart](../cart.md)++ holds **Line 1** · ++Atlas++", StepType.THEN, 3))
+            self.explorer = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map(_catalog_screen()))).render(story_map))["project/screens/explorer.dc.html"]
+
+        with it("writes each step in the explorer as plain words, without its term marks"):
+            expect(self.explorer).to(contain("Then the cart holds Line 1 · Atlas"))
+            expect(self.explorer).not_to(contain("++Atlas++"))
+            expect(self.explorer).not_to(contain("**Line 1**"))
+
     with context("rendered from a story with no screens"):
         with it("gives that story no thumbnail"):
             expect(self.files["project/Main.dc.html"]).not_to(contain("story=Create%20Credentials"))
@@ -148,6 +269,33 @@ with description("a Claude Design story map") as self:
 
         with it("keeps the screen's stylesheets"):
             expect(self.explorer).to(contain('<link rel="stylesheet" href="../ds/app/tokens.css">'))
+
+    with context("rendered into a project whose story screen is a phone screen"):
+        with before.all:
+            self.workspace = Path(tempfile.mkdtemp(prefix="cdd-story-canvas-size-"))
+            screens = self.workspace / "project" / "screens"
+            screens.mkdir(parents=True)
+            phone = StoryScreen(title="Plan catalog", story="Choose Plan", markup=WrittenMarkup(head="", body="<main></main>"),
+                                positions={"See the plan catalog": [{}]}, width=390, height=844)
+            (screens / "plan-catalog.dc.html").write_text(phone.html, encoding="utf-8")
+            screen = _catalog_screen()
+            screen.prototype = "screens/plan-catalog.dc.html"
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(workspace=str(self.workspace), ux_map=_ux_map(screen))).render(_story_map()))
+            self.sized_canvas = json.loads(files["project/canvas.json"])
+            self.sized_explorer = files["project/screens/explorer.dc.html"]
+
+        with after.all:
+            shutil.rmtree(self.workspace, ignore_errors=True)
+
+        with it("sizes the screen's own board to the screen, not to a desktop"):
+            board = self.sized_canvas["boards"]["screens/plan-catalog.dc.html"]
+            expect((board["w"], board["h"])).to(equal((390, 844)))
+
+        with it("imports the screen across the pane's width, so the screen's own frame centres itself in it"):
+            expect(self.sized_explorer).to(contain('hint-size="390px,844px" style="display: block; width: 100%"></dc-import>'))
+
+        with it("draws the screen on the explorer's dark background, not white"):
+            expect(self.sized_explorer).to(contain("height: 100%; background: #0B0B0B; overflow: auto"))
 
     with context("rendered with a screen that names a scenario, and a story whose screen names only the story"):
         with before.each:

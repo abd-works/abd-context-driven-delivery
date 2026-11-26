@@ -56,7 +56,7 @@ export function ServerHealthIconsView(elements: ElementTable, band: Band) {
   const { Box } = elements
   return (
     <Box key="health-icons" flexDirection="row" gap={1}>
-      {partsOf(band.health).map(part => PartView(elements, part, band.actions))}
+      {partsOf(band.health, band.opening).map(part => PartView(elements, part, band.actions))}
     </Box>
   )
 }

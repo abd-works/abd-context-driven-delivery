@@ -123,6 +123,34 @@ with description("a generate action on practice guidance") as self:
             with it("should name the roles a folder can hold of the pattern"):
                 expect(self.prose).to(contain("- lern_domain_driven: Boot, View, Client, Routes, Node, Domain, Store"))
 
+        # A Claude Design canvas is made by the rules of story_canvas.md and claude_design.md: an agent handed only their
+        # path in a step misses every one of them, and the greybox shell's template teaches the wrong artifact.
+        with context("that generates the UX mockup in the claude_design format"):
+            with before.each:
+                ux = Sessions(self.project).current().practice("ux")
+                mockup = ux.of_fidelity(ux.fidelities.called("mockup"))
+                mockup.choose_formats(["claude_design"], True)
+                mockup.choose_formats(["html"], False)
+                self.prose = _expanded_generate(_made_for(self.project), {"guidance": ["ux-mockup"]}).instructions
+
+            with it("should give the story canvas rules"):
+                expect(self.prose).to(contain("explorer-drives-the-screen", "real-screens-not-screenshots", "walk-before-publish"))
+
+            with it("should give the Claude Design screen rules"):
+                expect(self.prose).to(contain("shown-on-edges"))
+
+            with it("should give the canvas template, not the greybox shell's"):
+                expect(self.prose).to(contain("StoryScreen("))
+                expect(self.prose).not_to(contain("AI mockup template (Story Demo shell)"))
+
+            with it("should save the canvas in the UX practice's root"):
+                expect(self.prose).to(contain(f"claude_design: {self.project.resolve().as_posix()}/ux/design-canvas/{{version}}/project/canvas.json"))
+
+        with context("that generates the UX mockup in the html format"):
+            with it("should give the greybox shell's template"):
+                prose = _expanded_generate(_made_for(self.project), {"guidance": ["ux-mockup"]}).instructions
+                expect(prose).to(contain("AI mockup template (Story Demo shell)"))
+
         # The process says what to do first, so it opens the reply: a long reply is read from the top, and an agent that
         # meets the rules first treats the reply as a rulebook and skips the order of work.
         with context("that generates two fidelities TDD supplements"):

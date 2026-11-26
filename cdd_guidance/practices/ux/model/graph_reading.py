@@ -27,6 +27,7 @@ from cdd_guidance.practices.clean_engineering.clean_engineering import CleanEngi
 
 from cdd_guidance.practices.ux.model.nodes import Interaction, NavComponent, Screen, Transition
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR, StoryTree, WrittenStoryNodes
+from cdd_guidance.practices.ux.model.shown_places import RUN_BY
 from cdd_guidance.practices.ux.model.story_link import StoryLink
 from cdd_guidance.practices.ux.model.ux_map import ScreenNotOnMap, UxMap
 from cdd_guidance.practices.ux.model.ux_node import UxNode
@@ -344,7 +345,7 @@ class _DomainTermLinks(_LinksAcrossPractices):
 
 class _StoryDemoControlLinks(_LinksAcrossPractices):
     """The edges from UX's Story Demo controls to the other practices: a control runs the story steps whose text it
-    holds, and shows the property its bound field names. They are read from the facts every control saves with the
+    holds, each of which records ``runBy`` the control back, and shows the property its bound field names. They are read from the facts every control saves with the
     graph, as a screen's links are."""
 
     def link(self) -> None:
@@ -352,6 +353,7 @@ class _StoryDemoControlLinks(_LinksAcrossPractices):
             for label in control.get_fact("story_step_labels") or []:
                 for step in self._steps_reading(label, control):
                     self._graph.edges.relate("storySteps", control, step)
+                    self._graph.edges.relate(RUN_BY, step, control)
             bound = self._property_at(control.get_fact("bound_field") or "")
             if bound is not None:
                 self._graph.edges.relate("boundField", control, bound)

@@ -23,8 +23,10 @@ const chatBarView = atom(
     isRepoListOpen: false,
     repos: [],
     newSessionFolder: '',
+    isBacklogOpen: false,
+    backlogFirst: 0,
   } as ChatBarViewJson,
-  { shape: 'chat-bar-view-11' },
+  { shape: 'chat-bar-view-15' },
 )
 
 // A press turns choice on or off; the chosen stay in the order the Ticket offers them, so a choice sent reads the same
@@ -37,8 +39,14 @@ export function currentChatBarView($: EngineInterface) {
   return read($, chatBarView)
 }
 
+// The session list opens with the Backlog closed, so it is no taller than the sessions it lists.
 export async function toggleSessionList($: EngineInterface): Promise<void> {
-  await update($, chatBarView, view => ({ ...view, isSessionListOpen: !view.isSessionListOpen, isRepoListOpen: false, isCardOpen: false }))
+  await update($, chatBarView, view => ({ ...view, isSessionListOpen: !view.isSessionListOpen, isRepoListOpen: false, isCardOpen: false, isBacklogOpen: false, backlogFirst: 0 }))
+}
+
+// The Backlog row of the session list opens the BACKLOG box beside the list, or closes it.
+export async function toggleBacklog($: EngineInterface): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, isBacklogOpen: !view.isBacklogOpen, backlogFirst: 0 }))
 }
 
 // The repo list opens alone, so the bar below it stays in view.
@@ -58,6 +66,11 @@ export async function showRepos($: EngineInterface, repos: RepoRowJson[]): Promi
 // The folder a new session will work on, chosen beside its name; empty for the whole repository.
 export async function chooseNewSessionFolder($: EngineInterface, newSessionFolder: string): Promise<void> {
   await update($, chatBarView, view => ({ ...view, newSessionFolder }))
+}
+
+// A press on ▲ or ▼ in the BACKLOG box shows the page of items that starts at first.
+export async function showBacklogFrom($: EngineInterface, first: number): Promise<void> {
+  await update($, chatBarView, view => ({ ...view, backlogFirst: first }))
 }
 
 export async function closeSessionList($: EngineInterface): Promise<void> {

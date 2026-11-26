@@ -266,6 +266,38 @@ Marked `@identity("name")`, so a reference to a column is its name.
 	// data field: its cards, the tickets whose sessions are closed
 ----
 
+## ColumnOverview
+
+A column as `board.overview` sends it to a reader that draws the active session, such as the chat bar, which reads it every turn through MCP, whose answers are cut off past their size limit.
+
++ ColumnOverview(column: Column)
+------
++ name: str
+	// data field
++ kind: str
+	// data field
++ tickets: list[Ticket]
+	// data field, each by its name: a stage's cards; none in Backlog or Complete
+	-> Column.cards
++ items: list[BacklogItemOverview]
+	// data field: the Backlog's own items in the order the board keeps, which the chat bar's session list offers to start; none in a stage or Complete
+	-> Backlog.items
+----
+
+## BacklogItemOverview
+
+A backlog item as the overview sends it: its title and its children by title, without its idea's text, which across the Backlog can run past an MCP answer's size limit.
+
++ BacklogItemOverview(item: BacklogItem)
+------
++ title: str
+	// data field
+	-> BacklogItem.title
++ children: list[BacklogItem]
+	// data field, each by its title: the child items its folder keeps, which start with it
+	-> BacklogItem.children
+----
+
 ## Stage : Column
 
 Made for one `ApproachStage` of `STAGES`, which gives its title as the column's name, its scope, and its actions; the stage keeps it private.
@@ -495,7 +527,7 @@ Marked `@identity("name")`. Never moves to another column by itself: a person mo
 	-> SessionHierarchy.can_take_parent
 	-> SessionHierarchy.set_parent
 + move_before(other: Ticket): Ticket
-	// `ticket.move_before`: keeps it just above other in their column; the tool names other as it names any ticket
+	// `ticket.move_before`: keeps it just above other, first moving it into other's column and list when it is elsewhere (TicketMoves.move_beside), closing it beside a closed ticket; the tool names other as it names any ticket
 	-> Card.move_before
 + violations(): Report
 	// `ticket.violations`: the rules broken on every fidelity of its stage left with violations, each naming its fidelity, a rule two fidelities share listed once; its path is the session's reports folder from the project

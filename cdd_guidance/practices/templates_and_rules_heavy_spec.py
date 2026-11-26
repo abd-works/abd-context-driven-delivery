@@ -43,7 +43,6 @@ WITHOUT_A_PAIR = {
         "examples-trace-domain-model",
         "flagged-writes-intended-gwt",
         "given-names-complex-state-root-first",
-        "scenario-names-continuation",
         "scenarios-shape",
         "when-names-intent-not-interface-gesture",
     ],

@@ -118,11 +118,13 @@ class StoriesFormats(PracticeFormats):
         return any(str(path).endswith(STORY_FILE_SUFFIXES) for path in ([declared] if isinstance(declared, str) else declared))
 
     def _thin_sliced_map(self, named: list[Path], request: RenderRequest) -> ThinSlicedMap | None:
-        """The markdown story map beside the thin slice named alone, with that thin slice's increments, when the
+        """The markdown story map beside the thin slice named first, with that thin slice's increments, when the
         render is to a format that draws thin slices; none for any other files or format, or with no story map
-        beside it."""
+        beside it. The first file named is the one the drawing is saved for (thin-slice.drawio for thin-slice.md),
+        so a thin slice named first is drawn as its increments' lanes whatever else is named with it, most often its
+        own story map: drawing the plain map instead would save it under the thin slice's name."""
         draws = request.format in self and issubclass(self.adapter_class(request.format), DiagramStoryMap)
-        if not draws or len(named) != 1 or named[0].name not in THIN_SLICING_FILES:
+        if not draws or not named or named[0].name not in THIN_SLICING_FILES:
             return None
         project = self._project_of(named)
         story_map = StoryMapFiles((project / named[0]).parent).nearest()

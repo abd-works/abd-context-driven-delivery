@@ -49,14 +49,13 @@ section: body
 *Then* a toast says markdown is the only format chosen for story_map
 *And* the markdown chip stays picked
 
-#### Scenario: Refuse a format for a practice turned off
+#### Scenario: Choose a format for a practice switched off
 
-> Answered 2026-11-23 (exploratory testing, widget-17): every action refuses a practice turned off, so a format chosen for it would be kept for work nobody can do.
+> Answered 2026-11-25: switching a practice off changes only what the board and chat show; an action sent to the agent still works on it, so a format chosen for it is kept.
 
-*Given* UX is turned off for billing-report's session
+*Given* UX is switched off for billing-report's session
 *When* Claude Code chooses drawio for UX's ia
-*Then* the choice is refused, saying ux is turned off for the session and to turn ux on first
-*And* billing-report's session.json keeps no format for ia
+*Then* billing-report's session.json keeps drawio chosen for ia
 
 ## Story: Run Chosen Formats
 

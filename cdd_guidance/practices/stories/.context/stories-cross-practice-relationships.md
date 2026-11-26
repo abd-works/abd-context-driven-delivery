@@ -14,5 +14,6 @@ Stories records its links to Clean Engineering once both practices are read onto
 | retrievedUsing | Example | Property | That same file reads `.property`; recorded on both practices |
 | shownOn | Story, Scenario, Step | Screen | The screen's `story_names`, `scenario_names` (`Story › Scenario`), or `step_names` (`Story › Scenario › Step`) hold the node's key |
 | shows | Screen | Story | Recorded on UX with shownOn |
+| runBy | Step | StoryDemoControl | The Story Demo control's `story_steps` labels hold the step's text; recorded on UX with storySteps |
 
 A story model loaded on the graph (`StoryMap.record`, described in `practices/stories/model/.context/story-model.md`) carries the steps and examples these links start from.

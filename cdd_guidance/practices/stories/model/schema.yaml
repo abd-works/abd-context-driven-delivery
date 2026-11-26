@@ -65,6 +65,7 @@ story:
     - story-scenarios-at-most-seven
     - kebab-case-paths
     - scenarios-name-a-story-on-the-map
+    - scenarios-differ-in-when-or-outcome
 
 scenario:
   fidelity: scenarios
@@ -79,7 +80,6 @@ scenario:
     - steps match given+ (when then+)+
     - shownOn is the screen whose showsScenarios holds this scenario; with none, the scenario shows its story's screen
     - outline when examples count > 2
-    - a later then names the next story
     - examples cover every domain concept the steps name
     - invokes is the union of invokes on these steps
   rules:
@@ -90,6 +90,7 @@ scenario:
     - examples-trace-domain-model
     - reconcile-live-immediately
     - flagged-writes-intended-gwt
+    - person-stories-show-the-person-acting
 
 step:
   fidelity: scenarios
@@ -98,10 +99,13 @@ step:
   belongsTo: scenario
   ands?: [step]
   shownOn?: [screen]
+  runBy?: [storyDemoControl]
   names?: [class]
   where:
     - id is the text slugs from the root to this node, joined by dots
     - ands continue the step they follow
+    - runBy is the Story Demo control whose storySteps hold this step
+    - a step with no shownOn of its own shows on its scenario's screen, else its story's
     - names is the domain model class each domain term the step links names; a step with no linked term has none
     - shownOn is the screen whose showsSteps holds this step
     - but marks a missing state
@@ -110,6 +114,7 @@ step:
     - gwt-steps-trace-to-domain-operations
     - but-marks-missing-state
     - domain-terms-link-to-model
+    - step-says-more-than-an-example-name
 
 given:
   fidelity: scenarios
@@ -153,7 +158,7 @@ then:
   rules:
     - then-observes-an-example
     - behavioral-and-system-observable-outcomes
-    - scenario-names-continuation
+    - main-flow-first
     - browser-then-asserts-screen-widgets
     - assert-domain-behavior-not-seeded-state
 

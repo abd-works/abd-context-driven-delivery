@@ -166,6 +166,13 @@ class StoryTree:
         """The Stories nodes of a link of kind whose key is key."""
         return [node for node_type in LINKED_TYPES[kind] for node in self.stories.in_graph.nodes(node_type) if self.key_of(node) == key]
 
+    def nodes_labelled(self, anchor: str) -> list[Node]:
+        """The Stories nodes anchor names as a page that shows the story map labels them, such as the row of a design
+        canvas's story explorer a person's comment is anchored to (*StoryLabels*)."""
+        from cdd_guidance.practices.stories.model.story_labels import StoryLabels
+
+        return StoryLabels(self).named_by(anchor)
+
     def written_nodes(self) -> "WrittenStoryNodes":
         """The Stories nodes by the file each was read from, read now, for a run of links that each name a file and a
         heading: keep it for the run, since the map does not change during it."""

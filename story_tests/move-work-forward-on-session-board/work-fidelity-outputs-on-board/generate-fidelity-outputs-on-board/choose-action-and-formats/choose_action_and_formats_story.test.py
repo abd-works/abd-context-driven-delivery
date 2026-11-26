@@ -54,14 +54,12 @@ with story("Choose Action And Formats"):
             pass
         with and_("the markdown chip stays picked"):
             pass
-    with scenario("Refuse a format for a practice turned off"):
-        # Evidence: observed: practice_session_output_spec 'of a practice turned off'.
-        with given("UX is turned off for billing-report's session"):
+    with scenario("Choose a format for a practice switched off"):
+        # Evidence: observed: practice_session_output_spec 'of a practice switched off'.
+        with given("UX is switched off for billing-report's session"):
             pass
         with when("Claude Code chooses drawio for UX's ia"):
-            # Claude Code -> FidelitySessionOutput.choose_format('drawio', True) -> PracticeTurnedOff
+            # Claude Code -> FidelitySessionOutput.choose_format('drawio', True)
             pass
-        with then("the choice is refused, saying ux is turned off for the session and to turn ux on first"):
-            pass
-        with and_("billing-report's session.json keeps no format for ia"):
+        with then("billing-report's session.json keeps drawio chosen for ia"):
             pass

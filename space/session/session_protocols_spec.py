@@ -4,6 +4,7 @@ rename in space/session fails here rather than in a running server."""
 from expects import equal, expect
 from mamba import after, before, description, it
 
+import cdd_guidance.practices  # noqa: F401 - registers the practices a session's members make
 from harness.agent_tools.tool_call import CallSession
 from harness.guidance.worked_session import WorkedSession
 from harness.hooks.hook_server import HookSession

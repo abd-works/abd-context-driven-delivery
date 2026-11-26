@@ -125,7 +125,15 @@ class WorkedSession(CallSession, Protocol):
 
     @property
     def practices(self) -> Mapping[str, PracticeOutput]:
-        """The practices it works on, by key."""
+        """The practices it works on, by key: the ones its graph holds."""
+
+    @property
+    def own_practices(self) -> Mapping[str, PracticeOutput]:
+        """Its one instance of every practice, switched on or off, by key."""
+
+    def take_up(self, key: str) -> PracticeOutput:
+        """The practice whose key is key, held in its graph from now on, switched on or off, because an action works on
+        it."""
 
     @property
     def graph(self) -> object:

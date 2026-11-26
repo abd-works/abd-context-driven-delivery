@@ -55,11 +55,13 @@ export class ActivationClient {
 
   // Python says what closing the ticket can do with its work now, with those chosen at first. A read that failed
   // offers nothing, since the page has shown the failure.
-  async startClosing(ticket: TicketClient): Promise<void> {
+  // above names the closed ticket it was dropped above, which it is put above once it has closed.
+  async startClosing(ticket: TicketClient, above: string | null = null): Promise<void> {
     ticket.selection.select()
     const choices = await ticket.closeChoices()
     this.show({
       ticket,
+      above,
       leaving: choices?.chosen ?? [],
       offeredLeaving: choices?.choices ?? [],
       leavingBranch: choices?.branch ?? '',
@@ -83,6 +85,7 @@ export class ActivationClient {
     const closed = await closing.ticket.close(closing.leaving)
     await this.page.reader.refresh()
     if (!closed) return
+    if (closing.above) await this.page.ticket(closed.toJSON()).moveBefore(closing.above)
     this.page.ticket(closed.toJSON()).selection.select()
     this.page.store.toast(closedReport(closing, closed.toJSON().dropped_work))
   }

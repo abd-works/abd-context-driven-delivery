@@ -1388,6 +1388,29 @@ with description("the board tools") as self:
             with it("should stay as small as a ticket with no text"):
                 expect(len(json.dumps(self.overview)) < 40_000).to(be_true)
 
+        # (S) Person --> Show Backlog Items In Session List: the session list offers the Backlog's items to start, a
+        # parent's children under it, from the overview it reads every turn, so each item goes by its title alone.
+        with context("that holds backlog items, one a parent of two"):
+            with before.all:
+                def with_backlog(project: ProjectTools) -> dict:
+                    project.backlog_item("payment-retry.md", "Payment retry")
+                    (project.sessions / "_backlog" / "checkout-flow").mkdir()
+                    project.backlog_item("checkout-flow/checkout-flow.md", "Checkout flow")
+                    project.backlog_item("checkout-flow/address-form.md", "Address form")
+                    project.backlog_item("checkout-flow/card-form.md", "Card form")
+                    return project.call("board.overview")
+
+                self.backlog = column_of(ProjectTools.answer_of(with_backlog), "Backlog")
+
+            with it("should send the Backlog's own items by title, each with its children by title"):
+                expect(sorted(self.backlog["items"], key=lambda item: item["title"])).to(equal([
+                    {"title": "Checkout flow", "children": [{"title": "Address form"}, {"title": "Card form"}]},
+                    {"title": "Payment retry", "children": []},
+                ]))
+
+            with it("should send no items in a stage"):
+                expect(column_of(self.overview, "Discovery")["items"]).to(equal([]))
+
     with context("that are published through the cdd server"):
         with it("should name each tool after its object"):
             names = set(self.project.server.tools)
