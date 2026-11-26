@@ -80,6 +80,8 @@
     ]
   },
   "overlays": [
-    "lern_domain_driven"
+    "cdd_web_domain_access",
+    "lern_domain_driven",
+    "cdd_claude_mod"
   ]
 }
