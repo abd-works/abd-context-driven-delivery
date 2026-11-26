@@ -17,6 +17,7 @@ from typing import Dict, Iterable, List, Optional
 from urllib.parse import quote, urlencode
 
 from harness.design_canvas.canvas import Artboard, DesignCanvas, Place, artboard_stem
+from cdd_guidance.practices.ux.model.claude_design.class_cards import ClassCards
 from cdd_guidance.practices.ux.model.claude_design.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
 from cdd_guidance.practices.ux.model.claude_design.screen_artboard import ScreenArtboard
@@ -122,12 +123,15 @@ class StoryCanvasSetup:
     """What a story canvas is drawn with besides its story map: the canvas root (``workspace``), whose ``project``
     folder holds what people already made on the canvas; the UX map whose screens it shows, the one the caller holds;
     and where each story (``Story``) and scenario (``Story › Scenario``) sits in the story code (``sources``, its
-    ``path:line``), which the explorer offers to copy as an "open in the file viewer" request; and the canvas's *title*,
-    the name its version is published under (``ux-mockup``), so the canvas names itself as its file does."""
+    ``path:line``), which the explorer offers to copy as an "open in the file viewer" request; the canvas's *title*,
+    the name its version is published under (``ux-mockup``), so the canvas names itself as its file does; and
+    *files_root*, the folder the story map's nodes name their files from (the project's root), where the class cards
+    the steps' domain terms open are read from the model files they link."""
 
     def __init__(self, workspace: Optional[str] = None, ux_map: Optional[UxMap] = None, sources: Optional[Dict[str, str]] = None,
-                 title: str = "") -> None:
+                 title: str = "", files_root: Optional[Path] = None) -> None:
         self.title = title
+        self.files_root = files_root
         self.ux_map = ux_map
         self.sources = dict(sources or {})
         self.project = Path(workspace) / "project" if workspace else None
@@ -158,10 +162,20 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         self.screen_map = self._screen_map(setup.ux_map)
         self.sources = dict(setup.sources)
         self.canvas = DesignCanvas(setup.title or (self.name if self.name and self.name != "StoryMap" else "Story Map"), setup.project)
+        self.class_cards = ClassCards(setup.files_root)
 
     def blank(self) -> "ClaudeDesignStoryMap":
         """A canvas holding no story map, drawn with this canvas's setup."""
         return type(self)(setup=self._setup)
+
+    def _copy_fields(self, original: StoryMap, copy_part) -> None:
+        """Take original as every story map copy does, and the class cards its steps' domain terms open, read from the
+        lines original's steps were read from, which a canvas's own steps no longer hold."""
+        super()._copy_fields(original, copy_part)
+        if isinstance(original, ClaudeDesignStoryMap):
+            self.class_cards = original.class_cards
+        else:
+            self.class_cards = ClassCards(self._setup.files_root).read(_map_steps(original))
 
     def render(self, canonical: StoryMap, written: Written = Written()) -> str:
         """The canvas files as JSON, drawn on a new canvas of canonical made with this canvas's setup, so canonical
@@ -327,6 +341,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         heads += [f'<script src="../{script}"></script>' for script in self._fixture_scripts()]
         return (template.replace("__STYLESHEETS__", "\n".join(heads))
                 .replace("__IMPORTS__", "\n".join(self._imports()))
+                .replace("__CARDS__", json.dumps(self.class_cards.shown(), ensure_ascii=False))
                 .replace("__DATA__", json.dumps(tree, ensure_ascii=False)))
 
     def _epic_entry(self, epic: ClaudeDesignEpic) -> dict:
@@ -360,29 +375,26 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         but names none of its steps shows each step that ends an action (``one-group-per-action``). A group's kind is
         ``when`` when the Customer acts in it (it holds a When step), else the phase of its last step, so a screen
         knows on which group to type in what the Customer enters."""
-        groups: List[dict] = []
-        waiting: List[str] = []
-        phases: List[str] = []
+        groups: List[_StepGroup] = []
+        waiting = _StepGroup()
         prototype = ""
         unnamed = self._screens_naming_no_steps(story, scenario)
         ends = _action_ends(scenario) if unnamed else []
         for step, phase in _phased_steps(scenario):
-            indent = "    " if step.keyword in ("And", "But") else ""
-            waiting.append(f"{indent}{step.keyword} {plain_words(step.text)}")
-            phases.append(phase)
+            waiting.take(step, phase)
             named = shown_on(step, self.screen_map.screens)
             derived = [screen for screen in unnamed if screen not in named] if any(step is end for end in ends) else []
             shown = [screen for screen in [*named, *derived] if not self._blank(screen)]
             prototype = prototype or next((artboard_stem(s.prototype) for s in shown if s.prototype), "")
             if shown:
-                groups.append({"x": "\n".join(waiting), "i": [f"../{s.image}" for s in shown if s.image], "k": _kind_of(phases)})
-                waiting, phases = [], []
-        if waiting and groups:
-            groups[-1]["x"] += "\n" + "\n".join(waiting)
-            groups[-1]["k"] = _kind_of([groups[-1]["k"], *phases])
-        elif waiting:
-            groups.append({"x": "\n".join(waiting), "i": [], "k": _kind_of(phases)})
-        return groups, prototype
+                waiting.images = [f"../{s.image}" for s in shown if s.image]
+                groups.append(waiting)
+                waiting = _StepGroup()
+        if waiting.lines and groups:
+            groups[-1].take_all(waiting)
+        elif waiting.lines:
+            groups.append(waiting)
+        return [group.entry(self.class_cards) for group in groups], prototype
 
     def _screens_naming_no_steps(self, story: ClaudeDesignStory, scenario: "Scenario | Background") -> List[Screen]:
         """The screens that show the scenario or its story and name none of the steps they show, so CDD derives them."""
@@ -466,6 +478,50 @@ def shown_on(node: StoryNode, screens: Iterable[Screen]) -> List[Screen]:
     if edged:
         return edged
     return [screen for screen in screens if screen.lists(node)]
+
+
+class _StepGroup:
+    """The steps the explorer lists as one group, being gathered: each step's line in plain words (an And or But set
+    in), its phase, the realization each realized step's call graph gives, under its line, and the images of the screen
+    the group ends on."""
+
+    def __init__(self) -> None:
+        self.lines: List[str] = []
+        self.phases: List[str] = []
+        self.realized: List[str] = []
+        self.images: List[str] = []
+
+    def take(self, step: Step, phase: str) -> None:
+        line = f"{step.keyword} {plain_words(step.text)}"
+        self.lines.append(("    " if step.keyword in ("And", "But") else "") + line)
+        self.phases.append(phase)
+        if step.call_graph:
+            self.realized.append(f"{line}\n{step.call_graph.block()}")
+
+    def take_all(self, later: "_StepGroup") -> None:
+        """Take the steps of later, which end on no screen, after this group's own."""
+        self.lines += later.lines
+        self.phases += later.phases
+        self.realized += later.realized
+
+    def entry(self, class_cards: ClassCards) -> dict:
+        """The group as the explorer's tree holds it: its text (``x``), images (``i``) and kind (``k``); the domain
+        terms its text names, each with the key of its class card (``m``), and its realizations (``z``), when it has
+        any."""
+        text = "\n".join(self.lines)
+        entry = {"x": text, "i": self.images, "k": _kind_of(self.phases)}
+        terms = class_cards.terms_in(text)
+        if terms:
+            entry["m"] = terms
+        if self.realized:
+            entry["z"] = "\n\n".join(self.realized)
+        return entry
+
+
+def _map_steps(story_map: StoryMap) -> List[Step]:
+    """Every step of every story's Backgrounds and scenarios, each And or But after the step it continues."""
+    return [step for story in story_map.descendants.stories() for scenario in [*story.backgrounds, *story.scenarios]
+            for step in _steps_of(scenario)]
 
 
 def _steps_of(scenario: "Scenario | Background") -> List[Step]:

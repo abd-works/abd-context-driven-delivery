@@ -1,6 +1,7 @@
 """Mamba spec for a Claude Design story map. Render writes the canvas: the map page and the screens page."""
 
 import json
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -15,7 +16,10 @@ from cdd_guidance.practices.ux.model.claude_design.story_canvas import (
     StoryCanvasSetup,
 )
 from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen, WrittenMarkup
+from cdd_guidance.practices.source_code.call_graph import CallGraph
+from cdd_guidance.practices.stories.model.markdown.markup import MarkdownStep
 from cdd_guidance.practices.stories.model.story_map import Epic, Scenario, Step, StepType, Story, StoryMap
+from cdd_guidance.practices.stories.model.story_map_files import source_at
 from cdd_guidance.practices.ux.model.nodes import Screen
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 
@@ -67,6 +71,55 @@ def _outline_map() -> StoryMap:
     epic.stories.append(story)
     story_map.epics.append(epic)
     return story_map
+
+
+_DOMAIN_MODEL = """# Domain model
+
+### Cart <<Aggregate Root>> <<Entity>>
+
+A cart holds the lines a Customer picks.
+
+---
+
++ add(line)
+\t+ total
+
+### Line <<Entity>>
+
+A line on a plan.
+"""
+
+_CART = "../domain/domain-model.md#cart-aggregate-root-entity"
+_LINE = "../domain/domain-model.md#line-entity"
+
+
+def _linked_step(line: str, phase: StepType, order: int, realization: str = "") -> MarkdownStep:
+    """A step read from line of a scenario file in stories/, as the scenarios reader reads one."""
+    keyword, text = re.match(r"\*(\w+)\* (.*)$", line).groups()
+    step = MarkdownStep(text, phase, order)
+    step.keyword = keyword
+    step.source = source_at("stories/choose-plan.md", order)
+    step.read_from(line)
+    if realization:
+        step.call_graph = CallGraph().read(realization)
+    return step
+
+
+def _linked_map() -> StoryMap:
+    """Choose Plan, whose steps link cart and line to their classes, one of them linking cart to Line."""
+    story_map = _story_map()
+    scenario = story_map.epics[0].epics[0].stories[0].scenarios[0]
+    scenario.steps = [
+        _linked_step(f"*Given* the Customer has a ++[cart]({_CART})++", StepType.GIVEN, 1, "Cart.create()"),
+        _linked_step("*When* the Customer opens My Paradise", StepType.WHEN, 2, "Catalog.open()\n  -> Plan.list()"),
+        _linked_step(f"*Then* the ++[cart]({_CART})++ holds a ++[line]({_LINE})++ and no carts", StepType.THEN, 3),
+        _linked_step(f"*Then* the ++[cart]({_LINE})++ is still empty", StepType.THEN, 4),
+    ]
+    return story_map
+
+
+def _tree_of(explorer: str) -> list:
+    return json.loads(explorer.split("tree() {\nreturn ", 1)[1].split(";\n}", 1)[0])
 
 
 with description("a Claude Design story map") as self:
@@ -219,6 +272,82 @@ with description("a Claude Design story map") as self:
             expect(self.explorer).to(contain("Then the cart holds Line 1 · Atlas"))
             expect(self.explorer).not_to(contain("++Atlas++"))
             expect(self.explorer).not_to(contain("**Line 1**"))
+
+    with context("rendered from steps that link their domain terms to the domain model"):
+        with before.all:
+            self.root = Path(tempfile.mkdtemp(prefix="cdd-story-canvas-terms-"))
+            (self.root / "domain").mkdir()
+            (self.root / "domain" / "domain-model.md").write_text(_DOMAIN_MODEL, encoding="utf-8")
+            screen = Screen("Plan catalog", 1)
+            screen.prototype = "plan-catalog.dc.html"
+            screen.show_story("Choose Plan")
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=_ux_map(screen), files_root=self.root)).render(_linked_map()))
+            self.explorer = files["project/screens/explorer.dc.html"]
+            self.groups = _tree_of(self.explorer)[0]["e"][0]["s"][0]["c"][0]["t"]
+            self.cards = json.loads(self.explorer.split("classCards() {\nreturn ", 1)[1].split(";\n}", 1)[0])
+
+        with after.all:
+            shutil.rmtree(self.root, ignore_errors=True)
+
+        with it("gives each step group the linked terms its steps name, each with the key of its class card"):
+            expect(self.groups[1]["m"]).to(equal({"cart": "domain/domain-model.md#cart-aggregate-root-entity",
+                                                  "line": "domain/domain-model.md#line-entity"}))
+
+        with it("finds a linked term in a Given as well as a When or Then"):
+            expect(self.groups[0]["m"]).to(equal({"cart": "domain/domain-model.md#cart-aggregate-root-entity"}))
+
+        with it("opens the class a term is linked to most often when it links to more than one"):
+            expect(self.groups[0]["m"]["cart"]).to(equal("domain/domain-model.md#cart-aggregate-root-entity"))
+
+        with it("matches whole words only, so a word holding a term is no term"):
+            expect(self.groups[1]["x"]).to(contain("carts"))
+            expect(list(self.groups[1]["m"])).to(equal(["cart", "line"]))
+
+        with it("gives epics, stories and scenarios no terms"):
+            story = _tree_of(self.explorer)[0]["e"][0]["s"][0]
+            expect(("m" in story, "m" in story["c"][0])).to(equal((False, False)))
+
+        with it("writes each class card once, by its key, with the heading as its title and stereotypes in guillemets"):
+            expect({key: card["title"] for key, card in self.cards.items()}).to(equal({
+                "domain/domain-model.md#cart-aggregate-root-entity": "Cart «Aggregate Root» «Entity»",
+                "domain/domain-model.md#line-entity": "Line «Entity»",
+            }))
+
+        with it("writes the card's text as the model's section, up to the next heading as high, each rule as a dashed line and tabs as spaces"):
+            expect(self.cards["domain/domain-model.md#cart-aggregate-root-entity"]["text"]).to(equal(
+                "A cart holds the lines a Customer picks.\n\n– – –\n\n+ add(line)\n    + total"))
+
+        with it("gives a group whose steps are realized their realizations, each under its line"):
+            expect(self.groups[0]["z"]).to(equal(
+                "Given the Customer has a cart\nCart.create()\n\nWhen the Customer opens My Paradise\nCatalog.open()\n  -> Plan.list()"))
+
+        with it("gives a group whose steps have no realization none"):
+            expect("z" in self.groups[1]).to(equal(False))
+
+    with context("drawn as the explorer's page"):
+        with before.each:
+            self.page = self.files["project/screens/explorer.dc.html"]
+
+        with it("draws each row as a block that acts as a button, so a term's click inside it reaches the row"):
+            expect(self.page).to(contain('<div role="button" tabindex="0" class="{{row.cls}}" onClick="{{row.pick}}">'))
+            expect(self.page).not_to(contain('<button type="button" class="{{row.cls}}"'))
+
+        with it("draws each linked term as a span naming its card"):
+            expect(self.page).to(contain('<span class="sm-term" data-card="{{part.card}}">{{part.text}}</span>'))
+
+        with it("puts the class card below the scrolling list of steps, never over it"):
+            rows_end = self.page.index("</sc-for>\n</div>", self.page.index('list="{{rows}}"'))
+            expect(rows_end < self.page.index('class="sm-card-divider"') < self.page.index('class="sm-card"')).to(be(True))
+
+        with it("closes the card with its ×"):
+            expect(self.page).to(contain('onClick="{{closeCard}}">×</span>'))
+
+        with it("puts a divider above the card that drags to resize it"):
+            expect(self.page).to(contain('<div class="sm-card-divider" role="separator" aria-orientation="horizontal" title="Drag to resize" onPointerDown="{{startCardResize}}"></div>'))
+            expect(self.page).to(contain(".sm-card-divider{flex:0 0 auto;height:10px;cursor:row-resize"))
+
+        with it("shows a realization toggle under a step group that has one"):
+            expect(self.page).to(contain('<sc-if value="{{row.hasRealization}}" hint-placeholder-val="{{ false }}"><span class="sm-real-toggle"'))
 
     with context("rendered from a story with no screens"):
         with it("gives that story no thumbnail"):

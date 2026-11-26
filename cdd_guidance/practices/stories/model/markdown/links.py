@@ -42,6 +42,10 @@ class DomainTermLinks:
         """line with each underlined term the notes link written as that link; every other term as it is."""
         return self._UNDERLINED.sub(self._link_of, line)
 
+    def targets(self) -> Dict[str, str]:
+        """Each term the notes link, with the target its link names, as written (``domain-model.md#cart-entity``)."""
+        return dict(self._targets)
+
     def _link_of(self, match: re.Match) -> str:
         target = self._targets.get(match.group(1).strip())
         return f"++[{match.group(1)}]({target})++" if target else match.group(0)

@@ -54,6 +54,21 @@ body{margin:0}
 a.sm-btn{text-decoration:none;color:#E8E8ED}
 .sm-tab{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:600;padding:4px 10px;border:1px solid #2A2A2A;border-radius:999px;background:#111113;color:#E8E8ED;cursor:pointer}
 .sm-tab-on{background:#E5531A;border-color:#E5531A;color:#0B0B0B}
+.sm-step{display:flex;flex-direction:column;min-width:0;flex:1 1 auto}
+.sm-term{color:#E8A46B;text-decoration:underline dotted;text-underline-offset:2px;cursor:pointer}
+.sm-term:hover{color:#F0BC8C}
+.sm-real-toggle{align-self:flex-start;margin-top:2px;cursor:pointer;color:#7FA7D9;font:600 11px/16px 'JetBrains Mono',ui-monospace,monospace}
+.sm-real-toggle:hover{color:#A9C8EE}
+.sm-real{display:block;margin:4px 0 2px;padding:6px 8px;border-left:2px solid #7FA7D9;background:#141418;white-space:pre-wrap;color:#B8C4D6;font:11px/16px 'JetBrains Mono',ui-monospace,monospace;cursor:text;user-select:text}
+.sm-card-divider{flex:0 0 auto;height:10px;cursor:row-resize;margin:0 8px;display:flex;align-items:center;touch-action:none}
+.sm-card-divider::before{content:'';flex:1;height:3px;border-radius:2px;background:#3A3A40}
+.sm-card-divider:hover::before{background:#E8A46B}
+.sm-card{flex:0 0 auto;box-sizing:border-box;margin:0 8px 8px;padding:8px 10px;border:1px solid #E8A46B;border-radius:6px;background:#18181B;overflow-y:auto;overscroll-behavior:contain}
+.sm-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.sm-card-title{flex:1 1 auto;font:600 13px/18px 'Inter',system-ui,sans-serif;color:#F0BC8C}
+.sm-card-close{cursor:pointer;color:#9B9BA8;font:600 16px/1 'Inter',system-ui,sans-serif;padding:0 4px}
+.sm-card-close:hover{color:#E8E8ED}
+.sm-card-body{white-space:pre-wrap;font:11px/16px 'JetBrains Mono',ui-monospace,monospace;color:#C8C8D0}
 </style>
 </helmet>
 <div style="width: 100%; min-width: 1100px; height: 100vh; min-height: 700px; box-sizing: border-box; display: flex; background: #0B0B0B">
@@ -86,9 +101,16 @@ __IMPORTS__
 </div>
 <div style="display: flex; flex-direction: column; gap: 0; padding: 8px; overflow-y: auto; flex: 1 1 auto; min-height: 0">
 <sc-for list="{{rows}}" as="row" hint-placeholder-count="12">
-<div class="sm-line" style="{{row.indent}}"><button type="button" class="{{row.cls}}" onClick="{{row.pick}}"><span class="{{row.markCls}}">{{row.mark}}</span><sc-if value="{{row.is_epic}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <path d="M4 2.5v11"></path> <path d="M4 3.5h8L10.5 6 12 8.5H4"></path> </g></svg></sc-if><sc-if value="{{row.is_subEpic}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <path d="M5.5 4v9"></path> <path d="M5.5 4.5h6.5L10.5 6.5 12 8.5H5.5"></path> </g></svg></sc-if><sc-if value="{{row.is_story}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <rect x="3" y="2.5" width="10" height="11" rx="1"></rect> <path d="M5.5 6h5M5.5 8.5h5M5.5 11h3"></path> </g></svg></sc-if><sc-if value="{{row.is_background}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <rect x="5" y="2.5" width="8" height="8"></rect> <path d="M3 5.5h8V13.5H3z"></path> </g></svg></sc-if><sc-if value="{{row.is_scenario}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"> <circle cx="4" cy="12" r="1.6"></circle> <circle cx="12" cy="4" r="1.6"></circle> <path d="M5.3 10.8 10.7 5.2"></path> </g></svg></sc-if><sc-if value="{{row.is_example}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"> <path d="M6.2 3.2C4.8 3.2 4 4.2 4 5.4v1.4L2.6 8 4 9.2v1.4c0 1.2.8 2.2 2.2 2.2"></path> <path d="M9.8 3.2c1.4 0 2.2 1 2.2 2.2v1.4L13.4 8 12 9.2v1.4c0 1.2-.8 2.2-2.2 2.2"></path> </g></svg></sc-if><span>{{row.label}}</span></button><sc-if value="{{row.canCopy}}" hint-placeholder-val="{{ false }}"><button type="button" class="sm-copy" title="{{row.copyTitle}}" aria-label="{{row.copyTitle}}" data-location="{{row.copyLocation}}" data-title="{{row.copyName}}" onClick="{{copyFromButton}}">{{row.copyLabel}}</button></sc-if></div>
+<div class="sm-line" style="{{row.indent}}"><div role="button" tabindex="0" class="{{row.cls}}" onClick="{{row.pick}}"><span class="{{row.markCls}}">{{row.mark}}</span><sc-if value="{{row.is_epic}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <path d="M4 2.5v11"></path> <path d="M4 3.5h8L10.5 6 12 8.5H4"></path> </g></svg></sc-if><sc-if value="{{row.is_subEpic}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <path d="M5.5 4v9"></path> <path d="M5.5 4.5h6.5L10.5 6.5 12 8.5H5.5"></path> </g></svg></sc-if><sc-if value="{{row.is_story}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <rect x="3" y="2.5" width="10" height="11" rx="1"></rect> <path d="M5.5 6h5M5.5 8.5h5M5.5 11h3"></path> </g></svg></sc-if><sc-if value="{{row.is_background}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"> <rect x="5" y="2.5" width="8" height="8"></rect> <path d="M3 5.5h8V13.5H3z"></path> </g></svg></sc-if><sc-if value="{{row.is_scenario}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"> <circle cx="4" cy="12" r="1.6"></circle> <circle cx="12" cy="4" r="1.6"></circle> <path d="M5.3 10.8 10.7 5.2"></path> </g></svg></sc-if><sc-if value="{{row.is_example}}" hint-placeholder-val="{{ false }}"><svg class="sm-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"> <path d="M6.2 3.2C4.8 3.2 4 4.2 4 5.4v1.4L2.6 8 4 9.2v1.4c0 1.2.8 2.2 2.2 2.2"></path> <path d="M9.8 3.2c1.4 0 2.2 1 2.2 2.2v1.4L13.4 8 12 9.2v1.4c0 1.2-.8 2.2-2.2 2.2"></path> </g></svg></sc-if><span class="sm-step"><span><sc-for list="{{row.parts}}" as="part" hint-placeholder-count="1"><sc-if value="{{part.isTerm}}" hint-placeholder-val="{{ false }}"><span class="sm-term" data-card="{{part.card}}">{{part.text}}</span></sc-if><sc-if value="{{part.isText}}" hint-placeholder-val="{{ true }}">{{part.text}}</sc-if></sc-for></span><sc-if value="{{row.hasRealization}}" hint-placeholder-val="{{ false }}"><span class="sm-real-toggle" role="button" title="Show or hide how this step is realized">{{row.realizationToggle}}</span><sc-if value="{{row.realizationOpen}}" hint-placeholder-val="{{ false }}"><span class="sm-real">{{row.realization}}</span></sc-if></sc-if></span></div><sc-if value="{{row.canCopy}}" hint-placeholder-val="{{ false }}"><button type="button" class="sm-copy" title="{{row.copyTitle}}" aria-label="{{row.copyTitle}}" data-location="{{row.copyLocation}}" data-title="{{row.copyName}}" onClick="{{copyFromButton}}">{{row.copyLabel}}</button></sc-if></div>
 </sc-for>
 </div>
+<sc-if value="{{cardOpen}}" hint-placeholder-val="{{ false }}">
+<div class="sm-card-divider" role="separator" aria-orientation="horizontal" title="Drag to resize" onPointerDown="{{startCardResize}}"></div>
+<div class="sm-card" style="{{cardStyle}}">
+<div class="sm-card-head"><span class="sm-card-title">{{cardTitle}}</span><span class="sm-card-close" role="button" title="Close" aria-label="Close the class card" onClick="{{closeCard}}">×</span></div>
+<div class="sm-card-body">{{cardText}}</div>
+</div>
+</sc-if>
 </div>
 </sc-if>
 <sc-if value="{{panelHidden}}" hint-placeholder-val="{{ false }}">
@@ -115,6 +137,38 @@ try { window.localStorage.setItem('design-canvas.explorer-width', String(this.pa
 };
 window.addEventListener('mousemove', move);
 window.addEventListener('mouseup', stop);
+}
+cardHeight() {
+return (this.state && this.state.cardHeight) || 240;
+}
+startCardResize(event) {
+// The divider drags the class card's top edge: up makes the card taller and the list of steps shorter.
+if (event && event.preventDefault) event.preventDefault();
+const startY = event.clientY;
+const startHeight = this.cardHeight();
+const move = (moved) => this.setState({ cardHeight: Math.max(80, Math.min(window.innerHeight - 160, startHeight + (startY - moved.clientY))) });
+const stop = () => {
+window.removeEventListener('pointermove', move);
+window.removeEventListener('pointerup', stop);
+};
+window.addEventListener('pointermove', move);
+window.addEventListener('pointerup', stop);
+}
+termParts(text, terms) {
+// A step's text as plain words and the domain terms it links, longest term first, whole words only.
+const names = Object.keys(terms || {}).sort((a, b) => b.length - a.length);
+if (!names.length) return [{ text: text, isText: true, isTerm: false }];
+const pattern = new RegExp('(?<!\\w)(' + names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?!\\w)', 'g');
+const parts = [];
+let at = 0;
+let found;
+while ((found = pattern.exec(text)) !== null) {
+if (found.index > at) parts.push({ text: text.slice(at, found.index), isText: true, isTerm: false });
+parts.push({ text: found[1], isText: false, isTerm: true, card: terms[found[1]] });
+at = found.index + found[1].length;
+}
+if (at < text.length) parts.push({ text: text.slice(at), isText: true, isTerm: false });
+return parts;
 }
 componentDidMount() {
 this.followHash = () => this.forceUpdate();
@@ -162,6 +216,9 @@ return CanvasFixtures.scenarios(story).filter((name) => name.indexOf(prefix) ===
 const pattern = new RegExp('^' + template.split(/\$\{[^}]*\}/).map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(.+?)') + '$');
 return CanvasFixtures.scenarios(story).filter((name) => pattern.test(name)).map((name) => ({ name: name, label: name.match(pattern).slice(1).join(' · ') }));
 }
+classCards() {
+return __CARDS__;
+}
 tree() {
 return __DATA__;
 }
@@ -208,6 +265,35 @@ const exampleOf = (g, c) => { const rowsOf = this.outlineRows(S[g].n, (S[g].c[c]
 const valuesOf = (g, c) => { const sc = S[g].c[c]; const name = sc && sc.r ? exampleOf(g, c) : null; if (!name) return null; const row = this.outlineRows(S[g].n, sc.n).find((r) => r.name === name); return row ? sc.r[row.label] || null : null; };
 const filled = (text, values) => (values ? text.replace(/\$\{([^}]+)\}|\{([^}]+)\}|<([^>]+)>/g, (whole, a, b, c) => { const value = values[(a || b || c).trim()]; return value === undefined ? whole : value; }) : text);
 const rows = [];
+// A step row draws its linked terms and its realization toggle. A click on a term shows that term's class card and a
+// click on the toggle or the realization opens or closes it; neither selects the step. The open state is per row.
+const stepRow = (row, tp, key) => {
+const pick = row.pick;
+const realized = () => (this.state && this.state.realized) || {};
+return Object.assign(row, {
+parts: this.termParts(row.label, tp.m),
+hasRealization: Boolean(tp.z),
+realization: tp.z || '',
+realizationOpen: Boolean(realized()[key]),
+realizationToggle: realized()[key] ? '▾ realization' : '▸ realization',
+pick: (event) => {
+const target = event && event.target && event.target.closest ? event.target : null;
+const inRealization = target ? target.closest('.sm-real-toggle, .sm-real') : null;
+if (inRealization) {
+event.stopPropagation();
+if (inRealization.classList.contains('sm-real-toggle')) this.setState({ hash: hash, realized: Object.assign({}, realized(), { [key]: !realized()[key] }) });
+return;
+}
+const term = target ? target.closest('.sm-term') : null;
+if (term) {
+event.stopPropagation();
+this.setState({ hash: hash, card: term.getAttribute('data-card') });
+return;
+}
+pick(event);
+}
+});
+};
 // Each epic's row, then, when it is open, its sub-epics' and its stories' rows, at the depth the story map nests them;
 // a row below the first sub-epic level is set in by its depth.
 const indent = (depth) => 'margin-left: ' + 10 * Math.max(0, depth - 1) + 'px';
@@ -227,13 +313,16 @@ const ck = sk + '-' + ci;
 rows.push(Object.assign({ label: sc.n, is_background: Boolean(sc.b), is_scenario: !sc.b, ...copyOf(sc.f, s.n + ' › ' + sc.n), cls: 'sm-row sm-k3' + (g === st.g && ci === st.c ? ' sm-on sm-box sm-box-top' + (st.open[ck] ? '' : ' sm-box-bottom') : ''), pick: () => (sc.b || (g === st.g && ci === st.c && st.open[ck]) ? toggle(ck)() : go(g, ci, 0)) }, chev(st.open[ck])));
 if (!st.open[ck]) return;
 this.outlineRows(s.n, sc.n).forEach((ex) => rows.push({ label: ex.label, is_example: true, cls: 'sm-row sm-k3 sm-ex' + (g === st.g && ci === st.c ? ' sm-box' + (ex.name === exampleOf(g, ci) ? ' sm-step-on' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, 0, ex.name) }));
-sc.t.forEach((tp, ti) => rows.push(sc.b ? { label: tp.x, cls: 'sm-row sm-k4 sm-given', mark: '', markCls: 'sm-nomark', pick: () => {} } : { label: g === st.g && ci === st.c ? filled(tp.x, valuesOf(g, ci)) : tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c ? ' sm-box' + (ti === st.t ? ' sm-step-on' : '') + (ti === sc.t.length - 1 ? ' sm-box-bottom' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti, g === st.g && ci === st.c ? st.x : null) }));
+sc.t.forEach((tp, ti) => rows.push(stepRow(sc.b ? { label: tp.x, cls: 'sm-row sm-k4 sm-given', mark: '', markCls: 'sm-nomark', pick: () => {} } : { label: g === st.g && ci === st.c ? filled(tp.x, valuesOf(g, ci)) : tp.x, cls: 'sm-row sm-k4' + (g === st.g && ci === st.c ? ' sm-box' + (ti === st.t ? ' sm-step-on' : '') + (ti === sc.t.length - 1 ? ' sm-box-bottom' : '') : ''), mark: '', markCls: 'sm-nomark', pick: () => go(g, ci, ti, g === st.g && ci === st.c ? st.x : null) }, tp, 'r' + g + '-' + ci + '-' + ti)));
 });
 })();
 rows.slice(from).forEach((row) => { row.indent = indent(depth); });
 });
 };
 T.forEach((e, ei) => epicRows(e, 'e' + ei, 0));
+rows.forEach((row) => { if (!row.parts) Object.assign(row, { parts: [{ text: row.label, isText: true, isTerm: false }], hasRealization: false }); });
+const cards = this.classCards();
+const card = (this.state && this.state.card && cards[this.state.card]) || null;
 const scen = S[st.g].c[st.c] || S[st.g].c[0] || { n: '', p: '', t: [{ x: '', i: [] }] };
 const step = scen.t[st.t] || scen.t[0] || { x: '', i: [] };
 const imgs = step.i;
@@ -273,6 +362,12 @@ img: imgs[idx] || '',
 manyImgs: !scen.p && imgs.length > 1,
 thumbs: imgs.map((u, k) => ({ num: k + 1, cls: 'sm-tab' + (k === idx ? ' sm-tab-on' : ''), pick: () => this.setState({ i: k, hash: hash }) })),
 rows: rows,
+cardOpen: Boolean(card),
+cardTitle: card ? card.title : '',
+cardText: card ? card.text : '',
+cardStyle: 'height: ' + this.cardHeight() + 'px',
+closeCard: () => this.setState({ card: null, hash: hash }),
+startCardResize: (event) => this.startCardResize(event),
 copyFromButton: (event) => { const button = event && event.currentTarget; if (button) this.copyOpenRequest(button.getAttribute('data-location'), button.getAttribute('data-title')); },
 panelOpen: !st.hidden,
 panelWidthClass: 'sm-w-' + this.panelWidth(),
