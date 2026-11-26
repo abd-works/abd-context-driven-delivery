@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -33,11 +32,11 @@ from typing import Dict, List, Mapping, Optional, Protocol, Sequence, TextIO
 
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.model.story_map import StoryMap
-from cdd_guidance.practices.stories.model.story_tree import StoryTree
+from cdd_guidance.practices.stories.model.story_map_files import story_line
 from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.model.claude_design.screen_sources import FIXTURES, ScreenSources
 from cdd_guidance.practices.ux.model.claude_design.screen_walk import StoryCanvasWalk
-from cdd_guidance.practices.ux.model.claude_design.story_canvas import ClaudeDesignStoryMap, StoryCanvasSetup
+from cdd_guidance.practices.ux.model.claude_design.story_canvas import ClaudeDesignStoryMap, StoryCanvasSetup, source_key
 from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
 from harness.design_canvas.versions import CanvasVersion, CanvasVersions
@@ -46,7 +45,15 @@ FIXTURES_FILE = "fixtures/canvas-fixtures.js"
 SCREENS_FOLDER = "screens"
 UX_MAP_FILE = "ux.json"
 WALK_FILE = "walk.md"
-_STORY_HEADING = re.compile(r"^#+\s+Story:\s*(.+?)\s*$")
+
+
+def _story_place(files: List[Path], name: str) -> str:
+    """``path:line`` of the first line of files that names the story called name, else the first file's first line."""
+    for file in dict.fromkeys(files):
+        line = story_line(file.read_text(encoding="utf-8"), name)
+        if line:
+            return f"{file.as_posix()}:{line}"
+    return f"{files[0].as_posix()}:1"
 
 
 class CanvasFixtures(Protocol):
@@ -194,28 +201,22 @@ class ProjectStoryCanvas:
         return story_map
 
     def sources(self, story_map: StoryMap) -> Dict[str, str]:
-        """Where each story (``Story``) and scenario (``Story › Scenario``) starts in its scenario file, as an absolute
-        ``path:line``: a story at its ``Story:`` heading, a scenario at its own heading."""
+        """Where each story (``Story``) and scenario (``source_key``) starts in its scenario file, as an absolute
+        ``path:line``: a scenario at its own heading or call; a story at the line that names it in the first of its
+        scenarios' files that names it, else at the first line of its first scenario's file."""
         found: Dict[str, str] = {}
         for story in story_map.descendants.stories():
+            files = []
             for scenario in story.scenarios:
                 source = scenario.source
                 if source is None or not source.file:
                     continue
                 file = (self.project_root / source.file).resolve()
-                found[StoryTree.key_of(scenario)] = f"{file.as_posix()}:{source.start_line}"
-                if story.name not in found:
-                    found[story.name] = f"{file.as_posix()}:{self._story_heading_line(file, story.name)}"
+                found[source_key(story, scenario)] = f"{file.as_posix()}:{source.start_line}"
+                files.append(file)
+            if files:
+                found[story.name] = _story_place(files, story.name)
         return found
-
-    @staticmethod
-    def _story_heading_line(file: Path, name: str) -> int:
-        """The line of the story's ``Story:`` heading in its scenario file, else the file's first line."""
-        for number, line in enumerate(file.read_text(encoding="utf-8").splitlines(), 1):
-            heading = _STORY_HEADING.match(line)
-            if heading and heading.group(1) == name:
-                return number
-        return 1
 
     def _build_fixtures(self, story_map: StoryMap, out_file: Path) -> None:
         stories = [story.name for story in story_map.descendants.stories()]

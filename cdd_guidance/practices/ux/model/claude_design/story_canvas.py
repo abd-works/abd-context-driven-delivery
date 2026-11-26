@@ -119,6 +119,16 @@ class ClaudeDesignEpic(DiagramEpic):
     """Where the bars, actors, and cards end and the thumbnails begin."""
 
 
+def source_key(story: "Story", scenario: "Scenario | Background") -> str:
+    """The key a canvas's ``sources`` hold scenario's location under: ``Story › Scenario``, and for each later scenario
+    of story with the same name, such as one a shared story file and its screen spec both write, that key with its
+    place among them (``#2``), so each is opened in the file that writes it."""
+    same_named = [own for own in story.scenarios if own.name == scenario.name]
+    place = next((at for at, own in enumerate(same_named, start=1) if own is scenario), 1)
+    key = StoryTree.key_of(scenario)
+    return key if place == 1 else f"{key} #{place}"
+
+
 class StoryCanvasSetup:
     """What a story canvas is drawn with besides its story map: the canvas root (``workspace``), whose ``project``
     folder holds what people already made on the canvas; the UX map whose screens it shows, the one the caller holds;
@@ -363,7 +373,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
                 groups[0]["i"] = [f"../{image}"]
         background = scenario in story.backgrounds
         entry = {"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,
-                 "f": self.sources.get(StoryTree.key_of(scenario), "")}
+                 "f": self.sources.get(source_key(story, scenario), "")}
         rows = _outline_rows(scenario, groups)
         if rows:
             entry["r"] = rows

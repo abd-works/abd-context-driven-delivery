@@ -19,6 +19,7 @@ from cdd_guidance.practices.source_code import BracketStructure
 from cdd_guidance.practices.source_code import CodeBody
 from cdd_guidance.practices.stories.model.story_file import StoryFile
 from cdd_guidance.practices.stories.model.story_map import StepType
+from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_map import Scenario, Story
@@ -60,8 +61,14 @@ class ScreenSpecFile(StoryFile):
         for describe in _DESCRIBE.finditer(self.text):
             story = stories.setdefault(describe.group("name"), story_class(describe.group("name"), len(stories) + 1))
             for test in _TEST.finditer(self._brackets.braced(describe.end() - 1) or ""):
-                story.scenarios.append(self._scenario(story, test))
+                scenario = self._scenario(story, test)
+                scenario.source = self._lines_of(describe.end() + test.start())
+                story.scenarios.append(scenario)
         return list(stories.values())
+
+    def _lines_of(self, at: int):
+        """Where the test call that starts at the offset at of the file is written: its line, counted from 1."""
+        return source_at(self.path, self.text.count("\n", 0, at) + 1)
 
     def _scenario(self, story: "Story", test: re.Match) -> "Scenario":
         scenario = story.scenario_class(name=test.group("name"), sequential_order=len(story.scenarios) + 1)

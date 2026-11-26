@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 from cdd_guidance.practices.source_code import PYTHON, CodeBody
 from cdd_guidance.practices.stories.model.story_file import StoryFile
 from cdd_guidance.practices.stories.model.story_map import Example, ExampleValue, Scenario, StepType, Story
+from cdd_guidance.practices.stories.model.story_map_files import source_at
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_recording import StoryRecording
@@ -156,6 +157,8 @@ class SharedStoryFile(StoryFile):
 
     def _scenario(self, story: Story, name: str, function: ast.FunctionDef) -> Scenario:
         scenario = story.scenario_class(name=name, sequential_order=len(story.scenarios) + 1)
+        first = min([function.lineno, *(decorator.lineno for decorator in function.decorator_list)])
+        scenario.source = source_at(self.path, first, function.end_lineno or first)
         for step in self._steps_of(function):
             self._add_step(scenario, step)
         scenario_text = self._code_of(function)

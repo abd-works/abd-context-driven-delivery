@@ -32,3 +32,17 @@ Wrong file: Cancel Order's two "Cancel a submitted order" rows both name `confir
 Unit: an explorer spec over the bookshop fixture (code layouts), like `choose_lines_explorer_spec.py` is for pml-web's markdown.
 
 ## Also seen by
+
+## Triage
+
+- **Status:** confirmed
+- **Severity:** wrong result (open on a code scenario goes to line 0; the two rows of a scenario two files write name one file)
+- **Triaged by:** Prism
+- **Why:** three causes. (1) No code reader kept a scenario's lines: `StoryTestScenarios._same_named` placed every code scenario at `source_at(file)` (line 0), and the story-test, shared-story and screen-spec readers named none. (2) The canvas keyed each scenario's location by `Story › Scenario`, so two scenarios of one name shared a key and both rows took the last one. (3) A story's location was the first scenario file at a markdown `#… Story:` heading, else line 1, so a TypeScript story test's `* Story:` comment and a shared file's `story(` call were missed, and a screen spec could win.
+
+## Fix
+
+- **Test (unit):** `cdd_guidance/practices/ux/model/claude_design/bookshop_explorer_spec.py`, the explorer drawn from the bookshop fixture (Python and TypeScript story tests, shared story files, screen spec). Seen failing first (5 of 5).
+- **Scenarios:** "The open request of a scenario a story test in code writes names the line of its call" and "Each row of a scenario a shared story file and its screen spec both write opens its own file" in `story_tests/explore-stories-in-story-ui/navigate-the-story-tree/navigate_the_story_tree_story.test.md`.
+- **Fix:** `code_story_map.py` `CodeScenario.read_code` keeps its block's lines; `story_file.py` names the story test's path on them; `python/shared_story_file.py` and `screen_spec_file.py` place each scenario at its decorator / `test(` line; `story_map.py` `_same_named` keeps the lines read. `story_canvas.py` `source_key(story, scenario)` keys a later same-named scenario with its place (`#2`), used by the canvas and `ProjectStoryCanvas.sources`; a story is placed at the first of its scenario files that names it (`story_line`, shared with the story map links from widget-4).
+- **Commit:** pending

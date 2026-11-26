@@ -204,6 +204,8 @@ class BlockStoryFile(StoryFile, ABC):
         for block, lead in zip(blocks, leads):
             story = story_class.from_block(block, lead, "\n".join([imports, self.comment_above(block), block.text]))
             story.source = source_at(self.path, block.line_span[0] + 1, block.line_span[1] + 1)
+            for scenario in story.scenarios:
+                scenario.source = source_at(self.path, scenario.source.start_line, scenario.source.end_line)
             stories.append(story)
         return stories, written
 

@@ -1625,10 +1625,12 @@ class StoryTestScenarios:
         return held
 
     def _same_named(self, stories: List["Story"], file: str) -> List[tuple]:
-        """Each read story beside each Story of the map with its name, its scenarios placed in file."""
+        """Each read story beside each Story of the map with its name, its scenarios placed in file at the lines they
+        were read from."""
         for read in stories:
             for scenario in read.scenarios:
-                scenario.source = source_at(file)
+                read_at = scenario.source or source_at(file)
+                scenario.source = source_at(file, read_at.start_line, read_at.end_line)
         held = self._story_map.descendants.stories()
         return [(read, story) for read in stories for story in held if story.name == read.name]
 

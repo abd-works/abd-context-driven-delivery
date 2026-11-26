@@ -95,6 +95,23 @@ section: body
 *When* the Person copies Activate Ticket's open request  
 *Then* the copied request names Activate Ticket's scenarios file and line 12
 
+#### Scenario: The open request of a scenario a story test in code writes names the line of its call
+
+Observed (`cdd_guidance/practices/ux/model/claude_design/bookshop_explorer_spec.py`). Defect widget-6.
+
+*Given* Pack Order's scenario Pack a paid order is written in ++pack_order_story.test.py++ by its `scenario` call  
+*When* the Person copies Pack a paid order's open request  
+*Then* the copied request names ++pack_order_story.test.py++ and the line of that `scenario` call
+
+#### Scenario: Each row of a scenario a shared story file and its screen spec both write opens its own file
+
+Observed (`bookshop_explorer_spec.py`). Defect widget-6.
+
+*Given* Cancel Order's scenario Cancel a submitted order is written in ++confirm-order.story.shared.ts++ and in ++confirm-order.story.ui.spec.ts++  
+*When* the Person copies the open request of each of its two rows  
+*Then* one request names ++confirm-order.story.shared.ts++ and the other ++confirm-order.story.ui.spec.ts++, each at the line of its call  
+  *And* Cancel Order's own open request names ++confirm-order.story.shared.ts++ at its `story` call
+
 ## Story: Pick An Outline Scenario's Example
 
 ### Evidence

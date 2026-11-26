@@ -242,7 +242,9 @@ class CodeScenario(Scenario, CodeStoryNode):
 
     def read_code(self, block: StoryBlock, lead: List[str]) -> None:
         """This scenario's code from the block it was written as: each background's and step's body, the code that is
-        no step (`setup`), and the block's own lines (`written`)."""
+        no step (`setup`), and the block's own lines (`written`); and the lines it is written on, in the file its story
+        names."""
+        self.source = source_at(self.source.file if self.has_source_file else "", block.line_span[0] + 1, block.line_span[1] + 1)
         backgrounds = block.backgrounds([])
         for background, item in zip(self.backgrounds, backgrounds):
             read_step_code(background, item.steps([]))
