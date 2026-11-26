@@ -55,4 +55,4 @@ Unit (`prompt_queue_spec.py`): its send examples use one-line texts only.
 - **Code:** `tools/prompt_queue/prompt_queue.py`: `QueuedPrompt.handed_over` uses the new module function `_carried_on` and the constants `_CARD_FIELD` and `_CARRIED_ON`; `_SENT_CARDS_NOTE` gains the sentence.
 - **Tests:** `tools/prompt_queue/prompt_queue_spec.py` (unit), context "whose card's text and step hold several lines": three examples, seen failing first, now pass (121 examples).
 - **Scenario:** "Send a card whose text holds several lines as one card" in Send Queued Prompts To Another Chat (`share_queue_among_robots_story.test.md`).
-- **Commit:** (filled below)
+- **Commit:** 3feb838d2
