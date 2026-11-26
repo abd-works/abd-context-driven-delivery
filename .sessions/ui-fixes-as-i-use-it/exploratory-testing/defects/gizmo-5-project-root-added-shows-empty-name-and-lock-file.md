@@ -26,3 +26,17 @@ The added root is answered under a name (`.` or the project's folder name), so t
 ## Tier that should catch it
 
 Unit (`practice_session_output_spec.py`: no example adds the project's top folder).
+
+## Triage
+
+- **Status:** confirmed (the empty name and the lock file); question for the person (deleting another session's record or the own log)
+- **Severity:** wrong result / misleading listing
+- **Triaged by:** Hinge
+
+Reproduced with roots.py: `added_roots` answered `['']`, and All files listed `.sessions/tidy/session.json.lock`. Whether the file menu may delete another session's `.sessions/other` or the own `session.log` no scenario says: the Refuse outline protects only the own session.json and its folder. I changed no behaviour there; I would recommend refusing any session's record folder (`.sessions/<name>`) and its session.json, since only session tools change a record, while letting a log or report file go.
+
+## Fix
+
+Scenarios "Name the project's top folder added as a root" in `story_tests/review-generated-work-in-file-viewer/act-on-files-from-file-menu/act_on_files_from_file_menu_story.test.md` and "Leave out what a change to session.json leaves beside it" in `story_tests/review-generated-work-in-file-viewer/filter-files-in-files-app/filter_files_in_files_app_story.test.md`. Tests: `space/session/practices/practice_session_output_spec.py` (unit), adds as the project's top folder from a session working below it: listed as `.` (seen failing); `space/session/files/session_files_spec.py` (unit), `session.all_files` with a session.json under its folder that a change held: the lock file left out (seen failing). Fix: `added_roots` names the project's top `.`; `SessionFiles._files_at` leaves out what `record.is_left_beside` names, as `in_folder` already did.
+
+Commit: COMMIT

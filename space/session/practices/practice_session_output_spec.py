@@ -99,6 +99,33 @@ with description("a practice's root in a session") as self:
         with it("should be a root the session reads its files under"):
             expect(self.refund.session.session_files.in_root(self.refund.repo / REFUND_AGGREGATE)).to(equal(True))
 
+    # Defect gizmo-7: adding a root the practice already has said it was added, though nothing changed.
+    with context("that a person adds a second time"):
+        with before.each:
+            self.stories.add_root(REFUND_DOMAIN)
+
+        with it("should be refused, saying it is already a root of the practice"):
+            expect(lambda: self.stories.add_root(REFUND_DOMAIN)).to(raise_error(OutputRootRefused, contain(f"{REFUND_DOMAIN} is already a root of Stories")))
+
+    # Defect gizmo-4: .git was taken as a root, and All files failed for the whole session from then on.
+    with context("that a person adds inside git's own .git folder"):
+        with it("should be refused, naming the path"):
+            expect(lambda: self.stories.add_root(".git")).to(raise_error(OutputRootRefused, contain(".git is inside a .git folder")))
+
+        with it("should add no root"):
+            try:
+                self.stories.add_root(".git/hooks")
+            except OutputRootRefused:
+                pass
+            expect(self.stories.added_roots).to(equal([]))
+
+    # Defect gizmo-5: the project's top folder, added, was answered as a root named "".
+    with context("that a person adds as the project's top folder, from a session working in a folder below it"):
+        with it("should list it among the roots added as ., the project's top"):
+            self.refund.session.workpath = self.refund.repo / REFUND_DOMAIN
+            self.stories.add_root(".")
+            expect(self.stories.added_roots).to(equal(["."]))
+
     with context("that a person adds from outside the project"):
         with it("should be refused, naming the path"):
             expect(lambda: self.stories.add_root("../outside-root")).to(raise_error(OutputRootRefused, contain("../outside-root is outside the project")))

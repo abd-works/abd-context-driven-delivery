@@ -18,7 +18,7 @@ from harness.whiteboard import Whiteboard
 from harness.installation.context_config import CONTEXT_FOLDER, DEFAULT_FORMAT
 from harness.markdown.format import Format
 from harness.process.answer_reads import HeldForAnswer
-from space.session.files.file_manager import DESIGN_CANVAS_KIND, WHITEBOARD_KIND, FileEntry, Publication
+from space.session.files.file_manager import DESIGN_CANVAS_KIND, WHITEBOARD_KIND, FileEntry, Publication, inside_version_control
 from space.session.practices.proposed_roots import ProposedRoots, code_extensions
 from space.session.validation.validation_report import ValidationReports
 
@@ -216,24 +216,29 @@ class PracticeSessionOutput:
     @agent_tool
     @noSessionLog
     def add_root(self, path: str) -> PracticeSessionOutput:
-        """Add path, a file or a folder in the repository, as a root of every fidelity of this practice, beside the roots each has, kept in session.json, as the Files app's file menu does with Add to practice. An empty path and one outside the project are refused, and no fidelity takes it."""
-        self.root_named(path)
+        """Add path, a file or a folder in the repository, as a root of every fidelity of this practice, beside the roots each has, kept in session.json, as the Files app's file menu does with Add to practice. An empty path, one outside the project, one inside a .git folder, and one that is already a root of every fidelity of the practice are refused, and no fidelity takes it."""
+        root = self.root_named(path)
+        if all(root in output.roots for output in self.fidelity_outputs):
+            raise OutputRootRefused(path, f"{path} is already a root of {self.short_name}")
         for output in self.fidelity_outputs:
             output.add_root(path)
         return self
 
     def root_named(self, path: str) -> Path:
-        """The file or folder path names as a root, read from the repository; an empty path, which names nothing, and a
-        path outside the project raise *OutputRootRefused*. A folder that is not there yet is a root the practice
-        writes into."""
+        """The file or folder path names as a root, read from the repository; an empty path, which names nothing, a path
+        outside the project, and a path inside a .git folder, which holds git's own record and no one's work, raise
+        *OutputRootRefused*. A folder that is not there yet is a root the practice writes into."""
         if not str(path or "").strip():
             raise OutputRootRefused(path, "an empty path names no folder")
         project = self._session.checkout.root.resolve()
         root = (project / path).resolve()
         # A ticket's session works in its own worktree, beside the repository's own folder; a root may be in either.
         checkouts = {project, self._session.sessions.repo.root.resolve()}
-        if not any(root.is_relative_to(checkout) for checkout in checkouts):
+        checkout = next((checkout for checkout in checkouts if root.is_relative_to(checkout)), None)
+        if checkout is None:
             raise OutputRootRefused(path, f"{path} is outside the project {project.as_posix()}")
+        if inside_version_control(root.relative_to(checkout).parts):
+            raise OutputRootRefused(path, f"{path} is inside a .git folder, which holds git's own record, not anyone's work")
         return root
 
     @property
@@ -245,8 +250,8 @@ class PracticeSessionOutput:
     @data_field
     def added_roots(self) -> list[str]:
         """The files and folders a person added to this practice's fidelities as roots, each a path from the project,
-        in name order: the Files app's file bar shows each at its top, under its own name."""
-        return sorted(self._session.paths.from_project(root) for root in self.kept_roots)
+        in name order: the Files app's file bar shows each at its top, under its own name, the project's top folder as ``.``."""
+        return sorted(self._session.paths.from_project(root) or "." for root in self.kept_roots)
 
     def keep_root(self, root: Path) -> None:
         """Write this practice's files under root, kept in session.json relative to the workpath, so the root still
