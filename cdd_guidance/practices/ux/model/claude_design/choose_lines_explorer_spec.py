@@ -4,18 +4,19 @@ Lines part of pml-web's published explorer (``ux/design-canvas/version-7``), eac
 project's root, with the domain terms (``m``) and the Given and When realizations (``z``) each step group carries."""
 
 import json
+import tempfile
 from pathlib import Path
 
 from expects import equal, expect
 from mamba import before, description, it
 
+from cdd_guidance.practices.ux.model.claude_design.canvas_explorer import EXPLORER_FILE, CanvasExplorer
 from cdd_guidance.practices.ux.model.claude_design.project_story_canvas import NoCanvasFixtures, ProjectStoryCanvas
 from cdd_guidance.practices.ux.model.claude_design.story_canvas import ClaudeDesignStoryMap, StoryCanvasSetup
 from cdd_guidance.practices.ux.model.json.nodes import JsonUxMap
 
 _PROJECT = Path(__file__).resolve().parents[5] / "test-area" / "pml-web"
 _EXPECTED = Path(__file__).with_name("choose_lines_explorer.expected.json")
-_TREE_OPENS = "tree() {\nreturn "
 
 
 def _named_from(node, root: str):
@@ -33,8 +34,12 @@ def _drawn_tree() -> list:
     story_map = canvas.story_map()
     ux_map = JsonUxMap().parse(json.loads((_PROJECT / "ux" / "ux.json").read_text(encoding="utf-8")))
     setup = StoryCanvasSetup(ux_map=ux_map, sources=canvas.sources(story_map), files_root=_PROJECT)
-    page = json.loads(ClaudeDesignStoryMap(setup=setup).render(story_map))["project/screens/explorer.dc.html"]
-    tree, _ = json.JSONDecoder().raw_decode(page, page.index(_TREE_OPENS) + len(_TREE_OPENS))
+    page = json.loads(ClaudeDesignStoryMap(setup=setup).render(story_map))[f"project/{EXPLORER_FILE}"]
+    with tempfile.TemporaryDirectory() as folder:
+        written = Path(folder) / EXPLORER_FILE
+        written.parent.mkdir(parents=True)
+        written.write_text(page, encoding="utf-8")
+        tree = CanvasExplorer(Path(folder)).tree()
     return _named_from(tree, _PROJECT.as_posix() + "/")
 
 
