@@ -736,6 +736,13 @@ class Ticket(TicketCheckoutTools, TicketChoices, TicketMoveTools, TicketTreeTool
         """Return the rules broken on every fidelity of the ticket's stage left with violations, across its practices, each rule naming its fidelity, in the shape of fidelity_progress.report. path is the folder the reports sit in. A saved graph holds its whole practice's hits, so a rule two fidelities share is listed once. has_saved_graph is false when a report has no saved graph, so its rules are missing."""
         return self.work.violations
 
+    @mcp
+    @agent_tool
+    @noSessionLog
+    def violations_of(self, path: str) -> Report:
+        """Return the rules the latest reports of every fidelity of the ticket find broken in path, a file or a folder named from the project, each with only its violations in that file or in a file in that folder, in the shape of violations; no rule when none is broken there. The Files app's file menu shows it as Display violations."""
+        return self.work.violations_of(path)
+
     def in_overview(self) -> OverviewTicket:
         """This ticket as the board's overview sends it: whole, but for its text, and with its children by name."""
         return OverviewTicket(self._session, self._board)
@@ -925,6 +932,13 @@ class TicketWork:
         reports = [entry.report() for entry in self.progress if entry.has_violations and entry.stage is column]
         session = self._ticket.session
         return Report.from_reports(session.paths.from_project(session.reports_folder), reports)
+
+    def violations_of(self, path: str) -> Report:
+        """The rules the latest reports of every fidelity with violations find broken in path, a file or a folder named
+        from the project, with only their violations there."""
+        reports = [entry.report() for entry in self.progress if entry.has_violations]
+        session = self._ticket.session
+        return Report.from_reports(session.paths.from_project(session.reports_folder), reports).within(path)
 
     def progress_of(self, slug: str) -> FidelityProgress:
         """The progress of the fidelity slug names, such as stories-story-map. Only that fidelity's progress is read,

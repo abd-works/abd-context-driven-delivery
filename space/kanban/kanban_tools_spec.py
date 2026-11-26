@@ -1244,6 +1244,26 @@ with description("the board tools") as self:
             report = self.project.call("fidelity-progress.report", ticket="sign-up", fidelity="stories-story-map")
             expect(report["rules"][0]["fidelity"]["slug"]).to(equal("stories-story-map"))
 
+        # (S) Person --> Display Violations Of File Or Folder: the Files app's file menu shows the rules broken in one
+        # file or folder, read from the same reports.
+        with context("that are asked for in one file"):
+            with it("should list only the violations in that file"):
+                rules = self.project.call("ticket.violations_of", ticket="sign-up", path="docs/map.md")["rules"]
+                expect({violation["location"] for rule in rules for violation in rule["violations"]}).to(equal({"docs/map.md"}))
+
+        with context("that are asked for in a folder"):
+            with it("should list the violations of every file in it, here every violation the ticket has"):
+                in_folder = self.project.call("ticket.violations_of", ticket="sign-up", path="docs")["rules"]
+                expect(in_folder).to(equal(self.project.call("ticket.violations", ticket="sign-up")["rules"]))
+
+        with context("that are asked for in a folder holding none of them"):
+            with it("should list no rule"):
+                expect(self.project.call("ticket.violations_of", ticket="sign-up", path="src")["rules"]).to(equal([]))
+
+        with context("that are asked for in a folder whose name only starts as another's"):
+            with it("should list no violation of the other folder"):
+                expect(self.project.call("ticket.violations_of", ticket="sign-up", path="doc")["rules"]).to(equal([]))
+
     # A ticket's card sits in one stage, so its violations are those of that stage's practices.
     with context("with violations left on a fidelity of a later stage"):
         with before.each:
@@ -1433,11 +1453,11 @@ with description("the board tools") as self:
             names = set(self.project.server.tools)
             expect(names).to(equal({
                 "board.show", "board.overview", "board.help", "board.folders", "board.set_sends_fixes_directly", "board.save_again", "stage.set_wip_limit",
-                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.fidelity_files", "ticket.root_files", "ticket.format_choices", "ticket.choose_formats", "ticket.overlay_choices", "ticket.choose_overlays", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.assign_chat",
+                "ticket.create", "ticket.activate", "ticket.branch", "ticket.work_branch", "ticket.close_choices", "ticket.fidelity_files", "ticket.root_files", "ticket.format_choices", "ticket.choose_formats", "ticket.overlay_choices", "ticket.choose_overlays", "ticket.move_next", "ticket.move_previous", "ticket.move_to", "ticket.close", "ticket.archive", "ticket.violations", "ticket.violations_of", "ticket.assign_chat",
                 "ticket.edit_text", "ticket.tag", "ticket.delete", "ticket.add_child", "ticket.pull_out", "ticket.reassign_parent", "ticket.move_before",
                 "fidelity-progress.report", "fidelity-progress.accept_violation", "fidelity-progress.reopen_violation", "fidelity-progress.files", "fidelity-progress.help",
                 "sessions.current", "sessions.switch", "session.close", "session.append_log", "session.mark_loop", "session.read_loop",
-                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.read_file", "session.write_file", "session.check_changed_artifact", "session.file", "session.graph_trees", "session.graph_branch", "session.graph_fix_prompt", "session.graph_filter_choices", "session.graph_node_ranges", "session.graph_members", "session.add_to_chat_context", "session.show",
+                "session.choose_workpath", "session.folder_files", "session.workpath_files", "session.delete_file", "session.read_file", "session.write_file", "session.check_changed_artifact", "session.file", "session.graph_trees", "session.graph_branch", "session.graph_fix_prompt", "session.graph_filter_choices", "session.graph_node_ranges", "session.graph_members", "session.add_to_chat_context", "session.show",
                 "session.guidance_selection", "session.toggle_guidance", "session.guidance_selection_after", "session.record_test_tier",
                 "session.write_handoff", "session.read_handoff_format", "session.read_cdr_format", "session.list_cdrs", "session.write_cdr",
                 "practice-session-output.enable", "practice-session-output.choose_root", "practice-session-output.use_default_root", "fidelity-session-output.choose_root", "fidelity-session-output.add_root", "fidelity-session-output.propose_roots", "fidelity-session-output.choose_format",

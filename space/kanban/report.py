@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import cached_property
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 from harness.graph.saved_graph import SavedGraph, SavedGraphOutdated
@@ -167,6 +167,11 @@ class ReportRule:
         """Fix every violation of the rule the report found, read from the report itself."""
         return _in_session(f"Fix all violations of {self._rule.slug} found in this report: {self._report_path}. {_EVERY_FORMAT} {_KEEP_BEHAVIOUR}", self._fidelity)
 
+    def within(self, place: PurePosixPath) -> ReportRule:
+        """This rule holding only its violations in place, a file or a folder named from the project."""
+        inside = [violation for violation in self._violations if PurePosixPath(violation.location) == place or place in PurePosixPath(violation.location).parents]
+        return ReportRule(self._fidelity, self._rule, inside, self._report_path)
+
     @property
     def identity(self) -> tuple:
         """A saved graph holds its whole practice's hits, so two fidelities of one practice report the same broken rule."""
@@ -211,6 +216,14 @@ class Report:
         accepted = {rule.identity: rule for report in reversed(reports) for rule in report.accepted}
         standing = SavedGraphStanding(all(report.has_saved_graph for report in reports), any(report.is_out_of_date for report in reports))
         return cls(ReportSource(folder), list(reversed(rules.values())), standing).leaving_out(list(reversed(accepted.values())))
+
+    def within(self, path: str) -> Report:
+        """This report holding only the violations in path, a file or a folder named from the project, as a violation's
+        location names it; a rule with none there is left out, and so is an acceptance."""
+        place = PurePosixPath(path.replace(chr(92), "/").strip("/"))
+        rules = [rule.within(place) for rule in self._rules]
+        standing = SavedGraphStanding(self._has_saved_graph, self._is_out_of_date)
+        return Report(ReportSource(self._path, self._text), [rule for rule in rules if rule.count], standing)
 
     def leaving_out(self, accepted: list[ReportRule]) -> Report:
         """This report saying which violations it leaves out because a person accepted them, under the rule each breaks."""
