@@ -122,9 +122,12 @@ class StoryCanvasSetup:
     """What a story canvas is drawn with besides its story map: the canvas root (``workspace``), whose ``project``
     folder holds what people already made on the canvas; the UX map whose screens it shows, the one the caller holds;
     and where each story (``Story``) and scenario (``Story › Scenario``) sits in the story code (``sources``, its
-    ``path:line``), which the explorer offers to copy as an "open in the file viewer" request."""
+    ``path:line``), which the explorer offers to copy as an "open in the file viewer" request; and the canvas's *title*,
+    the name its version is published under (``ux-mockup``), so the canvas names itself as its file does."""
 
-    def __init__(self, workspace: Optional[str] = None, ux_map: Optional[UxMap] = None, sources: Optional[Dict[str, str]] = None) -> None:
+    def __init__(self, workspace: Optional[str] = None, ux_map: Optional[UxMap] = None, sources: Optional[Dict[str, str]] = None,
+                 title: str = "") -> None:
+        self.title = title
         self.ux_map = ux_map
         self.sources = dict(sources or {})
         self.project = Path(workspace) / "project" if workspace else None
@@ -154,7 +157,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         self._setup = setup
         self.screen_map = self._screen_map(setup.ux_map)
         self.sources = dict(setup.sources)
-        self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryMap" else "Story Map", setup.project)
+        self.canvas = DesignCanvas(setup.title or (self.name if self.name and self.name != "StoryMap" else "Story Map"), setup.project)
 
     def blank(self) -> "ClaudeDesignStoryMap":
         """A canvas holding no story map, drawn with this canvas's setup."""

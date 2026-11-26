@@ -128,6 +128,9 @@ with description("Canvas versions") as self:
         with it("starts version-1 when there is no version yet"):
             expect(self.versions.working().number).to(equal(1))
 
+        with it("titles the one canvas with its name alone, since there are no versions to tell apart"):
+            expect(self.versions.working().title).to(equal("ux-mockup"))
+
         with context("once the version is published"):
             with before.each:
                 (self.root / "version-1" / "project").mkdir(parents=True)

@@ -163,7 +163,7 @@ class ProjectStoryCanvas:
         ScreenSources(project).record({FIXTURES_FILE: self.stories_root}, self.project_root, FIXTURES)
         self._write_screens(screens, project, ux_document)
         ux_map = JsonUxMap().parse(ux_document)
-        setup = StoryCanvasSetup(workspace=str(version.folder), ux_map=ux_map, sources=self.sources(story_map))
+        setup = StoryCanvasSetup(workspace=str(version.folder), ux_map=ux_map, sources=self.sources(story_map), title=version.title)
         written = json.loads(ClaudeDesignStoryMap(setup=setup).render(story_map))
         for path, text in written.items():
             target = version.folder / path

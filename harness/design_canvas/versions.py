@@ -77,10 +77,11 @@ class CanvasVersion:
     (none for a version kept as a release), the link it was published at, and the canvas's name, which its title
     starts with."""
 
-    def __init__(self, folder: Path, published: PublishedLinks, name: str) -> None:
+    def __init__(self, folder: Path, published: PublishedLinks, name: str, kept_one: bool = False) -> None:
         self.folder = folder
         self._published = published
         self._name = name
+        self._kept_one = kept_one
 
     @property
     def number(self) -> Optional[int]:
@@ -96,8 +97,10 @@ class CanvasVersion:
     @property
     def title(self) -> str:
         """The title the version is published under: the canvas's name, then the version's folder, as a versioned file
-        is named (``ux-mockup.version-7``), so a person can tell canvases apart and match each to its folder."""
-        return f"{self._name}.{self.folder.name}"
+        is named (``ux-mockup.version-7``), so a person can tell canvases apart and match each to its folder. A project
+        that keeps one canvas, updated in place, has no versions to tell apart, so its canvas is titled with the name
+        alone (``ux-mockup``)."""
+        return self._name if self._kept_one else f"{self._name}.{self.folder.name}"
 
     @property
     def accepted_misses(self) -> List[str]:
@@ -137,7 +140,7 @@ class CanvasVersion:
         target = self.folder.parent / name
         self.folder.rename(target)
         self._published.rename(self.folder.name, name)
-        return CanvasVersion(target, self._published, self._name)
+        return CanvasVersion(target, self._published, self._name, self._kept_one)
 
 
 class CanvasVersions:
@@ -171,7 +174,7 @@ class CanvasVersions:
         return sorted(int(match.group(1)) for match in found if match)
 
     def _numbered(self, number: int) -> CanvasVersion:
-        return CanvasVersion(self.root / f"version-{number}", self.published, self.name)
+        return CanvasVersion(self.root / f"version-{number}", self.published, self.name, self.keeps_one)
 
     @property
     def latest(self) -> Optional[CanvasVersion]:
@@ -182,7 +185,7 @@ class CanvasVersions:
     def published_at(self, link: str) -> Optional[CanvasVersion]:
         """The version published at link, a numbered version or a release; none when no version was published there."""
         name = next((name for name, published in self.published.all().items() if published == link), None)
-        return CanvasVersion(self.root / name, self.published, self.name) if name is not None else None
+        return CanvasVersion(self.root / name, self.published, self.name, self.keeps_one) if name is not None else None
 
     def start_next(self) -> CanvasVersion:
         """Begin the next version as a copy of the latest (screens, images, fixtures), else of the newest release,
