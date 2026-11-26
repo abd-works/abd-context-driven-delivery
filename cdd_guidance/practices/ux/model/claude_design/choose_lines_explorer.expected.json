@@ -1,0 +1,697 @@
+{
+ "n": "Choose Lines",
+ "e": [],
+ "s": [
+  {
+   "n": "Display Plans",
+   "f": "tests/story_tests/choose-lines/display-plans/display_plans_story.test.md:9",
+   "c": [
+    {
+     "n": "See the plan catalog",
+     "b": false,
+     "p": "display-plans",
+     "t": [
+      {
+       "x": "Given the Customer has no account\n    And the Customer has an empty cart\n    And the plan repository holds plan Atlas, plan Ace, plan Data Freedom, plan Essentials, and plan Promo\nWhen the Customer opens My Paradise",
+       "i": [
+        "../shots/display-plans.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "plan": "src/.context/domain-model.md#plan-aggregate-root-entity"
+       },
+       "z": "Given the Customer has no account\ncart = new Cart(null, cart_empty_cart)\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\n\nWhen the Customer opens My Paradise\nplans = PlanRepository.list()"
+      },
+      {
+       "x": "Then the catalog shows plan Atlas, plan Ace, plan Data Freedom, and plan Essentials, each with its tagline, its plan features in Bermuda and when you travel, and its monthly price with all fees included\n    And plan Ace is tagged Best value\n    And each plan can be added\n    And the cart shows the no lines nudge\n    But plan Promo is not in the catalog",
+       "i": [
+        "../shots/display-plans.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "plan": "src/.context/domain-model.md#plan-aggregate-root-entity",
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/display-plans/display_plans_story.test.md:11"
+    },
+    {
+     "n": "Continue with no line in the cart",
+     "b": false,
+     "p": "display-plans",
+     "t": [
+      {
+       "x": "Given the Customer has an empty cart\nWhen the Customer continues from the plan catalog",
+       "i": [
+        "../shots/display-plans.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "plan catalog": "src/.context/domain-model.md#plan-aggregate-root-entity"
+       },
+       "z": "Given the Customer has an empty cart\ncart = new Cart(null, cart_empty_cart)\n\nWhen the Customer continues from the plan catalog\ncart.continueFromCatalog()\n  <- CartException(continueFromCatalog, Add at least one line to continue.)"
+      },
+      {
+       "x": "Then the catalog says Add at least one line to continue.\n    And the cart still holds no lines",
+       "i": [
+        "../shots/display-plans.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "line": "src/.context/domain-model.md#line-entity",
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/display-plans/display_plans_story.test.md:34"
+    }
+   ]
+  },
+  {
+   "n": "Add Line To Cart",
+   "f": "tests/story_tests/choose-lines/add-line-to-cart/add_line_to_cart_story.test.md:9",
+   "c": [
+    {
+     "n": "Add the first line",
+     "b": false,
+     "p": "add-line-to-cart",
+     "t": [
+      {
+       "x": "Given the Customer has an empty cart\nWhen the Customer adds a line on plan Atlas",
+       "i": [
+        "../shots/add-line-to-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity",
+        "plan": "src/.context/domain-model.md#plan-aggregate-root-entity"
+       },
+       "z": "Given the Customer has an empty cart\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncart = new Cart(null, cart_empty_cart)\n\nWhen the Customer adds a line on plan Atlas\nplan = PlanRepository.loadByName(Atlas)\nline = cart.addLine(plan)"
+      },
+      {
+       "x": "Then the stored cart holds Line 1 · Atlas at $193/mo\n    And the Customer is told the line added message\n    And every plan can now be added as one more line\n    And the cart shows $193/mo, 1 line, and the one line nudge",
+       "i": [
+        "../shots/add-line-to-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity",
+        "plan": "src/.context/domain-model.md#plan-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/add-line-to-cart/add_line_to_cart_story.test.md:11"
+    },
+    {
+     "n": "Add one more line",
+     "b": false,
+     "p": "add-line-to-cart",
+     "t": [
+      {
+       "x": "Given the Customer has a cart with one Atlas line\nWhen the Customer adds one more line on plan Ace",
+       "i": [
+        "../shots/add-line-to-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity",
+        "plan": "src/.context/domain-model.md#plan-aggregate-root-entity"
+       },
+       "z": "Given the Customer has a cart with one Atlas line\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncart = new Cart(null, cart_one_atlas_line)\nplan = PlanRepository.loadByName(Atlas)\ncart.addLine(plan)\n\nWhen the Customer adds one more line on plan Ace\nplan = PlanRepository.loadByName(Ace)\ncart.addLine(plan)"
+      },
+      {
+       "x": "Then the stored cart holds Line 1 · Atlas at $193/mo and Line 2 · Ace at $153/mo\n    And the cart shows $346/mo, 2 lines, and the two lines nudge",
+       "i": [
+        "../shots/add-line-to-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/add-line-to-cart/add_line_to_cart_story.test.md:32"
+    },
+    {
+     "n": "Add a line from the order checklist",
+     "b": false,
+     "p": "add-line-to-cart",
+     "t": [
+      {
+       "x": "Given the cart holds one line set up for Me\nWhen the Customer adds a line on plan Ace to the cart",
+       "i": [
+        "../shots/add-line-to-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity",
+        "plan": "src/.context/domain-model.md#plan-aggregate-root-entity"
+       },
+       "z": "Given the cart holds one line set up for Me\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncredentials = CredentialsRepository.new()\ncustomerProfile = new CustomerProfile(credentials, customer_cart_one_line_set_up_for_me)\nCustomerProfileRepository.update(customerProfile)\nNumberInventoryRepository.update(new NumberInventory(4415550106, \"\", available))\ncart = CartRepository.create(customerProfile)\nplan = PlanRepository.loadByName(Data Freedom)\nline = cart.addLine(plan)\nline.nameLine(Me, false)\nnumber = NumberInventoryRepository.load(4415550106)\nnumber.hold()\nNumberInventoryRepository.update(number)\nline.recordHeldNumbers([number])\nnumber.reserve()\nNumberInventoryRepository.update(number)\nline.reserveSelectedNumber(number)\nline.selectSim(new Sim(eSIM))\nCartRepository.update(cart)\n\nWhen the Customer adds a line on plan Ace to the cart\nplan = PlanRepository.loadByName(Ace)\ncart.addLine(plan)\nCartRepository.update(cart)"
+      },
+      {
+       "x": "Then the stored cart holds Line 1 · Me · Data Freedom and Line 2 · Ace\n    And Line 2 · Ace joins the order checklist as to do",
+       "i": [
+        "../shots/add-line-to-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/add-line-to-cart/add_line_to_cart_story.test.md:53"
+    }
+   ]
+  },
+  {
+   "n": "View Cart",
+   "f": "tests/story_tests/choose-lines/view-cart/view_cart_story.test.md:9",
+   "c": [
+    {
+     "n": "View the cart with a voucher",
+     "b": false,
+     "p": "view-cart",
+     "t": [
+      {
+       "x": "Given the cart holds one Atlas line with TRAVEL25 (Atlas with TRAVEL25)\nWhen the Customer views the cart",
+       "i": [
+        "../shots/view-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       },
+       "z": "Given the cart holds one Atlas line with TRAVEL25 (Atlas with TRAVEL25)\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\nCatalogVoucherRepository._seedTerms(code, terms) for each code in voucher.json: TRAVEL25, ALL10, CART10, PROMO30, PARTNER20, EXPIRED, USED\ncart = new Cart(null, cart_atlas_with_travel25)\nplan = PlanRepository.loadByName(Atlas)\ncart.addLine(plan)\nvoucher = AppliedVoucherRepository.forCode(TRAVEL25, planId => PlanRepository.load(planId))\n  -> CatalogVoucherRepository.termsFor(TRAVEL25)\ncart.applyVoucher(voucher)\n  -> voucher.redeem(plans)\nAppliedVoucherRepository.update(voucher)\n\nWhen the Customer views the cart\nsummary = cart.orderSummary()"
+      },
+      {
+       "x": "Then the cart shows Line 1 · Atlas at $193/mo, which can be removed\n    And the cart shows \"Voucher TRAVEL25, first bill only, −$25\"\n    And the cart shows \"You pay now $168, then $193/mo\"",
+       "i": [
+        "../shots/view-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/view-cart/view_cart_story.test.md:11"
+    },
+    {
+     "n": "View the cart with several lines",
+     "b": false,
+     "p": "view-cart",
+     "t": [
+      {
+       "x": "Given the cart holds Atlas and Ace lines\nWhen the Customer views the cart",
+       "i": [
+        "../shots/view-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       },
+       "z": "Given the cart holds Atlas and Ace lines\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncart = new Cart(null, cart_atlas_and_ace_lines)\nplan = PlanRepository.loadByName(Atlas)\ncart.addLine(plan)\nplan = PlanRepository.loadByName(Ace)\ncart.addLine(plan)\n\nWhen the Customer views the cart\nsummary = cart.orderSummary()"
+      },
+      {
+       "x": "Then the cart shows Line 1 · Atlas at $193/mo and Line 2 · Ace at $153/mo, each of which can be removed\n    And the cart shows $346/mo, 2 lines, and the two lines nudge\n    And a voucher can be added",
+       "i": [
+        "../shots/view-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/view-cart/view_cart_story.test.md:38"
+    },
+    {
+     "n": "View the cart from the order checklist",
+     "b": false,
+     "p": "view-cart",
+     "t": [
+      {
+       "x": "Given the cart holds one line set up for Me\nWhen the Customer views the cart from the order checklist",
+       "i": [
+        "../shots/view-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       },
+       "z": "Given the cart holds one line set up for Me\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncredentials = CredentialsRepository.new()\ncustomerProfile = new CustomerProfile(credentials, customer_cart_one_line_set_up_for_me)\nCustomerProfileRepository.update(customerProfile)\nNumberInventoryRepository.update(new NumberInventory(4415550106, \"\", available))\ncart = CartRepository.create(customerProfile)\nplan = PlanRepository.loadByName(Data Freedom)\nline = cart.addLine(plan)\nline.nameLine(Me, false)\nnumber = NumberInventoryRepository.load(4415550106)\nnumber.hold()\nNumberInventoryRepository.update(number)\nline.recordHeldNumbers([number])\nnumber.reserve()\nNumberInventoryRepository.update(number)\nline.reserveSelectedNumber(number)\nline.selectSim(new Sim(eSIM))\nCartRepository.update(cart)\n\nWhen the Customer views the cart from the order checklist\ncart = CartRepository.load(customerProfile)\nsummary = cart.orderSummary()"
+      },
+      {
+       "x": "Then the cart shows \"Line 1 · Me — Data Freedom $103/mo\", which can be removed\n    And a line can be added and a voucher can be added\n    And the cart shows the one line nudge",
+       "i": [
+        "../shots/view-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity",
+        "voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/view-cart/view_cart_story.test.md:61"
+    }
+   ]
+  },
+  {
+   "n": "Remove Line From Cart",
+   "f": "tests/story_tests/choose-lines/remove-line-from-cart/remove_line_from_cart_story.test.md:9",
+   "c": [
+    {
+     "n": "Remove a line from the cart",
+     "b": false,
+     "p": "remove-line-from-cart",
+     "t": [
+      {
+       "x": "Given the cart holds Atlas and Ace lines\nWhen the Customer removes Line 2 · Ace",
+       "i": [
+        "../shots/remove-line-from-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       },
+       "z": "Given the cart holds Atlas and Ace lines\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncart = new Cart(null, cart_atlas_and_ace_lines)\nplan = PlanRepository.loadByName(Atlas)\ncart.addLine(plan)\nplan = PlanRepository.loadByName(Ace)\ncart.addLine(plan)\n\nWhen the Customer removes Line 2 · Ace\nline = cart.lines.find(position 2)\ncart.removeLine(line)"
+      },
+      {
+       "x": "Then the stored cart holds Line 1 · Atlas at $193/mo only\n    And the cart shows $193/mo, 1 line, and the one line nudge",
+       "i": [
+        "../shots/remove-line-from-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/remove-line-from-cart/remove_line_from_cart_story.test.md:11"
+    },
+    {
+     "n": "Remove a set-up line from the order",
+     "b": false,
+     "p": "remove-line-from-cart",
+     "t": [
+      {
+       "x": "Given the cart holds lines set up for Me and Sam\nWhen the Customer removes Sam's line and confirms the remove line question",
+       "i": [
+        "../shots/remove-line-from-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       },
+       "z": "Given the cart holds lines set up for Me and Sam\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncredentials = CredentialsRepository.new()\ncustomerProfile = new CustomerProfile(credentials, customer_cart_lines_set_up_for_me_and_sam)\nCustomerProfileRepository.update(customerProfile)\nNumberInventoryRepository.update(new NumberInventory(4415550106, \"\", available))\nNumberInventoryRepository.update(new NumberInventory(4415550107, \"\", available))\ncart = CartRepository.create(customerProfile)\nplan = PlanRepository.loadByName(Data Freedom)\nline = cart.addLine(plan)\nline.nameLine(Me, false)\nnumber = NumberInventoryRepository.load(4415550106)\nnumber.hold()\nNumberInventoryRepository.update(number)\nline.recordHeldNumbers([number])\nnumber.reserve()\nNumberInventoryRepository.update(number)\nline.reserveSelectedNumber(number)\nline.selectSim(new Sim(eSIM))\nplan = PlanRepository.loadByName(Ace)\nline = cart.addLine(plan)\nline.nameLine(Sam, false)\nnumber = NumberInventoryRepository.load(4415550107)\nnumber.hold()\nNumberInventoryRepository.update(number)\nline.recordHeldNumbers([number])\nnumber.reserve()\nNumberInventoryRepository.update(number)\nline.reserveSelectedNumber(number)\nline.selectSim(new Sim(eSIM))\nCartRepository.update(cart)\n\nWhen the Customer removes Sam's line and confirms the remove line question\nline = cart.lines.find(nickname Sam)\nnumber = line.number\ncart.removeLine(line)\n  -> number.makeAvailable()\nNumberInventoryRepository.update(number)\nCartRepository.update(cart)"
+      },
+      {
+       "x": "Then the stored cart holds Line 1 · Me · Data Freedom only\n    And the progress bar's Lines step reads Your line",
+       "i": [
+        "../shots/remove-line-from-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/remove-line-from-cart/remove_line_from_cart_story.test.md:34"
+    },
+    {
+     "n": "Removing a line releases its number",
+     "b": false,
+     "p": "remove-line-from-cart",
+     "t": [
+      {
+       "x": "Given the cart holds lines set up for Me and Sam\nWhen the Customer removes Sam's line and confirms the remove line question",
+       "i": [
+        "../shots/remove-line-from-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       },
+       "z": "Given the cart holds lines set up for Me and Sam\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncredentials = CredentialsRepository.new()\ncustomerProfile = new CustomerProfile(credentials, customer_cart_lines_set_up_for_me_and_sam)\nCustomerProfileRepository.update(customerProfile)\nNumberInventoryRepository.update(new NumberInventory(4415550106, \"\", available))\nNumberInventoryRepository.update(new NumberInventory(4415550107, \"\", available))\ncart = CartRepository.create(customerProfile)\nplan = PlanRepository.loadByName(Data Freedom)\nline = cart.addLine(plan)\nline.nameLine(Me, false)\nnumber = NumberInventoryRepository.load(4415550106)\nnumber.hold()\nNumberInventoryRepository.update(number)\nline.recordHeldNumbers([number])\nnumber.reserve()\nNumberInventoryRepository.update(number)\nline.reserveSelectedNumber(number)\nline.selectSim(new Sim(eSIM))\nplan = PlanRepository.loadByName(Ace)\nline = cart.addLine(plan)\nline.nameLine(Sam, false)\nnumber = NumberInventoryRepository.load(4415550107)\nnumber.hold()\nNumberInventoryRepository.update(number)\nline.recordHeldNumbers([number])\nnumber.reserve()\nNumberInventoryRepository.update(number)\nline.reserveSelectedNumber(number)\nline.selectSim(new Sim(eSIM))\nCartRepository.update(cart)\n\nWhen the Customer removes Sam's line and confirms the remove line question\nline = cart.lines.find(nickname Sam)\nnumber = line.number\ncart.removeLine(line)\n  -> number.makeAvailable()\nNumberInventoryRepository.update(number)\nCartRepository.update(cart)"
+      },
+      {
+       "x": "Then the number Sam's line held is released and can be offered again",
+       "i": [
+        "../shots/remove-line-from-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "number": "src/.context/domain-model.md#numberinventory-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/remove-line-from-cart/remove_line_from_cart_story.test.md:87"
+    },
+    {
+     "n": "Keep the line",
+     "b": false,
+     "p": "remove-line-from-cart",
+     "t": [
+      {
+       "x": "Given the cart holds lines set up for Me and Sam\nWhen the Customer starts to remove Sam's line\n    But does not confirm the remove line question",
+       "i": [
+        "../shots/remove-line-from-cart.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       },
+       "z": "Given the cart holds lines set up for Me and Sam\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncredentials = CredentialsRepository.new()\ncustomerProfile = new CustomerProfile(credentials, customer_cart_lines_set_up_for_me_and_sam)\nCustomerProfileRepository.update(customerProfile)\nNumberInventoryRepository.update(new NumberInventory(4415550106, \"\", available))\nNumberInventoryRepository.update(new NumberInventory(4415550107, \"\", available))\ncart = CartRepository.create(customerProfile)\nplan = PlanRepository.loadByName(Data Freedom)\nline = cart.addLine(plan)\nline.nameLine(Me, false)\nnumber = NumberInventoryRepository.load(4415550106)\nnumber.hold()\nNumberInventoryRepository.update(number)\nline.recordHeldNumbers([number])\nnumber.reserve()\nNumberInventoryRepository.update(number)\nline.reserveSelectedNumber(number)\nline.selectSim(new Sim(eSIM))\nplan = PlanRepository.loadByName(Ace)\nline = cart.addLine(plan)\nline.nameLine(Sam, false)\nnumber = NumberInventoryRepository.load(4415550107)\nnumber.hold()\nNumberInventoryRepository.update(number)\nline.recordHeldNumbers([number])\nnumber.reserve()\nNumberInventoryRepository.update(number)\nline.reserveSelectedNumber(number)\nline.selectSim(new Sim(eSIM))\nCartRepository.update(cart)\n\nWhen the Customer starts to remove Sam's line\nline = cart.lines.find(nickname Sam)\nline.removeQuestion\nCart.messages.removeLineWarning"
+      },
+      {
+       "x": "Then the Customer is asked the remove line question\n    And the stored cart still holds Line 1 · Me and Line 2 · Sam with everything set up for them",
+       "i": [
+        "../shots/remove-line-from-cart.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "line": "src/.context/domain-model.md#line-entity",
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/remove-line-from-cart/remove_line_from_cart_story.test.md:139"
+    }
+   ]
+  },
+  {
+   "n": "Apply Family Discount",
+   "f": "tests/story_tests/choose-lines/apply-family-discount/apply_family_discount_story.test.md:9",
+   "c": [
+    {
+     "n": "A third line earns the family discount",
+     "b": false,
+     "p": "apply-family-discount",
+     "t": [
+      {
+       "x": "Given the cart holds family of three\nWhen My Paradise prices the cart",
+       "i": [
+        "../shots/apply-family-discount.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       },
+       "z": "Given the cart holds family of three\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncart = new Cart(null, cart_family_of_three)\nplan = PlanRepository.loadByName(Atlas)\ncart.addLine(plan)\nplan = PlanRepository.loadByName(Ace)\ncart.addLine(plan)\nplan = PlanRepository.loadByName(Data Freedom)\ncart.addLine(plan)\n\nWhen My Paradise prices the cart\nsummary = cart.orderSummary()"
+      },
+      {
+       "x": "Then each line's price is struck through and shows $5 less, as in three lines\n    And the cart shows \"Family discount · $5 × 3 lines −$15/mo\" and the family discount saving\n    And the cart shows $449 struck through and $434/mo\n    And the cart shows the three lines nudge",
+       "i": [
+        "../shots/apply-family-discount.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "line": "src/.context/domain-model.md#line-entity",
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "family discount": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/apply-family-discount/apply_family_discount_story.test.md:11"
+    },
+    {
+     "n": "Fewer than three lines get a nudge, not a discount",
+     "b": false,
+     "p": "apply-family-discount",
+     "t": [
+      {
+       "x": "Given the cart holds {lines}\nWhen My Paradise prices the cart",
+       "i": [
+        "../shots/apply-family-discount.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       },
+       "z": "Given the cart holds {lines}\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\ncart = new Cart(null, cart_empty_cart | cart_one_atlas_line | cart_atlas_and_ace_lines)\nfor each plan name of {lines}: Atlas, then Ace\n  plan = PlanRepository.loadByName(name)\n  cart.addLine(plan)\n\nWhen My Paradise prices the cart\nsummary = cart.orderSummary()"
+      },
+      {
+       "x": "Then no family discount is taken\n    And the cart shows the {lines} nudge",
+       "i": [
+        "../shots/apply-family-discount.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "family discount": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/apply-family-discount/apply_family_discount_story.test.md:37",
+     "r": {
+      "no lines": {
+       "example": "no lines",
+       "lines": "no lines"
+      },
+      "one line": {
+       "example": "one line",
+       "lines": "one line"
+      },
+      "two lines": {
+       "example": "two lines",
+       "lines": "two lines"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "n": "Apply Voucher",
+   "f": "tests/story_tests/choose-lines/apply-voucher/apply_voucher_story.test.md:9",
+   "c": [
+    {
+     "n": "Apply a voucher to one line",
+     "b": false,
+     "p": "apply-voucher",
+     "t": [
+      {
+       "x": "Given the Customer has a cart with one Atlas line\n    But the cart has no applied voucher\nWhen the Customer applies {voucher}",
+       "i": [
+        "../shots/apply-voucher.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity",
+        "applied voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity",
+        "voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       },
+       "z": "Given the Customer has a cart with one Atlas line\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\nCatalogVoucherRepository._seedTerms(code, terms) for each code in voucher.json: TRAVEL25, ALL10, CART10, PROMO30, PARTNER20, EXPIRED, USED\ncart = new Cart(null, cart_one_atlas_line)\nplan = PlanRepository.loadByName(Atlas)\ncart.addLine(plan)\n\nWhen the Customer applies {voucher}\nvoucher = AppliedVoucherRepository.forCode({voucher}, planId => PlanRepository.load(planId))\n  -> CatalogVoucherRepository.termsFor({voucher})\ncart.applyVoucher(voucher)\n  -> voucher.redeem(plans)\nAppliedVoucherRepository.update(voucher)"
+      },
+      {
+       "x": "Then the stored cart holds {voucher} as its applied voucher\n    And the voucher shows its code and rule, and can be removed\n    And the cart shows the code with {on one Atlas line}\n    And no other code can be entered while {voucher} is applied",
+       "i": [
+        "../shots/apply-voucher.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity",
+        "applied voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/apply-voucher/apply_voucher_story.test.md:11",
+     "r": {
+      "ALL10": {
+       "example": "ALL10",
+       "voucher": "ALL10",
+       "on one Atlas line": "−$10 first bill"
+      },
+      "CART10": {
+       "example": "CART10",
+       "voucher": "CART10",
+       "on one Atlas line": "−$19.30 first bill"
+      },
+      "TRAVEL25": {
+       "example": "TRAVEL25",
+       "voucher": "TRAVEL25",
+       "on one Atlas line": "−$25 first bill"
+      }
+     }
+    },
+    {
+     "n": "A voucher stacks with the family discount",
+     "b": false,
+     "p": "apply-voucher",
+     "t": [
+      {
+       "x": "Given the cart holds family of three\nWhen the Customer applies {voucher}",
+       "i": [
+        "../shots/apply-voucher.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       },
+       "z": "Given the cart holds family of three\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\nCatalogVoucherRepository._seedTerms(code, terms) for each code in voucher.json: TRAVEL25, ALL10, CART10, PROMO30, PARTNER20, EXPIRED, USED\ncart = new Cart(null, cart_family_of_three)\nplan = PlanRepository.loadByName(Atlas)\ncart.addLine(plan)\nplan = PlanRepository.loadByName(Ace)\ncart.addLine(plan)\nplan = PlanRepository.loadByName(Data Freedom)\ncart.addLine(plan)\n\nWhen the Customer applies {voucher}\nvoucher = AppliedVoucherRepository.forCode({voucher}, planId => PlanRepository.load(planId))\n  -> CatalogVoucherRepository.termsFor({voucher})\ncart.applyVoucher(voucher)\n  -> voucher.redeem(plans)\nAppliedVoucherRepository.update(voucher)"
+      },
+      {
+       "x": "Then the cart shows the applied voucher with {on family of three}, first bill only\n    And the cart still shows \"Family discount · $5 × 3 lines −$15/mo\"\n    And the cart shows {you pay now}",
+       "i": [
+        "../shots/apply-voucher.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "applied voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/apply-voucher/apply_voucher_story.test.md:49",
+     "r": {
+      "ALL10": {
+       "example": "ALL10",
+       "voucher": "ALL10",
+       "on family of three": "−$30 first bill",
+       "you pay now": "You pay now $404, then $434/mo"
+      },
+      "CART10": {
+       "example": "CART10",
+       "voucher": "CART10",
+       "on family of three": "−$43.40 first bill",
+       "you pay now": "You pay now $390.60, then $434/mo"
+      },
+      "TRAVEL25": {
+       "example": "TRAVEL25",
+       "voucher": "TRAVEL25",
+       "on family of three": "−$50 first bill",
+       "you pay now": "You pay now $384, then $434/mo"
+      }
+     }
+    },
+    {
+     "n": "An unknown code is refused",
+     "b": false,
+     "p": "apply-voucher",
+     "t": [
+      {
+       "x": "Given the Customer has a cart with one Atlas line\n    But the cart has no applied voucher\nWhen the Customer applies the unknown code",
+       "i": [
+        "../shots/apply-voucher.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity",
+        "applied voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       },
+       "z": "Given the Customer has a cart with one Atlas line\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\nCatalogVoucherRepository._seedTerms(code, terms) for each code in voucher.json: TRAVEL25, ALL10, CART10, PROMO30, PARTNER20, EXPIRED, USED\ncart = new Cart(null, cart_one_atlas_line)\nplan = PlanRepository.loadByName(Atlas)\ncart.addLine(plan)\n\nWhen the Customer applies the unknown code\nvoucher = AppliedVoucherRepository.forCode(HELLO5, planId => PlanRepository.load(planId))\n  -> CatalogVoucherRepository.termsFor(HELLO5)\n  <- VoucherException(enter, HELLO5, invalid code)"
+      },
+      {
+       "x": "Then the invalid code message is shown\n    And the stored cart has no applied voucher\n    And a code can still be entered",
+       "i": [
+        "../shots/apply-voucher.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "applied voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/apply-voucher/apply_voucher_story.test.md:91"
+    },
+    {
+     "n": "Remove an applied voucher",
+     "b": false,
+     "p": "apply-voucher",
+     "t": [
+      {
+       "x": "Given the cart holds the applied voucher TRAVEL25\nWhen the Customer removes the voucher",
+       "i": [
+        "../shots/apply-voucher.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "applied voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity",
+        "voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       },
+       "z": "Given the cart holds the applied voucher TRAVEL25\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\nCatalogVoucherRepository._seedTerms(code, terms) for each code in voucher.json: TRAVEL25, ALL10, CART10, PROMO30, PARTNER20, EXPIRED, USED\ncart = new Cart(null, cart_atlas_with_travel25)\nplan = PlanRepository.loadByName(Atlas)\ncart.addLine(plan)\nvoucher = AppliedVoucherRepository.forCode(TRAVEL25, planId => PlanRepository.load(planId))\n  -> CatalogVoucherRepository.termsFor(TRAVEL25)\ncart.applyVoucher(voucher)\n  -> voucher.redeem(plans)\nAppliedVoucherRepository.update(voucher)\n\nWhen the Customer removes the voucher\ncart.removeVoucher()"
+      },
+      {
+       "x": "Then the stored cart has no applied voucher\n    And a code can be entered again, the field still holding TRAVEL25\n    And the cart shows no voucher amount",
+       "i": [
+        "../shots/apply-voucher.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "applied voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity",
+        "voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/apply-voucher/apply_voucher_story.test.md:116"
+    }
+   ]
+  },
+  {
+   "n": "Unlock Promo Plan",
+   "f": "tests/story_tests/choose-lines/unlock-promo-plan/unlock_promo_plan_story.test.md:9",
+   "c": [
+    {
+     "n": "PROMO30 unlocks the Promo plan",
+     "b": false,
+     "p": "unlock-promo-plan",
+     "t": [
+      {
+       "x": "Given the plan catalog hides plan Promo\n    And the Customer has an empty cart\nWhen the Customer applies voucher PROMO30",
+       "i": [
+        "../shots/unlock-promo-plan.jpg"
+       ],
+       "k": "when",
+       "m": {
+        "plan catalog": "src/.context/domain-model.md#plan-aggregate-root-entity",
+        "plan": "src/.context/domain-model.md#plan-aggregate-root-entity",
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "voucher": "src/.context/domain-model.md#appliedvoucher-aggregate-root-entity"
+       },
+       "z": "Given the plan catalog hides plan Promo\nPlanRepository._seed(Atlas, Ace, Data Freedom, Essentials, Promo)\nCatalogVoucherRepository._seedTerms(code, terms) for each code in voucher.json: TRAVEL25, ALL10, CART10, PROMO30, PARTNER20, EXPIRED, USED\ncart = new Cart(null, cart_empty_cart)\n\nWhen the Customer applies voucher PROMO30\nvoucher = AppliedVoucherRepository.forCode(PROMO30, planId => PlanRepository.load(planId))\n  -> CatalogVoucherRepository.termsFor(PROMO30)\ncart.applyVoucher(voucher)\n  -> cart.addLine(plan) for the unsellable Promo plan in voucher.plans\n  -> voucher.redeem(plans)\nAppliedVoucherRepository.update(voucher)"
+      },
+      {
+       "x": "Then the Customer is shown promo plan ready with plan Promo tagged Unlocked, free for 30 days, with its plan features and $0/mo\n    And the stored cart holds Line 1 · Promo at $0/mo\n    And the cart shows $0/mo, 1 line, and \"PROMO30 free for 30 days\"",
+       "i": [
+        "../shots/unlock-promo-plan.jpg"
+       ],
+       "k": "then",
+       "m": {
+        "plan": "src/.context/domain-model.md#plan-aggregate-root-entity",
+        "cart": "src/.context/domain-model.md#cart-aggregate-root-entity",
+        "line": "src/.context/domain-model.md#line-entity"
+       }
+      }
+     ],
+     "f": "tests/story_tests/choose-lines/unlock-promo-plan/unlock_promo_plan_story.test.md:11"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,891 @@
+{
+  "name": "pml-web screens (Leo's multi-line prototype)",
+  "scope": "",
+  "story_references": [],
+  "object_references": [],
+  "notes": [],
+  "invariants": [],
+  "screens": [
+    {
+      "name": "display-plans",
+      "slug": "display-plans",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Display Plans"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "PlanRepository.list",
+        "Plan.name, tagline, price, tag, features",
+        "PlanFeature.region, lines",
+        "Cart.nextFamilyDiscountLineCount, familyDiscountWith"
+      ],
+      "domain_concepts": [],
+      "image": "shots/display-plans.jpg",
+      "prototype": "screens/display-plans.dc.html",
+      "regions": []
+    },
+    {
+      "name": "add-line-to-cart",
+      "slug": "add-line-to-cart",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Add Line To Cart"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.addLine",
+        "Line.position",
+        "Cart.monthlyCharge, nextFamilyDiscountLineCount, familyDiscountWith"
+      ],
+      "domain_concepts": [],
+      "image": "shots/add-line-to-cart.jpg",
+      "prototype": "screens/add-line-to-cart.dc.html",
+      "regions": []
+    },
+    {
+      "name": "view-cart",
+      "slug": "view-cart",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "View Cart"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.lines, orderSummary, monthlyCharge, voucherDiscount, upFrontCharge, firstBill, nextFamilyDiscountLineCount"
+      ],
+      "domain_concepts": [],
+      "image": "shots/view-cart.jpg",
+      "prototype": "screens/view-cart.dc.html",
+      "regions": []
+    },
+    {
+      "name": "remove-line-from-cart",
+      "slug": "remove-line-from-cart",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Remove Line From Cart"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.removeLine",
+        "NumberInventorySearch.releaseHeld",
+        "NumberInventory.makeAvailable",
+        "Line.position"
+      ],
+      "domain_concepts": [],
+      "image": "shots/remove-line-from-cart.jpg",
+      "prototype": "screens/remove-line-from-cart.dc.html",
+      "regions": []
+    },
+    {
+      "name": "apply-family-discount",
+      "slug": "apply-family-discount",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Apply Family Discount"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.familyDiscount, monthlySaving, fullPrice, monthlyCharge, upFrontCharge",
+        "orderSummary discountedPrice"
+      ],
+      "domain_concepts": [],
+      "image": "shots/apply-family-discount.jpg",
+      "prototype": "screens/apply-family-discount.dc.html",
+      "regions": []
+    },
+    {
+      "name": "apply-voucher",
+      "slug": "apply-voucher",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Apply Voucher"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.applyVoucher, removeVoucher, appliedVoucher, voucherDiscount",
+        "AppliedVoucher.code, plans, amountOff, percentOff, redeem, redeemFailed"
+      ],
+      "domain_concepts": [],
+      "image": "shots/apply-voucher.jpg",
+      "prototype": "screens/apply-voucher.dc.html",
+      "regions": []
+    },
+    {
+      "name": "unlock-promo-plan",
+      "slug": "unlock-promo-plan",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Unlock Promo Plan"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.applyVoucher → addLine",
+        "AppliedVoucher.trial",
+        "Plan.isSellable, tag, tagline",
+        "PlanRepository.load"
+      ],
+      "domain_concepts": [],
+      "image": "shots/unlock-promo-plan.jpg",
+      "prototype": "screens/unlock-promo-plan.dc.html",
+      "regions": []
+    },
+    {
+      "name": "create-credentials",
+      "slug": "create-credentials",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Create Credentials"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Credentials.email, password, confirmPassword, registrationRequirements, register"
+      ],
+      "domain_concepts": [],
+      "image": "shots/create-credentials.jpg",
+      "prototype": "screens/create-credentials.dc.html",
+      "regions": []
+    },
+    {
+      "name": "enter-validation-code",
+      "slug": "enter-validation-code",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Enter Validation Code"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "CredentialsValidation.validationCode, verify, canActivate",
+        "ValidationCodeMessage"
+      ],
+      "domain_concepts": [],
+      "image": "shots/enter-validation-code.jpg",
+      "prototype": "screens/enter-validation-code.dc.html",
+      "regions": []
+    },
+    {
+      "name": "resend-validation-code",
+      "slug": "resend-validation-code",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Resend Validation Code"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "CredentialsValidation.resendValidationCode, canResend, resendWaitSeconds"
+      ],
+      "domain_concepts": [],
+      "image": "shots/resend-validation-code.jpg",
+      "prototype": "screens/resend-validation-code.dc.html",
+      "regions": []
+    },
+    {
+      "name": "create-customer",
+      "slug": "create-customer",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Create Customer"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "CustomerProfileRepository.create",
+        "CartRepository.create",
+        "Cart.startCart, cartStep",
+        "CartStep.name, line",
+        "Line.setUp"
+      ],
+      "domain_concepts": [],
+      "image": "shots/create-customer.jpg",
+      "prototype": "screens/create-customer.dc.html",
+      "regions": []
+    },
+    {
+      "name": "check-order",
+      "slug": "check-order",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Check Order"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.orderSummary, fullPrice, monthlyCharge, monthlySaving, appliedVoucher, cartStep",
+        "Line.setUp",
+        "CustomerProfile.identityVerified, identityTicketRequired",
+        "Identity.fullName"
+      ],
+      "domain_concepts": [],
+      "image": "shots/check-order.jpg",
+      "prototype": "screens/check-order.dc.html",
+      "regions": []
+    },
+    {
+      "name": "change-line-plan",
+      "slug": "change-line-plan",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Change Line Plan"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Line.choosePlan, keepCurrentPlan, plan",
+        "PlanRepository.list"
+      ],
+      "domain_concepts": [],
+      "image": "shots/change-line-plan.jpg",
+      "prototype": "screens/change-line-plan.dc.html",
+      "regions": []
+    },
+    {
+      "name": "return-to-order-review",
+      "slug": "return-to-order-review",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Return To Order Review"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.returnToReview, orderSummary, monthlyCharge",
+        "Line.nameLine, reserveSelectedNumber, keepCurrentNumber, selectSim",
+        "Cart.removeLine"
+      ],
+      "domain_concepts": [],
+      "image": "shots/return-to-order-review.jpg",
+      "prototype": "screens/return-to-order-review.dc.html",
+      "regions": []
+    },
+    {
+      "name": "save-and-exit-order",
+      "slug": "save-and-exit-order",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Save And Exit Order"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.saveAndExit",
+        "CartRepository.update, load"
+      ],
+      "domain_concepts": [],
+      "image": "shots/save-and-exit-order.jpg",
+      "prototype": "screens/save-and-exit-order.dc.html",
+      "regions": []
+    },
+    {
+      "name": "name-line",
+      "slug": "name-line",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Name Line"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Line.nameLine, nickname, bringsOwnNumber, position",
+        "CartStep.line"
+      ],
+      "domain_concepts": [],
+      "image": "shots/name-line.jpg",
+      "prototype": "screens/name-line.dc.html",
+      "regions": []
+    },
+    {
+      "name": "pick-number",
+      "slug": "pick-number",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Pick Number"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "NumberInventorySearch.search, select, reserve",
+        "TermNumberSearch",
+        "NumberInventoryRepository.nextAvailable",
+        "Line.recordHeldNumbers, reserveSelectedNumber, heldNumbers, number"
+      ],
+      "domain_concepts": [],
+      "image": "shots/pick-number.jpg",
+      "prototype": "screens/pick-number.dc.html",
+      "regions": []
+    },
+    {
+      "name": "enter-porting-number",
+      "slug": "enter-porting-number",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Enter Porting Number"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Portability.donorOperator, portNumber, accountNumber, userType, accountType, informationConfirmed, permissionGranted, validate, beginPort, submit",
+        "Line.recordPort, portability"
+      ],
+      "domain_concepts": [],
+      "image": "shots/enter-porting-number.jpg",
+      "prototype": "screens/enter-porting-number.dc.html",
+      "regions": []
+    },
+    {
+      "name": "verify-ported-number",
+      "slug": "verify-ported-number",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Verify Ported Number"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Portability.codeSentTo, enterCode, canVerify, verify, refusedCode, resendVerificationSms, canResend, resendWaitSeconds"
+      ],
+      "domain_concepts": [],
+      "image": "shots/verify-ported-number.jpg",
+      "prototype": "screens/verify-ported-number.dc.html",
+      "regions": []
+    },
+    {
+      "name": "defer-port-verification",
+      "slug": "defer-port-verification",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Defer Port Verification"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Portability.confirmDonorNumber, deferVerification, verificationSkipped"
+      ],
+      "domain_concepts": [],
+      "image": "shots/defer-port-verification.jpg",
+      "prototype": "screens/defer-port-verification.dc.html",
+      "regions": []
+    },
+    {
+      "name": "select-sim",
+      "slug": "select-sim",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Select Sim"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Line.selectSim, sim",
+        "Sim.simType"
+      ],
+      "domain_concepts": [],
+      "image": "shots/select-sim.jpg",
+      "prototype": "screens/select-sim.dc.html",
+      "regions": []
+    },
+    {
+      "name": "enter-existing-sim",
+      "slug": "enter-existing-sim",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Enter Existing Sim"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Line.attachIccid",
+        "Sim.iccid, iccidEntered, iccidFormatValid",
+        "IccidInventoryRepository.validate"
+      ],
+      "domain_concepts": [],
+      "image": "shots/enter-existing-sim.jpg",
+      "prototype": "screens/enter-existing-sim.dc.html",
+      "regions": []
+    },
+    {
+      "name": "request-paradise-sim-card",
+      "slug": "request-paradise-sim-card",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Request Paradise Sim Card"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Line.selectSim",
+        "Sim.awaitsParadiseSimCard"
+      ],
+      "domain_concepts": [],
+      "image": "shots/request-paradise-sim-card.jpg",
+      "prototype": "screens/request-paradise-sim-card.dc.html",
+      "regions": []
+    },
+    {
+      "name": "activate-sim",
+      "slug": "activate-sim",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Activate Sim"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Line.activateSim",
+        "SubscriptionRepository.update",
+        "Subscription.waitingForPsim, sim, firstBillDueOn"
+      ],
+      "domain_concepts": [],
+      "image": "shots/activate-sim.jpg",
+      "prototype": "screens/activate-sim.dc.html",
+      "regions": []
+    },
+    {
+      "name": "verify-id-with-persona",
+      "slug": "verify-id-with-persona",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Verify Id With Persona"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "CustomerProfile.kycRequired",
+        "PersonaInquiry.fromCompletion, failed"
+      ],
+      "domain_concepts": [],
+      "image": "shots/verify-id-with-persona.jpg",
+      "prototype": "screens/verify-id-with-persona.dc.html",
+      "regions": []
+    },
+    {
+      "name": "enter-id-details-manually",
+      "slug": "enter-id-details-manually",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Enter Id Details Manually"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "CustomerProfile.deferIdentityVerification, identityTicketRequired",
+        "Identity.idTypesOffered, missingRequirements"
+      ],
+      "domain_concepts": [],
+      "image": "shots/enter-id-details-manually.jpg",
+      "prototype": "screens/enter-id-details-manually.dc.html",
+      "regions": []
+    },
+    {
+      "name": "confirm-details",
+      "slug": "confirm-details",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Confirm Details"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "CustomerProfile.confirmIdentity",
+        "Identity.preferredName, otherPhoneNumber",
+        "Address.street, complement, city, parish, postalCode"
+      ],
+      "domain_concepts": [],
+      "image": "shots/confirm-details.jpg",
+      "prototype": "screens/confirm-details.dc.html",
+      "regions": []
+    },
+    {
+      "name": "record-kyc-inquiry",
+      "slug": "record-kyc-inquiry",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Record Kyc Inquiry"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "CustomerProfile.confirmIdentity (locked fields), kyc, identityVerified",
+        "Kyc.personaInquiryId, verified"
+      ],
+      "domain_concepts": [],
+      "image": "shots/record-kyc-inquiry.jpg",
+      "prototype": "screens/record-kyc-inquiry.dc.html",
+      "regions": []
+    },
+    {
+      "name": "reload-card-form",
+      "slug": "reload-card-form",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Reload Card Form"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "BillingAccountRepository.create",
+        "BillingAccount.enterCardAuthorization",
+        "Payment.enter",
+        "CardAuthorization.hostedPage"
+      ],
+      "domain_concepts": [],
+      "image": "shots/reload-card-form.jpg",
+      "prototype": "screens/reload-card-form.dc.html",
+      "regions": []
+    },
+    {
+      "name": "enter-payment",
+      "slug": "enter-payment",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Enter Payment"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.fullPrice, upFrontCharge, familyDiscount, voucherDiscount, monthlyCharge",
+        "CardAuthorization.totalAmount"
+      ],
+      "domain_concepts": [],
+      "image": "shots/enter-payment.jpg",
+      "prototype": "screens/enter-payment.dc.html",
+      "regions": []
+    },
+    {
+      "name": "authorize-card",
+      "slug": "authorize-card",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Authorize Card"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "BillingAccount.checkCardAuthorization",
+        "Payment.checkStatus, paymentAttempts, maxAttempts, cardAdditionExhausted",
+        "PaymentStatus"
+      ],
+      "domain_concepts": [],
+      "image": "shots/authorize-card.jpg",
+      "prototype": "screens/authorize-card.dc.html",
+      "regions": []
+    },
+    {
+      "name": "create-billing-account",
+      "slug": "create-billing-account",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Create Billing Account"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "BillingAccount.activate, status, active",
+        "Cart.billingAccount, cartStep"
+      ],
+      "domain_concepts": [],
+      "image": "shots/create-billing-account.jpg",
+      "prototype": "screens/create-billing-account.dc.html",
+      "regions": []
+    },
+    {
+      "name": "pay-and-subscribe",
+      "slug": "pay-and-subscribe",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Pay And Subscribe"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "ProductOrder.place",
+        "BillingAccount.takePayment",
+        "Cart.recordPlaced, chargesUpFront",
+        "SubscriptionRepository.create",
+        "Subscription.planOrderedOn",
+        "CustomerProfile.completeCart"
+      ],
+      "domain_concepts": [],
+      "image": "shots/pay-and-subscribe.jpg",
+      "prototype": "screens/pay-and-subscribe.dc.html",
+      "regions": []
+    },
+    {
+      "name": "create-order-ticket",
+      "slug": "create-order-ticket",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Create Order Ticket"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "ProductOrder.ticketSubjects",
+        "ProductOrderRepository.createTicket",
+        "OrderTicket.subject, requesterName, requesterEmail"
+      ],
+      "domain_concepts": [],
+      "image": "shots/create-order-ticket.jpg",
+      "prototype": "screens/create-order-ticket.dc.html",
+      "regions": []
+    },
+    {
+      "name": "view-order-result",
+      "slug": "view-order-result",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "View Order Result"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Cart.orderResult, whatsNext, upFrontCharge, monthlyCharge",
+        "Subscription.firstBillDueOn"
+      ],
+      "domain_concepts": [],
+      "image": "shots/view-order-result.jpg",
+      "prototype": "screens/view-order-result.dc.html",
+      "regions": []
+    },
+    {
+      "name": "sign-in-with-existing-account",
+      "slug": "sign-in-with-existing-account",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Sign In With Existing Account"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Credentials.authenticateCredentials, isAuthenticatable, token",
+        "CustomerProfileRepository.load",
+        "CartRepository.load",
+        "SubscriptionRepository.load"
+      ],
+      "domain_concepts": [],
+      "image": "shots/sign-in-with-existing-account.jpg",
+      "prototype": "screens/sign-in-with-existing-account.dc.html",
+      "regions": []
+    },
+    {
+      "name": "reset-password",
+      "slug": "reset-password",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Reset Password"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Credentials.requestTemporaryPassword",
+        "PasswordReset.send",
+        "TemporaryPassword"
+      ],
+      "domain_concepts": [],
+      "image": "shots/reset-password.jpg",
+      "prototype": "screens/reset-password.dc.html",
+      "regions": []
+    },
+    {
+      "name": "set-new-password",
+      "slug": "set-new-password",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Set New Password"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Credentials.setNewPassword, newPasswordRequirements, newPasswordRequired",
+        "PasswordReset.clear"
+      ],
+      "domain_concepts": [],
+      "image": "shots/set-new-password.jpg",
+      "prototype": "screens/set-new-password.dc.html",
+      "regions": []
+    },
+    {
+      "name": "sign-out",
+      "slug": "sign-out",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Sign Out"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [
+        "Credentials.signOut, isLoggedIn"
+      ],
+      "domain_concepts": [],
+      "image": "shots/sign-out.jpg",
+      "prototype": "screens/sign-out.dc.html",
+      "regions": []
+    },
+    {
+      "name": "create-customer-with-temporary-password",
+      "slug": "create-customer-with-temporary-password",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Create Customer With Temporary Password"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [],
+      "domain_concepts": [],
+      "image": "shots/create-customer-with-temporary-password.jpg",
+      "prototype": "screens/create-customer-with-temporary-password.dc.html",
+      "regions": []
+    },
+    {
+      "name": "force-password-reset",
+      "slug": "force-password-reset",
+      "layout": "",
+      "description": "",
+      "chrome_of": "",
+      "inactive_tabs": [],
+      "story_names": [
+        "Force Password Reset"
+      ],
+      "scenario_names": [],
+      "step_names": [],
+      "domain_terms": [],
+      "domain_concepts": [],
+      "image": "shots/force-password-reset.jpg",
+      "prototype": "screens/force-password-reset.dc.html",
+      "regions": []
+    }
+  ],
+  "transitions": [],
+  "content_types": [],
+  "nav_components": []
+}
