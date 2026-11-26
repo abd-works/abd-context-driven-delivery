@@ -450,6 +450,15 @@ class PromptsSentToOwnChat(ValueError):
         self.chat = chat
 
 
+class RobotNotNamed(ValueError):
+    """A call gave a theme to a robot with no name, which no robot row shows and no card can be given to."""
+
+    def __init__(self, robot: str, theme: str) -> None:
+        super().__init__(f"{robot!r} names no robot, so the theme {theme!r} was not kept: name the robot to give its theme")
+        self.robot = robot
+        self.theme = theme
+
+
 class QueueFileUnreadable(JsonFileUnreadable):
     """A chat's queue file does not hold a prompt queue: it is damaged, cut off, empty, or holds something other than
     cards that each have an id of their own and a text. Nothing is written over it, so what it holds stays for a person
@@ -678,12 +687,15 @@ class PromptQueue:
     @mcp
     @agent_tool
     def set_theme(self, robot: str, theme: str) -> PromptQueue:
-        """Give the robot named robot its theme: its purpose or topic as one sentence, which the queue band shows beside the robot while its cards are closed. The lead gives it when it gives the robot its first card. A robot already on the queue is matched with no regard to case or outer spaces and keeps the spelling the queue first held; a theme of only spaces takes the robot's theme off."""
+        """Give the robot named robot its theme: its purpose or topic as one sentence, which the queue band shows beside the robot while its cards are closed. The lead gives it when it gives the robot its first card. A robot already on the queue is matched with no regard to case or outer spaces and keeps the spelling the queue first held; a theme given on several lines is kept as one line, a theme of only spaces takes the robot's theme off, and a robot with no name is refused."""
+        if not robot.strip():
+            raise RobotNotNamed(robot, theme)
+        sentence = " ".join(theme.split())
         with self._file.held():
             named = self._robot_as_spelled(robot)
             themes = {held: said for held, said in self.themes.items() if held.casefold() != named.casefold()}
-            if theme.strip():
-                themes[named] = theme.strip()
+            if sentence:
+                themes[named] = sentence
             self._file.write({**self._file.read(), _THEMES: themes})
             return self
 

@@ -12,7 +12,7 @@ from expects import contain, expect, equal, match, raise_error
 from harness.chat.chat import CHATS_FOLDER
 from harness.installation.json_file import JsonFile, JsonFileBusy
 from harness.chat.chat import ChatNotConnectedError
-from tools.prompt_queue.prompt_queue import ChatIdNotAnId, ChatNotKnown, NoPromptsToSend, PromptNotQueued, PromptsSentToOwnChat, PromptQueue, QueueFileUnreadable, StepNotPlanned, StepStateUnknown
+from tools.prompt_queue.prompt_queue import ChatIdNotAnId, ChatNotKnown, NoPromptsToSend, PromptNotQueued, PromptsSentToOwnChat, PromptQueue, QueueFileUnreadable, RobotNotNamed, StepNotPlanned, StepStateUnknown
 
 
 
@@ -88,6 +88,14 @@ with describe(PromptQueue):
         with it("takes the robot's theme off when it is set to only spaces"):
             self.queue.set_theme("Bolt", "  ")
             expect(self.queue.themes).to(equal({}))
+
+        with it("keeps a theme given on several lines as one line, so the robot's row stays one line"):
+            self.queue.set_theme("Bolt", "line one\n  line two\r\n")
+            expect(self.queue.themes).to(equal({"Bolt": "line one line two"}))
+
+        with it("refuses a theme for a robot with no name, keeping every theme"):
+            expect(lambda: self.queue.set_theme("   ", "nobody")).to(raise_error(RobotNotNamed))
+            expect(self.queue.themes).to(equal({"Bolt": "Whiteboard class diagram arrows"}))
 
     with it("gives a card the spelling of a robot the queue holds only a theme for, matching the name with no regard to case"):
         self.queue.set_theme("Gizmo", "Files menu")

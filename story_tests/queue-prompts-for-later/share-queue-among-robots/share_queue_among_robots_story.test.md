@@ -131,6 +131,21 @@ Evidence: `prompt_queue_spec.py` "gives a card a robot already on the queue by i
 
 Evidence: `prompt_queue_spec.py` "gives a card the spelling of a robot the queue holds only a theme for".
 
+#### Scenario: Keep a robot's theme as one line
+
+*Given* ++Write the scenarios++ (a) is given to ++Bolt++
+*When* the lead gives ++Bolt++ a theme written on two lines, "line one" then "line two"
+*Then* the queue keeps ++Bolt++'s theme as the one line "line one line two"
+
+#### Scenario: Refuse a theme for a robot with no name
+
+*Given* ++Bolt++ has the theme Whiteboard class diagram arrows
+*When* the lead gives a theme to a robot named only spaces
+*Then* the call is refused, saying it names no robot
+*And* the queue keeps only ++Bolt++'s theme
+
+Evidence: `prompt_queue_spec.py` "keeps a theme given on several lines as one line" and "refuses a theme for a robot with no name, keeping every theme".
+
 #### Scenario: Take a card off its robot
 
 *Given* ++Write the scenarios++ (a) is given to ++Bolt++
