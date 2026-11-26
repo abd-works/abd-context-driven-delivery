@@ -800,22 +800,49 @@ export async function sendNow($: EngineInterface, prompt: QueuedPrompt): Promise
 
 /** The steps toggle on a card: its steps show under it, or fold away again. */
 /** What + says when the prompt box is empty, since a card's new task is the prompt box's draft. */
-const EMPTY_TASK_NOTICE = 'Type the task in the prompt box, then press + to add it.'
+const EMPTY_TASK_NOTICE = 'Type the task in the prompt box and send it, or press + again, to add it to this card.'
+
+/** The card whose + was pressed on an empty prompt box: the next message sent becomes its task. */
+const stepAwaitedBy = atom({ plugin: 'prompt-queue', key: 'stepAwaitedBy' } as const, '')
 
 /** + on a card: the prompt box's draft becomes the prompt's last step, not started, and the box empties; the steps open.
- * A done card opens again, since it has work to run. */
+ * With the box empty, + waits for the task: the next message sent becomes it (takeAwaitedStep). */
 export async function addStep($: EngineInterface, prompt: QueuedPrompt): Promise<void> {
   const { text } = await $.prompt.read()
   if (text.trim() === '') {
     await update($, notice, () => EMPTY_TASK_NOTICE)
+    await update($, stepAwaitedBy, () => prompt.id)
     return
   }
+  await appendStep($, prompt, text)
+  await $.prompt.fill({ text: '', mode: 'replace' })
+}
+
+/** A message sent while + waits on a card becomes that card's task instead of a prompt; answers whether it did. */
+export async function takeAwaitedStep($: EngineInterface, text: string): Promise<boolean> {
+  const awaited = await read($, stepAwaitedBy)
+  if (awaited === '' || text.trim() === '') {
+    return false
+  }
+  await update($, stepAwaitedBy, () => '')
+  const prompt = (await read($, queue)).prompts.find(held => held.id === awaited)
+  if (prompt === undefined) {
+    await update($, notice, said => (said === EMPTY_TASK_NOTICE ? '' : said))
+    return false
+  }
+  await appendStep($, prompt, text)
+  return true
+}
+
+/** The text becomes the prompt's last step, not started, and its steps open. A done card opens again, since it has work
+ * to run. */
+async function appendStep($: EngineInterface, prompt: QueuedPrompt, text: string): Promise<void> {
   await update($, notice, said => (said === EMPTY_TASK_NOTICE ? '' : said))
+  await update($, stepAwaitedBy, () => '')
   await changeSteps($, prompt, [...(prompt.steps ?? []), { text: text.trim(), state: 'pending' }])
   if (prompt.is_done) {
     await changeQueue($, 'reopen', { prompt: prompt.id })
   }
-  await $.prompt.fill({ text: '', mode: 'replace' })
   await update($, openSteps, open => (open.includes(prompt.id) ? open : [...open, prompt.id]))
 }
 

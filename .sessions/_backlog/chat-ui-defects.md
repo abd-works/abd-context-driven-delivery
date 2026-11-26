@@ -49,3 +49,9 @@ Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: on the chat bar the pressed chip sho
 Reported 2026-11-26. In sub-agent mode, the robot rows ("Sparky 0/1") opened their queue only when the click landed on the robot picture's first cell: the see-through Button over it was one blank wide.
 
 Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: the Button lies over the whole row, robot, name and count, one blank per column (`AgentRobotView` in `tools/prompt_queue/hooks/queue/queue-view.tsx`). The tests press it by its key, unchanged. Not seen live: not repinned while the person demos pml-web on the dev lane.
+
+## + on a card with an empty prompt box: the task sent next went to the chat
+
+Reported 2026-11-26. A card's + ("Add task") pressed with the prompt box empty said "Type the task in the prompt box, then press + to add it." The person typed the task and sent it with Enter, expecting it to become the card's task; it went to the chat as an ordinary prompt.
+
+Fixed 2026-11-26 on `ui-fixes-as-i-use-it`: + on an empty prompt box waits on that card, and the next message sent (not a slash command, not the mod's own) becomes the card's last task, not started, through the same `set_steps` call + uses, and never reaches the chat ("Added as a task"); the hint clears and the message after it goes to the chat as usual. The hint now reads "Type the task in the prompt box and send it, or press + again, to add it to this card." (`addStep` and `takeAwaitedStep` in `tools/prompt_queue/hooks/queue/prompt-queue.ts`, the `prompt.submit` hook in `register.tsx`; plugin tests in `register.test.tsx`, not run: no `claude` CLI on this machine). Not seen live: not repinned while the person demos pml-web on the dev lane. Whether the desktop leaves the sent text in the prompt box after the drop is not checked.

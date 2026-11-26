@@ -1143,7 +1143,44 @@ test('+ with an empty prompt box says to type the task there first, instead of d
   await ui.press({ key: 'steps-a' })
   await ui.unmount()
 
-  expect(seeded.stored.notice?.value).toBe('Type the task in the prompt box, then press + to add it.')
+  expect(seeded.stored.notice?.value).toBe('Type the task in the prompt box and send it, or press + again, to add it to this card.')
+})
+
+/** + pressed on card a with the prompt box empty, which leaves + waiting for the task. */
+async function plusPressedEmpty($: TestEngine, on: TestOn) {
+  const seeded = seedQueue(on, true, '', QUEUED.map(prompt => ({ ...prompt })))
+  on('prompt.read', () => ({ value: { text: '', cursor: 0 } }))
+  on('prompt.submit', (_, e) => ({ text: e.text }))
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'steps-a' })
+  await ui.unmount()
+  return seeded
+}
+
+// Seen 2026-11-26: after + on an empty prompt box, the task typed and sent with Enter went to the chat as a prompt.
+test('after + on an empty prompt box, the message sent next becomes that card\'s task', async ($, on) => {
+  const seeded = await plusPressedEmpty($, on)
+
+  await $.prompt.submit({ text: 'Render the map', wait: false, origin: { kind: 'composer' } })
+
+  expect(seeded.prompts[0]!.steps).toEqual([{ text: 'Render the map', state: 'pending' }])
+})
+
+test('after + on an empty prompt box, the message sent next does not reach the chat', async ($, on) => {
+  await plusPressedEmpty($, on)
+
+  const submitted = await $.prompt.submit({ text: 'Render the map', wait: false, origin: { kind: 'composer' } })
+
+  expect(submitted.drop).toBe('Added as a task')
+})
+
+test('the message that became a task clears the hint, and the message after it goes to the chat', async ($, on) => {
+  const seeded = await plusPressedEmpty($, on)
+
+  await $.prompt.submit({ text: 'Render the map', wait: false, origin: { kind: 'composer' } })
+  const after = await $.prompt.submit({ text: 'Why is the map late?', wait: false, origin: { kind: 'composer' } })
+
+  expect([seeded.stored.notice?.value, after.drop, seeded.prompts[0]!.steps!.length]).toEqual(['', undefined, 1])
 })
 
 test('+ shows on a done card with no tasks too, and its new task opens the card again so it runs', async ($, on) => {

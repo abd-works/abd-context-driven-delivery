@@ -20,6 +20,7 @@ import {
   startTurn,
   followQueueAnswer,
   followRobotMessage,
+  takeAwaitedStep,
 } from './queue/prompt-queue'
 import { QueueView } from './queue/queue-view'
 import { PLAN_TOOL, PROMPT_QUEUE_TOOL, SET_STEPS_TOOL, WRAP_UP_TOOL } from './queue/plan-steps'
@@ -63,6 +64,10 @@ export const register: Register = on => {
     if (e.origin?.kind !== 'plugin' && (await isQueuedByKey($, e.text))) {
       await keepQueuedAttachments($, e.text, e.attachments ?? [])
       return { drop: 'Queued for later' }
+    }
+    // + pressed on an empty prompt box waits for the task: the message sent next becomes it, not a prompt.
+    if (e.origin?.kind !== 'plugin' && !e.command && (await takeAwaitedStep($, e.text))) {
+      return { drop: 'Added as a task' }
     }
     const sent = e.command || e.origin?.kind === 'plugin' ? undefined : await queueSentPrompt($, e.text)
     const queued = e.command ? undefined : await queueContext($, sent?.id)
