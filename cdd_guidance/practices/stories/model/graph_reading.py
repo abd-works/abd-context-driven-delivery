@@ -20,6 +20,7 @@ from cdd_guidance.practices.clean_engineering.model import MODULE_FUNCTION_HOLDE
 from cdd_guidance.practices.stories.model.modelled_areas import ExampleObservations, ModelledAreas
 from cdd_guidance.practices.stories.model.script_story_map import ScriptStoryMap
 from cdd_guidance.practices.stories.model.story_recording import StorySource, imported_files
+from cdd_guidance.practices.stories.model.story_map import CODE_FILE_FACT
 from cdd_guidance.practices.stories.model.story_node_types import StoryNodeTypes
 from cdd_guidance.practices.stories.model.realization_links import RealizationLinks
 from cdd_guidance.practices.stories.model.term_links import TermLinks
@@ -132,7 +133,7 @@ class StoriesReading(PracticeReading):
     def _files_held(self) -> set[Path]:
         """The files Stories' nodes in the graph were read from, a file that is gone since among them."""
         root = self.root.resolve()
-        files = {(root / node.source.file).resolve() for node in self.in_graph.nodes() if node.source is not None and node.source.file}
+        files = {(root / file).resolve() for node in self.in_graph.nodes() for file in _files_of(node)}
         return {path for path in files if not path.is_dir()}
 
     def _is_story_file(self, path: Path) -> bool:
@@ -201,8 +202,9 @@ class StoriesReading(PracticeReading):
             self._take_code_scenarios(model)
         elif self.graph.scope.edited_files is None:
             # A read of named files gave each story its story tests' scenarios already; a read of the whole folder
-            # read only the map and its markdown, so the story tests in code are taken here.
-            self._take_code_scenarios(model)
+            # read only the map and its markdown, so the story tests in code are merged in here, or are the map when
+            # there is none.
+            return self._story_files().with_code_scenarios(model, self.root)
         return model
 
     @property
@@ -216,15 +218,16 @@ class StoriesReading(PracticeReading):
     def _take_code_scenarios(self, model: "StoryMap") -> None:
         """Give each story of model the scenarios its story files in code under the root hold, in each code format the
         practice reads: its story tests, its shared stories, and its screen specs, by the files each format names its
-        story files; with edited files, only those among them. A story's first story file in code replaces the
-        scenarios the map's markdown gave it, and each later one adds its own, as a read of named files gives them."""
-        story_files = self._story_files()
-        suffixes = {Path(suffix).suffix for reader in story_files.code_readers for suffix in reader.story_file_suffixes}
-        edited = self.graph.scope.edited_files
+        story files; with edited files, only those among them. Each merges into the scenarios the map's markdown gave
+        the story (*StoryTestScenarios*), as a read of named files merges them."""
         # The folder the graph reads, which a story file's code imports resolve from; its files are named from the root.
         code_project = Path(self.graph.scope.folder) if self.graph.scope.folder is not None else self.root
-        paths = [path for path in self._scanned(suffixes) if edited is None or path in edited]
-        story_files.take_code_scenarios(model, paths, code_project)
+        self._story_files().take_code_scenarios(model, self._code_story_files(), code_project)
+
+    def _code_story_files(self) -> list[Path]:
+        """The story files in code under the root (``code_story_files_in``); with edited files, only those among them."""
+        edited = self.graph.scope.edited_files
+        return [path for path in self._story_files().code_story_files_in(self.root) if edited is None or path in edited]
 
     def _story_tests(self) -> "StoryMap":
         """The story map the story tests under the tests folder are themselves, where no story map file names their
@@ -289,6 +292,19 @@ class StoriesReading(PracticeReading):
         return [path for path in found if path in edited or any(story in path.parents for story in stories)]
 
 
+def story_file_of(step: "Node") -> str:
+    """The story file whose code step's body is: the story test that gives a step markdown writes its body, else the file
+    the step was read from."""
+    return step.get_fact(CODE_FILE_FACT) or step.source.file
+
+
+def _files_of(node: "Node") -> list[str]:
+    """The files Stories read node from: its own and, for a scenario markdown and code both write, the story test."""
+    own = [node.source.file] if node.source is not None and node.source.file else []
+    code = node.get_fact(CODE_FILE_FACT) if node.type == "Scenario" else ""
+    return [*own, code] if code else own
+
+
 class ImportedFiles:
     """The files a story file's steps can call code in: the files its imports name and the files those import in turn, found
     in the project the graph reads. A step invokes an operation only in one of them, so an operation of the same name
@@ -326,7 +342,7 @@ class ImportedFiles:
         return self._texts[file]
 
     def _named_from_project(self, step: "Node") -> str:
-        return (self._stories_root / step.source.file).relative_to(self._project).as_posix()
+        return (self._stories_root / story_file_of(step)).relative_to(self._project).as_posix()
 
     def _package_files(self, file: str, modules: dict[str, str]) -> set[str]:
         """The files, in file's own language, of each package file imports a module of: a story file that imports
@@ -399,7 +415,7 @@ class StoryLinks:
     @cached_property
     def story_files(self) -> set[str]:
         """The files the Stories practice read its story map and story tests from, read once: test code."""
-        return {node.source.file for node in self.stories.in_graph.nodes() if node.source is not None and node.source.file}
+        return {file for node in self.stories.in_graph.nodes() for file in _files_of(node)}
 
     def _is_tested_code(self, member: "Node") -> bool:
         """True for Clean Engineering code a step can invoke: never a function of a story test, such as a helper
@@ -466,7 +482,7 @@ class StoryLinks:
         on its name alone."""
         if member.source is None or not member.source.file:
             return False
-        if member.source.file == step.source.file:
+        if member.source.file == story_file_of(step):
             return True
         return (self._clean_root / member.source.file).resolve() in self.imported_files.reached_from(step)
 

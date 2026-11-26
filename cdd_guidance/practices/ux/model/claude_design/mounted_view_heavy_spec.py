@@ -16,13 +16,12 @@ from mamba import after, before, context, description, it
 
 from cdd_guidance.practices.ux.model.claude_design.mounted_view import MountedViewBundle, MountedViewMarkup
 from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen
+from cdd_guidance.practices.ux.model.claude_design.borrowed_node_modules import node_modules_with_esbuild
 
 _HERE = Path(__file__).resolve().parent
 _REPO = _HERE.parents[4]
 # An esbuild the repository already installs for one of its apps; the throwaway project borrows its node_modules.
-_NODE_MODULES = next(path for path in (_REPO / "harness" / "graph" / "app" / "node_modules",
-                                       _REPO / "cdd_guidance" / "practices" / "stories" / "app" / "node_modules")
-                     if (path / "esbuild").is_dir())
+_NODE_MODULES = node_modules_with_esbuild(_REPO)
 
 ORDER_VIEW = """
 import { useEffect, useState } from 'react';

@@ -6,6 +6,7 @@ A nested epic is an epic whose parent is an epic. Each node keeps its fields in 
 from __future__ import annotations
 
 import os
+import re
 import zlib
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,7 +20,7 @@ from harness.agent_tools.tool_call import ToolCall
 from harness.annotations.annotation import hosted_only
 from harness.graph.model_node import ModelChildren, ModelReferences
 from harness.graph.model_node import ModelNode
-from harness.graph.graph import Graph
+from harness.graph.graph import MARKDOWN_SUFFIXES, Graph
 from harness.annotations.name import Name
 from harness.installation.data_class import SourceFile, data_field, identity, language_adapter
 from harness.mcp.mcp_annotations import mcp
@@ -30,7 +31,7 @@ from cdd_guidance.practices.source_code import CodeBody, WrittenBlock
 from .name_facts import NameFacts
 from .opened_story_map import OpenedStoryMap, StoryMapEditRefused, UnopenedStoryMap
 from .story_copies import StoryCopies
-from .story_map_files import is_own_story_file, source_at
+from .story_map_files import source_at
 from .story_recording import StoryRecording, StorySources, file_of
 from harness.guidance.practice_formats import FormatAdapter
 
@@ -52,6 +53,12 @@ _STEP_NAME_LENGTH = 80
 # A step's graph id ends in a 24-bit checksum of its name: short enough to read in an id, long enough that two steps
 # on one line of one file do not share it.
 _STEP_CHECKSUM_MASK = 0xFFFFFF
+# A markdown link, `[plan](domain-model.md#plan)`, whose words are its first group; and the marks markdown puts around
+# words (`**Customer**`, `++empty cart++`, `*Add a line.*`, `` `code` ``), which code writes without.
+_MARKDOWN_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+_MARKDOWN_MARKS = re.compile(r"[*+`]")
+# The fact a scenario both markdown and code write keeps: the story test its steps' bodies come from, by its path.
+CODE_FILE_FACT = "code_file"
 
 # What an example stands for: a field map, a class, an object whose fields are its cells, or its own name.
 ExampleValue = Any
@@ -574,6 +581,9 @@ class Step(CodeHeld):
         self.source: Optional["Source"] = None
         self.call_graph = CallGraph([])
         self.body = CodeBody()
+        # The step a story test writes again, and its file, when markdown writes this step and code gives its body.
+        self.code_written: Optional["Step"] = None
+        self.code_file = ""
 
     def _copy_fields(self, original: "Step", copy_part: CopyPart) -> None:
         """Take what original says and was read with, its code, and each step chained onto it."""
@@ -583,6 +593,7 @@ class Step(CodeHeld):
         self.linked_terms = list(original.linked_terms)
         self.actor, self.source = original.actor, original.source
         self.call_graph = CallGraph(getattr(original, "call_graph", None) or [])
+        self.code_written, self.code_file = original.code_written, original.code_file
         self.take_code_from(original)
         self.ands = [copy_part(extra, type(self)) for extra in original.ands]
 
@@ -727,6 +738,8 @@ class Step(CodeHeld):
         lines = recording.span_of(self, file, fallback_text=self.text)
         continuations = list(self.ands)
         node = recording.add(self, self._node_id(lines), lines)
+        if self.code_written is not None:
+            recording.written_again(node, self.code_written, self.code_file)
         recording.graph.edges.link("ands" if isinstance(self.parent, Step) else "steps", parent, node)
         for continuation in continuations:
             continuation.record(recording, file, node)
@@ -740,6 +753,26 @@ class Step(CodeHeld):
         """A checksum of the step's recorded name for its graph id. A checksum, never ``hash``: Python salts ``hash``
         per process, and a step must keep its id in the worker that refreshes the graph and in the server."""
         return zlib.crc32(self.recorded_name.encode("utf-8")) & _STEP_CHECKSUM_MASK
+
+
+def _step_lines(steps: List["Step"]) -> List["Step"]:
+    """steps and every line chained onto each, in the order they are written."""
+    return [line for step in steps for line in (step, *_step_lines(step.ands))]
+
+
+def _paired_steps(own: List["Step"], again: List["Step"]) -> List[tuple]:
+    """Each of own beside the step of again that says the same; when some say what none of the other says, each in
+    order with the one at its place, if both write as many."""
+    unpaired = list(again)
+    paired = []
+    for step in own:
+        same = next((code for code in unpaired if _words_of(code.text) == _words_of(step.text)), None)
+        if same is not None:
+            unpaired.remove(same)
+            paired.append((step, same))
+    if len(paired) < len(own) and len(own) == len(again):
+        return list(zip(own, again))
+    return paired
 
 
 def _steps_key(steps: List["Step"]) -> tuple:
@@ -820,10 +853,14 @@ class Scenario(CodeHeld):
         self.is_outline: bool = False
         self.evidence: List[str] = []
         self.source: Optional["Source"] = None
+        # The scenario a story test writes again, and its file, when markdown writes this one and code gives its bodies.
+        self.code_written: Optional["Scenario"] = None
+        self.code_file = ""
 
     def _copy_fields(self, original: "Scenario", copy_part: CopyPart) -> None:
         self.sequential_order, self.is_outline = original.sequential_order, original.is_outline
         self.evidence, self.source = list(original.evidence), original.source
+        self.code_written, self.code_file = original.code_written, original.code_file
         self.backgrounds = [copy_part(background, type(self).background_class) for background in original.backgrounds]
         self.steps = [copy_part(step, type(self).step_class) for step in original.steps]
         self.examples = original.examples.clone(self)
@@ -886,6 +923,22 @@ class Scenario(CodeHeld):
                 run[1].append(step)
         return runs + [run] if run[0] or run[1] else runs
 
+    def take_code_of(self, written_again: "Scenario", file: str) -> None:
+        """Take the code of written_again, this scenario as the story test file writes it: each step of written_again
+        gives the step of this one that says the same its body and, when this one writes no realization, its
+        realization, the steps paired by what they say, else in order when both write as many; and each example it uses
+        that this one does not. This scenario keeps its own name, steps and place."""
+        self.code_written, self.code_file = written_again, file
+        own, again = _step_lines(self.steps), _step_lines(written_again.steps)
+        for step, code in _paired_steps(own, again):
+            step.code_written, step.code_file = code, file
+            step.body = code.body
+            if not step.call_graph:
+                step.call_graph = code.call_graph
+        for name, example in written_again.examples.items():
+            if name not in self.examples:
+                self.examples[name] = example
+
     def load_map_facts(self) -> None:
         """A scenario is sized by its steps, against no band."""
         facts = self._name_facts()
@@ -913,6 +966,11 @@ class Scenario(CodeHeld):
         if file != file_of(story):
             # Its steps and examples read the facts of the file that writes them, not of the story map its Story is in.
             node.set_facts(recording.source_of(file).facts)
+        if self.code_file:
+            # Its steps' bodies are the story test's code, which calls what that file imports.
+            node.set_facts(recording.source_of(self.code_file).facts)
+            node.set_fact(CODE_FILE_FACT, self.code_file)
+            recording.written_again(node, self.code_written, self.code_file)
         recording.graph.edges.link("scenarios", parent, node)
         for step in self.steps:
             step.record(recording, file, node)
@@ -1518,30 +1576,25 @@ class Descendants:
 class StoryTestScenarios:
     """The scenarios a story map's stories take from the story tests that specify them. A story test names the Story
     it specifies, and the markdown and the drawio of one story map each hold that Story, so every Story of that name
-    takes its scenarios. A Story the map does not have takes nothing."""
+    takes its scenarios. A Story the map does not have takes nothing.
+
+    Markdown and code that write the same story write the same scenarios, so they merge, whatever file the markdown is:
+    the map's markdown gives each scenario and its steps, and a story test's scenario of the same name gives that
+    scenario's steps their bodies and, where the markdown writes none, their realizations, and the examples it uses; a
+    scenario only the code writes is added after the story's own. No scenario the markdown writes is lost to the code. A
+    scenario the map only lists, with no steps, is the code's scenario of that name."""
 
     def __init__(self, story_map: "StoryMap") -> None:
         self._story_map = story_map
-        # The stories that already took a story test's scenarios, which the next story test of the same story adds to.
-        self._specified: set[int] = set()
 
     def take(self, stories: List["Story"], file: str) -> None:
-        """Give the scenarios and backgrounds of each of stories, read from the story test file, to every Story of the
-        same name, each scenario keeping the story test as its source. The first story test a Story takes replaces the
-        scenarios the map itself gave it; each later one adds its own after them, so a story written in a shared story
-        file and a screen spec holds the scenarios of both. A Story whose scenarios its own markdown file holds, named
-        for it (``display_plans_story.test.md``), keeps them and takes none: that file specifies the story, and the
-        story test in code is it written again. A sub-epic's scenarios file does not hold them so; and at a fidelity
-        that reads code alone the map's scenarios are dropped before any story test is taken."""
+        """Merge the scenarios of each of stories, read from the story test file, into every Story of the same name,
+        each scenario only the story test writes keeping it as its source; the story's backgrounds are the story test's
+        when the map gives it none."""
         for read, story in self._same_named(stories, file):
-            if self._written_in_its_own_file(story):
-                continue
-            if id(story) in self._specified:
-                story.scenarios = [*story.scenarios, *read.scenarios]
-                continue
-            self._specified.add(id(story))
-            story.backgrounds = list(read.backgrounds)
-            story.scenarios = list(read.scenarios)
+            if not story.backgrounds:
+                story.backgrounds = list(read.backgrounds)
+            story.scenarios = self._merged(list(story.scenarios), read.scenarios, file)
 
     def drop(self) -> None:
         """Take every story's scenarios and backgrounds away, leaving the map: at a fidelity whose scenarios come from
@@ -1550,9 +1603,19 @@ class StoryTestScenarios:
             story.scenarios = []
             story.backgrounds = []
 
-    def _written_in_its_own_file(self, story: "Story") -> bool:
-        """Whether a scenario of story was read from story's own markdown file."""
-        return any(scenario.source is not None and is_own_story_file(scenario.source.file or "", story.name) for scenario in story.scenarios)
+    def _merged(self, held: List["Scenario"], read: List["Scenario"], file: str) -> List["Scenario"]:
+        """held, a story's scenarios, with each of read, a story test's, merged into the one of the same name the map's
+        markdown writes, put in the place of one that writes no steps, or added after them. Two story files in code that
+        write one scenario, such as a shared story and its screen spec, each keep their own."""
+        for scenario in read:
+            index = next((at for at, own in enumerate(held) if _written_in_markdown(own) and _words_of(own.name) == _words_of(scenario.name)), None)
+            if index is None:
+                held.append(scenario)
+            elif not held[index].steps:
+                held[index] = scenario
+            else:
+                held[index].take_code_of(scenario, file)
+        return held
 
     def _same_named(self, stories: List["Story"], file: str) -> List[tuple]:
         """Each read story beside each Story of the map with its name, its scenarios placed in file."""
@@ -1561,6 +1624,18 @@ class StoryTestScenarios:
                 scenario.source = source_at(file)
         held = self._story_map.descendants.stories()
         return [(read, story) for read in stories for story in held if story.name == read.name]
+
+
+def _written_in_markdown(scenario: "Scenario") -> bool:
+    """Whether scenario was read from a markdown file: a story map or a scenarios file, not a story file in code."""
+    return scenario.source is not None and Path(scenario.source.file or "").suffix.lower() in MARKDOWN_SUFFIXES
+
+
+def _words_of(text: str) -> str:
+    """What a scenario's name or a step says, as markdown and code both write it: a link's words without its target,
+    no emphasis, term or code marks, one space between words, in one case, with no closing full stop."""
+    plain = _MARKDOWN_MARKS.sub("", _MARKDOWN_LINK.sub(r"\1", text or ""))
+    return " ".join(plain.casefold().split()).rstrip(".")
 
 
 def _renumber(nodes: List[StoryNode]) -> None:

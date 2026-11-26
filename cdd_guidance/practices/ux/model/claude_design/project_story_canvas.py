@@ -34,6 +34,7 @@ from typing import Dict, List, Mapping, Optional, Protocol, Sequence, TextIO
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.model.story_map import StoryMap
 from cdd_guidance.practices.stories.model.story_tree import StoryTree
+from cdd_guidance.practices.stories.stories import Stories
 from cdd_guidance.practices.ux.model.claude_design.screen_sources import FIXTURES, ScreenSources
 from cdd_guidance.practices.ux.model.claude_design.screen_walk import StoryCanvasWalk
 from cdd_guidance.practices.ux.model.claude_design.story_canvas import ClaudeDesignStoryMap, StoryCanvasSetup
@@ -183,10 +184,13 @@ class ProjectStoryCanvas:
         return dataclasses.replace(screen, theme=self.theme, beside=beside)
 
     def story_map(self) -> StoryMap:
-        """The story map below the Stories practice's root, with each story's scenario file."""
-        story_map = MarkdownStoryMap().read_folder(self.stories_root, self.project_root)
-        if story_map is None:
-            raise StoryMapNotFound(f"{self.stories_root} holds no markdown story map to draw the story canvas from.")
+        """The story map below the Stories practice's root, with each story's scenario file, and the scenarios its story
+        files in code write merged in as the Stories practice merges them (``ProjectStoryFiles.with_code_scenarios``);
+        the story files in code are the map when no markdown map is there."""
+        read = MarkdownStoryMap().read_folder(self.stories_root, self.project_root) or StoryMap()
+        story_map = Stories().story_files(self.project_root).with_code_scenarios(read, self.stories_root)
+        if not story_map.epics:
+            raise StoryMapNotFound(f"{self.stories_root} holds no story map and no story test to draw the story canvas from.")
         return story_map
 
     def sources(self, story_map: StoryMap) -> Dict[str, str]:

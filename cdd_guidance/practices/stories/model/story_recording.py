@@ -14,7 +14,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Callable, Iterator, Optional
 from pathlib import Path, PurePosixPath
 
-from harness.graph.graph import Node, as_code_writes
+from harness.graph.graph import Node, Source, as_code_writes
 from harness.graph.location import Location
 
 from cdd_guidance.practices.stories.model.story_map_files import source_at
@@ -254,6 +254,18 @@ class StoryRecording:
             node.source.align_to_declaration(*story_object.declaration)
         elif node.type == "Example":
             node.source.align_to_example_export(node.name, self._example_files)
+
+    def written_again(self, node: Node, again: "StoryNode", file: str) -> None:
+        """Record that node, read from markdown, is written again in code as again, in the story test file
+        (``Node.written_at``): at the lines of file again was read from, else the line that holds its name, moved onto
+        the lines that declare it as a node read from that file is (``_align``)."""
+        lines = self.span_of(again, file, fallback_text=getattr(again, "text", "") or again.name)
+        placed = Source.from_root(self._in_graph.source_root, Location(lines.file, lines.start_line, lines.end_line or lines.start_line))
+        if node.type in {"Step", "Given", "When", "Then"}:
+            placed.align_to_label(again.recorded_name)
+        else:
+            placed.widen_to_call_close()
+        node.written_at(Location(placed.file, placed.start_line, placed.end_line))
 
     def source_of(self, file: str) -> StorySource:
         """The file the map was read from at file; an empty one when it was read from none there."""

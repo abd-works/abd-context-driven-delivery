@@ -1,8 +1,8 @@
 """A project laid out as pml-web is: its story map in tests/.context, one markdown file of scenarios for each story in
 tests/story_tests/{sub-epic}/{story}/{story}_story.test.md, and a TypeScript shared story file of the same stories in
-the sub-epic's folder beside them. The story tests in code are no map of their own, and a story's own markdown file,
-named for it, specifies it: the graph reads each story, scenario and step from the markdown files, as a validate of one
-of them reads it, so every scenario graph rule runs on them."""
+the sub-epic's folder beside them. The story tests in code are no map of their own, and they write the markdown's
+scenarios again: the graph reads each story, scenario and step from the markdown files, with the bodies the code gives
+the steps, as a validate of one of them reads it, so every scenario graph rule runs on them."""
 
 import tempfile
 from pathlib import Path
@@ -70,15 +70,15 @@ _SHARED_TEXT = """\
 import { scenario, shareStory } from 'test-utils/story-test/story-test';
 
 shareStory('Display Plans', () => {
-  scenario('See the plan catalog in code', ({ given, when, then }) => {
+  scenario('See the plan catalog', ({ given, when, then }) => {
     given('the Customer has an empty cart', () => {});
-    when('the Customer opens My Paradise', () => {});
+    when('the Customer opens My Paradise', () => { plans = PlanRepository.list(); });
     then('the catalog shows plan Atlas', () => {});
   });
 });
 
 shareStory('Add Line To Cart', () => {
-  scenario('Add a first line in code', ({ given, when, then }) => {
+  scenario('Add a first line', ({ given, when, then }) => {
     given('the Customer has an empty cart', () => {});
     when('the Customer adds Atlas', () => {});
     then('the cart holds one line', () => {});
@@ -122,8 +122,13 @@ with description("a project's markdown story files beside a shared story file in
     with it("should read a story's scenarios from its markdown file"):
         expect(_scenarios(self.graph, "Display Plans")).to(equal(["See the plan catalog"]))
 
-    with it("should read no scenario of a story its markdown file specifies from the code"):
-        expect(_scenarios(self.graph, "Add Line To Cart")).not_to(contain("Add a first line in code"))
+    with it("should read a scenario the code writes again once, from its markdown file"):
+        expect(_scenarios(self.graph, "Add Line To Cart")).to(equal(["Add a first line"]))
+
+    with it("should give a markdown step the body the code gives the same step"):
+        stories = self.graph.practices.named("stories").reading.in_graph
+        opens = next(node for node in stories.nodes() if node.name == "when the **Customer** opens My Paradise")
+        expect(opens.get_fact("body_text")).to(contain("PlanRepository.list()"))
 
     with it("should read each step of a scenario from its markdown file"):
         steps = [node.name for node in self.checked.nodes if node.type in ("Given", "When", "Then")]
@@ -133,6 +138,6 @@ with description("a project's markdown story files beside a shared story file in
         files = {node.file for node in self.checked.nodes}
         expect(files).to(contain(_DISPLAY_PLANS))
 
-    with it("should give a validate of the markdown file the scenarios written there, and none of the code's"):
+    with it("should give a validate of the markdown file the scenarios written there"):
         names = [node.name for node in self.checked.nodes if node.type == "Scenario"]
         expect(names).to(equal(["See the plan catalog"]))

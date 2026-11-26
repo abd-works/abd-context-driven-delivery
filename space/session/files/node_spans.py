@@ -85,17 +85,24 @@ class NodeSpans:
         return node.practice is not None and node.practice.reading.is_used_from_elsewhere(node)
 
     def _widen_with(self, node: Node) -> bool:
-        """Widen the spans with the lines node was read from; whether it was read from any."""
+        """Widen the spans with the lines node was read from, and the lines of each other format it is written in
+        (``Node.places``), such as the story test that writes again a scenario its markdown writes; whether it was read
+        from any. Lines of a file the request leaves out open nothing, and the nodes below still do."""
         path = self._lines_file(node)
         if path is None:
             return False
-        if not self._kept(path):
-            # Read from lines, but of a file the request leaves out: nothing of it opens, and the nodes below it still do.
-            return True
-        source = node.source
-        start, end = self._spans.get(path, (source.start_line, source.end_line))
-        self._spans[path] = (min(start, source.start_line), max(end, source.end_line, source.start_line))
+        for place, (first, last) in [(path, (node.source.start_line, node.source.end_line)), *self._other_places(node)]:
+            if self._kept(place):
+                start, end = self._spans.get(place, (first, last))
+                self._spans[place] = (min(start, first), max(end, last, first))
         return True
+
+    def _other_places(self, node: Node) -> list[tuple[Path, tuple[int, int]]]:
+        """The file and lines of each format node is written in besides its own file's, while that file is there."""
+        root = Path(node.source.root or self._root)
+        others = [place for place in list(node.places.values())[1:] if place.file and place.line]
+        found = [((root / place.file).resolve(), (place.line, place.end_line or place.line)) for place in others]
+        return [(path, lines) for path, lines in found if path.is_file()]
 
     def _kept(self, path: Path) -> bool:
         """Whether the request keeps the file at path: every file when it names no paths, else one it names or one

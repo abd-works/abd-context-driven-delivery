@@ -176,10 +176,11 @@ class Filter:
 
     def _listed_or_below_listed(self, node: Node) -> bool:
         """True when node's file is listed, or a node above it was read from a listed file: a story listed by its story
-        map holds the scenarios and steps read for it from scenarios files the list leaves out."""
+        map holds the scenarios and steps read for it from scenarios files the list leaves out. A node written in several
+        formats (``Node.places``) is listed by any of its files."""
         above: Node | None = node
         while above is not None:
-            if self._source_listed(above.source):
+            if self._source_listed(above.source) or any(self._under_paths(place.file) for place in above.places.values()):
                 return True
             above = above.parent
         return False

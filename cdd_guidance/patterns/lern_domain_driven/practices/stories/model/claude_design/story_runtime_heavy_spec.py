@@ -13,12 +13,11 @@ from expects import equal, expect
 
 from cdd_guidance.patterns.lern_domain_driven.practices.stories.model.claude_design.fixtures import LernCanvasFixtures
 from cdd_guidance.patterns.lern_domain_driven.practices.stories.model.claude_design.story_runtime import StoryRuntimeContract
+from cdd_guidance.practices.ux.model.claude_design.borrowed_node_modules import node_modules_with_esbuild
 
 _REPO = Path(__file__).resolve().parents[7]
 # An esbuild the repository already installs for one of its apps; the throwaway workspace borrows its node_modules.
-_NODE_MODULES = next(path for path in (_REPO / "harness" / "graph" / "app" / "node_modules",
-                                       _REPO / "cdd_guidance" / "practices" / "stories" / "app" / "node_modules")
-                     if (path / "esbuild").is_dir())
+_NODE_MODULES = node_modules_with_esbuild(_REPO)
 
 REPOSITORIES = """
 const plans: Array<{ name: string }> = [];

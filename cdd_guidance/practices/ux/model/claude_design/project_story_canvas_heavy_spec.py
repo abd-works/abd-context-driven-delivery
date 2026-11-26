@@ -16,12 +16,11 @@ from cdd_guidance.patterns.lern_domain_driven.practices.stories.model.claude_des
 from cdd_guidance.practices.ux.model.claude_design.canvas_explorer import CanvasExplorer
 from cdd_guidance.practices.ux.model.claude_design.project_story_canvas import ProjectStoryCanvas
 from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen, WrittenMarkup
+from cdd_guidance.practices.ux.model.claude_design.borrowed_node_modules import node_modules_with_esbuild
 
 _REPO = Path(__file__).resolve().parents[5]
 # An esbuild the repository already installs for one of its apps; the throwaway project borrows its node_modules.
-_NODE_MODULES = next(path for path in (_REPO / "harness" / "graph" / "app" / "node_modules",
-                                       _REPO / "cdd_guidance" / "practices" / "stories" / "app" / "node_modules")
-                     if (path / "esbuild").is_dir())
+_NODE_MODULES = node_modules_with_esbuild(_REPO)
 
 STORY_MAP = """# (E) Place Order
 ## (S) Customer --> [Order Plan](../story_tests/place-order/order-plan/order_plan_story.test.md#story-order-plan)

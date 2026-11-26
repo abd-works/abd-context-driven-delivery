@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Callable, Optional
 
 
+from harness.graph.skipped_folders import scanned_files
+
 from cdd_guidance.practices.stories.model.code_story_map import CodeStoryMap
 from cdd_guidance.practices.stories.model.story_map_files import (
     STORY_FILE_SUFFIXES,
@@ -55,8 +57,8 @@ class ProjectStoryFiles:
 
     def take_code_scenarios(self, model: StoryMap, paths: list[Path], code_project: Path) -> None:
         """Give each story of model the scenarios the story files in code among paths hold, each file named from the
-        project, each read with code_project as the folder its code imports resolve from. A story's first story file
-        in code replaces the scenarios the map's markdown gave it, and each later one adds its own."""
+        project, each read with code_project as the folder its code imports resolve from. Each merges into the
+        scenarios the map's markdown gave the story (*StoryTestScenarios*): no scenario the markdown writes is lost."""
         for path in paths:
             reader = self.reader_of(path)
             if reader is None:
@@ -65,6 +67,22 @@ class ProjectStoryFiles:
             file = os.path.relpath(path, self.project).replace("\\", "/")
             model.sources.take(self.sources_of(StorySource(file, text)))
             model.test_scenarios.take(reader.story_file(file, text, code_project).stories, file)
+
+    def with_code_scenarios(self, model: StoryMap, root: Path) -> StoryMap:
+        """model, the story map read below root, with the scenarios of every story file in code below root merged in
+        (``take_code_scenarios``); when model holds no epic, the map those story files are themselves
+        (``story_map_of``), so a project that writes its scenarios in code alone has its stories read too."""
+        code = self.code_story_files_in(root)
+        if not model.epics:
+            return self.story_map_of(code)
+        self.take_code_scenarios(model, code, self.project)
+        return model
+
+    def code_story_files_in(self, root: Path) -> list[Path]:
+        """The files with the suffixes of a story file in a code format the practice reads, in the folders root's story
+        files sit in: root and, for a project's .context, the story_tests beside it."""
+        suffixes = {Path(suffix).suffix for reader in self.code_readers for suffix in reader.story_file_suffixes}
+        return [path for folder in StoryMapFiles(root).story_folders() for path in scanned_files(folder, suffixes)]
 
     def story_map_in(self, root: Path) -> StoryMap:
         """The story map in the folder root: the nearest story map at or above it, else its story-graph.json, else the
