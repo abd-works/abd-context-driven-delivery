@@ -2,8 +2,9 @@
 
 What a person wrote around the scenarios, which no step or example holds, comes back with them: the front matter, the
 story's kind, the link to the story map, the domain terms and the sentences under the story's heading, each domain
-term's link in the steps, and the realization under a When."""
+term's link in the steps, and the realization under a Given and under a When."""
 
+import tempfile
 from pathlib import Path
 
 from expects import contain, equal, expect
@@ -18,6 +19,24 @@ _CHANGE_QUANTITY = _ADD_BOOK.with_name("change_cart_line_quantity_story.test.md"
 _DOMAIN_MODEL = "../../../.context/domain-model.md"
 _BOOK = f"++[Book]({_DOMAIN_MODEL}#book-aggregate-root-entity)++"
 _CART = f"++[Cart]({_DOMAIN_MODEL}#cart-aggregate-root-entity)++"
+
+
+_EMPTY_CART_GIVEN = f"  *And* the Customer has {_CART} ++empty cart++\n"
+# The Background's Givens set up by statements of the flow, each Given's words a comment above its statements.
+_GIVEN_REALIZATION = (
+    "\n```realization\n// the Bookshop sells Book Tiny Tales\nbook = new Book(TinyTales.title, TinyTales.price)\n"
+    "BookRepository.create(book)\n// the Customer has Cart empty cart\ncart = new Cart(Me.customerId)\n"
+    "CartRepository.create(cart)\n```\n"
+)
+
+
+def _with_given_realization() -> Path:
+    """The Add Book To Cart scenarios file with a realization under its Background's Givens, written in a folder of
+    its own."""
+    written = Path(tempfile.mkdtemp()) / _ADD_BOOK.name
+    text = _ADD_BOOK.read_text(encoding="utf-8")
+    written.write_text(text.replace(_EMPTY_CART_GIVEN, _EMPTY_CART_GIVEN + _GIVEN_REALIZATION), encoding="utf-8")
+    return written
 
 
 def _back_from(format: type, scenarios: Path = _ADD_BOOK) -> str:
@@ -98,3 +117,17 @@ with description("a scenarios file written after the template, through a code fo
     with context("of a story with a Scenario Outline and its examples, through TypeScript"):
         with it("should come back as the file was written"):
             expect(_back_from(TypeScriptStoryMap, _CHANGE_QUANTITY)).to(equal(_CHANGE_QUANTITY.read_text(encoding="utf-8")))
+
+    with context("of a story whose Background Givens have a realization of statements, through Python"):
+        with before.all:
+            self.scenarios = _with_given_realization()
+
+        with it("should come back as the file was written"):
+            expect(_back_from(PythonStoryMap, self.scenarios)).to(equal(self.scenarios.read_text(encoding="utf-8")))
+
+    with context("of a story whose Background Givens have a realization of statements, through TypeScript"):
+        with before.all:
+            self.scenarios = _with_given_realization()
+
+        with it("should come back as the file was written"):
+            expect(_back_from(TypeScriptStoryMap, self.scenarios)).to(equal(self.scenarios.read_text(encoding="utf-8")))

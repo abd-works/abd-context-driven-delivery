@@ -14,7 +14,14 @@ section: body
      Exception: Python epic helper only — {epic_slug}_helper.py at epic root.
 
      Outcome chaining: first *Then* on a step; further outcomes on the same *When* use *And*
-     (not a second *Then*). New *When* when actor or trigger changes. -->
+     (not a second *Then*). New *When* when actor or trigger changes.
+
+     Realizations: one ```realization block after each Given group (a Background's included) and each When group.
+     Statements, not prose: name each object once (`cart = new Cart(customerProfile)`) and use the name after;
+     constructors with the parameters the code's constructor takes; repositories called only by the flow, each a
+     statement of its own (`CartRepository.update(cart)`), never under a domain operation; `<- ` only for a value the
+     next statements use; `// <the Given line's words>` before each Given line's statements; the repository or
+     aggregate operation a seed reaches, never a test helper. A Given that sets up nothing has no block. -->
 
 <!-- Head the file with the name the story has on the story map (`scenarios-name-a-story-on-the-map`). -->
 
@@ -36,8 +43,17 @@ section: body
 
 ### Background
 
-*Given* a ++`<ConceptX>`++ from `helper.given<ConceptX…>({ mode: "fake" })`  
-  *And* that ++`<ConceptX>`++ exposes `<public property / operation>`  
+*Given* a ++`<ConceptX>`++ `<in the state every scenario starts from>`  
+  *And* that ++`<ConceptX>`++ holds a ++`<ConceptY>`++ `<in its state>`
+
+```realization
+// a <ConceptX> <in the state every scenario starts from>
+<conceptX> = new <ConceptX>(<constructor parameters>)
+<ConceptX>Repository.create(<conceptX>)
+// that <ConceptX> holds a <ConceptY> <in its state>
+<conceptY> = <conceptX>.<addConceptY>(<parameters>)
+<ConceptX>Repository.update(<conceptX>)
+```
 
 ---
 
@@ -48,13 +64,25 @@ section: body
 #### Scenario Outline: `<outcome-oriented name>`
 
 *Given* a ++[`<ConceptA>`](<path>/domain-model.md#<concepta-heading-anchor>)++ with {`<field_1>`}  
-  *And* the ++[`<ConceptB>`](<path>/domain-model.md#<conceptb-heading-anchor>)++ for that ++`<ConceptA>`++ is {`<field_2>`}  
-*When* the **`<Actor>`** `<action>`  
+  *And* the ++[`<ConceptB>`](<path>/domain-model.md#<conceptb-heading-anchor>)++ for that ++`<ConceptA>`++ is {`<field_2>`}
 
 ```realization
-<entry>.<operation>(<args>)
-  -> <collaborator>.<operation>(<args>)
-  <- <result>
+// a <ConceptA> with {<field_1>}
+<conceptA> = new <ConceptA>({<field_1>})
+<ConceptA>Repository.create(<conceptA>)
+// the <ConceptB> for that <ConceptA> is {<field_2>}
+<conceptB> = new <ConceptB>(<conceptA>.<conceptAId>, {<field_2>})
+<ConceptB>Repository.create(<conceptB>)
+```
+
+*When* the **`<Actor>`** `<action>`
+
+```realization
+<conceptA> = <ConceptA>Repository.load(<conceptAId>)
+<conceptB> = <ConceptB>Repository.load(<conceptBId>)
+<result> = <conceptA>.<operation>(<conceptB>)
+  -> <conceptB>.<operation>(<args>)
+<ConceptA>Repository.update(<conceptA>)
 ```
 
 *Then* the ++`<result concept>`++ `<outcome>` is visible on the public interface  

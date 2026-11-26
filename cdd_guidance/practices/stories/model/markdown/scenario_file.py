@@ -256,7 +256,7 @@ class ScenarioFileReading:
             return
         self._take_step(owner, keyword, text)
         self.container.append(StepLines(owner))
-        if owner is self.scenario and keyword.lower() in ("when", "then") and owner.steps:
+        if keyword.lower() in ("given", "when", "then") and owner.steps:
             self.fence.target = owner.steps[-1]
 
     def _take_step(self, owner: "Scenario | Background", keyword: str, text: str) -> None:

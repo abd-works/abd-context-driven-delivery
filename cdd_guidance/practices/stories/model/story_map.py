@@ -553,7 +553,7 @@ class Increment(StoryNode):
 @agent_toolset
 class Step(CodeHeld):
     _semantic_type_name = "Step"
-    graph_facts = ("keyword", "text", "phase", "concepts", "values", "linked_terms", "actor", "continuation", "callees", "body_text", "realization_calls")
+    graph_facts = ("keyword", "text", "phase", "concepts", "values", "linked_terms", "actor", "continuation", "callees", "body_text", "realization_calls", "realization_nested_calls")
 
     def __init__(self, text: str, step_type: "StepType | None" = None, sequential_order: int = 0) -> None:
         """A step saying text, of step_type, at sequential_order. What a format reads about the step beyond that, its
@@ -687,11 +687,23 @@ class Step(CodeHeld):
     @property
     def realization_calls(self) -> List[str]:
         """The calls its realization's call graph names, at every depth, each once and as written (``Cart.addBook(book,
-        1)``); a return line (``<- CartLine``) is no call. It saves with the graph, so the step is linked to the model
-        operations its realization names whichever process holds the graph."""
+        1)``, ``line = cart.addLine(plan)``); a return line (``<- CartLine``) and a comment are no call. It saves with
+        the graph, so the step is linked to the model operations its realization names whichever process holds it."""
         found: List[str] = []
         for entry in self.call_graph:
             if entry.kind in ("call", "out") and entry.text not in found:
+                found.append(entry.text)
+        return found
+
+    @property
+    def realization_nested_calls(self) -> List[str]:
+        """The calls its realization writes under another call, each once and as written: what a domain operation calls
+        in turn (``-> Book.reserve(1)``), never a statement of the flow itself. The rule
+        repositories-called-only-by-the-flow reads it, since only the flow loads and stores an aggregate."""
+        found: List[str] = []
+        for entry in self.call_graph:
+            nested = entry.kind == "out" or (entry.kind == "call" and entry.depth > 0)
+            if nested and entry.text not in found:
                 found.append(entry.text)
         return found
 

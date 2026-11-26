@@ -12,6 +12,8 @@ from typing import Iterable, List, Optional
 
 _ARROW_OUT = re.compile(r"^(?:->|→)\s*(.+)$")
 _ARROW_IN = re.compile(r"^(?:<-|←)\s*(.+)$")
+# A comment line of a realization, such as the Given words written above the statements that set that Given up.
+_COMMENT = "//"
 
 
 @dataclass(frozen=True)
@@ -19,7 +21,7 @@ class CallGraphEntry:
     """One line in an indented call graph."""
 
     depth: int
-    kind: str  # "call" | "out" | "in"
+    kind: str  # "call" | "out" | "in" | "comment"
     text: str
 
 
@@ -44,9 +46,12 @@ class CallGraph(list):
         return self
 
     def add_line(self, line: str, depth: int) -> None:
-        """Add one written line at depth: an arrow line (``-> Cart.add(item)``, ``<- Total``) keeps its direction,
-        and any other line is a call."""
-        kind, text = parse_arrow_line(line) or ("call", line)
+        """Add one written line at depth: an arrow line (``-> Cart.add(item)``, ``<- Total``) keeps its direction, a
+        ``//`` line is a comment kept as written, and any other line is a call."""
+        if line.startswith(_COMMENT):
+            kind, text = "comment", line
+        else:
+            kind, text = parse_arrow_line(line) or ("call", line)
         self.append(CallGraphEntry(depth=depth, kind=kind, text=text))
 
     def block(self) -> str:

@@ -1,6 +1,6 @@
 """A markdown step's realization names the model operations the step leads to: each is an edge from the step to that
 operation in the domain model or the class model its domain terms link to, as a story test's step links to the code it
-calls; and code-steps-invoke-code reports a When whose realization names none."""
+calls; and code-steps-invoke-code reports a Given or When whose realization names none."""
 
 from expects import be_empty, contain, equal, expect, have_len
 from mamba import before, context, description, it
@@ -51,6 +51,22 @@ def _invoked_by(project: BookshopWorkingCopy, step) -> list[str]:
 
 def _realization_findings(project: BookshopWorkingCopy) -> list[str]:
     return [found for found in project.findings(_RULE) if "has a realization" in found]
+
+
+_EMPTY_CART_GIVEN = "  *And* the Customer has ++[Cart](../../../.context/domain-model.md#cart-aggregate-root-entity)++ ++empty cart++\n"
+_SELLS_TINY_TALES = "given the Bookshop sells ++Book++ ++Tiny Tales++"
+# The Background's Givens set up by the statements of the flow: each repository operation the seed reaches, after a
+# comment that says which Given the statements set up.
+_GIVEN_REALIZATION = (
+    "\n```realization\n// the Bookshop sells Book Tiny Tales\nbook = BookRepository.create(TinyTales.title, TinyTales.price)\n"
+    "// the Customer has Cart empty cart\ncart = CartRepository.create(Me.customerId)\n```\n"
+)
+_DDD_CREATE_BOOK = "ddd:Operation:.context/domain-model.md:create:BookRepository"
+_DDD_CREATE_CART = "ddd:Operation:.context/domain-model.md:create:CartRepository"
+
+
+def _given(project: BookshopWorkingCopy, name: str):
+    return project.node_named("Given", name, _ADD_BOOK)[0]
 
 
 with description("a markdown When whose realization names a model operation") as self:
@@ -150,3 +166,25 @@ with description("a markdown When whose realization names a model operation") as
 
         with it("should leave the When unjudged"):
             expect(_realization_findings(self.project)).to(be_empty)
+
+
+with description("a markdown Background Given whose realization names model operations") as self:
+    with context("with the domain model its domain terms link to"):
+        with before.all:
+            self.project = BookshopWorkingCopy(("stories", "ddd"), rewritten={_ADD_BOOK: (_EMPTY_CART_GIVEN, _EMPTY_CART_GIVEN + _GIVEN_REALIZATION)})
+            self.given = _given(self.project, _SELLS_TINY_TALES)
+
+        with it("should invoke each repository operation its statements call, past the names they give what returns"):
+            expect(_invoked_by(self.project, self.given)).to(equal([_DDD_CREATE_BOOK, _DDD_CREATE_CART]))
+
+        with it("should not be reported by code-steps-invoke-code"):
+            expect(_realization_findings(self.project)).to(be_empty)
+
+    with context("whose realization names an operation the model does not declare"):
+        with before.all:
+            renamed = _GIVEN_REALIZATION.replace("BookRepository.create(", "BookRepository.seed(").replace("CartRepository.create(", "CartRepository.seed(")
+            self.project = BookshopWorkingCopy(("stories", "ddd"), rewritten={_ADD_BOOK: (_EMPTY_CART_GIVEN, _EMPTY_CART_GIVEN + renamed)})
+
+        with it("should be reported by code-steps-invoke-code, naming the Given"):
+            expect(_realization_findings(self.project)).to(have_len(1))
+            expect(_realization_findings(self.project)[0]).to(contain(_SELLS_TINY_TALES))

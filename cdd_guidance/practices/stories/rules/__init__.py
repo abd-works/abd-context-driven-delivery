@@ -18,6 +18,7 @@ from cdd_guidance.practices.stories.rules.scenarios import (
     OutlineRequiresManyPermutations,
     PersonStoriesShowThePersonActing,
     PlainEnglishGwtSteps,
+    RepositoriesCalledOnlyByTheFlow,
     ScenariosDifferInWhenOrOutcome,
     ScenariosNameAStoryOnTheMap,
     ScenariosShape,
@@ -66,6 +67,7 @@ RULES: tuple = (
     StepSaysMoreThanAnExampleName(),
     ScenariosDifferInWhenOrOutcome(),
     PersonStoriesShowThePersonActing(),
+    RepositoriesCalledOnlyByTheFlow(),
 )
 
 BY_SLUG = {rule.slug: rule for rule in RULES}

@@ -187,20 +187,49 @@ If this change will not stay here, follow `practices/stories/stories-story-map.m
 - **`then-observes-an-example`** - Where a domain model or a class model is written for the Story's area of the map, name in each Then, or in a Given of its Scenario or of its Story's Background, the example whose outcome the Then observes. A Story's area is the Stories directly under its sub-epic or epic, with their Scenarios, steps, and examples. A model is written for the area when the knowledge graph joins one of those steps or examples to a class of the domain model (DDD) or the class model (Clean Engineering): a linked domain term leads to a class heading the graph read, a step calls an operation of a class, or an example is built as a class. Where no model is written for the area, a Then needs no example and an example needs no class, because an outcome with no example cannot be checked against the model, while asking for a model nobody has written stops Scenarios from being written first. {{decided.then_observes_an_example}}
 - **`step-says-more-than-an-example-name`** - Say in domain words what a step's subject holds or is, such as *Given* the ++cart++ holds ++one line set up for Me++, never only that it is or has an example (*Given* the ++cart++ is ++Me on the checklist++), because a step whose whole predicate is an example's name tells the reader nothing they can follow without opening the example. {{decided.step_says_more_than_an_example_name}}
 - **`scenarios-differ-in-when-or-outcome`** - Give each scenario of a story its own When or its own outcome. Two scenarios that run the same When, by its words or by the first operation its realization calls, and check mostly the same Thens are one behaviour written twice: merge them into one scenario, because a reader and a test runner cannot tell which of the two the story means, and a change made to one leaves the other stale. {{decided.scenarios_differ_in_when_or_outcome}}
+- **`repositories-called-only-by-the-flow`** - In a realization, call each repository from the flow, as a statement of its own at the top of the block: load the aggregate, call the domain operation, store the aggregate back. Never write a repository call under a domain operation, its own repository or another aggregate's; hand the operation the aggregate root the flow loaded instead, because a domain object that loads or stores aggregates hides the storage its behaviour depends on and cannot be tested without it.
 - **`person-stories-show-the-person-acting`** - In a story whose actor is a person, give every scenario a When in which that person acts. Merge a scenario whose Whens name only the system looking something up into a scenario the person acts in, or move it to a system story, because the design canvas shows each scenario of a person's story as what the person does on a screen, and a lookup alone gives the screen nothing to show. {{decided.person_stories_show_the_person_acting}}
 
 #### Scenario realizations (default on)
 
-After the Given/When/Then text is agreed, **produce scenario realizations by default** unless the user says **no realizations** (or an equivalent opt-out). A realization keeps the GWT skeleton and expands each **When** (and any **Then** that itself triggers observable collaborator or system effects) into the domain call graph at sketch fidelity — same `->` / `<-` interaction notation as `@clean_engineering` **model** (`write-interactions`). **Given** and pure state **Then** steps stay plain domain language; do not invent a graph where there is no interaction.
+After the Given/When/Then text is agreed, **produce scenario realizations by default** unless the user says **no realizations** (or an equivalent opt-out). A realization shows, as code-like statements, what the code does for a group of steps: each **Given** group, a Background's Givens among them, is followed by one ` ```realization ` block that sets up the state those Givens describe, and each **When** group by one block that runs the operation under test. A pure state **Then** has no block. Writing the setup as statements, rather than describing it, lets the graph link each Given to the repository and aggregate operations that build its state, so a reader sees which operations a scenario depends on before any test exists.
 
-**Procedure:** Follow `@practices/stories/story-realizations` (scope, walk production code, strip helpers, external systems at the boundary). Attach each graph to the step in the scenario artifact:
+**Write each block as statements, not prose.** A block is the flow the step runs: one statement per line, in the order the code runs them, at sketch fidelity (no bodies, no framework plumbing).
 
-- **Markdown:** a ` ```realization ` fenced block immediately under the **When** or expandable **Then** step (`templates/md/scenarios.md`).
-- **Code channels:** the stories model carries `realization` on each interaction in regenerable spec data and `#` call-graph comments under the matching `when` / `then` in story tests (`practices/stories/model`).
+- **Name each object once with a variable and use the variable afterwards**: `cart = new Cart(customerProfile)`, `plan = PlanRepository.loadByName(Atlas)`, `line = cart.addLine(plan)`, `CartRepository.update(cart)`. A reader follows one object from statement to statement instead of guessing which cart a later call means.
+- **Spell out constructors and factories with the parameters the code's constructor takes** (`new Cart(customerProfile)`, `Subscription.start(plan, customer.customerId)`), because those parameters are the object's dependencies, and a constructor written without them hides what the object needs.
+- **Only the flow calls repositories, each as a statement of its own at the top of the block.** The flow loads an aggregate, calls the domain operation, and stores the aggregate back. A domain object never calls a repository, its own or another aggregate's: one aggregate holds another by its id and is handed that aggregate's root by the flow (`cart.addLine(plan)`, with `plan` loaded above). A repository call written under a domain operation is reported by `repositories-called-only-by-the-flow`.
+- **Indent under a statement only what a domain operation calls in turn**, with `->` (`-> Price.withAmount(amount)`). Use `<- ` only for a returned value the next statements use, never for a sentence about state: write `line = cart.addLine(plan)`, not `<- an empty cart: no lines` or `<- nothing stored`. A Given that sets up nothing has no block.
+- **Put a `// <the Given line's words>` comment before the statements of each Given line**, so a reader can tell which statements build which Given when one block serves a Given and its Ands.
+- **Name the repository or aggregate operation the seed reaches** (`CartRepository.create(cart)`), never a test helper (`seedPlanCatalog`), because a helper's name tells the graph and the reader nothing about what the code does.
+
+```realization
+// the Customer has an empty Cart
+cart = new Cart(customerProfile)
+CartRepository.create(cart)
+// the Catalog sells Plan Atlas
+plan = new Plan(Atlas.name, Atlas.monthlyPrice)
+PlanRepository.create(plan)
+```
+
+```realization
+cart = CartRepository.load(cartId)
+plan = PlanRepository.loadByName(Atlas)
+line = cart.addLine(plan)
+  -> plan.priceFor(customerProfile)
+CartRepository.update(cart)
+```
+
+**Procedure:** Follow `@practices/stories/story-realizations` (scope, walk production code, strip helpers, external systems at the boundary). Attach each block to its step group in the scenario artifact:
+
+- **Markdown:** a ` ```realization ` fenced block immediately after the last line of the **Given** group (a Background's Givens included) or the **When** group it realizes, its And and But lines included (`templates/md/scenarios.md`).
+- **Code channels:** the same statements as comments at the top of the matching `given` / `when` step in story tests, which the stories model reads back as the step's realization (`practices/stories/model`).
+
+The graph reads a Given's block as it reads a When's: each operation a statement calls is matched, through the step's domain-term links, to that operation in the domain model or class model, and the step `invokes` it (`code-steps-invoke-code`, `gwt-steps-trace-to-domain-operations`).
 
 Place one `{scope-kebab-case}-scenario-realization.md` per scope when the user wants a consolidated document; otherwise keep realizations inline in the scenario file. Realizations are specification evidence — they do not replace executable acceptance tests.
 
-A scenario realization is not the BDD realization. The scenario realization follows the story map: each Scenario's Given/When/Then, with the call graph under the step that acts. The BDD realization (`@bdd` `#realization`, `{scope}-bdd-realization.md`) follows the spec files: each `it should`, with the call graph its test runs. The two use the same `->` / `<-` notation and name the same operations, so they live in separate files, because a reader has to know whether a graph realizes a Scenario or an observation.
+A scenario realization is not the BDD realization. The scenario realization follows the story map: each Scenario's Given/When/Then, with the statements under each Given and When group. The BDD realization (`@bdd` `#realization`, `{scope}-bdd-realization.md`) follows the spec files: each `it should`, with the call graph its test runs. The two use the same `->` / `<-` notation and name the same operations, so they live in separate files, because a reader has to know whether a graph realizes a Scenario or an observation.
 
 ---
 
@@ -266,7 +295,7 @@ Ask which concrete case proves the outcome, which system already holds the start
 
 Apply `@stories` `#scenarios` § Guidance and § Rules to acceptance tests. Use the **Test shape ladder** in the `testing-approach` rule under `clean_engineering/rules/`: start with the real application when it is available, use deterministic external-system stubs while developing, and replace them with end-to-end boundaries when requested.
 
-When scenario realizations exist (inline or `{scope}-scenario-realization.md`), treat them as the agreed call graph for the **When** under test: implement and assert through the outermost domain entry point and named collaborators the realization names — do not re-route through test-only helpers that the realization stripped away.
+When scenario realizations exist (inline or `{scope}-scenario-realization.md`), treat them as the agreed statements of each step: set up each **Given** through the repository and aggregate operations its realization names, and run the **When** under test through the outermost domain entry point and the collaborators its realization names — do not re-route through test-only helpers that the realization left out.
 
 **Develop the behaviour, not only the test.** Acceptance-test work owns both the executable specification and the production code that satisfies it. Represent each named scenario example as one code fixture, and do not invent fixture values the scenario does not name. Take one Scenario at a time: write the failing acceptance test, invoke the Clean Engineering companion at `code` fidelity, implement the smallest production change that can pass, rerun the test, refactor when it is green, and then continue to the next behaviour. After two failed fix attempts, diagnose the failure before changing more code.
 
@@ -303,7 +332,7 @@ If this change will not stay here, follow `practices/stories/stories-scenarios.m
 - **`infrastructure-in-lifecycle-hooks`** - Put browser startup, application wiring, and shutdown in lifecycle hooks; keep Given for domain state. Load an aggregate once at the highest Given that needs it and reach owned entities through their aggregate root, because infrastructure and shortcut lookups obscure the behaviour's real state.
 - **`inline-simple-gwt-bodies`** - Keep simple Given, When, and Then bodies inline and use example exports directly. Extract a helper only for repeated interaction that is not a domain operation, such as a screen gesture or application wiring, because pass-through helpers add names without adding meaning.
 - **`domain-operations-inline-in-steps`** - Call each domain operation — a repository load with the identity in hand, an aggregate command, the refusal it raises — directly in the Given, When, or Then that relies on it. Do not wrap domain calls in story-file helpers such as `signIn` or `reloadAccount`. When several steps need the same prior state, seed it with a `seed…` fixture in the examples file, because the acceptance test exists to show which domain operation each step runs and what it proves.
-- **`code-steps-invoke-code`** - Make each When of a story test in code call the domain operation it tests, so the graph links the step to that operation in Clean Engineering. A When that calls only the test's own helpers or its examples' seeds tests nothing. A When in markdown is asked once it has a realization: each operation the realization names is matched, through the step's domain-term links, to that operation in the domain model or class model they lead to, and the step is linked to it as a story test's step is linked to code; a When whose realization names no operation that model declares fails, because a realization that names nothing real specifies nothing the code can be held to. {{decided.code_steps_invoke_code}}
+- **`code-steps-invoke-code`** - Make each When of a story test in code call the domain operation it tests, so the graph links the step to that operation in Clean Engineering. A When that calls only the test's own helpers or its examples' seeds tests nothing. A Given or When in markdown is asked once it has a realization: each operation the realization names is matched, through the step's domain-term links, to that operation in the domain model or class model they lead to, and the step is linked to it as a story test's step is linked to code; a Given or When whose realization names no operation that model declares fails, because a realization that names nothing real specifies nothing the code can be held to. {{decided.code_steps_invoke_code}}
 - **`extract-assertion-helper`** - Extract the same assertion shape after it appears more than twice and pass its concrete values as data, because copied assertions become inconsistent when behaviour changes.
 
 ---

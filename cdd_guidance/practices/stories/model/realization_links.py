@@ -1,6 +1,6 @@
-"""RealizationLinks. A markdown step's realization names the model operations the step leads to, as a story test's
-step calls the code it tests: each is an edge from the step to the operation in the domain model (DDD) or the class
-model (Clean Engineering) its domain terms link to."""
+"""RealizationLinks. A markdown step's realization, under a Given as under a When, names the model operations the step
+leads to, as a story test's step calls the code it tests: each is an edge from the step to the operation in the domain
+model (DDD) or the class model (Clean Engineering) its domain terms link to."""
 
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 # A realization's call: what it is called on, written as the realization writes it (`Cart`, `checkout-flow`,
 # `self.session`), then the operation's name and its opening bracket.
 _REALIZED_CALL = re.compile(r"^(?P<receiver>.+?)\.(?P<operation>[A-Za-z_$][\w$]*)\s*\(")
+# The name a realization gives the value a call returns, written before the call (``line = cart.addLine(plan)``).
+_ASSIGNED_NAME = re.compile(r"^[A-Za-z_$][\w$]*\s*=\s*")
 # The fact a step with a realization records once a model is read: whether its realization names an operation of it.
 REALIZATION_REACH_FACT = "realization_reach"
 REALIZATION_REACHES_MODEL = "model"
@@ -86,9 +88,10 @@ class LinkedModel:
         return found
 
     def _operations_called_by(self, call: str) -> list["Node"]:
-        """The operations call names: of the class it is called on, when the linked documents hold that class, else of
-        the one linked class that declares an operation of that name; none for a call that is not on an object."""
-        found = _REALIZED_CALL.match(call.strip())
+        """The operations call names, after the name it gives what the call returns: of the class it is called on, when
+        the linked documents hold that class, else of the one linked class that declares an operation of that name; none
+        for a call that is not on an object, a constructor among them."""
+        found = _REALIZED_CALL.match(_ASSIGNED_NAME.sub("", call.strip(), count=1))
         if found is None:
             return []
         receiver = found.group("receiver").rsplit(".", 1)[-1].strip()

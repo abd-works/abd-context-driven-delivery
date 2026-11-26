@@ -17,12 +17,19 @@ Source: `{story file path or scenario file path}`
 
 **Given** {precondition in plain domain terms}
 
+```realization
+// {the Given line's words}
+{object} = new {Aggregate}({constructor parameters})
+{Aggregate}Repository.create({object})
+```
+
 **When** {actor performs domain intent}
 
 ```realization
-{entry}.{operation}({args})
+{object} = {Aggregate}Repository.load({id})
+{result} = {object}.{operation}({other aggregate root or value})
   -> {collaborator}.{operation}({args})
-  <- {result}
+{Aggregate}Repository.update({object})
 ```
 
 **Then** {observable outcome in plain domain terms}
