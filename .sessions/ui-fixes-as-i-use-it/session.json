@@ -8,7 +8,7 @@
   "stage_mark": "in-progress",
   "practices": {
     "stories": {
-      "enabled": false,
+      "enabled": true,
       "fidelities": {
         "acceptance_tests": {
           "formats": [
@@ -59,8 +59,9 @@
     }
   },
   "guidance": {
-    "version": 8,
+    "version": 10,
     "stages": [
+      "discovery",
       "specification",
       "implementation"
     ]
