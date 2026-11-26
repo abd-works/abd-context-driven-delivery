@@ -68,6 +68,28 @@ with describe(PromptQueue):
         self.queue.assign(second, "  bOLT ")
         expect([prompt.robot for prompt in self.queue.prompts]).to(equal(["Bolt", "Bolt"]))
 
+    with context("that the lead gives a robot its theme"):
+        with before.each:
+            self.queue.assign(self.queue.prompts[0].id, "Bolt")
+            self.queue.set_theme("Bolt", "  Whiteboard class diagram arrows  ")
+
+        with it("keeps the robot's theme on the queue, one sentence beside the robot's name"):
+            expect(self.queue.themes).to(equal({"Bolt": "Whiteboard class diagram arrows"}))
+
+        with it("keeps the theme after a reload, so the robot's theme comes back with its cards"):
+            expect(PromptQueue("chat-1", self.folder / "prompt-queue.json").themes).to(equal({"Bolt": "Whiteboard class diagram arrows"}))
+
+        with it("gives the theme to the robot as the queue first spelled it, matching the name with no regard to case or outer spaces"):
+            self.queue.set_theme(" bOLT", "Arrow routing")
+            expect(self.queue.themes).to(equal({"Bolt": "Arrow routing"}))
+
+        with it("takes the robot's theme off when it is set to only spaces"):
+            self.queue.set_theme("Bolt", "  ")
+            expect(self.queue.themes).to(equal({}))
+
+    with it("holds no theme for a robot nobody gave one"):
+        expect(self.queue.themes).to(equal({}))
+
     with it("reopens a done prompt so it runs again, its steps not started"):
         first = self.queue.prompts[0].id
         self.queue.set_steps(first, [{"text": "Write them", "state": "done"}])

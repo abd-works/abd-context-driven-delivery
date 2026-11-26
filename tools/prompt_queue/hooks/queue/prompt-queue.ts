@@ -99,6 +99,8 @@ export type QueueState = {
   shownDoneSteps: string[]
   expandedAgents: number[]
   tasks: SubAgentTask[]
+  /** Each robot's theme, one sentence, by its name as the queue spells it: shown beside a robot whose cards are closed. */
+  themes: Record<string, string>
   notice: string
 }
 
@@ -114,6 +116,7 @@ export async function currentQueue($: EngineInterface): Promise<QueueState> {
     shownDoneSteps: await read($, shownDoneSteps),
     expandedAgents: await read($, expandedAgents),
     tasks: robotsOf((await read($, queue)).prompts, await read($, tasks)),
+    themes: (await read($, queue)).themes ?? {},
     notice: await read($, notice),
   }
 }

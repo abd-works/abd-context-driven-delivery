@@ -353,8 +353,10 @@ function AgentRobotView($: EngineInterface, e: AbovePromptEvent, state: QueueSta
     : <Text key={`robot-${number}`} color={LOOK.accent}>🤖</Text>
 
   const progress = `${items.filter(item => item.is_done).length}/${items.length}`
-  // The see-through Button lies over the whole row, robot, name and count, so a press anywhere on it opens the queue.
-  const rowBlanks = ' '.repeat(ROBOT_COLUMNS + 1 + [...name].length + 1 + progress.length)
+  const theme = isOpen ? '' : themeOf(state.themes, name)
+  // The see-through Button lies over the whole row, robot, name, count and theme, so a press anywhere on it opens the
+  // queue.
+  const rowBlanks = ' '.repeat(ROBOT_COLUMNS + 1 + [...name].length + 1 + progress.length + (theme ? 1 + [...theme].length : 0))
 
   return (
     <Box key={`agent-robot-${number}`} flexDirection="row" alignItems="center" gap={1}>
@@ -363,11 +365,19 @@ function AgentRobotView($: EngineInterface, e: AbovePromptEvent, state: QueueSta
       </Box>
       <Text bold color={isOpen ? LOOK.accent : LOOK.muted}>{name}</Text>
       <Text key={`agent-progress-${number}`} color={LOOK.muted}>{progress}</Text>
+      {theme && <Text key={`agent-theme-${number}`} color={LOOK.muted}>{theme}</Text>}
       <Box position="absolute" top={0} left={0}>
         <Button key={`collapse-agent-${number}`} plain label={rowBlanks} onPress={() => toggleAgentQueue($, place)} />
       </Box>
     </Box>
   )
+}
+
+/** A robot's theme, matched to its name with no regard to case or outer spaces, as the queue matches robots; empty for
+ * a robot nobody gave one. */
+function themeOf(themes: Record<string, string>, name: string): string {
+  const named = name.trim().toLowerCase()
+  return Object.entries(themes).find(([robot]) => robot.trim().toLowerCase() === named)?.[1] ?? ''
 }
 
 /** The text columns a robot's picture takes, so the row's press area reaches past it to the name and the count. */

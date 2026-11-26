@@ -2076,6 +2076,62 @@ test("a robot's queue is closed until the robot is pressed, the robot listed wit
   await ui.unmount()
 })
 
+const SPARKY_THEME = 'Writes the story map and its scenarios'
+
+/** The robots' queues with Sparky given its theme on the queue, the robots whose cards are open as given. */
+function themedQueue(on: TestOn, open: number[]) {
+  const seeded = groupedQueue(on)
+  const held = seeded.stored.queue!.value as Record<string, unknown>
+  seeded.stored.queue = { value: { ...held, themes: { Sparky: SPARKY_THEME } }, version: 2 }
+  seeded.stored.expandedAgents = { value: open, version: 1 }
+  return seeded
+}
+
+test("a robot whose cards are closed shows its theme beside its name", async ($, on) => {
+  themedQueue(on, [])
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const robot = await ui.find({ type: 'Box', key: 'agent-robot-1' })
+
+  expect(robot?.text).toContain(SPARKY_THEME)
+  await ui.unmount()
+})
+
+test("a robot whose cards are open shows its name and count, not its theme", async ($, on) => {
+  themedQueue(on, [0])
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const robot = await ui.find({ type: 'Box', key: 'agent-robot-1' })
+
+  expect(robot?.text.includes(SPARKY_THEME)).toBe(false)
+  await ui.unmount()
+})
+
+test("a closed robot's press reaches across its theme too, so a press on the theme opens its cards", async ($, on) => {
+  themedQueue(on, [])
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  const press = await ui.find({ type: 'Button', key: 'collapse-agent-1' })
+  const count = await ui.find({ type: 'Text', key: 'agent-progress-1' })
+
+  expect(String(press?.props.label).length).toBeGreaterThan(`Sparky ${count?.text ?? ''} ${SPARKY_THEME}`.length + 1)
+  await ui.unmount()
+})
+
+test("a press on a themed robot opens its cards, and a second press closes them", async ($, on) => {
+  const seeded = themedQueue(on, [])
+  const opened: unknown[] = []
+
+  for (const _ of [1, 2]) {
+    const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+    await ui.press({ key: 'collapse-agent-1' })
+    await ui.unmount()
+    opened.push(seeded.stored.expandedAgents?.value)
+  }
+
+  expect(opened).toEqual([[0], []])
+})
+
 // The see-through press lies over the whole row, so a press on the robot's name or count opens its queue too: its blank
 // label reaches past the robot's picture, a gap, the name, a gap and the count.
 test("a robot's whole row takes the press, its robot, its name and its count", async ($, on) => {

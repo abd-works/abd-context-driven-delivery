@@ -44,6 +44,8 @@ _VIEWER_STATE = re.compile(r"\s*<artifact-view-context\b[^>]*>.*?(?:</artifact-v
 DECISION_MARK = "[decision required]"
 # The key under which the queue's file keeps whether the person switched the queue on for the chat.
 _IS_ON = "is_on"
+# The key under which the queue's file keeps each robot's theme, by the robot's name as the queue spells it.
+_THEMES = "themes"
 # The key under which the queue's file lists each source, such as a handoff, whose prompts were queued once.
 _QUEUED_SOURCES = "handoffs"
 # What a chat that opened a session is told once its latest handoff's next steps are on its queue.
@@ -494,6 +496,13 @@ class PromptQueue:
         return self._file.read().get(_IS_ON, False) is True
 
     @property
+    @data_field
+    def themes(self) -> dict[str, str]:
+        """Each robot's theme, its purpose or topic in one sentence, by the robot's name as the queue spells it: the
+        band shows it beside a robot whose cards are closed. A robot nobody gave a theme has none."""
+        return dict(self._file.read().get(_THEMES, {}))
+
+    @property
     @data_field(reference=True)
     def next(self) -> QueuedPrompt | None:
         """The prompt to do next, where the queue's pointer stands: the first that waits, neither done nor asking a
@@ -594,6 +603,18 @@ class PromptQueue:
     def assign(self, prompt: str, robot: str) -> PromptQueue:
         """Give the queued prompt whose id is prompt to the robot named robot, the sub-agent that works it in sub-agent mode: the queue keeps it, so each robot's queue comes back after a reload. An empty robot takes the prompt off its robot. A robot already on the queue is matched with no regard to case or outer spaces and keeps the spelling the queue first held, so bOLT and Bolt are one robot."""
         return self._changing(prompt, lambda found: found.assign(self._robot_as_spelled(robot)))
+
+    @mcp
+    @agent_tool
+    def set_theme(self, robot: str, theme: str) -> PromptQueue:
+        """Give the robot named robot its theme: its purpose or topic as one sentence, which the queue band shows beside the robot while its cards are closed. The lead gives it when it gives the robot its first card. A robot already on the queue is matched with no regard to case or outer spaces and keeps the spelling the queue first held; a theme of only spaces takes the robot's theme off."""
+        with self._file.held():
+            named = self._robot_as_spelled(robot)
+            themes = {held: said for held, said in self.themes.items() if held.casefold() != named.casefold()}
+            if theme.strip():
+                themes[named] = theme.strip()
+            self._file.write({**self._file.read(), _THEMES: themes})
+            return self
 
     @mcp
     @agent_tool

@@ -13,7 +13,7 @@ export type PromptStep = { text: string; state: StepState }
 /** is_on: whether the person switched the queue on for the chat; off, the mod leaves the chat alone. */
 /** The chat's queue as prompt-queue's tools answer it, PromptQueueData in the language adapter, its prompts typed: the
  * contract imports nothing, so the client file checks its answer against the adapter's type. */
-export type QueueJson = { chat: string; prompts: QueuedPrompt[]; next?: { id: string } | null; is_on?: boolean }
+export type QueueJson = { chat: string; prompts: QueuedPrompt[]; next?: { id: string } | null; is_on?: boolean; themes?: Record<string, string> }
 
 /** The queue's latest failure, which CDD's shared failure line shows: what failed with its reason, the context it failed
  * in, and its number, which grows with each failure so a newer one shows after an older one was handled. */
