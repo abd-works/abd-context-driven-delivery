@@ -14,6 +14,19 @@
           "formats": [
             "python"
           ]
+        },
+        "story_map": {
+          "formats": [
+            "drawio",
+            "whiteboard",
+            "markdown"
+          ]
+        },
+        "scenarios": {
+          "formats": [
+            "python",
+            "markdown"
+          ]
         }
       }
     },
@@ -59,7 +72,7 @@
     }
   },
   "guidance": {
-    "version": 10,
+    "version": 11,
     "stages": [
       "discovery",
       "specification",
