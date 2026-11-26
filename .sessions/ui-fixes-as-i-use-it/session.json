@@ -5,5 +5,45 @@
   "branch": "ui-fixes-as-i-use-it",
   "worktree": "C:\\dev\\abd-cdd-ui-fixes-as-i-use-it",
   "stage": "Implementation",
-  "stage_mark": "in-progress"
+  "stage_mark": "in-progress",
+  "practices": {
+    "stories": {
+      "fidelities": {
+        "acceptance_tests": {
+          "formats": []
+        }
+      }
+    },
+    "ddd": {
+      "fidelities": {
+        "tactics": {
+          "formats": []
+        }
+      }
+    },
+    "ux": {
+      "fidelities": {
+        "front_end_code": {
+          "formats": []
+        }
+      }
+    },
+    "clean_engineering": {
+      "fidelities": {
+        "code": {
+          "formats": []
+        }
+      }
+    },
+    "bdd": {
+      "fidelities": {
+        "development": {
+          "formats": []
+        }
+      }
+    }
+  },
+  "guidance": {
+    "version": 1
+  }
 }
