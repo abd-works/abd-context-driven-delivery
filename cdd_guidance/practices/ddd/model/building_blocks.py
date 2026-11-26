@@ -79,7 +79,6 @@ class DomainClass(DomainNode, OoadClass):
     def __init__(self, name: str = "", sequential_order: int = 0, **kwargs) -> None:
         super().__init__(name, sequential_order, intent=kwargs.get("intent", ""))
         self.tactical = TacticalClass(self)
-        self.invariants: list[str] = []
         # A repository the document writes inside its root's card, under a `**Name** «Repository»` line, rather than
         # under a `####` heading of its own. Every drawing draws a repository inside its root's card either way.
         self.written_in_root = False

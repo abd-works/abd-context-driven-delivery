@@ -102,3 +102,36 @@ with description("a domain model Markdown document") as self:
         with it("should write the document it was given"):
             result = CleanEngineering(fidelity="model").render("markdown", self.text, source="markdown")
             expect(result.content).to(equal(self.text))
+
+
+_CART_CARD = """# orders
+
+## Cart
+
+------
++ total: Money
+	// never below zero
+----
++ checkout(): Order
+
+**Invariants**
+
+- A cart belongs to one customer.
+"""
+
+
+with description("a class card whose class lists invariants no single member governs") as self:
+    with before.all:
+        self.read = MarkdownCleanEngineeringModel().parse(_CART_CARD)
+        self.cart = self.read.modules[0].classes[0]
+
+    with it("should read the invariants its Invariants list names onto the class"):
+        expect(self.cart.invariants).to(equal(["A cart belongs to one customer."]))
+
+    with it("should read no operation out of the Invariants list"):
+        expect([operation.name for operation in self.cart.operations]).to(equal(["checkout"]))
+
+    with it("should write the Invariants list back under the class's members when the class changed"):
+        self.cart.invariants.append("A cart holds one line per plan.")
+        written = MarkdownCleanEngineeringModel().render(self.read)
+        expect(written).to(contain("**Invariants**\n\n- A cart belongs to one customer.\n- A cart holds one line per plan."))

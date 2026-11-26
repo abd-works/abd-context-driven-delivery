@@ -456,3 +456,43 @@ with description("a class model whose classes only an operation joins, drawn on 
     with it("should draw the join between the two classes once"):
         board = Whiteboard.from_text(WhiteboardCleanEngineeringModel().render(_ledger_and_entry()))
         expect([element.role for element in board.elements if isinstance(element, Arrow)]).to(equal(["dependency"]))
+
+
+def _priced_cart() -> CleanEngineeringModel:
+    """A cart whose total and checkout each carry the invariant that governs them, and which holds one invariant no
+    single member governs."""
+    model = CleanEngineeringModel("orders")
+    module = Module("orders", 1)
+    cart = _class_with("Cart", 1, [Property(name="total", type_hint="Money"), Property(name="note", type_hint="str")])
+    cart.properties[0].add_invariant("never below zero")
+    checkout = Operation.from_signature("checkout(): Order")
+    checkout.add_invariant("only once")
+    cart.operations = [checkout, Operation.from_signature("empty(): None")]
+    cart.invariants = ["A cart belongs to one customer."]
+    module.classes.append(cart)
+    model.modules.append(module)
+    return model
+
+
+with description("a class card on a Claude whiteboard whose class keeps invariants") as self:
+    with before.all:
+        self.text = WhiteboardCleanEngineeringModel().render(_priced_cart())
+        self.lines = cards_of(Whiteboard.from_text(self.text))["Cart"].text.splitlines()
+
+    with it("should write a property's invariant directly under the property"):
+        expect(self.lines[self.lines.index("+ total: Money") + 1]).to(equal("  // never below zero"))
+
+    with it("should write an operation's invariant directly under the operation"):
+        expect(self.lines[self.lines.index("+ checkout(): Order") + 1]).to(equal("  // only once"))
+
+    # An invariant no single member governs closes the card, under a few dashes, with no heading over it.
+    with it("should write the class's own invariants under a few dashes at the bottom of the card"):
+        expect(self.lines[-2:]).to(equal(["– – –", "// A cart belongs to one customer."]))
+
+    with it("should name no Invariants heading on the card"):
+        expect(any("Invariants" in line for line in self.lines)).to(equal(False))
+
+    with it("should read each invariant back onto what it governs"):
+        cart = WhiteboardCleanEngineeringModel().parse(self.text).modules[0].classes[0]
+        expect((cart.properties[0].invariant_lines(), cart.operations[0].invariant_lines(), cart.invariants)).to(equal(
+            (["never below zero"], ["only once"], ["A cart belongs to one customer."])))

@@ -129,6 +129,8 @@ class OoadClass(OoadNode):
         # class sits, as a code file does in a class's doc comment: `Sales | custom`, `ShoppingCart`.
         self.module_path: List[str] = []
         self.bases: List[str] = []
+        # The rules the class keeps that no single property or operation governs; a member's own are on the member.
+        self.invariants: List[str] = []
         self.peer_names: List[str] = []
         self.module_helpers: List[list] = []
         # What its source says, as its parser reads it: the lines it spans and the facts they give.
@@ -196,6 +198,7 @@ class OoadClass(OoadNode):
         self.stereotypes = list(source.stereotypes)
         self.module_path = list(source.module_path)
         self.bases = list(source.bases)
+        self.invariants = list(getattr(source, "invariants", []))
         self.collaborators = list(source.collaborators)
         self.dependencies = [item.clone() for item in getattr(source, "dependencies", [])]
 

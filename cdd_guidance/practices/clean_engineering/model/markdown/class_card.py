@@ -63,10 +63,14 @@ def _operation_in(line: str) -> Optional[Operation]:
     return operation
 
 
+# The bold line a card lists the invariants no single member governs under, one `- ` bullet each.
+INVARIANTS_LIST = "**Invariants**"
+
+
 class ClassCard:
     """The members of one class card in the class-card notation: its intent and constructor above ``------``, its
     properties between ``------`` and ``----``, its operations below, each with the calls and notes written under it,
-    and the dependencies it names. A card that writes no constructor line (``writes_constructor``), as a DDD building
+    the dependencies it names, and, under **Invariants**, the invariants no single member governs. A card that writes no constructor line (``writes_constructor``), as a DDD building
     block's, starts at ``------``."""
 
     def __init__(self, body_lines: List[str], writes_constructor: bool = True) -> None:
@@ -76,9 +80,11 @@ class ClassCard:
     ## reading
 
     def read_into(self, oclass: OoadClass) -> None:
-        """Read the card onto oclass: its intent, its constructor, its properties and operations, and the
-        dependencies it names."""
-        text_lines, dependencies = Relationship.split_off(self._lines)
+        """Read the card onto oclass: its intent, its constructor, its properties and operations, the dependencies it
+        names, and the invariants its **Invariants** list names."""
+        at = next((index for index, line in enumerate(self._lines) if line.strip().lower().startswith(INVARIANTS_LIST.lower())), len(self._lines))
+        oclass.invariants = [line.strip()[2:].strip() for line in self._lines[at + 1:] if line.strip().startswith("- ")]
+        text_lines, dependencies = Relationship.split_off(self._lines[:at])
         head, members = _split_once(r"(?m)^-{6}\s*$", "\n".join(text_lines))
         props_text, ops_text = _split_once(r"(?m)^-{4}\s*$", members)
         intent, constructor_line, constructor_notes = self._read_head(head)
@@ -161,6 +167,9 @@ class ClassCard:
         lines.append(OPERATIONS)
         lines.extend(self.operation_lines(oclass))
         lines.extend(line for item in oclass.dependencies for line in item.lines())
+        if oclass.invariants:
+            lines.extend(["", INVARIANTS_LIST, ""])
+            lines.extend(f"- {item}" for item in oclass.invariants)
         return lines
 
     def property_lines(self, properties: List[Property]) -> List[str]:

@@ -13,7 +13,6 @@ from cdd_guidance.practices.clean_engineering.model.markdown.class_card import C
 from cdd_guidance.practices.ddd.model.building_blocks import DomainClass
 
 CARD = "#### "
-_INVARIANTS = "**invariants**"
 # A repository written inside its root's card, below the root's own lines: `**CartRepository** «Repository»`.
 _REPOSITORY_IN_ROOT = re.compile(r"^\*\*([A-Za-z_]\w*)\*\*\s*(?:«|<<)\s*Repository\s*(?:»|>>)$")
 # A building block's card writes no constructor line: its members start at the properties.
@@ -46,18 +45,11 @@ class CardSection:
         return cards
 
     def read_body(self, body: list[str]) -> None:
-        """Read the card's lines: its members in the class-card notation, then the invariants its **Invariants**
+        """Read the card's lines in the class-card notation: its members, then the invariants its **Invariants**
         lists."""
-        at = next((index for index, line in enumerate(body) if line.lower().startswith(_INVARIANTS)), len(body))
-        ClassCard(body[:at], writes_constructor=False).read_into(self._card)
-        self._card.invariants.extend(line[2:].strip() for line in body[at + 1:] if line.startswith("- "))
+        ClassCard(body, writes_constructor=False).read_into(self._card)
 
     def lines(self) -> list[str]:
         card = self._card
         heading = f"**{card.name}** «Repository»" if card.written_in_root else f"{CARD}{card.heading}"
-        written = [heading, "", *_MEMBERS.lines_of(card, card.plain_properties)]
-        if card.invariants:
-            written.extend(["", "**Invariants**", ""])
-            written.extend(f"- {item}" for item in card.invariants)
-        written.append("")
-        return written
+        return [heading, "", *_MEMBERS.lines_of(card, card.plain_properties), ""]

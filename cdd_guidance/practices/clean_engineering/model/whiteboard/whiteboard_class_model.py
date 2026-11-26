@@ -39,6 +39,10 @@ from harness.guidance.practice_formats import Written
 from harness.markdown.markdown import link_words
 from cdd_guidance.practices.clean_engineering.model.diagram.class_links import ClassModelLinks
 
+NOTE = "// "
+"""How an invariant starts on a card, as the model document writes it."""
+MEMBER_NOTE_INDENT = "  "
+"""How far an invariant is set in under the property or operation it governs."""
 SPLIT = "– – –"
 """The short dashed line between a class card's properties and its operations."""
 RULE = "---"
@@ -148,10 +152,10 @@ class _BoardText:
         starts = self._folded_starts()
         return [_BoardText("\n".join(self.lines[start:end])) for start, end in zip(starts, [*starts[1:], len(self.lines)])]
 
-    def members(self, part: int) -> List[str]:
+    def members(self, part: int) -> List[Tuple[str, List[str]]]:
         """The member lines of this card's own class in part (0 for the properties, 1 for the operations), without
-        their mark: the parts are parted by a dashed line, or, on a board drawn before it, by rules, the first of them
-        under the name."""
+        their mark, each with the invariants written under it: the parts are parted by a dashed line, or, on a board
+        drawn before it, by rules, the first of them under the name."""
         end = (self._folded_starts() or [len(self.lines)])[0]
         own = self.lines[self.at + 1:end]
         if own[:1] == [RULE]:
@@ -163,7 +167,23 @@ class _BoardText:
             else:
                 parts[-1].append(line)
         found = parts[part] if len(parts) > part else []
-        return [line[2:] for line in found if line[:2] in ("+ ", "- ")]
+        members: List[Tuple[str, List[str]]] = []
+        for line in found:
+            if line[:2] in ("+ ", "- "):
+                members.append((line[2:], []))
+            elif line.startswith(NOTE) and members:
+                members[-1][1].append(line[len(NOTE):].strip())
+        return members
+
+    def class_notes(self) -> List[str]:
+        """The invariants written under the dashes after this card's own class's operations: the ones no single member
+        governs."""
+        end = (self._folded_starts() or [len(self.lines)])[0]
+        own = self.lines[self.at + 1:end]
+        splits = [index for index, line in enumerate(own) if line == SPLIT]
+        if len(splits) < 2:
+            return []
+        return [line[len(NOTE):].strip() for line in own[splits[1] + 1:] if line.startswith(NOTE)]
 
 
 class _PlacedOnBoard(WhiteboardNode):
@@ -205,14 +225,23 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
         card, which reads as a box border, so the parts are parted by a short dashed line instead."""
         lines = [f"*{' '.join(f'«{item}»' for item in self.stereotypes)}*"] if self.stereotypes else []
         lines.append(f"**{self.name}**")
-        lines.extend(self.property_lines())
+        for line, prop in zip(self.property_lines(), self.properties):
+            lines.extend([line, *self._governed_by(prop)])
         lines.append(SPLIT)
-        lines.extend(
-            f"{'- ' if item.name.startswith('_') else '+ '}{item.name}({', '.join(parameter.save() for parameter in item.parameters)})"
-            f"{(': ' + item.return_type) if item.return_type else ''}"
-            for item in self.operations
-        )
+        for item in self.operations:
+            lines.append(
+                f"{'- ' if item.name.startswith('_') else '+ '}{item.name}({', '.join(parameter.save() for parameter in item.parameters)})"
+                f"{(': ' + item.return_type) if item.return_type else ''}"
+            )
+            lines.extend(self._governed_by(item))
+        if self.invariants:
+            lines.append(SPLIT)
+            lines.extend(f"{NOTE}{item}" for item in self.invariants)
         return lines
+
+    def _governed_by(self, member: Property | Operation) -> List[str]:
+        """The invariants member governs, each on a line of its own, set in under it."""
+        return [f"{MEMBER_NOTE_INDENT}{NOTE}{line}" for line in member.invariant_lines()]
 
     def width(self) -> int:
         return int(_text_box(self.shown_text)[0])
@@ -225,10 +254,24 @@ class WhiteboardClass(DiagramClass, _PlacedOnBoard):
                                 text=self.shown_text, text_align="left")
 
     def take_text(self, text: _BoardText) -> "WhiteboardClass":
-        """Become the class a card's words show: its stereotypes, properties and operations."""
+        """Become the class a card's words show: its stereotypes, properties and operations, each with the invariants
+        under it, and the invariants at the bottom that no single member governs."""
         self.stereotypes = text.stereotypes
-        self.properties = [Property.from_signature(line) or Property(name=line.strip()) for line in text.members(0)]
-        self.operations = [found for found in (Operation.from_signature(line) for line in text.members(1)) if found is not None]
+        self.properties = []
+        for line, notes in text.members(0):
+            prop = Property.from_signature(line) or Property(name=line.strip())
+            for note in notes:
+                prop.add_invariant(note)
+            self.properties.append(prop)
+        self.operations = []
+        for line, notes in text.members(1):
+            operation = Operation.from_signature(line)
+            if operation is None:
+                continue
+            for note in notes:
+                operation.add_invariant(note)
+            self.operations.append(operation)
+        self.invariants = text.class_notes()
         for part in text.folded_parts():
             self.fold(WhiteboardClass(name=part.name, sequential_order=1).take_text(part))
         return self
