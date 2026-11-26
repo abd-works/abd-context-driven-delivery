@@ -41,4 +41,4 @@ Unit (`prompt_queue_spec.py`, the set_theme examples).
 - **Code:** `tools/prompt_queue/prompt_queue.py`: `PromptQueue.set_theme`, new `RobotNotNamed`.
 - **Tests:** `tools/prompt_queue/prompt_queue_spec.py` (unit), under "that the lead gives a robot its theme": "keeps a theme given on several lines as one line, so the robot's row stays one line" and "refuses a theme for a robot with no name, keeping every theme"; seen failing first (the refusal did not exist), now pass (127 examples).
 - **Scenarios:** "Keep a robot's theme as one line" and "Refuse a theme for a robot with no name" (Assign Queued Prompt To Robot) in `share_queue_among_robots_story.test.md`.
-- **Commit:** (filled below)
+- **Commit:** 71590096f
