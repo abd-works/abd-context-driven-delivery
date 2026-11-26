@@ -533,6 +533,26 @@ with description("a DrawIO Story Map rendered in a workspace") as self:
             expect([story.name for story in stories]).to(equal(["Select Sim", "Activate Sim"]))
             expect(stories[0].actors).to(equal(["Customer"]))
 
+    with context("beside a story-map.md, one story's acceptance test and another's scenarios and acceptance test"):
+        with before.each:
+            from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
+
+            self.root = _workspace({
+                "story-map.md": _LINKED_MAP,
+                "onboard/get-sim/select_sim_story.test.py": "# Select Sim\n",
+                "onboard/get-sim/activate_sim_story.test.md": "## Story: Activate Sim\n",
+                "onboard/get-sim/activate_sim_story.test.ts": "// Activate Sim\n",
+            })
+            self.text = DrawIOStoryMap().render(MarkdownStoryMap().parse(_LINKED_MAP), Written(folder=Path(self.root)))
+            self.links = _links_by_label(self.text)
+
+        # A story with no scenario file of its own is still told in its acceptance test.
+        with it("should link a story with no scenario file to its acceptance test"):
+            expect(self.links["Select Sim"][0]).to(equal("onboard/get-sim/select_sim_story.test.py"))
+
+        with it("should link a story with both to its scenario file"):
+            expect(self.links["Activate Sim"][0]).to(equal("onboard/get-sim/activate_sim_story.test.md"))
+
     with context("whose story map is kept in the folder's .context under a prefixed name"):
         with it("should link an epic cell to that story map's entry"):
             from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap

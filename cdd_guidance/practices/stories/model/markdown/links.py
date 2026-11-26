@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Dict, List
 
 from harness.annotations.name import Name
 
-from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, StoryMapFiles
+from cdd_guidance.practices.stories.model.story_map_files import STORY_FILE_SUFFIXES, STORY_TEST_SUFFIXES, StoryMapFiles
 
 if TYPE_CHECKING:
     from cdd_guidance.practices.stories.model.story_map import Epic, Story, StoryMap, StoryNode
@@ -90,20 +90,28 @@ class StoryMapLinks:
         maps = StoryMapFiles(root).markdown_below()
         self._map_file = maps[0] if maps else None
         self._base = self._map_file.parent if self._map_file is not None else root
-        self._story_files: Dict[str, Path] = {}
-        for path in StoryMapFiles(root).story_files_below():
-            stem = path.name
-            for suffix in STORY_FILE_SUFFIXES:
-                stem = stem.removesuffix(suffix)
-            self._story_files.setdefault(self._slug(stem), path)
+        files = StoryMapFiles(root)
+        self._story_files = self._by_story(files.story_files_below(), STORY_FILE_SUFFIXES)
+        self._story_tests = self._by_story(files.story_tests_below(), STORY_TEST_SUFFIXES)
         self._entries = self._entries_of(story_map)
 
     def story_file(self, story: "Story") -> str:
-        """Relative path to the story's own markdown file, or ``""`` when it has none."""
-        path = self._story_files.get(self._slug(story.name))
+        """Relative path to the story's own scenario file, else to its acceptance test; ``""`` when it has neither."""
+        slug = self._slug(story.name)
+        path = self._story_files.get(slug) or self._story_tests.get(slug)
         if path is None or not path.is_file():
             return ""
         return self._relative(path)
+
+    def _by_story(self, paths: List[Path], suffixes: tuple) -> Dict[str, Path]:
+        """Each of paths by the slug of the story its name, without suffixes, names; the first of each story's."""
+        found: Dict[str, Path] = {}
+        for path in paths:
+            stem = path.name
+            for suffix in suffixes:
+                stem = stem.removesuffix(suffix)
+            found.setdefault(self._slug(stem), path)
+        return found
 
     def entry_for(self, node: "StoryNode") -> str:
         """The node's ``story-map.md#anchor`` link; empty for a node the map does not hold, or with no story map."""

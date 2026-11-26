@@ -36,6 +36,8 @@ STORY_TESTS_FOLDER = "story_tests"
 _MARKDOWN = ".md"
 # A story's own markdown file: `submit_order_story.test.md`, `submit_order_story.spec.md`.
 STORY_FILE_SUFFIXES = ("_story.test.md", "_story.spec.md")
+# How a story's acceptance test ends, in each language a story is tested in.
+STORY_TEST_SUFFIXES = ("_story.test.py", "_story.test.ts")
 # The markdown a map's increments are written in, in the order a folder is searched for them.
 THIN_SLICING_FILES = ("thin-slicing.md", "thin-slice.md", "thin-slices.md", "increments.md")
 # The name a map's first thin slice is written under, in a folder that holds none yet.
@@ -140,12 +142,22 @@ class StoryMapFiles:
         for walked in self.story_folders():
             yield from self._markdown_in(walked)
 
+    def story_tests_below(self) -> List[Path]:
+        """Each story's acceptance test in this folder and the folders below it, and in the `story_tests` beside a
+        project's `.context`."""
+        return sorted(path for walked in self.story_folders() for path in self._files_in(walked, STORY_TEST_SUFFIXES))
+
     def _markdown_in(self, top: Path) -> Iterator[Path]:
         """Every markdown file in top and the folders below it, entering each folder's `.context`, where documents are
         kept, and no folder a working-copy scan never enters."""
+        return self._files_in(top, (_MARKDOWN,))
+
+    def _files_in(self, top: Path, endings: tuple) -> Iterator[Path]:
+        """Every file in top and the folders below it whose name ends with one of endings, entering each folder's
+        `.context` and no folder a working-copy scan never enters."""
         for folder, folders, names in os.walk(top):
             folders[:] = sorted(name for name in folders if name == CONTEXT_FOLDER or not skips_folder(name))
-            yield from (Path(folder, name).resolve() for name in sorted(names) if name.lower().endswith(_MARKDOWN))
+            yield from (Path(folder, name).resolve() for name in sorted(names) if name.lower().endswith(endings))
 
     def _this_and_above(self) -> List[Path]:
         """This folder and those above it, up to the top folder; with none given, up to the project the folder sits
