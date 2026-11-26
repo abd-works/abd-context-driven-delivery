@@ -112,6 +112,14 @@ class SessionFileTools:
     @mcp
     @agent_tool
     @noSessionLog
+    def all_files(self) -> list[FileEntry]:
+        """List every file in this session's folders, the folder it works in and each file or folder a person added to its practices as a root, each once with its path from the project, whatever the stages, practices and formats selected: what the Files app's All files button lists; each listed, and the session's own work when the branch changed it. What git ignores, such as node_modules, is left out."""
+        listing = self.guidance.listing([])
+        return [listing.of_folder(entry) for entry in self.session_files.in_roots()]
+
+    @mcp
+    @agent_tool
+    @noSessionLog
     def read_file(self, path: str = "") -> FileText:
         """Return the text of path, a file in this repository or under a folder this session's practices write to, such as its ticket's worktree, with its version, which write_file takes back; no text and no version when the file is gone, such as one deleted since the board listed it. A path inside a .git folder is refused."""
         return self.session_files.read(path)

@@ -128,11 +128,32 @@ class SessionFiles:
         and whether the session's branch changed it: in a repository the files git tracks or would track there, so what
         .gitignore leaves out, such as node_modules or a build, is left out; elsewhere every file under it but those
         folders' kind."""
-        root = self._session.work_root
-        files = self._tracked_under(root) if self._session.repo.is_clone else self._walked_under(root)
         changed = self.branch_changes.files()
         repo = self._session.repo
-        return [FileEntry(repo.path_from_top(path), True, path.resolve() in changed) for path in sorted(files) if path.is_file()]
+        return [FileEntry(repo.path_from_top(path), True, path.resolve() in changed) for path in sorted(self._files_at(self._session.work_root))]
+
+    def in_roots(self) -> list[FileEntry]:
+        """Every file in the session's folders: under the folder it works in, as ``under_root`` lists it, and in each
+        root outside it, a file a person added as a root itself; each once, in path order, with whether the branch
+        changed it."""
+        work_root = self._session.work_root.resolve()
+        outside = [root for root in self._roots if root != work_root and work_root not in root.parents]
+        files = {Path(entry.path): entry for entry in self.under_root()}
+        changed = self.branch_changes.files()
+        repo = self._session.repo
+        for path in (file for root in outside for file in self._files_at(root)):
+            entry = FileEntry(repo.path_from_top(path), True, path.resolve() in changed)
+            files.setdefault(Path(entry.path), entry)
+        return [files[path] for path in sorted(files)]
+
+    def _files_at(self, root: Path) -> list[Path]:
+        """The file root is, or every file under the folder it is, as ``under_root`` lists a folder's files."""
+        if root.is_file():
+            return [root]
+        if not root.is_dir():
+            return []
+        listed = self._tracked_under(root) if self._session.repo.is_clone else self._walked_under(root)
+        return [path for path in listed if path.is_file()]
 
     def _tracked_under(self, root: Path) -> list[Path]:
         listed = Git(root).listed("ls-files", "--cached", "--others", "--exclude-standard")

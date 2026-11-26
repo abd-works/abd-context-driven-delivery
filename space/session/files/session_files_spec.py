@@ -392,3 +392,38 @@ with description("session.delete_file") as self:
             expect(lambda: self.delete(str(kept))).to(raise_error((PathOutsideRootsError, NamedPathNotFoundError)))
             expect(kept.is_file()).to(equal(True))
             outside.cleanup()
+
+
+# The person's answer (2026-11-26): the Files app's All files button lists every file in the session's folders, the
+# folder it works in and each root a person added to its practices, whatever the stages, practices and formats selected.
+with description("session.all_files") as self:
+    with before.each:
+        self.project = ThrowawayProject()
+        root = self.project.root
+        for path, text in {"board/notes.txt": "notes", "board/.context/story-map.md": "# map", "story_tests/checkout/checkout_story.test.md": "# checkout", "story_tests/other/other_story.test.md": "# other", "README.md": "# shop"}.items():
+            (root / path).parent.mkdir(parents=True, exist_ok=True)
+            (root / path).write_text(text, encoding="utf-8")
+        self.session = _working_in(root, root / "board")
+        self.listed = lambda: [entry.path for entry in self.session.all_files()]
+
+    with after.each:
+        OPEN_PROJECTS.close_all()
+
+    with context("of a session working in one folder"):
+        with it("should list every file in that folder, a file no fidelity declares among them"):
+            expect(self.listed()).to(equal(["board/.context/story-map.md", "board/notes.txt"]))
+
+    with context("with a folder outside it added to a practice"):
+        with it("should list every file in that folder as well, and nothing beside it"):
+            self.session.practice("stories").add_root("story_tests/checkout")
+            expect(self.listed()).to(equal(["board/.context/story-map.md", "board/notes.txt", "story_tests/checkout/checkout_story.test.md"]))
+
+    with context("with a file outside it added to a practice"):
+        with it("should list that file as well"):
+            self.session.practice("stories").add_root("README.md")
+            expect(self.listed()).to(contain("README.md"))
+
+    with context("with a folder inside it added to a practice"):
+        with it("should list each file in it once"):
+            self.session.practice("stories").add_root("board/.context")
+            expect(self.listed()).to(equal(["board/.context/story-map.md", "board/notes.txt"]))
