@@ -521,15 +521,20 @@ with description("Render saving what it makes beside its source") as self:
             expect(self.results[0].publish).to(contain("record_board"))
 
     with context("a story map whose board is kept and a person moved a card on"):
-        with before.each:
-            Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
-            self.board_file = self.folder / "story-map.whiteboard"
+        # Rendered, kept, moved and rendered again once, in a folder of its own; the examples only read what that left.
+        with before.all:
+            kept = Path(tempfile.mkdtemp(prefix="render-kept-board-")) / ".context"
+            kept.mkdir()
+            story_map = kept / "story-map.md"
+            story_map.write_text(_MARKDOWN_STORY_MAP, encoding="utf-8")
+            Render().render(_STORIES, format="whiteboard", paths=[str(story_map)], source="markdown")
+            self.board_file = kept / "story-map.whiteboard"
             Render().record_board(str(self.board_file), "https://claude.ai/artifact/StoryMapBoard")
             board = json.loads(self.board_file.read_text(encoding="utf-8"))
             self.card = next(key for key, record in board["elements"].items() if "Browse Product Catalog" in str(record.get("text")))
             board["elements"][self.card]["x"] = 777
             self.board_file.write_text(json.dumps(board), encoding="utf-8")
-            self.results = Render().render(_STORIES, format="whiteboard", paths=[str(self.story_map)], source="markdown")
+            self.results = Render().render(_STORIES, format="whiteboard", paths=[str(story_map)], source="markdown")
 
         with it("should keep the card where the person put it"):
             expect(json.loads(self.board_file.read_text(encoding="utf-8"))["elements"][self.card]["x"]).to(equal(777))
@@ -567,6 +572,20 @@ with description("A render whose worker process failed"):
 
     with it("should keep the worker's whole error output for whoever debugs it"):
         expect(RenderFailed(1, _WORKER_TRACEBACK).errors).to(equal(_WORKER_TRACEBACK))
+
+
+def _render_mockup(project: ThrowawayProject) -> list:
+    """The project's bookshop mockup rendered to its design canvas."""
+    return Render().for_call(ToolCall({}, project.root)).render("ux-mockup", format="claude_design", paths=["bookshop/buy-a-book.html"], source="html")
+
+
+def _rendered_mockup_project(mockup: str) -> ThrowawayProject:
+    """A project holding mockup as its bookshop mockup, rendered once to its design canvas."""
+    project = ThrowawayProject()
+    (project.root / "bookshop").mkdir()
+    (project.root / "bookshop" / "buy-a-book.html").write_text(mockup, encoding="utf-8")
+    _render_mockup(project)
+    return project
 
 
 with description("Render asked for a path, in a session") as self:
@@ -629,21 +648,12 @@ with description("Render asked for a path, in a session") as self:
         # the project made for it.
         with before.all:
             self.mockup = HtmlUxMap.create().render(OrderingMap().build(UxMap.create()))
-            self.rendered = ThrowawayProject()
-            (self.rendered.root / "bookshop").mkdir()
-            (self.rendered.root / "bookshop" / "buy-a-book.html").write_text(self.mockup, encoding="utf-8")
+            self.rendered = _rendered_mockup_project(self.mockup)
             self.rendered_action = Render().for_call(ToolCall({}, self.rendered.root))
-            self.rendered_action.render("ux-mockup", format="claude_design", paths=["bookshop/buy-a-book.html"], source="html")
             self.rendered_canvas = self.rendered.root / "design-canvas"
 
         with after.all:
             self.rendered.close()
-
-        with before.each:
-            (self.project.root / "bookshop").mkdir()
-            (self.project.root / "bookshop" / "buy-a-book.html").write_text(self.mockup, encoding="utf-8")
-            self.canvas = self.project.root / "design-canvas"
-            self.to_canvas = lambda: self.action.render("ux-mockup", format="claude_design", paths=["bookshop/buy-a-book.html"], source="html")
 
         with it("should save canvas.json and a prototype page for each screen in the canvas's first version"):
             saved = sorted(path.relative_to(self.rendered_canvas).as_posix() for path in self.rendered_canvas.rglob("*") if path.is_file())
@@ -656,17 +666,30 @@ with description("Render asked for a path, in a session") as self:
             )
             expect(back[0].content).to(equal(self.mockup))
 
+        # Each of these renders its canvas once, into a project of its own, before its example asks for the render it
+        # refuses; the example times only that refusal.
         with context("whose canvas's latest version is published"):
+            with before.all:
+                self.published = _rendered_mockup_project(self.mockup)
+                CanvasVersions.in_practice_root(self.published.root).latest.publish_at("https://claude.ai/artifact/canvas", ScreenWalkReport([]))
+
+            with after.all:
+                self.published.close()
+
             with it("should refuse to write into it"):
-                self.to_canvas()
-                CanvasVersions.in_practice_root(self.project.root).latest.publish_at("https://claude.ai/artifact/canvas", ScreenWalkReport([]))
-                expect(self.to_canvas).to(raise_error(PublishedVersion))
+                expect(lambda: _render_mockup(self.published)).to(raise_error(PublishedVersion))
 
         with context("whose canvas holds a screen people ported where a prototype page goes"):
+            with before.all:
+                self.ported = _rendered_mockup_project(self.mockup)
+                cart_page = self.ported.root / "design-canvas" / "version-1" / "project" / "screens" / "cart.dc.html"
+                cart_page.write_text("<html>ported cart</html>", encoding="utf-8")
+
+            with after.all:
+                self.ported.close()
+
             with it("should refuse to write over it"):
-                self.to_canvas()
-                (self.canvas / "version-1" / "project" / "screens" / "cart.dc.html").write_text("<html>ported cart</html>", encoding="utf-8")
-                expect(self.to_canvas).to(raise_error(CanvasFileNotRendered, contain("cart.dc.html")))
+                expect(lambda: _render_mockup(self.ported)).to(raise_error(CanvasFileNotRendered, contain("cart.dc.html")))
 
     # Exploratory testing, r3-rivet-08: a realization rendered from a saved graph was saved as graph.md beside the graph,
     # a name no fidelity writes, while the fidelity declares .context/{scope}-bdd-realization.md. The person's answer
