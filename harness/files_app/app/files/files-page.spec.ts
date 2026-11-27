@@ -251,6 +251,17 @@ describe('Select Guidance In Files App', () => {
         stop()
         expect(server.posted('/toggle-guidance')).toHaveLength(1)
       })
+
+      // Hardening regression run (review-graph-violations e2e): a press made while the page read the list again for a
+      // selection it was given, as it does as it opens, was dropped without a word.
+      it('should toggle a press made while the page reads the list for a selection changed elsewhere', async () => {
+        const server = discovery()
+        const { page, stop } = await following(server)
+        page.store.change(() => ({ filtering: 'the new selection' }))
+        await page.guidance.toggle('format', 'diagram')
+        stop()
+        expect(server.posted('/toggle-guidance')).toHaveLength(1)
+      })
     })
 
     describe('that has every stage turned off', () => {

@@ -52,6 +52,16 @@ def fixed(within, test_id: str) -> None:
     within.get_by_test_id(f"{test_id}-outcome").and_(within.locator(".is-sent")).wait_for(timeout=GRAPH_READ_MILLISECONDS)
 
 
+def markdown_shown(page) -> None:
+    """The markdown chip pressed on beside the chosen code, so the story map's markdown is listed: pressing off a
+    fidelity's only chosen format is refused (LastFormatLeftOut). A session that has it on already keeps it."""
+    markdown = page.locator('.format-toggle[title^="markdown:"]')
+    markdown.wait_for(timeout=SHOWN_MILLISECONDS)
+    if markdown.get_attribute("aria-pressed") != "true":
+        markdown.click()
+    page.locator('.format-toggle[title^="markdown:"][aria-pressed="true"]').wait_for(timeout=SHOWN_MILLISECONDS)
+
+
 def story_titles(page) -> list[str]:
     return sorted(page.locator('button.graph-node[title^="Story "]').evaluate_all("nodes => nodes.map(node => node.title)"))
 
@@ -60,9 +70,7 @@ with description("Review Graph Violations In Files App, in a real browser") as s
     with before.all:
         self.stack = FilesStack()
         self.page = self.stack.open(STORY_REVIEW, FIDELITIES)
-        chosen = self.page.locator('.format-toggle[aria-pressed="true"]')
-        chosen.first.wait_for(timeout=SHOWN_MILLISECONDS)
-        chosen.first.click()
+        markdown_shown(self.page)
         graph_view(self.page)
 
     with after.all:
@@ -103,9 +111,7 @@ with description("Fix Graph Violations From Files App, in a real browser") as se
     with context("Given the Files app shows story-review's violating stories in the graph view, opened from review-chat"):
         with before.all:
             self.page = opened_from_chat(self.stack)
-            chosen = self.page.locator('.format-toggle[aria-pressed="true"]')
-            chosen.first.wait_for(timeout=SHOWN_MILLISECONDS)
-            chosen.first.click()
+            markdown_shown(self.page)
             graph_view(self.page)
             self.page.locator(".graph-filters-toggle").click()
             self.page.get_by_role("button", name="Violations").click()

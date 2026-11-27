@@ -47,6 +47,15 @@ Requested 2026-11-16, the person: "Make sure design canvas is a filter option fo
 *When* the Files app lists every file under the session's root
 *Then* the canvas's `canvas.json` is listed with the link it is published at, so it opens as the design canvas there too
 
+#### Scenario: A format press made while the list is read again is still made
+
+Found by the hardening regression run, 2026-11-26 (`bolt-2-format-press-dropped-while-list-read-again.md`).
+
+*Given* the Files app is reading the list again for a selection it was given, as it does as it opens or after a chip is pressed on the chat bar, and says it is filtering by the new selection
+*When* the Person presses the markdown chip
+*Then* the session's selection has markdown chosen, and the markdown chip shows selected
+*And* a second press while the Person's own press is still filtering starts no second change
+
 ## Story: List Every File In Session Folders
 
 Requested (the person, 2026-11-26): an "All files" scope button, placed before the file bar's ▤ and Δ scope buttons, that shows every file and folder in the session's folders, "everything that is there, not only the files the fidelities name or the changed ones".

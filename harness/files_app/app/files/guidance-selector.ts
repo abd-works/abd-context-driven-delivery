@@ -22,6 +22,7 @@ const wait = (milliseconds: number) => new Promise(resolve => setTimeout(resolve
 export class GuidanceSelector {
   private drawnVersion = -1
   private isFollowing = false
+  private isPressing = false
 
   constructor(private readonly page: FilesPage) {}
 
@@ -40,9 +41,11 @@ export class GuidanceSelector {
 
   // A press on a stage, a practice's toggle, or a format chip: the session works out the selection it leaves, which can
   // take a while with many files to filter, so the page says what it is filtering by until the list is read again, and a
-  // press while one is filtering starts nothing.
+  // second press while a press is filtering starts nothing. A press made while the page reads the list for a selection
+  // it was given, as it does as it opens, is still sent: only a press of the person's own holds the next one back.
   async toggle(part: SelectionPart, name: string): Promise<void> {
-    if (this.page.store.state.filtering) return
+    if (this.isPressing) return
+    this.isPressing = true
     this.page.store.change(() => ({ filtering: name }))
     try {
       const answer = await this.page.session.toggleGuidance(part, name)
@@ -50,6 +53,7 @@ export class GuidanceSelector {
     } catch (failure) {
       this.page.notices.fail(`The ${name} ${part} was not changed: ${reasonOf(failure)}`, 'A press in the Files app')
     } finally {
+      this.isPressing = false
       this.page.store.change(() => ({ filtering: '' }))
     }
   }
