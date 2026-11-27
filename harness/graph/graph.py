@@ -362,14 +362,27 @@ class Node:
             node = node.parent or (node.graph.edges.direct_parent(node) if node.practice is not None else None)
         return default
 
+    def keep_fact(self, key: str, fact: FactValue) -> None:
+        """Record one fact on this node in place of the one it held: on its parsed object's own field when the object
+        saves that fact (``graph_facts``), else among the facts the node keeps itself, so ``get_fact`` answers it
+        either way."""
+        if key in self.graph_facts:
+            setattr(self, key, fact)
+        else:
+            self.set_fact(key, fact)
+
+    def forget_fact(self, key: str) -> None:
+        """No longer record the fact key among the facts the node keeps itself, so it holds the facts a node read anew
+        holds."""
+        if key in self.data:
+            del self.data[key]
+            if self.practice is not None and self.practice.reading.in_graph is not None:
+                self.graph.build.changed()
+
     def merge_fact(self, key: str, values: list) -> None:
         """Add values to a list fact this node keeps, each once, sorted: on its parsed object's own field when the
         object saves that fact, else among the facts the node keeps itself."""
-        merged = sorted(set(self.get_fact(key) or []) | set(values))
-        if key in self.graph_facts:
-            setattr(self, key, merged)
-        else:
-            self.set_fact(key, merged)
+        self.keep_fact(key, sorted(set(self.get_fact(key) or []) | set(values)))
 
     def has_fact(self, key: str) -> bool:
         """True when this node itself records the fact."""
@@ -457,7 +470,11 @@ class Node:
         file of the format with the most detail as its source, and each other format's place as a fact
         (``written_in``), so the file view can show each of its files and a saved graph keeps them. The format is the
         one that reads location's file. A node keeps one place for each format: the first one given, which its reader
-        gives the nearest file first, moved when the same file gives it again, as a refresh of that file does."""
+        gives the nearest file first, moved when the same file gives it again, as a refresh of that file does. Its own
+        file is no other format's place: a refresh that reads a document again finds the nodes the document alone wrote
+        under the class it describes, and they stay as a fresh read leaves them."""
+        if location.file == self.source.file:
+            return
         written = Path(location.file)
         format_name = str(self.practice.formats.reading_with(written, self.graph.practices.held.values()) or "graph")
         held = dict(self.data.get(WRITTEN_IN_FACT) or {})

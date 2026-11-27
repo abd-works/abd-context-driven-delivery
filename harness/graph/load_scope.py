@@ -68,8 +68,10 @@ class LoadScope:
 
     @property
     def folders(self) -> list[Path] | None:
-        """The folders holding the edited files, below the loaded folder; none when the whole folder is read."""
-        if self.edited_files is None or self.folder is None:
+        """The folders holding the files named, below the loaded folder, that are still there: a folder whose file a
+        refresh names gone is read again too, so what it says of its files is what a fresh read says. None when the
+        whole folder is read."""
+        if self.named is None or self.folder is None:
             return None
         folder = self.folder.resolve()
-        return sorted({parent for path in self.edited_files for parent in path.parents if parent != folder and folder in parent.parents})
+        return sorted({parent for path in self.named for parent in path.parents if parent != folder and folder in parent.parents and parent.is_dir()})

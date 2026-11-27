@@ -22,6 +22,8 @@ from harness.graph.model_node import schema_sync_paused
 from harness.graph.skipped_folders import skips_folder
 from harness.graph.schema_conformance import EXEMPT_FACT
 
+from harness.graph.saved_graph import WRITTEN_IN_FACT
+
 from cdd_guidance.practices.clean_engineering.model.base_class_model import MODULE_FUNCTION_HOLDER, CleanEngineeringModel, OoadClass
 from cdd_guidance.practices.clean_engineering.measures.checked_measures import CheckedCodeMeasures
 from cdd_guidance.practices.clean_engineering.measures.code_measures import MEASURES, NODE_TYPES, SHOWN_WITHOUT_LIMIT, ChosenTools
@@ -39,6 +41,9 @@ from cdd_guidance.practices.clean_engineering.reading.node_evidence import CodeN
 from cdd_guidance.practices.source_code import ClassReference, HoldsProjectTestCode, ScriptImports
 from cdd_guidance.practices.clean_engineering.model.operation import Operation
 from cdd_guidance.practices.clean_engineering.model.property import Property
+
+# How the name of a model document the practice reads ends, in a ``.context`` folder: ``graph-model.md``.
+_MODEL_DOCUMENT_ENDING = "-model.md"
 
 
 class GraphReading(HoldsProjectTestCode, PracticeReading):
@@ -109,6 +114,21 @@ class GraphReading(HoldsProjectTestCode, PracticeReading):
         if files and self.chosen_tools.measures_code:
             report_progress("clean_engineering · code measures")
             CheckedCodeMeasures(self, files, self.chosen_tools, self.measuring_tools).take()
+
+    def read_with(self, files: list[Path]) -> list[Path]:
+        """The code files of the classes a model document among files describes: the class a document and code both
+        write is one node, holding the document's facts and relationships beside the code's, so a refresh of the
+        document reads that code again too, and the node holds what the document says now, as a fresh read leaves it.
+        A refresh of no model document reads no other file."""
+        documents = self.in_graph.loading.from_root(path.resolve() for path in files if path.name.endswith(_MODEL_DOCUMENT_ENDING))
+        if not documents:
+            return []
+        joined = {
+            node.source.file
+            for node in self.in_graph.nodes("OoadClass")
+            if node.source.file not in documents and any(place[0] in documents for place in (node.data.get(WRITTEN_IN_FACT) or {}).values())
+        }
+        return sorted(Path(self.in_graph.source_root) / file for file in joined)
 
     def read_working_copy(self) -> None:
         """Keep the class model each model document describes, then read each source file with its language's class
@@ -372,8 +392,8 @@ class ModelDocuments:
         graph = self._reading.graph
         edited = graph.scope.edited_files
         folders = self._every_folder() if edited is None else {self._root, *(graph.scope.folders or [])}
-        named = {path for path in (edited or []) if path.name.endswith("-model.md")}
-        found = {model for folder in folders for model in (folder / ".context").glob("*-model.md")} | named
+        named = {path for path in (edited or []) if path.name.endswith(_MODEL_DOCUMENT_ENDING)}
+        found = {model for folder in folders for model in (folder / ".context").glob(f"*{_MODEL_DOCUMENT_ENDING}")} | named
         return sorted(document for document in found if not self._read_by_another_practice(document))
 
     def _read_by_another_practice(self, document: Path) -> bool:

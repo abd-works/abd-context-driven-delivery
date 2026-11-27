@@ -442,13 +442,17 @@ class GraphBuild:
 
     def _read_working_copy(self) -> None:
         """Read every open practice from the loaded folder, each after the practices it reads while it reads its own;
-        link them once all are read; add the applied overlays' nodes; then run every practice's rules."""
+        link them once all are read; put every practice's nodes in source order, so an overlay that records a fact from
+        the first of several nodes, such as a spec's subject, records the one a fresh build and a refresh both hold
+        first; add the applied overlays' nodes; then run every practice's rules."""
         graph = self.graph
         if graph.scope.folder is None:
             return
         practices = self._in_reading_order()
         for practice in practices:
             practice.reading.read()
+        for practice in practices:
+            practice.reading.in_graph.put_in_source_order()
         for overlay in [*graph.applied_patterns.graph_overlays, *graph.applied_patterns.supplement_overlays_of(practices)]:
             overlay.read(graph)
         self._offer_overlay_types()

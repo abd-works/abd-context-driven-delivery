@@ -16,7 +16,8 @@ from typing import TYPE_CHECKING
 
 from harness.agent_tools.progress import report_progress
 from harness.annotations.name import Name
-from harness.graph.graph import Node, PracticeNodes
+from harness.graph.graph import READ_AT_FIDELITY, Node, PracticeNodes
+from harness.graph.schema_conformance import EXEMPT_FACT
 from harness.graph.saved_graph import NodeIdentity
 from harness.graph.saved_graph import FactValue
 from harness.graph.location import Location
@@ -38,6 +39,7 @@ from cdd_guidance.practices.ddd.model.nodes import TARGET_SEGMENT, Aggregate, Ag
 from cdd_guidance.practices.ddd.model.stereotypes import BUILDING_BLOCK_KINDS, KIND_OF_STEREOTYPE, TacticalClass, calls_a_repository, kind_named_by, repository_calls_in, marks_another_system, root_kept_by
 
 if TYPE_CHECKING:
+    from harness.graph.edge import Edge
     from harness.guidance.guidance import PracticeGuidance
 
     from cdd_guidance.practices.clean_engineering.model import OoadClass
@@ -168,6 +170,11 @@ class BuildingBlock(Node):
     @property
     def _public_operations(self) -> list:
         return [op for op in self.ooad_class.operations if op.name and not op.name.startswith("_")]
+
+
+# The facts a building block keeps of its own, beside the facts of the class it is: its tactical facts, the fidelity it
+# was read at, and the relationships it is exempt from.
+_OWN_BLOCK_FACTS = (*BuildingBlock.graph_facts, READ_AT_FIDELITY, EXEMPT_FACT)
 
 
 class DddNodeTypes(PracticeNodeTypes):
@@ -373,7 +380,9 @@ class _WorkingCopyRead:
             self._read_contexts([(".", self._unmarked_context(), ".")])
         for folder, held in sorted(self._members_by_folder(bool(marked)).items()):
             self._read_aggregate_folder(folder, held)
+        self._place_folder_aggregates()
         described.read()
+        self._renew_kept_blocks()
         self._link_blocks()
         self._map_contexts(marked)
         self._join_folders()
@@ -453,6 +462,24 @@ class _WorkingCopyRead:
         if aggregate is not None:
             aggregate.set_fact("bare_classes", self._domain.bare_in(folder, self._in_graph.nodes()))
 
+    def _place_folder_aggregates(self) -> None:
+        """Put each aggregate a folder holds under the bounded context around its folder now, and under no other: the
+        contexts are read again on every read, and a refresh that reads no class of a folder keeps its aggregate from
+        before, which a context renamed or added since must still hold."""
+        for aggregate in self._in_graph.nodes("Aggregate"):
+            if not (self._root / aggregate.source.file).is_dir():
+                continue
+            context = self._contexts.around(aggregate.source.file) or self._in_graph.root
+            self._in_graph.edge_index.drop(lambda edge: self._places_elsewhere(edge, aggregate, context))
+            self._graph.edges.link("owns", context, aggregate)
+            self._graph.edges.relate("belongsTo", aggregate, context)
+
+    def _places_elsewhere(self, edge: Edge, aggregate: Node, context: Node) -> bool:
+        """Whether edge puts aggregate under a bounded context, or the practice's root, other than context."""
+        if edge.kind == "owns" and edge.child is aggregate:
+            return edge.parent is not context and edge.parent.type in ("BoundedContext", "Practice")
+        return edge.kind == "belongsTo" and edge.parent is aggregate and edge.child is not context and edge.child.type in ("BoundedContext", "Practice")
+
     def _documents(self) -> list["_DomainDocument"]:
         """Each document that describes the domain, in a ``.context`` folder under the practice's root: the domain
         models first, whose aggregates hold classes, then the bounded-context maps."""
@@ -475,6 +502,17 @@ class _WorkingCopyRead:
             block = self._blocks.add(node, tactical, kind, Location(source.file, source.start_line, source.end_line))
             self._graph.edges.relate("isA", block, tactical.oclass)
         return node
+
+    def _renew_kept_blocks(self) -> None:
+        """Give each building block a refresh kept as a plain node, as a worker or a saved graph holds it, the facts its
+        class holds now: a block read now holds its class and answers the class's facts, but a kept block holds a copy
+        of them, and the code read again beside it, such as a class it calls moved to another file, changes its class's
+        linked facts. The block's own facts, worked out from its class's operations, stay."""
+        for block in [node for node in self._in_graph.nodes() if node.type in _BLOCK_KINDS and not isinstance(node, BuildingBlock)]:
+            classes = [edge.child for edge in self._graph.edges.from_parent("isA", block)]
+            if classes:
+                own = {key: block.data[key] for key in _OWN_BLOCK_FACTS if key in block.data}
+                block.data = {**classes[0].facts, **own}
 
     def _link_blocks(self) -> None:
         """Link the building blocks DDD holds, those read now and those it built before: each repository accesses the

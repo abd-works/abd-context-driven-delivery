@@ -244,6 +244,33 @@ with description("Clean Engineering reading code into its graph"):
         with it("should be the index the class rules ask"):
             expect([each.node for each in ProductionClasses(self.fixture.practice.reading).named("Till")]).to(equal(self.index.classes_named("Till")))
 
+    # Hardening regression run (graph_incremental_heavy_spec): a refresh kept a folder's node as the build before left
+    # it, so a file added or deleted was not counted among its public files and a deleted file's imports stayed on it.
+    with context("with a file of its folder deleted and refreshed"):
+        with before.all:
+            self.fixture = practice_from_files({"shop/cart.py": _CART, "shop/till.py": "from pathlib import Path\n\n\nclass Till:\n    pass\n"})
+            (self.fixture.root / "shop/till.py").unlink()
+            self.fixture.practice.reading.graph.refresh([str(self.fixture.root / "shop/till.py")])
+            self.shop = next(node for node in self.fixture.practice.reading.in_graph.nodes("Package") if node.name == "shop")
+
+        with it("should count only the public files still in the folder"):
+            expect(self.shop.get_fact("public_source_files")).to(equal(1))
+
+        with it("should keep no import of the file deleted"):
+            expect(sorted(self.shop.get_fact("imported_classes_by_file") or {})).to(equal(["shop/cart.py"]))
+
+    # Hardening regression run (graph_incremental_heavy_spec): a refresh after a deleted file kept it among the files of
+    # its folder that another file imports, which a fresh build, reading only files still there, never lists.
+    with context("with a file another file of its folder imports deleted and refreshed"):
+        with before.all:
+            self.fixture = practice_from_files({"shop/till.py": "class Till:\n    pass\n", "shop/counter.py": "from shop.till import Till\n\n\nclass Counter:\n    pass\n"})
+            (self.fixture.root / "shop/till.py").unlink()
+            self.fixture.practice.reading.graph.refresh([str(self.fixture.root / "shop/till.py")])
+            self.shop = next(node for node in self.fixture.practice.reading.in_graph.nodes("Package") if node.name == "shop")
+
+        with it("should list no sibling the file still there imported from the file deleted"):
+            expect(self.shop.get_fact("sibling_imports")).to(equal({"counter.py": []}))
+
     with context("with members that call and read another object's members"):
         with before.all:
             self.fixture = practice_from_files(
@@ -406,6 +433,44 @@ with description("Clean Engineering reading the classes its model documents desc
 
         with it("should take the class as a production class the compared facts measure, once"):
             expect([each.file for each in ProductionClasses(self.fixture.practice.reading)]).to(equal(["shop/ledger.py"]))
+
+    # Hardening regression run (graph_incremental_heavy_spec): a refresh of another file of the folder read the document
+    # again and gave each member only the document writes its own file as a second place, which a fresh build never does.
+    with context("with code that declares the class the model document describes, refreshed with another file of its folder"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/.context/shop-model.md": _SHOP_MODEL + "+ close(): None\n",
+                    "shop/ledger.py": "class Ledger:\n    def record(self, entry: str) -> str:\n        return entry\n",
+                    "shop/till.py": "class Till:\n    pass\n",
+                }
+            )
+            self.fixture.practice.reading.graph.refresh([str(self.fixture.root / "shop/till.py")])
+
+        with it("should keep no second place on an operation only the document declares"):
+            close = next(node for node in self.fixture.practice.reading.in_graph.nodes("Operation") if node.name == "close")
+            expect(close.has_fact("written_in")).to(equal(False))
+
+    # Hardening regression run (graph_incremental_heavy_spec): a document that no longer describes a class left the
+    # class its code declares holding the document's place and stereotypes until a full load.
+    with context("with code that declares the class the model document describes, whose document is changed to describe another class"):
+        with before.all:
+            self.fixture = practice_from_files(
+                {
+                    "shop/.context/shop-model.md": _SHOP_MODEL,
+                    "shop/ledger.py": "class Ledger:\n    def record(self, entry: str) -> str:\n        return entry\n",
+                }
+            )
+            document = self.fixture.root / "shop/.context/shop-model.md"
+            document.write_text(_SHOP_MODEL.replace("## Ledger", "## Journal"), encoding="utf-8")
+            self.fixture.practice.reading.graph.refresh([str(document)])
+            self.ledger = next(node for node in _classes(self.fixture) if node.name == "Ledger")
+
+        with it("should keep only the code's place on the class the code declares"):
+            expect(sorted(self.ledger.places)).to(equal(["python"]))
+
+        with it("should keep none of the document's stereotypes on it"):
+            expect(self.ledger.get_fact("stereotypes") or []).to(equal([]))
 
     with context("with code that declares the class in two files of the module the document describes"):
         with before.all:

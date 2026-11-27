@@ -48,12 +48,13 @@ class DependenciesToOwn(ComparedFact):
             if self._classes.is_value(edge.child.name) or not production[edge.child.node_id].has_behavior:
                 continue
             found.setdefault(owner.node_id, []).extend(self._to_own(owner, edge.child, dict(edge.facts)))
+        # Sorted, so the fact does not hang on the order the edges were recorded in, which a refresh changes.
         for each in self._classes:
-            record_fact(each.node, DEPENDENCIES_TO_OWN, found.get(each.node_id, []))
+            record_fact(each.node, DEPENDENCIES_TO_OWN, sorted(found.get(each.node_id, [])))
 
     def _to_own(self, owner: "ProductionClass", other: "Node", facts: dict) -> list[list]:
         reached = set(facts.get(REACHED_FACT, []))
-        through = list(facts.get(THROUGH_FACT, []))
+        through = sorted(facts.get(THROUGH_FACT, []))
         entries: list[list] = []
         if CREATED_ON_EACH_CALL in reached:
             builders = [name for name in through if self._builds_from_text(owner, name, other.name)]

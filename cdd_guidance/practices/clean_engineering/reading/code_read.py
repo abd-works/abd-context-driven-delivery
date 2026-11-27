@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from harness.agent_tools.progress import report_progress
 from harness.graph.skipped_folders import scanned_files, skips_folder
 from harness.graph.location import Location
+from harness.graph.schema_conformance import EXEMPT_FACT
 from harness.whiteboard import UnreadableBoard
 
 from cdd_guidance.practices.clean_engineering.model.base_class_model import (
@@ -40,6 +41,10 @@ PRODUCTION_FACT = "holds_production_code"
 # The module card a Module is read from, by its path from the source root: the node sits at its folder, and the card
 # is the file whose text its facts and its rules come from.
 CARD_FACT = "described_in"
+# What a folder's production files import, kept on its node by each file: the classes, by the file's path from the source
+# root, and the files of the folder itself, by the file's name.
+IMPORTED_CLASSES_BY_FILE = "imported_classes_by_file"
+SIBLING_IMPORTS = "sibling_imports"
 # The fidelities a class is read at, by name: model while none of its operations has a body, code once one has.
 MODEL_FIDELITY, CODE_FIDELITY = "model", "code"
 _CLASS_NAMES = re.compile(r"\bclass\s+(\w+)")
@@ -434,10 +439,7 @@ class ClassJoins:
                 value = [*held, *(item for item in value if item not in held)]
             elif code.has_fact(key):
                 continue
-            if key in code.graph_facts:
-                setattr(code, key, value)
-            else:
-                code.set_fact(key, value)
+            code.keep_fact(key, value)
 
     def _drop_held(self, relative: str, described: OoadClass) -> None:
         """Drop the nodes the class the document at relative describes was held as, with their edges, while no code
@@ -481,9 +483,35 @@ class CodeFolders:
         return not file_name.startswith("_") and not self._test_code.is_test_code(file_name)
 
     def add(self) -> None:
-        """Add each folder to the graph as its Module's node."""
+        """Add each folder to the graph as its Module's node. A folder the graph holds already, as a refresh of one of
+        its files finds it, keeps its node, which takes what the folder says now."""
         for relative, module in self._modules.items():
-            self._nodes[relative] = self._in_graph.add(module, f"clean_engineering:{module.type}:{relative}", Location(relative, 1, 1))
+            node = self._in_graph.add(module, f"clean_engineering:{module.type}:{relative}", Location(relative, 1, 1))
+            if node is not module:
+                self._read_again(node, relative, module)
+            self._nodes[relative] = node
+
+    def _read_again(self, node: "Node", relative: str, module: Module) -> None:
+        """Give node, the folder's node a read before added, the facts the folder's Module read now holds, and keep
+        what its files import only for the files still in it, so it holds what a node read anew holds: a file added
+        counts among its public files, and a file deleted or moved away leaves no import behind. A fact the read
+        works out again on every node, such as which relationships test code is exempt from, starts afresh."""
+        for key, fact in module.facts.items():
+            node.keep_fact(key, fact)
+        node.forget_fact(EXEMPT_FACT)
+        folder = self._root / relative
+        in_folder = lambda name: (folder / name).is_file()
+        self._keep_files_still_there(node, IMPORTED_CLASSES_BY_FILE, lambda file: (self._root / file).is_file())
+        self._keep_files_still_there(node, SIBLING_IMPORTS, in_folder, lambda imported: [name for name in imported if in_folder(name)])
+
+    def _keep_files_still_there(self, node: "Node", key: str, still_there, kept_of=lambda held: held) -> None:
+        """Keep the fact at key only for the files still there, each with what it holds that is still there; a sibling a
+        file imported and that was deleted or moved away is no longer imported, as a read anew finds it."""
+        kept = {file: kept_of(held) for file, held in (node.get_fact(key) if node.has_fact(key) else {}).items() if still_there(file)}
+        if kept:
+            node.set_fact(key, kept)
+        else:
+            node.forget_fact(key)
 
     def take(self, relative: str, module: Module) -> "Node":
         """The folder node that holds the file at relative, which keeps what the file imports when it is production
@@ -525,16 +553,16 @@ class CodeFolders:
         """The classes a production file imports, re-exports, or qualifies, each with the module it names it from, kept
         on its folder by the file's path, so a refresh that reads the file again replaces what it named before and
         keeps what the folder's other files name."""
-        kept = folder.get_fact("imported_classes_by_file") if folder.has_fact("imported_classes_by_file") else {}
-        folder.set_fact("imported_classes_by_file", {**kept, relative: sorted(references)})
+        kept = folder.get_fact(IMPORTED_CLASSES_BY_FILE) if folder.has_fact(IMPORTED_CLASSES_BY_FILE) else {}
+        folder.set_fact(IMPORTED_CLASSES_BY_FILE, {**kept, relative: sorted(references)})
 
     def _record_sibling_imports(self, folder: "Node", relative: str, targets: list[str]) -> None:
         """The files of its own folder a production file imports, kept on the folder by file name, so the one-way-deps
         rule sees a cycle between the files of one folder; a refresh keeps the other files' imports."""
         path = Path(relative)
         siblings = {found.name for found in (self._sibling_imported(path, target) for target in targets) if found is not None}
-        kept = folder.get_fact("sibling_imports") if folder.has_fact("sibling_imports") else {}
-        folder.set_fact("sibling_imports", {**kept, path.name: sorted(siblings)})
+        kept = folder.get_fact(SIBLING_IMPORTS) if folder.has_fact(SIBLING_IMPORTS) else {}
+        folder.set_fact(SIBLING_IMPORTS, {**kept, path.name: sorted(siblings)})
 
     def _sibling_imported(self, path: Path, target: str) -> Path | None:
         """The file of path's own folder an import of target names; none for a file of another folder."""

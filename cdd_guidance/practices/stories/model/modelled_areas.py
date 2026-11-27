@@ -110,7 +110,8 @@ class ModelledAreas:
     def record(self) -> None:
         """Say on each Then whether a model is written for its area, and on each example outside a modelled area that
         it is not held to the relationships that lead to a model. A fact is written only where it says something
-        new, so a graph with no model keeps its Thens as they were read."""
+        new, so a graph with no model keeps its Thens as they were read; a node a refresh kept, whose area is no longer
+        what it was, lets go of the fact it held, as a node read anew holds none."""
         for node in self.stories.in_graph.nodes():
             if node.type == "Example":
                 self._record(node, EXEMPT_FACT, [] if self._is_modelled(node) else _EXAMPLE_MODEL_RELATIONSHIPS)
@@ -118,8 +119,10 @@ class ModelledAreas:
                 self._record(node, MODEL_WRITTEN_FACT, self._is_modelled(node))
 
     def _record(self, node: "Node", fact: str, held: list[str] | bool) -> None:
-        if held or node.has_fact(fact):
+        if held:
             node.set_fact(fact, held)
+        else:
+            node.forget_fact(fact)
 
     def _is_modelled(self, node: "Node") -> bool:
         return self.tree.area_of(node) in self._modelled
