@@ -66,6 +66,15 @@ _QUEUE_TOOLS = (
 )
 
 
+class AgentTurnFailedError(RuntimeError):
+    """The headless chat's turn ended in an error of its own, such as the Claude subscription being refused, so the
+    plugin's hooks were never checked: an example that expects nothing queued would otherwise pass on a chat that did
+    nothing."""
+
+    def __init__(self, result: str) -> None:
+        super().__init__(f"The headless chat's turn failed before the plugin could be checked: {result}")
+
+
 class ClaudeCodeNotFoundError(RuntimeError):
     """No Claude Code to run the headless chat with: CLAUDE_CODE_EXECPATH is not set and no claude is on the PATH. A
     chat in the Claude app sets the variable in its Bash tool, not always in its PowerShell tool, so the tier run from
@@ -154,8 +163,12 @@ class HeadlessChat:
         self._process.stdin.flush()
 
     def _wait_for(self, arrived) -> None:
-        while not arrived(json.loads(self._lines.get(timeout=_TURN_SECONDS))):
-            pass
+        while True:
+            event = json.loads(self._lines.get(timeout=_TURN_SECONDS))
+            if event.get("type") == "result" and event.get("is_error"):
+                raise AgentTurnFailedError(str(event.get("result") or event.get("terminal_reason") or "no reason given"))
+            if arrived(event):
+                return
 
     def stop(self) -> None:
         if self._process is not None:
