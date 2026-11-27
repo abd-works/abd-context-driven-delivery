@@ -55,11 +55,34 @@ class ReportTool:
         npx = shutil.which("npx")
         if npx is None:
             raise E2eReviewRefused("npx is not on PATH, so the e2e review tool cannot run")
-        done = subprocess.run([npx, "tsx", script, *args], cwd=self.folder, capture_output=True, text=True, encoding="utf-8",
-                              errors="replace", check=False, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        self._install_packages()
+        done = self._command([npx, "tsx", script, *args])
         if done.returncode != 0:
-            raise E2eReviewRefused((done.stderr or done.stdout).strip().splitlines()[-1] if (done.stderr or done.stdout).strip() else f"{script} failed")
+            raise E2eReviewRefused(self._reason(done, f"{script} failed"))
         return done.stdout
+
+    def _install_packages(self) -> None:
+        """Install the tool's packages from its package-lock the first time it runs in a folder that holds none, as a
+        runtime pinned from a checkout does, since git keeps no node_modules; refused, naming the folder, when npm fails."""
+        if (self.folder / "node_modules").is_dir():
+            return
+        npm = shutil.which("npm")
+        if npm is None:
+            raise E2eReviewRefused(f"npm is not on PATH, so the e2e review tool's packages cannot be installed in {self.folder}")
+        done = self._command([npm, "ci", "--no-audit", "--no-fund"])
+        if done.returncode != 0:
+            raise E2eReviewRefused(f"the e2e review tool's packages did not install in {self.folder}: {self._reason(done, 'npm ci failed')}; run npm ci there")
+
+    def _command(self, command: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(command, cwd=self.folder, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False,
+                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+    def _reason(self, done: subprocess.CompletedProcess[str], otherwise: str) -> str:
+        """The line of the command's output that names its error, such as Node's ERR_MODULE_NOT_FOUND, rather than the
+        last line, which for a crash of Node is only its version."""
+        lines = [line.strip() for line in (done.stderr or done.stdout or "").splitlines() if line.strip()]
+        named = next((line for line in lines if "Error" in line or "error" in line), None)
+        return named or (lines[-1] if lines else otherwise)
 
 
 class E2eRun:

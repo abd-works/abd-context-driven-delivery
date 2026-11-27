@@ -2823,7 +2823,7 @@ Observed (`step` in `space/kanban/app/tests/step-capture.ts`, used by the board'
 
 ### (S) Agent --> Compare An E2E Run With The Accepted Walk
 
-Observed (`E2eReview.run` and `changed_pairs` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `Run.pairsAgainst` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`; `writeCompareReport` in `harness/e2e_review/report/report.ts`, tested by `report.spec.ts`): `e2e-review.run` runs the sub-epic's browser story tests, and `e2e-review.changed_pairs` pairs each step's screen with the same step of the accepted walk, or of the run named in `against`, and lists those that differ; `compare.html` shows the two screens side by side. Where they differ the agent fixes the test or the code and reruns. Its scenarios are tested by those specs; no story test file runs them.
+Observed (`E2eReview.run` and `changed_pairs` in `harness/e2e_review/e2e_review.py`, tested by `e2e_review_spec.py`; `Run.pairsAgainst` in `harness/e2e_review/report/run.ts`, tested by `run.spec.ts`; `writeCompareReport` in `harness/e2e_review/report/report.ts`, tested by `report.spec.ts`): `e2e-review.run` runs the sub-epic's browser story tests, and `e2e-review.changed_pairs` pairs each step's screen with the same step of the accepted walk, or of the run named in `against`, and lists those that differ; `compare.html` shows the two screens side by side. Where they differ the agent fixes the test or the code and reruns. Its scenarios are tested by those specs; no story test file runs them. Scenarios: [capture_end_to_end_steps_story.test.md](../story_tests/review-end-to-end-screens/capture-end-to-end-steps/capture_end_to_end_steps_story.test.md).
 
 ### (S) Agent --> Walk A Disputed Step Again
 
