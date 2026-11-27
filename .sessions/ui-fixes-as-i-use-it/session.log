@@ -702,3 +702,15 @@
 2026-11-27T03:28:51Z tool prompt-queue.done d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2497
 2026-11-27T03:29:04Z tool prompt-queue.done d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2504
 2026-11-27T03:29:18Z tool prompt-queue.done d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2511
+2026-11-27T03:29:54Z tool prompt-queue.step_done d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2531
+2026-11-27T03:30:08Z tool prompt-queue.step_done d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2538
+2026-11-27T03:30:22Z tool prompt-queue.step_done d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2545
+2026-11-27T03:30:35Z tool prompt-queue.done d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2552
+2026-11-27T03:31:06Z tool prompt-queue.show d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2560
+2026-11-27T17:04:07Z tool prompt-queue.show d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2562
+2026-11-27T17:04:10Z tool prompt-queue.is_only_talk d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2562
+2026-11-27T17:04:34Z tool prompt-queue.show d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2645
+2026-11-27T17:04:56Z tool prompt-queue.assign d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2653
+2026-11-27T17:05:28Z tool validate.validate .sessions\ui-fixes-as-i-use-it\exploratory-testing d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2676
+2026-11-27T17:06:08Z validate Stories hardening d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2676
+2026-11-27T17:06:24Z tool prompt-queue.show d0e9c5f2-25b2-4add-a9ea-dc9815cfc180 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-ui-fixes-as-i-use-it\d0e9c5f2-25b2-4add-a9ea-dc9815cfc180.jsonl 1-2706
