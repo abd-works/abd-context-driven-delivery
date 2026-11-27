@@ -402,20 +402,26 @@ class SavedFiles:
 
     def __init__(self, files: list[str] | None) -> None:
         self._named = None if files is None else [entry.replace("\\", "/").rstrip("/") for entry in files]
+        # Whether a node, or a node above it, is written in one of the files besides its own, by the node's id: one save
+        # asks it of every node, edge and folder, and each node below asks it again of every node above.
+        self._written_in_named: dict[int, bool] = {}
 
     def reads(self, node: Node) -> bool:
         """Whether node was read from one of the files, or it or a node above it is written in one of them besides its
         own file (``Node.places``), as a scenario its markdown writes, with its steps, is written again in a story test."""
         if self._named is None:
             return True
-        if self._names((node.source.file or "").replace("\\", "/")):
-            return True
-        above: Node | None = node
-        while above is not None:
-            if any(self._names(place.file.replace("\\", "/")) for place in above.other_places if place.file):
-                return True
-            above = above.parent
-        return False
+        return self._names((node.source.file or "").replace("\\", "/")) or self._written_in_files(node)
+
+    def _written_in_files(self, node: Node) -> bool:
+        """Whether node or a node above it is written in one of the files besides its own file, worked out once for each
+        node over this save, since the graph does not change while it is saved."""
+        known = self._written_in_named.get(id(node))
+        if known is None:
+            here = any(self._names(place.file.replace("\\", "/")) for place in node.other_places if place.file)
+            known = here or (node.parent is not None and self._written_in_files(node.parent))
+            self._written_in_named[id(node)] = known
+        return known
 
     def _names(self, file: str) -> bool:
         """Whether file is one of the named files or sits under a named folder."""
