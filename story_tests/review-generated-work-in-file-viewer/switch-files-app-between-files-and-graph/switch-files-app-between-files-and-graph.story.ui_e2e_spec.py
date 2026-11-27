@@ -49,13 +49,15 @@ OBSERVED_EXAMPLES = ["closed ticket", "open ticket"]
 
 
 def show_every_format(page) -> None:
-    """Turns off each format selected, such as code, which the seed's session selects: no format selected shows every
-    format, the markdown scenarios beside the code."""
+    """Turns on each format not selected beside code, which the seed's session selects, so every format shows, the
+    markdown scenarios beside the code: pressing off a fidelity's only chosen format is refused (LastFormatLeftOut)."""
     page.locator(".format-toggle").first.wait_for(timeout=SHOWN_MILLISECONDS)
-    selected = page.locator('.format-toggle[aria-pressed="true"]')
-    while selected.count():
-        selected.first.click()
-        page.wait_for_timeout(500)
+    titles = page.locator('.format-toggle:not([aria-pressed="true"])').evaluate_all("chips => chips.map(chip => chip.title.split(':')[0])")
+    for name in titles:
+        page.locator(f'.format-toggle[title^="{name}:"]').click()
+        page.locator(f'.format-toggle[title^="{name}:"][aria-pressed="true"]').wait_for(timeout=SHOWN_MILLISECONDS)
+        # A press while one is filtering starts nothing, so the next waits until the list is read again.
+        page.locator(".files-filtering").wait_for(state="detached", timeout=SHOWN_MILLISECONDS)
 
 
 def listed_entry(page, path: str):
