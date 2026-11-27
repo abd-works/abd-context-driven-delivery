@@ -65,7 +65,7 @@ with description("Review Files In Files App") as self:
                 self.page.close()
 
             with it("Then the file bar lists that project's story-map.drawio and story-map.whiteboard as the story map files on disk, not a file of the CDD checkout"):
-                expect(self.page.locator("button.file-entry:not(.is-missing)").evaluate_all("entries => entries.map(entry => entry.title)")).to(equal([DIAGRAM, f"{WHITEBOARD}: opens the whiteboard as a canvas"]))
+                expect(self.page.locator("button.file-entry:not(.is-missing)").evaluate_all("entries => entries.map(entry => entry.title)")).to(equal([DIAGRAM, f"{WHITEBOARD}: opens its board in Claude"]))
 
             with it("And marks the story map files it does not hold, such as thin-slice.whiteboard, as not generated yet"):
                 expect(self.page.locator('button.file-entry.is-missing[title="design/.context/thin-slice.whiteboard: not generated yet"]').count()).to(equal(1))

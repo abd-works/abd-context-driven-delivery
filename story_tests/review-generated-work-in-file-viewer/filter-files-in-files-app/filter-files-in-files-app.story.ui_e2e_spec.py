@@ -31,8 +31,8 @@ with description("Story: Filter Files By Format In Files App") as self:
         with after.all:
             self.page.close()
 
-        with it("Then the design canvas is listed by its version, marked as a design canvas"):
-            expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("version-1 ↗ design canvas"))
+        with it("Then the design canvas is listed by the title it is published under, marked as a design canvas"):
+            expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("ux-mockup.version-1 ↗ design canvas"))
 
         with it("And pressing it opens the design canvas at its link, not the text of canvas.json"):
             expect(self.entry.get_attribute("href")).to(equal(CANVAS_LINK))
@@ -54,8 +54,8 @@ with description("Story: Filter Files By Format In Files App, opened on another 
         with after.all:
             self.page.close()
 
-        with it("Then the design canvas version-1 is listed, marked as a design canvas"):
-            expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("version-1 ↗ design canvas"))
+        with it("Then the design canvas is listed by the title it is published under, ux-mockup.version-1, marked as a design canvas"):
+            expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("ux-mockup.version-1 ↗ design canvas"))
 
         with it("And pressing it opens the design canvas at the link that project keeps, not the text of canvas.json"):
             expect(self.entry.get_attribute("href")).to(equal(CANVAS_LINK))

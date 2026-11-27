@@ -31,14 +31,14 @@ Requested 2026-11-16, the person: "Make sure design canvas is a filter option fo
 *Given* the UX root of checkout-flow holds `design-canvas/version-2/project/canvas.json`, published at its link in `design-canvas/versions.json`
 *And* the canvas chip ▦ is selected
 *When* the file bar shows its files in their folders
-*Then* the design canvas version-2 is listed in the `design-canvas` folder, beside `versions.json`, not three folders down in `version-2/project`
+*Then* the design canvas is listed by the title it is published under, such as ux-mockup.version-2, in the `design-canvas` folder, beside `versions.json`, not three folders down in `version-2/project`
 *And* pressing it opens the design canvas at its link in a tab of its own, not the text of `canvas.json`
 
 ##### Example: another project
 
 *Given* the Files app is opened on ++another project++, whose design-review session holds `design/ux/design-canvas/version-1/project/canvas.json`, published at its link in `design/ux/design-canvas/versions.json`
 *When* the file bar lists design-review's UX mockup and story map files
-*Then* the design canvas version-1 is listed, marked as a design canvas
+*Then* the design canvas is listed by the title it is published under, ux-mockup.version-1, marked as a design canvas
 *And* pressing it opens the design canvas at the link that project keeps, not the text of `canvas.json`
 
 #### Scenario: List the canvas a session folder or the root holds
