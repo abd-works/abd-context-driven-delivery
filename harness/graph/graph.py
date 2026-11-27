@@ -625,7 +625,7 @@ class NodeTree:
     def _holder_for(self, kind: str) -> Node:
         """The child named for kind that grouped and relationship edges of that kind sit under, made the first time."""
         node = self._node
-        holder = self._child_named(kind)
+        holder = self._holder_named(kind)
         if holder is None:
             holder = Node(node.practice, NodeIdentity(type=kind, node_id=f"{node.practice.key}:{kind}:{node.node_id}", name=kind), node.source)
             holder.parent = node
@@ -656,8 +656,10 @@ class NodeTree:
     def _holder(self, node: Node) -> bool:
         return node.type == node.name
 
-    def _child_named(self, name: str) -> Node | None:
-        return next((child for child in self._node.children if child.name == name), None)
+    def _holder_named(self, kind: str) -> Node | None:
+        """The child holding the edges of kind, never a part that only shares its name, such as a class's property
+        named properties, which would otherwise hold its siblings and itself."""
+        return next((child for child in self._node.children if child.name == kind and self._holder(child)), None)
 
     def _written_at_home(self, seen: set[str], path: set[str]) -> list[ExplorerEntry]:
         """The entries the node writes under it at its home place: each child, then its rules when the filter shows

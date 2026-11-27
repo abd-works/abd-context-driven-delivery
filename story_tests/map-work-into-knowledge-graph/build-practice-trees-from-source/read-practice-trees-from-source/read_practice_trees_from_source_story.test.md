@@ -98,3 +98,12 @@ Observed (`graph_reading_spec.py`).
 *When* the Knowledge Graph reads the project for Clean Engineering
 *Then* the model's Ledger is a node of its own at its card, beside the two classes of code
   *And* a model of another module that describes Ledger is a node of its own too, since the module, not the name, says which class a model means
+
+#### Scenario: Group a class's properties apart from a property named for the group
+
+Found by the hardening regression run, 2026-11-26 (`bolt-4-property-named-properties-is-its-own-parent.md`): `OoadClass.properties` took the place of the group its class's properties sit under, so it hung under itself and a validate's save walked up from it without end.
+
+*Given* the class Ledger holds the property properties, a list of Entry, and the property total
+*When* the Knowledge Graph reads the project for Clean Engineering
+*Then* Ledger's properties sit under the group named properties, and neither hangs under a property
+  *And* a validate on the practices folder, whose OoadClass has such a property, answers with its graph report

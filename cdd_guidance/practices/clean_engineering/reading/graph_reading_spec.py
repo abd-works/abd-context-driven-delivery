@@ -271,6 +271,17 @@ with description("Clean Engineering reading code into its graph"):
         with it("should list no sibling the file still there imported from the file deleted"):
             expect(self.shop.get_fact("sibling_imports")).to(equal({"counter.py": []}))
 
+    # Hardening regression run (graph_build_heavy_spec): OoadClass's property named properties took the place of the
+    # group its class's properties sit under, so it was its own parent and a save walking up from it never ended.
+    with context("with a class whose property is named as the group its properties sit under"):
+        with before.all:
+            ledger = "from shop.entry import Entry\n\n\nclass Ledger:\n    def __init__(self) -> None:\n        self.properties: list[Entry] = []\n        self.total: int = 0\n\n    def add(self, entry: Entry) -> None:\n        self.properties.append(entry)\n        self.total += 1\n"
+            self.fixture = practice_from_files({"shop/entry.py": "class Entry:\n    pass\n", "shop/ledger.py": ledger})
+            self.members = [node for node in self.fixture.practice.reading.in_graph.nodes("Property") if node.name in ("properties", "total")]
+
+        with it("should hang no property under a property, itself included"):
+            expect([(member.name, member.parent is not None and member.parent.type == "Property") for member in sorted(self.members, key=lambda member: member.name)]).to(equal([("properties", False), ("total", False)]))
+
     with context("with members that call and read another object's members"):
         with before.all:
             self.fixture = practice_from_files(
