@@ -26,4 +26,4 @@
 - **Test (unit):** `harness/files_app/app/files/files-page.spec.ts`, Select Guidance In Files App › that has the diagram format selected › should toggle a press made while the page reads the list for a selection changed elsewhere. Seen failing (no toggle posted), then passing.
 - **Fix:** `GuidanceSelector.toggle` holds the next press back only while a press of its own is filtering (`isPressing`), not while the page reads the list for a selection it was given.
 - **e2e:** the review-graph-violations spec presses the markdown chip on beside code (pressing off the only chosen format is refused since pip-4's fix) and passes 8 of 8.
-- **Commit:** see git log for this file.
+- **Commit:** ebcf85741.
