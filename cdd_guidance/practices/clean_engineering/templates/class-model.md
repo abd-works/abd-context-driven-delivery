@@ -20,6 +20,14 @@ format: md
 
 ### **{{ClassName}}** <<{{Stereotypes}}>>
 
+*{{ClassName}}* is {{the job a caller hires it for — then what it holds and does}}.
+
+#### {{term this class owns — itself, a property, an instance, a state}}
+
+- {{why a caller uses it, then the mechanic, then how it relates to *another class*}}
+- **Invariant:** {{rule that must always hold — only when one exists}}
+- Sources: `{{source file the term is defined in}}`
+
 + {{ClassName}}({{constructor parameters}})
 ------
 + {{propertyName}}: {{Type}}

@@ -2,15 +2,24 @@
  * The LERN story runtime: `shareStory`, `scenario`, `background`, `withStory`, `ctx`, and the Given / When / Then chain
  * with Gherkin-style `.and()` / `.but()`. Vitest runs it by default (globals on); another runner, such as the canvas
  * fixtures, replaces the host with `installStoryHost`. The canvas fixtures need three things from it: the host's
- * `it(name, fn, steps)` receives `{ whens }`, the When steps the Then runs before its body; `storyBindings()` gives
- * what the steps bound; and `withStory` replays a shared story on the repositories it is given.
+ * `it(name, fn, steps)` receives `{ whens, entries }`, the When steps the Then runs before its body and what each
+ * of them enters; `storyBindings()` gives what the steps bound; and `withStory` replays a shared story on the
+ * repositories it is given.
+ *
+ * A When names what the Customer enters as its third argument, `enters`: the objects it binds by name before its
+ * action runs, such as `when('the Customer registers valid credentials', register, () => ({ credentials }))`. The
+ * When binds them and then acts, so its body reads them through `ctx`; the canvas binds them before the When runs,
+ * so the When's screen shows and types what the Customer enters.
  *
  * ```
  * file: test-utils/story-test/story-test.ts
  * ```
  */
 
-export type StepFn = (label: string, fn: () => void | Promise<void>) => StepChain;
+/** What a When enters: the objects it binds by name before its action runs. */
+export type Entered = () => Record<string, unknown>;
+
+export type StepFn = (label: string, fn: () => void | Promise<void>, enters?: Entered) => StepChain;
 
 export interface StepChain {
   and: StepFn;
@@ -23,8 +32,11 @@ let activeEachBackgrounds: Array<Array<() => void | Promise<void>>> | null = nul
 
 type StoryHost = {
   describe(name: string, fn: () => void): void;
-  /** whens: the When steps this Then runs before its own body, in order, so a host can replay a scenario's actions. */
-  it(name: string, fn: () => void | Promise<void>, steps?: { whens: Array<() => void | Promise<void>> }): void;
+  /**
+   * whens: the When steps this Then runs before its own body, in order, so a host can replay a scenario's actions;
+   * entries: what each of those Whens enters, where it names it, so a host can show it before the When acts.
+   */
+  it(name: string, fn: () => void | Promise<void>, steps?: { whens: Array<() => void | Promise<void>>; entries: Array<Entered | undefined> }): void;
   beforeEach(fn: () => void | Promise<void>): void;
   beforeAll(fn: () => void | Promise<void>): void;
   afterAll(fn: () => void | Promise<void>): void;
@@ -64,12 +76,18 @@ function currentEachBackgrounds(): Array<Array<() => void | Promise<void>>> {
   return activeEachBackgrounds ?? [];
 }
 
-function makeStep(push: (label: string, fn: () => void | Promise<void>) => void): StepFn {
-  const step: StepFn = (label, fn) => {
-    push(label, fn);
+function makeStep(push: (label: string, fn: () => void | Promise<void>, enters?: Entered) => void): StepFn {
+  const step: StepFn = (label, fn, enters) => {
+    push(label, fn, enters);
     return { and: step, but: step };
   };
   return step;
+}
+
+/** Bind what a When enters, so its action and the steps after it read it through `ctx`. */
+export function bindEntered(enters: Entered | undefined): void {
+  if (!enters) return;
+  for (const [name, value] of Object.entries(enters())) setStoryBinding(name, value);
 }
 
 function makeThenStep(
@@ -181,17 +199,25 @@ function executeScenario(
   host.describe(name, () => {
     const givens: Array<() => void | Promise<void>> = [];
     const whens: Array<() => void | Promise<void>> = [];
+    const entries: Array<Entered | undefined> = [];
     const thens: Array<{
       step: string;
       fn: () => void | Promise<void>;
       whens: Array<() => void | Promise<void>>;
+      entries: Array<Entered | undefined>;
     }> = [];
 
     build({
       given: makeStep((_label, fn) => givens.push(fn)),
-      when: makeStep((_label, fn) => whens.push(fn)),
-      then: makeThenStep((entry) => thens.push({ ...entry, whens: [...whens] })),
-      and: makeAndStep((entry) => thens.push({ ...entry, whens: [...whens] })),
+      when: makeStep((_label, fn, enters) => {
+        whens.push(async () => {
+          bindEntered(enters);
+          await fn();
+        });
+        entries.push(enters);
+      }),
+      then: makeThenStep((entry) => thens.push({ ...entry, whens: [...whens], entries: [...entries] })),
+      and: makeAndStep((entry) => thens.push({ ...entry, whens: [...whens], entries: [...entries] })),
     });
 
     host.beforeEach(async () => {
@@ -202,11 +228,11 @@ function executeScenario(
       for (const g of givens) await g();
     });
 
-    thens.forEach(({ step, fn, whens: precedingWhens }) => {
+    thens.forEach(({ step, fn, whens: precedingWhens, entries: precedingEntries }) => {
       host.it(step, async () => {
         for (const when of precedingWhens) await when();
         await fn();
-      }, { whens: precedingWhens });
+      }, { whens: precedingWhens, entries: precedingEntries });
     });
   });
 }

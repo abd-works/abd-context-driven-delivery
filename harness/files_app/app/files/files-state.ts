@@ -10,6 +10,11 @@ export type FidelityFiles = { slug: string; entries: FileEntryData[] }
 // A node a person selected in the graph view, with the lines it covers in its file, which open and unfold there.
 export type SelectedNode = { nodeId: string; lines: RangeData }
 
+// The file a link opened beside the open file: its path, the heading anchor the link names, none for the whole file,
+// the lines of that section, which a file with no rendered form shows in its source view, and the file as the session
+// answers it, none until read.
+export type LinkedFileState = { path: string; anchor: string; lines: { start: number; end: number }[]; file: SessionFileData | null }
+
 // The graph view of the file bar: the practice trees of the session's graph holding only the nodes of the files the bar
 // lists, read for those files (readFor names them), the branches a person opened and the entries read below them, the
 // nodes selected, every class, operation and property the graph holds, which the open file opens its calls in place from
@@ -52,6 +57,10 @@ export type FilesState = {
   isListing: boolean
   openPath: string
   file: SessionFileData | null
+  // The heading the open file is shown at: the one a link named when the file it opened beside became the open file.
+  openAnchor: string
+  // The file a link followed from either file opened beside the open file; at most one, so the next link replaces it.
+  linked: LinkedFileState | null
   // The other files open beside the first, each holding a node selected in the graph view; none outside it.
   moreFiles: SessionFileData[]
   // The open files a person collapsed to their names; every other open file shows whole.
@@ -83,6 +92,8 @@ export const NO_FILES: FilesState = {
   isListing: true,
   openPath: '',
   file: null,
+  openAnchor: '',
+  linked: null,
   moreFiles: [],
   collapsedFiles: [],
   graph: NO_GRAPH,

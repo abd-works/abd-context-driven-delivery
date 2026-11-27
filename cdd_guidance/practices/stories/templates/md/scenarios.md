@@ -93,7 +93,7 @@ Use only for  simple scenarios where an examples table adds limited value — ex
 
 *Given* a ++`<ConceptA>`++ *`<value>`*  
   *And* that ++`<ConceptA>`++ *`<value>`* has a ++`<ConceptB>`++ *`<value>`*  
-*When* the ++`<ConceptA>`++ *`<value>`* `<triggering action>`  
+*When* the **`<Actor>`** `<triggering action>` on the ++`<ConceptA>`++ *`<value>`*  
     using ++`<ConceptB>`++ *`<value>`*  
 *Then* the ++`<observed concept>`++ is `<observable outcome>`  
   *And* the ++`<related concept>`++ is `<additional outcome>`  
@@ -102,6 +102,6 @@ Use only for  simple scenarios where an examples table adds limited value — ex
 #### Scenario 2: `<alternate outcome-oriented scenario name>`
 
 *Given* `<alternate setup state>`  
-*When* `<alternate triggering action>`  
+*When* the **`<Actor>`** `<alternate triggering action>`  
 *Then* `<alternate observable outcome>`  
   *And* `<additional outcome>`

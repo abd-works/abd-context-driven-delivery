@@ -3,5 +3,8 @@
   "title": "Sync Design Canvas With Production",
   "scope": "feature",
   "branch": "sync-design-canvas-with-production",
-  "worktree": "C:\\dev\\abd-cdd-sync-design-canvas-with"
+  "worktree": "C:\\dev\\abd-cdd-sync-design-canvas-with",
+  "stage": "Hardening",
+  "stage_mark": "in-progress",
+  "dropped_work": []
 }

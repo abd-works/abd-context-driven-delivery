@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from cdd_guidance.actions.render.canvas_comment import CanvasComment, CanvasCommentNeedsAnchor, canvas_published_at
 from cdd_guidance.actions.render.rendered_canvas import RenderedCanvas
 from cdd_guidance.actions.render.rendered_code import RenderedCode, RenderHasNoDeclaredPlace
 from cdd_guidance.actions.render.rendered_file import SAVED_GROUPS, WHITEBOARD, RenderedFile, RenderedSections
@@ -19,6 +20,7 @@ from harness.agent_tools.agent_tools import agent_instructions, agent_tool, agen
 from harness.installation.files import skill
 from harness.markdown.format import Format
 from harness.mcp.mcp_annotations import mcp
+from harness.design_canvas.versions import CanvasVersion
 from harness.whiteboard import Whiteboard
 
 
@@ -29,11 +31,11 @@ _DECLARES_NOTHING = DeclaredOutputs({})
 
 
 class BoardNotKept(LookupError):
-    """A comment came from a board no whiteboard file of the session's project was published to, so no practice says
-    how to answer it."""
+    """A comment came from a board no whiteboard file and no design canvas version of the session's project was
+    published to, so no practice says how to answer it."""
 
     def __init__(self, board: str, searched: Path) -> None:
-        super().__init__(f"No whiteboard file under {searched} keeps the board {board} as the board it was published to")
+        super().__init__(f"No whiteboard file or design canvas version under {searched} keeps the board {board} as the board it was published to")
         self.board = board
         self.searched = searched
 
@@ -184,9 +186,9 @@ class Render(GuidanceAction):
     @mcp
     @skill
     @agent_instructions
-    def answer_board_comment(self, board: str) -> str:
-        """Answer a comment a person left on a board in Claude that CDD published. board: the board's address, the claude.ai artifact link the comment came from. Make the change the comment asks for in the file the board is drawn from, following the rules below, never on the board alone, which the next render would undo. Then render that file to whiteboard with paths set to it, follow publish_board, and reply on the comment's thread saying what changed."""
-        drawn_from = self._drawn_from(board)
+    def answer_board_comment(self, board: str, anchor: str = "") -> str:
+        """Answer a comment a person left on a board in Claude that CDD published: a whiteboard a render published, or a version of the UX practice's design canvas. board: the board's address, the claude.ai artifact link the comment came from. anchor: for a design canvas, where the comment sits, as the comment shows it: the label of the story explorer row (a step as its keyword and words, a scenario, story or epic by its name, an outline row by its example's name, cut short with … as the row shows it) and its location; leave it empty for a whiteboard. Make the change the comment asks for in the file the board is drawn from, which the answer names, following the rules below, never on the board alone, which the next render would undo. For a whiteboard, then render that file to whiteboard with paths set to it and follow publish_board. For a design canvas, the knowledge graph finds the story, scenario, step or example the anchor names, the file that holds it and the screens and interactions that show it; change that file, keep the story test that holds it in code in step, render the canvas again with the UX practice's render_story_canvas, publish it as versions.json says, and tell the person when the change also needs a screen changed. Then reply on the comment's thread saying what changed."""
+        drawn_from = self._drawn_from(board, anchor)
         instructions(drawn_from)
         rules = self.work.rules_to_follow
         instructions(rules)
@@ -194,10 +196,17 @@ class Render(GuidanceAction):
         tools(self.publish_board)
         return ""
 
-    def _drawn_from(self, board: str) -> str:
-        """Which whiteboard file the board was published from and the file it is drawn from, working from now on at the
-        fidelity that draws it, so the rules handed over are that fidelity's."""
-        board_file = self._file_published_to(board)
+    def _drawn_from(self, board: str, anchor: str) -> str:
+        """What the board was published from and the file to change, working from now on at the fidelity that writes
+        that file, so the rules handed over are that fidelity's: a whiteboard file's, else, for a design canvas, the
+        Stories fidelity that writes what the comment's anchor names."""
+        try:
+            board_file = self._file_published_to(board)
+        except BoardNotKept as not_kept:
+            canvas = canvas_published_at(self.session.work_root, self._ux_roots(), board)
+            if canvas is None:
+                raise not_kept
+            return self._canvas_drawn_from(board, canvas, anchor)
         relative = self._from_root(board_file)
         fidelity = self._fidelity_drawing(relative)
         if fidelity is None:
@@ -206,6 +215,41 @@ class Render(GuidanceAction):
         folder = relative.rsplit("/", 1)[0] + "/" if "/" in relative else ""
         source = fidelity.declared.file_name_beside(relative, "markdown")
         return f"The board was published from {relative}, which {fidelity.slug} draws. Change {folder}{source or 'the file it is drawn from'}."
+
+    def _canvas_drawn_from(self, board: str, canvas: CanvasVersion, anchor: str) -> str:
+        """The answer for a comment on a design canvas version: what its anchor names on the knowledge graph, read with
+        the whole working copy, the file of each, and the screens that show it; worked from now on at the Stories
+        fidelity that writes it."""
+        if not anchor.strip():
+            raise CanvasCommentNeedsAnchor(board)
+        graph = self.graph
+        graph.reads.hold_whole()
+        comment = CanvasComment(canvas, anchor, graph, self._stories_root(), self.session.work_root)
+        answer = comment.answer
+        fidelity = self._stories_fidelity(comment.fidelity)
+        if fidelity is not None:
+            self._work_on(fidelity.slug)
+        return answer
+
+    def _practice_output(self, key: str):
+        return next((output for output in self.session.practices.values() if getattr(output.guidance, "key", "") == key), None)
+
+    def _ux_roots(self) -> list[Path]:
+        """The folders the session's UX practice writes under, where it keeps its design canvas."""
+        ux = self._practice_output("ux")
+        return [Path(ux.folder)] if ux is not None else []
+
+    def _stories_root(self) -> Path:
+        """The folder the session's Stories practice writes under, whose story files hold the scenarios; the work root
+        when the session has no Stories practice or its folder is not written yet."""
+        stories = self._practice_output("stories")
+        folder = Path(stories.folder) if stories is not None else None
+        return folder if folder is not None and folder.is_dir() else self.session.work_root
+
+    def _stories_fidelity(self, name: str):
+        """The Stories fidelity called name among the session's practices; none when the session works on no Stories."""
+        fidelities = (fidelity for practice in self.work.practice_set() if practice.key == "stories" for fidelity in practice.fidelities)
+        return next((fidelity for fidelity in fidelities if fidelity.name == name), None)
 
     def _file_published_to(self, board: str) -> Path:
         """The whiteboard file of the session's project whose board is at board, as the file's own board field keeps

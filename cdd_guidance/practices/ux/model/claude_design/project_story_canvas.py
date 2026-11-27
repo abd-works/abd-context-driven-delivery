@@ -11,7 +11,8 @@ format.
 3. builds the active pattern's fixtures bundle into ``project/fixtures/canvas-fixtures.js``, and stops with
    *FixturesNotBuilt*, rendering nothing, when it cannot be built (``stop-when-fixtures-fail``);
 4. copies the files each screen's markup source names (*ScreenFiles*: a ported canvas's component and the scripts
-   and stylesheets it loads) into ``project/``, writes each story's prototype screen (*StoryScreen*) to
+   and stylesheets it loads) into ``project/``, recording where each comes from (*ScreenSources*,
+   ``project/screen-sources.json``), writes each story's prototype screen (*StoryScreen*) to
    ``project/screens/<slug>.dc.html`` and names it as that screen's prototype in ``ux.json``;
 5. renders the story map and the story explorer (*ClaudeDesignStoryMap*), whose step groups CDD derives from the
    scenarios, with each story's and scenario's ``path:line`` in its scenario file for the explorer's open request;
@@ -22,16 +23,18 @@ See ``story_canvas.md`` beside this file, *Steps*.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Mapping, Optional, Protocol, Sequence, TextIO
+from typing import Dict, List, Mapping, Optional, Protocol, Sequence, TextIO
 
 from cdd_guidance.practices.stories.model.markdown.nodes import MarkdownStoryMap
 from cdd_guidance.practices.stories.model.story_map import StoryMap
 from cdd_guidance.practices.stories.model.story_tree import StoryTree
+from cdd_guidance.practices.ux.model.claude_design.screen_sources import FIXTURES, ScreenSources
 from cdd_guidance.practices.ux.model.claude_design.screen_walk import StoryCanvasWalk
 from cdd_guidance.practices.ux.model.claude_design.story_canvas import ClaudeDesignStoryMap, StoryCanvasSetup
 from cdd_guidance.practices.ux.model.claude_design.story_screen import StoryScreen
@@ -81,6 +84,9 @@ class WalkReport(Protocol):
     @property
     def misses(self) -> Sequence[str]: ...
 
+    @property
+    def differences(self) -> Sequence: ...
+
     def write(self, path: Path) -> Path: ...
 
 
@@ -94,15 +100,28 @@ class RenderedStoryCanvas:
     walk: WalkReport
     walk_file: Path
 
+    @property
+    def changed(self) -> List[str]:
+        """The files of the version's project folder that differ from its last publish, the ones to publish."""
+        return self.version.changed_files()
+
     def summary(self) -> str:
-        """The render in a few lines: where it went, the walk's misses, and the title to publish it under, the
-        version's own (``CanvasVersion.title``, such as ``ux-mockup.version-7``)."""
+        """The render in a few lines: where it went, the walk's misses, and how to publish it: a version published
+        before gets exactly the files that changed since, after its live canvas.json is read for people's edits; a new
+        one is published whole under the version's own title (``CanvasVersion.title``, such as
+        ``ux-mockup.version-7``)."""
         lines = [f"Rendered {len(self.files)} canvas files into {self.version.folder}.",
-                 f"Walk: {self.walk_file} ({len(self.walk.misses)} value(s) the screens leave out)."]
+                 f"Walk: {self.walk_file} ({len(self.walk.misses)} value(s) the screens leave out or action(s) that leave the screen as it was)."]
         lines += [f"  - {miss}" for miss in self.walk.misses]
+        if self.walk.differences:
+            lines.append(f"Production views beside their prototypes: {len(self.walk.differences)} step(s) where the text differs (see {self.walk_file}).")
+            lines += [f"  - {difference.line}" for difference in self.walk.differences]
         if self.version.link is not None:
-            lines.append(f"Publish it again at {self.version.link}, the canvas this project keeps updating in place, after reading "
-                         f"that canvas back for edits people made there, and record the link again with version.publish_at.")
+            changed = self.changed
+            lines.append(f"Publish the {len(changed)} file(s) that changed since the last publish to {self.version.link}, the canvas this "
+                         f"project keeps updating in place: first read that canvas's live canvas.json for edits people made there, "
+                         f"then publish exactly these and record the link again with version.publish_at:")
+            lines += [f"  - project/{path}" for path in changed]
         else:
             lines.append(f"Publish it as a new canvas titled exactly {self.version.title!r} and keep its link with version.publish_at.")
         return "\n".join(lines)
@@ -120,36 +139,47 @@ class ProjectStoryCanvas:
     """A project's story canvas: the project's root, the UX practice's root (where the canvas versions and ``ux.json``
     live), the Stories practice's root (where the story map lives), the pattern's fixtures builder, and the scope the
     canvas covers, which names it: none for the whole repository (``ux-mockup``), else the increment, feature, epic or
-    module's name (``{scope}-ux-mockup``)."""
+    module's name (``{scope}-ux-mockup``); and the one *theme* every screen is drawn in, ported prototype and mounted
+    view alike (empty for each markup's own)."""
 
     project_root: Path
     ux_root: Path
     stories_root: Path
     fixtures: CanvasFixtures
     scope: str = ""
+    theme: str = ""
     walk_type: type = field(default=StoryCanvasWalk)
 
     def render(self, screens: Optional[Mapping[str, StoryScreen]] = None) -> RenderedStoryCanvas:
         """Render the canvas into the working version, with screens, by UX-map slug, written beside the screens already
         there. Stops with *FixturesNotBuilt* before anything is rendered when the fixtures cannot be built."""
-        screens = dict(screens or {})
+        screens = {slug: self._themed(screen) for slug, screen in (screens or {}).items()}
         story_map = self.story_map()
         ux_document = self._ux_document()
         self._check_on_ux_map(screens, ux_document)
         version = CanvasVersions.in_practice_root(self.ux_root, self.scope).working()
         project = version.folder / "project"
         self._build_fixtures(story_map, project / FIXTURES_FILE)
+        ScreenSources(project).record({FIXTURES_FILE: self.stories_root}, self.project_root, FIXTURES)
         self._write_screens(screens, project, ux_document)
         ux_map = JsonUxMap().parse(ux_document)
-        setup = StoryCanvasSetup(workspace=str(version.folder), ux_map=ux_map, sources=self.sources(story_map))
+        setup = StoryCanvasSetup(workspace=str(version.folder), ux_map=ux_map, sources=self.sources(story_map), title=version.title)
         written = json.loads(ClaudeDesignStoryMap(setup=setup).render(story_map))
         for path, text in written.items():
             target = version.folder / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text, encoding="utf-8")
-        report = self.walk_type(version).walk(story_map)
+        beside = {slug: screen.beside.html for slug, screen in screens.items() if screen.beside is not None}
+        report = self.walk_type(version).walk(story_map, beside)
         walk_file = report.write(version.folder / WALK_FILE)
         return RenderedStoryCanvas(version, sorted(written), report, Path(walk_file))
+
+    def _themed(self, screen: StoryScreen) -> StoryScreen:
+        """screen, and the prototype it stands beside, in the canvas's theme."""
+        if not self.theme:
+            return screen
+        beside = dataclasses.replace(screen.beside, theme=self.theme) if screen.beside is not None else None
+        return dataclasses.replace(screen, theme=self.theme, beside=beside)
 
     def story_map(self) -> StoryMap:
         """The story map below the Stories practice's root, with each story's scenario file."""
@@ -214,9 +244,11 @@ class ProjectStoryCanvas:
         if not screens:
             return
         copied = []
-        for markup in (screen.markup for screen in screens.values()):
+        markups = [markup for screen in screens.values() for markup in (screen.markup, *([screen.beside.markup] if screen.beside else []))]
+        for markup in markups:
             if markup not in copied:
                 markup.copy_files(project)
+                ScreenSources(project).record(markup.sources(), self.project_root)
                 copied.append(markup)
         folder = project / SCREENS_FOLDER
         folder.mkdir(parents=True, exist_ok=True)

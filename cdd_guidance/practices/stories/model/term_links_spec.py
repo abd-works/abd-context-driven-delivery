@@ -1,12 +1,32 @@
 """The domain terms a step links to the domain model: each is an edge from the step to the class the link names, and
 an example written beside a linked term demonstrates that class."""
 
-from expects import contain, equal, expect
+from expects import be_empty, contain, equal, expect
 from mamba import before, context, description, it
 
-from cdd_guidance.practices.stories.model.fixtures.bookshop_project import BookshopProject
-
+from cdd_guidance.practices.stories.model.fixtures.bookshop_project import BookshopProject, BookshopWorkingCopy
 _ADD_BOOK = "story_tests/fill-cart/add-books/add_book_to_cart_story.test.md"
+# A Clean Engineering class model of the Cart and the Book, which the scenarios' links name instead of the domain model.
+_CLASS_MODEL = """# ordering
+
+## Cart <<Aggregate Root>> <<Entity>>
+
+------
++ cartId: CartId
+----
++ addBook(bookId: BookId, quantity: Quantity): CartLine
+
+## Book <<Aggregate Root>> <<Entity>>
+
+------
++ bookId: BookId
+"""
+_AS_CLASS_MODEL = {
+    "written": {".context/class-model.md": _CLASS_MODEL},
+    "rewritten": {_ADD_BOOK: ("domain-model.md#", "class-model.md#")},
+}
+_CE_BOOK = "clean_engineering:OoadClass:.context/class-model.md:Book"
+_CE_CART = "clean_engineering:OoadClass:.context/class-model.md:Cart"
 _PACK_ORDER = "story_tests/fulfil-order/pack-order/pack_order_story.test.py"
 _BOOK = "ddd:EntityRoot:.context/domain-model.md:Book"
 _CART = "ddd:EntityRoot:.context/domain-model.md:Cart"
@@ -51,6 +71,17 @@ with description("a step that links a domain term to its heading in the domain m
         with it("should have the example its text names after the link demonstrate that class"):
             paid_order = self.project.node_named("Example", "paid_order", _PACK_ORDER)[0]
             expect(_demonstrated_by(self.project, paid_order)).to(equal([_ORDER]))
+
+    with context("that links to a Clean Engineering class model rather than the domain model"):
+        with before.all:
+            self.clean = BookshopWorkingCopy(("stories", "clean_engineering"), written=_AS_CLASS_MODEL["written"], rewritten=_AS_CLASS_MODEL["rewritten"])
+            self.clean_when = self.clean.node_named("When", "when the Customer adds ++Book++ ++Tiny Tales++ to the ++Cart++", _ADD_BOOK)[0]
+
+        with it("should name each class of the class model its links name"):
+            expect(_named_by(self.clean, self.clean_when)).to(equal([_CE_BOOK, _CE_CART]))
+
+        with it("should not report the terms it links as unlinked"):
+            expect([found for found in self.clean.findings("domain-terms-link-to-model") if "Tiny Tales" in found]).to(be_empty)
 
     with context("whose link names a heading the domain model does not hold"):
         with before.all:

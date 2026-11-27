@@ -1032,3 +1032,84 @@ describe('Browse The Folder A Session Works In', () => {
     expect([server.posted('/workpath-files').length, server.posted('/folder-files').length]).toEqual([1, 0])
   })
 })
+
+// A link followed from a file opens the file it names beside it, at the heading it names, so a person reads a scenario
+// and the class a term links to side by side: Open Linked File Beside The File in review_files_in_files_app_story.test.md.
+describe('Open Linked File Beside The File', () => {
+  const SCENARIO = 'specs/checkout.md'
+  const MODEL = '.context/domain-model.md'
+  const GLOSSARY = '.context/glossary.md'
+  const BOOK = { id: `${MODEL}:5`, kind: 'section', line: 3, title: 'Book', link: '../.context/domain-model.md#book', path: MODEL, startLine: 5, endLine: 9, text: '' } as const
+  const CART = { id: `${GLOSSARY}:1`, kind: 'section', line: 7, title: 'Cart', link: 'glossary.md', path: GLOSSARY, startLine: 1, endLine: 4, text: '' } as const
+
+  // A session that answers each file it is asked for, as session.file does, rendered as markdown.
+  class LinkingFilesServer extends FakeFilesServer {
+    override async post<Result>(path: string, body: Record<string, unknown> = {}): Promise<Result | null> {
+      if (path.endsWith('/file')) return { path: body.path, text: `# ${String(body.path)}`, language: 'markdown', rendered_form: 'markdown', comments: [], changes: [], folds: [] } as Result
+      return super.post<Result>(path, body)
+    }
+  }
+
+  async function scenarioOpen(): Promise<{ page: FilesPage; server: LinkingFilesServer }> {
+    const server = new LinkingFilesServer()
+    const page = new FilesPage(server, new FilesLink(`${STAGE_LINK}&file=${SCENARIO}`))
+    await started(page)
+    return { page, server }
+  }
+
+  async function bookFollowed(): Promise<{ page: FilesPage; server: LinkingFilesServer }> {
+    const shown = await scenarioOpen()
+    await shown.page.goTo(BOOK)
+    return shown
+  }
+
+  describe('with the scenario open and its link to Book followed', () => {
+    it('should keep the scenario as the file the link was followed from', async () => {
+      const { page } = await bookFollowed()
+      expect([page.state.openPath, page.state.file?.path]).toEqual([SCENARIO, SCENARIO])
+    })
+
+    it('should open the domain model beside it, at the heading the link names', async () => {
+      const { page } = await bookFollowed()
+      expect([page.state.linked?.path, page.state.linked?.file?.path, page.state.linked?.anchor]).toEqual([MODEL, MODEL, 'book'])
+    })
+
+    it("should keep a comment on the domain model on the domain model's lines", async () => {
+      const { page, server } = await bookFollowed()
+      await page.linkedComments.add({ start: 5, end: 6 }, 'Book needs an ISBN')
+      expect(server.posts.filter(post => post.path.includes('/file-comments/') && post.path.endsWith('/add')).map(post => post.body.path)).toEqual([MODEL])
+    })
+
+    describe('that has another link followed, from either file', () => {
+      it('should replace the domain model with the file that link names, never opening a third', async () => {
+        const { page } = await bookFollowed()
+        await page.goTo(CART)
+        expect([page.state.openPath, page.state.linked?.path, page.state.linked?.anchor]).toEqual([SCENARIO, GLOSSARY, ''])
+      })
+    })
+
+    describe('that has the domain model closed', () => {
+      it('should leave the scenario open alone', async () => {
+        const { page } = await bookFollowed()
+        page.closeLinked()
+        expect([page.state.openPath, page.state.linked]).toEqual([SCENARIO, null])
+      })
+    })
+
+    describe('that has the scenario closed', () => {
+      it('should leave the domain model open alone, at the heading the link named', async () => {
+        const { page } = await bookFollowed()
+        page.closeOpen()
+        expect([page.state.openPath, page.state.file?.path, page.state.openAnchor, page.state.linked]).toEqual([MODEL, MODEL, 'book', null])
+      })
+    })
+
+    describe('that has a file chosen from the list', () => {
+      it('should open it with the domain model still beside it', async () => {
+        const { page } = await bookFollowed()
+        await page.open('.context/story-flow.md')
+        expect([page.state.openPath, page.state.linked?.path, page.state.openAnchor]).toEqual(['.context/story-flow.md', MODEL, ''])
+      })
+    })
+  })
+})

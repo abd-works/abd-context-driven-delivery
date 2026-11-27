@@ -411,14 +411,14 @@ The `claude_design` format: one prototype page per screen (`screens/<slug>.dc.ht
 	// canvas.json and each prototype page in its project folder, which a render reads
 + reads_file(file: Path, text: str): bool
 	// a prototype page HTML reads, or a canvas.json placing only screen pages
-- _board_of(name: str, title: str): CanvasBoard
+- _board_of(name: str, title: str, size: ScreenSize = None): CanvasBoard
 + prototype_names(): list[str]
 + names(files = ()): list[str]
 + title(name: str): str
 + page_of(name: str): str
 + pages(files = ()): list[dict]
-+ boards(files = ()): dict[str, dict]
-	// each over this map's own screens
++ boards(files = (), reserved = 0, sizes = None): dict[str, dict]
+	// each over this map's own screens; a board takes its screen's own size from sizes, else width × height
 
 ## ClaudeDesignStoryMap
 

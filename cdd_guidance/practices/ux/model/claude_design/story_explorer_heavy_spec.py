@@ -85,6 +85,27 @@ def _shown_step(*arguments: str) -> str:
     return _explored(_story_map(), _ux_map(), list(arguments))["step"]
 
 
+def _rows(story_map: StoryMap, open_all: bool = False) -> list:
+    """The rows the explorer's tree draws for story_map, each as (label, indent), every row opened when open_all."""
+    run = _RUN.replace("const shown = explorer.renderVals();", (
+        "for (let round = 0; OPEN && round < 10; round += 1) explorer.renderVals().rows.filter((row) => row.mark === '›' && row.markCls === 'sm-chev').forEach((row) => row.pick());\n"
+        "const shown = explorer.renderVals();").replace("OPEN", "true" if open_all else "false")).replace(
+        "console.log(JSON.stringify({ step: shown.stepText, index: shown.stepIndex }));",
+        "console.log(JSON.stringify(shown.rows.filter((row) => row.is_epic || row.is_subEpic || row.is_story).map((row) => [row.label, row.indent])));")
+    files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=UxMap.create())).render(story_map))
+    code = re.search(r'<script type="text/x-dc"[^>]*>([\s\S]*?)</script>', files["project/screens/explorer.dc.html"]).group(1)
+    answer = subprocess.run(["node", "-e", run, "[]"], input=code, capture_output=True, text=True, check=True)
+    return [tuple(row) for row in json.loads(answer.stdout)]
+
+
+def _story_with_a_scenario(name: str) -> Story:
+    story = Story(name, 1)
+    scenario = Scenario(f"Use {name}", 1)
+    scenario.steps.append(Step("the Customer opens the screen", StepType.WHEN, 1))
+    story.scenarios.append(scenario)
+    return story
+
+
 def _ux_map() -> UxMap:
     screen = Screen("Cart", 1)
     screen.prototype = "screens/add-line-to-cart.dc.html"
@@ -94,6 +115,36 @@ def _ux_map() -> UxMap:
     ux_map = UxMap.create()
     ux_map.append_screen(screen)
     return ux_map
+
+
+def _outline_map() -> StoryMap:
+    """Create Credentials with an outline whose steps name its columns, and two rows in its Examples table."""
+    story_map = StoryMap()
+    epic = Epic("Create Account", 1)
+    story = Story("Create Credentials", 1)
+    outline = Scenario("Enter Invalid credentials", 1)
+    outline.steps.append(Step("the Customer has entered {example}", StepType.GIVEN, 1))
+    outline.steps.append(Step("the Customer registers the credentials", StepType.WHEN, 2))
+    outline.steps.append(Step("the {message} message is shown", StepType.THEN, 3))
+    outline.examples["missing email"] = {"message": "++email required++"}
+    outline.examples["password missing letters"] = {"message": "password rule"}
+    story.scenarios.append(outline)
+    epic.stories.append(story)
+    story_map.epics.append(epic)
+    return story_map
+
+
+def _outline_steps(*calls: list, rows: bool = True) -> dict:
+    """The step rows and the step text the explorer shows for the outline after calls, its rows listed by the fixtures
+    bundle when rows."""
+    listed = "['Enter Invalid credentials: missing email', 'Enter Invalid credentials: password missing letters']" if rows else "[]"
+    run = _RUN.replace("const explorer = new Component();", f"globalThis.CanvasFixtures = {{ scenarios: () => {listed} }};\nconst explorer = new Component();").replace(
+        "console.log(JSON.stringify({ step: shown.stepText, index: shown.stepIndex }));",
+        "console.log(JSON.stringify({ steps: shown.rows.filter((row) => /^(Given|Then)/.test(row.label || '')).map((row) => row.label), step: shown.stepText }));")
+    files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=UxMap.create())).render(_outline_map()))
+    code = re.search(r'<script type="text/x-dc"[^>]*>([\s\S]*?)</script>', files["project/screens/explorer.dc.html"]).group(1)
+    answer = subprocess.run(["node", "-e", run, json.dumps(list(calls))], input=code, capture_output=True, text=True, check=True)
+    return json.loads(answer.stdout)
 
 
 with description("a story explorer that a screen moves") as self:
@@ -138,3 +189,49 @@ with description("a story explorer that a screen moves") as self:
         with it("should move to the next outcome after the next action, not back to the first"):
             shown = _explored(_two_actions_map(), _two_actions_ux_map(), self.scenario, self.scenario + ["Then"], self.scenario + ["Then"])
             expect(shown).to(equal({"step": "Then the cart holds only Ace", "index": 2}))
+
+    with context("whose story map holds stories directly under an epic"):
+        with it("should draw the epic once and its stories under it, with no repeated row"):
+            story_map = StoryMap()
+            epic = Epic("Choose Lines", 1)
+            epic.stories.append(_story_with_a_scenario("Display Plans"))
+            epic.stories.append(_story_with_a_scenario("View Cart"))
+            story_map.epics.append(epic)
+            expect(_rows(story_map)).to(equal([("Choose Lines", "margin-left: 0px"), ("Display Plans", "margin-left: 0px"), ("View Cart", "margin-left: 0px")]))
+
+    with context("whose story map nests epics three deep"):
+        with it("should draw each level once, set in by its depth below the first sub-epic, and open and close at every level"):
+            story_map = StoryMap()
+            epic, sub_epic, inner = Epic("Onboard A Customer", 1), Epic("Choose Lines", 1), Epic("Pick Plans", 1)
+            inner.stories.append(_story_with_a_scenario("Display Plans"))
+            sub_epic.epics.append(inner)
+            epic.epics.append(sub_epic)
+            story_map.epics.append(epic)
+            expect(_rows(story_map)).to(equal([("Onboard A Customer", "margin-left: 0px"), ("Choose Lines", "margin-left: 0px"),
+                                               ("Pick Plans", "margin-left: 10px"), ("Display Plans", "margin-left: 10px")]))
+
+        with it("should close a nested epic's stories away when that epic is closed"):
+            story_map = StoryMap()
+            epic, sub_epic, inner = Epic("Onboard A Customer", 1), Epic("Choose Lines", 1), Epic("Pick Plans", 1)
+            inner.stories.append(_story_with_a_scenario("Display Plans"))
+            sub_epic.epics.append(inner)
+            epic.epics.append(sub_epic)
+            story_map.epics.append(epic)
+            closed = _RUN.replace("const shown = explorer.renderVals();",
+                                  "explorer.renderVals().rows.filter((row) => row.label === 'Pick Plans')[0].pick();\nconst shown = explorer.renderVals();").replace(
+                "console.log(JSON.stringify({ step: shown.stepText, index: shown.stepIndex }));",
+                "console.log(JSON.stringify(shown.rows.map((row) => row.label)));")
+            files = json.loads(ClaudeDesignStoryMap(setup=StoryCanvasSetup(ux_map=UxMap.create())).render(story_map))
+            code = re.search(r'<script type="text/x-dc"[^>]*>([\s\S]*?)</script>', files["project/screens/explorer.dc.html"]).group(1)
+            answer = subprocess.run(["node", "-e", closed, "[]"], input=code, capture_output=True, text=True, check=True)
+            expect(json.loads(answer.stdout)).to(equal(["Onboard A Customer", "Choose Lines", "Pick Plans"]))
+
+    with context("whose outline has a row picked"):
+        with it("should show the picked row's values in the steps, as its Examples table gives them"):
+            shown = _outline_steps(["Create Credentials", "Enter Invalid credentials: password missing letters"])
+            expect(shown).to(equal({"steps": ["Given the Customer has entered password missing letters\nWhen the Customer registers the credentials\nThen the password rule message is shown"], "step": "Given the Customer has entered password missing letters\nWhen the Customer registers the credentials\nThen the password rule message is shown"}))
+
+    with context("whose outline has no row to pick"):
+        with it("should show the outline's placeholders"):
+            shown = _outline_steps(["Create Credentials", "Enter Invalid credentials"], rows=False)
+            expect(shown["step"]).to(equal("Given the Customer has entered {example}\nWhen the Customer registers the credentials\nThen the {message} message is shown"))

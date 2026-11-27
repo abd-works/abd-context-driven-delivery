@@ -36,8 +36,8 @@ with description("a story's prototype screen") as self:
         self.script = re.search(r"data-dc-script[^>]*>(.*)</script>", self.html, re.S).group(1)
 
     with context("inside the story explorer"):
-        with it("should declare story, scenario, step, stepIndex and go"):
-            expect(ScreenArtboard(self.html).declared_props).to(equal({"story", "scenario", "step", "stepIndex", "go", "$preview"}))
+        with it("should declare story, scenario, step, stepIndex, stepKind and go"):
+            expect(ScreenArtboard(self.html).declared_props).to(equal({"story", "scenario", "step", "stepIndex", "stepKind", "go", "$preview"}))
 
         with it("should open on its first scenario"):
             expect(self.script).to(contain("'Add one more line'"))
@@ -61,6 +61,17 @@ with description("a story's prototype screen") as self:
     with context("with its markup written from scratch"):
         with it("should draw that markup inside the element that moves the explorer on a press"):
             expect(self.html).to(contain('onClickCapture="{{ advance }}">\n<main>{{ cart.plan }}</main>\n</div>'))
+
+    with context("drawn at its own size"):
+        with it("should draw its markup in a frame a phone wide, centred, at least a phone tall"):
+            expect(self.html).to(contain('<div class="canvas-screen" style="box-sizing: border-box; width: 390px; min-height: 844px; margin: 0 auto;'))
+
+        with it("should make the frame the canvas-screen size container, which the stylesheets' container rules ask"):
+            expect(self.html).to(contain("container-type: inline-size; container-name: canvas-screen; contain: layout paint\""))
+
+        with it("should draw a screen of another size in a frame of that size, and state that size to the canvas"):
+            wide = screen(WrittenMarkup(head="", body="<main></main>"), width=768, height=1024)
+            expect((wide.html.count("width: 768px; min-height: 1024px"), ScreenArtboard(wide.html).preview_size)).to(equal((1, (768, 1024))))
 
     with context("with its markup taken from a page of an existing app"):
         with before.all:
@@ -89,6 +100,11 @@ with description("a story's prototype screen") as self:
 
         with it("should load the ported component's scripts"):
             expect(self.ported_html).to(contain('<script src="../flow.js"></script>'))
+
+    with context("drawn in the canvas's theme"):
+        with it("should hand the ported component the theme, over any it was given, and set it on the screen's frame"):
+            themed = screen(PortedCanvasMarkup(component="flow", attributes={"theme": "light"}), theme="dark").html
+            expect((themed.count(' theme="dark"'), 'theme="light"' in themed, themed.count('<div class="canvas-screen" data-theme="dark"'))).to(equal((1, False, 1)))
 
     with context("with a ported component that takes a bound object whose name is not a JavaScript name"):
         with it("should refuse it"):

@@ -13,7 +13,7 @@ from harness.graph.practice_rule import PracticeGraphRule
 from harness.graph.violation import Finding
 
 from cdd_guidance.practices.stories.model.modelled_areas import MODEL_WRITTEN_FACT
-from cdd_guidance.practices.stories.model.story_map import NOT_ON_STORY_MAP
+from cdd_guidance.practices.stories.model.story_map import ACTORS_FACT, NOT_ON_STORY_MAP, STORY_KIND_FACT, StoryType
 
 if TYPE_CHECKING:
     from harness.graph.graph import Node
@@ -165,9 +165,10 @@ _DOMAIN_CLASS_TYPES = ("EntityRoot", "Entity", "ValueObject")
 
 
 class DomainTermsLinkToModel(StepRule):
-    """Which underlined terms are domain terms comes from the DDD model loaded beside the stories: a term that names one
-    of its classes, as the class (LineItem) or as words (line item). Without a DDD model there is no heading to link
-    to, so the rule passes."""
+    """Which underlined terms are domain terms comes from the models loaded beside the stories: the DDD domain model's
+    classes, and the classes a Clean Engineering model document (``*-model.md``) declares. A term that names one of
+    them, as the class (LineItem) or as words (line item), is a domain term. Without either model there is no heading
+    to link to, so the rule passes."""
 
     slug = "domain-terms-link-to-model"
     node_types = ("Step", "Given", "When", "Then")
@@ -189,11 +190,22 @@ class DomainTermsLinkToModel(StepRule):
         return [Finding(node, f"Step {text!r} names the domain terms {unlinked} without linking them to their headings in the domain model.")]
 
     def _class_keys(self, context: RuleCheckContext) -> set[str]:
-        """Each class of the DDD model as the key a term is matched by: its name lower case, with no spaces."""
-        ddd = context.practice.reading.domain_model
-        if ddd is None:
-            return set()
-        return {self._key(node.name) for kind in _DOMAIN_CLASS_TYPES for node in ddd.in_graph.nodes(kind)}
+        """Each class of the DDD model, and each class a Clean Engineering model document declares, as the key a term
+        is matched by: its name lower case, with no spaces. Classes read from code are left out: a model document is
+        what a term links to."""
+        reading = context.practice.reading
+        keys: set[str] = set()
+        ddd = reading.domain_model
+        if ddd is not None:
+            keys |= {self._key(node.name) for kind in _DOMAIN_CLASS_TYPES for node in ddd.in_graph.nodes(kind)}
+        clean = reading.object_model
+        if clean is not None:
+            keys |= {
+                self._key(node.name)
+                for node in clean.in_graph.nodes("OoadClass")
+                if node.source is not None and (node.source.file or "").endswith("-model.md")
+            }
+        return keys
 
     def _key(self, name: str) -> str:
         """The name lower case, with no spaces, hyphens, or underscores, and no plural s: line items and LineItem
@@ -400,3 +412,178 @@ class GwtStepsTraceToDomainOperations(StepRule):
         if any(cls.lower() in name.lower() for cls in classes):
             return []
         return [Finding(node, f"Step {name!r} does not name a domain concept ({', '.join(classes)}); tie GWT to domain operations.")]
+
+
+# A step's subject, then the verb that says the subject is, or holds, what follows: its predicate.
+_PREDICATE = re.compile(r"^(?P<subject>.*?\S)\s+(?P<verb>is|has)\s+(?P<predicate>.+?)[\s.]*$", re.I)
+_ARTICLE = re.compile(r"^(?:the|a|an)\s+", re.I)
+# A term the markdown scenarios underline as a whole, ++Me on the checklist++, which names an example or a term.
+_WHOLLY_UNDERLINED = re.compile(r"^\+\+([^+]+)\+\+$")
+# The marks a step's words carry in a markdown scenarios file: bold actors, underlined terms, backticks.
+_STEP_MARKS = re.compile(r"\*\*|\+\+|`")
+# What splits an example's name written as code into words: paidOrder, paid_order.
+_NAME_WORD_BREAK = re.compile(r"_+|(?<=[a-z0-9])(?=[A-Z])")
+# Words that join others and name nothing in the domain.
+_LINKING_WORDS = frozenset({"the", "a", "an", "to", "of", "on", "in", "for", "from", "with", "and", "or", "by", "at", "as", "up", "set", "is", "has"})
+# The share of the fewer Thens two scenarios must have in common to say the same: more than half.
+_SAME_OUTCOME_SHARE = 0.5
+
+
+def _plain(text: str) -> str:
+    """A step's words as a reader reads them: no markup, one space between words, in lower case."""
+    return " ".join(_STEP_MARKS.sub("", text).split()).casefold().rstrip(" .")
+
+
+def _naming_words(text: str) -> set[str]:
+    """The words of text that can name something, each without a plural s."""
+    words = re.findall(r"[a-z0-9]+", _plain(_NAME_WORD_BREAK.sub(" ", text)))
+    return {word.rstrip("s") for word in words if word not in _LINKING_WORDS}
+
+
+def _with_ands(steps: list[Node], context: RuleCheckContext) -> list[Node]:
+    """steps, each followed by the And and But steps chained onto it."""
+    return [held for step in steps for held in (step, *context.targets(step, "ands"))]
+
+
+class StepSaysMoreThanAnExampleName(StepRule):
+    """A step's predicate is the state it gives, the action it takes, or the outcome it checks. When the whole predicate
+    after ``is`` or ``has`` is one example's name and that name holds no domain word, as in ``the cart is Me on the
+    checklist``, the step tells a reader nothing they can follow without opening the example. An example is named by
+    a term the markdown underlines as a whole, or, in a story test, by the plain words of an example the step uses. The
+    domain words are those the story map names the step's area with, its epic or sub-epic and that area's stories, and
+    the terms, concepts and classes the story's steps name."""
+
+    slug = "step-says-more-than-an-example-name"
+    node_types = ("Step", "Given", "When", "Then")
+
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        found = _PREDICATE.match(self.text(node).strip())
+        if found is None:
+            return []
+        name = self._example_named(_ARTICLE.sub("", found.group("predicate").strip()), node, context)
+        if not name or _naming_words(name) & self._domain_words(node, context):
+            return []
+        subject, verb = _plain(found.group("subject")), found.group("verb").casefold()
+        return [Finding(node, f"Step {self.text(node)!r} says only that {subject} {verb} the example {name!r}; say in domain "
+            f"words what {subject} holds or is, so a reader can follow the step without opening the example.")]
+
+    def _example_named(self, predicate: str, node: Node, context: RuleCheckContext) -> str:
+        """The example the whole predicate names: an underlined term, or the plain words of an example the step uses;
+        empty when the predicate says anything more."""
+        underlined = _WHOLLY_UNDERLINED.match(predicate)
+        if underlined is not None:
+            return underlined.group(1).strip()
+        said = _plain(predicate)
+        for example in context.targets(node, "observes"):
+            if " ".join(_NAME_WORD_BREAK.sub(" ", example.name).split()).casefold() == said:
+                return predicate
+        return ""
+
+    def _domain_words(self, node: Node, context: RuleCheckContext) -> set[str]:
+        """The domain words of the step's story: the names of its area of the story map, the epic or sub-epic it sits
+        under and that area's stories, and the terms its steps link to the domain model, the concepts and domain classes
+        they name, and the classes the model links them to."""
+        tree = context.practice.reading.story_tree
+        story = tree.story_of(node)
+        scenarios = tree.scenarios(story) if story is not None else []
+        steps = [step for scenario in scenarios for step in _with_ands(tree.steps(scenario), context)] or [node]
+        terms: list[str] = [story.name] if story is not None else []
+        area = tree.area_of(story) if story is not None else None
+        if area is not None and area is not story:
+            terms.extend([area.name, *(named.name for named in tree.stories_under(area))])
+        for step in steps:
+            for fact in ("linked_terms", "concepts", "domain_class_names"):
+                terms.extend(str(term) for term in step.get_fact(fact) or [])
+            terms.extend(target.name for target in context.targets(step, "names"))
+        return {word for term in terms for word in _naming_words(term)}
+
+
+class ScenariosDifferInWhenOrOutcome(StepRule):
+    """Two scenarios of one story that run the same When, by its words or by the first operation its realization calls,
+    and whose Thens mostly say the same, specify one behaviour twice. The Thens say the same when more than half of the
+    fewer Thens are said by the other scenario too, word for word or as the start of a longer Then that only adds detail
+    after a comma; a Then that goes on otherwise, as ``stores the porting as verified``, says something else."""
+
+    slug = "scenarios-differ-in-when-or-outcome"
+    node_types = ("Story",)
+
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        tree = context.practice.reading.story_tree
+        scenarios = tree.scenarios(node)
+        findings: list[Finding] = []
+        for index, first in enumerate(scenarios):
+            for second in scenarios[index + 1:]:
+                if self._same_when(first, second, context) and self._same_outcome(first, second, context):
+                    findings.append(Finding(second, f"Scenario {second.name!r} runs the same When as {first.name!r} in story "
+                        f"{node.name!r} and checks mostly the same Thens; merge them into one scenario, or make each show a "
+                        "different case."))
+        return findings
+
+    def _same_when(self, first: Node, second: Node, context: RuleCheckContext) -> bool:
+        ones, others = self._when_of(first, context), self._when_of(second, context)
+        if ones is None or others is None:
+            return False
+        return ones[0] == others[0] or (bool(ones[1]) and ones[1] == others[1])
+
+    def _when_of(self, scenario: Node, context: RuleCheckContext) -> tuple[str, str] | None:
+        """The scenario's first When, as its words and the first operation its realization calls; none without one."""
+        when = next((step for step in _with_ands(context.targets(scenario, "steps"), context) if self.phase(step) == "when"), None)
+        if when is None:
+            return None
+        calls = when.get_fact("realization_calls") or []
+        return _plain(self.text(when)), "".join(str(calls[0]).split()) if calls else ""
+
+    def _same_outcome(self, first: Node, second: Node, context: RuleCheckContext) -> bool:
+        ones, others = self._thens(first, context), self._thens(second, context)
+        fewer, more = (ones, others) if len(ones) <= len(others) else (others, ones)
+        if not fewer:
+            return False
+        said = [then for then in fewer if any(_says_as_much(then, other) for other in more)]
+        return len(said) > len(fewer) * _SAME_OUTCOME_SHARE
+
+    def _thens(self, scenario: Node, context: RuleCheckContext) -> list[str]:
+        steps = _with_ands(context.targets(scenario, "steps"), context)
+        return [_plain(self.text(step)) for step in steps if self.phase(step) == "then"]
+
+
+def _says_as_much(then: str, other: str) -> bool:
+    """Whether two Thens say the same: the same words, or one the start of the other, which only adds detail after a
+    comma."""
+    shorter, longer = sorted((then, other), key=len)
+    return shorter == longer or (longer.startswith(shorter) and longer[len(shorter):].startswith(","))
+
+
+class PersonStoriesShowThePersonActing(StepRule):
+    """A story whose actor is a person is that person's interaction with the product, and the design canvas shows each
+    of its scenarios as what the person does on a screen. A scenario of such a story whose Whens name only the system
+    looking something up has no person action to show: merge it into a scenario the person acts in, or move it to a
+    system story. A person is the actor of any user story on the map, so a When in which another person acts, such as
+    the Customer signing in on an Administrator's story, still shows a person on a screen. A When names the person by
+    the actor its line marks, or by opening with the actor's name."""
+
+    slug = "person-stories-show-the-person-acting"
+    node_types = ("Scenario",)
+
+    def check(self, node: Node, context: RuleCheckContext) -> list[Finding]:
+        story = context.practice.reading.story_tree.story_of(node)
+        if story is None or story.get_fact(STORY_KIND_FACT) != StoryType.USER.value:
+            return []
+        actors = [str(actor).strip() for actor in story.get_fact(ACTORS_FACT) or [] if str(actor).strip()]
+        whens = [step for step in _with_ands(context.targets(node, "steps"), context) if self.phase(step) == "when"]
+        if not actors or not whens or any(self._acts(when, [*actors, *self._people(context)]) for when in whens):
+            return []
+        said = "; ".join(repr(self.text(when)) for when in whens)
+        return [Finding(node, f"Scenario {node.name!r} of the {actors[0]}'s story {story.name!r} has no When in which the "
+            f"{actors[0]} acts ({said}); merge it into a scenario the {actors[0]} acts in, or move it to a system story.")]
+
+    @staticmethod
+    def _people(context: RuleCheckContext) -> list[str]:
+        """The actors of every user story on the story map: the people the product serves."""
+        stories = [story for story in context.nodes("Story") if story.get_fact(STORY_KIND_FACT) == StoryType.USER.value]
+        actors = (str(actor).strip() for story in stories for actor in story.get_fact(ACTORS_FACT) or [])
+        return list(dict.fromkeys(actor for actor in actors if actor))
+
+    def _acts(self, when: Node, actors: list[str]) -> bool:
+        marked = str(when.get_fact("actor") or "").strip().casefold()
+        opening = _ARTICLE.sub("", _plain(self.text(when)))
+        return any(marked == actor.casefold() or opening.startswith(actor.casefold()) for actor in actors)

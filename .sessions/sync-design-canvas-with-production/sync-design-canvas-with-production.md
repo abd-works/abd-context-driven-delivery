@@ -4,7 +4,7 @@ Session `claud_design_enhancements`. Analysis and planning only: nothing here is
 
 | Increment | Epic → feature on the story map | Depends on | First slice |
 |---|---|---|---|
-| **11: Sync Design Canvas With Production** | Build Design Canvas Screens → Reuse Production Assets On The Canvas, with its four sub-features: Trace Canvas Files To Production (Phase 1), Install Production Design System On The Canvas (Phase 2), Mount Production Views As Screens (Phases 0, 3, 5), Redesign A Screen By Detaching It (Phase 4) | Nothing; comes before every other design canvas increment | Phase 0 spike on `select-plan` |
+| **11: Sync Design Canvas With Production** | Build Design Canvas Screens → Reuse Production Assets On The Canvas, with its four sub-features: Trace Canvas Files To Production (Phase 1), Install Production Design System On The Canvas (Phase 2), Mount Production Views As Screens (Phases 0, 3, 5), Redesign A Screen By Detaching It (Phase 4) | Nothing; comes before every other design canvas increment | Phase 0 spike on the multi-line canvas's first screens: add a line, add another line, check the cart |
 
 The other design canvas increments: [Integrate Stories With The Canvas Explorer](integrate-stories-with-the-canvas-explorer.md), [Draw Linked Models On The Canvas](draw-linked-models-on-the-canvas.md).
 
@@ -165,6 +165,12 @@ Keeps option E's hash check and drops the stored copies. **Done:** a version rep
 - Dedupe shots by content hash: 183 shots hold only 115 unique ones, so 68 duplicates become 0.
 - Decide where originals live, because none were found outside the canvas folder; e2e output under `.sessions/<release>/e2e-test-results` holds JSON, not PNGs.
 
+##### Story: Report What Has Not Reached Production
+
+- Each version lists its diverged screens, including screens with no production view yet, and its drifted files, each with the repo path it must reach.
+- A canvas edit to a packaged file (CSS, image, font) shows here until the repo holds it, the Design System package is rebuilt, and its hash matches again.
+- A version kept as a release must report none, or name each one as accepted.
+
 ##### Story: Find Screen Files Through The Manifest
 
 Thin screens break these existence checks, so they read the manifest instead of the version folder:
@@ -206,16 +212,50 @@ Option G is the delivery route. **Done:** CSS and assets are byte-identical to t
 
 **The real duplication is the screens.** About 3,700 lines of generators and patch scripts sit in `pml-web/.sessions/design-canvas/tools`. They are outside CDD, session-bound, and hard-code `C:/dev/paradise-mobile/pml-web` (`paradise_screens.py`, `render_pml_canvas.py`). They re-state markup and behaviour that already exist in 44 production `.tsx` files. A substring check of `select-plan.dc.html` found 41 of its 42 class names in the matching TSX, so the port is faithful today. Nothing keeps it that way.
 
-**Phase 0: spike on one screen (decides everything else).** Use `select-plan` in pml-web, as a throwaway on a scratch canvas. Each gate has a pass test, and each gate is the first check of the story named beside it.
+**Phase 0: spike on the first multi-line screens (decides everything else).** Use pml-web's new multi-line canvas (`ux/prototype/multi-line-domain`, ported by `port_multiline_screens.py`), on a scratch canvas, and take only its first few screens, enough to test: **add a line**, **add another line**, and **check the cart** (the `add-line-to-cart` story's *Add the first line* and *Add one more line* scenarios, then the cart they open).
+
+The multi-line canvas, from the pml-web built features chat on 2026-11-25:
+
+| What | Where |
+|---|---|
+| Canvas | **Use version-7** (2026-11-25): `C:/dev/paradise-mobile/pml-web/ux/design-canvas/version-7/project/`, published `https://claude.ai/artifact/ERxPHqATTeH6SFAw8xgqqN`, CDD `f8309f3df`. Its explorer hands each screen a `step-index` (the step group on show, from 0); each scenario's given/then in `story-screens.json` is a list, one state per step group; `go(story, scenario, 'Then')` moves to the next Then after the group on show. Same screens and scenario names. Superseded: `C:/dev/paradise-mobile/pml-web/ux/design-canvas/version-6/project/` (`Main.dc.html`, `screens/`, `canvas.json`); versions in `ux/design-canvas/versions.json`. Published as `https://claude.ai/artifact/1zLwTyxmspnoJZcgAAE82o` (private; play links `#play-screens-add-line-to-cart` and `#play-screens-view-cart`); read only, the pml-web chat may republish it to the same link. version-5 (`https://claude.ai/artifact/VnncHtBz97QjjdjWDhtqjw`) ignores scenarios, so do not use it |
+| Screens | `screens/display-plans.dc.html` (catalog), `screens/add-line-to-cart.dc.html` (*Add the first line*, *Add one more line*), `screens/view-cart.dc.html` (*View the cart with several lines*). Each wraps `screens/flow.dc.html`, Leo's prototype, at the story's state from `ux/prototype/multi-line/story-screens.json` |
+| What the screens run | The prototype's markup over the real domain bundle `project/pml-domain.js` (`window.PMLDomain`), `multiline.js` and `ds/pmlapp` |
+| Production views | `src/revenue/cart/plan-catalog.tsx` (`PlanCatalogView`, still single-line, takes `onSignUp`), `select-plan.tsx` (`SelectPlanView`), `checkout.tsx` (`CheckoutView`). The domain is built (`Cart`/`Line` in `cart.ts`; `CartClient.addLineToCart`/`removeLine` in `cart-client.tsx`) |
+| Build | `.sessions/design-canvas/tools/port_multiline_screens.py`, then `render_pml_canvas.py`, with the CDD venv, cwd `abd-context-driven-delivery`, `PYTHONPATH=".;cdd_guidance;cdd_guidance/practices"`. The `LernCanvasFixtures` step (`node build-canvas-fixtures.mjs`) fails today; these screens do not use it |
+
+**Finding that changes the spike:** no production view renders the multi-line cart yet (the lines list with add and remove). The add-a-line and cart screens exist only in the prototype, so there is nothing in production to mount for them. The spike therefore splits:
+
+- **Mount gates (1, 2, 4, 5, 6)** run on the catalog in front of them, `PlanCatalogView`, the one production view these screens reach.
+- **Data gate (3)** runs add a line, add another line, and check the cart through the real domain: `CartClient.addLineToCart` and `Cart`/`Line`, answered from fixture routes, which the prototype already exercises through `window.PMLDomain`.
+- **Add a line and check the cart as mounted screens** wait until pml-web builds their views. Until then they stay prototype screens, marked as having no production view: the detached state of Redesign A Screen By Detaching It. Each gate has a pass test, and each gate is the first check of the story named beside it.
 
 | Gate | Question | Pass | Story |
 |---|---|---|---|
-| 1. Mount | Does `x-import` resolve a bundle global from `project/ds/`? | `SelectPlanView` renders in a published canvas | Mount Production View In A Thin Screen |
+| 1. Mount | Does `x-import` resolve a bundle global from `project/ds/`? | The add-a-line view renders in a published canvas, and adding a second line and opening the cart work on it | Mount Production View In A Thin Screen |
 | 2. React | Does React 19 source run on 18.3.1 with classic JSX? | Renders and handles clicks. A grep found no `use(`, `useActionState`, `useOptimistic`, `useFormStatus` or `forwardRef`; ref-as-prop was not checked | Bundle Product Views For The Canvas |
 | 3. Data | Can the real routes run in the browser? | `createCartRoutes` takes its repositories as parameters, which suits a small router stand-in, but `*-node` is stubbed today and those routes call `CartNode.fromRequest`. Pass: a real route answers a fixture. Otherwise fall back to a thin fetch table over the in-memory repositories | Answer Screen Requests From Fixture Routes |
 | 4. Navigation | Does the `define` seam hold? | `followStepIfNeeded` moves the explorer through `go`, and the artboard stays put | Keep Explorer Navigation Inside The Artboard |
 | 5. Isolation | Does `.paradise` CSS stay inside the screen in the explorer? | The `sm-` panel is unaffected | Keep Product Styles Inside The Screen |
 | 6. Editing | What can people actually do with a mounted view? | Written down, to confirm the trade-off | Redesign A Screen By Detaching It |
+
+**Spike results, 2026-11-25: all six gates answered. The main plan holds; the fallback is not needed.** The pml-web built features chat finished the test build in pml-web's own canvas, version-7 (https://claude.ai/artifact/ERxPHqATTeH6SFAw8xgqqN), and checked it in the hosted canvas in Chrome. A first try in this chat's scratch canvas had used the old Paradise package from `eb529d2^`, whose stylesheet made the cards overflow the frame; that try is superseded.
+
+- **Styles:** Leo's pmlapp design system, now a production asset at `packages/my-paradise/assets/pmlapp`.
+- **Data:** the scenario fixtures go through the domain, replacing the hand-written fetch table.
+- **Mounted screens:** Display Plans, Add Line To Cart, and View Cart. Every other screen is still the ported prototype.
+- **CDD source, on main:** `394700602` adds `mounted_view.py`, the esbuild build, the React and location stand-ins, and scope-css. `315408a53` fixes a bug found in the hosted run: the view fetched plans before the fixture loaded ("reading 'list' of undefined"). `CanvasMount` now waits for the fixture and mounts the view again on each load. Neither commit is on this ticket's branch yet.
+
+| Gate | Result | Evidence |
+|---|---|---|
+| 1. Mount | **Pass** | The real `PlanCatalogView` draws through `x-import Paradise.CanvasMount` |
+| 2. React | **Pass** | A React shim in the bundle runs React 19 source on 18.3.1 |
+| 3. Data | **Pass, from fixtures** | Add on Atlas ran the real `CartClient.addLineToCart` through the canvas routes on the scenario's Cart, giving Line 1 · Atlas $193/mo and the "2 more lines" nudge |
+| 4. Navigation | **Pass** | Continue moved the explorer to Create Credentials › Create account through `go`, and the address stayed on the canvas |
+| 5. Isolation | **Pass** | CSS scoped to `.canvas-screen`, with `@media` rules turned into `@container`. The explorer's `sm-` panel is unchanged, and the 390-pixel frame draws the phone layout |
+| 6. Editing | **As expected** | A mounted view is one element. People can place it, pick a scenario and use Edit, but can't retype its text in the editor; text changes are made in the production view. On its own artboard the view is blank until a scenario is picked |
+
+**Still open after Phase 0:** production views for the voucher sheet and the order checklist; canvas routes and views for the other screens; a production boot, so the views also run outside the canvas; the rest of the epic package (self-care-section, write-text and others), which accounts for most of pml-web's remaining `tsc` errors; and Phases 1 and 2, the Design System package and the hash manifest. pml-web's changes are not committed yet.
 
 **If gates 1 to 3 fail:** keep Phases 1 and 2 (assets, CSS, shots) and move screens to I3 render-to-markup, with `DCLogic` calling domain code as it does now. Screens remain copies, but generated and hash-pinned to the TSX, and the hand-written generators still go.
 
@@ -287,6 +327,12 @@ This keeps a clear answer to "is this what production does?" for every screen. P
 ##### Story: Reattach A Screen Once Its Change Reaches Production
 
 - A detached screen shows as diverged until the change lands in the TSX, then it re-attaches and the mark clears.
+
+##### Story: Check A Redesign Against Production Before Reattaching
+
+- When a diverged screen's view changes in the product repo, render the new view at the same scenario state and compare it with the detached markup: the elements, classes and text it shows, and a screenshot difference.
+- A match reattaches the screen and clears the mark. A mismatch keeps it diverged and lists what differs, so a redesign is never marked as reaching production when it hasn't.
+- Without this, the mark clears when the TSX changes at all, and nothing proves production matches what was designed.
 
 ## From Fully Integrated App Flow
 

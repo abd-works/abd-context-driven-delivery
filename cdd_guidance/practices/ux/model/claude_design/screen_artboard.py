@@ -19,6 +19,10 @@ _PICTURE = re.compile(r"<img\b|background(?:-image)?\s*:[^;\"']*url\(", re.IGNOR
 _WORKING = re.compile(r"<(?:x-import|dc-import|input|button|select|textarea|a)\b", re.IGNORECASE)
 _LOGIC = re.compile(r"<script\b([^>]*\btype=\"text/x-dc\"[^>]*)>([\s\S]*?)</script>")
 _DATA_PROPS = re.compile(r"data-props='([^']*)'")
+# A script or stylesheet it loads, its link in group 1 or 2; a link that leaves the canvas.
+_LOADED = re.compile(r"<script\b[^>]*?\bsrc=[\"']([^\"']+)[\"']|<link\b[^>]*?\bhref=[\"']([^\"']+)[\"']", re.IGNORECASE)
+_OFF_CANVAS = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|/|#)", re.IGNORECASE)
+_DC_IMPORT = re.compile(r"<dc-import\b[^>]*?\bname=\"([^\"]*)\"", re.IGNORECASE)
 # Where a story canvas keeps its versions, beside the UX map it ports.
 _CANVAS_FILE = "canvas.json"
 _PROJECT = "project"
@@ -50,14 +54,28 @@ class ScreenArtboard:
     @cached_property
     def declared_props(self) -> set[str]:
         """The props its data-props declares, which the explorer and the editor hand it."""
+        return set(self._data_props)
+
+    @cached_property
+    def preview_size(self) -> Optional[tuple[int, int]]:
+        """The screen's own width and height, as its data-props' ``$preview`` states them; none when it states none."""
+        preview = self._data_props.get("$preview")
+        if not isinstance(preview, dict):
+            return None
+        width, height = preview.get("width"), preview.get("height")
+        return (width, height) if isinstance(width, int) and isinstance(height, int) else None
+
+    @cached_property
+    def _data_props(self) -> dict:
         found = _LOGIC.search(self.text)
         declared = _DATA_PROPS.search(found.group(1)) if found else None
         if declared is None:
-            return set()
+            return {}
         try:
-            return set(json.loads(html.unescape(declared.group(1))))
+            props = json.loads(html.unescape(declared.group(1)))
         except json.JSONDecodeError:
-            return set()
+            return {}
+        return props if isinstance(props, dict) else {}
 
     @property
     def shows_only_a_picture(self) -> bool:
@@ -76,6 +94,36 @@ class ScreenArtboard:
     def names(self, text: str) -> bool:
         """Whether it names text, as written, as a JavaScript string writes it, or as HTML writes it."""
         return any(form in self.text for form in (text, json.dumps(text, ensure_ascii=False)[1:-1], html.escape(text)))
+
+    @cached_property
+    def links(self) -> list[str]:
+        """Each script and stylesheet it loads by a link inside the canvas (``src`` or ``href``), as written; links to
+        another site, from the site's root, or to inline data are left out."""
+        found = [tag.group(1) or tag.group(2) for tag in _LOADED.finditer(self.text)]
+        return [link for link in found if not _OFF_CANVAS.match(link)]
+
+    @cached_property
+    def imports(self) -> list[str]:
+        """The name of each artboard it draws through ``dc-import``, beside it in its folder."""
+        return [name for name in _DC_IMPORT.findall(self.template) if name]
+
+    @cached_property
+    def settings(self) -> dict:
+        """The settings each prop it declares takes in the editor (``editor``, its ``options``), by the prop's name."""
+        return {name: value for name, value in self._data_props.items() if isinstance(value, dict)}
+
+    @cached_property
+    def positions(self) -> dict[str, list[dict]]:
+        """The positions a story screen keeps (``positions()``), one list of step groups per scenario, with its story's
+        position under the empty name; none when it keeps none."""
+        found: dict[str, list[dict]] = {}
+        story = _returned(self.logic, "storyPosition")
+        if isinstance(story, dict) and story:
+            found[""] = [story]
+        kept = _returned(self.logic, "positions")
+        if isinstance(kept, dict):
+            found.update({name: [group for group in groups if isinstance(group, dict)] for name, groups in kept.items() if isinstance(groups, list)})
+        return found
 
     @property
     def loads_fixtures(self) -> bool:
@@ -117,3 +165,15 @@ class PortedCanvas:
             return False
         held = bundle.read_text(encoding="utf-8", errors="replace")
         return text in held or json.dumps(text, ensure_ascii=False)[1:-1] in held
+
+
+def _returned(logic: str, method: str):
+    """The JSON value a method of the logic returns on its own line (``method() { return <json>; }``); none when it
+    returns something else."""
+    found = re.search(rf"(?m)^{re.escape(method)}\(\) \{{\s*return (.*);\s*\}}", logic)
+    if found is None:
+        return None
+    try:
+        return json.loads(found.group(1))
+    except json.JSONDecodeError:
+        return None

@@ -92,7 +92,8 @@ class ClassCard:
 
     def _read_head(self, head: str) -> Tuple[str, str, List[str]]:
         """The card's intent, its constructor line, and the notes under the constructor, from the part above
-        ``------``."""
+        ``------``. The intent is the class's language: its definition and the bullets of the terms it owns, which a
+        model card writes above the constructor, so a ``-`` bullet there is language, not a private member."""
         intent_lines: List[str] = []
         notes: List[str] = []
         constructor_line = ""
@@ -103,7 +104,7 @@ class ClassCard:
                 notes.append(stripped[2:].strip())
             if not stripped or stripped.startswith(NOTE):
                 continue
-            if stripped.startswith(("+", "-")) or re.match(r"^\w[\w\s]*\(", stripped):
+            if _SIGNATURE.match(stripped):
                 seen_signature = True
                 constructor_line = stripped
             elif not seen_signature:
@@ -254,6 +255,10 @@ def _split_once(separator: str, text: str) -> Tuple[str, str]:
     return parts[0], parts[1] if len(parts) > 1 else ""
 
 
+# A constructor or member signature above ``------``: a ``+`` line, a ``-`` private member named straight before its
+# parentheses (``- _build(…)``), or a bare call ``Name(…)`` / ``new Name(…)``. A ``- `` bullet of prose, such as a
+# term's language, is none of these.
+_SIGNATURE = re.compile(r"^(?:\+|-\s*_?\w+\(|(?:new\s+)?\w+\()")
 _REFERENCE = re.compile(r"^-?\s*(?:→|->)?\s*([A-Za-z][\w ·]*?)\s*\(by\s+([A-Za-z_]\w*)\s*\)")
 _IDENT = re.compile(r"^[A-Za-z_]\w*$")
 _REPOSITORY_OPERATIONS = re.compile(r"[/,]")

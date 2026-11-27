@@ -1259,7 +1259,10 @@ class GraphEdges:
         self._graph.practices.part_of(parent.practice).edge_index.record(edge_type, parent, child, facts)
 
     def from_parent(self, kind: str, parent: Node) -> list[Edge]:
-        """Edges of one kind leaving parent, in recorded order."""
+        """Edges of one kind leaving parent, in recorded order; none for a node no practice of the graph holds, such as a
+        scenario a format parsed that was never added to the graph, since only a node on the graph has edges."""
+        if parent.practice is None:
+            return []
         return self._graph.practices.part_of(parent.practice).edge_index.from_parent(kind, parent)
 
     def direct_parent(self, child: Node) -> Node | None:

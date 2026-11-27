@@ -44,19 +44,34 @@ class CommitMessageRequiredError(ValueError):
         super().__init__("commit message is required")
 
 
+class NothingToCommitError(RuntimeError):
+    """Raised when push-commit finds no change in the checkout it commits in. Answering with the sha already at HEAD
+    would read as a new commit, so the caller would report work pushed that never left the disk."""
+
+    def __init__(self, checkout: Path) -> None:
+        super().__init__(f"nothing to commit in {checkout}: its working tree has no changes")
+
+
 
 class Commit:
     """One git commit. Its data is its sha, subject, full message, and the trailers the message carries, which is what
     an MCP tool that makes a commit answers with."""
 
-    def __init__(self, sha: str, message: str) -> None:
+    def __init__(self, sha: str, message: str, checkout: Path | str = "") -> None:
         self._sha = sha
         self._message = message
+        self._checkout = str(checkout)
 
     @property
     @data_field
     def sha(self) -> str:
         return self._sha
+
+    @property
+    @data_field
+    def checkout(self) -> str:
+        """The folder of the checkout the commit was made in, so the caller can see which worktree it went to."""
+        return self._checkout
 
     @property
     @data_field
@@ -413,15 +428,19 @@ class Publishing:
         self._repo = repo
 
     def push_commit(self, message: str, *, untracked: bool, sync_remote: bool) -> Commit:
-        """Commit the checkout's working tree with message, and push its branch when sync_remote."""
+        """Commit the checkout's working tree with message, and push its branch when sync_remote. Refuses, naming the
+        checkout, when it has no changes: answering with the sha already at HEAD would read as work pushed that never left
+        the disk."""
         text = (message or "").strip()
         if not text:
             raise CommitMessageRequiredError()
         repo = self._repo
+        if not repo.working_tree.is_dirty(untracked=untracked):
+            raise NothingToCommitError(repo.root)
         sha = repo.working_tree.commit([str(repo.root)], text, untracked=untracked)
         if sync_remote:
             repo.origin.push_upstream()
-        return Commit(sha, text)
+        return Commit(sha, text, repo.root)
 
     def push_work(self) -> Commit:
         """Commit the checkout's work on its branch and push the branch, nothing merged."""

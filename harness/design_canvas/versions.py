@@ -5,8 +5,9 @@ People edit a published canvas directly, so a regeneration never writes over one
 copy of the latest that the generator then renders into, and that version is published as a new canvas.
 ``versions.json`` remembers each version's published link, in the order they were published (*PublishedLinks*). A
 version is recorded as published only after a walk of its screens (*WalkedScreens*, the UX practice's story canvas
-walk) finds every value its scenarios' steps name on the screen that shows the step, or the person accepts by name each
-value left out; the accepted ones are kept beside the link, so the gap stays in view. A
+walk) finds every value its scenarios' steps name on the screen that shows the step, and a change on the screen after each
+action, or the person accepts by name each value left out and each action that leaves its screen as it was; the
+accepted ones are kept beside the link, so the gap stays in view. A
 version kept as a release is renamed to the release's name (``CanvasVersion.release``); numbering then starts again at
 ``version-1``, copied from that release.
 
@@ -17,6 +18,7 @@ same link again. The walk before publishing still runs.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 from pathlib import Path
@@ -30,6 +32,8 @@ DESIGN_CANVAS_FOLDER = "design-canvas"
 _VERSION = re.compile(r"^version-(\d+)$")
 # What a published version keeps beside its link: the values its screens leave out that the person accepted.
 _ACCEPTED_MISSES = "accepted_misses"
+# What is kept beside a version's link: each file of its project folder as it was published, by its content's hash.
+_PUBLISHED_FILES = "published_files"
 # The setting in versions.json that keeps one canvas every render updates in place, instead of a new version each time.
 KEEP_ONE = "keep_one"
 # The name of the canvas of the whole repository, the UX practice's mockup; a canvas scoped to an increment, a feature,
@@ -61,8 +65,9 @@ class UnshownStepValues(Exception):
     def __init__(self, version: str, misses: Sequence[str]) -> None:
         listed = "\n".join(f"  - {miss}" for miss in misses)
         super().__init__(
-            f"{version} is not recorded as published: its screens leave out {len(misses)} value(s) their steps name. Make "
-            f"each screen show them, or pass the ones the prototype cannot show as accepted_misses:\n{listed}")
+            f"{version} is not recorded as published: its screens leave out {len(misses)} value(s) their steps name, or stay "
+            f"as they were after an action. Make each screen show them and each action change its screen, or pass the ones "
+            f"the prototype cannot show as accepted_misses:\n{listed}")
         self.version = version
         self.misses = list(misses)
 
@@ -72,10 +77,11 @@ class CanvasVersion:
     (none for a version kept as a release), the link it was published at, and the canvas's name, which its title
     starts with."""
 
-    def __init__(self, folder: Path, published: PublishedLinks, name: str) -> None:
+    def __init__(self, folder: Path, published: PublishedLinks, name: str, kept_one: bool = False) -> None:
         self.folder = folder
         self._published = published
         self._name = name
+        self._kept_one = kept_one
 
     @property
     def number(self) -> Optional[int]:
@@ -91,8 +97,10 @@ class CanvasVersion:
     @property
     def title(self) -> str:
         """The title the version is published under: the canvas's name, then the version's folder, as a versioned file
-        is named (``ux-mockup.version-7``), so a person can tell canvases apart and match each to its folder."""
-        return f"{self._name}.{self.folder.name}"
+        is named (``ux-mockup.version-7``), so a person can tell canvases apart and match each to its folder. A project
+        that keeps one canvas, updated in place, has no versions to tell apart, so its canvas is titled with the name
+        alone (``ux-mockup``)."""
+        return self._name if self._kept_one else f"{self._name}.{self.folder.name}"
 
     @property
     def accepted_misses(self) -> List[str]:
@@ -109,14 +117,30 @@ class CanvasVersion:
         if unaccepted:
             raise UnshownStepValues(self.folder.name, unaccepted)
         kept = [miss for miss in walk.misses if miss in accepted]
-        self._published.record(self.folder.name, url, {_ACCEPTED_MISSES: kept} if kept else None)
+        self._published.record(self.folder.name, url, {**({_ACCEPTED_MISSES: kept} if kept else {}), _PUBLISHED_FILES: self.file_hashes()})
+
+    def file_hashes(self) -> dict[str, str]:
+        """Each file of the version's project folder, by its path there, with its content's hash."""
+        project = self.folder / "project"
+        files = sorted(path for path in project.rglob("*") if path.is_file()) if project.is_dir() else []
+        return {path.relative_to(project).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
+
+    def changed_files(self) -> List[str]:
+        """The files of the project folder that differ from the version's last publish, by their path there: each new
+        or changed one, then each one removed since; every file while the version was never published with them
+        recorded."""
+        published = self._published.beside(self.folder.name).get(_PUBLISHED_FILES)
+        now = self.file_hashes()
+        if not isinstance(published, dict):
+            return list(now)
+        return [path for path, digest in now.items() if published.get(path) != digest] + sorted(path for path in published if path not in now)
 
     def release(self, name: str) -> CanvasVersion:
         """Keep this published version as the release name: its folder and its link take the release's name."""
         target = self.folder.parent / name
         self.folder.rename(target)
         self._published.rename(self.folder.name, name)
-        return CanvasVersion(target, self._published, self._name)
+        return CanvasVersion(target, self._published, self._name, self._kept_one)
 
 
 class CanvasVersions:
@@ -150,13 +174,18 @@ class CanvasVersions:
         return sorted(int(match.group(1)) for match in found if match)
 
     def _numbered(self, number: int) -> CanvasVersion:
-        return CanvasVersion(self.root / f"version-{number}", self.published, self.name)
+        return CanvasVersion(self.root / f"version-{number}", self.published, self.name, self.keeps_one)
 
     @property
     def latest(self) -> Optional[CanvasVersion]:
         """The newest numbered version; none when there is none yet."""
         numbers = self._numbers
         return self._numbered(numbers[-1]) if numbers else None
+
+    def published_at(self, link: str) -> Optional[CanvasVersion]:
+        """The version published at link, a numbered version or a release; none when no version was published there."""
+        name = next((name for name, published in self.published.all().items() if published == link), None)
+        return CanvasVersion(self.root / name, self.published, self.name, self.keeps_one) if name is not None else None
 
     def start_next(self) -> CanvasVersion:
         """Begin the next version as a copy of the latest (screens, images, fixtures), else of the newest release,

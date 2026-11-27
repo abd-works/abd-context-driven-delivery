@@ -1,0 +1,68 @@
+{
+ "v": 1,
+ "title": "Story Map",
+ "order": [
+  "epic.f50cc1f06f",
+  "story.user.c36a5d90a9",
+  "story.user.1f5135b545",
+  "story.user.fc1f148259",
+  "story.system.685edda64f"
+ ],
+ "elements": {
+  "epic.f50cc1f06f": {
+   "type": "shape",
+   "color": "purple",
+   "text": "Buy Hero Supplies",
+   "kind": "rounded",
+   "size": "body",
+   "x": 20,
+   "y": 120,
+   "w": 696,
+   "h": 60
+  },
+  "story.user.c36a5d90a9": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Spider-Man*\nSearch Supply Catalog",
+   "kind": "rounded",
+   "size": "small",
+   "x": 32,
+   "y": 280,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.1f5135b545": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Spider-Man*\nAdd Supply To Cart",
+   "kind": "rounded",
+   "size": "small",
+   "x": 208,
+   "y": 280,
+   "w": 152,
+   "h": 152
+  },
+  "story.user.fc1f148259": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Spider-Man*\nPlace Supply Order",
+   "kind": "rounded",
+   "size": "small",
+   "x": 384,
+   "y": 280,
+   "w": 152,
+   "h": 152
+  },
+  "story.system.685edda64f": {
+   "type": "shape",
+   "color": "yellow",
+   "text": "*Payment Service*\nCharge Order Payment",
+   "kind": "rounded",
+   "size": "small",
+   "x": 560,
+   "y": 280,
+   "w": 152,
+   "h": 152
+  }
+ }
+}

@@ -1,0 +1,98 @@
+{
+  "name": "ui-fixes-as-i-use-it",
+  "title": "ui-fixes-as-i-use-it",
+  "scope": "feature",
+  "branch": "ui-fixes-as-i-use-it",
+  "worktree": "C:\\dev\\abd-cdd-ui-fixes-as-i-use-it",
+  "stage": "Implementation",
+  "stage_mark": "in-progress",
+  "practices": {
+    "stories": {
+      "enabled": true,
+      "fidelities": {
+        "acceptance_tests": {
+          "formats": [
+            "python"
+          ]
+        },
+        "story_map": {
+          "formats": [
+            "drawio",
+            "whiteboard",
+            "markdown"
+          ]
+        },
+        "scenarios": {
+          "formats": [
+            "python",
+            "markdown"
+          ]
+        }
+      }
+    },
+    "ddd": {
+      "enabled": false,
+      "fidelities": {
+        "tactics": {
+          "formats": [
+            "python"
+          ]
+        }
+      }
+    },
+    "ux": {
+      "enabled": false,
+      "fidelities": {
+        "front_end_code": {
+          "formats": [
+            "typescript"
+          ]
+        }
+      }
+    },
+    "clean_engineering": {
+      "enabled": true,
+      "fidelities": {
+        "code": {
+          "formats": [
+            "python"
+          ]
+        },
+        "modules": {
+          "formats": [
+            "markdown",
+            "drawio",
+            "whiteboard"
+          ]
+        },
+        "model": {
+          "formats": [
+            "python",
+            "drawio",
+            "whiteboard"
+          ]
+        }
+      }
+    },
+    "bdd": {
+      "enabled": false,
+      "fidelities": {
+        "development": {
+          "formats": [
+            "python"
+          ]
+        }
+      }
+    }
+  },
+  "guidance": {
+    "version": 42,
+    "stages": [
+      "hardening"
+    ]
+  },
+  "overlays": [
+    "cdd_claude_mod",
+    "cdd_web_domain_access"
+  ]
+}

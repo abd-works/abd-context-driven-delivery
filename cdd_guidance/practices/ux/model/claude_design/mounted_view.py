@@ -100,7 +100,9 @@ class MountedViewBundle:
 @dataclass(frozen=True)
 class MountedViewMarkup(ScreenMarkup):
     """A screen drawn by the production view the project's entry exports as *view*, from *bundle*, inside the
-    screen's frame (``.canvas-screen``, which the bundle's scoped stylesheet answers to). It hands the view every
+    screen's frame (``.canvas-screen``, which *StoryScreen* draws and whose width the bundle's container rules read),
+    in a wrapper of its own (``.canvas-mount``, which the bundle's scoped selectors and design tokens answer to, so a
+    ported screen in the same kind of frame keeps its own theme). It hands the view every
     object the scenario bound, the repositories, the step group's position, and the explorer's ``go``. *size* is the
     hint size the editor gives it."""
 
@@ -112,11 +114,16 @@ class MountedViewMarkup(ScreenMarkup):
     def head(self) -> str:
         return self.bundle.head
 
-    def body_for(self, position_settings: list[str]) -> str:
+    def body_for(self, position_settings: list[str], theme: str = "") -> str:
         given = 'bound="{{ bound }}" repositories="{{ repositories }}" position="{{ position }}" go="{{ go }}"'
-        return (f'<div class="canvas-screen">\n<x-import component-from-global-scope="{self.bundle.component}" '
+        themed = f' data-theme="{theme}"' if theme else ""
+        return (f'<div class="canvas-mount"{themed}>\n<x-import component-from-global-scope="{self.bundle.component}" '
                 f'view="{self.view}" {given} hint-size="{self.size}"></x-import>\n</div>')
 
     def copy_files(self, project: Path) -> list[Path]:
         """Bundle the project's views into the version, where the screen's head loads them."""
         return self.bundle.build(project)
+
+    def sources(self) -> dict[str, Path]:
+        """The bundle's folder in the version comes from the project's view entry, its production code."""
+        return {f"{DESIGN_SYSTEMS_FOLDER}/{self.bundle.folder}": Path(self.bundle.project_root) / self.bundle.entry}

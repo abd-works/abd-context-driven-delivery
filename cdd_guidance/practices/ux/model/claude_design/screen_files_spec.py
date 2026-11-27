@@ -86,3 +86,50 @@ with description("the files a prototype screen's markup source needs in a canvas
         with it("should copy nothing"):
             expect(ScreenFiles().copy_into(self.project, "screens/flow.dc.html")).to(equal([]))
             expect(self.project.exists()).to(be_false)
+
+
+PORTED_STYLESHEET = """:root{--ink:#000}
+[data-theme="dark"]{--ink:#fff}
+.plans{display:grid;grid-template-columns:1fr}
+@media (min-width: 768px){.plans{grid-template-columns:1fr 1fr 1fr}}
+@media (prefers-reduced-motion: reduce){.plans{transition:none}}
+.sheet{width:100vw}
+"""
+
+PORTED_COMPONENT = """<!doctype html><html><head>
+<link rel="stylesheet" href="ds/bundle.css"></head>
+<body><x-dc><helmet><style>.flow{padding:8px}
+@media (max-width: 600px){.flow{padding:0}}</style></helmet><div class="flow"></div></x-dc></body></html>
+"""
+
+
+with description("a ported screen's stylesheets, copied into a canvas version") as self:
+    with before.all:
+        self.root = Path(tempfile.mkdtemp(prefix="cdd-screen-files-css-"))
+        component = write(self.root, "prototype/Main.dc.html", PORTED_COMPONENT)
+        write(self.root, "prototype/ds/bundle.css", PORTED_STYLESHEET)
+        project = self.root / "version-1" / "project"
+        ScreenFiles(component=component, needs={"ds": self.root / "prototype" / "ds"}).copy_into(project, "screens/flow.dc.html")
+        self.stylesheet = (project / "ds" / "bundle.css").read_text(encoding="utf-8")
+        self.component = (project / "screens" / "flow.dc.html").read_text(encoding="utf-8")
+
+    with after.all:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    with it("should ask a width media query of the screen's frame, as a container query"):
+        expect(self.stylesheet).to(contain("@container canvas-screen (min-width: 768px){.plans{grid-template-columns:1fr 1fr 1fr}}"))
+        expect(self.stylesheet).not_to(contain("@media (min-width"))
+
+    with it("should keep a media query that asks about anything but size"):
+        expect(self.stylesheet).to(contain("@media (prefers-reduced-motion: reduce){.plans{transition:none}}"))
+
+    with it("should keep every selector as written, so the theme the component sets on the page still reaches the tokens"):
+        expect(self.stylesheet).to(contain(':root{--ink:#000}'))
+        expect(self.stylesheet).to(contain('[data-theme="dark"]{--ink:#fff}'))
+        expect(self.stylesheet).not_to(contain(".canvas-screen"))
+
+    with it("should measure a length in the window's width by the frame's width"):
+        expect(self.stylesheet).to(contain(".sheet{width:100cqw}"))
+
+    with it("should ask the component's own style blocks' width media queries of the frame too"):
+        expect(self.component).to(contain("<style>.flow{padding:8px}@container canvas-screen (max-width: 600px){.flow{padding:0}}</style>"))

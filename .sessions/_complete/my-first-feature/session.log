@@ -1,0 +1,45 @@
+2026-11-18T21:05:48Z --- 1
+2026-11-18T21:06:06Z tool prompt-queue.show
+2026-11-18T21:06:06Z tool prompt-queue.show
+2026-11-18T21:06:07Z tool prompt-queue.add
+2026-11-18T21:06:07Z tool prompt-queue.move
+2026-11-18T21:06:13Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-41
+2026-11-18T21:06:17Z tool sessions.switch 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-63
+2026-11-18T21:06:22Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-89
+2026-11-18T21:06:27Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-95
+2026-11-18T21:06:33Z tool prompt-queue.done 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-103
+2026-11-18T21:06:34Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-108
+2026-11-18T21:06:40Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-114
+2026-11-18T21:07:04Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-123
+2026-11-18T21:07:07Z error generate.generate C:\dev\abd-cdd-my-first-feature\.sessions\my-first-feature\session.err 1 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-143
+2026-11-18T21:07:10Z tool generate.generate 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-147
+2026-11-18T21:07:10Z generate C:\dev\abd-cdd-my-first-feature stories story_map markdown 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-147
+2026-11-18T21:07:33Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-177
+2026-11-18T21:07:34Z tool app.open 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-185
+2026-11-18T21:07:38Z render C:\dev\abd-cdd-my-first-feature\demos\spider-man-shopping stories story_map markdown 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-185
+2026-11-18T21:07:38Z render C:\dev\abd-cdd-my-first-feature\demos\spider-man-shopping stories story_map markdown 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-195
+2026-11-18T21:07:39Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-196
+2026-11-18T21:07:46Z tool app.open 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-202
+2026-11-18T21:08:10Z tool validate.validate demos\spider-man-shopping\.context\story-map.md, demos\spider-man-shopping\.context\story-map.drawio, demos\spider-man-shopping\.context\story-map.whiteboard 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-224
+2026-11-18T21:08:12Z validate Stories story_map 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-224
+2026-11-18T21:08:33Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-265
+2026-11-18T21:08:42Z tool app.open 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-285
+2026-11-18T21:08:43Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-285
+2026-11-18T21:08:51Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-291
+2026-11-18T21:09:18Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-302
+2026-11-18T21:10:54Z error chat.send C:\dev\abd-cdd-my-first-feature\.sessions\my-first-feature\session.err 32 no-chat
+2026-11-18T21:11:32Z error chat.send C:\dev\abd-cdd-my-first-feature\.sessions\my-first-feature\session.err 51 no-chat
+2026-11-18T21:13:56Z tool sessions.current 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-437
+2026-11-18T21:15:12Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-500
+2026-11-18T21:15:45Z tool session.debug_session 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-536
+2026-11-18T21:16:34Z tool prompt-queue.done 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-592
+2026-11-18T21:16:37Z tool prompt-queue.set_steps 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-600
+2026-11-18T21:17:03Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-607
+2026-11-18T21:17:03Z tool prompt-queue.add_interruption 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-609
+2026-11-18T21:17:10Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-616
+2026-11-18T21:17:10Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-616
+2026-11-18T21:21:24Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-616
+2026-11-18T21:21:24Z tool prompt-queue.add_interruption 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-618
+2026-11-18T21:21:29Z tool sessions.current 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-631
+2026-11-18T21:21:36Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-637
+2026-11-18T23:25:24Z tool prompt-queue.show 987a400c-2ef6-4c10-8b46-01c7ea558834 C:\Users\jeffa\.claude\projects\C--dev-abd-cdd-my-first-feature\987a400c-2ef6-4c10-8b46-01c7ea558834.jsonl 1-642

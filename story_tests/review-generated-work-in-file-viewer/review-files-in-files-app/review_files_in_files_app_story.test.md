@@ -541,7 +541,7 @@ Changed by the person's answer on 2026-11-20: a link to another file was left wh
 
 *Given* the Files app shows the story map rendered
 *When* the Person presses the link *Add Book To Cart*
-*Then* the Files app opens the scenario file at the lines the link names
+*Then* the Files app opens the scenario file beside the story map, at the lines the link names
 *When* the Person presses a link to a web page
 *Then* the web page opens in a tab of its own and the Files app stays where it is
 
@@ -566,8 +566,23 @@ Answered by the person on 2026-11-20: which callouts show follows the file view'
 
 *Given* the Files app shows the story map in the source view, *Add Book To Cart*'s line carrying its callout
 *When* the Person presses the link's text with Ctrl held
-*Then* the Files app opens the scenario file at the lines the link names
+*Then* the Files app opens the scenario file beside the story map, at the lines the link names
 *And* Go to file on the open callout does the same
+
+#### Scenario: Open a linked file beside the file it is linked from
+
+Requested by the person on 2026-11-25: a scenario links each domain term to its class in a module's model file, and the story map links each story to its scenario file, so a person reads the two side by side. A linked file opens in a pane to the right of the file it was linked from; there are never more than two. The page: `harness/files_app/app/files/files-page.spec.ts` (Open Linked File Beside The File), `rendered-callouts.spec.ts` (Open A Linked File At Its Heading); the walk: `open-files-in-files-app.story.ui_e2e_spec.py`.
+
+*Given* the Files app shows *Add Book To Cart*'s scenario file rendered, whose Given links the domain term *Book* to the domain model
+*When* the Person presses the link *Book*
+*Then* the domain model opens in a pane to the right of the scenario, scrolled to the heading *Book <<Entity>>*
+*And* each pane scrolls, takes comments and closes on its own
+*When* the Person presses another link, in either pane
+*Then* the file it names replaces the domain model in the right pane, and no third pane opens
+*When* the Person closes the left pane
+*Then* the file in the right pane is the one file open, at the heading its link named
+*When* the Person chooses another file from the file bar while two panes show
+*Then* it opens in the left pane, and the right pane keeps its file
 
 ## Story: Lay Out Lines In Source View
 

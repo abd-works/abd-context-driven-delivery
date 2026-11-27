@@ -54,7 +54,7 @@ export async function createSession($: EngineInterface, sessionName: string): Pr
 
 // A Backlog item started from the session list leaves the Backlog as the board moves it out: backlog-item.start on the
 // folder chosen beside the new session's name, or the whole repository, then the ticket opens as one picked from the
-// list does. A parent starts with its children; a child starts alone. Python refuses an item gone from the Backlog.
+// list does. A parent starts with its children. Python refuses an item gone from the Backlog.
 export async function startBacklogItem($: EngineInterface, title: string): Promise<void> {
   const path = (await currentChatBarView($)).newSessionFolder
   let started: TicketData

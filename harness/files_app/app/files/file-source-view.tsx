@@ -20,6 +20,8 @@ import { calloutsOf, isStoryTest, monacoLanguageOf, rulesOf, sourceOf, violation
 // How far down the window the first line asked to show sits once the page scrolls to it: near the top, so it is plain
 // where the page went, with a line or two above it for context.
 const SHOWN_FROM_TOP = 1 / 10
+// The class of a pane that scrolls on its own, as each of two files side by side does.
+export const SCROLLING_PANE = 'file-pane'
 // How long a file's folds take to close after it opens, during which the page keeps the line asked for in view.
 const FOLDS_SETTLE_MILLISECONDS = 1500
 
@@ -119,7 +121,11 @@ export function FileSourceView({
       frame = requestAnimationFrame(() => {
         const top = wrapper.current?.getBoundingClientRect().top
         if (top === undefined) return
-        window.scrollTo({ top: window.scrollY + top + editor.getTopForLineNumber(firstShown) - window.innerHeight * SHOWN_FROM_TOP, behavior: 'smooth' })
+        // Beside a linked file each file scrolls in its own pane; alone, the page scrolls.
+        const pane = wrapper.current?.closest<HTMLElement>(`.${SCROLLING_PANE}`)
+        const lineTop = top + editor.getTopForLineNumber(firstShown)
+        if (pane) pane.scrollTo({ top: pane.scrollTop + lineTop - pane.getBoundingClientRect().top - pane.clientHeight * SHOWN_FROM_TOP, behavior: 'smooth' })
+        else window.scrollTo({ top: window.scrollY + lineTop - window.innerHeight * SHOWN_FROM_TOP, behavior: 'smooth' })
       })
     }
     scrollToShown()

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import html
 import json
+import re
 from functools import cached_property
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
@@ -18,6 +19,7 @@ from urllib.parse import quote, urlencode
 from harness.design_canvas.canvas import Artboard, DesignCanvas, Place, artboard_stem
 from cdd_guidance.practices.ux.model.claude_design.look import BACKGROUND, FONTS, LOOK
 from cdd_guidance.practices.ux.model.claude_design.nodes import ClaudeDesignUxMap
+from cdd_guidance.practices.ux.model.claude_design.screen_artboard import ScreenArtboard
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from harness.annotations.name import Name
 from cdd_guidance.practices.stories.model.markdown.markup import plain_words
@@ -120,9 +122,12 @@ class StoryCanvasSetup:
     """What a story canvas is drawn with besides its story map: the canvas root (``workspace``), whose ``project``
     folder holds what people already made on the canvas; the UX map whose screens it shows, the one the caller holds;
     and where each story (``Story``) and scenario (``Story › Scenario``) sits in the story code (``sources``, its
-    ``path:line``), which the explorer offers to copy as an "open in the file viewer" request."""
+    ``path:line``), which the explorer offers to copy as an "open in the file viewer" request; and the canvas's *title*,
+    the name its version is published under (``ux-mockup``), so the canvas names itself as its file does."""
 
-    def __init__(self, workspace: Optional[str] = None, ux_map: Optional[UxMap] = None, sources: Optional[Dict[str, str]] = None) -> None:
+    def __init__(self, workspace: Optional[str] = None, ux_map: Optional[UxMap] = None, sources: Optional[Dict[str, str]] = None,
+                 title: str = "") -> None:
+        self.title = title
         self.ux_map = ux_map
         self.sources = dict(sources or {})
         self.project = Path(workspace) / "project" if workspace else None
@@ -152,7 +157,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         self._setup = setup
         self.screen_map = self._screen_map(setup.ux_map)
         self.sources = dict(setup.sources)
-        self.canvas = DesignCanvas(self.name if self.name and self.name != "StoryMap" else "Story Map", setup.project)
+        self.canvas = DesignCanvas(setup.title or (self.name if self.name and self.name != "StoryMap" else "Story Map"), setup.project)
 
     def blank(self) -> "ClaudeDesignStoryMap":
         """A canvas holding no story map, drawn with this canvas's setup."""
@@ -186,7 +191,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
                                "title": "Story map", "is_interactive": True, "expand": "fill"})
         canvas.place(f"{self.screens_folder}/explorer.dc.html", {"x": 0, "y": 0, "w": self.explorer_width, "h": self.explorer_height, "page": self.screens_page,
                                                                  "title": "Story explorer", "is_interactive": True, "expand": "fill"}, self._explorer())
-        for name, board in self.screen_map.boards(self._screen_files(), reserved=2).items():
+        for name, board in self.screen_map.boards(self._screen_files(), reserved=2, sizes=self._screen_sizes()).items():
             canvas.place(name, board)
             self._add_context_panel(name)
         return canvas
@@ -218,14 +223,23 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         the screen serves, opened to their scenarios and steps. Nothing in it navigates or edits."""
         lines: List[str] = []
         for epic in self.epics:
-            lines.append(f'<div class="cx-epic">{html.escape(epic.name)}</div>')
-            for sub in epic.leaf_epics():
-                lines.append(f'<div class="cx-sub">{html.escape(sub.name)}</div>')
-                lines.extend(line for story in sub.stories for line in self._context_story_lines(story, focus))
+            lines.extend(self._context_epic_lines(epic, focus, 0))
         style = _CONTEXT_PANEL_STYLE
         body = ('<div style="position: absolute; inset: 0; overflow: auto; box-sizing: border-box; padding: 20px 20px 40px; '
                 'background: #111113; border-left: 1px solid #2A2A2A">\n' + "\n".join(lines) + "\n</div>")
         return Artboard("Stories", self.context_width, height, body, style=style, root_style=f"background: {BACKGROUND}", head=FONTS, name=name)
+
+    def _context_epic_lines(self, epic: ClaudeDesignEpic, focus: List[str], depth: int) -> List[str]:
+        """An epic in the context panel at depth (0 for an epic of the map), then its sub-epics, as deep as the map
+        nests them, then its stories."""
+        if depth:
+            lines = [f'<div class="cx-sub" style="padding-left: {12 * depth}px">{html.escape(epic.name)}</div>']
+        else:
+            lines = [f'<div class="cx-epic">{html.escape(epic.name)}</div>']
+        for sub in epic.epics:
+            lines.extend(self._context_epic_lines(sub, focus, depth + 1))
+        lines.extend(line for story in epic.stories for line in self._context_story_lines(story, focus))
+        return lines
 
     def _context_story_lines(self, story: ClaudeDesignStory, focus: List[str]) -> List[str]:
         """A story in the context panel: greyed and collapsed, or, when the screen serves it (in focus), opened to its
@@ -306,11 +320,7 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
     # -- explorer -------------------------------------------------------------------------
 
     def _explorer(self) -> str:
-        tree = []
-        for epic in self.epics:
-            subs = epic.leaf_epics()
-            tree.append({"n": epic.name, "u": [{"n": sub.name, "s": [self._story_entry(story) for story in sub.stories]}
-                                               for sub in subs]})
+        tree = [self._epic_entry(epic) for epic in self.epics]
         template = _EXPLORER_TEMPLATE.read_text(encoding="utf-8")
         heads = [f'<link rel="stylesheet" href="{href}">' for href in self._stylesheets()]
         heads += [f'<script src="{src}"></script>' for src in self._screen_scripts()]
@@ -318,6 +328,11 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         return (template.replace("__STYLESHEETS__", "\n".join(heads))
                 .replace("__IMPORTS__", "\n".join(self._imports()))
                 .replace("__DATA__", json.dumps(tree, ensure_ascii=False)))
+
+    def _epic_entry(self, epic: ClaudeDesignEpic) -> dict:
+        """An epic as the explorer lists it: its sub-epics (``e``), each listed the same way, as deep as the story map
+        nests them, and the stories directly under it (``s``)."""
+        return {"n": epic.name, "e": [self._epic_entry(sub) for sub in epic.epics], "s": [self._story_entry(story) for story in epic.stories]}
 
     def _story_entry(self, story: ClaudeDesignStory) -> dict:
         scenarios = [self._scenario_entry(story, scenario) for scenario in [*story.backgrounds, *story.scenarios]]
@@ -332,32 +347,41 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
             if image and not any(group["i"] for group in groups):
                 groups[0]["i"] = [f"../{image}"]
         background = scenario in story.backgrounds
-        return {"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,
-                "f": self.sources.get(StoryTree.key_of(scenario), "")}
+        entry = {"n": "Background" if background else scenario.name, "b": background, "p": prototype, "t": groups,
+                 "f": self.sources.get(StoryTree.key_of(scenario), "")}
+        rows = _outline_rows(scenario, groups)
+        if rows:
+            entry["r"] = rows
+        return entry
 
     def _step_groups(self, story: ClaudeDesignStory, scenario: "Scenario | Background") -> tuple[List[dict], str]:
-        """The scenario's steps, grouped so each group ends on a step a screen shows, with that screen's images; and
-        the first prototype those screens name. A screen that shows the story or the scenario but names none of its
-        steps shows each step that ends an action (``one-group-per-action``)."""
+        """The scenario's steps, grouped so each group ends on a step a screen shows, with that screen's images and the
+        group's kind (``k``); and the first prototype those screens name. A screen that shows the story or the scenario
+        but names none of its steps shows each step that ends an action (``one-group-per-action``). A group's kind is
+        ``when`` when the Customer acts in it (it holds a When step), else the phase of its last step, so a screen
+        knows on which group to type in what the Customer enters."""
         groups: List[dict] = []
         waiting: List[str] = []
+        phases: List[str] = []
         prototype = ""
         unnamed = self._screens_naming_no_steps(story, scenario)
         ends = _action_ends(scenario) if unnamed else []
-        for step in _steps_of(scenario):
+        for step, phase in _phased_steps(scenario):
             indent = "    " if step.keyword in ("And", "But") else ""
             waiting.append(f"{indent}{step.keyword} {plain_words(step.text)}")
+            phases.append(phase)
             named = shown_on(step, self.screen_map.screens)
             derived = [screen for screen in unnamed if screen not in named] if any(step is end for end in ends) else []
             shown = [screen for screen in [*named, *derived] if not self._blank(screen)]
             prototype = prototype or next((artboard_stem(s.prototype) for s in shown if s.prototype), "")
             if shown:
-                groups.append({"x": "\n".join(waiting), "i": [f"../{s.image}" for s in shown if s.image]})
-                waiting = []
+                groups.append({"x": "\n".join(waiting), "i": [f"../{s.image}" for s in shown if s.image], "k": _kind_of(phases)})
+                waiting, phases = [], []
         if waiting and groups:
             groups[-1]["x"] += "\n" + "\n".join(waiting)
+            groups[-1]["k"] = _kind_of([groups[-1]["k"], *phases])
         elif waiting:
-            groups.append({"x": "\n".join(waiting), "i": []})
+            groups.append({"x": "\n".join(waiting), "i": [], "k": _kind_of(phases)})
         return groups, prototype
 
     def _screens_naming_no_steps(self, story: ClaudeDesignStory, scenario: "Scenario | Background") -> List[Screen]:
@@ -378,12 +402,29 @@ class ClaudeDesignStoryMap(DiagramStoryMap):
         return prototype, image
 
     def _imports(self) -> List[str]:
+        """Each prototype screen in the explorer's screen pane. The import fills the pane's width and the screen's own
+        frame (StoryScreen, at the screen's width) centres itself in it, so it lays out as it does on its own artboard
+        and the fixture bar at the pane's left stays clear of it; a screen that states no size fills the pane."""
         lines = []
+        sizes = self._screen_sizes()
         for prototype in self._prototypes():
             name = artboard_stem(prototype)
+            size = sizes.get(prototype)
+            hint, style = (f"{size[0]}px,{size[1]}px", "display: block; width: 100%") if size else \
+                ("1280px,900px", "display: block; width: 100%; min-height: 100%")
             lines.append(f'<sc-if value="{{{{live.{Name(name).camel}}}}}" hint-placeholder-val="{{{{ false }}}}">'
-                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" step-index="{{{{stepIndex}}}}" hint-size="1280px,900px" style="display: block; width: 100%; min-height: 100%"></dc-import></sc-if>')
+                         f'<dc-import name="{name}" story="{{{{storyName}}}}" scenario="{{{{scenarioName}}}}" go="{{{{goToStory}}}}" step="{{{{stepText}}}}" step-index="{{{{stepIndex}}}}" step-kind="{{{{stepKind}}}}" hint-size="{hint}" style="{style}"></dc-import></sc-if>')
         return lines
+
+    def _screen_sizes(self) -> Dict[str, tuple]:
+        """Each screen artboard's own width and height, by its name, as the artboard the project holds states them
+        (``$preview``); a screen the project does not hold, or that states no size, is left out."""
+        sizes = {}
+        for name in self.screen_map.names(self._screen_files()):
+            size = ScreenArtboard.at(self.canvas.project.folder / name).preview_size if self.canvas.project.holds(name) else None
+            if size:
+                sizes[name] = size
+        return sizes
 
     def _screen_files(self) -> List[str]:
         """Screen artboards already in the canvas's screens folder: each needs a place on the Screens page."""
@@ -435,14 +476,38 @@ def _steps_of(scenario: "Scenario | Background") -> List[Step]:
     return found
 
 
-def _action_ends(scenario: "Scenario | Background") -> List[Step]:
-    """The steps a screen shows when the UX map names none: the step before each Then that opens a run of Thens, and
-    the scenario's last step, so each action and its outcome is one step group. An And or But takes the phase of the
+_PLACEHOLDER = re.compile(r"\$?\{[^}]+\}|<[^>]+>")
+
+
+def _outline_rows(scenario: "Scenario | Background", groups: List[dict]) -> Dict[str, Dict[str, str]]:
+    """An outline's Examples table as the explorer fills its steps from it: each row, by its name (its ``example``
+    column), with every column's value in plain words. A scenario whose steps name no placeholder has none."""
+    examples = getattr(scenario, "examples", None) or {}
+    if not examples or not any(_PLACEHOLDER.search(group["x"]) for group in groups):
+        return {}
+    return {plain_words(example.name): {column: plain_words(value) for column, value in example.row.items()}
+            for example in examples.values()}
+
+
+def _phased_steps(scenario: "Scenario | Background") -> List[tuple]:
+    """Each step of the scenario, in order, with its phase: given, when or then. An And or But takes the phase of the
     step it continues."""
     phased: List[tuple] = []
     for step in scenario.steps:
         phased.append((step, step.phase))
         phased.extend((extra, extra.phase or step.phase) for extra in getattr(step, "ands", []) or [])
+    return phased
+
+
+def _kind_of(phases: List[str]) -> str:
+    """A step group's kind from its steps' phases: ``when`` when it holds a When step, else its last step's phase."""
+    return "when" if "when" in phases else next((phase for phase in reversed(phases) if phase), "")
+
+
+def _action_ends(scenario: "Scenario | Background") -> List[Step]:
+    """The steps a screen shows when the UX map names none: the step before each Then that opens a run of Thens, and
+    the scenario's last step, so each action and its outcome is one step group."""
+    phased = _phased_steps(scenario)
     ends = [phased[index - 1][0] for index, (_, phase) in enumerate(phased)
             if index and phase == "then" and phased[index - 1][1] != "then"]
     if phased and not any(phased[-1][0] is end for end in ends):

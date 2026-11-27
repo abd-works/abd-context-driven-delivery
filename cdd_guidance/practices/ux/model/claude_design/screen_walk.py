@@ -2,7 +2,7 @@
 rendered at the scenarios it shows, and every value the scenarios' steps name is looked for on it.
 
 For each scenario the explorer lists with a prototype screen, the screen's artboard is rendered once for each step group
-the explorer lists for that scenario, with the ``story``, ``scenario``, ``step`` and ``stepIndex`` props the explorer
+the explorer lists for that scenario, with the ``story``, ``scenario``, ``step``, ``stepIndex`` and ``stepKind`` props the explorer
 hands it when the reader picks that group. A scenario with one action has two groups, its Givens and When, then its
 Thens; a scenario with two actions has three, so the outcome between them is walked too. The values each step names (*StepValues*: quoted text,
 dollar amounts, codes written in capitals with digits, phone numbers, and numbers of four or more digits) are looked
@@ -24,7 +24,7 @@ import shutil
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional, Sequence
+from typing import TYPE_CHECKING, List, Mapping, Optional, Sequence
 
 from cdd_guidance.practices.stories.model.story_tree import KEY_SEPARATOR
 from cdd_guidance.practices.ux.model.claude_design.canvas_explorer import CanvasExplorer, ExplorerScenario
@@ -36,6 +36,12 @@ if TYPE_CHECKING:
 _RENDERER = Path(__file__).with_name("screen_render.cjs")
 # What the miss of a screen that did not render names in place of a value.
 UNRENDERED = "(screen did not render)"
+# The name a prototype takes beside the screens while the walk draws it next to the production view standing in for it.
+BESIDE_SUFFIX = ".beside.dc.html"
+# The most lines of text a difference shows for each side.
+_DIFFERENCE_LINES = 6
+# What the miss of an action that leaves its screen as it was names before the action.
+STILL = "(screen stays as it was after)"
 
 
 class ScreenWalkUnavailable(RuntimeError):
@@ -161,19 +167,25 @@ def _cell(text: str) -> str:
 
 
 class ScreenWalkReport:
-    """What a walk found, step by step. Its ``misses`` are what ``CanvasVersion.publish_at`` refuses to publish over."""
+    """What a walk found, step by step, each action whose screen stays as it was (*stills*), and each step where a
+    production view shows other text than the prototype it stands in for (*differences*). Its ``misses`` are what
+    ``CanvasVersion.publish_at`` refuses to publish over; the differences are for the person to read."""
 
-    def __init__(self, steps: Sequence[WalkedStep]) -> None:
+    def __init__(self, steps: Sequence[WalkedStep], stills: Sequence["StillAction"] = (), differences: Sequence["ScreenDifference"] = ()) -> None:
         self.steps = list(steps)
+        self.stills = list(stills)
+        self.differences = list(differences)
 
     @property
     def misses(self) -> List[str]:
         """Each value a screen leaves out, once, as ``Story › Scenario › value``; a screen that did not render is one
-        miss at its scenario."""
+        miss at its scenario; and each action that leaves its screen as it was, as ``Story › Scenario › STILL: When …``."""
         found: dict[str, None] = {}
         for step in self.steps:
             for value in ([UNRENDERED] if step.error else step.missing):
                 found.setdefault(f"{step.place}{KEY_SEPARATOR}{value}", None)
+        for still in self.stills:
+            found.setdefault(still.miss, None)
         return list(found)
 
     def markdown(self) -> str:
@@ -182,6 +194,16 @@ class ScreenWalkReport:
         for step in self.steps:
             missing = f"{UNRENDERED[:-1]}: {step.error})" if step.error else ", ".join(step.missing)
             lines.append(f"| {_cell(step.place)} | {_cell(step.screen)} | {_cell(step.step)} | {_cell(', '.join(step.found))} | {_cell(missing)} |")
+        if self.stills:
+            lines += ["", "Actions that leave the screen as it was, so a reader who presses on the screen sees nothing happen:", "",
+                      "| Story › Scenario | Screen | Action |", "| --- | --- | --- |"]
+            lines += [f"| {_cell(still.place)} | {_cell(still.screen)} | {_cell(still.step)} |" for still in self.stills]
+        if self.differences:
+            lines += ["", "Production views beside the prototype they stand in for: the text each shows that the other does not "
+                          "(the walk draws text, not layout, so layout is not compared):", "",
+                      "| Story › Scenario | Screen | Step | Only in production | Only in the prototype |", "| --- | --- | --- | --- | --- |"]
+            lines += [f"| {_cell(each.place)} | {_cell(each.screen)} | {_cell(each.step)} | {_cell(each.production_text)} | {_cell(each.prototype_text)} |"
+                      for each in self.differences]
         return "\n".join(lines) + "\n"
 
     def write(self, path: Path) -> Path:
@@ -193,17 +215,24 @@ class ScreenWalkReport:
 @dataclass(frozen=True)
 class _Stop:
     """One render of a scenario's screen: the step group the explorer hands it, at its position in the scenario, and the
-    steps whose values it shows."""
+    steps whose values it shows. *played* is the scenario as the screen loads it, an outline's example row by its own
+    name."""
 
     scenario: ExplorerScenario
     artboard: Optional[Path]
     lines: List[str]
     index: int
+    played: str = ""
+
+    @property
+    def name(self) -> str:
+        return self.played or self.scenario.name
 
     @property
     def props(self) -> dict:
         """The props the explorer hands the screen when the reader picks this step group."""
-        return {"story": self.scenario.story, "scenario": self.scenario.name, "step": "\n".join(self.lines), "stepIndex": self.index}
+        return {"story": self.scenario.story, "scenario": self.name, "step": "\n".join(self.lines), "stepIndex": self.index,
+                "stepKind": self.scenario.kind_of(self.index)}
 
 
 class StoryCanvasWalk:
@@ -213,9 +242,11 @@ class StoryCanvasWalk:
         self.version = version
         self.explorer = CanvasExplorer(version.folder / "project")
 
-    def walk(self, story_map: "StoryMap") -> ScreenWalkReport:
+    def walk(self, story_map: "StoryMap", beside: Optional[Mapping[str, str]] = None) -> ScreenWalkReport:
         """Render each scenario's screen at every step group the explorer lists for it, as the reader picks them, and
-        report the values its steps name that each render shows and leaves out."""
+        report the values its steps name that each render shows and leaves out. *beside* holds, by screen slug, the
+        artboard of the prototype a production view stands in for; each such screen is drawn as both at every step,
+        and the text they show differently is reported."""
         stories = {story.name: story for story in story_map.descendants.stories()}
         stops: list[_Stop] = []
         unmatched: list[WalkedStep] = []
@@ -226,10 +257,32 @@ class StoryCanvasWalk:
             if self._scenario_in(stories, scenario) is None:
                 unmatched.append(WalkedStep(scenario.story, scenario.name, scenario.screen, "", error="the story map holds no scenario of this name under this story"))
                 continue
-            stops.extend(_Stop(scenario, artboard, group.split("\n"), index) for index, group in enumerate(scenario.groups) if group)
+            stops.extend(_Stop(scenario, artboard, group.split("\n"), index, played.name)
+                         for played in scenario.played() for index, group in enumerate(played.groups) if group)
         rendered = self._rendered(stops)
         steps = [step for stop, text in zip(stops, rendered) for step in _checked(stop, text)]
-        return ScreenWalkReport([*unmatched, *steps])
+        return ScreenWalkReport([*unmatched, *steps], _still_actions(stops, rendered), self._differences(stops, rendered, beside or {}))
+
+    def _differences(self, stops: Sequence[_Stop], rendered: Sequence[dict], beside: Mapping[str, str]) -> List["ScreenDifference"]:
+        """Each step where a production view and the prototype it stands in for show other text. The prototype is
+        written beside the screens only while it is drawn (``<slug>.beside.dc.html``), so the canvas never holds it."""
+        compared = [(stop, result) for stop, result in zip(stops, rendered) if stop.scenario.screen in beside and "error" not in result]
+        if not compared:
+            return []
+        folder = self.version.folder / "project" / "screens"
+        written = []
+        try:
+            for slug in {stop.scenario.screen for stop, _ in compared}:
+                path = folder / f"{slug}{BESIDE_SUFFIX}"
+                path.write_text(beside[slug], encoding="utf-8")
+                written.append(path)
+            prototype = _render([{"artboard": str((folder / f"{stop.scenario.screen}{BESIDE_SUFFIX}").resolve()), "props": stop.props}
+                                 for stop, _ in compared])
+        finally:
+            for path in written:
+                path.unlink(missing_ok=True)
+        found = (ScreenDifference.of(stop, result, drawn) for (stop, result), drawn in zip(compared, prototype))
+        return [difference for difference in found if difference is not None]
 
     @staticmethod
     def _scenario_in(stories: dict, scenario: ExplorerScenario) -> Optional["Scenario"]:
@@ -266,12 +319,132 @@ def _checked(stop: _Stop, rendered: dict) -> List[WalkedStep]:
     """Each line of stop checked against what its screen showed."""
     scenario = stop.scenario
     if "error" in rendered:
-        return [WalkedStep(scenario.story, scenario.name, scenario.screen, stop.lines[-1].strip(), error=rendered["error"])]
+        return [WalkedStep(scenario.story, stop.name, scenario.screen, stop.lines[-1].strip(), error=rendered["error"])]
     shown = ShownText(rendered["text"])
     steps = []
     for line in stop.lines:
         values = StepValues(line).values
-        steps.append(WalkedStep(scenario.story, scenario.name, scenario.screen, line.strip(),
+        steps.append(WalkedStep(scenario.story, stop.name, scenario.screen, line.strip(),
                                 [value.written for value in values if shown.shows(value)],
                                 [value.written for value in values if not shown.shows(value)]))
     return steps
+
+
+@dataclass(frozen=True)
+class StillAction:
+    """An action a scenario takes (a When, with its And lines) after which its screen shows what it showed before: the
+    scenario on its screen, and the action's first line."""
+
+    story: str
+    scenario: str
+    screen: str
+    step: str
+
+    @property
+    def place(self) -> str:
+        return f"{self.story}{KEY_SEPARATOR}{self.scenario}"
+
+    @property
+    def miss(self) -> str:
+        return f"{self.place}{KEY_SEPARATOR}{STILL}: {self.step}"
+
+
+_KEYWORD = re.compile(r"^\s*(Given|When|Then|And|But)\b")
+
+
+def _actions(groups: Sequence[List[str]]) -> List[tuple]:
+    """Each action of a scenario's step groups, as (its first line, the group holding it, whether its group ends on it):
+    a run of When lines, an And or But taking the phase of the line it continues."""
+    found: list[tuple] = []
+    for index, lines in enumerate(groups):
+        phase, opened = "", None
+        for place, line in enumerate(lines):
+            keyword = (_KEYWORD.match(line) or [None, ""])[1]
+            phase = phase if keyword in ("And", "But", "") else keyword.lower()
+            if phase == "when" and opened is None:
+                opened = line.strip()
+            if phase != "when" and opened is not None:
+                found.append((opened, index, False))
+                opened = None
+        if opened is not None:
+            found.append((opened, index, True))
+    return found
+
+
+def _still_actions(stops: Sequence["_Stop"], rendered: Sequence[dict]) -> List[StillAction]:
+    """Each action, of each scenario a screen plays, after which the screen shows the same text as before it. An action
+    that ends its step group is shown before on that group and after on the next; one inside a group, followed by its
+    outcome, is shown after on that group and before on the one ahead of it. An action with no group on one side has no
+    state of its own, so the screen stays as it was too. A screen that did not render is reported by the value check."""
+    played: dict[tuple, list] = {}
+    for stop, result in zip(stops, rendered):
+        played.setdefault((stop.scenario.story, stop.name, stop.scenario.screen), []).append((stop.index, stop.lines, result))
+    stills: List[StillAction] = []
+    for (story, scenario, screen), shown in played.items():
+        by_index = {index: result for index, _, result in shown}
+        if any("error" in result for result in by_index.values()):
+            continue
+        groups = [lines for _, lines, _ in sorted(shown, key=lambda each: each[0])]
+        indexes = sorted(by_index)
+        for step, at, ends in _actions(groups):
+            index = indexes[at]
+            before, after = (index, index + 1) if ends else (index - 1, index)
+            if before not in by_index or after not in by_index or by_index[before]["text"] == by_index[after]["text"]:
+                stills.append(StillAction(story, scenario, screen, step))
+    return stills
+
+
+@dataclass(frozen=True)
+class ScreenDifference:
+    """One step where a production view shows other text than the prototype it stands in for: the lines only the
+    production view shows, the lines only the prototype shows, or why the prototype did not draw."""
+
+    story: str
+    scenario: str
+    screen: str
+    step: str
+    only_in_production: tuple = ()
+    only_in_prototype: tuple = ()
+    error: str = ""
+
+    @property
+    def place(self) -> str:
+        return f"{self.story}{KEY_SEPARATOR}{self.scenario}"
+
+    @property
+    def production_text(self) -> str:
+        return " / ".join(self.only_in_production[:_DIFFERENCE_LINES]) + (" …" if len(self.only_in_production) > _DIFFERENCE_LINES else "")
+
+    @property
+    def prototype_text(self) -> str:
+        if self.error:
+            return f"(the prototype did not draw: {self.error})"
+        return " / ".join(self.only_in_prototype[:_DIFFERENCE_LINES]) + (" …" if len(self.only_in_prototype) > _DIFFERENCE_LINES else "")
+
+    @property
+    def line(self) -> str:
+        """The difference as one line of the render summary."""
+        return f"{self.place} on {self.screen}, {self.step}: production only [{self.production_text}]; prototype only [{self.prototype_text}]"
+
+    @classmethod
+    def of(cls, stop: "_Stop", production: dict, prototype: dict) -> Optional["ScreenDifference"]:
+        """How the two drawings of stop's screen differ; none when they show the same text."""
+        step = stop.lines[-1].strip()
+        if "error" in prototype:
+            return cls(stop.scenario.story, stop.name, stop.scenario.screen, step, error=str(prototype["error"]))
+        shown, drawn = _text_lines(production["text"]), _text_lines(prototype["text"])
+        only_production = tuple(line for line in shown if line not in drawn)
+        only_prototype = tuple(line for line in drawn if line not in shown)
+        if not only_production and not only_prototype:
+            return None
+        return cls(stop.scenario.story, stop.name, stop.scenario.screen, step, only_production, only_prototype)
+
+
+def _text_lines(text: str) -> List[str]:
+    """The lines a screen shows, each with its spaces made single, blank ones left out, each once."""
+    found: dict[str, None] = {}
+    for line in text.splitlines():
+        line = re.sub(r"\s+", " ", line).strip()
+        if line:
+            found.setdefault(line, None)
+    return list(found)

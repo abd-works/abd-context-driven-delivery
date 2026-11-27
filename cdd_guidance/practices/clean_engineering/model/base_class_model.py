@@ -255,6 +255,16 @@ class OoadClass(OoadNode):
         assert isinstance(source, OoadClass)
         self._properties.reconcile(source.properties, self.load_property)
         self._operations.reconcile(source.operations, self.load_operation)
+        self._reconcile_folded(source)
+
+    def _reconcile_folded(self, source: "OoadClass") -> None:
+        """Hold, as this class's own kind, each class source draws inside its card, so a format that draws the card
+        draws them too."""
+        self.folded = []
+        for item in source.folded:
+            made = type(self)(item.name, item.sequential_order)
+            made.translate_from(item)
+            self.fold(made)
 
     def declares(self, member: OoadNode) -> bool:
         """True when member is one of this class's own operations or properties."""

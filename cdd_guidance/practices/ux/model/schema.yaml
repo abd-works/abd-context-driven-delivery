@@ -20,6 +20,8 @@ map:
     - in-scope-epics-only
     - story-domain-js-imported
     - scenario-listed-once
+    - screen-files-from-production
+    - positions-hold-no-data
 
 screen:
   fidelity: ia

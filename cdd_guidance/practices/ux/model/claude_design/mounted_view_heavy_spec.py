@@ -165,9 +165,9 @@ with description("a production view mounted on the canvas, for real") as self:
         with it("should point the views' fetch and window.location at the canvas's stand-ins"):
             expect((self.script.count("globalThis.__canvasFetch)(\"/api/order\")"), self.script.count("globalThis.__canvasLocation.assign"))).to(equal((1, 1)))
 
-    with context("scoping the product's stylesheet to the screen's frame"):
-        with it("should put the page's tokens and base rules on the frame"):
-            expect((self.css.count(".canvas-screen{--brand:#f00;"), self.css.count(".canvas-screen{margin:0;"))).to(equal((1, 1)))
+    with context("scoping the product's stylesheet to the mounted view"):
+        with it("should put the page's tokens and base rules on the mounted view's own wrapper, not on every frame"):
+            expect((self.css.count(".canvas-mount{--brand:#f00;"), self.css.count(".canvas-mount{margin:0;"))).to(equal((1, 1)))
 
         with it("should turn a width query into a container query on the frame"):
             expect(self.css).to(contain("@containercanvas-screen(min-width:600px)"))
@@ -176,7 +176,7 @@ with description("a production view mounted on the canvas, for real") as self:
             expect(self.css).to(contain("@media(prefers-reduced-motion:reduce)"))
 
         with it("should measure the window's width as the frame's"):
-            expect(self.css).to(contain(".canvas-screen.plan{width:50cqw;"))
+            expect(self.css).to(contain(".canvas-mount.plan{width:50cqw;"))
 
         with it("should keep the frame's fixed children inside it"):
             expect(self.css).to(contain(".canvas-screen{container:canvas-screen/inline-size;contain:layoutpaint;"))

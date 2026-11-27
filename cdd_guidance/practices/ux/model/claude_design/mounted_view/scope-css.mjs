@@ -2,14 +2,22 @@
 // canvas page, beside the story explorer's own panel, so the product's rules must neither read the browser window nor
 // reach the page around the frame:
 //
-// - every selector is scoped to the frame (`.canvas-screen`); `:root`, `html` and `body` become the frame itself, so
-//   the design tokens and the page's base rules land on the screen and nowhere else;
+// - every selector is scoped to the mounted view's own wrapper (`.canvas-mount`, inside the frame); `:root`, `html`
+//   and `body` become that wrapper, so the product's design tokens and base rules land on the mounted view and nowhere
+//   else, not even on a ported prototype screen drawn in the same kind of frame with its own theme;
 // - an `@media` rule that asks only about width or height becomes an `@container` rule on the frame, so the screen
 //   draws its phone layout in a phone-wide frame inside a wide window; any other media rule stays as it is;
 // - `vw` becomes `cqw`, the frame's width;
 // - the frame contains its fixed and absolute children (`contain: layout paint`), so a sheet or a backdrop the
 //   product fixes to the window covers the screen, not the explorer.
+//
+// A stylesheet that must keep its own selectors, such as a ported prototype's design system whose tokens answer to
+// `:root` and `[data-theme="dark"]` on the page, takes only the size conversion (`containerCss`): its width and height
+// media rules become container rules on the frame and `vw` becomes `cqw`, and every selector stays as written.
+import { pathToFileURL } from 'node:url';
+
 const FRAME = '.canvas-screen';
+const SCOPE = '.canvas-mount';
 const CONTAINER = 'canvas-screen';
 const UNSCOPED_AT_RULES = /^@(font-face|keyframes|-webkit-keyframes|property|page|counter-style|font-feature-values|import|charset|namespace)\b/i;
 const GROUPING_AT_RULES = /^@(media|supports|container|layer|document)\b/i;
@@ -39,14 +47,14 @@ function splitTopLevel(text, separator) {
 export function scopeSelector(selector) {
   const written = selector.trim();
   if (!written) return written;
-  if (written.startsWith(FRAME)) return written;
+  if (written.startsWith(FRAME) || written.startsWith(SCOPE)) return written;
   const page = /^(:root|html|body)(?![\w-])/i.exec(written);
   if (page) {
     const rest = written.slice(page[0].length);
     const nested = /^\s+(:root|html|body)(?![\w-])/i.exec(rest);
-    return `${FRAME}${nested ? rest.slice(nested[0].length) : rest}`;
+    return `${SCOPE}${nested ? rest.slice(nested[0].length) : rest}`;
   }
-  return `${FRAME} ${written}`;
+  return `${SCOPE} ${written}`;
 }
 
 function scopeSelectors(selectors) {
@@ -77,7 +85,7 @@ function blockEnd(text, open) {
   return text.length - 1;
 }
 
-function scopeRules(text) {
+function rewriteRules(text, scoped) {
   let out = '';
   let index = 0;
   while (index < text.length) {
@@ -92,21 +100,40 @@ function scopeRules(text) {
     const prelude = text.slice(index, open).trim();
     const close = blockEnd(text, open);
     const body = text.slice(open + 1, close);
-    out += scopeRule(prelude, body);
+    out += rewriteRule(prelude, body, scoped);
     index = close + 1;
   }
   return out;
 }
 
-function scopeRule(prelude, body) {
+function rewriteRule(prelude, body, scoped) {
   if (UNSCOPED_AT_RULES.test(prelude)) return `${prelude}{${body}}`;
-  if (/^@media\b/i.test(prelude)) return `${containerQuery(prelude) || prelude}{${scopeRules(body)}}`;
-  if (GROUPING_AT_RULES.test(prelude)) return `${prelude}{${scopeRules(body)}}`;
+  if (/^@media\b/i.test(prelude)) return `${containerQuery(prelude) || prelude}{${rewriteRules(body, scoped)}}`;
+  if (GROUPING_AT_RULES.test(prelude)) return `${prelude}{${rewriteRules(body, scoped)}}`;
   if (prelude.startsWith('@')) return `${prelude}{${body}}`;
-  return `${scopeSelectors(prelude)}{${scopeDeclarations(body)}}`;
+  return `${scoped ? scopeSelectors(prelude) : prelude}{${scopeDeclarations(body)}}`;
 }
 
+function withoutComments(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, '');
+}
+
+// The product's stylesheet kept inside the mounted view: selectors scoped to its wrapper, size media rules on the frame, the frame's rule first.
 export function scopeCss(css) {
-  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  return `${FRAME_RULE}\n${scopeRules(withoutComments)}`;
+  return `${FRAME_RULE}
+${rewriteRules(withoutComments(css), true)}`;
+}
+
+// The size conversion alone: width and height media rules on the frame, `vw` as `cqw`, selectors as written.
+export function containerCss(css) {
+  return rewriteRules(withoutComments(css), false);
+}
+
+// Run as `node scope-css.mjs --container`: reads a JSON list of stylesheets on standard input and writes the list
+// converted by containerCss, in the same order, to standard output.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href && process.argv.includes('--container')) {
+  let input = '';
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', (chunk) => { input += chunk; });
+  process.stdin.on('end', () => { process.stdout.write(JSON.stringify(JSON.parse(input).map(containerCss))); });
 }

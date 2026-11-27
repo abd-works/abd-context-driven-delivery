@@ -6,8 +6,9 @@ import { CallCatalog } from '@source-view/call-expansion'
 import type { SourceCallout } from '@source-view/source-callouts'
 
 import type { FileCallouts } from './file-callouts'
-import { FileSourceView } from './file-source-view'
+import { FileSourceView, SCROLLING_PANE } from './file-source-view'
 import { renderingOf, type RenderedForm, type Rendering } from './file-rendering'
+import { headingAnchored } from './markdown-page'
 import { FILE_PATH, RenderedCallouts } from './rendered-callouts'
 import type { PageFrames } from './page-frames'
 import { calloutsOf } from './source-of-file'
@@ -15,9 +16,10 @@ import { calloutsOf } from './source-of-file'
 const NO_CALLOUTS: SourceCallout[] = []
 const NO_MEMBERS: NodeSourceData[] = []
 
-// What the source view takes; callouts, which reads another file's callouts for a section opened in place; and frames,
-// which shows an HTML page running its own scripts.
-type FileViewProps = ComponentProps<typeof FileSourceView> & { callouts: FileCallouts; frames: PageFrames }
+// What the source view takes; callouts, which reads another file's callouts for a section opened in place; frames,
+// which shows an HTML page running its own scripts; and anchor, the heading a link named, which the rendered page
+// scrolls to.
+type FileViewProps = ComponentProps<typeof FileSourceView> & { callouts: FileCallouts; frames: PageFrames; anchor?: string }
 
 // Rendered and Source, the two ways a file with a rendered form shows; the one showing is pressed.
 function RenderedToggleView({ rendered, onChoose }: { rendered: boolean; onChoose: (rendered: boolean) => void }) {
@@ -33,11 +35,25 @@ function RenderedToggleView({ rendered, onChoose }: { rendered: boolean; onChoos
   )
 }
 
+// Scrolls the heading of page that anchor names to the top of the pane it is drawn in, below the pane's head, which stays
+// in view; the window and the other pane stay where they are. A page in no pane scrolls the window to it.
+function showHeading(page: HTMLElement, anchor: string): void {
+  const heading = headingAnchored(page, anchor)
+  if (!heading) return
+  const pane = page.closest<HTMLElement>(`.${SCROLLING_PANE}`)
+  if (!pane) return heading.scrollIntoView({ block: 'start' })
+  const head = pane.querySelector<HTMLElement>('.file-pane-head')?.offsetHeight ?? 0
+  pane.scrollTop += heading.getBoundingClientRect().top - pane.getBoundingClientRect().top - head - HEADING_MARGIN_PIXELS
+}
+
+// The room left above a heading a link opened at, so it does not sit flush against the pane's head.
+const HEADING_MARGIN_PIXELS = 8
+
 // A markdown file drawn as the page it describes, with its callouts and links: a line that holds callouts ends in a
 // mark that opens them in place, and a press on a link follows it, to another file of the session or, for a web
 // address, to a tab of its own. The page is drawn again only when the file's text or the callouts shown change, so a
 // file read again as it was, as while a comment on it is sent, keeps the callouts a person opened.
-function MarkdownPageView({ path, html, shown, rendered }: { path: string; html: string; shown: SourceCallout[]; rendered: RenderedCallouts }) {
+function MarkdownPageView({ path, html, shown, rendered, anchor }: { path: string; html: string; shown: SourceCallout[]; rendered: RenderedCallouts; anchor: string }) {
   const page = useRef<HTMLDivElement>(null)
   const held = useRef(shown)
   held.current = shown
@@ -47,6 +63,10 @@ function MarkdownPageView({ path, html, shown, rendered }: { path: string; html:
     page.current.innerHTML = html
     rendered.mark(page.current, held.current)
   }, [html, drawn, rendered])
+  // A file a link opened shows the heading the link named at the top of its pane, once the page is first drawn.
+  useEffect(() => {
+    if (page.current) showHeading(page.current, anchor)
+  }, [html, anchor])
   const follow = (event: MouseEvent<HTMLElement>) => {
     if (rendered.follow(event.target as Element)) event.preventDefault()
   }
@@ -80,14 +100,14 @@ function FramedPageView({ path, html, frames }: { path: string; html: string; fr
 
 // The file drawn as its form draws it: markdown and SVG in the page, cleaned of scripts; an HTML page in a frame of its
 // own, running its scripts apart from the Files app; JSON laid out, or as its text with the reason it is not valid.
-function RenderedFileView({ path, rendering, shown, rendered, frames }: { path: string; rendering: Rendering; shown: SourceCallout[]; rendered: RenderedCallouts; frames: PageFrames }) {
+function RenderedFileView({ path, rendering, shown, rendered, frames, anchor }: { path: string; rendering: Rendering; shown: SourceCallout[]; rendered: RenderedCallouts; frames: PageFrames; anchor: string }) {
   if (rendering.form === 'html') return <FramedPageView path={path} html={rendering.html} frames={frames} />
   return (
     <div className={`file-rendered rendered-${rendering.form}`} aria-label={`${path} rendered`}>
       {rendering.problem ? <p className="files-note rendered-problem">{rendering.problem}</p> : null}
       {rendering.form === 'json' ? <pre dangerouslySetInnerHTML={{ __html: rendering.html }} /> : null}
       {rendering.form === 'svg' ? <div className="markdown-page" dangerouslySetInnerHTML={{ __html: rendering.html }} /> : null}
-      {rendering.form === 'markdown' ? <MarkdownPageView path={path} html={rendering.html} shown={shown} rendered={rendered} /> : null}
+      {rendering.form === 'markdown' ? <MarkdownPageView path={path} html={rendering.html} shown={shown} rendered={rendered} anchor={anchor} /> : null}
     </div>
   )
 }
@@ -102,7 +122,7 @@ function useRenderedCallouts({ callouts, members = NO_MEMBERS, onGoToFile }: Pic
   return useMemo(() => new RenderedCallouts({ calloutsIn: path => now.current.callouts.in(path), within: (callout, stack) => now.current.within(callout, stack), goTo: callout => now.current.onGoToFile?.(callout) }), [])
 }
 
-function RenderableFileView({ form, callouts, frames, ...props }: FileViewProps & { form: RenderedForm }) {
+function RenderableFileView({ form, callouts, frames, anchor = '', ...props }: FileViewProps & { form: RenderedForm }) {
   const around = props.openAround ?? []
   // It opens rendered unless lines of it are asked to show, such as a node selected in the graph view, whose lines,
   // comments and broken rules only the source view marks.
@@ -123,7 +143,7 @@ function RenderableFileView({ form, callouts, frames, ...props }: FileViewProps 
   return (
     <div className="file-source">
       <div className="file-source-bar">{toggle}</div>
-      <RenderedFileView path={file.path} rendering={rendering} shown={shown} rendered={rendered} frames={frames} />
+      <RenderedFileView path={file.path} rendering={rendering} shown={shown} rendered={rendered} frames={frames} anchor={anchor} />
     </div>
   )
 }
@@ -131,8 +151,8 @@ function RenderableFileView({ form, callouts, frames, ...props }: FileViewProps 
 // An open file: a file the session answers a rendered form for (markdown, HTML, SVG, JSON) opens rendered, unless lines of it are asked to
 // show, with Rendered and Source to switch between the two; any other file opens in the source view alone. Both views
 // show the file's callouts and follow its links.
-export function FileView({ callouts, ...props }: FileViewProps) {
+export function FileView({ callouts, anchor, ...props }: FileViewProps) {
   const form = props.file.rendered_form as RenderedForm | ''
   if (!form) return <FileSourceView {...props} />
-  return <RenderableFileView {...props} callouts={callouts} form={form} />
+  return <RenderableFileView {...props} callouts={callouts} form={form} anchor={anchor} />
 }

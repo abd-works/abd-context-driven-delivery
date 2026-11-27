@@ -37,10 +37,16 @@ with description("a story's screen mounting a production view") as self:
             expect(given).to(equal([("bound", "bound"), ("repositories", "repositories"), ("position", "position"), ("go", "go")]))
 
         with it("should draw it inside the screen's frame, which the scoped stylesheet answers to"):
-            expect(self.html).to(contain('<div class="canvas-screen">\n<x-import'))
+            expect(self.html).to(contain('<div class="canvas-screen" style="box-sizing: border-box; width: 390px;'))
+            expect(re.search(r'<div class="canvas-screen"[^>]*>\n<div class="canvas-mount">\n<x-import', self.html)).not_to(equal(None))
 
         with it("should still load its scenario through the fixture bar"):
             expect(ScreenArtboard(self.html).loads_fixtures).to(equal(True))
+
+    with context("drawn in the canvas's theme"):
+        with it("should set the theme on the view's wrapper, where its scoped design tokens answer to it"):
+            themed = StoryScreen(title="Cart", story="Cart", markup=MountedViewMarkup("PlanCatalogScreen", BUNDLE), positions={}, theme="dark").html
+            expect(themed).to(contain('<div class="canvas-mount" data-theme="dark">'))
 
     with context("a bundle"):
         with it("should be drawn by its namespace's CanvasMount"):
