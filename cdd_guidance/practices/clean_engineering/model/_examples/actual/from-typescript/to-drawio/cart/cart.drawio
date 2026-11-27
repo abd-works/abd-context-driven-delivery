@@ -47,7 +47,7 @@
           <mxGeometry x="4540" y="380" width="320" height="110" as="geometry" />
         </mxCell>
         <mxCell id="plans--plan" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Plans»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;i style=&quot;font-size:9px;color:#888;&quot;&gt;&amp;lt;&amp;lt;represents&amp;gt;&amp;gt;&lt;/i&gt;&lt;br/&gt;&lt;b&gt;Plan&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ name: string&lt;br/&gt;+ price: number&lt;br/&gt;+ isSellable: boolean&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="2620" y="1220" width="580" height="142" as="geometry" />
+          <mxGeometry x="160" y="1220" width="580" height="142" as="geometry" />
         </mxCell>
         <mxCell id="porting--portability" value="&lt;p style=&quot;margin:0px;margin-top:2px;text-align:center;font-size:10px;&quot;&gt;&lt;i&gt;«from: Porting»&lt;/i&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;text-align:center;&quot;&gt;&lt;i style=&quot;font-size:9px;color:#888;&quot;&gt;&amp;lt;&amp;lt;association&amp;gt;&amp;gt;&lt;/i&gt;&lt;br/&gt;&lt;b&gt;Portability&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ donorOperator: string&lt;br/&gt;+ portNumber: string&lt;br/&gt;+ accountNumber: string | null&lt;br/&gt;+ userType: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;dashed=1;dashPattern=8 8;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="3820" y="890" width="1020" height="142" as="geometry" />
@@ -104,14 +104,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="8" value="plan" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--bundle" target="plans--plan" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="450" y="1190" />
-              <mxPoint x="2900" y="1190" />
-              <mxPoint x="2900" y="1180" />
-              <mxPoint x="2910" y="1180" />
-            </Array>
-          </mxGeometry>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="9" value="carts" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=0;startSize=14;endArrow=open;endSize=12;exitX=0.7581;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="cart--cartrepository" target="cart--cart" parent="1">
           <mxGeometry relative="1" as="geometry">

@@ -35,7 +35,7 @@
           <mxGeometry x="680" y="60" width="240" height="80" as="geometry" />
         </mxCell>
         <mxCell id="customer--accountcredentialrequirement" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialRequirement&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ field: string&lt;br/&gt;+ requirement: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ AccountCredentialRequirement(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=Customer;" vertex="1" parent="1">
-          <mxGeometry x="1830" y="1700" width="220" height="94" as="geometry" />
+          <mxGeometry x="1360" y="1700" width="220" height="94" as="geometry" />
         </mxCell>
         <mxCell id="customer--accountcredentialrequirements" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialRequirements&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ emailRequired: AccountCredentialRequirement&lt;br/&gt;+ emailFormat: AccountCredentialRequirement&lt;br/&gt;+ passwordRequired: AccountCredentialRequirement&lt;br/&gt;+ passwordLetters: AccountCredentialRequirement&lt;br/&gt;+ passwordNumber: AccountCredentialRequirement&lt;br/&gt;+ passwordSymbol: AccountCredentialRequirement&lt;br/&gt;+ passwordLength: AccountCredentialRequirement&lt;br/&gt;+ confirmRequired: AccountCredentialRequirement&lt;br/&gt;+ confirmMismatch: AccountCredentialRequirement&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ AccountCredentialRequirements(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=Customer;" vertex="1" parent="1">
           <mxGeometry x="1320" y="1350" width="300" height="206" as="geometry" />
@@ -47,7 +47,7 @@
           <mxGeometry x="1920" y="60" width="220" height="142" as="geometry" />
         </mxCell>
         <mxCell id="customer--accounttoken" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;i style=&quot;font-size:9px;color:#888;&quot;&gt;&amp;lt;&amp;lt;System&amp;gt;&amp;gt;&lt;/i&gt;&lt;br/&gt;&lt;b&gt;AccountToken&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ email: string&lt;br/&gt;+ customerId: string | null&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ AccountToken(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=Customer;" vertex="1" parent="1">
-          <mxGeometry x="2360" y="1350" width="200" height="94" as="geometry" />
+          <mxGeometry x="2740" y="1350" width="200" height="94" as="geometry" />
         </mxCell>
         <mxCell id="customer--validationcode" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;i style=&quot;font-size:9px;color:#888;&quot;&gt;&amp;lt;&amp;lt;System&amp;gt;&amp;gt;&lt;/i&gt;&lt;br/&gt;&lt;b&gt;ValidationCode&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ code: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ ValidationCode(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=Customer;" vertex="1" parent="1">
           <mxGeometry x="2040" y="1350" width="200" height="80" as="geometry" />
@@ -114,9 +114,7 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="920" y="690" />
-              <mxPoint x="2210" y="690" />
-              <mxPoint x="2210" y="670" />
-              <mxPoint x="2750" y="670" />
+              <mxPoint x="2750" y="690" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -171,11 +169,11 @@
         <mxCell id="11" value="accountCredentials" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=accountCredentials;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="customer--customerexception" target="customer--accountcredentials" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="1700" y="210" />
-              <mxPoint x="1870" y="210" />
-              <mxPoint x="1870" y="10" />
-              <mxPoint x="2890" y="10" />
-              <mxPoint x="2890" y="410" />
+              <mxPoint x="1700" y="250" />
+              <mxPoint x="2230" y="250" />
+              <mxPoint x="2230" y="30" />
+              <mxPoint x="2870" y="30" />
+              <mxPoint x="2870" y="410" />
               <mxPoint x="2840" y="410" />
             </Array>
           </mxGeometry>
@@ -184,7 +182,7 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="2950" y="1310" />
-              <mxPoint x="2490" y="1310" />
+              <mxPoint x="2870" y="1310" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -199,8 +197,8 @@
         <mxCell id="14" value="requirements" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.1944;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="customer--accountcredentials" target="customer--accountcredentialrequirements" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2730" y="1230" />
-              <mxPoint x="1470" y="1230" />
+              <mxPoint x="2730" y="1250" />
+              <mxPoint x="1470" y="1250" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -208,9 +206,9 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="2450" y="390" />
-              <mxPoint x="2530" y="390" />
-              <mxPoint x="2530" y="650" />
-              <mxPoint x="2930" y="650" />
+              <mxPoint x="2820" y="390" />
+              <mxPoint x="2820" y="760" />
+              <mxPoint x="2930" y="760" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -223,26 +221,21 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="17" value="emailRequired, emailFormat, passwordRequired, passwordLetters, passwordNumber, passwordSymbol, passwordLength, confirmRequired, confirmMismatch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=emailRequired,emailFormat,passwordRequired,passwordLetters,passwordNumber,passwordSymbol,passwordLength,confirmRequired,confirmMismatch;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="1470" y="1660" />
-              <mxPoint x="1940" y="1660" />
-            </Array>
-          </mxGeometry>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="18" value="accountToken" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.35;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="customer--cognitouser" target="customer--accounttoken" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="2030" y="320" />
-              <mxPoint x="2430" y="320" />
-              <mxPoint x="2430" y="410" />
-              <mxPoint x="2490" y="410" />
-              <mxPoint x="2490" y="1250" />
-              <mxPoint x="1710" y="1250" />
-              <mxPoint x="1710" y="1490" />
-              <mxPoint x="2330" y="1490" />
-              <mxPoint x="2330" y="1310" />
-              <mxPoint x="2430" y="1310" />
+              <mxPoint x="2030" y="230" />
+              <mxPoint x="2210" y="230" />
+              <mxPoint x="2210" y="10" />
+              <mxPoint x="3850" y="10" />
+              <mxPoint x="3850" y="1320" />
+              <mxPoint x="2970" y="1320" />
+              <mxPoint x="2970" y="1470" />
+              <mxPoint x="2710" y="1470" />
+              <mxPoint x="2710" y="1310" />
+              <mxPoint x="2810" y="1310" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -254,10 +247,8 @@
               <mxPoint x="1320" y="300" />
               <mxPoint x="1360" y="300" />
               <mxPoint x="1360" y="320" />
-              <mxPoint x="1890" y="320" />
-              <mxPoint x="1890" y="30" />
-              <mxPoint x="2870" y="30" />
-              <mxPoint x="2870" y="370" />
+              <mxPoint x="2630" y="320" />
+              <mxPoint x="2630" y="370" />
               <mxPoint x="2660" y="370" />
             </Array>
           </mxGeometry>
@@ -305,16 +296,10 @@
               <mxPoint x="1070" y="30" />
               <mxPoint x="1070" y="610" />
               <mxPoint x="2230" y="610" />
-              <mxPoint x="2230" y="690" />
-              <mxPoint x="2470" y="690" />
-              <mxPoint x="2470" y="1210" />
-              <mxPoint x="1690" y="1210" />
-              <mxPoint x="1690" y="1510" />
-              <mxPoint x="3470" y="1510" />
-              <mxPoint x="3470" y="640" />
-              <mxPoint x="3230" y="640" />
-              <mxPoint x="3230" y="400" />
-              <mxPoint x="3040" y="400" />
+              <mxPoint x="2230" y="660" />
+              <mxPoint x="2800" y="660" />
+              <mxPoint x="2800" y="370" />
+              <mxPoint x="3040" y="370" />
             </Array>
           </mxGeometry>
         </mxCell>

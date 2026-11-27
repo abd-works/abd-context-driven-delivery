@@ -11,7 +11,7 @@
           <mxGeometry x="450" y="60" width="280" height="126" as="geometry" />
         </mxCell>
         <mxCell id="billing--invoice" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;i style=&quot;font-size:9px;color:#888;&quot;&gt;&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/i&gt;&lt;br/&gt;&lt;b&gt;Invoice&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ invoiceId: string&lt;br/&gt;+ billDate: string&lt;br/&gt;+ dueDate: string&lt;br/&gt;+ dueAmount: string&lt;br/&gt;+ status: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Invoice(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=Billing;" vertex="1" parent="1">
-          <mxGeometry x="240" y="760" width="200" height="142" as="geometry" />
+          <mxGeometry x="100" y="760" width="200" height="142" as="geometry" />
         </mxCell>
         <mxCell id="billing--transaction" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;i style=&quot;font-size:9px;color:#888;&quot;&gt;&amp;lt;&amp;lt;Entity&amp;gt;&amp;gt;&lt;/i&gt;&lt;br/&gt;&lt;b&gt;Transaction&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ id: string&lt;br/&gt;+ paymentDate: string&lt;br/&gt;+ totalAmount: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ Transaction(...)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#e6e6e6;strokeColor=#666666;module=Billing;" vertex="1" parent="1">
           <mxGeometry x="540" y="760" width="200" height="110" as="geometry" />
@@ -35,15 +35,15 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="150" y="720" />
-              <mxPoint x="340" y="720" />
+              <mxPoint x="200" y="720" />
             </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="3" value="transactions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;startArrow=diamondThin;startFill=1;startSize=14;endArrow=open;endSize=12;exitX=0.6786;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="billing--billing" target="billing--transaction" parent="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="250" y="700" />
-              <mxPoint x="640" y="700" />
+              <mxPoint x="250" y="720" />
+              <mxPoint x="640" y="720" />
             </Array>
           </mxGeometry>
         </mxCell>

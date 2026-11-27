@@ -35,10 +35,10 @@
           <mxGeometry x="1640" y="60" width="200" height="80" as="geometry" />
         </mxCell>
         <mxCell id="customer--accountcredentialrequirement" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialRequirement&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ field: string&lt;br/&gt;+ requirement: string&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(field: string, requirement: string)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=Customer;" vertex="1" parent="1">
-          <mxGeometry x="3960" y="2080" width="300" height="94" as="geometry" />
+          <mxGeometry x="3230" y="2080" width="300" height="94" as="geometry" />
         </mxCell>
         <mxCell id="customer--accountcredentialrequirements" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AccountCredentialRequirements&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ emailRequired: AccountCredentialRequirement&lt;br/&gt;+ emailFormat: AccountCredentialRequirement&lt;br/&gt;+ passwordRequired: AccountCredentialRequirement&lt;br/&gt;+ passwordLetters: AccountCredentialRequirement&lt;br/&gt;+ passwordNumber: AccountCredentialRequirement&lt;br/&gt;+ passwordSymbol: AccountCredentialRequirement&lt;br/&gt;+ passwordLength: AccountCredentialRequirement&lt;br/&gt;+ confirmRequired: AccountCredentialRequirement&lt;br/&gt;+ confirmMismatch: AccountCredentialRequirement&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor(emailRequired: AccountCredentialRequirement, emailFormat: AccountCredentialRequirement, passwordRequired: AccountCredentialRequirement, passwordLetters: AccountCredentialRequirement, passwordNumber: AccountCredentialRequirement, passwordSymbol: AccountCredentialRequirement, passwordLength: AccountCredentialRequirement, confirmRequired: AccountCredentialRequirement, confirmMismatch: AccountCredentialRequirement)&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=Customer;" vertex="1" parent="1">
-          <mxGeometry x="2210" y="1730" width="2380" height="206" as="geometry" />
+          <mxGeometry x="2190" y="1730" width="2380" height="206" as="geometry" />
         </mxCell>
         <mxCell id="customer--amplifyservice" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;AmplifyService&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;/&gt;&lt;p style=&quot;margin:0px;margin-left:4px;font-size:10px;&quot;&gt;+ constructor()&lt;br/&gt;+ signUp(email: string, password: string): CognitoUser | Error&lt;br/&gt;+ signIn(email: string, password: string): CognitoUser | Error&lt;br/&gt;+ confirmSignUp(email: string, validationCode: ValidationCode): CognitoUser | Error&lt;br/&gt;+ resendSignUp(email: string): ValidationCodeSend | Error&lt;br/&gt;+ signOut(): void&lt;br/&gt;+ fetchUserAttributes(email: string): CognitoUser | Error&lt;br/&gt;+ getUser(email: string): CognitoUser | null&lt;br/&gt;&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;whiteSpace=wrap;fillColor=#d6e4f5;strokeColor=#666666;module=Customer;" vertex="1" parent="1">
           <mxGeometry x="7620" y="440" width="480" height="174" as="geometry" />
@@ -120,10 +120,10 @@
               <mxPoint x="900" y="790" />
               <mxPoint x="870" y="790" />
               <mxPoint x="870" y="980" />
-              <mxPoint x="2140" y="980" />
-              <mxPoint x="2140" y="2000" />
-              <mxPoint x="3890" y="2000" />
-              <mxPoint x="3890" y="2240" />
+              <mxPoint x="2120" y="980" />
+              <mxPoint x="2120" y="2000" />
+              <mxPoint x="3160" y="2000" />
+              <mxPoint x="3160" y="2240" />
               <mxPoint x="7610" y="2240" />
               <mxPoint x="7610" y="1000" />
               <mxPoint x="8210" y="1000" />
@@ -168,10 +168,10 @@
               <mxPoint x="2130" y="780" />
               <mxPoint x="3330" y="780" />
               <mxPoint x="3330" y="1130" />
-              <mxPoint x="2160" y="1130" />
-              <mxPoint x="2160" y="1980" />
-              <mxPoint x="3910" y="1980" />
-              <mxPoint x="3910" y="2220" />
+              <mxPoint x="2140" y="1130" />
+              <mxPoint x="2140" y="1980" />
+              <mxPoint x="3180" y="1980" />
+              <mxPoint x="3180" y="2220" />
               <mxPoint x="7590" y="2220" />
               <mxPoint x="7590" y="980" />
               <mxPoint x="8190" y="980" />
@@ -242,7 +242,7 @@
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="2750" y="1690" />
-              <mxPoint x="3400" y="1690" />
+              <mxPoint x="3380" y="1690" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -268,7 +268,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="17" value="emailRequired, emailFormat, passwordRequired, passwordLetters, passwordNumber, passwordSymbol, passwordLength, confirmRequired, confirmMismatch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=emailRequired,emailFormat,passwordRequired,passwordLetters,passwordNumber,passwordSymbol,passwordLength,confirmRequired,confirmMismatch;exitX=0.7983;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
+        <mxCell id="17" value="emailRequired, emailFormat, passwordRequired, passwordLetters, passwordNumber, passwordSymbol, passwordLength, confirmRequired, confirmMismatch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;unmarked=emailRequired,emailFormat,passwordRequired,passwordLetters,passwordNumber,passwordSymbol,passwordLength,confirmRequired,confirmMismatch;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="customer--accountcredentialrequirements" target="customer--accountcredentialrequirement" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="18" value="accountToken" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;labelBackgroundColor=#ffffff;endArrow=open;endSize=12;exitX=0.5;exitY=1.0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6765;entryY=0.0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" source="customer--cognitouser" target="customer--accounttoken" parent="1">
