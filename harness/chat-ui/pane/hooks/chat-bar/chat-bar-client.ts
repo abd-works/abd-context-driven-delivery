@@ -21,7 +21,7 @@ import { StageClient } from './stage-client'
 // Main is the default session: the default branch in the repository's own folder, a ticket on the board like any other.
 export const MAIN_SESSION = 'main'
 
-const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null } as ChatBarJson, { shape: 'chat-bar-overview-3' })
+const chatBar = atom({ plugin: 'cdd-board', key: 'chatBar' } as const, { board: null, problem: null, askedToReconnect: false } as ChatBarJson, { shape: 'chat-bar-overview-4' })
 
 
 // The active session's line: health mark, session name, fidelity dots, action button, stage icons.
@@ -258,7 +258,7 @@ export async function currentChatBar($: EngineInterface): Promise<ChatBarClient>
 export async function refreshChatBar($: EngineInterface): Promise<void> {
   try {
     const board = await readBoard($)
-    await update($, chatBar, json => ({ ...json, board, problem: null }))
+    await update($, chatBar, json => ({ ...json, board, problem: null, askedToReconnect: false }))
   } catch (failure) {
     await update($, chatBar, json => ({ ...json, problem: reasonOf(failure) }))
   }
@@ -278,7 +278,9 @@ export function readChatBarUntilAnswered($: EngineInterface, readBar: () => Prom
 async function readAgainWhileUnanswered($: EngineInterface, readBar: () => Promise<void>, attempt: number): Promise<void> {
   if ((await read($, chatBar)).problem === null) return
   await readBar()
-  if ((await read($, chatBar)).problem !== null && attempt < OPENING_TRIES) readChatBarUntilAnswered($, readBar, attempt + 1)
+  if ((await read($, chatBar)).problem === null) return
+  if (attempt < OPENING_TRIES) readChatBarUntilAnswered($, readBar, attempt + 1)
+  else await askChatToReconnect($)
 }
 
 // A restart of the cdd server, as an install does, cuts off a call in flight. board.overview only reads, so a read cut
@@ -343,6 +345,33 @@ export function boardProblemPrompt(shown: string): string {
 // Fix on a board that did not answer sends the chat the context and the steps that usually clear it.
 export async function askChatToFixBoard($: EngineInterface, shown: string): Promise<void> {
   await $.prompt.submit({ text: boardProblemPrompt(shown), asUser: true })
+}
+
+// What the bar sends by itself when the board stays unanswered: most often the chat has lost its cdd connection while the
+// server itself answers, as after a restart for a repin, so reconnecting comes first and the full diagnosis after it.
+export const RECONNECT_STEPS = [
+  'Where this chat has the connector tools (the Claude desktop app), call session_connectors_status. When '
+    + 'plugin:cdd:cdd is listed as failed, call reconnect_session_connector with server plugin:cdd:cdd, end your turn, '
+    + 'and check its status again at the start of the next one.',
+  'When plugin:cdd:cdd is not listed at all, or the reconnect fails, run python scripts/install.py --ide Claude from the '
+    + 'CDD checkout, which writes the cdd plugin again and starts the server when it is down, then reconnect as in step 1.',
+  'Ask me to run /reload-plugins only when both of those leave the chat without cdd.',
+]
+
+export function reconnectPrompt(shown: string): string {
+  const reconnect = RECONNECT_STEPS.map((step, index) => `${index + 1}. ${step}`).join('\n')
+  const diagnose = BOARD_PROBLEM_STEPS.map((step, index) => `${index + 1}. ${step}`).join('\n')
+  return `The CDD chat bar sent this by itself, because it shows: ${shown}\n\nReconnect this chat to cdd without waiting for me:\n${reconnect}\n\n`
+    + `If the board still does not answer after that, find its cause and fix it:\n${diagnose}\n\nThen tell me what was wrong and what you changed.`
+}
+
+// A board that stays unanswered sends the chat the reconnect steps once for each outage: the reads after that prompt's own
+// turn fail too, and a read that works again clears askedToReconnect for the next outage.
+export async function askChatToReconnect($: EngineInterface): Promise<void> {
+  const { problem, askedToReconnect } = await read($, chatBar)
+  if (problem === null || askedToReconnect) return
+  await update($, chatBar, json => ({ ...json, askedToReconnect: true }))
+  await $.prompt.submit({ text: reconnectPrompt(`The board did not answer: ${problem}`), asUser: true })
 }
 
 export async function moveNext($: EngineInterface, chatBar: ChatBarClient): Promise<ChatBarClient | MoveRefused> {

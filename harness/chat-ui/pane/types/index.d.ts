@@ -38,8 +38,9 @@ export type ToMainJson = { isAsking: boolean; state: InstallJson['state']; error
 export type AppOpeningJson = { label: string; state: 'idle' | 'opening' | 'failed'; error: string | null; url?: string | null }
 
 // What the chat bar keeps between draws: board.overview's answer, and the server's own text when the last call failed.
-// problem is why the last board read failed, cleared by the next read that works.
-export type ChatBarJson = { board: object | null; problem: string | null }
+// problem is why the last board read failed, cleared by the next read that works. askedToReconnect once the bar has sent
+// the chat the reconnect steps for this outage, so it sends them once.
+export type ChatBarJson = { board: object | null; problem: string | null; askedToReconnect: boolean }
 
 // The failure shown above the chat bar's line, tools/error_display's FailureData (what failed and the context it failed
 // in), typed where error-display/failure-client.ts reads it; null while none is shown. It stays until the person fixes

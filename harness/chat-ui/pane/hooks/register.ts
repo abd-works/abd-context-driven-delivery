@@ -4,7 +4,7 @@ import { keepInTouch } from './chat-bar/check-in-client'
 import { chatStarted, isCheckInDue, turnCompleted, turnStarted } from './board-chat/chat-turns'
 import { readName } from './board-chat/chat-name'
 import { openedBoard } from './board-chat/board-server'
-import { currentChatBar, readChatBarUntilAnswered, refreshChatBar } from './chat-bar/chat-bar-client'
+import { askChatToReconnect, currentChatBar, readChatBarUntilAnswered, refreshChatBar } from './chat-bar/chat-bar-client'
 import { ChatBarView } from './chat-bar/chat-bar-view'
 import { changedArtifactOf, checkChangedArtifact } from './chat-bar/changed-artifact-client'
 import { clearBusy, currentBusy } from './chat-bar/busy-client'
@@ -81,6 +81,7 @@ async function readBoardAfterTurn($: EngineInterface, isMainChat: boolean): Prom
   if (isMainChat) await turnCompleted($).catch(shownAsFailure($, 'The turn was not recorded as finished', 'Finishing a turn in the main chat'))
   await readName($).catch(shownAsFailure($, 'The chat was not named', 'Finishing a turn, reading the chat name'))
   await Promise.all([readActive($), refreshHealth($)]).catch(shownAsFailure($, 'The board did not load', 'Finishing a turn, calling board.show and reading the server health'))
+  await askChatToReconnect($).catch(shownAsFailure($, 'The chat was not asked to reconnect to cdd', 'Finishing a turn while the board did not answer'))
   await readVersionAfterTurn($).catch(shownAsFailure($, 'The CDD version was not read', 'Finishing a turn, calling cdd-version.read'))
 }
 
