@@ -25,4 +25,4 @@
 - **Test (unit):** `cdd_guidance/practices/clean_engineering/reading/graph_reading_spec.py`, with a class whose property is named as the group its properties sit under › should hang no property under a property, itself included. Seen failing (`total` under `properties`), then passing.
 - **Fix:** `NodeTree._holder_named` finds the holder of a kind only among the holders (`type == name`), never a part that shares its name.
 - **Found with it:** saving a validate's checked graph walked up every node's parents for every node, edge and folder, working out each node's places (and its file's format) each time; `Node.other_places` (ad0a10ac0) and a save that remembers each node's answer (44474bf29) take that from minutes to seconds.
-- **Commit:** see git log for this file.
+- **Commit:** 8cfa4f875.
