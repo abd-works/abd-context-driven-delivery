@@ -25,4 +25,4 @@
 - **Test (heavy):** `harness/e2e_review/e2e_review_heavy_spec.py`.
 - **Fix:** `ReportTool` installs its packages with `npm ci` the first time it runs in a folder that holds none, refused with the folder named when npm fails, and a refusal names the line of the command's output that names its error.
 - **Not changed:** `cdd_guidance/practices/stories/app/` has no packages in the runtime either; nothing in this regression run used it.
-- **Commit:** see git log for this file.
+- **Commit:** db0db2a58.
