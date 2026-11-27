@@ -22,13 +22,13 @@ Requested 2026-11-16, the person: "Same with whiteboard — if the diagram filte
 
 Requested 2026-11-18 (Nov 18 demo fixes): "Whiteboard entry opens as an external link, not a canvas."
 
-#### Scenario: Open a whiteboard file as a canvas
+#### Scenario: Open a whiteboard's board in Claude
 
 *Given* the session of ticket checkout-flow holds `.context/story-map.whiteboard`, and the file keeps its board's address
 *And* the diagram chip ◇ is selected
 *When* the file bar lists the Stories story map's files
 *Then* the whiteboard is listed as story-map, marked as a whiteboard
-*And* pressing it draws the board on a canvas beside the file list, its blocks, labels and arrows where the board places them, not the text of the file
+*And* pressing it opens its board at its board's address, in Claude's artifact panel when a chat opened the page and in a browser tab when none did, never a drawing or the text of the file
 *And* the board in Claude is a press away, at its board's address, opening in Claude's artifact panel
 
 ##### Example: another project
@@ -43,7 +43,7 @@ Requested 2026-11-18 (Nov 18 demo fixes): "Whiteboard entry opens as an external
 
 *Given* `.context/story-map.whiteboard` was never published, so no address is kept for it
 *When* the file bar lists it
-*Then* it is listed as a whiteboard not on a board in Claude yet, and pressing it still draws it on a canvas, rather than showing the file's text
+*Then* it is listed as a whiteboard not on a board in Claude yet
 
 #### Scenario: A board address that is no Claude address is never sent to the chat
 

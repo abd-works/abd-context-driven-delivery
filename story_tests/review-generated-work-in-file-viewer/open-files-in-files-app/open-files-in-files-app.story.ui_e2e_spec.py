@@ -17,7 +17,7 @@ from mamba import after, before, context, description, it
 from cdd_guidance.practices.ux.model.html.nodes import HtmlUxMap
 from cdd_guidance.practices.ux.model.ux_map import UxMap
 from cdd_guidance.practices.ux.model.ux_map_spec_fixture import OrderingMap
-from files_app_browser import BOARD_LINK, BOARD_STORY, DESIGN_REVIEW, NBSP, SHOWN_MILLISECONDS, WHITEBOARD, FilesStack, all_session_files
+from files_app_browser import BOARD_LINK, DESIGN_REVIEW, NBSP, SHOWN_MILLISECONDS, WHITEBOARD, FilesStack, all_session_files, tab_opened_by
 from space.kanban.graph_view_examples import BOARD_CODE, BOARD_TEXT, CHECKOUT_FLOW
 from space.session.files.session_file import VIEWER_SHOWS_LINES
 
@@ -37,9 +37,11 @@ with description("Story: Open Whiteboard In Files App") as self:
     with after.all:
         self.stack.close()
 
-    with context("Scenario: Open a whiteboard file as a canvas"):
+    with context("Scenario: Open a whiteboard's board in Claude"):
         with before.all:
             self.page = self.stack.open(DESIGN_REVIEW, FIDELITIES)
+            # The board's address is in Claude; the tab a press opens is answered here, so the example needs no network.
+            self.page.context.route(f"{BOARD_LINK}**", lambda route: route.fulfill(status=200, content_type="text/html", body="<html></html>"))
             diagram = self.page.locator('.format-toggle[title^="diagram:"]')
             diagram.wait_for(timeout=SHOWN_MILLISECONDS)
             if diagram.get_attribute("aria-pressed") != "true":
@@ -54,11 +56,8 @@ with description("Story: Open Whiteboard In Files App") as self:
         with it("Then the whiteboard is listed as story-map, marked as a whiteboard"):
             expect(self.entry.inner_text().replace(NBSP, " ").strip()).to(equal("story-map whiteboard"))
 
-        with it("And pressing it draws the board on a canvas, not the text of the file"):
-            self.entry.click()
-            canvas = self.page.locator("svg.whiteboard-canvas")
-            canvas.wait_for(timeout=SHOWN_MILLISECONDS)
-            expect(BOARD_STORY in canvas.text_content()).to(equal(True))
+        with it("And pressing it opens its board at its board's address, in a browser tab when no chat opened the page"):
+            expect(tab_opened_by(self.page, self.entry)).to(equal(BOARD_LINK))
 
         with it("And the board in Claude is a press away, at its board's address"):
             link = self.page.locator(f'a.board-link[title^="{WHITEBOARD}"]').first
@@ -72,7 +71,7 @@ with description("Story: Open Whiteboard In Files App, opened on another project
     with after.all:
         self.stack.close()
 
-    with context("Scenario: Open a whiteboard file as a canvas, Example: another project"):
+    with context("Scenario: Open a whiteboard's board in Claude, Example: another project"):
         with before.all:
             self.page = self.stack.open(DESIGN_REVIEW, FIDELITIES)
             diagram = self.page.locator('.format-toggle[title^="diagram:"]')

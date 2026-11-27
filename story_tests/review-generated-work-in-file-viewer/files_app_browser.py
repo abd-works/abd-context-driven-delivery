@@ -313,6 +313,18 @@ def all_session_files(page: Page) -> None:
     page.locator(".file-list, .file-tree").first.wait_for(timeout=SHOWN_MILLISECONDS)
 
 
+def tab_opened_by(page: Page, entry) -> str:
+    """The address of the browser tab a press on entry opens, as a page no chat opened opens a board in Claude; the tab
+    is closed once read."""
+    with page.expect_popup(timeout=SHOWN_MILLISECONDS) as opened:
+        entry.click()
+    tab = opened.value
+    tab.wait_for_load_state(timeout=SHOWN_MILLISECONDS)
+    address = tab.url
+    tab.close()
+    return address
+
+
 def graph_view(page: Page) -> None:
     """Every file under the session's root listed, shown as the session's graph, read for real."""
     all_session_files(page)

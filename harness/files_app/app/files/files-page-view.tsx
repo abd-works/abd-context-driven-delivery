@@ -52,8 +52,8 @@ function DrawioTabLinkView({ page, path }: { page: FilesPage; path: string }) {
 }
 
 // A whiteboard on a board in Claude opens that board, in Claude Desktop's artifact panel, or in a browser when no chat
-// opened the page; one not on a board yet opens beside the file list as its board drawn on a canvas, never as the
-// file's text. One not on disk says why, as any file not on disk does.
+// opened the page; one not on a board yet says so, since the app never draws a board. One not on disk says why, as any
+// file not on disk does.
 function WhiteboardEntryView({ page, entry, published, isOpen }: { page: FilesPage; entry: FileEntryData; published: PublishedFile; isOpen: boolean }) {
   const hint = !entry.exists ? `${entry.path}: ${missingNoteOf(entry)}` : published.link ? `${entry.path}: opens its board in Claude` : `${entry.path}: not on a board in Claude yet`
   const note = entry.exists ? (published.link ? 'whiteboard' : 'whiteboard, not on a board in Claude yet') : `whiteboard, ${missingNoteOf(entry)}`
