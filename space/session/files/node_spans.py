@@ -100,7 +100,7 @@ class NodeSpans:
     def _other_places(self, node: Node) -> list[tuple[Path, tuple[int, int]]]:
         """The file and lines of each format node is written in besides its own file's, while that file is there."""
         root = Path(node.source.root or self._root)
-        others = [place for place in list(node.places.values())[1:] if place.file and place.line]
+        others = [place for place in node.other_places if place.file and place.line]
         found = [((root / place.file).resolve(), (place.line, place.end_line or place.line)) for place in others]
         return [(path, lines) for path, lines in found if path.is_file()]
 

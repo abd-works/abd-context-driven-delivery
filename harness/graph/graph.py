@@ -492,6 +492,15 @@ class Node:
         return {**own, **{name: place for name, place in others.items() if name not in own}}
 
     @property
+    def other_places(self) -> list[Location]:
+        """Each place this node is written in besides its own file, as ``places`` lists them after its own; none for a
+        node written only in its own file, which most are, found without working out its own file's format, so a save
+        or a filter that asks it of every node in a large graph stays fast."""
+        if not self.data.get(WRITTEN_IN_FACT):
+            return []
+        return list(self.places.values())[1:]
+
+    @property
     def failed_rules(self) -> list[str]:
         return self.rules.failed_slugs
 

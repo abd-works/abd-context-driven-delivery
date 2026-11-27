@@ -180,7 +180,7 @@ class Filter:
         formats (``Node.places``) is listed by any of its files."""
         above: Node | None = node
         while above is not None:
-            if self._source_listed(above.source) or any(self._under_paths(place.file) for place in above.places.values()):
+            if self._source_listed(above.source) or any(self._under_paths(place.file) for place in above.other_places):
                 return True
             above = above.parent
         return False

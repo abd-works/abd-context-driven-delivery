@@ -412,7 +412,7 @@ class SavedFiles:
             return True
         above: Node | None = node
         while above is not None:
-            if any(self._names(place.file.replace("\\", "/")) for place in list(above.places.values())[1:] if place.file):
+            if any(self._names(place.file.replace("\\", "/")) for place in above.other_places if place.file):
                 return True
             above = above.parent
         return False
