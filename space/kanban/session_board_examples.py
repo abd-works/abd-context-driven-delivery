@@ -368,6 +368,12 @@ class SessionsProject(ThrowawayProject):
         path = self.sessions / seed.folder / seed.name / "session.json"
         path.write_text(json.dumps({**json.loads(path.read_text(encoding="utf-8")), **fields}), encoding="utf-8")
 
+    def seed_guidelines(self, *names: str) -> None:
+        """Seed the guidelines the project's .context/config.json lists, the only patterns it uses."""
+        config = self.root / ".context" / "config.json"
+        config.parent.mkdir(parents=True, exist_ok=True)
+        config.write_text(json.dumps({"guidelines": list(names)}), encoding="utf-8")
+
     def seed_session_json_text(self, seed: SessionSeed, text: str) -> None:
         (self.sessions / seed.folder / seed.name / "session.json").write_text(text, encoding="utf-8")
 

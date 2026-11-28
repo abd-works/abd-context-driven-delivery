@@ -67,6 +67,7 @@ def _(s):
     def _(world):
         world.project.seed_session(CHECKOUT_FLOW)
         world.project.seed_session_fields(CHECKOUT_FLOW, overlays=list(OVERLAYS))
+        world.project.seed_guidelines(*OVERLAYS)
         world.project.seed_active(CHECKOUT_FLOW)
 
     @s.when("Claude Code generates stories-acceptance-tests")
@@ -104,6 +105,7 @@ def _(s):
     def _(world):
         world.project.seed_session(CHECKOUT_FLOW)
         world.project.seed_session_fields(CHECKOUT_FLOW, overlays=list(OVERLAYS))
+        world.project.seed_guidelines(*OVERLAYS)
         world.project.seed_active(CHECKOUT_FLOW)
 
     @s.when("Claude Code validates stories-acceptance-tests")
