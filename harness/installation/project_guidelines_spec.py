@@ -1,5 +1,6 @@
-"""The guidelines one project works with: the patterns CDD ships, and those the project keeps in its own guidelines
-folder, each left out when its .context/config.json disables it, and never reaching another project."""
+"""The guidelines one project works with: those its .context/config.json lists, else those CDD's own config lists, else
+all; each read from the project's own guidelines folder when it keeps one there, else from CDD's, and never reaching
+another project."""
 
 import json
 import shutil
@@ -36,12 +37,17 @@ class Helper:
 '''
 
 
-def _project(guidelines: dict[str, str], folder: str | None = "guidelines", own: tuple[str, ...] = ("acme_domain_driven",)) -> Path:
-    """A project whose config marks guidelines and names folder, which holds a pattern module for each of own."""
-    root = Path(tempfile.mkdtemp(prefix="cdd-project-guidelines-"))
-    config = {"guidelines": guidelines, **({"guidelines_folder": folder} if folder else {})}
-    (root / ".context").mkdir()
+def _config(root: Path, config: dict) -> Path:
+    (root / ".context").mkdir(parents=True, exist_ok=True)
     (root / ".context" / "config.json").write_text(json.dumps(config), encoding="utf-8")
+    return root
+
+
+def _project(guidelines: list[str] | None, folder: str | None = "guidelines", own: tuple[str, ...] = ("acme_domain_driven",)) -> Path:
+    """A project whose config lists guidelines (no list when None) and names folder, which holds a pattern module for
+    each of own."""
+    root = Path(tempfile.mkdtemp(prefix="cdd-project-guidelines-"))
+    _config(root, {**({"guidelines": guidelines} if guidelines is not None else {}), **({"guidelines_folder": folder} if folder else {})})
     for name in own:
         pattern = root / (folder or "guidelines") / name
         pattern.mkdir(parents=True)
@@ -51,16 +57,17 @@ def _project(guidelines: dict[str, str], folder: str | None = "guidelines", own:
 
 with description("a project's guidelines"):
     with before.each:
-        self.held = HeldProjectGuidelines()
-        self.roots: list[Path] = []
+        self.cdd = Path(tempfile.mkdtemp(prefix="cdd-own-config-"))
+        self.held = HeldProjectGuidelines(self.cdd)
+        self.roots: list[Path] = [self.cdd]
 
     with after.each:
         for root in self.roots:
             shutil.rmtree(root, ignore_errors=True)
 
-    with context("that keeps a pattern in its own guidelines folder and disables the LERN pattern CDD ships"):
+    with context("that lists its own pattern and not the LERN pattern CDD ships"):
         with before.each:
-            self.root = _project({"lern_domain_driven": "disabled", "acme_domain_driven": "enabled"})
+            self.root = _project(["ddd", "mern_domain_driven", "acme_domain_driven"])
             self.roots.append(self.root)
             self.guidelines = self.held.of(self.root)
 
@@ -70,11 +77,11 @@ with description("a project's guidelines"):
         with it("should leave out a class beside the pattern that is no guideline of that folder"):
             expect([each.__name__ for each in self.guidelines.own_classes]).to(equal(["Acme"]))
 
-        with it("should choose its own pattern and the shipped patterns it does not disable"):
+        with it("should choose only the patterns it lists"):
             chosen = self.guidelines.chosen([ShippedLern, ShippedMern])
             expect([each.pattern for each in chosen]).to(equal(["mern_domain_driven", "acme_domain_driven"]))
 
-        with it("should install every toolset that is no guideline, the shipped patterns it keeps, and its own"):
+        with it("should install every toolset that is no guideline and the patterns it lists"):
             installed = self.guidelines.toolsets([Echo, ShippedLern, ShippedMern])
             expect([each.__name__ for each in installed]).to(equal(["Echo", "ShippedMern", "Acme"]))
 
@@ -83,7 +90,7 @@ with description("a project's guidelines"):
 
         with context("with another project the same process serves"):
             with before.each:
-                self.other = _project({}, folder=None, own=())
+                self.other = _project(None, folder=None, own=())
                 self.roots.append(self.other)
 
             with it("should give the other project none of its own patterns"):
@@ -95,15 +102,15 @@ with description("a project's guidelines"):
 
         with context("with another project that keeps a pattern of the same name"):
             with before.each:
-                self.other = _project({})
+                self.other = _project(None)
                 self.roots.append(self.other)
 
             with it("should import each project's pattern as a class of its own"):
                 expect(self.held.of(self.other).own_classes[0]).not_to(equal(self.guidelines.own_classes[0]))
 
-    with context("that disables its own pattern"):
+    with context("that keeps a pattern it does not list"):
         with before.each:
-            self.root = _project({"acme_domain_driven": "disabled"})
+            self.root = _project(["lern_domain_driven"])
             self.roots.append(self.root)
 
         with it("should not choose it"):
@@ -114,7 +121,7 @@ with description("a project's guidelines"):
 
     with context("that keeps a pattern named as one CDD ships"):
         with before.each:
-            self.root = _project({}, own=("lern_domain_driven",))
+            self.root = _project(None, own=("lern_domain_driven",))
             self.roots.append(self.root)
 
         with it("should choose its own in place of the shipped one"):
@@ -124,8 +131,26 @@ with description("a project's guidelines"):
         with it("should install its own in place of the shipped one"):
             expect([each.__name__ for each in self.held.of(self.root).toolsets([ShippedLern])]).to(equal(["Acme"]))
 
+    with context("that lists no guidelines"):
+        with before.each:
+            self.root = _project(None, folder=None, own=())
+            self.roots.append(self.root)
+
+        with context("with CDD's own config listing some"):
+            with before.each:
+                _config(self.cdd, {"guidelines": ["lern_domain_driven"]})
+
+            with it("should use those CDD's config lists"):
+                chosen = self.held.of(self.root).chosen([ShippedLern, ShippedMern])
+                expect([each.pattern for each in chosen]).to(equal(["lern_domain_driven"]))
+
+        with context("with CDD's own config listing none"):
+            with it("should use every shipped pattern"):
+                chosen = self.held.of(self.root).chosen([ShippedLern, ShippedMern])
+                expect([each.pattern for each in chosen]).to(equal(["lern_domain_driven", "mern_domain_driven"]))
+
     with context("that names no guidelines folder"):
         with it("should keep no patterns of its own"):
-            root = _project({}, folder=None, own=())
+            root = _project(None, folder=None, own=())
             self.roots.append(root)
             expect(self.held.of(root).own_classes).to(be_empty)

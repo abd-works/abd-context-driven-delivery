@@ -1,7 +1,11 @@
 {
   "guidelines_folder": "guidelines",
-  "guidelines": {
-    "lern_domain_driven": "disabled",
-    "acme_domain_driven": "enabled"
-  }
+  "guidelines": [
+    "stories",
+    "ddd",
+    "ux",
+    "clean_engineering",
+    "bdd",
+    "acme_domain_driven"
+  ]
 }

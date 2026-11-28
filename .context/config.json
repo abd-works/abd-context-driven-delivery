@@ -1,10 +1,14 @@
 {
-  "guidelines": {
-    "cdd_web_domain_access": "enabled",
-    "cdd_claude_mod": "enabled",
-    "lern_domain_driven": "enabled",
-    "mern_domain_driven": "disabled"
-  },
+  "guidelines": [
+    "stories",
+    "ddd",
+    "ux",
+    "clean_engineering",
+    "bdd",
+    "cdd_web_domain_access",
+    "cdd_claude_mod",
+    "lern_domain_driven"
+  ],
   "practice_folders": {
     "stories": ".",
     "clean_engineering": ".",

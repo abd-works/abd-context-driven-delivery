@@ -25,11 +25,11 @@ with description("a project's context configuration"):
 
     with context("that holds guidelines and practice folders"):
         with before.each:
-            self.config.save({"guidelines": {"mern_domain_driven": "enabled"}, "practice_folders": {"bdd": "specs"}})
+            self.config.save({"guidelines": ["mern_domain_driven"], "practice_folders": {"bdd": "specs"}})
 
         with it("should keep its guidelines when practice folders are set"):
             self.config.update(practice_folders={"stories": "docs"})
-            expect(self.config.guideline("mern-domain-driven")).to(equal("enabled"))
+            expect(self.config.uses_guideline("mern-domain-driven")).to(equal(True))
 
     with context("that names default formats"):
         with before.each:

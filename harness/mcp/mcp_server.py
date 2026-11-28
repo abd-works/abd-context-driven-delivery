@@ -456,7 +456,7 @@ class ProjectToolsets:
             guidelines.own_classes
         except AgentToolSet.LOAD_FAILURES as error:
             self.skipped.skip(f"guidelines of {self.project}", error)
-            return [reference for reference in toolsets if not self._disabled(reference, guidelines)]
+            return [reference for reference in toolsets if not self._left_out(reference, guidelines)]
         loaded = [reference for reference in toolsets if self._loads(reference)]
         chosen = guidelines.toolsets([reference.toolset_class for reference in loaded])
         unloaded = [reference for reference in toolsets if reference not in loaded]
@@ -469,8 +469,11 @@ class ProjectToolsets:
             return False
         return True
 
-    def _disabled(self, reference: ToolsetReference, guidelines: ProjectGuidelines) -> bool:
-        return self._loads(reference) and guidelines.is_disabled(guideline_name(reference.toolset_class))
+    def _left_out(self, reference: ToolsetReference, guidelines: ProjectGuidelines) -> bool:
+        if not self._loads(reference):
+            return False
+        name = guideline_name(reference.toolset_class)
+        return bool(name) and not guidelines.uses(name)
 
     def restarted(self) -> ProjectToolsets:
         """A new server with the same toolsets, on the code as it is now. Every module from this checkout is imported

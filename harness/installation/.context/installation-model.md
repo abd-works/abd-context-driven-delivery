@@ -440,7 +440,7 @@ How one IDE lays out the folder CDD installs into: the folder's name in a projec
 
 ## ContextConfig
 
-One project's `.context/config.json`: the guidelines that apply to it, each `enabled` or `disabled`, and the folder each practice writes in. `CONTEXT_FOLDER` names the `.context` folder once.
+One project's `.context/config.json`: the guidelines it uses, as its `guidelines` list names them, and the folder each practice writes in. `CONTEXT_FOLDER` names the `.context` folder once.
 
 + ContextConfig(root: Path | str)
 ------
@@ -451,14 +451,15 @@ One project's `.context/config.json`: the guidelines that apply to it, each `ena
 + load(): dict[str, Any]
 + save(configuration: Mapping[str, Any]): Path
 + update(**sections): dict[str, Any]
-+ guideline(pattern: str): str
++ guidelines(): list[str] | None
++ uses_guideline(name: str): bool
 + practice_folder(practice: str): str | None
 ---<<reads and writes through>>--> JsonFile
 ---<<raises>>--> MalformedContextConfigError
 
 ## ProjectGuidelines
 
-The guidelines one project works with, as its `.context/config.json` says: `guidelines` marks each `enabled` or `disabled`, and `guidelines_folder` names a folder of the project holding patterns of its own. A disabled one is left out wherever patterns are listed, applied, chosen, or installed; the project's own replaces a shipped one of its name. The process holds each project's once (`PROJECT_GUIDELINES`, a *HeldProjectGuidelines*), and each guidelines folder is imported once, as a package named from its path (*GuidelinesFolder*), so no project's patterns reach another's.
+The guidelines one project works with, as its `.context/config.json` says: `guidelines` lists the ones it uses, and `guidelines_folder` names a folder of the project holding patterns of its own. Only listed patterns are used, wherever patterns are listed, applied, chosen, or installed: the project's list, else the list in CDD's own config, else every pattern. Each is read from the project's folder when it keeps it there, else from CDD's. The process holds each project's once (`PROJECT_GUIDELINES`, a *HeldProjectGuidelines*), and each guidelines folder is imported once, as a package named from its path (*GuidelinesFolder*), so no project's patterns reach another's.
 
 + ProjectGuidelines(root: Path | str, held: HeldProjectGuidelines)
 ------
@@ -466,7 +467,7 @@ The guidelines one project works with, as its `.context/config.json` says: `guid
 + folder: GuidelinesFolder | None
 + own_classes: list[type]
 ----
-+ is_disabled(name: str): bool
++ uses(name: str): bool
 + chosen(shipped: Iterable[type]): list[type]
 + toolsets(shipped: Iterable[type]): list[type]
 ---<<reads>>--> ContextConfig

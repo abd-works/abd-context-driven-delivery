@@ -46,7 +46,7 @@ with description("the patterns a graph overlays for a project"):
         with it("should not list the pattern it disables"):
             expect("lern_domain_driven" in self.overlays.names).to(equal(False))
 
-        with it("should apply its own pattern and leave out the disabled one"):
+        with it("should apply its own pattern and leave out one it does not list"):
             expect([pattern.pattern for pattern in self.overlays.patterns]).to(equal(["acme_domain_driven"]))
 
         with it("should check a practice with its own pattern's graph rule in place of the practice's of that name"):

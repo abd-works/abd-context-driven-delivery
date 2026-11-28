@@ -134,7 +134,7 @@ class _CoreInject:
         return {"additional_context": "core rules"}
 
 
-def _guidelines_dispatch(root: Path, toolsets: list, guidelines: dict | None = None) -> dict:
+def _guidelines_dispatch(root: Path, toolsets: list, guidelines: list | None = None) -> dict:
     if guidelines is not None:
         from harness.installation.context_config import ContextConfig
 
@@ -206,13 +206,13 @@ with description("hook dispatch"):
 
     with context("that gates pattern hooks on config.json guidelines"):
 
-        with it("should skip a pattern when the workspace leaves it disabled"):
+        with it("should skip a pattern the workspace does not list"):
             _PatternInject.calls = []
             with tempfile.TemporaryDirectory() as tmp:
                 out = _guidelines_dispatch(
                     Path(tmp),
                     [_PatternInject],
-                    {"lern_domain_driven": "disabled"},
+                    ["stories"],
                 )
             expect(_PatternInject.calls).to(equal([]))
             expect(out).to(equal({"permission": "allow"}))
@@ -224,25 +224,25 @@ with description("hook dispatch"):
             expect(_PatternInject.calls).to(equal([]))
             expect(out).to(equal({"permission": "allow"}))
 
-        with it("should run a pattern when the workspace enables it"):
+        with it("should run a pattern the workspace lists"):
             _PatternInject.calls = []
             with tempfile.TemporaryDirectory() as tmp:
                 out = _guidelines_dispatch(
                     Path(tmp),
                     [_PatternInject],
-                    {"lern-domain-driven": "enabled"},
+                    ["lern-domain-driven"],
                 )
             expect(_PatternInject.calls).to(equal(["lern"]))
             expect(out["additional_context"]).to(equal("lern rules"))
 
-        with it("should run a core practice when patterns are disabled"):
+        with it("should run a core practice when the workspace lists no pattern"):
             _PatternInject.calls = []
             _CoreInject.calls = []
             with tempfile.TemporaryDirectory() as tmp:
                 out = _guidelines_dispatch(
                     Path(tmp),
                     [_PatternInject, _CoreInject],
-                    {"lern_domain_driven": "disabled"},
+                    ["stories"],
                 )
             expect(_PatternInject.calls).to(equal([]))
             expect(_CoreInject.calls).to(equal(["core"]))

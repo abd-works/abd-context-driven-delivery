@@ -21,8 +21,7 @@ class MalformedContextConfigError(JsonFileUnreadable):
 
 
 class ContextConfig:
-    """One project's ``.context/config.json``: the guidelines that apply to it, each ``enabled`` or ``disabled``, and
-    the folder each practice writes in. Names are matched without regard to case or to ``-`` against ``_``, so
+    """One project's ``.context/config.json``: the guidelines it uses, and the folder each practice writes in. Names are matched without regard to case or to ``-`` against ``_``, so
     ``mern-domain-driven`` and ``mern_domain_driven`` name one guideline."""
 
     def __init__(self, root: Path | str) -> None:
@@ -58,9 +57,20 @@ class ContextConfig:
         self.save(configuration)
         return configuration
 
-    def guideline(self, pattern: str) -> str:
-        """Whether the guideline named pattern is ``enabled`` or ``disabled``; empty when the project names none."""
-        return (self._value_named("guidelines", pattern) or "").casefold()
+    def guidelines(self) -> list[str] | None:
+        """The guidelines the project uses, as its ``guidelines`` list names them, such as ``["stories", "ddd",
+        "pml_lern_domain_driven"]``; none when the project lists none, so CDD's own are used. A ``guidelines`` object
+        written by an earlier CDD names those it marks ``enabled``."""
+        section = self.load().get("guidelines")
+        if isinstance(section, Mapping):
+            return [str(name).strip() for name, value in section.items() if str(value).strip().casefold() == "enabled"]
+        if isinstance(section, list):
+            return [str(name).strip() for name in section if str(name).strip()]
+        return None
+
+    def uses_guideline(self, name: str) -> bool:
+        """Whether the project's ``guidelines`` list names the guideline called name."""
+        return self._match_key(name) in {self._match_key(each) for each in self.guidelines() or []}
 
     def practice_folder(self, practice: str) -> str | None:
         return self._value_named("practice_folders", practice)

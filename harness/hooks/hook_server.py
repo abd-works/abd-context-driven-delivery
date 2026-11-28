@@ -325,7 +325,7 @@ class HookHandler:
         if payload is None:
             return False
         return any(
-            self._guideline_value(root, pattern) == "enabled"
+            self._config_of(root).uses_guideline(pattern)
             for root in self._guideline_roots(payload)
         )
 
@@ -359,9 +359,6 @@ class HookHandler:
             if self._config_of(parent).exists():
                 return [parent]
         return []
-
-    def _guideline_value(self, root: Path, pattern: str) -> str:
-        return self._config_of(root).guideline(pattern)
 
     def _config_of(self, root: Path) -> ContextConfig:
         if root not in self._configs:

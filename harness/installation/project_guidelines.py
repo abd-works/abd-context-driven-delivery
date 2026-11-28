@@ -1,5 +1,5 @@
-"""ProjectGuidelines: the guidelines one project works with, the patterns CDD ships and those the project keeps in its own
-folder, each left out when the project's ``.context/config.json`` disables it."""
+"""ProjectGuidelines: the guidelines one project works with, each read from the project's own guidelines folder when it
+keeps one there, else from CDD's: those its ``.context/config.json`` lists, else those CDD's own config lists, else all."""
 from __future__ import annotations
 
 import hashlib
@@ -13,12 +13,14 @@ from typing import Iterable
 
 from harness.installation.context_config import ContextConfig
 
-DISABLED = "disabled"
 # The prefix of the package each project's guidelines folder is imported as, followed by a digest of the folder's path.
 PACKAGE_PREFIX = "cdd_project_guidelines_"
 # The folder a project's own guideline installs under, the one CDD's shipped patterns install under
 # (``cdd_guidance/patterns``), so its skill and rules sit beside theirs.
 INSTALLED_UNDER = "patterns"
+# The CDD checkout this code runs from, whose own ``.context/config.json`` lists the guidelines a project uses when its
+# own config lists none.
+CDD_ROOT = Path(__file__).resolve().parents[2]
 
 
 def guideline_name(toolset_class: type) -> str:
@@ -77,11 +79,13 @@ class GuidelinesFolder:
 
 
 class ProjectGuidelines:
-    """The guidelines one project works with, as its ``.context/config.json`` says: ``guidelines`` marks each
-    ``enabled`` or ``disabled``, and ``guidelines_folder`` names a folder of the project holding guidelines of its own.
-    A disabled guideline is left out wherever guidelines are listed, applied, chosen, or installed, so a project can
-    switch off a pattern CDD ships and switch on its own copy; one the project names neither way stays in. Each project
-    is read for itself: the cdd server answers several projects, and one project's guidelines never reach another's."""
+    """The guidelines one project works with, as its ``.context/config.json`` says: ``guidelines`` lists the ones it
+    uses, and ``guidelines_folder`` names a folder of the project holding guidelines of its own. Each listed guideline
+    is read from that folder when the project keeps it there, else from CDD's; one the list leaves out is used nowhere,
+    neither listed, applied, chosen, nor installed. A project with no list uses those CDD's own config lists, and with
+    neither list every guideline CDD ships and its own.
+    Each project is read for itself: the cdd server answers several projects, and one project's guidelines never reach
+    another's."""
 
     FOLDER_KEY = "guidelines_folder"
 
@@ -106,15 +110,20 @@ class ProjectGuidelines:
         folder = self.folder
         return folder.classes if folder is not None else []
 
-    def is_disabled(self, name: str) -> bool:
-        return self.config.guideline(name) == DISABLED
+    def uses(self, name: str) -> bool:
+        """Whether the project uses the guideline called name: its own config's list decides, else CDD's, else every
+        guideline is used."""
+        for config in (self.config, self._held.cdd_config):
+            if config.guidelines() is not None:
+                return config.uses_guideline(name)
+        return True
 
     def chosen(self, shipped: Iterable[type]) -> list[type]:
-        """The guideline classes the project works with, one for each name: the project's own copy when it keeps one,
-        else the one CDD ships, never both; none the project disables."""
+        """The guideline classes the project works with, one for each name it uses: the project's own copy when it keeps
+        one, else the one CDD ships, never both."""
         by_name: dict[str, type] = {guideline_name(each): each for each in shipped}
         by_name.update({guideline_name(each): each for each in self.own_classes})
-        return [each for name, each in by_name.items() if name and not self.is_disabled(name)]
+        return [each for name, each in by_name.items() if name and self.uses(name)]
 
     def toolsets(self, shipped: Iterable[type]) -> list[type]:
         """The toolset classes an install into the project publishes: each of shipped that is no guideline, then the
@@ -127,7 +136,8 @@ class HeldProjectGuidelines:
     """The guidelines of each project the process has asked about, each made once, and each guidelines folder imported
     once: a module is imported once per process, so the folders that hold them are held once per process too."""
 
-    def __init__(self) -> None:
+    def __init__(self, cdd_root: Path = CDD_ROOT) -> None:
+        self.cdd_config = ContextConfig(cdd_root)
         self._projects: dict[Path, ProjectGuidelines] = {}
         self._folders: dict[Path, GuidelinesFolder] = {}
         self._lock = threading.Lock()
