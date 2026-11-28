@@ -138,7 +138,7 @@ class Validate(GuidanceAction):
             return ""
         if self._rule is not None:
             return self._rule.validate() if self._rule in worked.checked_rules() else ""
-        return worked.checked_rules_text()
+        return worked.checked_rules_text(self.brief.replaced_rules(self._graph.edited or self._graph.files_built_from))
 
     def _overlay_section(self) -> str:
         """The rules of the patterns the checked content was generated with; none when it names none."""

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, ClassVar
 from harness.agent_tools.agent_tools import AgentTool
 from harness.annotations.annotation import DestinationKind
 from harness.installation.ide_layout import IdeLayout
+from harness.installation.project_guidelines import PROJECT_GUIDELINES
 from harness.installation.repository_toolsets import RepositoryToolsets
 
 if TYPE_CHECKING:
@@ -67,7 +68,7 @@ class InstallPlace:
         try:
             relative = folder.resolve().relative_to(repo)
         except ValueError:
-            return Path(folder.name)
+            return PROJECT_GUIDELINES.installs_from(folder) or Path(folder.name)
         return self._guidance_source_folder(relative)
 
     def _guidance_source_folder(self, folder: Path) -> Path:

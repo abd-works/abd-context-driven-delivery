@@ -27,7 +27,7 @@ class Satisfy(GuidanceAction):
         self.log_running("satisfy")
         steps = _SATISFY_MARKDOWN.strip()
         instructions(steps)
-        rules = self.work.rules_to_follow
+        rules = self.rules_to_follow
         instructions(rules)
         tools(self._validate().validate)
         instructions(self._generate().generate_fixes_from_validate)

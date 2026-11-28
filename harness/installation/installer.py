@@ -27,6 +27,7 @@ from harness.installation.install_lock import InstallLock
 from harness.installation.install_target import InstallTarget
 from harness.installation.install_record import InstallRecord, LastInstall
 from harness.installation.language_adapter import LanguageAdapters
+from harness.installation.project_guidelines import PROJECT_GUIDELINES
 from harness.installation.repository_toolsets import RepositoryToolsets
 from harness.markdown import markdown
 from harness.markdown.front_matter import FrontMatter
@@ -400,12 +401,15 @@ class Installer:
         return adapters.write_all(whole=True)
 
     def repository_toolsets(self) -> list[ToolsetReference]:
-        """The reference to every toolset the repository defines; one whose module cannot be imported stops the install,
-        named after the toolset, with its cause."""
+        """The reference to every toolset the repository defines, with the guidelines of the project it installs into
+        chosen as that project's ``.context/config.json`` says: a pattern it disables is left out, and each pattern it
+        keeps in its own guidelines folder is published as a shipped one is. One whose module cannot be imported stops
+        the install, named after the toolset, with its cause."""
         classes = self.toolsets.classes()
         for unloadable in self.toolsets.unloadable:
             raise ToolsetInstallFailed(unloadable.reference, unloadable.cause) from unloadable.cause
-        return [ToolsetReference.of(toolset_class) for toolset_class in classes]
+        chosen = PROJECT_GUIDELINES.of(self.target.project).toolsets(classes)
+        return [ToolsetReference.of(toolset_class) for toolset_class in chosen]
 
     def diagnosis_of(self, channels: InstallChannels, published: dict[str, list[str]]) -> InstallDiagnosis:
         """What channels deployed, with what each registered channel published, against the last install recorded, and

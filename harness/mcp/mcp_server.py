@@ -36,6 +36,7 @@ from harness.installation.install_record import InstallRecord
 from harness.installation.install_target import InstallTarget
 from harness.installation.installer import SERVER_CHANNELS
 from harness.installation.json_file import JsonFile, JsonFileUnreadable
+from harness.installation.project_guidelines import PROJECT_GUIDELINES, ProjectGuidelines, guideline_name
 from harness.installation.repository_toolsets import RUNNING_CHECKOUT, RepositoryToolsets
 from harness.mcp.cdd_home import CddHome
 from harness.mcp.mcp_annotations import LongCall, Mcp  # noqa: F401 - importing the server defines Mcp, the channel install reads
@@ -438,11 +439,38 @@ class ProjectToolsets:
             self.skipped.skip(str(toolset.reference), error)
 
     def for_project(self, project: Path) -> ProjectToolsets:
-        """A server with the same toolsets working on ``project``. Toolsets keep state between calls, so each project
-        gets objects of its own and one chat's work never shows up in another's."""
+        """A server with the same toolsets working on ``project``, its guidelines chosen as the project's
+        ``.context/config.json`` says: a pattern it disables is not served, and each it keeps in its own guidelines
+        folder is. Toolsets keep state between calls, so each project gets objects of its own and one chat's work, or
+        one project's patterns, never shows up in another's."""
         server = type(self)(repo=self.repo, project=project)
-        server.start(self._toolsets)
+        server.start(server._with_guidelines(self._toolsets))
         return server
+
+    def _with_guidelines(self, toolsets: Iterable[ToolsetReference]) -> list[ToolsetReference]:
+        """toolsets with this server's project's guidelines chosen among them. A reference whose class cannot be loaded
+        is kept, so starting records why; a guidelines folder that cannot be imported is recorded and its patterns
+        left out."""
+        guidelines = PROJECT_GUIDELINES.of(self.project)
+        try:
+            guidelines.own_classes
+        except AgentToolSet.LOAD_FAILURES as error:
+            self.skipped.skip(f"guidelines of {self.project}", error)
+            return [reference for reference in toolsets if not self._disabled(reference, guidelines)]
+        loaded = [reference for reference in toolsets if self._loads(reference)]
+        chosen = guidelines.toolsets([reference.toolset_class for reference in loaded])
+        unloaded = [reference for reference in toolsets if reference not in loaded]
+        return [*(ToolsetReference.of(toolset_class) for toolset_class in chosen), *unloaded]
+
+    def _loads(self, reference: ToolsetReference) -> bool:
+        try:
+            reference.toolset_class
+        except AgentToolSet.LOAD_FAILURES:
+            return False
+        return True
+
+    def _disabled(self, reference: ToolsetReference, guidelines: ProjectGuidelines) -> bool:
+        return self._loads(reference) and guidelines.is_disabled(guideline_name(reference.toolset_class))
 
     def restarted(self) -> ProjectToolsets:
         """A new server with the same toolsets, on the code as it is now. Every module from this checkout is imported
@@ -708,7 +736,8 @@ class McpHost:
                 no_arguments,
             ),
         ]
-        enrolled = (*self._checkout_toolsets.tools.values(), *self._checkout_toolsets.prompts.values())
+        served = self._server_for(project) if project is not None else self._checkout_toolsets
+        enrolled = (*served.tools.values(), *served.prompts.values())
         return [*builtins, *(self._listed(tool.mcp_name, tool.listed_description, tool.input_schema) for tool in enrolled)]
 
     def _listed(self, name: str, description: str | None, input_schema: dict[str, Any]) -> dict[str, Any]:

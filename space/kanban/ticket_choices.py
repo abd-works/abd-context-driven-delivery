@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Callable
 
 from harness.agent_tools.agent_tools import agent_tool, noSessionLog
 from harness.annotations.annotation import hosted_only
-from harness.graph.pattern_overlays import PatternOverlays
 from harness.mcp.mcp_annotations import long_call, mcp
 from space.kanban.format_choice import FormatChoice
 from space.kanban.overlay_choice import OverlayChoice
@@ -87,9 +86,9 @@ class TicketChoices:
     @agent_tool
     @noSessionLog
     def overlay_choices(self) -> list[OverlayChoice]:
-        """Return the pattern overlays a person can choose for ticket's session: every registered pattern in name order, each with its icon, its first and last letter, and whether the session overlays it on its graph."""
+        """Return the pattern overlays a person can choose for ticket's session: every pattern its project works with in name order, each with its icon, its first and last letter, and whether the session overlays it on its graph."""
         chosen = self.session.overlays
-        return [OverlayChoice(pattern, pattern in chosen) for pattern in PatternOverlays().names]
+        return [OverlayChoice(pattern, pattern in chosen) for pattern in self.session.pattern_overlays([]).names]
 
     @mcp
     @agent_tool

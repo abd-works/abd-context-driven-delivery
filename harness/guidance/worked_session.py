@@ -142,6 +142,10 @@ class WorkedSession(CallSession, Protocol):
     def choose_overlays(self, overlays: list[str]) -> None:
         """Overlay the patterns named on its graph from now on."""
 
+    def pattern_overlays(self, overlays: list[str] | None = None) -> object:
+        """The overlays named, its own when none are, chosen among the patterns its project works with; typed as
+        *PatternOverlays* only inside harness/graph."""
+
     def practice(self, key: str) -> PracticeOutput:
         """The practice whose key is key, on or off for the session."""
 

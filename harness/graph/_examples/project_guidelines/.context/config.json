@@ -1,0 +1,7 @@
+{
+  "guidelines_folder": "guidelines",
+  "guidelines": {
+    "lern_domain_driven": "disabled",
+    "acme_domain_driven": "enabled"
+  }
+}

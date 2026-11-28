@@ -190,7 +190,7 @@ class Render(GuidanceAction):
         """Answer a comment a person left on a board in Claude that CDD published: a whiteboard a render published, or a version of the UX practice's design canvas. board: the board's address, the claude.ai artifact link the comment came from. anchor: for a design canvas, where the comment sits, as the comment shows it: the label of the story explorer row (a step as its keyword and words, a scenario, story or epic by its name, an outline row by its example's name, cut short with … as the row shows it) and its location; leave it empty for a whiteboard. Make the change the comment asks for in the file the board is drawn from, which the answer names, following the rules below, never on the board alone, which the next render would undo. For a whiteboard, then render that file to whiteboard with paths set to it and follow publish_board. For a design canvas, the knowledge graph finds the story, scenario, step or example the anchor names, the file that holds it and the screens and interactions that show it; change that file, keep the story test that holds it in code in step, render the canvas again with the UX practice's render_story_canvas, publish it as versions.json says, and tell the person when the change also needs a screen changed. Then reply on the comment's thread saying what changed."""
         drawn_from = self._drawn_from(board, anchor)
         instructions(drawn_from)
-        rules = self.work.rules_to_follow
+        rules = self.rules_to_follow
         instructions(rules)
         tools(self.render)
         tools(self.publish_board)

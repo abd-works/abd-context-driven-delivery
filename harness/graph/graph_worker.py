@@ -14,6 +14,7 @@ from pathlib import Path
 from harness.agent_tools.tool_call import CALLS_BEING_ANSWERED, ToolCall
 from harness.graph.graph import Graph
 from harness.graph.graph_build import BuildOrder
+from harness.installation.project_guidelines import PROJECT_GUIDELINES
 from harness.mcp.tool_calls import ThrottledReporter
 
 
@@ -25,6 +26,9 @@ def main(arguments: list[str]) -> None:
     if len(arguments) != 3:
         raise SystemExit("usage: python -m harness.graph.graph_worker ORDER RESULT CHANGES")
     order = BuildOrder.from_text(Path(arguments[0]).read_text(encoding="utf-8"))
+    if order.patterns_project is not None:
+        # The project's own patterns are imported from its guidelines folder, under a package only this read makes.
+        PROJECT_GUIDELINES.of(order.patterns_project).own_classes
     for module in order.modules:
         importlib.import_module(module)
     # The build is this process's one call; whoever started the worker reads its progress lines.

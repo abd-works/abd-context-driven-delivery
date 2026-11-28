@@ -221,10 +221,8 @@ class Ux(PracticeGuidance):
         """The fixtures builder of the first pattern the session overlays that builds canvas fixtures, else one that
         stops the render and says so."""
         from cdd_guidance.practices.ux.model.claude_design.project_story_canvas import NoCanvasFixtures
-        from harness.graph.pattern_overlays import PatternOverlays
-
         overlays = list(self.session.overlays)
-        for pattern in PatternOverlays(overlays).patterns:
+        for pattern in self.session.pattern_overlays(overlays).patterns:
             builds = getattr(pattern, "canvas_fixtures", None)
             if builds is not None:
                 return builds(workspace)

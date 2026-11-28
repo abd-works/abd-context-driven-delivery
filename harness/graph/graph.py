@@ -1303,8 +1303,10 @@ class Graph(GraphExplorer):
         # The folder a session's graph is saved in, the session's own folder; none for a graph no session holds, such as
         # the graph tool's, which saves in the folder it loads.
         self.kept_in: Path | None = None
-        # The pattern overlays this graph applies, each pattern made once.
+        # The pattern overlays this graph applies, each pattern made once, and the project whose patterns they are
+        # chosen among; none for a graph no project holds, which chooses among the patterns CDD ships.
         self.applied_patterns = PatternOverlays()
+        self.patterns_project: Path | None = None
         self.schema_edges = SchemaEdges(self)
         self.edges = GraphEdges(self)
         self.reads = GraphReads(self)
@@ -1332,6 +1334,12 @@ class Graph(GraphExplorer):
         """Apply the overlays named, each a folder or a pattern's name: the graph holds the pattern each one is, and
         asks each for the GraphOverlay it owns."""
         self.applied_patterns.apply(list(overlays))
+
+    def use_patterns_of(self, project: Path | str) -> None:
+        """Choose this graph's overlays among the patterns the project at project works with: its own guidelines in,
+        those it disables out. The overlays applied now are applied again among them."""
+        self.patterns_project = Path(project).resolve()
+        self.applied_patterns = PatternOverlays.from_project(self.patterns_project, self.applied_patterns.paths)
 
     def node(self, node_id: str) -> Node | None:
         """The node called node_id, in whichever practice holds it; none when no practice does."""

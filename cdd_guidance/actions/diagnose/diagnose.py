@@ -127,4 +127,4 @@ class Diagnose(GuidanceAction):
             return ""
         self._work_on(guidance)
         self.log_running("diagnose")
-        return self.work.rules_to_follow
+        return self.rules_to_follow

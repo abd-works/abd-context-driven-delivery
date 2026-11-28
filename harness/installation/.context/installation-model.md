@@ -456,6 +456,22 @@ One project's `.context/config.json`: the guidelines that apply to it, each `ena
 ---<<reads and writes through>>--> JsonFile
 ---<<raises>>--> MalformedContextConfigError
 
+## ProjectGuidelines
+
+The guidelines one project works with, as its `.context/config.json` says: `guidelines` marks each `enabled` or `disabled`, and `guidelines_folder` names a folder of the project holding patterns of its own. A disabled one is left out wherever patterns are listed, applied, chosen, or installed; the project's own replaces a shipped one of its name. The process holds each project's once (`PROJECT_GUIDELINES`, a *HeldProjectGuidelines*), and each guidelines folder is imported once, as a package named from its path (*GuidelinesFolder*), so no project's patterns reach another's.
+
++ ProjectGuidelines(root: Path | str, held: HeldProjectGuidelines)
+------
++ root: Path
++ folder: GuidelinesFolder | None
++ own_classes: list[type]
+----
++ is_disabled(name: str): bool
++ chosen(shipped: Iterable[type]): list[type]
++ toolsets(shipped: Iterable[type]): list[type]
+---<<reads>>--> ContextConfig
+---<<imports from>>--> GuidelinesFolder
+
 ## JsonFile
 
 One file holding a JSON object, read and written whole by its owner. A missing file reads as empty; a file holding anything but a JSON object raises the owner's kind of *JsonFileUnreadable*, so an owner never saves over what a person wrote.

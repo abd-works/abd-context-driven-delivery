@@ -4,6 +4,7 @@ from __future__ import annotations
 from functools import cached_property
 from dataclasses import replace
 from pathlib import Path, PurePosixPath
+from collections.abc import Collection
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from harness.annotations.annotation import hosted_only
@@ -155,11 +156,18 @@ class Guidance:
         """The rules a validate of this guidance checks, one by one."""
         return [rule for collection in self.checked_rule_collections for rule in collection]
 
-    def checked_rules_text(self) -> str:
+    def checked_rules_text(self, replaced: Collection[str] = ()) -> str:
         """The rules a validate of this guidance checks, as their markdown: what an agent judges against, and what an
-        action that writes or fixes the artifact tells it to follow."""
-        texts = (collection.validate.strip() for collection in self.checked_rule_collections)
+        action that writes or fixes the artifact tells it to follow. A rule named in replaced, which a pattern the work
+        is held to replaces with a rule of its own name, is left out, so the agent reads the pattern's rule alone."""
+        texts = (self._collection_text(collection, replaced).strip() for collection in self.checked_rule_collections)
         return "\n\n".join(text for text in texts if text)
+
+    def _collection_text(self, collection: RulesCollection, replaced: Collection[str]) -> str:
+        """collection's rules as their markdown, less each named in replaced."""
+        if not any(rule.slug in replaced for rule in collection):
+            return collection.validate
+        return "\n\n".join(rule.validate() for rule in collection if rule.slug not in replaced)
 
     @property
     def every_rule(self) -> list[Rule]:

@@ -34,7 +34,7 @@ class Generate(GuidanceAction):
         self._work_on(guidance)
         process = self._process_first()
         instructions(process)
-        rules = self.work.rules_to_follow
+        rules = self.rules_to_follow
         instructions(rules)
         overlay_rules = self.brief.overlay_rules()
         instructions(overlay_rules)

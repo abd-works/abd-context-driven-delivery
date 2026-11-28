@@ -124,7 +124,7 @@ class BuildTask:
 class BuildOrderDocument(TypedDict):
     """A build order as the server writes it for the worker: the task, the scope the worker reads (its folder, the files
     it is limited to, and whether it stands on the whole working copy), each chosen practice's source root, the pattern
-    overlays, the graph before the step (written in, or named by the file of the worker's last answer), the
+    overlays and the project whose patterns they are chosen among, the graph before the step (written in, or named by the file of the worker's last answer), the
     modules that register the practices and patterns the graph holds, and the keys of the practices it holds."""
 
     task: BuildTaskDocument
@@ -133,6 +133,7 @@ class BuildOrderDocument(TypedDict):
     over_whole: bool
     roots: dict[str, str]
     overlays: list[str]
+    patterns_project: str
     state: GraphDocument | None
     state_file: str
     modules: list[str]
@@ -164,6 +165,7 @@ class BuildOrder:
             "over_whole": scope.over_whole,
             "roots": {key: str(root) for key, root in graph.practices.roots_by_key.items()},
             "overlays": list(graph.overlays),
+            "patterns_project": "" if graph.patterns_project is None else str(graph.patterns_project),
             "state": before.document if isinstance(before, SavedGraph) else None,
             "state_file": str(before) if isinstance(before, Path) else "",
             "modules": sorted({type(item).__module__ for item in [*graph.practices.held.values(), *graph.applied_patterns.patterns]}),
@@ -193,6 +195,12 @@ class BuildOrder:
     @property
     def overlays(self) -> list[str]:
         return list(self._document.get("overlays") or [])
+
+    @property
+    def patterns_project(self) -> Path | None:
+        """The project whose patterns the graph's overlays are chosen among; none for a graph no project holds."""
+        named = self._document.get("patterns_project")
+        return Path(named) if named else None
 
     @property
     def modules(self) -> list[str]:
@@ -356,6 +364,8 @@ class GraphBuild:
         graph.scope = order.scope
         held = graph.practices.held
         graph.practices.choose({held[key]: root for key, root in order.roots.items()})
+        if order.patterns_project is not None:
+            graph.use_patterns_of(order.patterns_project)
         graph.overlays = order.overlays
         graph.schema_edges.syncs = False
         with BuildReads():

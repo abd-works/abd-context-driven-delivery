@@ -66,6 +66,12 @@ class InstallTarget:
         return cls(layout, repo / layout.folder_name, dev_lane)
 
     @property
+    def project(self) -> Path:
+        """The project the IDE folder belongs to, the folder holding it, whose ``.context/config.json`` says which
+        guidelines its install publishes."""
+        return self.path.parent
+
+    @property
     def is_temporary(self) -> bool:
         """Whether the folder is in the system's temporary folder, as a spec's install is."""
         return is_temporary(self.path)

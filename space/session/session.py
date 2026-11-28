@@ -646,11 +646,16 @@ class Session(SessionFileTools, SessionExplorer, SessionGuidanceTools, SessionTe
         person chooses some."""
         return list(self.record.fields.overlays)
 
+    def pattern_overlays(self, overlays: list[str] | None = None) -> PatternOverlays:
+        """The overlays named, this session's own when none are, chosen among the patterns its checkout's project works
+        with: those CDD ships and those the project keeps in its own guidelines folder, less each it disables."""
+        return PatternOverlays.from_project(self.context_config.root, self.overlays if overlays is None else overlays)
+
     def choose_overlays(self, overlays: list[str]) -> None:
         """Overlay the patterns named on this session's graph from now on, in place of those chosen before: kept in its
         session.json, and applied to its graph at once when it has one. A name that is no registered pattern is refused
         with NotAPatternError, and nothing changes."""
-        patterns = PatternOverlays().names
+        patterns = self.pattern_overlays([]).names
         unknown = [name for name in overlays if name not in patterns]
         if unknown:
             raise NotAPatternError(unknown, patterns)

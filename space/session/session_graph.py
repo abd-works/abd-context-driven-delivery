@@ -119,6 +119,7 @@ class SessionGraph:
         every = self._practices.every
         graph = Graph(every[key].guidance for key in every if key in held)
         graph.kept_in = session.work_folder
+        graph.use_patterns_of(session.context_config.root)
         graph.reads.open_saved(session.work_root)
         if session.overlays:
             graph.overlays = session.overlays

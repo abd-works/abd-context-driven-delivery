@@ -18,6 +18,7 @@ from harness.annotations.class_registry import ClassRegistry
 from harness.graph.practice_rule import PracticeGraphRule, SharedPracticeGraphRule
 from harness.graph.schema_conformance import FRAMEWORK_RULES
 from harness.graph.practice_reading import rules_in
+from harness.installation.project_guidelines import PROJECT_GUIDELINES
 
 if TYPE_CHECKING:
     from harness.graph.graph import Graph, Node
@@ -100,11 +101,22 @@ class GraphOverlay:
 REGISTERED_PATTERNS: ClassRegistry[PracticeGuidance] = ClassRegistry(lambda pattern_class: pattern_class.pattern)
 
 
+def project_patterns(project: Path | str) -> ClassRegistry[PracticeGuidance]:
+    """The patterns the project at project works with: those registered in ``REGISTERED_PATTERNS`` and those kept in
+    its own guidelines folder, less each its ``.context/config.json`` disables. The project's own are read first, since
+    importing them registers the patterns CDD ships."""
+    guidelines = PROJECT_GUIDELINES.of(project)
+    own = guidelines.own_classes
+    registry: ClassRegistry[PracticeGuidance] = ClassRegistry(lambda pattern_class: pattern_class.pattern)
+    registry.register(*guidelines.chosen([*REGISTERED_PATTERNS.classes, *own]))
+    return registry
+
+
 class PatternOverlays:
     """The pattern overlays one graph applies. Each is a folder holding ``practices/``, named by its path or by the name
     of a registered pattern; a pattern is its folder's name. It is made with the registry of pattern classes, the
-    process's ``REGISTERED_PATTERNS`` unless a caller hands it another; the pattern objects are this object's own, each
-    made the first time it is wanted."""
+    process's ``REGISTERED_PATTERNS`` unless a caller hands it another, such as a project's (``from_project``); the
+    pattern objects are this object's own, each made the first time it is wanted."""
 
     def __init__(self, overlays: list[str] | tuple[str, ...] = (), registered: ClassRegistry[PracticeGuidance] = REGISTERED_PATTERNS) -> None:
         self._registered = registered
@@ -112,6 +124,12 @@ class PatternOverlays:
         self.paths: list[str] = []
         self.patterns: list[PracticeGuidance] = []
         self.apply(overlays)
+
+    @classmethod
+    def from_project(cls, project: Path | str, overlays: list[str] | tuple[str, ...] = ()) -> PatternOverlays:
+        """The overlays named, chosen among the patterns the project at project works with (``project_patterns``): a
+        pattern it disables is neither listed nor applied, and one it keeps in its own folder is both."""
+        return cls(overlays, project_patterns(project))
 
     def apply(self, overlays: list[str] | tuple[str, ...]) -> None:
         """Apply the overlays named, each a folder or a pattern's name, in place of those applied before. The patterns

@@ -436,12 +436,12 @@ class WorkList:
             return [operation(self.text)]
         return [operation(self.at_fidelity(self._entry(index))) for index in range(len(self.listed()))]
 
-    @property
-    def rules_to_follow(self) -> str:
+    def rules_to_follow(self, replaced: frozenset[str] = frozenset()) -> str:
         """The rules each listed guidance holds the agent to, read from the fidelity the action works at on it: its
-        shared rules and that fidelity's, or the guidance text itself. It checks nothing, so it saves no report and logs
-        no validate line, which would tell the session board the work had been checked."""
-        rules = (worked if isinstance(worked, str) else worked.checked_rules_text() for worked in self.each(lambda worked: worked))
+        shared rules and that fidelity's, less those named in replaced, which a pattern replaces, or the guidance text
+        itself. It checks nothing, so it saves no report and logs no validate line, which would tell the session board
+        the work had been checked."""
+        rules = (worked if isinstance(worked, str) else worked.checked_rules_text(replaced) for worked in self.each(lambda worked: worked))
         return "\n\n".join(part for part in rules if part)
 
     def _held(self, sent: GuidanceEntry | ListedGuidance) -> GuidanceEntry | ListedGuidance:
@@ -580,16 +580,37 @@ class SessionBrief:
         """The shared rules of each pattern the work is held to, such as lern_domain_driven, which apply on top of the
         practices' rules: for content paths names, the patterns it was generated with; otherwise, as for generate, the
         patterns the session overlays. None for an action made for no session."""
+        held = self._patterns_held_to(paths)
+        if held is None:
+            return ""
+        names, source = held
+        patterns = self._action.graph.applied_patterns
+        rules = [self._overlay_rules_of(patterns.pattern_named(name), name, source) for name in names]
+        return "\n\n".join(part for part in [*rules, self._story_scope(names)] if part)
+
+    def replaced_rules(self, paths: list[str] | None = None) -> frozenset[str]:
+        """The names of the practices' rules the patterns the work is held to replace: each shared rule of such a pattern
+        named as a practice's rule is, so the practice's own text of it is left out of what the agent follows and is
+        judged against, as a pattern's graph rule replaces a practice's of its name."""
+        held = self._patterns_held_to(paths)
+        if held is None:
+            return frozenset()
+        patterns = self._action.graph.applied_patterns
+        return frozenset(rule.slug for name in held[0] for rule in (patterns.pattern_named(name).rules or ()))
+
+    def _patterns_held_to(self, paths: list[str] | None) -> tuple[list[str], str] | None:
+        """The names of the patterns the work is held to, among those the session's project works with, and where they
+        came from: for content paths names, the patterns it was generated with; otherwise those the session overlays.
+        None for an action made for no session."""
         session = self._action.works_in
         if session is None:
-            return ""
+            return None
         patterns = self._action.graph.applied_patterns
         root = session.work_root
         recorded = GeneratedPatterns(patterns).recorded_for([root / path for path in paths or []], root)
         names = recorded or list(session.overlays)
         source = _RECORDED_IN_PATTERNS_FILE if recorded else _OVERLAID_BY_SESSION
-        rules = [self._overlay_rules_of(patterns.pattern_named(name), name, source) for name in names if name in patterns.names]
-        return "\n\n".join(part for part in [*rules, self._story_scope(names)] if part)
+        return [name for name in names if name in patterns.names], source
 
     def _story_scope(self, patterns: list[str]) -> str:
         """The stories this session's increment is about, which generate and validate work on, each with the patterns
@@ -611,7 +632,8 @@ class SessionBrief:
         """The pattern's shared rules, opened by where the pattern came from, so the reader can check that claim."""
         return (
             f"## Pattern overlay: {name}\n\n"
-            f"{source.format(name=name)}, so its shared rules below apply on top of the practices' rules. "
+            f"{source.format(name=name)}, so its shared rules below apply on top of the practices' rules; a rule here "
+            "named as a practice's rule replaces that rule, whose own text is left out. "
             f"Its whole guidance is its instructions, `{pattern.slug}_instructions`.\n\n"
             f"{pattern.section_text('Shared rules')}"
         )
@@ -815,6 +837,12 @@ class GuidanceAction:
         self._work_on(guidance)
         tools(self.act_quickly)
         return ""
+
+    @property
+    def rules_to_follow(self) -> str:
+        """The rules each listed guidance holds the agent to at the fidelity this action works at on it, less those a
+        pattern the work is held to replaces with a rule of its own name."""
+        return self.work.rules_to_follow(self.brief.replaced_rules())
 
     @property
     def session_context(self) -> str:
