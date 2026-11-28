@@ -1,6 +1,6 @@
 # Coverage themes — release after v1.2.1, exploratory testing (2026-11-27)
 
-**Status: proposed. No robot starts until the person confirms, drops, or adds to these themes.**
+**Status: confirmed by the person on 2026-11-28, all seven as written.**
 
 ## Scope
 
