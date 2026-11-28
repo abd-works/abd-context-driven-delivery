@@ -1410,6 +1410,22 @@ test('grouping the queue gives each card its robot on the queue', async ($, on) 
   expect(seeded.prompts.map(prompt => prompt.robot)).toEqual(['Sparky', 'Bolt'])
 })
 
+// Asked 2026-11-26: grouping put six independent cards on three robots; each card runs alone unless it needs another.
+test('grouping asks the model for a robot of its own for each prompt that can run alone', async ($, on) => {
+  seedQueue(on, true)
+  const systems: string[] = []
+  on('model.complete', (_, e) => {
+    systems.push((e as { system: string }).system)
+    return { value: { isAnswered: true, text: JSON.stringify(GROUPED.map(({ description, prompts }) => ({ description, prompts }))), usage: NO_USAGE } }
+  })
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  await ui.press({ key: 'queue-sub-agents' })
+  await ui.unmount()
+
+  expect(systems[0]).toContain('Each prompt is a task of its own')
+})
+
 test("grouping the queue closes every robot's queue, leaving only the list of robots", async ($, on) => {
   const seeded = seedQueue(on, true)
   seeded.stored.expandedAgents = { value: [0, 1], version: 1 }
@@ -1503,6 +1519,18 @@ test("the hand-out tells each robot to put its own task list on its card with pr
   const { asked } = await handOut($, on, ROBOT_CARDS)
 
   expect([asked[0]?.includes('task list of your own plan'), asked[0]?.includes('prompt-queue.set_steps')]).toEqual([true, true])
+})
+
+test("the hand-out starts every robot in one message, so they all run at the same time", async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS)
+
+  expect(asked[0]).toContain('all in one message')
+})
+
+test("the hand-out has each robot name its card id in every report", async ($, on) => {
+  const { asked } = await handOut($, on, ROBOT_CARDS)
+
+  expect(asked[0]).toContain('name card [<card id>] in every report')
 })
 
 test("the hand-out tells each robot to tick its card's steps with prompt-queue.step_done, naming this chat", async ($, on) => {
@@ -1919,6 +1947,23 @@ test("in sub-agent mode the note on a new message shows the robots' queues and l
   expect(carried.join()).toContain('Bolt: [b] Run the unit tier')
   expect(carried.join()).toContain('prompt-queue.assign')
   expect(carried.join()).toContain('do it yourself')
+})
+
+// Asked 2026-11-26: six independent cards were put on three robots, so half the work waited on the other half.
+test("in sub-agent mode the note gives each independent card a robot of its own, named by its card id, with its steps set", async ($, on) => {
+  const seeded = groupedQueue(on)
+  seeded.stored.askedAbout = { value: 'a', version: 1 }
+  const carried: string[] = []
+  on('prompt.submit', (_, e) => {
+    carried.push(...(e.context ?? []))
+    return { text: e.text }
+  })
+
+  await $.prompt.submit({ text: 'also run the heavy tier', wait: false, origin: { kind: 'composer' } })
+
+  const note = carried.join()
+  expect(['one robot for each card that can run on its own', 'needs the result of', 'card id and robot name', 'every card you add']
+    .map(words => note.includes(words))).toEqual([true, true, true, true])
 })
 
 test("a card queued for a robot by name shows in that robot's queue", async ($, on) => {

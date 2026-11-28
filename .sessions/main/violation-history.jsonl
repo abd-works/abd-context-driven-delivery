@@ -1,1 +1,2 @@
 {"event": "run", "run": "clean-engineering-modules-20261124T041021.md", "at": "2026-11-24T04:10:21Z", "commit": "092e123", "session": "main", "fidelity": "clean-engineering-modules", "paths": ["harness/graph/.context/graph-model.md"], "hits": 0}
+{"event": "run", "run": "stories-hardening-20261126T141219.md", "at": "2026-11-26T14:12:19Z", "commit": "febcb45", "session": "main", "fidelity": "stories-hardening", "paths": [".sessions/main/exploratory-testing/coverage-themes.md"], "hits": 0}

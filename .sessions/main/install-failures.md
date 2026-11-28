@@ -36,3 +36,21 @@
   `shutil.rmtree(target, ignore_errors=True)` removed the files but not the folders (`PermissionError: [WinError 5] Access is denied` on `...\typescript\harness\chat`), which a process started from the runtime still held open, so the copy found the folder there. The runtime's language adapters were left empty, so any app started from the runtime could not import `@cdd/cdd-connection`.
 - **Tried:** `copytree(..., dirs_exist_ok=True)`, so the copy writes into folders that are still held; and the copy now runs on every install from the checkout the runtime serves, not only on the install that pins it, so the next install repairs a pin whose copy failed. Reinstalled: cleared, `runtime language adapters: copied`.
 - **Diagnostics:** `/harness-diagnostics-agent-tools-diagnostics` not run: this chat's cdd MCP connection is down (the 401 / OAuth failure above), so the MCP call cannot be made until `/reload-plugins`. Themes updated from logs alone.
+
+## 2026-11-27: install-latest ran under the wrong Python
+
+- **Ran:** `python scripts/install-latest.py`, from `/install-latest` in a Claude Code chat on the main checkout.
+- **Checkout:** `C:\dev\abd-context-driven-delivery`, branch `main`, commit `babac3c18`; `~/.cdd/runtime.json` commit `babac3c18`, python `.venv\Scripts\python.exe`.
+- **Error:** step 1 passed (`v1.2.1: already up to date`); the import of `harness.hooks` then failed before step 2:
+
+  ```
+  File "harness\agent_tools\agent_tools.py", line 25
+    type CollectionEntry = object
+         ^^^^^^^^^^^^^^^
+  SyntaxError: invalid syntax
+  ```
+
+  The bare `python` on PATH was Python 3.11.15 from another tool's virtual environment (`C:\Users\thoma\AppData\Local\hermes\hermes-agent\venv\Scripts\python`), which comes first on PATH. The project requires Python 3.12 or later (`requires-python = ">=3.12"`), and the `type` statement is 3.12 syntax. `install-latest.py` runs `install.py` with `sys.executable`, so it keeps whatever interpreter started it.
+- **Tried:** ran `.venv\Scripts\python.exe scripts\install-latest.py`, the interpreter `runtime.json` pins.
+  Cleared: all script steps passed, diagnose_install green, every channel delta 0.
+- **Diagnostics:** `/harness-diagnostics-agent-tools-diagnostics` not run: the traceback showed the cause, the shell's interpreter. The cdd server and this chat's MCP connection stayed healthy throughout.

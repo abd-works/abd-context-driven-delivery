@@ -1,0 +1,11 @@
+{
+  "chat": "ef886fc4-f831-462c-a3da-f56aac774d4d",
+  "taken_off": "2026-11-26T15:16:52.851433+00:00",
+  "prompts": [
+    {
+      "id": "242ff5d69958",
+      "text": "Run exploratory testing: six tester robots, one per confirmed theme",
+      "robot": "Sparky"
+    }
+  ]
+}

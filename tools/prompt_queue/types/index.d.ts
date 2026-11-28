@@ -43,6 +43,12 @@ declare module 'claude-code' {
       expandedAgents: number[]
       sentCards: Record<string, string>
       robotAgents: Record<string, string>
+      // The sub-agents in a turn now, so a robot that stopped is told from one still working.
+      workingAgents: string[]
+      // Which check on each sub-agent is the current one, so an older check ends quietly.
+      robotChecks: Record<string, number>
+      // The cards whose finished steps are shown rather than folded into one line.
+      shownDoneSteps: string[]
       isAwaitingDecision: boolean
       decisionWait: number
       // The cdd server that answered the queue's last call, asked first next time; empty before any answered.

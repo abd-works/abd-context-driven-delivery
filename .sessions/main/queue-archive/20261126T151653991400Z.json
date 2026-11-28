@@ -1,0 +1,11 @@
+{
+  "chat": "ef886fc4-f831-462c-a3da-f56aac774d4d",
+  "taken_off": "2026-11-26T15:16:53.991400+00:00",
+  "prompts": [
+    {
+      "id": "df930a100bf9",
+      "text": "Fix reported defects: four defect-fixing robots, one per code area",
+      "robot": "Bolt"
+    }
+  ]
+}
