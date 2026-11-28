@@ -19,4 +19,6 @@
 
 **Actual** - Each graph call answers `SyntaxError: invalid syntax (broken_domain_driven.py, line 10)` with no project or folder named; `graph.practice_names` fails too, though it lists practices, not patterns. `sessions.current` and `session.show` still work. The server log shows the tool list skipped it: `MCP standup exception: skipped guidelines of C:\dev\_et\after-1-2-1\sparky\work\broken: invalid syntax`.
 
+**Also shows in the installer** - `Installer.create(ide="Claude", path=work/broken/.claude, repo=<build>).repository_toolsets()` raises the bare `SyntaxError: invalid syntax (broken_domain_driven.py, line 10)`. `Installer.repository_toolsets` promises an unimportable module "stops the install, named after the toolset, with its cause" (`ToolsetInstallFailed`); for a project's own pattern the install stops with neither the pattern's name nor the project's folder named.
+
 **Tier that should catch it** - unit (`harness/graph/project_patterns_spec.py` with a fixture folder whose module fails to import), plus heavy for the server path. Every spec uses the one example project whose pattern imports cleanly, so no test has a folder that fails.
