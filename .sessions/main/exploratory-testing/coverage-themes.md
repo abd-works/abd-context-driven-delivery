@@ -1,58 +1,66 @@
-# Coverage themes — release after v1.2.1 exploratory testing (2026-11-26)
+# Coverage themes — release after v1.2.1, exploratory testing (2026-11-27)
 
-**Status: all six themes confirmed by the person on 2026-11-26, as written, before any robot started.**
+**Status: proposed. No robot starts until the person confirms, drops, or adds to these themes.**
 
 ## Scope
 
-The release is what main holds after the tag `v1.2.1` (5af176f4a, 2026-11-24): 25 commits, outside `.sessions/`. Exploratory testing covers what they changed and what calls that code, not the whole product. The regression run that follows exploratory testing covers every story's screens.
+The release is what `main` holds after the tag `v1.2.1` (5af176f4a, 2026-11-24): 60 commits outside `.sessions/`, up to `4c4c82f2e`. Exploratory testing covers what those commits changed and the code that calls it, not the whole product. The regression run that follows covers every story's screens.
 
-| Area the release changed | Commits | Tests added with it |
+Branch `ui-fixes-as-i-use-it` (124 commits not on `main`) had its own hardening round on that branch, and is not in this release.
+
+| Area the release changed | Commits | Tests that came with it |
 |---|---|---|
-| UX story canvas on Claude Design (`cdd_guidance/practices/ux/model/claude_design/`, `harness/design_canvas/`, LERN pattern story runtime) | 315408a53, 394700602, 3ae1c18f5, f9a14895c, cac07a66b, 63e52cb4d, 3de215a2e, f0bfba060, cd3ecd720, 1602daec7, f8309f3df, 27428bb57, 44a5d6f1d, f1103e7d9, 9136b3b46 | 10 unit specs, 6 heavy specs (mounted view, screen walk, canvas rules, project story canvas); no browser test |
-| Files app opens a whiteboard in Claude (`harness/files_app/`, `harness/whiteboard/`) | 1dba6d13a, 6da63b712 | files-page and whiteboard-canvas TypeScript specs, whiteboard_spec |
-| Board: drop a card above a card in any column; a second press on Start is ignored (`space/kanban/`) | 020e7a512 | ticket-client and root-choice-client TypeScript specs, Maintain Tickets story test |
-| Chat bar: session list shows the Backlog and starts an item; app icons show running, not running, failed (`harness/chat-ui/pane/`) | eabeeef76, 020e7a512 | backlog-in-session-list.test.ts, kanban_tools_spec, Steer Sessions story test |
-| A practice switched off changes only what the board and chat show (`space/session/`, `harness/guidance_actions/`) | 8955e44af | guidance_actions_spec, session_protocols_spec, Choose Action And Formats story test |
-| Stories guidance: main-flow-first replaces scenario-names-continuation; `/version` commit message | 4aa101ca2, c582c6935 | cdd_version_spec; guidance text only otherwise |
+| A project's own patterns, and the guidelines list in `.context/config.json` (`harness/installation/project_guidelines.py`, graph, installer, cdd server, hooks) | d58373b13, 0cd2251fe, 1a6ff6f23 | 4 unit specs and 2 heavy specs on one example project; hook_spec, context_config_spec |
+| Chat bar asks the chat to reconnect to cdd; the queue gives each independent card its own robot; app icons for running, not running, failed | 43723eca3, 020e7a512 | board-reconnect.test.ts, register.test.tsx; no mod test runs the bar in a chat |
+| Backlog in the chat bar's session list; a parent ticket moves and starts with its children; card drops in any column | eabeeef76, 0a121e232, 8df5c84ec, d61bf328f, 0b41c8ec7, 263b4a154, 020e7a512 | backlog-in-session-list.test.ts, Steer Sessions and Organize Ticket Hierarchy story tests, ticket-client.spec.ts |
+| Deleting a session: whatever files stay, paths over 260 characters, a folder an earlier removal set aside | c9bac921a, ea9a407b2 | session_folder_spec |
+| Board and ticket answers leave the idea text out, to stay under MCP's size limit | 0a97cec4b, af30e8874 | kanban_tools_spec |
+| Story canvas, story explorer, board comments on a canvas, Files app linked-file pane, class cards on whiteboards | 30 commits from 1dba6d13a to f937a969a, with 4acea8442, 92fa602a6, b1322f992 | unit and heavy specs on the bundled LERN fixture project; one Files app e2e spec |
+| Switching a practice off changes only what the board and chat show | 8955e44af | guidance_actions_spec, session_protocols_spec, Choose Action And Formats story test |
 
 ## Themes
 
 Each theme names the change behind it, the evidence that it is at risk, and what no tier runs for real today.
 
-1. **The story canvas on a real project, not the fixture project.**
-   *Change:* the whole story canvas (`render_story_canvas`, `StoryScreen`, mounted production views, the 40-page limit, the publish gate), built in 15 commits over one day.
-   *Evidence:* every heavy spec renders the bundled LERN fixture project. Nothing renders the canvas for a project whose stories have no fixture, a scenario with no screen, more stories than Claude Design's 40 pages, or a project with no UX root. 315408a53 (a mounted view must wait for its fixture and mount afresh on each load) and 9136b3b46 (the explorer must load the scripts its screens load) were both corrections made after the feature first shipped, and both are about the canvas meeting the fixture's data and the browser, which no browser test runs.
-   *Reach:* a robot renders the canvas for this repository's own story map and for a throwaway LERN project, then opens the result in a browser through Playwright. Publishing to Claude Design itself needs a person.
+1. **A project that keeps its own patterns, on a server that answers several projects.**
+   *Change:* d58373b13, 0cd2251fe, 1a6ff6f23: patterns read from a project's `guidelines_folder`, used only when the project's `guidelines` list names them, else CDD's list, else all.
+   *Evidence:* built in one day and reshaped twice by the person the same day. Every spec uses one example project with a pattern that imports cleanly. Nothing runs two real projects against one running cdd server, a pattern module that fails to import, a config edited while the server runs, an old-style `guidelines` object, or an install into a project after the list changed. The change also stopped CDD's own install publishing `mern_domain_driven` and `oss_portal_domain_driven`.
+   *Reach:* in reach: two sandbox projects, the installer, a cdd server and the hook server.
 
-2. **Re-rendering the canvas over one already there.**
-   *Change:* f9a14895c (`keep_one` in `versions.json` updates one canvas in place), 3ae1c18f5 (copies a ported screen's files, reads prototype positions).
-   *Evidence:* `versions_spec` covers the setting on a fresh folder. Nothing renders twice with a screen removed between the renders, two renders at once, a hand-edited `versions.json`, or a copied screen whose source moved. The last release's theme 5, state that outlives the thing it describes, produced five defects.
+2. **The chat bar when cdd goes down.**
+   *Change:* 43723eca3 (the bar asks the chat to reconnect to cdd by itself), 020e7a512 (app icons green, white, red).
+   *Evidence:* both are covered only by TypeScript unit tests, because the mod harness does not run from a shell. `install-failures.md` records cdd failing for a chat while the bar still drew. Nothing runs a reconnect against a server that is stopped, restarting, or holding its port, a reconnect asked while the chat is busy, or the icons against those states.
+   *Reach:* the health and reconnect calls through a sandbox cdd server; what the bar shows in a live chat needs a person.
+
+3. **Starting work from the chat bar's Backlog and the board at once.**
+   *Change:* eabeeef76, 0a121e232, 8df5c84ec, d61bf328f, 0b41c8ec7 (the Backlog in the session list, reshaped five times in two days), 263b4a154 (a parent ticket moves and starts with its children), 020e7a512 (drops in any column).
+   *Evidence:* the chat bar and the board can both start one Backlog item, and starting a parent now starts each child, so one start can half-succeed. Two callers on one resource produced the most defects in the last two rounds. Nothing starts an item from both places at once, starts a parent whose child fails to start, or moves a parent while a child is open.
+   *Reach:* the board through Playwright and the chat bar's server calls through a sandbox cdd server.
+
+4. **Deleting a session.**
+   *Change:* c9bac921a, ea9a407b2.
+   *Evidence:* a delete that removes "whatever files stay" can remove more than it should. The round on `ui-fixes-as-i-use-it` found three data-loss defects in folder deletes there (a delete through a junction, a folder holding a root, a delete stopping halfway), and that fix is not on `main`. session_folder_spec runs on plain folders only: no junction, file held open, nested `.git`, or another session's set-aside folder.
    *Reach:* in reach, in a sandbox.
 
-3. **Switching a practice off while work on it is under way.**
-   *Change:* 8955e44af (switching a practice off changes only what the board and chat show; actions sent to the agent still work on it).
-   *Evidence:* the last release fixed the opposite failure (0d29115c8: a slug of a practice turned off ran as plain text, so validate checked nothing). The new behaviour is covered by unit specs on a faked session. Nothing runs generate, validate, or render through the cdd server on a practice that is off, nor switches a practice off with its files open on the board or in the Files app. This session has UX, DDD, and BDD switched off, so this is the normal case here, not an edge case.
-   *Reach:* in reach, through the cdd server in a sandbox.
+5. **Board answers for a big board.**
+   *Change:* 0a97cec4b, af30e8874 (overview and ticket moves leave the idea text out).
+   *Evidence:* the change fixed answers that went past MCP's size limit; the spec checks one ticket. Nothing measures the answers for a board of a hundred tickets with long ideas, or checks that the chat bar and robots still get the text they need from another call.
+   *Reach:* in reach, through a sandbox cdd server.
 
-4. **Starting and moving work from two places at once.**
-   *Change:* 020e7a512 (a card dropped above a card in another column moves there; above a closed ticket it goes through the Close dialog; a second press on Start is ignored), eabeeef76 (the chat bar's session list starts a Backlog item as the board does).
-   *Evidence:* the board and the chat bar can now both start one Backlog item, and the double-press guard is in the board's browser code only. The last release's theme 1 (two callers on one shared resource) produced the most defects. Nothing covers the Close dialog being cancelled after a drop, a drop onto a card that moved or closed meanwhile, or a start from the chat bar while the board starts the same item.
-   *Reach:* the board through Playwright in a sandbox; the chat bar's server calls through the cdd server. The chat bar in a live chat needs a person.
+6. **The story canvas and explorer on a real project.**
+   *Change:* the story canvas and explorer (30 commits), board comments on a canvas answered through the graph (4acea8442), the Files app's linked-file pane (92fa602a6), class cards on whiteboards (b1322f992).
+   *Evidence:* every heavy spec renders the bundled LERN fixture project. Several commits are corrections after first shipping (315408a53, 9136b3b46, f937a969a). Nothing renders a project whose stories have no fixture, a scenario with no screen, more than 40 pages, or a re-render over a canvas a person edited.
+   *Reach:* rendering and the explorer through Playwright in a sandbox; publishing to Claude Design and board comments in Claude need a person.
 
-5. **Opening a whiteboard that is not ready.**
-   *Change:* 1dba6d13a, 6da63b712 (the Files app opens a whiteboard's board in Claude and never draws one).
-   *Evidence:* the whiteboard render was the first defect in Increment 9, Defect Fixing (098ab71e2), and a saved whiteboard broke the graph build in the last release (6af44bc98). The specs open a whiteboard whose board exists. Nothing opens one whose board was never made, was deleted, or belongs to another project.
-   *Reach:* the Files app through Playwright; the board opening in Claude needs a person.
-
-6. **What the chat bar's app icons say when an app is down.**
-   *Change:* 020e7a512 (app icons green running, white not running, red failed; no Graph icon).
-   *Evidence:* the icons read the server-health wording, and the session's `install-failures.md` records the cdd server failing for a chat (401 to OAuth) while the bar still drew. This session started with `plugin:cdd:cdd` refused. Nothing checks the icons against a server that is stopped, deadlocked, or held on its port.
-   *Reach:* the health calls and wording through the cdd server in a sandbox; the colours in a live chat need a person.
+7. **Switching a practice off while work on it is under way.**
+   *Change:* 8955e44af.
+   *Evidence:* the release before fixed the opposite failure (0d29115c8). The new behaviour is covered by unit specs on a faked session; nothing runs generate, validate, or render through the cdd server on a practice that is off, or switches one off with its files open on the board.
+   *Reach:* in reach, through a sandbox cdd server.
 
 ## Left out
 
-- The Stories guidance change (4aa101ca2) and the `/version` commit message (c582c6935): text and one message, each with its spec, and nothing calls them at run time.
+- c582c6935 (the `/version` commit message), 4aa101ca2 and b669300e0 (Stories guidance text), 0c7ff87ab (a demo story map), 0a3178117 and d8ee69b09 (story map records), 12cb0f27a and 4569236f4 (commit messages and a spec): text or records, each with its spec, called by nothing at run time.
 
 ## What the session can and cannot reach
 
-Tester robots run Python, git, the installer, a cdd server, and a browser through Playwright, each in its own sandbox with its own `CDD_HOME`. Themes 2 and 3 are fully in reach. Themes 1, 4, 5, and 6 are in reach up to the Claude app: publishing to Claude Design, opening a board in Claude, and the chat bar in a live chat need a person, and the final report lists those walks.
+Tester robots run Python, git, the installer, a cdd server, and a browser through Playwright, each in its own sandbox with its own `CDD_HOME`. Themes 1, 4, 5 and 7 are fully in reach. Themes 2, 3 and 6 are in reach up to the Claude app: the chat bar in a live chat, publishing to Claude Design, and board comments in Claude need a person, and the final report lists those walks.
